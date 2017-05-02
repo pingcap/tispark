@@ -4,7 +4,7 @@ A cannot-be-more-trivial implementation of tidb-spark-connector.
 Uses as below
 ./spark-shell --jars /where-ever-it-is/tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar
 
-import com.pingcap.tispark.tispark._
+import com.pingcap.tispark._
 val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 import sqlContext.implicits._
 

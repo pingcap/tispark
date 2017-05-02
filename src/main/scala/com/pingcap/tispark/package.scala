@@ -1,4 +1,4 @@
-package com.pingcap.tispark
+package com.pingcap
 
 import org.apache.spark.sql.{DataFrame, SQLContext}
 
