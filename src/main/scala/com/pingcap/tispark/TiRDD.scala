@@ -1,14 +1,16 @@
 package com.pingcap.tispark
 
-import com.pingcap.tikv.{TiCluster, TiConfiguration}
+import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.meta.TiRange
-import org.apache.spark.{Partition, SparkContext, TaskContext}
+import com.pingcap.tikv.{TiCluster, TiConfiguration}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
+import org.apache.spark.{Partition, SparkContext, TaskContext}
+
 import scala.collection.JavaConverters._
 
 
-class TiRDD(sc: SparkContext, options: TiOptions)
+class TiRDD(selectRequestInBytes: ByteString, sc: SparkContext, options: TiOptions)
   extends RDD[Row](sc, Nil) {
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
@@ -25,6 +27,7 @@ class TiRDD(sc: SparkContext, options: TiOptions)
     val iterator = snapshot.newSelect(table)
                            .addRange(TiRange.create[java.lang.Long](0L, Long.MaxValue))
                            .doSelect()
+    println(selectRequestInBytes.toStringUtf8)
     def toSparkRow(row: com.pingcap.tikv.meta.Row): Row = {
       val rowArray = new Array[Any](row.fieldCount())
       for (i <- 0 until row.fieldCount()) {

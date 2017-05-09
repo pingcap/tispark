@@ -1,16 +1,18 @@
 package com.pingcap.tispark
 
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Row, SQLContext}
-import org.apache.spark.sql.sources.{BaseRelation, PrunedScan, TableScan}
-import org.apache.spark.sql.types.{LongType, MetadataBuilder, StructField, StructType}
+import com.pingcap.tidb.tipb.SelectRequest
 import com.pingcap.tikv.{TiCluster, TiConfiguration}
+import com.pingcap.tispark.TiCoprocessorOperation.CoprocessorReq
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.sources.BaseRelation
+import org.apache.spark.sql.types.{LongType, MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.{Row, SQLContext}
 
 import scala.collection.JavaConverters._
 
 
 case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContext)
-  extends BaseRelation with TableScan with PrunedScan {
+  extends BaseRelation {
 
   val conf = TiConfiguration.createDefault(options.addresses.asJava)
   val cluster = TiCluster.getCluster(conf)
@@ -30,11 +32,7 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
     new StructType(fields)
   }
 
-  override def buildScan(): RDD[Row] = {
-    new TiRDD(sqlContext.sparkContext, options)
-  }
-
-  override def buildScan(requiredColumns: Array[String]): RDD[Row] = {
-    buildScan()
+  def buildScan(cop: CoprocessorReq): RDD[Row] = {
+    new TiRDD(cop.toByteString, sqlContext.sparkContext, options)
   }
 }
