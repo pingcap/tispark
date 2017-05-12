@@ -1,10 +1,11 @@
 package com.pingcap.tispark
 
-import com.pingcap.tidb.tipb.SelectRequest
+import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.{TiCluster, TiConfiguration}
-import com.pingcap.tispark.TiCoprocessorOperation.CoprocessorReq
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.sources.BaseRelation
+import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.sources.{BaseRelation, CatalystSource}
 import org.apache.spark.sql.types.{LongType, MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{Row, SQLContext}
 
@@ -12,7 +13,7 @@ import scala.collection.JavaConverters._
 
 
 case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContext)
-  extends BaseRelation {
+  extends BaseRelation with CatalystSource {
 
   val conf = TiConfiguration.createDefault(options.addresses.asJava)
   val cluster = TiCluster.getCluster(conf)
@@ -32,7 +33,38 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
     new StructType(fields)
   }
 
-  def buildScan(cop: CoprocessorReq): RDD[Row] = {
-    new TiRDD(cop.toByteString, sqlContext.sparkContext, options)
+  //def buildScan(cop: CoprocessorReq): RDD[Row] = {
+  //  new TiRDD(coprocessorReqToBytes(cop), sqlContext.sparkContext, options)
+  //}
+  /**
+    * {@inheritDoc}
+    */
+  override def isMultiplePartitionExecution(relations: Seq[CatalystSource]): Boolean = {
+    true
+  }
+
+  /**
+    * {@inheritDoc}
+    */
+  override def supportsLogicalPlan(plan: LogicalPlan): Boolean = {
+    true
+  }
+
+  /**
+    * {@inheritDoc}
+    */
+  override def supportsExpression(expr: Expression): Boolean = {
+    true
+  }
+
+  /**
+    * {@inheritDoc}
+    */
+  override def logicalPlanToRDD(plan: LogicalPlan): RDD[Row] = {
+    new TiRDD(coprocessorReqToBytes(plan), sqlContext.sparkContext, options)
+  }
+
+  private def coprocessorReqToBytes(plan: LogicalPlan): ByteString = {
+    ByteString.copyFromUtf8(plan.toJSON)
   }
 }
