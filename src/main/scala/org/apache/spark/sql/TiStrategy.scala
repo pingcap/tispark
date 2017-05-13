@@ -2,8 +2,9 @@ package org.apache.spark.sql
 
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction, Final}
-import org.apache.spark.sql.catalyst.expressions.{Attribute, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction, Final, Max}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
 import org.apache.spark.sql.catalyst.plans.{PartialAggregation, logical}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.aggregate.HashAggregateExec
@@ -58,12 +59,36 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     @inline def isSupported(p: LogicalPlan, nonGlobal: LogicalPlan): Boolean =
       !containsGlobalOperators(nonGlobal) && cs.supportsLogicalPlan(p)
-    /**
-      * Before the Spark 1.6 migration the CatalystSource Strategy also distinguished in
-      * cases the query asked for DISTINCT elements. However, this has been buried into aggregate
-      * expressions - thus it is handled in the partial aggregation
-      */
+
     plan match {
+      case PhysicalAggregation(
+        groupingExpressions, aggregateExpressions, resultExpressions, child)
+        if (!aggregateExpressions.exists(_.isDistinct)) =>
+
+        val aggregateExpressionsToAlias: Map[AggregateExpression, Alias] = aggregateExpressions.map{
+          agg => agg -> Alias(agg, agg.toString)()
+        }(collection.breakOut)
+
+        val pushDownPlan =  logical.Aggregate(groupingExpressions,
+                                              aggregateExpressions.map(
+                                                agg => aggregateExpressionsToAlias(agg)
+                                              ) ++ groupingExpressions,
+                                              child)
+
+        val residualAggregateExpressions = aggregateExpressions.map(
+          expr => AggregateExpression(expr.aggregateFunction match {
+            case Max(_) => Max(aggregateExpressionsToAlias(expr).toAttribute)
+            case other => other
+          }, expr.mode, expr.isDistinct, expr.resultId)
+        )
+
+        aggregate.AggUtils.planAggregateWithoutDistinct(
+          groupingExpressions,
+          residualAggregateExpressions,
+          resultExpressions,
+          toPhysicalRDD(cs, pushDownPlan))
+
+      case _ => Nil
         // TODO: Port Limit logic for 2.1+
       case partialAgg@PartialAggregation(
       finalGroupings,
