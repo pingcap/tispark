@@ -2,21 +2,22 @@ package org.apache.spark.sql
 
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, AggregateFunction, Final, Max}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, Divide, Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
 import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
-import org.apache.spark.sql.catalyst.plans.{PartialAggregation, logical}
+import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.execution.aggregate.HashAggregateExec
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.{RDDConversions, RDDScanExec, SparkPlan, aggregate}
 import org.apache.spark.sql.sources.CatalystSource
+
+import scala.collection.mutable
 
 
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf = context.conf
 
-  // scalastyle:off cyclomatic.complexity
+
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     val relations = plan.collect({ case p => p })
       .filter(_.isInstanceOf[LogicalRelation])
@@ -36,7 +37,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       }
     }
   }
-  // scalastyle:on cyclomatic.complexity
+
   private def toPhysicalRDD(cs: CatalystSource, plan: LogicalPlan): SparkPlan = {
     val rdd = cs.logicalPlanToRDD(plan)
     val internalRdd = RDDConversions.rowToRowRdd(rdd,
@@ -52,34 +53,71 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       Nil
     }
 
-
-
-  // scalastyle:off
   private def planPartitioned(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] = {
+    val aliasMap = mutable.HashMap[Expression, Alias]()
+    val avgRewriteMap = mutable.HashMap[Attribute, List[AggregateExpression]]()
 
-    @inline def isSupported(p: LogicalPlan, nonGlobal: LogicalPlan): Boolean =
-      !containsGlobalOperators(nonGlobal) && cs.supportsLogicalPlan(p)
+    def toAlias(expr: Expression) = aliasMap.getOrElseUpdate(expr, Alias(expr, expr.toString)())
+
+    def newAggregate(aggFunc: AggregateFunction,
+                     originalAggExpr: AggregateExpression) =
+      AggregateExpression(aggFunc, originalAggExpr.mode, originalAggExpr.isDistinct, originalAggExpr.resultId)
 
     plan match {
       case PhysicalAggregation(
         groupingExpressions, aggregateExpressions, resultExpressions, child)
         if (!aggregateExpressions.exists(_.isDistinct)) =>
+        val residualAggregateExpressions = aggregateExpressions.map {
+          aggExpr => aggExpr.aggregateFunction match {
+              case Max(_) => newAggregate(Max(toAlias(aggExpr).toAttribute), aggExpr)
+              case Min(_) => newAggregate(Min(toAlias(aggExpr).toAttribute), aggExpr)
+              case Count(_) => newAggregate(Count(toAlias(aggExpr).toAttribute), aggExpr)
+              case Sum(_) => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
+              case _ => aggExpr
+            }
+        } flatMap {
+          aggExpr => aggExpr match {
+              // We have to separate average into sum and count
+              // and for outside expression such as average(x) + 1,
+              // Spark has lift agg + 1 up to resultExpressions
+              // We need to modify the reference there as well to forge
+              // Divide(sum/count) + 1
+              case aggExpr@AggregateExpression(Average(ref), _, _, _) =>
+                val sumToPush = newAggregate(Sum(ref), aggExpr)
+                val countFunc = newAggregate(Count(ref), aggExpr)
+                avgRewriteMap(aggExpr.resultAttribute) = List(sumToPush, countFunc)
+                List(newAggregate(Sum(toAlias(sumToPush).toAttribute), aggExpr),
+                  newAggregate(Count(toAlias(countFunc).toAttribute), aggExpr))
 
-        val aggregateExpressionsToAlias: Map[AggregateExpression, Alias] = aggregateExpressions.map{
-          agg => agg -> Alias(agg, agg.toString)()
-        }(collection.breakOut)
+              case _ => aggExpr :: Nil
+            }
+        }
 
-        val pushDownPlan =  logical.Aggregate(groupingExpressions,
-                                              aggregateExpressions.map(
-                                                agg => aggregateExpressionsToAlias(agg)
-                                              ) ++ groupingExpressions,
-                                              child)
 
-        val residualAggregateExpressions = aggregateExpressions.map(
-          expr => AggregateExpression(expr.aggregateFunction match {
-            case Max(_) => Max(aggregateExpressionsToAlias(expr).toAttribute)
+        val pushdownAggregates = aggregateExpressions.flatMap{
+          aggExpr =>
+            avgRewriteMap
+                .getOrElse(aggExpr.resultAttribute, List(aggExpr))
+                .map(x => toAlias(x))
+        }
+
+        val pushDownPlan = logical.Aggregate(
+          groupingExpressions,
+          pushdownAggregates ++ groupingExpressions,
+          child)
+
+        resultExpressions.map(
+          expr => expr.transformDown {
+            case aggExpr: AggregateExpression
+              if (avgRewriteMap.contains(aggExpr.resultAttribute)) => {
+              // Replace the original Average expression with Div of Alias
+              val sumCountPair = avgRewriteMap(aggExpr.resultAttribute)
+
+              Divide(Alias(sumCountPair(0), sumCountPair(1).toString)(),
+                      Alias(sumCountPair(0), sumCountPair(0).toString)())
+            }
             case other => other
-          }, expr.mode, expr.isDistinct, expr.resultId)
+          }
         )
 
         aggregate.AggUtils.planAggregateWithoutDistinct(
@@ -88,92 +126,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           resultExpressions,
           toPhysicalRDD(cs, pushDownPlan))
 
+
       case _ => Nil
-        // TODO: Port Limit logic for 2.1+
-      case partialAgg@PartialAggregation(
-      finalGroupings,
-      finalAggregates,
-      partialGroupings,
-      partialAggregates,
-      aggregateFunctionToAttributeMap,
-      resultExpressions,
-      child) =>
-
-        // compose plan that has to be done by the datasource
-        // We need to append group by expressions to output schema
-        // and make sure what coprocessor produce exact plan output
-        val pushDownPlan =
-          logical.Aggregate(partialGroupings, partialAggregates ++ partialGroupings, child)
-
-        if (isSupported(pushDownPlan, child)) {
-          // Only non-distinct aggregates can be pushed
-          aggregate.AggUtils.planAggregateWithoutDistinct(
-            finalGroupings,
-            finalAggregates,
-            resultExpressions,
-            toPhysicalRDD(cs, pushDownPlan))
-        } else {
-          Nil
-        }
-
-      // partitioned and aggregates do not go together, should have matched in the
-      // partial aggregation part before
-      case _: logical.Aggregate =>
-        Nil
-      case _ if isSupported(plan, plan) =>
-        toPhysicalRDD(cs, plan) :: Nil
-      case _ =>
-        Nil
     }
-  }
-
-  /**
-    * Spark SQL optimizer converts [[logical.Distinct]] to a [[logical.Aggregate]]
-    * grouping by all columns. This method detects such case.
-    *
-    * @param agg
-    * @return
-    */
-  private def isDistinct(agg: logical.Aggregate): Boolean = {
-    agg.child.output == agg.groupingExpressions && agg.child.output == agg.aggregateExpressions
-  }
-
-  private def containsGlobalOperators(plan: LogicalPlan): Boolean =
-    plan
-      .collect { case op => isGlobalOperation(op) }
-      .exists { isGlobal => isGlobal }
-
-  private def isGlobalOperation(op: LogicalPlan): Boolean =
-    op match {
-        // TODO: Add limit back for 2.0
-      case _: logical.Sort => true
-      case _: logical.Distinct => true
-      case _: logical.Intersect => true
-      case _: logical.Except => true
-      case _: logical.Aggregate => true
-      case _ => false
-    }
-
-  /**
-    * This emits a Spark Plan for partial aggregations taking Tungsten (if possible) into account.
-    *
-    * @param groupingExpressions grouping expressions of the final aggregate
-    * @param aggregateExpressions aggregate expressions of the final aggregate
-    * @param aggregateFunctionToAttribute mapping from attributes to aggregation functions
-    * @param resultExpressions result expressions of this plan
-    * @param pushedDownChild the child plan
-    * @return Spark plan including pushed down parts
-    */
-  private def planAggregateWithoutDistinctWithPushdown(
-                                                        groupingExpressions: Seq[NamedExpression],
-                                                        aggregateExpressions: Seq[AggregateExpression],
-                                                        aggregateFunctionToAttribute: Map[(AggregateFunction, Boolean), Attribute],
-                                                        resultExpressions: Seq[NamedExpression],
-                                                        pushedDownChild: SparkPlan): Seq[SparkPlan] = {
-    aggregate.AggUtils.planAggregateWithoutDistinct(
-      groupingExpressions,
-      aggregateExpressions,
-      resultExpressions,
-      pushedDownChild)
   }
 }

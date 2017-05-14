@@ -33,9 +33,6 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
     new StructType(fields)
   }
 
-  //def buildScan(cop: CoprocessorReq): RDD[Row] = {
-  //  new TiRDD(coprocessorReqToBytes(cop), sqlContext.sparkContext, options)
-  //}
   /**
     * {@inheritDoc}
     */

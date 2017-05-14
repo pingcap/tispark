@@ -27,7 +27,6 @@ class TiRDD(selectRequestInBytes: ByteString, sc: SparkContext, options: TiOptio
     val iterator = snapshot.newSelect(table)
                            .addRange(TiRange.create[java.lang.Long](0L, Long.MaxValue))
                            .doSelect()
-    println(selectRequestInBytes.toStringUtf8)
     def toSparkRow(row: com.pingcap.tikv.meta.Row): Row = {
       val rowArray = new Array[Any](row.fieldCount())
       for (i <- 0 until row.fieldCount()) {
