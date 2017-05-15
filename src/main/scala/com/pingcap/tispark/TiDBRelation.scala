@@ -3,7 +3,6 @@ package com.pingcap.tispark
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.{TiCluster, TiConfiguration}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.sources.{BaseRelation, CatalystSource}
 import org.apache.spark.sql.types.{LongType, MetadataBuilder, StructField, StructType}
@@ -37,20 +36,6 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
     * {@inheritDoc}
     */
   override def isMultiplePartitionExecution(relations: Seq[CatalystSource]): Boolean = {
-    true
-  }
-
-  /**
-    * {@inheritDoc}
-    */
-  override def supportsLogicalPlan(plan: LogicalPlan): Boolean = {
-    true
-  }
-
-  /**
-    * {@inheritDoc}
-    */
-  override def supportsExpression(expr: Expression): Boolean = {
     true
   }
 

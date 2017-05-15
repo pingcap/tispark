@@ -10,6 +10,7 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.{RDDConversions, RDDScanExec, SparkPlan, aggregate}
 import org.apache.spark.sql.sources.CatalystSource
+import com.pingcap.tispark.TiUtils._
 
 import scala.collection.mutable
 
@@ -45,16 +46,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def planNonPartitioned(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] =
-    if (cs.supportsLogicalPlan(plan)) {
+    if (isSupportedLogicalPlan(plan)) {
       toPhysicalRDD(cs, plan) :: Nil
     } else {
       Nil
     }
 
   // We do through similar logic with original Spark as in SparkStrategies.scala
-  // Difference is we need to test if a subplan can be consumed all together by TiKV
+  // Difference is we need to test if a sub-plan can be consumed all together by TiKV
   // and then we don't return (don't planLater) and plan the remaining all at once
   private def planPartitioned(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] = {
+
     val aliasMap = mutable.HashMap[Expression, Alias]()
     val avgRewriteMap = mutable.HashMap[Attribute, List[AggregateExpression]]()
 
@@ -64,7 +66,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                      originalAggExpr: AggregateExpression) =
       AggregateExpression(aggFunc, originalAggExpr.mode, originalAggExpr.isDistinct, originalAggExpr.resultId)
 
-    plan match {
+    if (!isSupportedLogicalPlan(plan))
+      Nil
+    else
+      plan match {
         // This is almost the same as Spark's original SpecialLimits logic
         // The difference is that we hijack the plan for pushdown
         // Limit + Sort can be consumed by coprocessor iff no aggregates
@@ -143,7 +148,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           residualAggregateExpressions,
           resultExpressions,
           toPhysicalRDD(cs, pushDownPlan))
-
 
       case _ => Nil
     }

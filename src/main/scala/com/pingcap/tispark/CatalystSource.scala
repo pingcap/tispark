@@ -25,34 +25,9 @@ trait CatalystSource {
   def isMultiplePartitionExecution(relations: Seq[CatalystSource]): Boolean
 
   /**
-    * Checks if the logical plan is fully supported by this relation.
-    *
-    * Implementations can assume that [[CatalystSource.isMultiplePartitionExecution()]]
-    * was called before this method and that [[LogicalPlan]] was modified accordingly
-    *
-    * @param plan Logical plan.
-    * @return
-    */
-  def supportsLogicalPlan(plan: LogicalPlan): Boolean
-
-  /**
-    * Checks if an expression is supported. This might be used by the
-    * planner to maximize the portion of the logical plan that is
-    * pushed down.
-    *
-    * It is safe to always return false here ([[CatalystSource.supportsLogicalPlan()]]
-    * will be called anyway, but giving proper answers here will help getting
-    * more aggregations pushed down.
-    *
-    * @param expr Expression.
-    * @return
-    */
-  def supportsExpression(expr: Expression): Boolean
-
-  /**
     * Takes a logical plan and returns an RDD[InternalRow].
     *
-    * Implementations can assume that [[CatalystSource.supportsLogicalPlan()]]
+    * Implementations can assume that [[isSupportedLogicalPlan()]]
     * was called before this method.
     *
     * @param plan Logical plan.
