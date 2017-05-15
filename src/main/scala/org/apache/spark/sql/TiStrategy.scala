@@ -31,10 +31,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       val sources = relations.map(_.asInstanceOf[CatalystSource])
       val source = sources.head
       val partitionedExecution = source.isMultiplePartitionExecution(sources)
-      partitionedExecution match {
-        case false => planNonPartitioned(source, plan)
-        case true => planPartitioned(source, plan)
-      }
+      if (partitionedExecution) planPartitioned(source, plan)
+      else planNonPartitioned(source, plan)
     }
   }
 
