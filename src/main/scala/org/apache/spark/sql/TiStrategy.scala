@@ -66,6 +66,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                      originalAggExpr: AggregateExpression) =
       AggregateExpression(aggFunc, originalAggExpr.mode, originalAggExpr.isDistinct, originalAggExpr.resultId)
 
+    // TODO: This test should be done once for all children
     if (!isSupportedLogicalPlan(plan))
       Nil
     else

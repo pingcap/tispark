@@ -1,6 +1,5 @@
 package org.apache.spark.sql
 
-import com.pingcap.tispark.TiRDD
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Divide, ExprId, Expression, IntegerLiteral, NamedExpression}
