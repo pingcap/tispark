@@ -15,6 +15,7 @@ import com.pingcap.tispark.TiUtils._
 import scala.collection.mutable
 
 
+// TODO: Too many hacks here since we hijacks the plan and break
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf = context.conf
 
@@ -31,9 +32,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     } else {
       val sources = relations.map(_.asInstanceOf[CatalystSource])
       val source = sources.head
-      val partitionedExecution = source.isMultiplePartitionExecution(sources)
-      if (partitionedExecution) planPartitioned(source, plan)
-      else planNonPartitioned(source, plan)
+      doPlan(source, plan)
     }
   }
 
@@ -55,7 +54,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   // We do through similar logic with original Spark as in SparkStrategies.scala
   // Difference is we need to test if a sub-plan can be consumed all together by TiKV
   // and then we don't return (don't planLater) and plan the remaining all at once
-  private def planPartitioned(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] = {
+  private def doPlan(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] = {
 
     val aliasMap = mutable.HashMap[Expression, Alias]()
     val avgRewriteMap = mutable.HashMap[Attribute, List[AggregateExpression]]()
@@ -77,14 +76,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         // so we don't need to match it further
         case logical.ReturnAnswer(rootPlan) => rootPlan match {
           case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
-            execution.TakeOrderedAndProjectExec(limit, order, child.output, toPhysicalRDD(cs, child)) :: Nil
+            execution.TakeOrderedAndProjectExec(limit, order, child.output, toPhysicalRDD(cs, rootPlan)) :: Nil
           case logical.Limit(
           IntegerLiteral(limit),
-          logical.Project(projectList, logical.Sort(order, true, child))) =>
+          logical.Project(projectList, logical.Sort(order, true, _))) =>
             execution.TakeOrderedAndProjectExec(
-              limit, order, projectList, toPhysicalRDD(cs, child)) :: Nil
-          case logical.Limit(IntegerLiteral(limit), child) =>
-            execution.CollectLimitExec(limit, toPhysicalRDD(cs, child)) :: Nil
+              limit, order, projectList, toPhysicalRDD(cs, rootPlan)) :: Nil
+          case logical.Limit(IntegerLiteral(limit), _) =>
+            execution.CollectLimitExec(limit, toPhysicalRDD(cs, rootPlan)) :: Nil
         }
 
           // Collapse filters and projections and push plan directly
