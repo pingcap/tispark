@@ -6,7 +6,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.sources.{BaseRelation, CatalystSource}
 import org.apache.spark.sql.types.{LongType, MetadataBuilder, StructField, StructType}
-import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.sql.{Row, SQLContext, TiStrategyContext}
 
 import scala.collection.JavaConverters._
 
@@ -42,11 +42,12 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
   /**
     * {@inheritDoc}
     */
-  override def logicalPlanToRDD(plan: LogicalPlan): RDD[Row] = {
-    new TiRDD(coprocessorReqToBytes(plan), sqlContext.sparkContext, options)
+  override def logicalPlanToRDD(context: TiStrategyContext): RDD[Row] = {
+    new TiRDD(coprocessorReqToBytes(context), sqlContext.sparkContext, options)
   }
 
-  private def coprocessorReqToBytes(plan: LogicalPlan): ByteString = {
-    ByteString.copyFromUtf8(plan.toJSON)
+  private def coprocessorReqToBytes(context: TiStrategyContext): ByteString = {
+    // ByteString.copyFromUtf8(context)
+    ByteString.EMPTY
   }
 }

@@ -1,7 +1,7 @@
 package org.apache.spark.sql.sources
 
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{Row, TiStrategyContext}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 
@@ -33,6 +33,6 @@ trait CatalystSource {
     * @param plan Logical plan.
     * @return
     */
-  def logicalPlanToRDD(plan: LogicalPlan): RDD[Row]
+  def logicalPlanToRDD(plan: TiStrategyContext): RDD[Row]
 
 }

@@ -38,11 +38,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def toPhysicalRDD(cs: CatalystSource, plan: LogicalPlan): SparkPlan = {
-    val rdd = cs.logicalPlanToRDD(plan)
+/*    val rdd = cs.logicalPlanToRDD(plan)
     val internalRdd = RDDConversions.rowToRowRdd(rdd,
       plan.schema.fields.map(_.dataType))
 
-    RDDScanExec(plan.output, internalRdd, "CatalystSource")
+    RDDScanExec(plan.output, internalRdd, "CatalystSource")*/
+    null
   }
 
   private def planNonPartitioned(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] =

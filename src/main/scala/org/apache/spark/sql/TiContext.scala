@@ -13,7 +13,7 @@ class TiContext (val session: SparkSession) extends Serializable with Logging {
                ): DataFrame = {
     logDebug("Creating tiContext...")
     val tiRelation = TiDBRelation(new TiOptions(tiAddresses, dbName, tableName))(sqlContext)
-    session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
+    session.experimental.extraStrategies ++= Seq(new TiStrategies(sqlContext))
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 }
