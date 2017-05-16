@@ -18,7 +18,7 @@ object TiUtils {
           groupingExpressions.exists(expr => !isSupportedGroupingExpr(expr)) ||
           !isSupportedLogicalPlan(child)
 
-      case PhysicalOperation(projectList, filters, child) =>
+      case PhysicalOperation(projectList, filters, child) if (child ne plan) =>
         isSupportedPhysicalOperation(plan, projectList, filters, child)
 
       case logical.ReturnAnswer(rootPlan) => rootPlan match {
@@ -29,6 +29,7 @@ object TiUtils {
           isSupportedPlanWithDistinct(child)
         case logical.Limit(IntegerLiteral(_), child) =>
           isSupportedPlanWithDistinct(child)
+        case _ => false
       }
 
       case LogicalRelation(_: CatalystSource, _, _) => true
@@ -43,7 +44,6 @@ object TiUtils {
                                            child: LogicalPlan): Boolean = {
     // It seems Spark return the plan itself if no match instead of fail
     // So do a test avoiding unlimited recursion
-    (child ne currentPlan) &&
     !projectList.exists(expr => !isSupportedProjection(expr)) &&
       !filterList.exists(expr => !isSupportedFilter(expr)) &&
       isSupportedLogicalPlan(child)
@@ -51,7 +51,7 @@ object TiUtils {
 
   private def isSupportedPlanWithDistinct(plan: LogicalPlan): Boolean = {
     plan match {
-      case PhysicalOperation(projectList, filters, child) =>
+      case PhysicalOperation(projectList, filters, child) if (child ne plan) =>
         isSupportedPhysicalOperation(plan, projectList, filters, child)
       case _: TiDBRelation => true
       case _ => false
