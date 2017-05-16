@@ -84,11 +84,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
               limit, order, projectList, toPhysicalRDD(cs, child)) :: Nil
           case logical.Limit(IntegerLiteral(limit), child) =>
             execution.CollectLimitExec(limit, toPhysicalRDD(cs, child)) :: Nil
-          case _ => Nil
         }
 
-        case PhysicalOperation(projectList, filters, child) =>
-          Nil
+          // Collapse filters and projections and push plan directly
+        case PhysicalOperation(_, _, LogicalRelation(_: CatalystSource, _, _)) =>
+          toPhysicalRDD(cs, plan) :: Nil
+
+          // A fall-back for all logic in case nothing to push
+        case LogicalRelation(_: CatalystSource, _, _) => toPhysicalRDD(cs, plan) :: Nil
 
         case PhysicalAggregation(
         groupingExpressions, aggregateExpressions, resultExpressions, child)

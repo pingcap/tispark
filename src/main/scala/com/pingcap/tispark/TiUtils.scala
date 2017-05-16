@@ -1,41 +1,61 @@
 package com.pingcap.tispark
 
-import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.catalyst.expressions.{Expression, IntegerLiteral, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
+import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.sources.CatalystSource
 
 
 object TiUtils {
-
   def isSupportedLogicalPlan(plan: LogicalPlan): Boolean = {
-    // We need to check:
-    // 1. Aggregates:
-    //      if distinct exists;
-    //      if non-supported aggregates exists
-    //      if non-supported expression as aggregation argument
-    //      if adjacent with Relation, or with Projection and Filter
-    //      if non-supported grouping expressions
-    // 2. Filter
-    //      if non-supported expression as aggregation argument
-    //      if not on the top of relation
-    // 3. Limit
-    //      if not on the top of relation or with projection and filters
-    // 4. Projection and filter
-    //      if not on the top of relation
-    /*
     plan match {
       case PhysicalAggregation(
       groupingExpressions, aggregateExpressions, _, child) =>
         aggregateExpressions.exists(expr => !isSupportedAggregate(expr)) ||
           groupingExpressions.exists(expr => !isSupportedGroupingExpr(expr)) ||
           !isSupportedLogicalPlan(child)
+
       case PhysicalOperation(projectList, filters, child) =>
-        projectList.exists(expr => !isSupportedProjection(expr)) ||
-          filters.exists(expr => !isSupportedFilter(expr)) ||
-          !isSupportedLogicalPlan(child)
-    }*/
-    true
+        isSupportedPhysicalOperation(plan, projectList, filters, child)
+
+      case logical.ReturnAnswer(rootPlan) => rootPlan match {
+        case logical.Limit(IntegerLiteral(_), logical.Sort(_, true, child)) =>
+          isSupportedPlanWithDistinct(child)
+        case logical.Limit(IntegerLiteral(_),
+        logical.Project(_, logical.Sort(_, true, child))) =>
+          isSupportedPlanWithDistinct(child)
+        case logical.Limit(IntegerLiteral(_), child) =>
+          isSupportedPlanWithDistinct(child)
+      }
+
+      case LogicalRelation(_: CatalystSource, _, _) => true
+
+      case _ => false
+    }
+  }
+
+  private def isSupportedPhysicalOperation(currentPlan: LogicalPlan,
+                                           projectList: Seq[NamedExpression],
+                                           filterList: Seq[Expression],
+                                           child: LogicalPlan): Boolean = {
+    // It seems Spark return the plan itself if no match instead of fail
+    // So do a test avoiding unlimited recursion
+    (child ne currentPlan) &&
+    !projectList.exists(expr => !isSupportedProjection(expr)) &&
+      !filterList.exists(expr => !isSupportedFilter(expr)) &&
+      isSupportedLogicalPlan(child)
+  }
+
+  private def isSupportedPlanWithDistinct(plan: LogicalPlan): Boolean = {
+    plan match {
+      case PhysicalOperation(projectList, filters, child) =>
+        isSupportedPhysicalOperation(plan, projectList, filters, child)
+      case _: TiDBRelation => true
+      case _ => false
+    }
   }
 
   private def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
