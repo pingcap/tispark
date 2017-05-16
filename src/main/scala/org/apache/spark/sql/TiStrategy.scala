@@ -15,7 +15,12 @@ import com.pingcap.tispark.TiUtils._
 import scala.collection.mutable
 
 
-// TODO: Too many hacks here since we hijacks the plan and break
+// TODO: Too many hacks here since we hijacks the planning
+// but we don't have full control over planning stage
+// We cannot pass context around during planning so
+// a re-extract needed for pushdown since
+// a plan tree might have Join which causes a single tree
+// have multiple plan to pushdown
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf = context.conf
 
@@ -43,13 +48,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     RDDScanExec(plan.output, internalRdd, "CatalystSource")
   }
-
-  private def planNonPartitioned(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] =
-    if (isSupportedLogicalPlan(plan)) {
-      toPhysicalRDD(cs, plan) :: Nil
-    } else {
-      Nil
-    }
 
   // We do through similar logic with original Spark as in SparkStrategies.scala
   // Difference is we need to test if a sub-plan can be consumed all together by TiKV

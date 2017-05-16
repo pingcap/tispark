@@ -1,5 +1,6 @@
 package com.pingcap.tispark
 
+import com.google.proto4pingcap.ByteString
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Expression, IntegerLiteral, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
@@ -80,6 +81,33 @@ object TiUtils {
   // 1. if contains UDF / functions that cannot be folded
   private def isSupportedGroupingExpr(expr: Expression): Boolean = {
     isSupportedBasicExpression(expr)
+  }
+
+  class SelectBuilder {
+    def toProtoByteString() = ByteString.EMPTY
+  }
+
+  def coprocessorReqToBytes(plan: LogicalPlan, builder: SelectBuilder = new SelectBuilder()): SelectBuilder = {
+    plan match {
+      case PhysicalAggregation(
+      groupingExpressions, aggregateExpressions, _, child) =>
+        coprocessorReqToBytes(child, builder)
+
+      case PhysicalOperation(projectList, filters, child) if (child ne plan) =>
+        coprocessorReqToBytes(child, builder)
+
+      case logical.ReturnAnswer(rootPlan) => rootPlan match {
+        case logical.Limit(IntegerLiteral(_), logical.Sort(_, true, child)) =>
+          coprocessorReqToBytes(child, builder)
+
+        case logical.Limit(IntegerLiteral(_),
+        logical.Project(_, logical.Sort(_, true, child))) =>
+          coprocessorReqToBytes(child, builder)
+
+        case logical.Limit(IntegerLiteral(_), child) =>
+          coprocessorReqToBytes(child, builder)
+      }
+    }
   }
 
 }
