@@ -23,6 +23,7 @@ object TiUtils {
     //      if not on the top of relation or with projection and filters
     // 4. Projection and filter
     //      if not on the top of relation
+    /*
     plan match {
       case PhysicalAggregation(
       groupingExpressions, aggregateExpressions, _, child) =>
@@ -33,7 +34,8 @@ object TiUtils {
         projectList.exists(expr => !isSupportedProjection(expr)) ||
           filters.exists(expr => !isSupportedFilter(expr)) ||
           !isSupportedLogicalPlan(child)
-    }
+    }*/
+    true
   }
 
   private def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {

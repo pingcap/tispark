@@ -34,5 +34,6 @@ trait CatalystSource {
     * @return
     */
   def logicalPlanToRDD(plan: TiStrategyContext): RDD[Row]
+  def logicalPlanToRDD(plan: LogicalPlan): RDD[Row]
 
 }

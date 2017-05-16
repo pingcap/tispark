@@ -1,5 +1,6 @@
 package org.apache.spark.sql
 
+import com.pingcap.tispark.TiRDD
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Divide, ExprId, Expression, IntegerLiteral, NamedExpression}
@@ -101,6 +102,11 @@ class TiStrategies(context: SQLContext) extends Strategy with Logging {
                 .getOrElse(aggExpr.resultId, List(aggExpr))
                 .map(x => toAlias(x))
           }
+
+          val pushDownPlan = logical.Aggregate(
+            groupingExpressions,
+            pushdownAggregates ++ groupingExpressions,
+            child)
 
           val rewrittenResultExpression:Seq[NamedExpression] = resultExpressions.map {
             expr: NamedExpression => expr.transformDown {

@@ -3,7 +3,7 @@ package org.apache.spark.sql
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, Divide, Expression, IntegerLiteral}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, Divide, Expression, IntegerLiteral, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -38,12 +38,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def toPhysicalRDD(cs: CatalystSource, plan: LogicalPlan): SparkPlan = {
-/*    val rdd = cs.logicalPlanToRDD(plan)
+    val rdd = cs.logicalPlanToRDD(plan)
     val internalRdd = RDDConversions.rowToRowRdd(rdd,
       plan.schema.fields.map(_.dataType))
 
-    RDDScanExec(plan.output, internalRdd, "CatalystSource")*/
-    null
+    RDDScanExec(plan.output, internalRdd, "CatalystSource")
   }
 
   private def planNonPartitioned(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] =
@@ -135,7 +134,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
             pushdownAggregates ++ groupingExpressions,
             child)
 
-          resultExpressions.map(
+          val rewrittenResultExpression = resultExpressions.map(
             expr => expr.transformDown {
               case aggExpr: AggregateExpression
                 if (avgRewriteMap.contains(aggExpr.resultAttribute)) => {
@@ -146,13 +145,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                   Alias(sumCountPair(1), sumCountPair(1).toString)())
               }
               case other => other
-            }
+            }.asInstanceOf[NamedExpression]
           )
 
           aggregate.AggUtils.planAggregateWithoutDistinct(
             groupingExpressions,
             residualAggregateExpressions,
-            resultExpressions,
+            rewrittenResultExpression,
             toPhysicalRDD(cs, pushDownPlan))
 
         case _ => Nil

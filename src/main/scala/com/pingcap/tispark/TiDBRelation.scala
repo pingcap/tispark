@@ -46,6 +46,10 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
     new TiRDD(coprocessorReqToBytes(context), sqlContext.sparkContext, options)
   }
 
+  override def logicalPlanToRDD(plan: LogicalPlan): RDD[Row] = {
+    new TiRDD(coprocessorReqToBytes(null), sqlContext.sparkContext, options)
+  }
+
   private def coprocessorReqToBytes(context: TiStrategyContext): ByteString = {
     // ByteString.copyFromUtf8(context)
     ByteString.EMPTY
