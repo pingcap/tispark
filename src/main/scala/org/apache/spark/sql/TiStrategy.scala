@@ -56,13 +56,24 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   private def doPlan(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] = {
 
     val aliasMap = mutable.HashMap[Expression, Alias]()
+    val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
     val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
 
     def toAlias(expr: Expression) = aliasMap.getOrElseUpdate(expr, Alias(expr, expr.toString)())
 
     def newAggregate(aggFunc: AggregateFunction,
                      originalAggExpr: AggregateExpression) =
-      AggregateExpression(aggFunc, originalAggExpr.mode, originalAggExpr.isDistinct, originalAggExpr.resultId)
+      AggregateExpression(aggFunc,
+                          originalAggExpr.mode,
+                          originalAggExpr.isDistinct,
+                          originalAggExpr.resultId)
+
+    def newAggregateWithId(aggFunc: AggregateFunction,
+                           originalAggExpr: AggregateExpression) =
+      AggregateExpression(aggFunc,
+        originalAggExpr.mode,
+        originalAggExpr.isDistinct,
+        NamedExpression.newExprId)
 
     // TODO: This test should be done once for all children
     if (!isSupportedLogicalPlan(plan))
@@ -92,12 +103,26 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           // A fall-back for all logic in case nothing to push
         case LogicalRelation(_: CatalystSource, _, _) => toPhysicalRDD(cs, plan) :: Nil
 
+          // Basic logic of original Spark's aggregation plan is:
+          // PhysicalAggregation extractor will rewrite original aggregation
+          // into aggregateExpressions and resultExpressions.
+          // resultExpressions contains only references [[AttributeReference]]
+          // to the result of aggregation. resultExpressions might contain projections
+          // like Add(sumResult, 1).
+          // For a aggregate like agg(expr) + 1, the rewrite process is: rewrite agg(expr) ->
+          // 1. pushdown: agg(expr) as agg1, if avg then sum(expr), count(expr)
+          // 2. residual expr (for Spark itself): agg(agg1) as finalAgg1 the parameter is a
+          // reference to pushed plan's corresponding aggregation
+          // 3. resultExpressions: finalAgg1 + 1, the finalAgg1 is the reference to final result
+          // of the aggregation
         case PhysicalAggregation(
         groupingExpressions, aggregateExpressions, resultExpressions, child)
           if (!aggregateExpressions.exists(_.isDistinct)) =>
           val residualAggregateExpressions = aggregateExpressions.map {
             aggExpr =>
               aggExpr.aggregateFunction match {
+                  // here aggExpr is the original AggregationExpression
+                  // and will be pushed down to TiKV
                 case Max(_) => newAggregate(Max(toAlias(aggExpr).toAttribute), aggExpr)
                 case Min(_) => newAggregate(Min(toAlias(aggExpr).toAttribute), aggExpr)
                 case Count(_) => newAggregate(Count(toAlias(aggExpr).toAttribute), aggExpr)
@@ -121,9 +146,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                   val sumToPush = newAggregate(Sum(promotedType), aggExpr)
                   val countToPush = newAggregate(Count(ref), aggExpr)
 
-                  val sumFinal = newAggregate(Sum(toAlias(sumToPush).toAttribute), aggExpr)
-                  val countFinal = newAggregate(Count(toAlias(countToPush).toAttribute), aggExpr)
+                  // Need a new expression id since they are not simply rewrite as above
+                  val sumFinal = newAggregateWithId(Sum(toAlias(sumToPush).toAttribute), aggExpr)
+                  val countFinal = newAggregateWithId(Count(toAlias(countToPush).toAttribute), aggExpr)
 
+                  avgPushdownRewriteMap(aggExpr.resultId) = List(sumToPush, countToPush)
                   avgFinalRewriteMap(aggExpr.resultId) = List(sumFinal, countFinal)
                   List(sumFinal, countFinal)
                 case _ => aggExpr :: Nil
@@ -133,9 +160,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
           val pushdownAggregates = aggregateExpressions.flatMap {
             aggExpr =>
-              avgFinalRewriteMap
+              avgPushdownRewriteMap
                 .getOrElse(aggExpr.resultId, List(aggExpr))
-                .map(x => toAlias(x))
+                .map(x => toAlias(x)) // Spark needs NamedExpression for references
           }
 
           val pushDownPlan = logical.Aggregate(
@@ -152,6 +179,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
                 // We missed the chance for auto-coerce already
                 // so manual cast needed
+                // Also, convert into resultAttribute since
+                // they are created by tiSpark without Spark conversion
                 // TODO: Is DoubleType a best target type for all?
                 Cast(
                   Divide(
