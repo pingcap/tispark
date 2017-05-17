@@ -15,9 +15,9 @@ object TiUtils {
     plan match {
       case PhysicalAggregation(
       groupingExpressions, aggregateExpressions, _, child) =>
-        aggregateExpressions.exists(expr => !isSupportedAggregate(expr)) ||
-          groupingExpressions.exists(expr => !isSupportedGroupingExpr(expr)) ||
-          !isSupportedLogicalPlan(child)
+        !aggregateExpressions.exists(expr => !isSupportedAggregate(expr)) &&
+          !groupingExpressions.exists(expr => !isSupportedGroupingExpr(expr)) &&
+          isSupportedLogicalPlan(child)
 
       case PhysicalOperation(projectList, filters, child) if (child ne plan) =>
         isSupportedPhysicalOperation(plan, projectList, filters, child)
@@ -62,16 +62,24 @@ object TiUtils {
   private def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
-        aggExpr.isDistinct ||
-          !aggExpr.aggregateFunction.find(expr => isSupportedBasicExpression(expr)).isEmpty
+        !aggExpr.isDistinct &&
+          aggExpr.aggregateFunction
+            .children
+            .find(expr => !isSupportedBasicExpression(expr))
+            .isEmpty
       case _ => false
     }
   }
 
-  private def isSupportedBasicExpression(expr: Expression) = true
+  private def isSupportedBasicExpression(expr: Expression) = {
+    expr match {
+      case BasicExpression(_) => true
+      case _ => false
+    }
+  }
 
   private def isSupportedProjection(expr: Expression): Boolean = {
-    isSupportedBasicExpression(expr)
+    expr.find(child => !isSupportedBasicExpression(child)).isEmpty
   }
 
   private def isSupportedFilter(expr: Expression): Boolean = {
@@ -91,22 +99,28 @@ object TiUtils {
     plan match {
       case PhysicalAggregation(
       groupingExpressions, aggregateExpressions, _, child) =>
+        // TODO: fill builder with value
         coprocessorReqToBytes(child, builder)
 
       case PhysicalOperation(projectList, filters, child) if (child ne plan) =>
+        // TODO: fill builder with value
         coprocessorReqToBytes(child, builder)
 
-      case logical.ReturnAnswer(rootPlan) => rootPlan match {
-        case logical.Limit(IntegerLiteral(_), logical.Sort(_, true, child)) =>
-          coprocessorReqToBytes(child, builder)
+      case logical.Limit(IntegerLiteral(_), logical.Sort(_, true, child)) =>
+        // TODO: fill builder with value
+        coprocessorReqToBytes(child, builder)
 
-        case logical.Limit(IntegerLiteral(_),
-        logical.Project(_, logical.Sort(_, true, child))) =>
-          coprocessorReqToBytes(child, builder)
+      case logical.Limit(IntegerLiteral(_),
+      logical.Project(_, logical.Sort(_, true, child))) =>
+        // TODO: fill builder with value
+        coprocessorReqToBytes(child, builder)
 
-        case logical.Limit(IntegerLiteral(_), child) =>
-          coprocessorReqToBytes(child, builder)
-      }
+      case logical.Limit(IntegerLiteral(_), child) =>
+        // TODO: fill builder with value
+        coprocessorReqToBytes(child, builder)
+
+        // End of recursive traversal
+      case LogicalRelation(_: CatalystSource, _, _) => builder
     }
   }
 

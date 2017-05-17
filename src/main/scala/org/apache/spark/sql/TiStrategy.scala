@@ -3,7 +3,7 @@ package org.apache.spark.sql
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, Divide, Expression, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, Cast, Divide, ExprId, Expression, IntegerLiteral, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -11,6 +11,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.{RDDConversions, RDDScanExec, SparkPlan, aggregate}
 import org.apache.spark.sql.sources.CatalystSource
 import com.pingcap.tispark.TiUtils._
+import org.apache.spark.sql.types.{DecimalType, DoubleType, LongType}
 
 import scala.collection.mutable
 
@@ -55,7 +56,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   private def doPlan(cs: CatalystSource, plan: LogicalPlan): Seq[SparkPlan] = {
 
     val aliasMap = mutable.HashMap[Expression, Alias]()
-    val avgRewriteMap = mutable.HashMap[Attribute, List[AggregateExpression]]()
+    val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
 
     def toAlias(expr: Expression) = aliasMap.getOrElseUpdate(expr, Alias(expr, expr.toString)())
 
@@ -112,12 +113,19 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                 // We need to modify the reference there as well to forge
                 // Divide(sum/count) + 1
                 case aggExpr@AggregateExpression(Average(ref), _, _, _) =>
-                  val sumToPush = newAggregate(Sum(ref), aggExpr)
-                  val countFunc = newAggregate(Count(ref), aggExpr)
-                  avgRewriteMap(aggExpr.resultAttribute) = List(sumToPush, countFunc)
-                  List(newAggregate(Sum(toAlias(sumToPush).toAttribute), aggExpr),
-                    newAggregate(Count(toAlias(countFunc).toAttribute), aggExpr))
+                  // Need a type promotion
+                  val promotedType = ref.dataType match {
+                    case DoubleType | DecimalType.Fixed(_, _) | LongType => ref
+                    case _ => Cast(ref, DoubleType)
+                  }
+                  val sumToPush = newAggregate(Sum(promotedType), aggExpr)
+                  val countToPush = newAggregate(Count(ref), aggExpr)
 
+                  val sumFinal = newAggregate(Sum(toAlias(sumToPush).toAttribute), aggExpr)
+                  val countFinal = newAggregate(Count(toAlias(countToPush).toAttribute), aggExpr)
+
+                  avgFinalRewriteMap(aggExpr.resultId) = List(sumFinal, countFinal)
+                  List(sumFinal, countFinal)
                 case _ => aggExpr :: Nil
               }
           }
@@ -125,8 +133,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
           val pushdownAggregates = aggregateExpressions.flatMap {
             aggExpr =>
-              avgRewriteMap
-                .getOrElse(aggExpr.resultAttribute, List(aggExpr))
+              avgFinalRewriteMap
+                .getOrElse(aggExpr.resultId, List(aggExpr))
                 .map(x => toAlias(x))
           }
 
@@ -137,13 +145,21 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
           val rewrittenResultExpression = resultExpressions.map(
             expr => expr.transformDown {
-              case aggExpr: AggregateExpression
-                if (avgRewriteMap.contains(aggExpr.resultAttribute)) => {
+              case aggExpr: AttributeReference
+                if (avgFinalRewriteMap.contains(aggExpr.exprId)) => {
                 // Replace the original Average expression with Div of Alias
-                val sumCountPair = avgRewriteMap(aggExpr.resultAttribute)
+                val sumCountPair = avgFinalRewriteMap(aggExpr.exprId)
 
-                Divide(Alias(sumCountPair(0), sumCountPair(0).toString)(),
-                  Alias(sumCountPair(1), sumCountPair(1).toString)())
+                // We missed the chance for auto-coerce already
+                // so manual cast needed
+                // TODO: Is DoubleType a best target type for all?
+                Cast(
+                  Divide(
+                    Cast(sumCountPair(0).resultAttribute, DoubleType),
+                    Cast(sumCountPair(1).resultAttribute, DoubleType)
+                  ),
+                  aggExpr.dataType
+                )
               }
               case other => other
             }.asInstanceOf[NamedExpression]
