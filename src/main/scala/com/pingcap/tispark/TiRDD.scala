@@ -2,7 +2,8 @@ package com.pingcap.tispark
 
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tidb.tipb.SelectRequest
-import com.pingcap.tikv.meta.TiRange
+import com.pingcap.tikv.catalog.Catalog
+import com.pingcap.tikv.meta.{TiDBInfo, TiRange, TiTableInfo}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.{Snapshot, TiCluster, TiConfiguration}
 import org.apache.spark.rdd.RDD
@@ -15,15 +16,28 @@ import scala.collection.JavaConverters._
 class TiRDD(selectRequestInBytes: ByteString, ranges: List[TiRange[java.lang.Long]], sc: SparkContext, options: TiOptions)
   extends RDD[Row](sc, Nil) {
 
-  @transient val tiConf = TiConfiguration.createDefault(options.addresses.asJava)
-  @transient val cluster = TiCluster.getCluster(tiConf)
-  @transient val catalog = cluster.getCatalog
-  @transient val database = catalog.getDatabase(options.databaseName)
-  @transient val table = catalog.getTable(database, options.tableName)
-  @transient val snapshot = cluster.createSnapshot()
-  @transient val selectReq = SelectRequest.parseFrom(selectRequestInBytes)
+  @transient var tiConf: TiConfiguration = null
+  @transient var cluster: TiCluster = null
+  @transient var catalog: Catalog = null
+  @transient var database: TiDBInfo = null
+  @transient var table: TiTableInfo = null
+  @transient var snapshot: Snapshot = null
+  @transient var selectReq: SelectRequest = null
+
+  init()
+
+  def init(): Unit = {
+    tiConf = TiConfiguration.createDefault(options.addresses.asJava)
+    cluster = TiCluster.getCluster(tiConf)
+    catalog = cluster.getCatalog
+    database = catalog.getDatabase(options.databaseName)
+    table = catalog.getTable(database, options.tableName)
+    snapshot = cluster.createSnapshot()
+    selectReq = SelectRequest.parseFrom(selectRequestInBytes)
+  }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
+    init()
     context.addTaskCompletionListener{ _ => cluster.close() }
 
     val tiPartition = split.asInstanceOf[TiPartition]
