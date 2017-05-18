@@ -1,16 +1,16 @@
 package org.apache.spark.sql
 
 
+import com.pingcap.tispark.TiUtils._
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, Cast, Divide, ExprId, Expression, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Cast, Divide, ExprId, Expression, IntegerLiteral, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.{RDDConversions, RDDScanExec, SparkPlan, aggregate}
 import org.apache.spark.sql.sources.CatalystSource
-import com.pingcap.tispark.TiUtils._
 import org.apache.spark.sql.types.{DecimalType, DoubleType, LongType}
 
 import scala.collection.mutable
@@ -127,6 +127,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                 case Min(_) => newAggregate(Min(toAlias(aggExpr).toAttribute), aggExpr)
                 case Count(_) => newAggregate(Count(toAlias(aggExpr).toAttribute), aggExpr)
                 case Sum(_) => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
+                  // TODO: More to add
                 case _ => aggExpr
               }
           } flatMap {
