@@ -1,5 +1,6 @@
 package com.pingcap.tispark
 
+import com.pingcap.tikv.meta.TiRange
 import com.pingcap.tikv.{TiCluster, TiConfiguration}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -33,6 +34,7 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
 
   override def logicalPlanToRDD(plan: LogicalPlan): RDD[Row] = {
     new TiRDD(TiUtils.coprocessorReqToBytes(plan).toProtoByteString(),
+              List(TiRange.create[java.lang.Long](0L, Long.MaxValue)),
               sqlContext.sparkContext, options)
   }
 }

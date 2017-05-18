@@ -1,8 +1,10 @@
 package com.pingcap.tispark
 
 import com.google.proto4pingcap.ByteString
+import com.pingcap.tidb.tipb.SelectRequest
 import com.pingcap.tikv.meta.TiRange
-import com.pingcap.tikv.{TiCluster, TiConfiguration}
+import com.pingcap.tikv.util.RangeSplitter
+import com.pingcap.tikv.{Snapshot, TiCluster, TiConfiguration}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.{Partition, SparkContext, TaskContext}
@@ -10,23 +12,22 @@ import org.apache.spark.{Partition, SparkContext, TaskContext}
 import scala.collection.JavaConverters._
 
 
-class TiRDD(selectRequestInBytes: ByteString, sc: SparkContext, options: TiOptions)
+class TiRDD(selectRequestInBytes: ByteString, ranges: List[TiRange[java.lang.Long]], sc: SparkContext, options: TiOptions)
   extends RDD[Row](sc, Nil) {
 
-  override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    val tiConf = TiConfiguration.createDefault(options.addresses.asJava)
-    val cluster = TiCluster.getCluster(tiConf)
+  @transient val tiConf = TiConfiguration.createDefault(options.addresses.asJava)
+  @transient val cluster = TiCluster.getCluster(tiConf)
+  @transient val catalog = cluster.getCatalog
+  @transient val database = catalog.getDatabase(options.databaseName)
+  @transient val table = catalog.getTable(database, options.tableName)
+  @transient val snapshot = cluster.createSnapshot()
+  @transient val selectReq = SelectRequest.parseFrom(selectRequestInBytes)
 
+  override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
     context.addTaskCompletionListener{ _ => cluster.close() }
 
-    val catalog = cluster.getCatalog
-    val database = catalog.getDatabase(options.databaseName)
-    val table = catalog.getTable(database, options.tableName)
-    val snapshot = cluster.createSnapshot()
-
-    val iterator = snapshot.newSelect(table)
-                           .addRange(TiRange.create[java.lang.Long](0L, Long.MaxValue))
-                           .doSelect()
+    val tiPartition = split.asInstanceOf[TiPartition]
+    val iterator = snapshot.select(selectReq, tiPartition.region, tiPartition.store, tiPartition.tiRange)
     def toSparkRow(row: com.pingcap.tikv.meta.Row): Row = {
       val rowArray = new Array[Any](row.fieldCount())
       for (i <- 0 until row.fieldCount()) {
@@ -45,6 +46,14 @@ class TiRDD(selectRequestInBytes: ByteString, sc: SparkContext, options: TiOptio
   }
 
   override protected def getPartitions: Array[Partition] = {
-    Array(new TiPartition(0))
+    val keyRanges = Snapshot.convertHandleRangeToKeyRange(table, ranges.asJava)
+    val keyWithRegionRanges = RangeSplitter.newSplitter(cluster.getRegionManager)
+                 .splitRangeByRegion(keyRanges)
+    keyWithRegionRanges.asScala.zipWithIndex.map{
+      case (keyRegionPair, index) => new TiPartition(index,
+                                            keyRegionPair.first.first, /* Region */
+                                            keyRegionPair.first.second, /* Store */
+                                            keyRegionPair.second) /* Range */
+    }.toArray
   }
 }
