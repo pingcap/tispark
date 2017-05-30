@@ -11,8 +11,8 @@ val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 import sqlContext.implicits._
 val ti = new TiContext(sqlContext.sparkSession)
 
-val df = sqlContext.tidbTable(List("127.0.0.1:" + 2379), "test", "people")
 
+val df = ti.tidbTable(List("127.0.0.1:" + 2379), "test", "t2")
 df.createGlobalTempView("people")
-spark.sql("select * from global_temp.people").show
+spark.sql("select c2, c3, avg(c1 + 1) + 1 as r1, count(*) as r2 from global_temp.people where c1 > 0 group by c2, c3").show
 ```
