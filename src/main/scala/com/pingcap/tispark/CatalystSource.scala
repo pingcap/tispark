@@ -1,8 +1,8 @@
 package org.apache.spark.sql.sources
 
+import com.pingcap.tikv.meta.TiTableInfo
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, TiStrategyContext}
-import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 
 /**
@@ -19,5 +19,7 @@ trait CatalystSource {
     * @return
     */
   def logicalPlanToRDD(plan: LogicalPlan): RDD[Row]
+
+  def tableInfo : TiTableInfo
 
 }
