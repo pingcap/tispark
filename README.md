@@ -16,5 +16,3 @@ val df = ti.tidbTable(List("127.0.0.1:" + 2379), "test", "t1")
 df.createGlobalTempView("t1")
 spark.sql("select avg(c1) from global_temp.t1").show
 
-df.select("c1").show
-```
