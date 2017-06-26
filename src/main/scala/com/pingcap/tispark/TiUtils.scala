@@ -1,8 +1,9 @@
 package com.pingcap.tispark
 
-import com.pingcap.tikv.`type`.{DecimalType, FieldType, LongType, StringType}
-import com.pingcap.tikv.SelectBuilder
-import com.pingcap.tikv.expression.{TiAggregateFunction, TiColumnRef}
+
+import com.pingcap.tikv.expression.TiColumnRef
+import com.pingcap.tikv.meta.TiSelectRequest
+import com.pingcap.tikv.types.{BytesType, DecimalType, IntegerType}
 import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Expression, IntegerLiteral, NamedExpression}
@@ -15,6 +16,13 @@ import org.apache.spark.sql.types.DataType
 
 
 object TiUtils {
+  type TiSum = com.pingcap.tikv.expression.aggregate.Sum
+  type TiCount = com.pingcap.tikv.expression.aggregate.Count
+  type TiMin = com.pingcap.tikv.expression.aggregate.Min
+  type TiMax = com.pingcap.tikv.expression.aggregate.Max
+  type TiDataType = com.pingcap.tikv.types.DataType
+
+
   def isSupportedLogicalPlan(plan: LogicalPlan): Boolean = {
     plan match {
       case PhysicalAggregation(
@@ -94,17 +102,17 @@ object TiUtils {
   }
 
   // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp:FieldType): DataType = {
+  def toSparkDataType(tp:TiDataType): DataType = {
     tp match {
-      case _: StringType => sql.types.StringType
-      case _: LongType => sql.types.LongType
+      case _: BytesType => sql.types.StringType
+      case _: IntegerType => sql.types.LongType
       case _: DecimalType => sql.types.DoubleType
     }
   }
 
   def coprocessorReqToBytes(plan: LogicalPlan,
-                            builder: SelectBuilder)
-  : SelectBuilder = {
+                            selReq: TiSelectRequest)
+  : TiSelectRequest = {
     plan match {
       case PhysicalAggregation(
       groupingExpressions, aggregateExpressions, _, child) =>
@@ -112,35 +120,35 @@ object TiUtils {
           case Average(_) =>
             assert(false, "Should never be here")
           case Sum(_) =>
-             builder.addAggregates(TiAggregateFunction.create(TiAggregateFunction.AggFunc.Sum, TiColumnRef.create(aggExpr.resultAttribute.name, builder.table)))
+            selReq.addAggregate(new TiSum(TiColumnRef.create(aggExpr.resultAttribute.name, selReq.getTableInfo)))
           case Count(_) =>
-            builder.addAggregates(TiAggregateFunction.create(TiAggregateFunction.AggFunc.Count, TiColumnRef.create(aggExpr.resultAttribute.name, builder.table)))
-          case Min(_) => builder.addAggregates(TiAggregateFunction.create(TiAggregateFunction.AggFunc.Min))
-            builder.addAggregates(TiAggregateFunction.create(TiAggregateFunction.AggFunc.Min, TiColumnRef.create(aggExpr.resultAttribute.name, builder.table)))
-          case Max(_) => builder.addAggregates(TiAggregateFunction.create(TiAggregateFunction.AggFunc.Max))
-            builder.addAggregates(TiAggregateFunction.create(TiAggregateFunction.AggFunc.Max, TiColumnRef.create(aggExpr.resultAttribute.name, builder.table)))
+            selReq.addAggregate(new TiCount(TiColumnRef.create(aggExpr.resultAttribute.name, selReq.getTableInfo)))
+          case Min(_) =>
+            selReq.addAggregate(new TiMin(TiColumnRef.create(aggExpr.resultAttribute.name, selReq.getTableInfo)))
+          case Max(_) =>
+            selReq.addAggregate(new TiMax(TiColumnRef.create(aggExpr.resultAttribute.name, selReq.getTableInfo)))
         })
-        coprocessorReqToBytes(child, builder)
+        coprocessorReqToBytes(child, selReq)
 
       case PhysicalOperation(projectList, filters, child) if child ne plan =>
         // TODO: fill builder with value
-        coprocessorReqToBytes(child, builder)
+        coprocessorReqToBytes(child, selReq)
 
       case logical.Limit(IntegerLiteral(_), logical.Sort(_, true, child)) =>
         // TODO: fill builder with value
-        coprocessorReqToBytes(child, builder)
+        coprocessorReqToBytes(child, selReq)
 
       case logical.Limit(IntegerLiteral(_),
       logical.Project(_, logical.Sort(_, true, child))) =>
         // TODO: fill builder with value
-        coprocessorReqToBytes(child, builder)
+        coprocessorReqToBytes(child, selReq)
 
       case logical.Limit(IntegerLiteral(_), child) =>
         // TODO: fill builder with value
-        coprocessorReqToBytes(child, builder)
+        coprocessorReqToBytes(child, selReq)
 
         // End of recursive traversal
-      case LogicalRelation(_: CatalystSource, _, _) => builder
+      case LogicalRelation(_: CatalystSource, _, _) => selReq
     }
   }
 

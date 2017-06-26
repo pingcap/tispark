@@ -1,8 +1,8 @@
 package com.pingcap.tispark
 
 import com.pingcap.tikv.catalog.Catalog
-import com.pingcap.tikv.meta.{TiDBInfo, TiRange, TiTableInfo}
-import com.pingcap.tikv.{SelectBuilder, TiCluster, TiConfiguration}
+import com.pingcap.tikv.meta.{TiDBInfo, TiRange, TiSelectRequest, TiTableInfo}
+import com.pingcap.tikv.{TiCluster, TiConfiguration}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.sources.{BaseRelation, CatalystSource}
@@ -37,7 +37,7 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
   }
 
   override def logicalPlanToRDD(plan: LogicalPlan): RDD[Row] = {
-    new TiRDD(TiUtils.coprocessorReqToBytes(plan, builder = SelectBuilder.newBuilder(cluster.createSnapshot(), table)).addRange(TiRange.create[java.lang.Long](0L, Long.MaxValue)).build().toByteString,
+    new TiRDD(TiUtils.coprocessorReqToBytes(plan, new TiSelectRequest()),
               List(TiRange.create[java.lang.Long](0L, Long.MaxValue)),
               sqlContext.sparkContext, options)
   }

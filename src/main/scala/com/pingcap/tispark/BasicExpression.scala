@@ -1,35 +1,33 @@
 package com.pingcap.tispark
 
-import collection.JavaConverters._
-import com.pingcap.tidb.tipb.{Expr, ExprType}
-import org.apache.spark.sql.catalyst.expressions.{Abs, Alias, AttributeReference, BinaryArithmetic, Expression, Literal}
 import com.google.proto4pingcap.ByteString
-import com.pingcap.tikv.TiConfiguration
-import com.pingcap.tikv.expression.{TiAggregateFunction, TiConstant, TiExpr, TiScalarExpression}
+import com.pingcap.tidb.tipb.Expr
+import com.pingcap.tikv.expression.{TiConstant, TiExpr}
 import org.apache.spark.sql.catalyst.expressions.aggregate.{Average, Count, Sum}
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, BinaryArithmetic, Expression, Literal}
 
 object BasicExpression {
   implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
 
-  def unapply(expr: Expression): Option[Expr] = {
+  def unapply(expr: Expression): Option[TiExpr] = {
     expr match {
         // TODO: Translate basic literals
       case _: Literal =>
-        Some(TiConstant.create(null).toProto)
+        Some(TiConstant.create(null))
 
       case BinaryArithmetic(BasicExpression(lhs), BasicExpression(rhs)) =>
         // TODO: figure how to set type for BinaryArithmetic
         // TODO: translate opcode itself
-        Some(TiScalarExpression.create(null).toProto)
+        Some(null)
 
       case Sum(BasicExpression(op)) =>
-        Some(TiAggregateFunction.create(TiAggregateFunction.AggFunc.Sum).toProto)
+        Some(null)
 
       case Average(BasicExpression(op)) =>
-        Some (TiAggregateFunction.create(TiAggregateFunction.AggFunc.Average).toProto)
+        Some(null)
 
       case Count(BasicExpression(op)) =>
-        Some (TiAggregateFunction.create(TiAggregateFunction.AggFunc.Count).toProto)
+        Some(null)
 
       case Alias(BasicExpression(child), _) =>
         Some(child)
@@ -38,12 +36,10 @@ object BasicExpression {
       case attr: AttributeReference =>
         // Do we need add ValToType in TiExpr?
         // Some(TiExpr.create().setValue(attr.name).toProto)
-        Some(Expr.newBuilder()
-          .setVal(attr.name)
-          .build)
+        Some(null)
 
         // TODO: Remove it and let it fail once done all translation
-      case _ => Some(Expr.getDefaultInstance)
+      case _ => Some(null)
     }
   }
 }
