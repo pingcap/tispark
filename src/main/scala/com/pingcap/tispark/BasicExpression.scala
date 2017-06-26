@@ -1,7 +1,6 @@
 package com.pingcap.tispark
 
 import com.google.proto4pingcap.ByteString
-import com.pingcap.tidb.tipb.Expr
 import com.pingcap.tikv.expression.{TiConstant, TiExpr}
 import org.apache.spark.sql.catalyst.expressions.aggregate.{Average, Count, Sum}
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, BinaryArithmetic, Expression, Literal}

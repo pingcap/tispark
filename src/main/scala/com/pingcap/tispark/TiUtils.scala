@@ -1,12 +1,13 @@
 package com.pingcap.tispark
 
 
-import com.pingcap.tikv.expression.TiColumnRef
+import com.pingcap.tikv.exception.TiClientInternalException
+import com.pingcap.tikv.expression.{TiColumnRef, TiExpr}
 import com.pingcap.tikv.meta.TiSelectRequest
 import com.pingcap.tikv.types.{BytesType, DecimalType, IntegerType}
 import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{Expression, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, IntegerLiteral, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -102,7 +103,7 @@ object TiUtils {
   }
 
   // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp:TiDataType): DataType = {
+  def toSparkDataType(tp: TiDataType): DataType = {
     tp match {
       case _: BytesType => sql.types.StringType
       case _: IntegerType => sql.types.LongType
@@ -116,17 +117,26 @@ object TiUtils {
     plan match {
       case PhysicalAggregation(
       groupingExpressions, aggregateExpressions, _, child) =>
-        aggregateExpressions.foreach(aggExpr => aggExpr.aggregateFunction match {
+        aggregateExpressions.foreach(aggExpr =>
+          aggExpr.aggregateFunction match {
           case Average(_) =>
             assert(false, "Should never be here")
-          case Sum(_) =>
-            selReq.addAggregate(new TiSum(TiColumnRef.create(aggExpr.resultAttribute.name, selReq.getTableInfo)))
-          case Count(_) =>
-            selReq.addAggregate(new TiCount(TiColumnRef.create(aggExpr.resultAttribute.name, selReq.getTableInfo)))
-          case Min(_) =>
-            selReq.addAggregate(new TiMin(TiColumnRef.create(aggExpr.resultAttribute.name, selReq.getTableInfo)))
-          case Max(_) =>
-            selReq.addAggregate(new TiMax(TiColumnRef.create(aggExpr.resultAttribute.name, selReq.getTableInfo)))
+          case Sum(BasicExpression(arg)) => {
+            arg.bind(selReq.getTableInfo)
+            selReq.addAggregate(new TiSum(arg))
+          }
+          case Count(BasicExpression(arg)) => {
+            arg.bind(selReq.getTableInfo)
+            selReq.addAggregate(new TiCount(arg))
+          }
+          case Min(BasicExpression(arg)) => {
+            arg.bind(selReq.getTableInfo)
+            selReq.addAggregate(new TiMin(arg))
+          }
+          case Max(BasicExpression(arg)) => {
+            arg.bind(selReq.getTableInfo)
+            selReq.addAggregate(new TiMax(arg))
+          }
         })
         coprocessorReqToBytes(child, selReq)
 
