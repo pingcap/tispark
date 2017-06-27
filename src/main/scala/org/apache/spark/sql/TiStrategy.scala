@@ -82,7 +82,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     else
       plan match {
         // This is almost the same as Spark's original SpecialLimits logic
-        // The difference is that we hijack the plan for pushdown
+        // The difference is that we hijack the plan for push down
         // Limit + Sort can be consumed by coprocessor iff no aggregates
         // so we don't need to match it further
         case logical.ReturnAnswer(rootPlan) => rootPlan match {
@@ -170,7 +170,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
           val pushDownPlan = logical.Aggregate(
             groupingExpressions,
-            pushdownAggregates ++ groupingExpressions,
+            // Below should match exactly the sequence of coprocessor result
+            // TODO: Otherwise, make a matching operation
+            groupingExpressions ++ pushdownAggregates,
             child)
 
           val rewrittenResultExpression = resultExpressions.map(

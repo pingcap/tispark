@@ -1,32 +1,37 @@
 package com.pingcap.tispark
 
 import com.google.proto4pingcap.ByteString
-import com.pingcap.tikv.expression.{TiConstant, TiExpr}
-import org.apache.spark.sql.catalyst.expressions.aggregate.{Average, Count, Sum}
-import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, BinaryArithmetic, Expression, Literal}
+import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, Expression, Literal, Multiply, Remainder, Subtract}
 
 object BasicExpression {
   implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
+  type TiPlus = com.pingcap.tikv.expression.scalar.Plus
+  type TiMinus = com.pingcap.tikv.expression.scalar.Minus
+  type TiMultiply = com.pingcap.tikv.expression.scalar.Multiply
+  type TiDivide = com.pingcap.tikv.expression.scalar.Divide
+  type TiMod = com.pingcap.tikv.expression.scalar.Mod
 
   def unapply(expr: Expression): Option[TiExpr] = {
     expr match {
-        // TODO: Translate basic literals
-      case _: Literal =>
-        Some(TiConstant.create(null))
+      case Literal(value, _) => {
+        Some(TiConstant.create(value))
+      }
 
-      case BinaryArithmetic(BasicExpression(lhs), BasicExpression(rhs)) =>
-        // TODO: figure how to set type for BinaryArithmetic
-        // TODO: translate opcode itself
-        Some(null)
+      case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(new TiPlus(lhs, rhs))
 
-      case Sum(BasicExpression(op)) =>
-        Some(null)
+      case Subtract(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(new TiMinus(lhs, rhs))
 
-      case Average(BasicExpression(op)) =>
-        Some(null)
+      case Multiply(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(new TiMultiply(lhs, rhs))
 
-      case Count(BasicExpression(op)) =>
-        Some(null)
+      case Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(new TiDivide(lhs, rhs))
+
+      case Remainder(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(new TiMod(lhs, rhs))
 
       case Alias(BasicExpression(child), _) =>
         Some(child)
@@ -35,7 +40,7 @@ object BasicExpression {
       case attr: AttributeReference =>
         // Do we need add ValToType in TiExpr?
         // Some(TiExpr.create().setValue(attr.name).toProto)
-        Some(null)
+        Some(TiColumnRef.create(attr.name))
 
         // TODO: Remove it and let it fail once done all translation
       case _ => Some(null)

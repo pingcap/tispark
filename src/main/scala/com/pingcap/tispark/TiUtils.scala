@@ -1,13 +1,12 @@
 package com.pingcap.tispark
 
 
-import com.pingcap.tikv.exception.TiClientInternalException
-import com.pingcap.tikv.expression.{TiColumnRef, TiExpr}
+import com.pingcap.tikv.expression.{TiByItem, TiColumnRef}
 import com.pingcap.tikv.meta.TiSelectRequest
 import com.pingcap.tikv.types.{BytesType, DecimalType, IntegerType}
 import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{AttributeSet, Expression, IntegerLiteral, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -111,9 +110,9 @@ object TiUtils {
     }
   }
 
-  def coprocessorReqToBytes(plan: LogicalPlan,
-                            selReq: TiSelectRequest)
+  def planToSelectRequest(plan: LogicalPlan, selReq: TiSelectRequest)
   : TiSelectRequest = {
+
     plan match {
       case PhysicalAggregation(
       groupingExpressions, aggregateExpressions, _, child) =>
@@ -122,43 +121,62 @@ object TiUtils {
           case Average(_) =>
             assert(false, "Should never be here")
           case Sum(BasicExpression(arg)) => {
-            arg.bind(selReq.getTableInfo)
             selReq.addAggregate(new TiSum(arg))
           }
           case Count(BasicExpression(arg)) => {
-            arg.bind(selReq.getTableInfo)
             selReq.addAggregate(new TiCount(arg))
           }
           case Min(BasicExpression(arg)) => {
-            arg.bind(selReq.getTableInfo)
             selReq.addAggregate(new TiMin(arg))
           }
           case Max(BasicExpression(arg)) => {
-            arg.bind(selReq.getTableInfo)
             selReq.addAggregate(new TiMax(arg))
           }
+          case _ =>
         })
-        coprocessorReqToBytes(child, selReq)
+        groupingExpressions.foreach(groupItem =>
+          groupItem match {
+            case BasicExpression(byExpr) =>
+              selReq.addGroupByItem(TiByItem.create(byExpr, false))
+            case _ =>
+          }
+        )
+        planToSelectRequest(child, selReq)
 
-      case PhysicalOperation(projectList, filters, child) if child ne plan =>
-        // TODO: fill builder with value
-        coprocessorReqToBytes(child, selReq)
+      case PhysicalOperation(projectList, filters, child) if child ne plan => {
+        // Assume project list should be all simple AttributeReference
+        val projectSet = AttributeSet(projectList.flatMap(_.references))
+
+        projectSet
+          .map(ref => TiColumnRef.create(ref.name))
+          .foreach(selReq.addField)
+
+        filters
+          .map(expr => expr match {
+            case BasicExpression(expr) => expr
+          }).foreach(selReq.addWhere)
+
+        planToSelectRequest(child, selReq)
+      }
 
       case logical.Limit(IntegerLiteral(_), logical.Sort(_, true, child)) =>
         // TODO: fill builder with value
-        coprocessorReqToBytes(child, selReq)
+        planToSelectRequest(child, selReq)
 
       case logical.Limit(IntegerLiteral(_),
       logical.Project(_, logical.Sort(_, true, child))) =>
         // TODO: fill builder with value
-        coprocessorReqToBytes(child, selReq)
+        planToSelectRequest(child, selReq)
 
       case logical.Limit(IntegerLiteral(_), child) =>
         // TODO: fill builder with value
-        coprocessorReqToBytes(child, selReq)
+        planToSelectRequest(child, selReq)
 
         // End of recursive traversal
-      case LogicalRelation(_: CatalystSource, _, _) => selReq
+      case LogicalRelation(source: CatalystSource, _, _) =>
+        selReq.setTableInfo(source.tableInfo)
+
+      case _ => selReq
     }
   }
 

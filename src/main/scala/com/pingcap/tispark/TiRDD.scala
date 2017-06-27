@@ -10,6 +10,7 @@ import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv._
 import com.pingcap.tikv.expression.aggregate.Sum
+import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.{BytesType, DataType}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
@@ -21,6 +22,8 @@ import scala.collection.JavaConversions._
 class TiRDD(selReq: TiSelectRequest, ranges: List[TiRange[java.lang.Long]], sc: SparkContext, options: TiOptions)
   extends RDD[Row](sc, Nil) {
 
+  type TiRow = com.pingcap.tikv.row.Row
+
   @transient var tiConf: TiConfiguration = _
   @transient var cluster: TiCluster = _
   @transient var catalog: Catalog = _
@@ -29,6 +32,8 @@ class TiRDD(selReq: TiSelectRequest, ranges: List[TiRange[java.lang.Long]], sc: 
   @transient var snapshot: Snapshot = _
   @transient var selectReq: TiSelectRequest = _
   @transient var fieldsType:List[DataType] = _
+  @transient var rt: RowTransformer = _
+  @transient var finalTypes: List[DataType] = _
 
   init()
 
@@ -40,45 +45,27 @@ class TiRDD(selReq: TiSelectRequest, ranges: List[TiRange[java.lang.Long]], sc: 
     table = catalog.getTable(database, options.tableName)
     selectReq = selReq
     snapshot = cluster.createSnapshot()
-    fieldsType = SchemaInfer.create(selectReq).getTypes.toList
+    selectReq.bind
+    val schemaInferer = SchemaInfer.create(selectReq)
+    fieldsType = schemaInferer.getTypes.toList
+    rt = schemaInferer.getRowTransformer
+    finalTypes = rt.getTypes.toList
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
     init()
     context.addTaskCompletionListener{ _ => cluster.close() }
 
-    // byPass, sum return a long type
+    // bypass, sum return a long type
     val tiPartition = split.asInstanceOf[TiPartition]
     val iterator = snapshot.select(selectReq, tiPartition.region, tiPartition.store, tiPartition.tiRange)
-    def toSparkRow(row: com.pingcap.tikv.row.Row): Row = {
+    def toSparkRow(row: TiRow): Row = {
       //TODO bypass for sum
-      val rowArray = new Array[Any](row.fieldCount)
+      val transRow = rt.transform(row)
+      val rowArray = new Array[Any](rt.getTypes.size)
       // if sql does not have group by, simple skip "SingledGroup"
-      if (selectReq.getGroupByItems.size() == 0 && selectReq.getAggregates.size() > 0) {
-        for (i <- 1 until row.fieldCount()) {
-          // TODO Array[Pair] sourceType -> outputType
-          if (!fieldsType(i).isInstanceOf[BytesType]) {
-            if (selectReq.getAggregates.size() == 1) {
-              if (selectReq.getAggregates.get(0).isInstanceOf[Sum]) {
-                val value = row.getDouble(i)
-                rowArray(0) = Math.round(value)
-              } else {
-                rowArray(0) = row.get(i, fieldsType(i))
-              }
-            } else {
-               if (selectReq.getAggregates.get(i - 1).isInstanceOf[Sum]) {
-                val value = row.getDouble(i)
-                rowArray(0) = Math.round(value)
-              } else {
-                rowArray(1) = row.get(i, fieldsType(i))
-              }
-            }
-          }
-        }
-      } else {
-        for (i <- 0 until row.fieldCount()) {
-          rowArray(i) = row.get(i, fieldsType(i))
-        }
+      for (i <- 0 until transRow.fieldCount) {
+        rowArray(i) = transRow.get(i, finalTypes(i))
       }
 
       Row.fromSeq(rowArray)
