@@ -12,7 +12,7 @@ object BasicExpression {
   type TiDivide = com.pingcap.tikv.expression.scalar.Divide
   type TiMod = com.pingcap.tikv.expression.scalar.Mod
 
-  def unapply(expr: Expression): Option[TiExpr] = {
+  def convertToTiExpr(expr: Expression): Option[TiExpr] = {
     expr match {
       case Literal(value, _) => {
         Some(TiConstant.create(value))
@@ -42,8 +42,10 @@ object BasicExpression {
         // Some(TiExpr.create().setValue(attr.name).toProto)
         Some(TiColumnRef.create(attr.name))
 
-        // TODO: Remove it and let it fail once done all translation
+      // TODO: Remove it and let it fail once done all translation
       case _ => Some(null)
     }
   }
+
+  def unapply(expr: Expression): Option[TiExpr] = convertToTiExpr(expr)
 }

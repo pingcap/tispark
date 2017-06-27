@@ -33,9 +33,7 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
     new StructType(fields)
   }
 
-  override def tableInfo :TiTableInfo = {
-    table
-  }
+  override def tableInfo :TiTableInfo = table
 
   override def logicalPlanToRDD(plan: LogicalPlan): RDD[Row] = {
     val selReq = new TiSelectRequest

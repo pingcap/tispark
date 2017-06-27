@@ -1,7 +1,7 @@
 package com.pingcap.tispark
 
 
-import com.pingcap.tikv.expression.{TiByItem, TiColumnRef}
+import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
 import com.pingcap.tikv.meta.TiSelectRequest
 import com.pingcap.tikv.types.{BytesType, DecimalType, IntegerType}
 import org.apache.spark.sql
@@ -13,6 +13,8 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.sources.CatalystSource
 import org.apache.spark.sql.types.DataType
+
+import scala.collection.JavaConverters._
 
 
 object TiUtils {
@@ -123,8 +125,9 @@ object TiUtils {
           case Sum(BasicExpression(arg)) => {
             selReq.addAggregate(new TiSum(arg))
           }
-          case Count(BasicExpression(arg)) => {
-            selReq.addAggregate(new TiCount(arg))
+          case Count(args) => {
+            val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
+            selReq.addAggregate(new TiCount(tiArgs: _*))
           }
           case Min(BasicExpression(arg)) => {
             selReq.addAggregate(new TiMin(arg))
