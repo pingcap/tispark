@@ -153,9 +153,8 @@ object TiUtils {
           .map(ref => TiColumnRef.create(ref.name))
           .foreach(selReq.addField)
 
-        val tiFilters = filters.map(expr =>
-            expr match { case BasicExpression(expr) => expr }
-        )
+        val tiFilters = filters
+          .map(expr => expr match { case BasicExpression(expr) => expr })
 
         val scanBuilder = new ScanBuilder
         val pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)

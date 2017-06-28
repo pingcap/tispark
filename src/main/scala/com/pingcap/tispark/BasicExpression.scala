@@ -46,7 +46,7 @@ object BasicExpression {
         Some(child)
 
       case IsNotNull(BasicExpression(child)) =>
-        Some(new TiIsNull(child))
+        Some(new TiNot(new TiIsNull(child)))
 
       case GreaterThan(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(new TiGreaterThan(lhs, rhs))
