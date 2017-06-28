@@ -2,7 +2,7 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv._
 import com.pingcap.tikv.catalog.Catalog
-import com.pingcap.tikv.meta.{TiDBInfo, TiRange, TiSelectRequest, TiTableInfo}
+import com.pingcap.tikv.meta.{TiDBInfo, TiSelectRequest, TiTableInfo}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
@@ -14,7 +14,7 @@ import org.apache.spark.{Partition, SparkContext, TaskContext}
 import scala.collection.JavaConversions._
 
 
-class TiRDD(selReq: TiSelectRequest, ranges: List[TiRange[java.lang.Long]], sc: SparkContext, options: TiOptions)
+class TiRDD(selReq: TiSelectRequest, sc: SparkContext, options: TiOptions)
   extends RDD[Row](sc, Nil) {
 
   type TiRow = com.pingcap.tikv.row.Row
@@ -53,12 +53,12 @@ class TiRDD(selReq: TiSelectRequest, ranges: List[TiRange[java.lang.Long]], sc: 
 
     // bypass, sum return a long type
     val tiPartition = split.asInstanceOf[TiPartition]
-    val iterator = snapshot.select(selectReq, tiPartition.region, tiPartition.store, tiPartition.tiRange)
+    val iterator = snapshot.select(selectReq, split.asInstanceOf[TiPartition].task)
+
     def toSparkRow(row: TiRow): Row = {
-      //TODO bypass for sum
       val transRow = rt.transform(row)
       val rowArray = new Array[Any](rt.getTypes.size)
-      // if sql does not have group by, simple skip "SingledGroup"
+
       for (i <- 0 until transRow.fieldCount) {
         rowArray(i) = transRow.get(i, finalTypes(i))
       }
@@ -76,14 +76,11 @@ class TiRDD(selReq: TiSelectRequest, ranges: List[TiRange[java.lang.Long]], sc: 
   }
 
   override protected def getPartitions: Array[Partition] = {
-    val keyRanges = Snapshot.convertHandleRangeToKeyRange(table, ranges)
-    val keyWithRegionRanges = RangeSplitter.newSplitter(cluster.getRegionManager)
-                 .splitRangeByRegion(keyRanges)
-    keyWithRegionRanges.zipWithIndex.map{
-      case (keyRegionPair, index) => new TiPartition(index,
-                                            keyRegionPair.first.first, /* Region */
-                                            keyRegionPair.first.second, /* Store */
-                                            keyRegionPair.second) /* Range */
+    val keyWithRegionTasks = RangeSplitter.newSplitter(cluster.getRegionManager)
+                 .splitRangeByRegion(selReq.getRanges)
+
+    keyWithRegionTasks.zipWithIndex.map{
+      case (task, index) => new TiPartition(index, task)
     }.toArray
   }
 }
