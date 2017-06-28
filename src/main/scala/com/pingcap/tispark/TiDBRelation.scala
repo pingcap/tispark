@@ -38,7 +38,7 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
   override def logicalPlanToRDD(plan: LogicalPlan): RDD[Row] = {
     val selReq = new TiSelectRequest
     selReq.setStartTs(snapshot.getVersion)
-    new TiRDD(TiUtils.planToSelectRequest(plan, selReq),
+    new TiRDD(TiUtils.planToSelectRequest(plan, selReq, this),
               List(TiRange.create[java.lang.Long](0L, Long.MaxValue)),
               sqlContext.sparkContext, options)
   }

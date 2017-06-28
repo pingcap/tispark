@@ -2,7 +2,8 @@ package com.pingcap.tispark
 
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef}
-import com.pingcap.tikv.meta.TiSelectRequest
+import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
+import com.pingcap.tikv.predicates.ScanBuilder
 import com.pingcap.tikv.types.{BytesType, DecimalType, IntegerType}
 import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
@@ -13,6 +14,9 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.sources.CatalystSource
 import org.apache.spark.sql.types.DataType
+
+import scala.collection.JavaConversions
+import scala.collection.JavaConversions._
 
 
 object TiUtils {
@@ -107,7 +111,7 @@ object TiUtils {
     }
   }
 
-  def planToSelectRequest(plan: LogicalPlan, selReq: TiSelectRequest)
+  def planToSelectRequest(plan: LogicalPlan, selReq: TiSelectRequest, source: TiDBRelation)
   : TiSelectRequest = {
 
     plan match {
@@ -139,7 +143,7 @@ object TiUtils {
             case _ =>
           }
         )
-        planToSelectRequest(child, selReq)
+        planToSelectRequest(child, selReq, source)
 
       case PhysicalOperation(projectList, filters, child) if child ne plan => {
         // Assume project list should be all simple AttributeReference
@@ -149,26 +153,33 @@ object TiUtils {
           .map(ref => TiColumnRef.create(ref.name))
           .foreach(selReq.addField)
 
-        filters
-          .map(expr => expr match {
-            case BasicExpression(expr) => expr
-          }).foreach(selReq.addWhere)
+        val tiFilters = filters.map(expr =>
+            expr match { case BasicExpression(expr) => expr }
+        )
 
-        planToSelectRequest(child, selReq)
+        val scanBuilder = new ScanBuilder
+        val pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
+        val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
+                                             pkIndex, source.table)
+
+        selReq.addRanges(scanPlan.getKeyRanges)
+        scanPlan.getFilters.toList.map(selReq.addWhere)
+
+        planToSelectRequest(child, selReq, source)
       }
 
       case logical.Limit(IntegerLiteral(_), logical.Sort(_, true, child)) =>
         // TODO: fill builder with value
-        planToSelectRequest(child, selReq)
+        planToSelectRequest(child, selReq, source)
 
       case logical.Limit(IntegerLiteral(_),
       logical.Project(_, logical.Sort(_, true, child))) =>
         // TODO: fill builder with value
-        planToSelectRequest(child, selReq)
+        planToSelectRequest(child, selReq, source)
 
       case logical.Limit(IntegerLiteral(_), child) =>
         // TODO: fill builder with value
-        planToSelectRequest(child, selReq)
+        planToSelectRequest(child, selReq, source)
 
         // End of recursive traversal
       case LogicalRelation(source: CatalystSource, _, _) =>
