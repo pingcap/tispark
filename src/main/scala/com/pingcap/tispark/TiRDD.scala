@@ -1,17 +1,12 @@
 package com.pingcap.tispark
 
-import java.util
-
-import com.google.proto4pingcap.ByteString
-import com.pingcap.tidb.tipb.{ExprType, SelectRequest}
+import com.pingcap.tikv._
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.meta.{TiDBInfo, TiRange, TiSelectRequest, TiTableInfo}
 import com.pingcap.tikv.operation.SchemaInfer
-import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv._
-import com.pingcap.tikv.expression.aggregate.Sum
 import com.pingcap.tikv.operation.transformer.RowTransformer
-import com.pingcap.tikv.types.{BytesType, DataType}
+import com.pingcap.tikv.types.DataType
+import com.pingcap.tikv.util.RangeSplitter
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.{Partition, SparkContext, TaskContext}

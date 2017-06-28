@@ -43,7 +43,7 @@ object BasicExpression {
         Some(TiColumnRef.create(attr.name))
 
       // TODO: Remove it and let it fail once done all translation
-      case _ => Some(null)
+      case _ => Option.empty[TiExpr]
     }
   }
 

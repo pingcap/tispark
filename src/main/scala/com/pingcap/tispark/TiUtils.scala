@@ -1,7 +1,7 @@
 package com.pingcap.tispark
 
 
-import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
+import com.pingcap.tikv.expression.{TiByItem, TiColumnRef}
 import com.pingcap.tikv.meta.TiSelectRequest
 import com.pingcap.tikv.types.{BytesType, DecimalType, IntegerType}
 import org.apache.spark.sql
@@ -13,8 +13,6 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.sources.CatalystSource
 import org.apache.spark.sql.types.DataType
-
-import scala.collection.JavaConverters._
 
 
 object TiUtils {
@@ -84,10 +82,7 @@ object TiUtils {
   }
 
   private def isSupportedBasicExpression(expr: Expression) = {
-    expr match {
-      case BasicExpression(_) => true
-      case _ => false
-    }
+    !BasicExpression.convertToTiExpr(expr).isEmpty
   }
 
   private def isSupportedProjection(expr: Expression): Boolean = {
