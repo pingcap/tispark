@@ -1,6 +1,8 @@
 package com.pingcap.tispark
 
 
+import java.util
+
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef}
 import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
 import com.pingcap.tikv.predicates.ScanBuilder
@@ -181,8 +183,22 @@ object TiUtils {
         planToSelectRequest(child, selReq, source)
 
         // End of recursive traversal
-      case LogicalRelation(source: CatalystSource, _, _) =>
+      case rel@LogicalRelation(source: CatalystSource, _, _) => {
+        // Append full range
+        if (selReq.getRanges.isEmpty) {
+          val scanBuilder = new ScanBuilder
+          val pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(source.tableInfo)
+          val scanPlan = scanBuilder.buildScan(new util.ArrayList(), pkIndex, source.tableInfo)
+          selReq.addRanges(scanPlan.getKeyRanges)
+        }
+        if (selReq.getFields.isEmpty &&
+            selReq.getGroupByItems.isEmpty &&
+            selReq.getAggregates.isEmpty) {
+          // no aggregation and projection, take table relation field as columns
+          rel.output.foreach(col => selReq.addField(TiColumnRef.create(col.name)))
+        }
         selReq.setTableInfo(source.tableInfo)
+      }
 
       case _ => selReq
     }
