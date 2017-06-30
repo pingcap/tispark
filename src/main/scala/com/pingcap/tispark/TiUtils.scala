@@ -6,7 +6,7 @@ import java.util
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef}
 import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
 import com.pingcap.tikv.predicates.ScanBuilder
-import com.pingcap.tikv.types.{BytesType, DecimalType, IntegerType}
+import com.pingcap.tikv.types._
 import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeSet, Expression, IntegerLiteral, NamedExpression}
@@ -107,9 +107,11 @@ object TiUtils {
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
     tp match {
+      case _: RawBytesType => sql.types.BinaryType
       case _: BytesType => sql.types.StringType
       case _: IntegerType => sql.types.LongType
       case _: DecimalType => sql.types.DoubleType
+      case _: TimestampType => sql.types.TimestampType
     }
   }
 

@@ -63,6 +63,7 @@ class TiRDD(selReq: TiSelectRequest, sc: SparkContext, options: TiOptions)
         rowArray(i) = transRow.get(i, finalTypes(i))
       }
 
+
       Row.fromSeq(rowArray)
     }
 

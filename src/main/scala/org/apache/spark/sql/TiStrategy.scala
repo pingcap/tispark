@@ -116,8 +116,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           // reference to pushed plan's corresponding aggregation
           // 3. resultExpressions: finalAgg1 + 1, the finalAgg1 is the reference to final result
           // of the aggregation
-        case PhysicalAggregation(
-        groupingExpressions, aggregateExpressions, resultExpressions, child)
+        case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child)
           if !aggregateExpressions.exists(_.isDistinct) =>
           val residualAggregateExpressions = aggregateExpressions.map {
             aggExpr =>
@@ -128,7 +127,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                 case Min(_) => newAggregate(Min(toAlias(aggExpr).toAttribute), aggExpr)
                 case Count(_) => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
                 case Sum(_) => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
-//                case Average(_) => newAggregate(Average(toAlias(aggExpr).toAttribute), aggExpr)
                 // TODO: More to add
                 case _ => aggExpr
               }
