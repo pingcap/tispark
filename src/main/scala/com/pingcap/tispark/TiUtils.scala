@@ -27,6 +27,7 @@ object TiUtils {
   type TiMin = com.pingcap.tikv.expression.aggregate.Min
   type TiMax = com.pingcap.tikv.expression.aggregate.Max
   type TiDataType = com.pingcap.tikv.types.DataType
+  type TiTypes = com.pingcap.tikv.types.Types
 
 
   def isSupportedLogicalPlan(plan: LogicalPlan): Boolean = {
@@ -115,6 +116,16 @@ object TiUtils {
     }
   }
 
+  def fromSparkType(tp: DataType): TiDataType = {
+    tp match {
+      case _: sql.types.BinaryType => DataTypeFactory.of(Types.TYPE_BLOB)
+      case _: sql.types.StringType => DataTypeFactory.of(Types.TYPE_VARCHAR)
+      case _: sql.types.LongType => DataTypeFactory.of(Types.TYPE_LONG)
+      case _: sql.types.DoubleType => DataTypeFactory.of(Types.TYPE_NEW_DECIMAL)
+      case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_DATE)
+    }
+  }
+
   def planToSelectRequest(plan: LogicalPlan, selReq: TiSelectRequest, source: TiDBRelation)
   : TiSelectRequest = {
 
@@ -126,7 +137,8 @@ object TiUtils {
           case Average(_) =>
             assert(false, "Should never be here")
           case Sum(BasicExpression(arg)) => {
-            selReq.addAggregate(new TiSum(arg))
+            selReq.addAggregate(new TiSum(arg),
+                                fromSparkType(aggExpr.aggregateFunction.dataType))
           }
           case Count(args) => {
             val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
@@ -149,8 +161,9 @@ object TiUtils {
         )
         planToSelectRequest(child, selReq, source)
 
-      case PhysicalOperation(projectList, filters, child) if child ne plan => {
-        // Assume project list should be all simple AttributeReference
+        // matching a projection and filter directly on the top of CatalystSource (TiDB source)
+      case PhysicalOperation(projectList, filters, rel@LogicalRelation(_: CatalystSource, _, _)) if rel ne plan => {
+        // extract all attribute references for column pruning
         val projectSet = AttributeSet(projectList.flatMap(_.references))
 
         projectSet
@@ -168,7 +181,7 @@ object TiUtils {
         selReq.addRanges(scanPlan.getKeyRanges)
         scanPlan.getFilters.toList.map(selReq.addWhere)
 
-        planToSelectRequest(child, selReq, source)
+        planToSelectRequest(rel, selReq, source)
       }
 
       case logical.Limit(IntegerLiteral(_), logical.Sort(_, true, child)) =>
