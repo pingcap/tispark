@@ -26,6 +26,7 @@ object TiUtils {
   type TiCount = com.pingcap.tikv.expression.aggregate.Count
   type TiMin = com.pingcap.tikv.expression.aggregate.Min
   type TiMax = com.pingcap.tikv.expression.aggregate.Max
+  type TiFirst = com.pingcap.tikv.expression.aggregate.First
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiTypes = com.pingcap.tikv.types.Types
 
@@ -58,7 +59,7 @@ object TiUtils {
     }
   }
 
-  private def isSupportedPhysicalOperation(currentPlan: LogicalPlan,
+  def isSupportedPhysicalOperation(currentPlan: LogicalPlan,
                                            projectList: Seq[NamedExpression],
                                            filterList: Seq[Expression],
                                            child: LogicalPlan): Boolean = {
@@ -69,7 +70,7 @@ object TiUtils {
       isSupportedLogicalPlan(child)
   }
 
-  private def isSupportedPlanWithDistinct(plan: LogicalPlan): Boolean = {
+  def isSupportedPlanWithDistinct(plan: LogicalPlan): Boolean = {
     plan match {
       case PhysicalOperation(projectList, filters, child) if child ne plan =>
         isSupportedPhysicalOperation(plan, projectList, filters, child)
@@ -78,7 +79,7 @@ object TiUtils {
     }
   }
 
-  private def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
+  def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
@@ -88,20 +89,20 @@ object TiUtils {
     }
   }
 
-  private def isSupportedBasicExpression(expr: Expression) = {
+  def isSupportedBasicExpression(expr: Expression) = {
     !BasicExpression.convertToTiExpr(expr).isEmpty
   }
 
-  private def isSupportedProjection(expr: Expression): Boolean = {
+  def isSupportedProjection(expr: Expression): Boolean = {
     expr.find(child => !isSupportedBasicExpression(child)).isEmpty
   }
 
-  private def isSupportedFilter(expr: Expression): Boolean = {
+  def isSupportedFilter(expr: Expression): Boolean = {
     isSupportedBasicExpression(expr)
   }
 
   // 1. if contains UDF / functions that cannot be folded
-  private def isSupportedGroupingExpr(expr: Expression): Boolean = {
+  def isSupportedGroupingExpr(expr: Expression): Boolean = {
     isSupportedBasicExpression(expr)
   }
 
@@ -124,6 +125,22 @@ object TiUtils {
       case _: sql.types.DoubleType => DataTypeFactory.of(Types.TYPE_NEW_DECIMAL)
       case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_DATE)
     }
+  }
+
+  def projectFilterToSelectRequest(projects: Seq[NamedExpression],
+                                   filters: Seq[Expression],
+                                   source: TiDBRelation): TiSelectRequest = {
+    val selReq: TiSelectRequest = new TiSelectRequest
+    val tiFilters = filters.map(expr => expr match { case BasicExpression(expr) => expr })
+    val scanBuilder = new ScanBuilder
+    val pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
+    val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
+      pkIndex, source.table)
+
+    selReq.addRanges(scanPlan.getKeyRanges)
+    scanPlan.getFilters.toList.map(selReq.addWhere)
+
+    selReq
   }
 
   def planToSelectRequest(plan: LogicalPlan, selReq: TiSelectRequest, source: TiDBRelation)
