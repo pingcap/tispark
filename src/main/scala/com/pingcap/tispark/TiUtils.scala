@@ -14,7 +14,6 @@ import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOper
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.sources.CatalystSource
 import org.apache.spark.sql.types.DataType
 
 import scala.collection.JavaConversions
@@ -53,7 +52,7 @@ object TiUtils {
         case _ => false
       }
 
-      case LogicalRelation(_: CatalystSource, _, _) => true
+      case LogicalRelation(_: TiDBRelation, _, _) => true
 
       case _ => false
     }
@@ -141,99 +140,6 @@ object TiUtils {
     scanPlan.getFilters.toList.map(selReq.addWhere)
 
     selReq
-  }
-
-  def planToSelectRequest(plan: LogicalPlan, selReq: TiSelectRequest, source: TiDBRelation)
-  : TiSelectRequest = {
-
-    plan match {
-      case PhysicalAggregation(
-      groupingExpressions, aggregateExpressions, _, child) =>
-        aggregateExpressions.foreach(aggExpr =>
-          aggExpr.aggregateFunction match {
-          case Average(_) =>
-            assert(false, "Should never be here")
-          case Sum(BasicExpression(arg)) => {
-            selReq.addAggregate(new TiSum(arg),
-                                fromSparkType(aggExpr.aggregateFunction.dataType))
-          }
-          case Count(args) => {
-            val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
-            selReq.addAggregate(new TiCount(tiArgs: _*))
-          }
-          case Min(BasicExpression(arg)) => {
-            selReq.addAggregate(new TiMin(arg))
-          }
-          case Max(BasicExpression(arg)) => {
-            selReq.addAggregate(new TiMax(arg))
-          }
-          case _ =>
-        })
-        groupingExpressions.foreach(groupItem =>
-          groupItem match {
-            case BasicExpression(byExpr) =>
-              selReq.addGroupByItem(TiByItem.create(byExpr, false))
-            case _ =>
-          }
-        )
-        planToSelectRequest(child, selReq, source)
-
-        // matching a projection and filter directly on the top of CatalystSource (TiDB source)
-      case PhysicalOperation(projectList, filters, rel@LogicalRelation(_: CatalystSource, _, _)) if rel ne plan => {
-        // extract all attribute references for column pruning
-        val projectSet = AttributeSet(projectList.flatMap(_.references))
-
-        projectSet
-          .map(ref => TiColumnRef.create(ref.name))
-          .foreach(selReq.addField)
-
-        val tiFilters = filters
-          .map(expr => expr match { case BasicExpression(expr) => expr })
-
-        val scanBuilder = new ScanBuilder
-        val pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
-        val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
-                                             pkIndex, source.table)
-
-        selReq.addRanges(scanPlan.getKeyRanges)
-        scanPlan.getFilters.toList.map(selReq.addWhere)
-
-        planToSelectRequest(rel, selReq, source)
-      }
-
-      case logical.Limit(IntegerLiteral(_), logical.Sort(_, true, child)) =>
-        // TODO: fill builder with value
-        planToSelectRequest(child, selReq, source)
-
-      case logical.Limit(IntegerLiteral(_),
-      logical.Project(_, logical.Sort(_, true, child))) =>
-        // TODO: fill builder with value
-        planToSelectRequest(child, selReq, source)
-
-      case logical.Limit(IntegerLiteral(_), child) =>
-        // TODO: fill builder with value
-        planToSelectRequest(child, selReq, source)
-
-        // End of recursive traversal
-      case rel@LogicalRelation(source: CatalystSource, _, _) => {
-        // Append full range
-        if (selReq.getRanges.isEmpty) {
-          val scanBuilder = new ScanBuilder
-          val pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(source.tableInfo)
-          val scanPlan = scanBuilder.buildScan(new util.ArrayList(), pkIndex, source.tableInfo)
-          selReq.addRanges(scanPlan.getKeyRanges)
-        }
-        if (selReq.getFields.isEmpty &&
-            selReq.getGroupByItems.isEmpty &&
-            selReq.getAggregates.isEmpty) {
-          // no aggregation and projection, take table relation field as columns
-          rel.output.foreach(col => selReq.addField(TiColumnRef.create(col.name)))
-        }
-        selReq.setTableInfo(source.tableInfo)
-      }
-
-      case _ => selReq
-    }
   }
 
 }

@@ -4,15 +4,14 @@ import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.meta.{TiDBInfo, TiSelectRequest, TiTableInfo}
 import com.pingcap.tikv.{Snapshot, TiCluster, TiConfiguration}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.sources.{BaseRelation, CatalystSource}
+import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{Row, SQLContext}
 
 import scala.collection.JavaConverters._
 
 case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContext)
-  extends BaseRelation with CatalystSource {
+  extends BaseRelation {
 
   val conf: TiConfiguration = TiConfiguration.createDefault(options.addresses.asJava)
   val cluster: TiCluster = TiCluster.getCluster(conf)
@@ -33,17 +32,9 @@ case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContex
     new StructType(fields)
   }
 
-  override def tableInfo :TiTableInfo = table
+  def tableInfo :TiTableInfo = table
 
-  override def logicalPlanToRDD(plan: LogicalPlan): RDD[Row] = {
-    val selReq = TiUtils.planToSelectRequest(plan, new TiSelectRequest, this)
-    selReq.setStartTs(snapshot.getVersion)
-
-    new TiRDD(selReq,
-              sqlContext.sparkContext, options)
-  }
-
-  override def logicalPlanToRDD(selectRequest: TiSelectRequest): RDD[Row] = {
+  def logicalPlanToRDD(selectRequest: TiSelectRequest): RDD[Row] = {
     selectRequest.setStartTs(snapshot.getVersion)
 
     new TiRDD(selectRequest,

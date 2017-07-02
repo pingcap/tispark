@@ -1,24 +1,21 @@
 package org.apache.spark.sql
 
 
-import com.pingcap.tikv.expression.{TiByItem, TiExpr}
-
-import scala.collection.JavaConversions._
+import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
 import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
 import com.pingcap.tikv.predicates.ScanBuilder
-import com.pingcap.tispark.{BasicExpression, TiDBRelation, TiUtils}
 import com.pingcap.tispark.TiUtils._
+import com.pingcap.tispark.{BasicExpression, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, ExprId, Expression, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, ExprId, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
-import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.sources.CatalystSource
 import org.apache.spark.sql.types._
 
+import scala.collection.JavaConversions._
 import scala.collection.{JavaConversions, mutable}
 
 
@@ -45,14 +42,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       val source = sources.head
       doPlan(source, plan)
     }
-  }
-
-  private def toPhysicalRDD(cs: CatalystSource, plan: LogicalPlan): SparkPlan = {
-    val rdd = cs.logicalPlanToRDD(plan)
-    val internalRdd = RDDConversions.rowToRowRdd(rdd,
-      plan.schema.fields.map(_.dataType))
-
-    RDDScanExec(plan.output, internalRdd, "CatalystSource")
   }
 
   private def toCoprocessorRDD(source: TiDBRelation,
@@ -123,6 +112,27 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     selectRequest
   }
 
+  def aggregationFilter(filters: Seq[Expression],
+                        source: TiDBRelation,
+                        output: Seq[Attribute],
+                        selectRequest: TiSelectRequest = new TiSelectRequest): SparkPlan = {
+    toCoprocessorRDD(source, output, filterToSelectRequest(filters, source, selectRequest))
+  }
+
+  def filterToSelectRequest(filters: Seq[Expression],
+                            source: TiDBRelation,
+                            selectRequest: TiSelectRequest): TiSelectRequest = {
+    val tiFilters:Seq[TiExpr] = filters.map(expr => expr match { case BasicExpression(expr) => expr })
+    val scanBuilder: ScanBuilder = new ScanBuilder
+    val pkIndex: TiIndexInfo = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
+    val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
+      pkIndex, source.table)
+
+    selectRequest.addRanges(scanPlan.getKeyRanges)
+    scanPlan.getFilters.toList.map(selectRequest.addWhere)
+    selectRequest
+  }
+
   def pruneFilterProject(projectList: Seq[NamedExpression],
                          filterPredicates: Seq[Expression],
                          source: TiDBRelation,
@@ -136,6 +146,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       filterPredicates.partition(TiUtils.isSupportedFilter)
 
     val residualFilter: Option[Expression] = residualFilters.reduceLeftOption(catalyst.expressions.And)
+    val residualFilterSet = AttributeSet(residualFilters.flatMap(_.references))
 
     val tiFilters:Seq[TiExpr] = pushdownFilters.map(expr => expr match { case BasicExpression(expr) => expr })
     val scanBuilder: ScanBuilder = new ScanBuilder
@@ -156,10 +167,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // When it is possible to just use column pruning to get the right projection and
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
-      val scan = toCoprocessorRDD(source, projectList.asInstanceOf[Seq[Attribute]], selectRequest)
+      val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
+      projectSeq.foreach(attr => selectRequest.addField(TiColumnRef.create(attr.name)))
+      val scan = toCoprocessorRDD(source, projectSeq, selectRequest)
       residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
-      val scan = toCoprocessorRDD(source, (projectSet ++ filterSet).toSeq, selectRequest)
+      val projectSeq: Seq[Attribute] = (projectSet ++ residualFilterSet).toSeq
+      projectSeq.foreach(attr => selectRequest.addField(TiColumnRef.create(attr.name)))
+      val scan = toCoprocessorRDD(source, projectSeq, selectRequest)
       ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
     }
   }
@@ -167,7 +182,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   // We do through similar logic with original Spark as in SparkStrategies.scala
   // Difference is we need to test if a sub-plan can be consumed all together by TiKV
   // and then we don't return (don't planLater) and plan the remaining all at once
-  private def doPlan(cs: TiDBRelation, plan: LogicalPlan): Seq[SparkPlan] = {
+  private def doPlan(source: TiDBRelation, plan: LogicalPlan): Seq[SparkPlan] = {
 
     val aliasMap = mutable.HashMap[Expression, Alias]()
     val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
@@ -194,28 +209,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       Nil
     else
       plan match {
-        // This is almost the same as Spark's original SpecialLimits logic
-        // The difference is that we hijack the plan for push down
-        // Limit + Sort can be consumed by coprocessor iff no aggregates
-        // so we don't need to match it further
-        case logical.ReturnAnswer(rootPlan) => rootPlan match {
-          case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
-            execution.TakeOrderedAndProjectExec(limit, order, child.output, toPhysicalRDD(cs, rootPlan)) :: Nil
-          case logical.Limit(
-          IntegerLiteral(limit),
-          logical.Project(projectList, logical.Sort(order, true, _))) =>
-            execution.TakeOrderedAndProjectExec(
-              limit, order, projectList, toPhysicalRDD(cs, rootPlan)) :: Nil
-          case logical.Limit(IntegerLiteral(limit), _) =>
-            execution.CollectLimitExec(limit, toPhysicalRDD(cs, rootPlan)) :: Nil
-        }
-
           // Collapse filters and projections and push plan directly
-        case PhysicalOperation(projectList, filters, LogicalRelation(cs: TiDBRelation, _, _)) =>
-          pruneFilterProject(projectList, filters, cs, null) :: Nil
-
-          // A fall-back for all logic in case nothing to push
-        case LogicalRelation(_: CatalystSource, _, _) => toPhysicalRDD(cs, plan) :: Nil
+        case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
+          pruneFilterProject(projectList, filters, source) :: Nil
 
           // Basic logic of original Spark's aggregation plan is:
           // PhysicalAggregation extractor will rewrite original aggregation
@@ -278,7 +274,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
               }
           }
 
-
           val pushdownAggregates = aggregateExpressions.flatMap {
             aggExpr =>
               avgPushdownRewriteMap
@@ -287,7 +282,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
           selReq = aggregationToSelectRequest(groupingExpressions,
                                               pushdownAggregates,
-                                              cs,
+                                              source,
                                               selReq)
 
           val rewrittenResultExpression = resultExpressions.map(
@@ -313,11 +308,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
             }.asInstanceOf[NamedExpression]
           )
 
+          val output = (groupingExpressions ++ pushdownAggregates.map(x => toAlias(x))).map(_.toAttribute)
+
           aggregate.AggUtils.planAggregateWithoutDistinct(
             groupingExpressions,
             residualAggregateExpressions,
             rewrittenResultExpression,
-            pruneFilterProject(Seq.empty[NamedExpression], filters, source, selReq))
+            toCoprocessorRDD(source, output, filterToSelectRequest(filters, source, selReq)))
 
         case _ => Nil
       }
