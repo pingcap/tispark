@@ -1,23 +1,15 @@
 package com.pingcap.tispark
 
 
-import java.util
-
-import com.pingcap.tikv.expression.{TiByItem, TiColumnRef}
-import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
-import com.pingcap.tikv.predicates.ScanBuilder
 import com.pingcap.tikv.types._
 import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{AttributeSet, Expression, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Expression, IntegerLiteral, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.types.DataType
-
-import scala.collection.JavaConversions
-import scala.collection.JavaConversions._
 
 
 object TiUtils {
@@ -125,21 +117,4 @@ object TiUtils {
       case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_DATE)
     }
   }
-
-  def projectFilterToSelectRequest(projects: Seq[NamedExpression],
-                                   filters: Seq[Expression],
-                                   source: TiDBRelation): TiSelectRequest = {
-    val selReq: TiSelectRequest = new TiSelectRequest
-    val tiFilters = filters.map(expr => expr match { case BasicExpression(expr) => expr })
-    val scanBuilder = new ScanBuilder
-    val pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
-    val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
-      pkIndex, source.table)
-
-    selReq.addRanges(scanPlan.getKeyRanges)
-    scanPlan.getFilters.toList.map(selReq.addWhere)
-
-    selReq
-  }
-
 }
