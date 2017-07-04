@@ -18,6 +18,7 @@ package com.pingcap.tispark
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Remainder, Subtract}
+import org.apache.spark.unsafe.types.UTF8String
 
 object BasicExpression {
   implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
@@ -38,7 +39,10 @@ object BasicExpression {
   def convertToTiExpr(expr: Expression): Option[TiExpr] = {
     expr match {
       case Literal(value, _) => {
-        Some(TiConstant.create(value))
+        value match {
+          case strVal: UTF8String => Some(TiConstant.create(strVal.toString))
+          case other => Some(TiConstant.create(other))
+        }
       }
 
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
@@ -75,7 +79,7 @@ object BasicExpression {
         Some(new TiLessEqual(lhs, rhs))
 
       case EqualTo(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiLessEqual(lhs, rhs))
+        Some(new TiEqual(lhs, rhs))
 
       case Not(EqualTo(BasicExpression(lhs), BasicExpression(rhs))) =>
         Some(new TiNotEqual(lhs, rhs))
