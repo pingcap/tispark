@@ -136,12 +136,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
   def filterToSelectRequest(filters: Seq[Expression],
                             source: TiDBRelation,
-                            selectRequest: TiSelectRequest): TiSelectRequest = {
+                            selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
     val tiFilters:Seq[TiExpr] = filters.map(expr => expr match { case BasicExpression(expr) => expr })
     val scanBuilder: ScanBuilder = new ScanBuilder
     val pkIndex: TiIndexInfo = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
     val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
-      pkIndex, source.table)
+                                         pkIndex, source.table)
 
     selectRequest.addRanges(scanPlan.getKeyRanges)
     scanPlan.getFilters.toList.map(selectRequest.addWhere)
@@ -235,10 +235,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       groupingExpressions,
       aggregateExpressions,
       resultExpressions,
-      TiAggregationProjection(filters, rel, source))
+      TiAggregationProjection(filters, _, source))
         if !aggregateExpressions.exists(_.isDistinct) =>
-        var selReq: TiSelectRequest =
-          projectFilterToSelectRequest(Seq.empty[NamedExpression], filters, source)
+        var selReq: TiSelectRequest = filterToSelectRequest(filters, source)
         val residualAggregateExpressions = aggregateExpressions.map {
           aggExpr =>
             aggExpr.aggregateFunction match {
@@ -320,7 +319,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           groupingExpressions,
           residualAggregateExpressions,
           rewrittenResultExpression,
-          toCoprocessorRDD(source, output, filterToSelectRequest(filters, source, selReq)))
+          toCoprocessorRDD(source, output, selReq))
 
       case _ => Nil
     }
