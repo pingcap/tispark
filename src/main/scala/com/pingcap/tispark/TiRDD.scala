@@ -33,7 +33,8 @@ class TiRDD(selectReq: TiSelectRequest, sc: SparkContext, options: TiOptions, ta
 
   type TiRow = com.pingcap.tikv.row.Row
 
-  @transient lazy val cluster: TiCluster = MetaManager.getCluster(options)
+  @transient lazy val meta: MetaManager = new MetaManager(options.addresses)
+  @transient lazy val cluster: TiCluster = meta.cluster
   @transient lazy val snapshot: Snapshot = cluster.createSnapshot()
   @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
 

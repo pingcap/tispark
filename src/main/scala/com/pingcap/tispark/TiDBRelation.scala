@@ -16,17 +16,19 @@
 package com.pingcap.tispark
 
 import com.pingcap.tikv.Snapshot
+import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{Row, SQLContext}
 
-case class TiDBRelation(options: TiOptions)(@transient val sqlContext: SQLContext)
+class TiDBRelation(options: TiOptions, meta: MetaManager)(@transient val sqlContext: SQLContext)
   extends BaseRelation {
+  val table: TiTableInfo = meta.getTable(options.databaseName, options.tableName)
+                               .getOrElse(throw new TiClientInternalException("Table not exist"))
 
-  val table: TiTableInfo = MetaManager.resolveTable(options)
-  lazy val snapshot: Snapshot = MetaManager.getCluster(options).createSnapshot()
+  lazy val snapshot: Snapshot = meta.cluster.createSnapshot()
 
   override def schema: StructType = {
     val fields = new Array[StructField](table.getColumns.size())

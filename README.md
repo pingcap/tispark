@@ -18,3 +18,5 @@ df.createGlobalTempView("item")
 
 spark.sql("select sum(discount) as avg_disc from global_temp.item").show
 
+spark.sql("select count(*) as avg_disc from global_temp.item").show
+

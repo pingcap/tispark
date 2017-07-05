@@ -15,17 +15,36 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tispark.{TiDBRelation, TiOptions}
+import com.pingcap.tispark.{MetaManager, TiDBRelation, TiOptions}
 import org.apache.spark.internal.Logging
 
 
 class TiContext (val session: SparkSession, addressList: List[String]) extends Serializable with Logging {
-  val sqlContext = session.sqlContext
+  val sqlContext: SQLContext = session.sqlContext
+  val meta: MetaManager = new MetaManager(addressList)
+
+  meta.loadDatabase
+  session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
+
   def tidbTable(dbName: String,
                 tableName: String): DataFrame = {
-    logDebug("Creating tiContext...")
-    val tiRelation = TiDBRelation(new TiOptions(addressList, dbName, tableName))(sqlContext)
-    session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
+    val tiRelation = new TiDBRelation(new TiOptions(addressList, dbName, tableName), meta)(sqlContext)
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
+
+  def tidbMapDatabase(dbName: String): Unit =
+    meta.getDatabase(dbName).foreach {
+      db => {
+        meta.loadTables(db)
+        meta.getTables(db).foreach {
+          table => {
+            val rel: TiDBRelation =
+              new TiDBRelation(new TiOptions(addressList, dbName, table.getName), meta)(sqlContext)
+            sqlContext.baseRelationToDataFrame(rel).createTempView(table.getName)
+            logInfo("Registered table" + table.getName)
+          }
+        }
+      }
+    }
+
 }
