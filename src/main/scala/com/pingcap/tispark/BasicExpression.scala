@@ -15,9 +15,12 @@
 
 package com.pingcap.tispark
 
+import java.sql.{Date, Timestamp}
+
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Remainder, Subtract}
+import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
 object BasicExpression {
@@ -36,14 +39,31 @@ object BasicExpression {
   type TiNotEqual = com.pingcap.tikv.expression.scalar.NotEqual
   type TiNot = com.pingcap.tikv.expression.scalar.Not
 
+  final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
+
+
+
+  def convertLiteral(value: Any, dataType: DataType): Any = {
+    // all types from literals are passed according to DataType's InternalType definition
+    if (value == null || dataType == null) {
+      null
+    } else {
+      dataType match {
+        // In Spark Date is encoded as integer of days after 1970-01-01
+        // and sql.Date is constructed as milliseconds after 1970-01-01
+        // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd
+        case DateType => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int]).toString
+        case TimestampType => new Timestamp(value.asInstanceOf[Long])
+        case StringType => value.toString
+        case _ => value
+      }
+    }
+  }
+
   def convertToTiExpr(expr: Expression): Option[TiExpr] = {
     expr match {
-      case Literal(value, _) => {
-        value match {
-          case strVal: UTF8String => Some(TiConstant.create(strVal.toString))
-          case other => Some(TiConstant.create(other))
-        }
-      }
+      case Literal(value, dataType) =>
+        Some(TiConstant.create(convertLiteral(value, dataType)))
 
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(new TiPlus(lhs, rhs))

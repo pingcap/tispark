@@ -67,6 +67,7 @@ object TiUtils {
       case _: IntegerType => sql.types.LongType
       case _: DecimalType => sql.types.DoubleType
       case _: TimestampType => sql.types.TimestampType
+      case _: DateType => sql.types.DateType
     }
   }
 
@@ -76,7 +77,8 @@ object TiUtils {
       case _: sql.types.StringType => DataTypeFactory.of(Types.TYPE_VARCHAR)
       case _: sql.types.LongType => DataTypeFactory.of(Types.TYPE_LONG)
       case _: sql.types.DoubleType => DataTypeFactory.of(Types.TYPE_NEW_DECIMAL)
-      case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_DATE)
+      case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_TIMESTAMP)
+      case _: sql.types.DateType => DataTypeFactory.of(Types.TYPE_DATE)
     }
   }
 }
