@@ -1,5 +1,6 @@
 # tispark
-A cannot-be-more-trivial implementation of tidb-spark-connector.
+A thin layer of TiSpark. Most of the logic is inside tikv-java-client library.
+https://github.com/pingcap/tikv-client-lib-java
 
 
 Uses as below
