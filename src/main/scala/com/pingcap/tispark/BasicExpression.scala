@@ -21,7 +21,6 @@ import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Remainder, Subtract}
 import org.apache.spark.sql.types._
-import org.apache.spark.unsafe.types.UTF8String
 
 object BasicExpression {
   implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
@@ -55,6 +54,7 @@ object BasicExpression {
         case DateType => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int]).toString
         case TimestampType => new Timestamp(value.asInstanceOf[Long])
         case StringType => value.toString
+        case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
         case _ => value
       }
     }

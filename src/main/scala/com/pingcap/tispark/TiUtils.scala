@@ -20,7 +20,6 @@ import com.pingcap.tikv.types._
 import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
-import org.apache.spark.sql.types
 import org.apache.spark.sql.types.{DataType, DataTypes}
 
 
