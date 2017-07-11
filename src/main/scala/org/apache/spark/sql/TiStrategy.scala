@@ -231,7 +231,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // reference to pushed plan's corresponding aggregation
       // 3. resultExpressions: finalAgg1 + 1, the finalAgg1 is the reference to final result
       // of the aggregation
-      case PhysicalAggregation(
+      case TiAggregation(
       groupingExpressions,
       aggregateExpressions,
       resultExpressions,
@@ -326,19 +326,29 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 }
 
+object TiAggregation {
+  type ReturnType = PhysicalAggregation.ReturnType
+
+  def unapply(a: Any): Option[ReturnType] = a match {
+    case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child)
+      if (groupingExpressions.forall(TiUtils.isSupportedGroupingExpr) &&
+          aggregateExpressions.forall(TiUtils.isSupportedAggregate)) =>
+      Some(groupingExpressions, aggregateExpressions, resultExpressions, child)
+
+    case _ => Option.empty[ReturnType]
+  }
+}
 
 object TiAggregationProjection {
   type ReturnType = (Seq[Expression], LogicalPlan, TiDBRelation)
 
-  def unapply(plan: LogicalPlan): Option[ReturnType] = {
-    plan match {
-      // Only push down aggregates projection when all filters can be applied and
-      // all projection expressions are column references
-      case PhysicalOperation(projects, filters, rel@LogicalRelation(source: TiDBRelation, _, _))
-        if projects.forall(_.isInstanceOf[Attribute]) &&
-          filters.forall(TiUtils.isSupportedFilter) =>
-        Some((filters, rel, source))
-      case _ => Option.empty[ReturnType]
-    }
+  def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
+    // Only push down aggregates projection when all filters can be applied and
+    // all projection expressions are column references
+    case PhysicalOperation(projects, filters, rel@LogicalRelation(source: TiDBRelation, _, _))
+      if (projects.forall(_.isInstanceOf[Attribute]) &&
+          filters.forall(TiUtils.isSupportedFilter)) =>
+      Some((filters, rel, source))
+    case _ => Option.empty[ReturnType]
   }
 }

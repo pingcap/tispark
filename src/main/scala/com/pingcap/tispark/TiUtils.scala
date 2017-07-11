@@ -18,9 +18,9 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.types._
 import org.apache.spark.sql
-import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.types.DataType
+import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
+import org.apache.spark.sql.types.{DataType, DataTypes}
 
 
 object TiUtils {
@@ -43,21 +43,13 @@ object TiUtils {
   }
 
   def isSupportedBasicExpression(expr: Expression) = {
-    !BasicExpression.convertToTiExpr(expr).isEmpty
+    BasicExpression.convertToTiExpr(expr).fold(false) {_.isSupportedExpr}
   }
 
-  def isSupportedProjection(expr: Expression): Boolean = {
-    expr.find(child => !isSupportedBasicExpression(child)).isEmpty
-  }
+  def isSupportedFilter(expr: Expression): Boolean = isSupportedBasicExpression(expr)
 
-  def isSupportedFilter(expr: Expression): Boolean = {
-    isSupportedBasicExpression(expr)
-  }
-
-  // 1. if contains UDF / functions that cannot be folded
-  def isSupportedGroupingExpr(expr: Expression): Boolean = {
-    isSupportedBasicExpression(expr)
-  }
+  // if contains UDF / functions that cannot be folded
+  def isSupportedGroupingExpr(expr: NamedExpression): Boolean = isSupportedBasicExpression(expr)
 
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
@@ -65,7 +57,8 @@ object TiUtils {
       case _: RawBytesType => sql.types.BinaryType
       case _: BytesType => sql.types.StringType
       case _: IntegerType => sql.types.LongType
-      case _: DecimalType => sql.types.DoubleType
+      case _: RealType => sql.types.DoubleType
+      case _: DecimalType => DataTypes.createDecimalType(tp.getLength, tp.getDecimal)
       case _: TimestampType => sql.types.TimestampType
       case _: DateType => sql.types.DateType
     }
@@ -76,7 +69,8 @@ object TiUtils {
       case _: sql.types.BinaryType => DataTypeFactory.of(Types.TYPE_BLOB)
       case _: sql.types.StringType => DataTypeFactory.of(Types.TYPE_VARCHAR)
       case _: sql.types.LongType => DataTypeFactory.of(Types.TYPE_LONG)
-      case _: sql.types.DoubleType => DataTypeFactory.of(Types.TYPE_NEW_DECIMAL)
+      case _: sql.types.DoubleType => DataTypeFactory.of(Types.TYPE_DOUBLE)
+      case _: sql.types.DecimalType => DataTypeFactory.of(Types.TYPE_NEW_DECIMAL)
       case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_TIMESTAMP)
       case _: sql.types.DateType => DataTypeFactory.of(Types.TYPE_DATE)
     }
