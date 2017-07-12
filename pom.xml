@@ -18,6 +18,7 @@
         <junit.version>4.12</junit.version>
         <spark.version>2.1.0</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
+        <scala.version>2.11</scala.version>
     </properties>
     <dependencies>
         <dependency>
