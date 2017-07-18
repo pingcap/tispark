@@ -1,0 +1,3 @@
+[submodule "tikv-client-lib-java"]
+	path = tikv-client-lib-java
+	url = https://github.com/pingcap/tikv-client-lib-java.git
