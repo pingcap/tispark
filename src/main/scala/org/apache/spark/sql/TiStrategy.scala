@@ -102,16 +102,20 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
             }
             case Count(args) => {
               val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
-              selectRequest.addAggregate(new TiCount(tiArgs: _*))
+              selectRequest.addAggregate(new TiCount(tiArgs: _*),
+                fromSparkType(aggExpr.aggregateFunction.dataType))
             }
             case Min(BasicExpression(arg)) =>
-              selectRequest.addAggregate(new TiMin(arg))
+              selectRequest.addAggregate(new TiMin(arg),
+                fromSparkType(aggExpr.aggregateFunction.dataType))
 
             case Max(BasicExpression(arg)) =>
-              selectRequest.addAggregate(new TiMax(arg))
+              selectRequest.addAggregate(new TiMax(arg),
+                fromSparkType(aggExpr.aggregateFunction.dataType))
 
             case First(BasicExpression(arg), _) =>
-              selectRequest.addAggregate(new TiFirst(arg))
+              selectRequest.addAggregate(new TiFirst(arg),
+                fromSparkType(aggExpr.aggregateFunction.dataType))
 
             case _ => None
           }
@@ -261,11 +265,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
               // Divide(sum/count) + 1
               case aggExpr@AggregateExpression(Average(ref), _, _, _) =>
                 // Need a type promotion
-                val promotedType = ref.dataType match {
-                  case DoubleType | DecimalType.Fixed(_, _) | LongType => ref
-                  case _ => Cast(ref, DoubleType)
-                }
-                val sumToPush = newAggregate(Sum(promotedType), aggExpr)
+                val sumToPush = newAggregate(Sum(ref), aggExpr)
                 val countToPush = newAggregate(Count(ref), aggExpr)
 
                 // Need a new expression id since they are not simply rewrite as above
