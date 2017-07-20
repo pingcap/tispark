@@ -16,7 +16,7 @@
 package com.pingcap.tispark
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo}
+import com.pingcap.tikv.meta.TiSelectRequest
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
@@ -28,7 +28,7 @@ import org.apache.spark.{Partition, SparkContext, TaskContext}
 import scala.collection.JavaConversions._
 
 
-class TiRDD(selectReq: TiSelectRequest, sc: SparkContext, options: TiOptions, table: TiTableInfo)
+class TiRDD(val selectReq: TiSelectRequest, val options: TiOptions, @transient sc: SparkContext)
   extends RDD[Row](sc, Nil) {
 
   type TiRow = com.pingcap.tikv.row.Row

@@ -47,8 +47,7 @@ class TiDBRelation(options: TiOptions, meta: MetaManager)(@transient val sqlCont
 
 
     new TiRDD(selectRequest,
-              sqlContext.sparkContext,
               options,
-              table)
+              sqlContext.sparkContext)
   }
 }
