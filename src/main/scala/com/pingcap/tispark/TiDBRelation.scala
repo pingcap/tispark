@@ -17,7 +17,7 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.Snapshot
 import com.pingcap.tikv.exception.TiClientInternalException
-import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo}
+import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
@@ -43,11 +43,12 @@ class TiDBRelation(options: TiOptions, meta: MetaManager)(@transient val sqlCont
   }
 
   def logicalPlanToRDD(selectRequest: TiSelectRequest): RDD[Row] = {
-    selectRequest.setStartTs(snapshot.getVersion)
-
+    val ts: TiTimestamp = snapshot.getTimestamp
+    selectRequest.setStartTs(ts.getVersion)
 
     new TiRDD(selectRequest,
               options,
+              ts,
               sqlContext.sparkContext)
   }
 }
