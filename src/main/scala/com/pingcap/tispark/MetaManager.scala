@@ -27,7 +27,7 @@ import scala.collection.breakOut
 // and serving inside metastore if any
 class MetaManager(addrList: List[String]) {
   val cluster: TiCluster = getCluster()
-  private val catalog: Catalog = cluster.getCatalog
+  private def catalog: Catalog = cluster.getCatalog
   private val dbCache = HashMap[String, (TiDBInfo, Map[String, TiTableInfo])]()
 
   def getDatabases(update: Boolean = false): List[TiDBInfo] = {

@@ -15,9 +15,8 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.Snapshot
 import com.pingcap.tikv.exception.TiClientInternalException
-import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo}
+import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
@@ -27,8 +26,6 @@ class TiDBRelation(options: TiOptions, meta: MetaManager)(@transient val sqlCont
   extends BaseRelation {
   val table: TiTableInfo = meta.getTable(options.databaseName, options.tableName)
                                .getOrElse(throw new TiClientInternalException("Table not exist"))
-
-  lazy val snapshot: Snapshot = meta.cluster.createSnapshot()
 
   override def schema: StructType = {
     val fields = new Array[StructField](table.getColumns.size())
@@ -43,11 +40,12 @@ class TiDBRelation(options: TiOptions, meta: MetaManager)(@transient val sqlCont
   }
 
   def logicalPlanToRDD(selectRequest: TiSelectRequest): RDD[Row] = {
-    selectRequest.setStartTs(snapshot.getVersion)
-
+    val ts: TiTimestamp = meta.cluster.getTimestamp
+    selectRequest.setStartTs(ts.getVersion)
 
     new TiRDD(selectRequest,
               options,
+              ts,
               sqlContext.sparkContext)
   }
 }
