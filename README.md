@@ -2,7 +2,7 @@
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV. It takes advantages of the Spark, at the same time, seamlessly glues to the distributed OLTP database TiDB to provide a Hybrid Transaction/Analytical Processing (HTAP) solution answering complex OLAP queries. 
 
-## Architecture
+## TiSpark Architecture
 
 ![architecture](./docs/architecture.png)
 
@@ -14,20 +14,7 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV. It t
 
 - In addition, user can deploy and utilize tools from Spark ecosystem for further data processing and manipulation on TiDB . for example, using TiSpark for data analysis and ETL; retrieving data from TiKV as a machine learning data source; generating reports from  and so on.
 
-
-
-
-TiSpark depends on the existence of TiKV clusters and PDs. It also needs to setup a Spark clustering platform. This document provides a quick introduction of how to setup and use TiSpark. It requires some basic knowledge of Apache Spark. For more information, please refer to Spark website (https://spark.apache.org/docs/latest/index.html).
-
-
-- __Horizontal scalability__
-Grow TiDB as your business grows. You can increase the capacity simply by adding more machines.
-
-- __Asynchronous schema changes__
-Evolve TiDB schemas as your requirement evolves. You can add new columns and indices without stopping or affecting the on-going operations.
-
-# tispark
-Running Spark SQL on top of TiDB / TiKV.
+TiSpark depends on the existence of TiKV clusters and PDs. It also needs to setup and use Spark clustering platform. 
 
 A thin layer of TiSpark. Most of the logic is inside tikv-java-client library.
 https://github.com/pingcap/tikv-client-lib-java
@@ -50,3 +37,23 @@ ti.tidbMapDatabase("tpch")
 
 spark.sql("select count(*) from lineitem").show
 ```
+## Quick start
+
+Read the [Quick Start](./docs/QUICKSTART.md).
+
+
+## Follow us
+
+### Twitter
+
+[@PingCAP](https://twitter.com/PingCAP)
+
+### Mailing list
+
+tidb-user@googlegroups.com
+
+[Google Group](https://groups.google.com/forum/#!forum/tidb-user)
+
+## License
+TiSpark is under the Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
+
