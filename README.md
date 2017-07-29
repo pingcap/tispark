@@ -39,7 +39,7 @@ spark.sql("select count(*) from lineitem").show
 ```
 ## Quick start
 
-Read the [Quick Start](./docs/QUICKSTART.md).
+Read the [Quick Start](./docs/userguide.md).
 
 
 ## Follow us
