@@ -1,18 +1,19 @@
 ## What is TiSpark?
 
-TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV. It takes advantages of the Spark, at the same time, seamlessly glues to the distributed OLTP database TiDB to provide a Hybrid Transaction/Analytical Processing (HTAP) solution answering complex OLAP queries. 
+TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) to serve as a one-stop solution for online transactions and analysis.
 
 ## TiSpark Architecture
 
 ![architecture](./docs/architecture.png)
 
-- TiSpark Integrates with Spark Catalyst Engine deeply, it provides precise control of the computing, which allows Spark read data from the storage of TiKV efficiently, It also supports index seek, which improves the performance of a point query execution significantly.
 
-- It utilizes several of computing strategies to reduce both amount of computing tasks and size of data set handling by Spark SQL, which accelerates the query execution. It also uses TiDB built-in statistical information as a query plan optimization.
+- TiSpark integrates with Spark Catalyst Engine deeply. It provides precise control of the computing, which allows Spark read data from TiKV efficiently. It also supports index seek, which improves the performance of the point query execution significantly.
 
-- From data integration point of view, TiSpark + TiDB provides a solution runs both transaction and analysis directly on the same platform without building and maintaining any ETLs. It simplifies system architecture and reduces the cost of maintenance.
+- It utilizes several strategies to push down the computing to reduce the size of dataset handling by Spark SQL, which accelerates the query execution. It also uses the TiDB built-in statistical information for  the query plan optimization.
 
-- In addition, user can deploy and utilize tools from Spark ecosystem for further data processing and manipulation on TiDB . for example, using TiSpark for data analysis and ETL; retrieving data from TiKV as a machine learning data source; generating reports from  and so on.
+- From the data integration point of view, TiSpark + TiDB provides a solution runs both transaction and analysis directly on the same platform without building and maintaining any ETLs. It simplifies the system architecture and reduces the cost of maintenance.
+
+- In addition, you can deploy and utilize tools from the Spark ecosystem for further data processing and manipulation on TiDB. For example, using TiSpark for data analysis and ETL; retrieving data from TiKV as a machine learning data source; generating reports from the scheduling system  and so on.
 
 TiSpark depends on the existence of TiKV clusters and PDs. It also needs to setup and use Spark clustering platform. 
 
