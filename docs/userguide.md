@@ -3,7 +3,7 @@ TiSpark (Beta) User Guide
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) solution to serve as a one-stop solution for online transactions and analysis.
 
 
-TiSpark depends on the TiKV cluster and the PD cluster. It also needs to set up a Spark clustering platform. This document provides a brief introduction to how to setup and use TiSpark. It requires some basic knowledge of Apache Spark. For more information, please refer to [Spark website](https://spark.apache.org/docs/latest/index.html).
+TiSpark depends on the TiKV cluster and the PD cluster. It also needs to set up a Spark cluster. This document provides a brief introduction to how to setup and use TiSpark. It requires some basic knowledge of Apache Spark. For more information, please refer to [Spark website](https://spark.apache.org/docs/latest/index.html).
 
 
 ## Overview
@@ -16,9 +16,9 @@ TiSpark is an OLAP solution that runs Spark SQL directly on TiKV, the distribute
 TiSpark Architecture
 
 + TiSpark integrates with Spark Catalyst Engine deeply. It provides precise control of the computing, which allows Spark read data from TiKV efficiently. It also supports index seek, which improves the performance of the point query execution significantly.
-+ It utilizes several strategies to push down the computing to reduce the size of dataset handling by Spark SQL, which accelerates the query execution. It also uses the TiDB built-in statistical information for  the query plan optimization.
++ It utilizes several strategies to push down the computing to reduce the size of dataset handling by Spark SQL, which accelerates the query execution. It also uses the TiDB built-in statistical information for the query plan optimization.
 + From the data integration point of view, TiSpark + TiDB provides a solution runs both transaction and analysis directly on the same platform without building and maintaining any ETLs. It simplifies the system architecture and reduces the cost of maintenance.
-+ In addition, you can deploy and utilize tools from the Spark ecosystem for further data processing and manipulation on TiDB. For example, using TiSpark for data analysis and ETL; retrieving data from TiKV as a machine learning data source; generating reports from the scheduling system  and so on.
++ In addition, you can deploy and utilize tools from the Spark ecosystem for further data processing and manipulation on TiDB. For example, using TiSpark for data analysis and ETL; retrieving data from TiKV as a machine learning data source; generating reports from the scheduling system and so on.
 
 ## Environment Setup
 
@@ -37,7 +37,7 @@ For independent deployment of TiKV and TiSpark, it is recommended to refer to th
  
 + Hardware configuration
  - For general purposes, please refer to the TiDB and TiKV hardware configuration [recommendations](https://github.com/pingcap/docs/blob/master/op-guide/recommendation.md#deployment-recommendations).
- - If the usage is more focused on the analysis scenarios, you can increase the memory of the TiKV nodes to at least 64GIf using  Hard Disk Drive (HDD), it is recommended to use at least 8 disks.
+ - If the usage is more focused on the analysis scenarios, you can increase the memory of the TiKV nodes to at least 64G. If using  Hard Disk Drive (HDD), it is recommended to use at least 8 disks.
 
 + TiKV parameters (default)
 
@@ -104,7 +104,7 @@ Running TiSpark on an existing Spark cluster does not require a reboot of the cl
 Spark-shell --jars $ PATH / tispark-0.1.0.jar
 ```
 
-If you want to deploy TiSpark as a default component, simply place the TiSpark jar package into the jars path for each node of the Spark clusters and restart the Spark clusters:
+If you want to deploy TiSpark as a default component, simply place the TiSpark jar package into the jars path for each node of the Spark cluster and restart the Spark cluster:
 
 ```
 $ {SPARK_INSTALL_PATH} / jars
@@ -117,7 +117,7 @@ In this way,  you can use either `Spark-Submit` or `Spark-Shell` to use TiSpark 
 ### Deploy TiSpark without the Spark cluster
 
 
-If you do not have a Spark cluster, we recommend using the standalone model. To use the Spark Standalone model, you can simply place a compiled version of Spark on each node of the cluster. If you encounter problems, please to refer to its official website* (https://spark.apache.org/docs/latest/spark-standalone.html)*. And you are welcome to [file an issue](https://github.com/pingcap/tispark/issues/new) on our GitHub.
+If you do not have a Spark cluster, we recommend using the standalone mode. To use the Spark Standalone model, you can simply place a compiled version of Spark on each node of the cluster. If you encounter problems, please to refer to its official website* (https://spark.apache.org/docs/latest/spark-standalone.html)*. And you are welcome to [file an issue](https://github.com/pingcap/tispark/issues/new) on our GitHub.
 
 
 #### Download and install
@@ -159,15 +159,15 @@ Assuming you have successfully started the TiSpark cluster as described above, h
 In the Spark-Shell, enter the following command, assuming that your PD node is located at `192.168.1.100`, port `2379`:
 
 ```
-Import org.apache.spark.sql.TiContext
-Val ti = new TiContext (spark, List ("192.168.1.100:2379")
-Ti.tidbMapDatabase ("tpch")
+import org.apache.spark.sql.TiContext
+val ti = new TiContext (spark, List ("192.168.1.100:2379")
+ti.tidbMapDatabase ("tpch")
 
 ```
 After that you can call Spark SQL directly:
 
 ```
-Spark.sql ("select count (*) from lineitem")
+spark.sql ("select count (*) from lineitem")
 ```
 
 The result is:
