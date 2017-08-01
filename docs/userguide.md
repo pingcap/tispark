@@ -10,7 +10,7 @@ TiSpark depends on the TiKV cluster and the PD cluster. It also needs to set up 
 
 TiSpark is an OLAP solution that runs Spark SQL directly on TiKV, the distributed storage engine.
 
-![image alt text](image_0.png)
+![image alt text](architecture.png)
 
 
 TiSpark Architecture
