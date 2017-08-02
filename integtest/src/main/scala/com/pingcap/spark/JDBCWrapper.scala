@@ -63,7 +63,7 @@ class JDBCWrapper(prop: Properties) {
     tp match {
       case "VARCHAR" | "CHAR" | "TEXT" => str
       case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" => BigDecimal(str)
-      case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INTEGER" | "BIGINT" => str.toLong
+      case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => str.toLong
       case "DATE" => Date.valueOf(str)
       case "TIME" | "TIMESTAMP" | "DATETIME" => Timestamp.valueOf(str)
     }
@@ -97,16 +97,13 @@ class JDBCWrapper(prop: Properties) {
     val stat = s"insert into ${table} values (${placeholders})"
     val ps = connection.prepareStatement(stat)
     row.zipWithIndex.map { case (value, index) => {
+        val pos = index + 1
         value match {
-          case f: Float => ps.setFloat(index + 1, f)
-          case d: Double => ps.setDouble(index + 1, d)
-          case bd: BigDecimal => ps.setBigDecimal(index + 1, bd.bigDecimal)
-          case b: Boolean => ps.setBoolean(index + 1, b)
-          case s: Short => ps.setShort(index + 1, s)
-          case i: Int => ps.setInt(index + 1, i)
-          case l: Long => ps.setLong(index + 1, l)
-          case d: Date => ps.setDate(index + 1, d)
-          case ts: Timestamp => ps.setTimestamp(index + 1, ts)
+          case bd: BigDecimal => ps.setBigDecimal(pos, bd.bigDecimal)
+          case l: Long => ps.setLong(pos, l)
+          case d: Date => ps.setDate(pos, d)
+          case s: String => ps.setString(pos, s)
+          case ts: Timestamp => ps.setTimestamp(pos, ts)
         }
       }
     }
