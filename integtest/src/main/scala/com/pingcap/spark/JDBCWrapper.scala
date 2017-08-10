@@ -20,11 +20,13 @@ package com.pingcap.spark
 import java.sql.{Connection, Date, DriverManager, Timestamp}
 import java.util.Properties
 import java.util.regex.Pattern
+
 import com.pingcap.spark.Utils._
+import com.typesafe.scalalogging.slf4j.LazyLogging
 
 import scala.collection.mutable.ArrayBuffer
 
-class JDBCWrapper(prop: Properties) {
+class JDBCWrapper(prop: Properties) extends LazyLogging {
   private val Sep: String = "|"
 
   private val createdDBs = ArrayBuffer.empty[String]
@@ -35,6 +37,11 @@ class JDBCWrapper(prop: Properties) {
     val jdbcHostname = getOrThrow(prop, "tidbaddr")
     val jdbcPort = Integer.parseInt(getOrThrow(prop, "tidbport"))
     val jdbcUrl = s"jdbc:mysql://${jdbcHostname}:${jdbcPort}?user=${jdbcUsername}"
+
+    logger.info("jdbcUsername: " + jdbcUsername)
+    logger.info("jdbcHostname: " + jdbcHostname)
+    logger.info("jdbcPort: " + jdbcPort)
+    logger.info("jdbcUrl: " + jdbcUrl)
 
     DriverManager.getConnection(jdbcUrl, jdbcUsername, "")
   }
@@ -52,6 +59,7 @@ class JDBCWrapper(prop: Properties) {
   }
 
   private def dumpCreateTable(table: String, path: String): Unit = {
+    logger.info(s"Dumping table: ${table} to ${path}")
     val (_, res) = queryTiDB("show create table " + table)
     val content = res(0)(1).toString
     writeFile(content, ddlFileName(path, table))
@@ -89,10 +97,14 @@ class JDBCWrapper(prop: Properties) {
 
   def createTable(path: String) = {
     val statement = connection.createStatement()
-    statement.executeUpdate(readFile(path).mkString("\n"))
+    val query = readFile(path).mkString("\n")
+    logger.info("Running script: " + path)
+    logger.info("Create table: " + query)
+    statement.executeUpdate(query)
   }
 
   private def insertRow(row: List[Any], table: String): Unit = {
+    logger.info("Insert into : " + table)
     val placeholders = List.fill(row.size)("?").mkString(",")
     val stat = s"insert into ${table} values (${placeholders})"
     val ps = connection.prepareStatement(stat)
@@ -111,13 +123,14 @@ class JDBCWrapper(prop: Properties) {
   }
 
   def loadTable(path: String): Unit = {
+    logger.info("Loading data from : " + path)
     val lines = readFile(path)
     val (table, schema, rows) = (lines(0), lines(1).split(Pattern.quote(Sep)).toList, lines.drop(2))
     val rowData: List[List[Any]] = rows.map { rowFromString(_, schema) }
     rowData.map(insertRow(_, table))
   }
 
-  def init(databaseName: String): Unit = {
+  def init(databaseName: String): String = {
     if (databaseName != null) {
       if(!databaseExists(databaseName)) {
         createDatabase(databaseName, false)
@@ -130,6 +143,8 @@ class JDBCWrapper(prop: Properties) {
       connection.setCatalog(sandbox)
       currentDatabaseName = sandbox
     }
+    logger.info("Current database " + currentDatabaseName)
+    currentDatabaseName
   }
 
   private def databaseExists(databaseName: String): Boolean = {
@@ -141,6 +156,7 @@ class JDBCWrapper(prop: Properties) {
   }
 
   private def createDatabase(dbName: String, cleanup: Boolean = true): Unit = {
+    logger.info("Creating database " + dbName)
     val statement = connection.createStatement()
     statement.executeUpdate("create database " + dbName)
     if (cleanup) createdDBs.append(dbName)
@@ -154,6 +170,7 @@ class JDBCWrapper(prop: Properties) {
   }
 
   def queryTiDB(query: String): (List[String], List[List[Any]]) = {
+    logger.info("Running query on TiDB: " + query)
     val statement = connection.createStatement()
     val resultSet = statement.executeQuery(query)
     val rsMetaData = resultSet.getMetaData();

@@ -19,12 +19,13 @@ package com.pingcap.spark
 
 import java.util.Properties
 
+import com.typesafe.scalalogging.slf4j.LazyLogging
 import org.apache.spark.sql.{SparkSession, TiContext}
 
 import scala.collection.mutable.ArrayBuffer
 
 
-class SparkWrapper(prop: Properties) {
+class SparkWrapper(prop: Properties) extends LazyLogging {
   private val spark = SparkSession
     .builder()
     .appName("TiSpark Integration Test")
@@ -33,8 +34,12 @@ class SparkWrapper(prop: Properties) {
   spark.sparkContext.setLogLevel("ERROR")
   val ti = new TiContext(spark, List(prop.getProperty("pdaddr")))
 
+  def init(databaseName: String): Unit = {
+    ti.tidbMapDatabase(databaseName)
+  }
 
   def querySpark(sql: String): List[List[Any]] = {
+    logger.info("Running query on spark: " + sql)
     spark.sql(sql).collect().map(row => {
       val rowRes = ArrayBuffer.empty[Any]
       for (i <- 0 to row.length - 1) {

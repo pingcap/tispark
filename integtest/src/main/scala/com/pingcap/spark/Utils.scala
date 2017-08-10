@@ -21,6 +21,8 @@ import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
 import java.util.Properties
 
+import com.typesafe.scalalogging.slf4j.Logger
+
 import scala.collection.JavaConversions._
 
 object Utils {
@@ -51,6 +53,14 @@ object Utils {
     } else {
       v
     }
+  }
+
+  def time[R](block: => R)(logger: Logger): R = {
+    val t0 = System.nanoTime()
+    val result = block
+    val t1 = System.nanoTime()
+    logger.info("Elapsed time: " + (t1 - t0) / 1000.0 / 1000.0 / 1000.0 + "s")
+    result
   }
 
   def isDDLFile(path: String) = path.endsWith(DDLSuffix)

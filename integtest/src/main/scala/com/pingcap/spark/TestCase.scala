@@ -22,29 +22,35 @@ import java.util.Properties
 import com.pingcap.spark.Utils._
 
 import scala.collection.mutable.ArrayBuffer
+import com.typesafe.scalalogging.slf4j.LazyLogging
 
-class TestCase(val prop: Properties) {
+class TestCase(val prop: Properties) extends LazyLogging {
   protected val dbName = prop.getProperty("database")
   protected val dumpDB = Option(prop.getProperty("dumpDB")).getOrElse("false").toBoolean
   protected val basePath = getOrThrow(prop, "testbasepath")
   protected lazy val jdbc = new JDBCWrapper(prop)
   protected lazy val spark = new SparkWrapper(prop)
 
+  logger.info("Database: " + dbName)
+  logger.info("dumpDB: " + dumpDB)
+  logger.info("basePath: " + basePath)
 
-  protected val testCases = ArrayBuffer.empty[String]
-
-  def testName(): String = getClass.getSimpleName
+  protected val testCases = ArrayBuffer.empty[(String, String)]
 
   def init(): Unit = {
     if (dumpDB) {
+      logger.info("Dumping database " + dbName)
       if (dbName == null) {
         throw new IllegalArgumentException("database name is null while dumping")
       }
-      jdbc.init(dbName)
+      val curDB = jdbc.init(dbName)
+      spark.init(curDB)
       ensurePath(basePath, dbName)
       jdbc.dumpAllTables(joinPath(basePath, dbName))
     } else {
-      jdbc.init(dbName)
+      logger.info("Attach to database " + dbName)
+      val curDB = jdbc.init(dbName)
+      spark.init(curDB)
       prepareTestcases(basePath)
     }
   }
@@ -55,7 +61,7 @@ class TestCase(val prop: Properties) {
 
     val dir = new File(parentPath)
     if (dir.isDirectory) {
-      dir.listFiles().map {f =>
+      dir.listFiles().map { f =>
         if (f.isDirectory) {
           prepareTestcases(f.getAbsolutePath)
         } else {
@@ -64,32 +70,44 @@ class TestCase(val prop: Properties) {
           } else if (f.getName.endsWith(DataSuffix)) {
             dataFiles.append(f.getAbsolutePath)
           } else if (f.getName.endsWith(SQLSuffix)) {
-            testCases.append(Utils.readFile(f.getAbsolutePath).mkString("\n"))
+            testCases.append((f.getName, Utils.readFile(f.getAbsolutePath).mkString("\n")))
           }
         }
       }
     }
 
-    ddls.foreach(jdbc.createTable)
-    dataFiles.foreach(jdbc.loadTable)
+    if (prop.getProperty("loaddata").toBoolean) {
+      logger.info("Load data... ")
+      ddls.foreach{ file => {
+          logger.info("Resister for DDL script " + file)
+          jdbc.createTable(file)
+        }
+      }
+      dataFiles.foreach{ file => {
+          logger.info("Resister for data loading script " + file)
+          jdbc.loadTable(file)
+        }
+      }
+    }
+    test
   }
 
   def test() = {
-    testCases.foreach { sql =>
-      println("================= Query TiSpark =================\n")
-      val actual: List[List[Any]] = spark.querySpark(sql)
-      println("================= Query TiDB =================\n")
-      val baseline: List[List[Any]] = jdbc.queryTiDB(sql)._2
+    testCases.sortBy(_._1).foreach { case (file, sql) =>
+      logger.info(s" Query TiSpark ${file} \n")
+      val actual: List[List[Any]] = time { spark.querySpark(sql) }(logger)
+      logger.info(s" Query TiDB ${file} \n")
+      val baseline: List[List[Any]] = time { jdbc.queryTiDB(sql)._2 }(logger)
 
       val result = compResult(actual, baseline)
       if (!result) {
-        println("================= TiSpark =================\n")
-        printResult(actual)
-        println("================= TiDB =================\n")
-        printResult(baseline)
+        logger.info(s"Dump diff for TiSpark ${file} \n")
+        writeResult(actual, file + ".result.spark")
+        logger.info(s"Dump diff for TiDB ${file} \n")
+        writeResult(baseline, file + ".result.tidb")
       }
 
-      println(testName + " result: " + result)
+      logger.info(s"${file} result: ${result}\n\n")
     }
   }
 
@@ -140,14 +158,16 @@ class TestCase(val prop: Properties) {
     }
   }
 
-  def printResult(rowList: List[List[Any]]): Unit = {
+  def writeResult(rowList: List[List[Any]], path: String): Unit = {
+    val sb = StringBuilder.newBuilder
     rowList.foreach{
       row => {
         row.foreach{
-          value => print(value + " ")
+          value => sb.append(value + " ")
         }
-        println("")
+        sb.append("\n")
       }
     }
+    writeFile(sb.toString(), path)
   }
 }
