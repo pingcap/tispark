@@ -94,9 +94,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   def test() = {
     testCases.sortBy(_._1).foreach { case (file, sql) =>
-      logger.info(s" Query TiSpark ${file} \n")
+      logger.info(s" Query TiSpark ${file} ")
       val actual: List[List[Any]] = time { spark.querySpark(sql) }(logger)
-      logger.info(s" Query TiDB ${file} \n")
+      logger.info(s" \nQuery TiDB ${file} ")
       val baseline: List[List[Any]] = time { jdbc.queryTiDB(sql)._2 }(logger)
 
       val result = compResult(actual, baseline)
@@ -107,7 +107,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
         writeResult(baseline, file + ".result.tidb")
       }
 
-      logger.info(s"${file} result: ${result}\n\n")
+      logger.info(s" \n*************** ${file} result: ${result}\n\n\n")
     }
   }
 
