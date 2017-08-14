@@ -4,6 +4,26 @@ User might attach to an existing database with existing data for testing or dump
 Put config.properties into Spark's conf path
 Test cases will be searched recursively. DDL files is for recreate test table; SQL is for test script run for both sides. Data file is for loading test data.
 
+Dump database to create test data:
+```
+./dump.sh
+```
+
+Load test data from dumping files:
+```
+./load.sh
+```
+
+Run Test on existing data:
+```
+./test.sh
+```
+
+And you might run manually like this for other use cases:
+```
+java -Dtest.mode=Load -cp ./conf:$./lib/* com.pingcap.spark.TestFramework
+```
+
 ### Configuration
 Here is a sample for config.properties
 ```
@@ -12,9 +32,6 @@ tidbaddr=127.0.0.1
 tidbport=4000
 tidbuser=root
 testbasepath=/Users/whoever/workspace/pingcap/tispark/integtest/testcases
-dumpDB=false
-databaseToDump=tpch
-loaddata=false
 ```
 
 | Key           | Desc          |
@@ -23,8 +40,7 @@ loaddata=false
 | tidbaddr      | TiDB Address      |
 | tidbport      | TiDB Port      |
 | tidbuser      | TiDB username |
-| testbasepath  | Test case base path include .ddl, .sql and .data files | 
-| dumpDB        | If do database dumping to create test data files or run test. Put true will not run test. |
-| database      | Database to attach. Required for dump database; Optional for load and test; If absent for a temp sandbox database will be created |
-| loaddata      | Create table and load data before test. |
-
+| test.basepath | Test case base path include .ddl, .sql and .data files | 
+| test.mode     | Test: Run test only; Load: Load only; LoadNTest: Load and Test; Dump: Dump database specified by test.dumpDB.databases |
+| test.dumpDB.databases  | Database to dump. Required for dump database |
+| test.ignore      | Test path to ignore. |
