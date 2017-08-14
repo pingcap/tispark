@@ -27,7 +27,7 @@ object TestFramework extends LazyLogging {
 
   def main(args: Array[String]) = {
     val prop: Properties = loadConf(ConfName)
-    new TestCase(prop).init()
+      new TestCase(prop).init()
     System.exit(0)
   }
 

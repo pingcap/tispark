@@ -27,15 +27,19 @@ import com.typesafe.scalalogging.slf4j.LazyLogging
 import scala.collection.mutable.ArrayBuffer
 
 class JDBCWrapper(prop: Properties) extends LazyLogging {
+  private val KeyTiDBAddress = "tidb.addr"
+  private val KeyTiDBPort = "tidb.port"
+  private val KeyTiDBUser = "tidb.user"
+
   private val Sep: String = "|"
 
   private val createdDBs = ArrayBuffer.empty[String]
   private var currentDatabaseName: String = null
 
   private val connection: Connection = {
-    val jdbcUsername = getOrThrow(prop, "tidbuser")
-    val jdbcHostname = getOrThrow(prop, "tidbaddr")
-    val jdbcPort = Integer.parseInt(getOrThrow(prop, "tidbport"))
+    val jdbcUsername = getOrThrow(prop, KeyTiDBUser)
+    val jdbcHostname = getOrThrow(prop, KeyTiDBAddress)
+    val jdbcPort = Integer.parseInt(getOrThrow(prop, KeyTiDBPort))
     val jdbcUrl = s"jdbc:mysql://${jdbcHostname}:${jdbcPort}?user=${jdbcUsername}"
 
     logger.info("jdbcUsername: " + jdbcUsername)
@@ -65,15 +69,29 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     writeFile(content, ddlFileName(path, table))
   }
 
-  private def valToString(value: Any): String = value.toString
+  private def valToString(value: Any): String = Option(value).getOrElse("NULL").toString
 
   private def valFromString(str: String, tp: String): Any = {
+    if (str.equalsIgnoreCase("NULL")) {
+      null
+    } else {
+      tp match {
+        case "VARCHAR" | "CHAR" | "TEXT" => str
+        case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" => BigDecimal(str)
+        case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => str.toLong
+        case "DATE" => Date.valueOf(str)
+        case "TIME" | "TIMESTAMP" | "DATETIME" => Timestamp.valueOf(str)
+      }
+    }
+  }
+
+  private def typeCodeFromString(tp: String): Int = {
     tp match {
-      case "VARCHAR" | "CHAR" | "TEXT" => str
-      case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" => BigDecimal(str)
-      case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => str.toLong
-      case "DATE" => Date.valueOf(str)
-      case "TIME" | "TIMESTAMP" | "DATETIME" => Timestamp.valueOf(str)
+      case "VARCHAR" | "CHAR" | "TEXT" => 12
+      case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" => 3
+      case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => 4
+      case "DATE" => 91
+      case "TIME" | "TIMESTAMP" | "DATETIME" => 93
     }
   }
 
@@ -92,7 +110,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
                   schema.mkString(Sep) + "\n" +
                   result.map(rowToString).mkString("\n")
 
-    Utils.writeFile(content, dataFileName(path, table))
+    writeFile(content, dataFileName(path, table))
   }
 
   def createTable(path: String) = {
@@ -103,7 +121,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     statement.executeUpdate(query)
   }
 
-  private def insertRow(row: List[Any], table: String): Unit = {
+  private def insertRow(row: List[Any], schema: List[String], table: String): Unit = {
     logger.info("Insert into : " + table)
     val placeholders = List.fill(row.size)("?").mkString(",")
     val stat = s"insert into ${table} values (${placeholders})"
@@ -116,6 +134,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
           case d: Date => ps.setDate(pos, d)
           case s: String => ps.setString(pos, s)
           case ts: Timestamp => ps.setTimestamp(pos, ts)
+          case null => ps.setNull(pos, typeCodeFromString(schema(index)))
         }
       }
     }
@@ -127,7 +146,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     val lines = readFile(path)
     val (table, schema, rows) = (lines(0), lines(1).split(Pattern.quote(Sep)).toList, lines.drop(2))
     val rowData: List[List[Any]] = rows.map { rowFromString(_, schema) }
-    rowData.map(insertRow(_, table))
+    rowData.map(insertRow(_, schema, table))
   }
 
   def init(databaseName: String): String = {
@@ -164,6 +183,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
 
   private def dropDatabases(): Unit = {
     createdDBs.foreach { dbName =>
+      logger.info("Dropping database " + dbName)
       val statement = connection.createStatement()
       statement.executeUpdate("drop database " + dbName)
     }

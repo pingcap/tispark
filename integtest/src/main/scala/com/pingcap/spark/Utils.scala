@@ -47,11 +47,25 @@ object Utils {
   }
 
   def getOrThrow(prop: Properties, key: String): String = {
-    val v = prop.getProperty(key)
-    if (v == null) {
-      throw new IllegalArgumentException(key + " is null")
+    val jvmProp = System.getProperty(key)
+    if (jvmProp != null) {
+      jvmProp
     } else {
-      v
+      val v = prop.getProperty(key)
+      if (v == null) {
+        throw new IllegalArgumentException(key + " is null")
+      } else {
+        v
+      }
+    }
+  }
+
+  def getOrElse(prop: Properties, key: String, defValue: String): String = {
+    val jvmProp = System.getProperty(key)
+    if (jvmProp != null) {
+      jvmProp
+    } else {
+      Option(prop.getProperty(key)).getOrElse(defValue)
     }
   }
 

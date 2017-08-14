@@ -25,58 +25,81 @@ import scala.collection.mutable.ArrayBuffer
 import com.typesafe.scalalogging.slf4j.LazyLogging
 
 class TestCase(val prop: Properties) extends LazyLogging {
-  protected val dbName = prop.getProperty("database")
-  protected val dumpDB = Option(prop.getProperty("dumpDB")).getOrElse("false").toBoolean
-  protected val basePath = getOrThrow(prop, "testbasepath")
+  object RunMode extends Enumeration {
+    type RunMode = Value
+    val Test, Load, LoadNTest, Dump = Value
+  }
+
+  protected val KeyDumpDBList = "test.dumpDB.databases"
+  protected val KeyMode = "test.mode"
+  protected val KeyTestBasePath = "test.basepath"
+
+  protected val dbNames = getOrElse(prop, KeyDumpDBList, "").split(",")
+  protected val mode = RunMode.withName(getOrElse(prop, KeyMode, "Test"))
+  protected val basePath = getOrElse(prop, KeyTestBasePath, "./testcases")
   protected lazy val jdbc = new JDBCWrapper(prop)
   protected lazy val spark = new SparkWrapper(prop)
 
-  logger.info("Database: " + dbName)
-  logger.info("dumpDB: " + dumpDB)
+  logger.info("Databases to dump: " + dbNames.mkString(","))
+  logger.info("Run Mode: " + mode)
   logger.info("basePath: " + basePath)
 
-  protected val testCases = ArrayBuffer.empty[(String, String)]
-
   def init(): Unit = {
-    if (dumpDB) {
-      logger.info("Dumping database " + dbName)
-      if (dbName == null) {
-        throw new IllegalArgumentException("database name is null while dumping")
+    mode match {
+      case RunMode.Dump => {
+        dbNames.filter(!_.isEmpty).foreach { dbName =>
+          logger.info("Dumping database " + dbName)
+          if (dbName == null) {
+            throw new IllegalArgumentException("database name is null while dumping")
+          }
+          jdbc.init(dbName)
+          ensurePath(basePath, dbName)
+          jdbc.dumpAllTables(joinPath(basePath, dbName))
+        }
       }
-      val curDB = jdbc.init(dbName)
-      spark.init(curDB)
-      ensurePath(basePath, dbName)
-      jdbc.dumpAllTables(joinPath(basePath, dbName))
-    } else {
-      logger.info("Attach to database " + dbName)
-      val curDB = jdbc.init(dbName)
-      spark.init(curDB)
-      prepareTestcases(basePath)
+      case RunMode.Load => {
+        work(basePath, false, true)
+      }
+      case RunMode.Test => {
+        work(basePath, true, false)
+      }
+      case RunMode.LoadNTest => {
+        work(basePath, true, true)
+      }
     }
   }
 
-  protected def prepareTestcases(parentPath: String): Unit = {
+  protected def work(parentPath: String, run: Boolean, load: Boolean): Unit = {
     val ddls = ArrayBuffer.empty[String]
     val dataFiles = ArrayBuffer.empty[String]
+    val dirs = ArrayBuffer.empty[String]
 
     val dir = new File(parentPath)
+    val testCases = ArrayBuffer.empty[(String, String)]
+
+    var dbName = dir.getName
+
     if (dir.isDirectory) {
       dir.listFiles().map { f =>
         if (f.isDirectory) {
-          prepareTestcases(f.getAbsolutePath)
+          dirs.append(f.getAbsolutePath)
         } else {
           if (f.getName.endsWith(DDLSuffix)) {
             ddls.append(f.getAbsolutePath)
           } else if (f.getName.endsWith(DataSuffix)) {
             dataFiles.append(f.getAbsolutePath)
           } else if (f.getName.endsWith(SQLSuffix)) {
-            testCases.append((f.getName, Utils.readFile(f.getAbsolutePath).mkString("\n")))
+            testCases.append((f.getName, readFile(f.getAbsolutePath).mkString("\n")))
           }
         }
       }
+    } else {
+      throw new IllegalArgumentException("Cannot prepare non-folder")
     }
 
-    if (prop.getProperty("loaddata").toBoolean) {
+    if (load) {
+      logger.info("Switch to " + dbName)
+      dbName = jdbc.init(dbName)
       logger.info("Load data... ")
       ddls.foreach{ file => {
           logger.info("Resister for DDL script " + file)
@@ -89,10 +112,18 @@ class TestCase(val prop: Properties) extends LazyLogging {
         }
       }
     }
-    test
+    if (run) {
+      test(dbName, testCases)
+    }
+
+    dirs.foreach { dir =>
+      work(dir, run, load)
+    }
   }
 
-  def test() = {
+  def test(dbName: String, testCases: ArrayBuffer[(String, String)]) = {
+    spark.init(dbName)
+
     testCases.sortBy(_._1).foreach { case (file, sql) =>
       logger.info(s" Query TiSpark ${file} ")
       val actual: List[List[Any]] = time { spark.querySpark(sql) }(logger)

@@ -21,20 +21,23 @@ import java.util.Properties
 
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import org.apache.spark.sql.{SparkSession, TiContext}
+import com.pingcap.spark.Utils._
 
 import scala.collection.mutable.ArrayBuffer
 
 
 class SparkWrapper(prop: Properties) extends LazyLogging {
+  private val KeyPDAddress = "pd.addrs"
+
   private val spark = SparkSession
     .builder()
     .appName("TiSpark Integration Test")
     .getOrCreate()
 
-  spark.sparkContext.setLogLevel("ERROR")
-  val ti = new TiContext(spark, List(prop.getProperty("pdaddr")))
+  val ti = new TiContext(spark, getOrThrow(prop, KeyPDAddress).split(",").toList)
 
   def init(databaseName: String): Unit = {
+    logger.info("Mapping database: " + databaseName)
     ti.tidbMapDatabase(databaseName)
   }
 
