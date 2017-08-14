@@ -1,7 +1,0 @@
-pdaddr=127.0.0.1:2379
-tidbaddr=127.0.0.1
-tidbport=4000
-tidbuser=root
-dumpDB=false
-database=tpch
-loaddata=false

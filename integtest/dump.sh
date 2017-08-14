@@ -2,4 +2,4 @@
 
 CLASS="com.pingcap.spark.TestFramework"
 
-java -Dtest.mode=Dump -Dtest.dumpDB.databases="$@" -cp ./conf:./lib/* $CLASS 
+java -Dtest.mode=Dump -Dtest.dumpDB.databases="$@" -cp ${BASEDIR}/conf:${BASEDIR}/lib/* $CLASS 

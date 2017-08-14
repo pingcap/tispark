@@ -22,7 +22,7 @@ import java.util.Properties
 import com.typesafe.scalalogging.slf4j.LazyLogging
 
 object TestFramework extends LazyLogging {
-  val ConfName = "config.properties"
+  val ConfName = "tispark_config.properties"
 
 
   def main(args: Array[String]) = {

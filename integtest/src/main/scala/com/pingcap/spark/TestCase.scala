@@ -33,10 +33,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected val KeyDumpDBList = "test.dumpDB.databases"
   protected val KeyMode = "test.mode"
   protected val KeyTestBasePath = "test.basepath"
+  protected val KeyTestIgnore = "test.ignore"
 
   protected val dbNames = getOrElse(prop, KeyDumpDBList, "").split(",")
   protected val mode = RunMode.withName(getOrElse(prop, KeyMode, "Test"))
   protected val basePath = getOrElse(prop, KeyTestBasePath, "./testcases")
+  protected val ignoreCases = getOrElse(prop, KeyTestIgnore, "").split(",")
   protected lazy val jdbc = new JDBCWrapper(prop)
   protected lazy val spark = new SparkWrapper(prop)
 
@@ -78,50 +80,52 @@ class TestCase(val prop: Properties) extends LazyLogging {
     val testCases = ArrayBuffer.empty[(String, String)]
 
     var dbName = dir.getName
-
-    if (dir.isDirectory) {
-      dir.listFiles().map { f =>
-        if (f.isDirectory) {
-          dirs.append(f.getAbsolutePath)
-        } else {
-          if (f.getName.endsWith(DDLSuffix)) {
-            ddls.append(f.getAbsolutePath)
-          } else if (f.getName.endsWith(DataSuffix)) {
-            dataFiles.append(f.getAbsolutePath)
-          } else if (f.getName.endsWith(SQLSuffix)) {
-            testCases.append((f.getName, readFile(f.getAbsolutePath).mkString("\n")))
+    if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
+      if (dir.isDirectory) {
+        dir.listFiles().map { f =>
+          if (f.isDirectory) {
+            dirs.append(f.getAbsolutePath)
+          } else {
+            if (f.getName.endsWith(DDLSuffix)) {
+              ddls.append(f.getAbsolutePath)
+            } else if (f.getName.endsWith(DataSuffix)) {
+              dataFiles.append(f.getAbsolutePath)
+            } else if (f.getName.endsWith(SQLSuffix)) {
+              testCases.append((f.getName, readFile(f.getAbsolutePath).mkString("\n")))
+            }
           }
         }
+      } else {
+        throw new IllegalArgumentException("Cannot prepare non-folder")
       }
-    } else {
-      throw new IllegalArgumentException("Cannot prepare non-folder")
-    }
 
-    if (load) {
-      logger.info("Switch to " + dbName)
-      dbName = jdbc.init(dbName)
-      logger.info("Load data... ")
-      ddls.foreach{ file => {
+      if (load) {
+        logger.info("Switch to " + dbName)
+        dbName = jdbc.init(dbName)
+        logger.info("Load data... ")
+        ddls.foreach{ file => {
           logger.info("Resister for DDL script " + file)
           jdbc.createTable(file)
         }
-      }
-      dataFiles.foreach{ file => {
+        }
+        dataFiles.foreach{ file => {
           logger.info("Resister for data loading script " + file)
           jdbc.loadTable(file)
         }
+        }
       }
-    }
-    if (run) {
-      test(dbName, testCases)
-    }
+      if (run) {
+        test(dbName, testCases)
+      }
 
-    dirs.foreach { dir =>
-      work(dir, run, load)
+      dirs.foreach { dir =>
+        work(dir, run, load)
+      }
     }
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]) = {
+    jdbc.init(dbName)
     spark.init(dbName)
 
     testCases.sortBy(_._1).foreach { case (file, sql) =>
