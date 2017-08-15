@@ -4,20 +4,22 @@ User might attach to an existing database with existing data for testing or dump
 Put config.properties into Spark's conf path
 Test cases will be searched recursively. DDL files is for recreate test table; SQL is for test script run for both sides. Data file is for loading test data.
 
-Dump database to create test data:
+Dump databases listed to create test data:
 ```
-./dump.sh
+./dump.sh dbnameList
 ```
+Database name list is separated by comma like this: db1, db2
 
 Load test data from dumping files:
 ```
-./load.sh
+./load.sh 
 ```
 
 Run Test on existing data:
 ```
-./test.sh
+./test.sh [-d|--debug]
 ```
+If debug flag present, JVM remote debug port will open at 5005.
 
 And you might run manually like this for other use cases:
 ```
@@ -43,4 +45,4 @@ test.basepath=/Users/whoever/workspace/pingcap/tispark/integtest/testcases
 | test.basepath | Test case base path include .ddl, .sql and .data files | 
 | test.mode     | Test: Run test only; Load: Load only; LoadNTest: Load and Test; Dump: Dump database specified by test.dumpDB.databases |
 | test.dumpDB.databases  | Database to dump. Required for dump database |
-| test.ignore      | Test path to ignore. |
+| test.ignore      | Test path to ignore. Separated by comma |
