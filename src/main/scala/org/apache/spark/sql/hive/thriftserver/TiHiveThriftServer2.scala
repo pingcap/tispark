@@ -15,13 +15,20 @@
 
 package org.apache.spark.sql.hive.thriftserver
 
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
+
 import org.apache.commons.logging.LogFactory
+import org.apache.hadoop.hive.conf.HiveConf
+import org.apache.hadoop.hive.conf.HiveConf.ConfVars
+import org.apache.hive.service.cli.thrift.{ThriftBinaryCLIService, ThriftHttpCLIService}
 import org.apache.hive.service.server.HiveServer2
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.sql.hive.thriftserver.HiveThriftServer2._
+import org.apache.spark.sql.hive.thriftserver.ReflectionUtils.setSuperField
 import org.apache.spark.sql.hive.thriftserver.ui.ThriftServerTab
 import org.apache.spark.util.{ShutdownHookManager, Utils}
 
@@ -72,11 +79,13 @@ object TiHiveThriftServer2 extends Logging {
       TiSparkSQLEnv.sqlContext.sessionState.newHadoopConf())
 
     try {
-      val server = new HiveThriftServer2(TiSparkSQLEnv.sqlContext)
+      val server = new TiHiveThriftServer2(TiSparkSQLEnv.sqlContext)
       server.init(executionHive.conf)
       server.start()
       logInfo("TiHiveThriftServer2 started")
       listener = new HiveThriftServer2Listener(server, TiSparkSQLEnv.sqlContext.conf)
+      HiveThriftServer2.listener = listener
+
       TiSparkSQLEnv.sparkContext.addSparkListener(listener)
       uiTab = if (TiSparkSQLEnv.sparkContext.getConf.getBoolean("spark.ui.enabled", true)) {
         Some(new ThriftServerTab(TiSparkSQLEnv.sparkContext))
@@ -93,6 +102,48 @@ object TiHiveThriftServer2 extends Logging {
       case e: Exception =>
         logError("Error starting TiHiveThriftServer2", e)
         System.exit(-1)
+    }
+  }
+}
+
+
+private[hive] class TiHiveThriftServer2(sqlContext: SQLContext)
+  extends HiveServer2
+    with ReflectedCompositeService {
+  // state is tracked internally so that the server only attempts to shut down if it successfully
+  // started, and then once only.
+  private val started = new AtomicBoolean(false)
+
+  override def init(hiveConf: HiveConf) {
+    val sparkSqlCliService = new TiSparkSQLCLIService(this, sqlContext)
+    setSuperField(this, "cliService", sparkSqlCliService)
+    addService(sparkSqlCliService)
+
+    val thriftCliService = if (isHTTPTransportMode(hiveConf)) {
+      new ThriftHttpCLIService(sparkSqlCliService)
+    } else {
+      new ThriftBinaryCLIService(sparkSqlCliService)
+    }
+
+    setSuperField(this, "thriftCLIService", thriftCliService)
+    addService(thriftCliService)
+    initCompositeService(hiveConf)
+  }
+
+  private def isHTTPTransportMode(hiveConf: HiveConf): Boolean = {
+    val transportMode = hiveConf.getVar(ConfVars.HIVE_SERVER2_TRANSPORT_MODE)
+    transportMode.toLowerCase(Locale.ENGLISH).equals("http")
+  }
+
+
+  override def start(): Unit = {
+    super.start()
+    started.set(true)
+  }
+
+  override def stop(): Unit = {
+    if (started.getAndSet(false)) {
+      super.stop()
     }
   }
 }

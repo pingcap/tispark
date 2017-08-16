@@ -28,13 +28,23 @@ import org.apache.spark.util.Utils
 import org.apache.spark.{SparkConf, SparkContext}
 
 
-class TiSparkSession(@transient override val sparkContext: SparkContext) extends SparkSession(sparkContext) {
+class TiSparkSession(@transient override val sparkContext: SparkContext,
+                     @transient private val existingSharedState: Option[SharedState])
+  extends SparkSession(sparkContext) {
+
+  private[sql] def this(sc: SparkContext) {
+    this(sc, None)
+  }
 
   @transient
   override lazy val sharedState: SharedState = new SharedState(sparkContext)
 
   @transient
   override lazy val sessionState: SessionState = new TiSessionState(this)
+
+  override def newSession(): SparkSession = {
+    new TiSparkSession(sparkContext, Some(sharedState))
+  }
 
   experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
 }
