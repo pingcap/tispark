@@ -13,23 +13,21 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.internal
+package org.apache.spark.sql.hive
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 
 
-class TiSessionState(sparkSession: SparkSession) extends SessionState(sparkSession) {
+class TiSessionState(sparkSession: SparkSession) extends HiveSessionState(sparkSession) {
   /**
     * Internal catalog for managing table and database states.
     */
   override lazy val catalog = new TiSessionCatalog(
-    sparkSession.sharedState.externalCatalog,
+    sparkSession.sharedState.externalCatalog.asInstanceOf[HiveExternalCatalog],
     sparkSession.sharedState.globalTempViewManager,
+    sparkSession,
     functionResourceLoader,
     functionRegistry,
     conf,
     newHadoopConf())
-
-
 }

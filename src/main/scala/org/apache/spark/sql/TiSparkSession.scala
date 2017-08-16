@@ -17,26 +17,26 @@ package org.apache.spark.sql
 
 import java.util.concurrent.atomic.AtomicReference
 
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
 import org.apache.spark.sql.execution.ui.SQLListener
+import org.apache.spark.sql.hive.TiSessionState
 import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
-import org.apache.spark.sql.internal.{SessionState, SharedState, TiSessionState}
+import org.apache.spark.sql.internal.{SessionState, SharedState}
 import org.apache.spark.util.Utils
-
-import scala.reflect.ClassTag
-import scala.util.control.NonFatal
+import org.apache.spark.{SparkConf, SparkContext}
 
 
-class TiSparkSession(@transient private val sparkContext: SparkContext) extends SparkSession(sparkContext) {
+class TiSparkSession(@transient override val sparkContext: SparkContext) extends SparkSession(sparkContext) {
 
   @transient
   override lazy val sharedState: SharedState = new SharedState(sparkContext)
 
   @transient
   override lazy val sessionState: SessionState = new TiSessionState(this)
+
+  experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
 }
 
 

@@ -13,24 +13,29 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.catalyst.catalog
+package org.apache.spark.sql.hive
 
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
-import com.pingcap.tispark.{MetaManager, TiUtils}
+import com.pingcap.tispark.{MetaManager, TiDBRelation, TiOptions, TiUtils}
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.sql.catalyst.{CatalystConf, TableIdentifier}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{FunctionRegistry, NoSuchDatabaseException, NoSuchTableException}
+import org.apache.spark.sql.catalyst.catalog._
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.StringUtils
+import org.apache.spark.sql.catalyst.{CatalystConf, TableIdentifier}
 
 
-class TiSessionCatalog(externalCatalog: ExternalCatalog,
+class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
                         globalTempViewManager: GlobalTempViewManager,
+                        sparkSession: SparkSession,
                         functionResourceLoader: FunctionResourceLoader,
                         functionRegistry: FunctionRegistry,
                         conf: CatalystConf,
                         hadoopConf: Configuration)
-  extends SessionCatalog(externalCatalog,
+  extends HiveSessionCatalog(externalCatalog,
                          globalTempViewManager,
+                         sparkSession,
                          functionResourceLoader,
                          functionRegistry,
                          conf,
@@ -38,6 +43,26 @@ class TiSessionCatalog(externalCatalog: ExternalCatalog,
 
   val pdAddresses: List[String] = hadoopConf.get("spark.tispark.pd.addresses", "127.0.0.1:2379").split(",").toList
   val meta: MetaManager = new MetaManager(pdAddresses)
+
+  meta.loadDatabase
+  meta.getDatabases().map {
+    db => meta.loadTables(db)
+  }
+
+
+  override def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan = {
+    synchronized {
+      val table = formatTableName(name.table)
+      val db = formatDatabaseName(name.database.getOrElse(currentDb))
+      if (!meta.getDatabase(db).isEmpty && !meta.getTable(db, table).isEmpty) {
+        val rel: TiDBRelation =
+          new TiDBRelation(new TiOptions(pdAddresses, db, table), meta)(sparkSession.sqlContext)
+        sparkSession.sqlContext.baseRelationToDataFrame(rel).logicalPlan
+      } else {
+        super.lookupRelation(name, alias)
+      }
+    }
+  }
 
   override def databaseExists(db: String): Boolean = {
     val dbName = formatDatabaseName(db)
