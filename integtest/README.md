@@ -1,5 +1,6 @@
 ## How to do Integration Test
-It requires both TiDB and Spark present. It will run Spark SQL and compare result with TiDB.
+It requires both TiDB and Spark present. It comples Spark SQL's result against TiDB's. If results are differnet, then it indicates there are something wrong in both side. It is highly possible that `TiKV-Java-Client` do something wrong. Detecting inconsistent behavior with TiDB is the purpose of this integration test.
+
 User might attach to an existing database with existing data for testing or dump test data and schema via this tool to create testcases as well.
 Put config.properties into Spark's conf path
 Test cases will be searched recursively. DDL files is for recreate test table; SQL is for test script run for both sides. Data file is for loading test data.
@@ -15,6 +16,9 @@ Load test data from dumping files:
 ./load.sh 
 ```
 
+Before you run `test.sh`, you have to set `SPARK_HOME`. Otherwise, `test.sh` can not perform 
+correctly.
+There are several ways to do that, just leave it for yourselves.
 Run Test on existing data:
 ```
 ./test.sh [-d|--debug]
@@ -42,7 +46,7 @@ test.basepath=/Users/whoever/workspace/pingcap/tispark/integtest/testcases
 | tidb.addr      | TiDB Address      |
 | tidb.port      | TiDB Port      |
 | tidb.user      | TiDB username |
-| test.basepath | Test case base path include .ddl, .sql and .data files | 
-| test.mode     | Test: Run test only; Load: Load only; LoadNTest: Load and Test; Dump: Dump database specified by test.dumpDB.databases |
+| test.basepath  | Test case base path include .ddl, .sql and .data files | 
+| test.mode      | Test: Run test only; Load: Load only; LoadNTest: Load and Test; Dump: Dump database specified by test.dumpDB.databases |
 | test.dumpDB.databases  | Database to dump. Required for dump database |
 | test.ignore      | Test path to ignore. Separated by comma |

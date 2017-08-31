@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -ue
 
 BASEDIR=$(dirname "$0")
 CLASS="com.pingcap.spark.TestFramework"
