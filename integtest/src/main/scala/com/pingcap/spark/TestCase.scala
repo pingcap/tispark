@@ -153,17 +153,11 @@ class TestCase(val prop: Properties) extends LazyLogging {
       case d: java.math.BigDecimal => d.doubleValue()
       case d: BigDecimal => d.bigDecimal.doubleValue()
       case d: Number => d.doubleValue()
-      case d: java.math.BigInteger => d.doubleValue()
     }
 
     def toInteger(x: Any): Long = x match {
-      case d: Long => d
-      case d: Integer => d.toLong
-      case d: Short => d.toLong
-      case d: java.math.BigInteger => d.longValue()
       case d: BigInt => d.bigInteger.longValue()
       case d: Number => d.longValue()
-      case d: java.math.BigDecimal => d.longValue()
       case d: BigDecimal => d.bigDecimal.longValue()
     }
 
