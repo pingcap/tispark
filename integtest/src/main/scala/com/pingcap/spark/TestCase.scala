@@ -158,7 +158,6 @@ class TestCase(val prop: Properties) extends LazyLogging {
     def toInteger(x: Any): Long = x match {
       case d: BigInt => d.bigInteger.longValue()
       case d: Number => d.longValue()
-      case d: BigDecimal => d.bigDecimal.longValue()
     }
 
     def compValue(lhs: Any, rhs: Any): Boolean = lhs match {
