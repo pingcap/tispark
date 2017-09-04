@@ -176,13 +176,15 @@ class TestCase(val prop: Properties) extends LazyLogging {
         false
       } else {
         !lhs.zipWithIndex.exists {
-          case (value, i) => rhs.length <= i || !compValue(value, rhs(i))
+          // case (value, i) => rhs.length <= i || !compValue(value, rhs(i))
+          case (value, i) => !compValue(value, rhs(i))
         }
       }
     }
 
     !lhs.zipWithIndex.exists {
-      case (row, i) => rhs.length <= i || !compRow(row, rhs(i))
+      // case (row, i) => rhs.length <= i || !compRow(row, rhs(i))
+      case (row, i) => !compRow(row, rhs(i))
     }
   }
 
