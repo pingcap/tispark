@@ -133,7 +133,6 @@ class TestCase(val prop: Properties) extends LazyLogging {
       val actual: List[List[Any]] = time { spark.querySpark(sql) }(logger)
       logger.info(s" \nQuery TiDB ${file} ")
       val baseline: List[List[Any]] = time { jdbc.queryTiDB(sql)._2 }(logger)
-
       val result = compResult(actual, baseline)
       if (!result) {
         logger.info(s"Dump diff for TiSpark ${file} \n")
@@ -165,9 +164,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
           Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
         case _: Number | _: BigInt | _: java.math.BigInteger =>
           toInteger(lhs) == toInteger(rhs)
-        case _ => lhs == rhs
+      case _ => lhs == rhs
       }
-
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {
       if (lhs == null && rhs == null) {
@@ -176,14 +174,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
         false
       } else {
         !lhs.zipWithIndex.exists {
-          // case (value, i) => rhs.length <= i || !compValue(value, rhs(i))
           case (value, i) => !compValue(value, rhs(i))
         }
       }
     }
 
     !lhs.zipWithIndex.exists {
-      // case (row, i) => rhs.length <= i || !compRow(row, rhs(i))
       case (row, i) => !compRow(row, rhs(i))
     }
   }
