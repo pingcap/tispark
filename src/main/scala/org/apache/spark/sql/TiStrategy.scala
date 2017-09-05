@@ -15,7 +15,6 @@
 
 package org.apache.spark.sql
 
-
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
 import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
 import com.pingcap.tikv.predicates.ScanBuilder
@@ -28,41 +27,33 @@ import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOper
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
 import scala.collection.JavaConversions._
 import scala.collection.{JavaConversions, mutable}
 
 
-// TODO: Too many hacks here since we hijacks the planning
+// TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
 // We cannot pass context around during planning so
 // a re-extract needed for pushdown since
 // a plan tree might have Join which causes a single tree
 // have multiple plan to pushdown
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
-  val sqlConf = context.conf
+  val sqlConf: SQLConf = context.conf
 
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
-    val relations = plan.collect({ case p => p })
-      .filter(_.isInstanceOf[LogicalRelation])
-      .map(_.asInstanceOf[LogicalRelation])
-      .map(_.relation)
-      .toList
-
-    if (relations.isEmpty || relations.exists(!_.isInstanceOf[TiDBRelation])) {
-      Nil
-    } else {
-      val sources = relations.map(_.asInstanceOf[TiDBRelation])
-      val source = sources.head
-      doPlan(source, plan)
-    }
+    plan.collectFirst {
+      case LogicalRelation(relation: TiDBRelation, _, _) =>
+        doPlan(relation, plan)
+    }.toSeq.flatten
   }
 
   private def toCoprocessorRDD(source: TiDBRelation,
                                output: Seq[Attribute],
                                selectRequest: TiSelectRequest): SparkPlan = {
-    val schemaTypes = StructType.fromAttributes(output).fields.map(_.dataType)
+    val schemaTypes = output.map(_.dataType)
     selectRequest.setTableInfo(source.table)
     val rdd = source.logicalPlanToRDD(selectRequest)
     val internalRdd = RDDConversions.rowToRowRdd(rdd, schemaTypes)
@@ -74,7 +65,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                                    filters: Seq[Expression],
                                    source: TiDBRelation,
                                    selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
-    val tiFilters = filters.map(expr => expr match { case BasicExpression(expr) => expr })
+    val tiFilters = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder = new ScanBuilder
     val pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
     val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
@@ -90,43 +81,35 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                                  aggregates: Seq[AggregateExpression],
                                  source: TiDBRelation,
                                  selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
-    aggregates.foreach(expr =>
-      expr match {
-        case aggExpr: AggregateExpression =>
-          aggExpr.aggregateFunction match {
-            case Average(_) =>
-              assert(false, "Should never be here")
-            case Sum(BasicExpression(arg)) => {
-              selectRequest.addAggregate(new TiSum(arg),
-                fromSparkType(aggExpr.aggregateFunction.dataType))
-            }
-            case Count(args) => {
-              val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
-              selectRequest.addAggregate(new TiCount(tiArgs: _*),
-                fromSparkType(aggExpr.aggregateFunction.dataType))
-            }
-            case Min(BasicExpression(arg)) =>
-              selectRequest.addAggregate(new TiMin(arg),
-                fromSparkType(aggExpr.aggregateFunction.dataType))
+    aggregates.foreach {
+      case AggregateExpression(_: Average, _, _, _) =>
+        throw new IllegalArgumentException("Should never be here")
 
-            case Max(BasicExpression(arg)) =>
-              selectRequest.addAggregate(new TiMax(arg),
-                fromSparkType(aggExpr.aggregateFunction.dataType))
+      case AggregateExpression(f @ Sum(BasicExpression(arg)), _, _, _) =>
+        selectRequest.addAggregate(new TiSum(arg), fromSparkType(f.dataType))
 
-            case First(BasicExpression(arg), _) =>
-              selectRequest.addAggregate(new TiFirst(arg),
-                fromSparkType(aggExpr.aggregateFunction.dataType))
+      case AggregateExpression(f @ Count(args), _, _, _) =>
+        val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
+        selectRequest.addAggregate(new TiCount(tiArgs: _*), fromSparkType(f.dataType))
 
-            case _ => None
-          }
-      })
-    groupByList.foreach(groupItem =>
-      groupItem match {
-        case BasicExpression(byExpr) =>
-          selectRequest.addGroupByItem(TiByItem.create(byExpr, false))
-        case _ => None
-      }
-    )
+      case AggregateExpression(f @ Min(BasicExpression(arg)), _, _, _) =>
+        selectRequest.addAggregate(new TiMin(arg), fromSparkType(f.dataType))
+
+      case AggregateExpression(f @ Max(BasicExpression(arg)), _, _, _) =>
+        selectRequest.addAggregate(new TiMax(arg), fromSparkType(f.dataType))
+
+      case AggregateExpression(f @ First(BasicExpression(arg), _), _, _, _) =>
+        selectRequest.addAggregate(new TiFirst(arg), fromSparkType(f.dataType))
+
+      case _ =>
+    }
+
+    groupByList.foreach {
+      case BasicExpression(keyExpr) =>
+        selectRequest.addGroupByItem(TiByItem.create(keyExpr, false))
+
+      case _ =>
+    }
 
     selectRequest
   }
@@ -141,7 +124,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def filterToSelectRequest(filters: Seq[Expression],
                             source: TiDBRelation,
                             selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
-    val tiFilters:Seq[TiExpr] = filters.map(expr => expr match { case BasicExpression(expr) => expr })
+    val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val pkIndex: TiIndexInfo = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
     val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
@@ -331,8 +314,8 @@ object TiAggregation {
 
   def unapply(a: Any): Option[ReturnType] = a match {
     case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child)
-      if (groupingExpressions.forall(TiUtils.isSupportedGroupingExpr) &&
-          aggregateExpressions.forall(TiUtils.isSupportedAggregate)) =>
+      if groupingExpressions.forall(TiUtils.isSupportedGroupingExpr) &&
+        aggregateExpressions.forall(TiUtils.isSupportedAggregate) =>
       Some(groupingExpressions, aggregateExpressions, resultExpressions, child)
 
     case _ => Option.empty[ReturnType]
@@ -346,8 +329,8 @@ object TiAggregationProjection {
     // Only push down aggregates projection when all filters can be applied and
     // all projection expressions are column references
     case PhysicalOperation(projects, filters, rel@LogicalRelation(source: TiDBRelation, _, _))
-      if (projects.forall(_.isInstanceOf[Attribute]) &&
-          filters.forall(TiUtils.isSupportedFilter)) =>
+      if projects.forall(_.isInstanceOf[Attribute]) &&
+        filters.forall(TiUtils.isSupportedFilter) =>
       Some((filters, rel, source))
     case _ => Option.empty[ReturnType]
   }
