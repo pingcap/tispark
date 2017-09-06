@@ -23,7 +23,6 @@ class TiContext (val session: SparkSession, addressList: List[String]) extends S
   val sqlContext: SQLContext = session.sqlContext
   val meta: MetaManager = new MetaManager(addressList)
 
-  meta.loadDatabase
   session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
 
   def tidbTable(dbName: String,
@@ -35,7 +34,6 @@ class TiContext (val session: SparkSession, addressList: List[String]) extends S
   def tidbMapDatabase(dbName: String): Unit =
     meta.getDatabase(dbName).foreach {
       db => {
-        meta.loadTables(db)
         meta.getTables(db).foreach {
           table => {
             val rel: TiDBRelation =

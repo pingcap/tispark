@@ -44,12 +44,6 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
   val pdAddresses: List[String] = hadoopConf.get("spark.tispark.pd.addresses", "127.0.0.1:2379").split(",").toList
   val meta: MetaManager = new MetaManager(pdAddresses)
 
-  meta.loadDatabase
-  meta.getDatabases().map {
-    db => meta.loadTables(db)
-  }
-
-
   override def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan = {
     synchronized {
       val table = formatTableName(name.table)
