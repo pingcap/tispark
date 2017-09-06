@@ -1,0 +1,10 @@
+#!/bin/bash
+source _create.sh
+
+ensure_database
+
+if [ -z "$1" ]; then
+	$mysql_cmd
+else
+	$mysql_cmd -e "$@"
+fi

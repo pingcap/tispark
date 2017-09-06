@@ -40,3 +40,5 @@ hs_err_pid*
 .gradle
 *.spark
 *.tidb
+
+metastore_db/
