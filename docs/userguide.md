@@ -151,6 +151,26 @@ Similarly, you can start a Spark-Slave node with the following command:
 
 After the command returns, you can see if the Slave node is joined to the Spark cluster correctly from the panel as well. Repeat the above command at all Slave nodes. After all Slaves are connected to the master, you have a Standalone mode Spark cluster.
 
+#### Spark SQL shell and JDBC Server
+
+If you want to use JDBC server and interactive SQL shell, please copy `start-tithriftserver.sh stop-tithriftserver.sh` to your Spark's sbin folder and `tispark-sql` to bin folder. 
+
+To start interactive shell:
+```
+./bin/tispark-sql
+```
+
+To use Thrift Server, you can start it similar way as default Spark Thrift Server:
+```
+./sbin/start-tithriftserver.sh
+```
+
+And stop it like below:
+```
+./sbin/stop-tithriftserver.sh
+```
+
+
 ## Demo
 
 Assuming you have successfully started the TiSpark cluster as described above, here's a quick introduction to how to use Spark SQL for OLAP analysis. Here we use a table named `lineitem` in the `tpch` database as an example.
@@ -180,6 +200,39 @@ The result is:
 +-------------+
 ```
  
+TiSpark's SQL Interactive shell is almost the same as spark-sql shell.
+
+```
+tispark-sql> use tpch;
+Time taken: 0.015 seconds
+
+tispark-sql> select count(*) from lineitem;
+2000
+Time taken: 0.673 seconds, Fetched 1 row(s)
+```
+
+For JDBC connection with Thrift Server, you can try it with various JDBC supported tools including SQuirreLSQL and hive-beeline.
+For example, to use it with beeline:
+```
+./beeline
+Beeline version 1.2.2 by Apache Hive
+beeline> !connect jdbc:hive2://localhost:10000
+
+1: jdbc:hive2://localhost:10000> use testdb;
++---------+--+
+| Result  |
++---------+--+
++---------+--+
+No rows selected (0.013 seconds)
+
+select count(*) from account;
++-----------+--+
+| count(1)  |
++-----------+--+
+| 1000000   |
++-----------+--+
+1 row selected (1.97 seconds)
+```
 
 ## FAQ
 

@@ -16,11 +16,12 @@
 package com.pingcap.tispark
 
 
+import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.types._
 import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
-import org.apache.spark.sql.types.{DataType, DataTypes}
+import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
 
 
 object TiUtils {
@@ -74,5 +75,17 @@ object TiUtils {
       case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_TIMESTAMP)
       case _: sql.types.DateType => DataTypeFactory.of(Types.TYPE_DATE)
     }
+  }
+
+  def getSchemaFromTable(table: TiTableInfo): StructType = {
+    val fields = new Array[StructField](table.getColumns.size())
+    for (i <- 0 until table.getColumns.size()) {
+      val col = table.getColumns.get(i)
+      val metadata = new MetadataBuilder()
+        .putString("name", col.getName)
+        .build()
+      fields(i) = StructField(col.getName, TiUtils.toSparkDataType(col.getType), nullable = true, metadata)
+    }
+    new StructType(fields)
   }
 }
