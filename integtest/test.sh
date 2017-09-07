@@ -18,7 +18,7 @@ CLASS="com.pingcap.spark.TestFramework"
 cp ${BASEDIR}/conf/tispark_config.properties "${SPARK_HOME}"/conf/tispark_config.properties
 spark_debug_opt="-agentlib:jdwp=transport=dt_socket,server=y,address=5005,suspend=y -Dtest.mode=Test"
 spark_test_opt="-Dtest.mode=Test"
-# --driver-java-options
+
 spark_cmd="${SPARK_HOME}/bin/spark-submit --class $CLASS ${BASEDIR}/lib/* --driver-java-options"
 if [[ "$@" = *--debug ]] || [[ "$@" = *-d ]]; then
     echo "debuging..."
