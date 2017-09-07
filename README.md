@@ -49,6 +49,10 @@ To build TiKV client:
 ```
 ./bin/build-client.sh
 ```
+To build TiSpark itself:
+```
+mvn clean package
+```
 
 ## Follow us
 
