@@ -42,6 +42,13 @@ spark.sql("select count(*) from lineitem").show
 
 Read the [Quick Start](./docs/userguide.md).
 
+## How to build
+
+TiSpark depends on TiKV java client project which is included as a submodule. 
+To build TiKV client:
+```
+./bin/build-client.sh
+```
 
 ## Follow us
 
