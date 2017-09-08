@@ -18,8 +18,22 @@ check_tpch_dir_is_present() {
         exit
     fi
 }
+
+check_tpch_data_is_loaded() {
+    if [ hash mysql 2>/dev/null ]; then
+        echo "please install mysql first."
+        exit
+    fi
+    res=`mysql -h 127.0.0.1 -P 4000 -u root -e "show databases" | grep "tpch_test" > /dev/null; echo "$?"`
+    if [ ! "$res" -eq 0 ]; then
+        echo "please load tpch data to tidb cluster first."
+        exit
+    fi
+}
+
 clear_last_diff_files
 check_tpch_dir_is_present
+check_tpch_data_is_loaded
 
 BASEDIR=$(dirname "$0")
 CLASS="com.pingcap.spark.TestFramework"
