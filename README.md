@@ -40,7 +40,7 @@ spark.sql("select count(*) from lineitem").show
 ## Configuration
 
 |    Key    | Default Value | Description |
-| ---------- | --- |
+| ---------- | --- | --- |
 | spark.tispark.pd.addresses |  127.0.0.1:2379 | PD Cluster Addresses, split by comma |
 | spark.tispark.grpc.framesize |  268435456 | Max frame size of GRPC response |
 | spark.tispark.grpc.timeout_in_sec |  10 | GRPC timeout time in seconds |
