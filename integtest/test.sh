@@ -10,7 +10,16 @@ clear_last_diff_files() {
     fi
 }
 
+check_tpch_dir_is_present() {
+    if [ ! -d "tpch" ]; then
+        echo "tpch is not present. You have to clone it to your local machine."
+        echo "this script is required to generate and load tpch database to TiDB cluster."
+        echo "git clone https://github.com/zhexuany/tispark_tpch tpch"
+        exit
+    fi
+}
 clear_last_diff_files
+check_tpch_dir_is_present
 
 BASEDIR=$(dirname "$0")
 CLASS="com.pingcap.spark.TestFramework"
