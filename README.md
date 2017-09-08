@@ -39,6 +39,8 @@ spark.sql("select count(*) from lineitem").show
 
 ## Configuration
 
+Below configurations can be put together with spark-defaults.conf or passed in the same way as other Spark config properties.
+
 |    Key    | Default Value | Description |
 | ---------- | --- | --- |
 | spark.tispark.pd.addresses |  127.0.0.1:2379 | PD Cluster Addresses, split by comma |
