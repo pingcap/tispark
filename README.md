@@ -29,15 +29,24 @@ Uses as below
 ```
 
 import org.apache.spark.sql.TiContext
-
-// suppose your TiDB's Placement Driver is 127.0.0.1:2379
-val ti = new TiContext(spark, List("127.0.0.1:" + 2379)) 
+val ti = new TiContext(spark) 
 
 // Mapping all TiDB tables from database tpch as Spark SQL tables
 ti.tidbMapDatabase("tpch")
 
 spark.sql("select count(*) from lineitem").show
 ```
+
+## Configuration
+
+|    Key    | Default Value | Description |
+| ---------- | --- |
+| spark.tispark.pd.addresses |  127.0.0.1:2379 | PD Cluster Addresses, split by comma |
+| spark.tispark.grpc.framesize |  268435456 | Max frame size of GRPC response |
+| spark.tispark.grpc.timeout_in_sec |  10 | GRPC timeout time in seconds |
+| spark.tispark.meta.reload_period_in_sec |  60 | Metastore reload period in seconds |
+
+
 ## Quick start
 
 Read the [Quick Start](./docs/userguide.md).

@@ -15,25 +15,25 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tispark.{MetaManager, TiDBRelation, TiOptions}
+import com.pingcap.tikv.{TiCluster, TiConfiguration}
+import com.pingcap.tispark._
+import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 
-import scala.collection.JavaConversions
 
-
-class TiContext (val session: SparkSession, addressList: List[String]) extends Serializable with Logging {
+class TiContext (val session: SparkSession) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
-  val meta: MetaManager = new MetaManager(addressList)
+  val conf: SparkConf = session.sparkContext.conf
+  val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
+
+  val cluster: TiCluster = TiCluster.getCluster(tiConf)
+  val meta: MetaManager = new MetaManager(cluster.getCatalog)
 
   session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
 
-  def this (session: SparkSession, addressList: java.util.List[String]) {
-    this(session, JavaConversions.asScalaBuffer(addressList).toList)
-  }
-
   def tidbTable(dbName: String,
                 tableName: String): DataFrame = {
-    val tiRelation = new TiDBRelation(new TiOptions(addressList, dbName, tableName), meta)(sqlContext)
+    val tiRelation = new TiDBRelation(cluster, new TiTableReference(dbName, tableName), meta)(sqlContext)
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
@@ -43,7 +43,7 @@ class TiContext (val session: SparkSession, addressList: List[String]) extends S
         meta.getTables(db).foreach {
           table => {
             val rel: TiDBRelation =
-              new TiDBRelation(new TiOptions(addressList, dbName, table.getName), meta)(sqlContext)
+              new TiDBRelation(cluster, new TiTableReference(dbName, table.getName), meta)(sqlContext)
             sqlContext.baseRelationToDataFrame(rel).createTempView(table.getName)
             logInfo("Registered table" + table.getName)
           }

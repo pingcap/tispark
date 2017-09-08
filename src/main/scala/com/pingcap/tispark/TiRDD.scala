@@ -28,15 +28,18 @@ import org.apache.spark.{Partition, SparkContext, TaskContext}
 import scala.collection.JavaConversions._
 
 
-class TiRDD(val selectReq: TiSelectRequest, val options: TiOptions, val ts: TiTimestamp, sc: SparkContext)
+class TiRDD(val selectReq: TiSelectRequest,
+            val tiConf: TiConfiguration,
+            val tableRef: TiTableReference,
+            val ts: TiTimestamp,
+            sc: SparkContext)
   extends RDD[Row](sc, Nil) {
 
   type TiRow = com.pingcap.tikv.row.Row
 
-  @transient lazy val meta: MetaManager = new MetaManager(options.addresses)
-  @transient lazy val cluster: TiCluster = meta.cluster
+  @transient lazy val cluster: TiCluster = TiCluster.getCluster(tiConf)
   @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
-  private def snapshot: Snapshot = cluster.createSnapshot(ts)
+  @transient lazy val snapshot: Snapshot = cluster.createSnapshot(ts)
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
     val schemaInferrer: SchemaInfer = SchemaInfer.create(selectReq)
@@ -55,7 +58,7 @@ class TiRDD(val selectReq: TiSelectRequest, val options: TiOptions, val ts: TiTi
 
     def toSparkRow(row: TiRow): Row = {
       val transRow = rowTransformer.transform(row)
-      val rowArray = new Array[Any](rowTransformer.getTypes.size)
+      val rowArray = new Array[Any](finalTypes.size)
 
       for (i <- 0 until transRow.fieldCount) {
         rowArray(i) = transRow.get(i, finalTypes(i))
