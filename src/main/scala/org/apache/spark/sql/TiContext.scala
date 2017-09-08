@@ -44,11 +44,12 @@ class TiContext (val session: SparkSession, addressList: List[String]) extends S
           table => {
             val rel: TiDBRelation =
               new TiDBRelation(new TiOptions(addressList, dbName, table.getName), meta)(sqlContext)
-            sqlContext.baseRelationToDataFrame(rel).createTempView(table.getName)
-            logInfo("Registered table" + table.getName)
+            if (!sqlContext.sparkSession.catalog.tableExists(table.getName)) {
+              sqlContext.baseRelationToDataFrame(rel).createTempView(table.getName)
+              logInfo("Registered table " + table.getName)
+            }
           }
         }
       }
     }
-
 }
