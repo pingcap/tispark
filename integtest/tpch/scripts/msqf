@@ -1,4 +1,0 @@
-#/bin/bash
-source _create.sh
-ensure_database
-$MYSQL_CMD --local-infile $@
