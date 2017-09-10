@@ -64,7 +64,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-<<<<<<< HEAD
             <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
             <scope>provided</scope>
@@ -72,9 +71,6 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-unsafe_${scala.binary.version}</artifactId>
-=======
-            <artifactId>spark-unsafe_${scala.version}</artifactId>
->>>>>>> add integration test framework
             <version>${spark.version}</version>
             <scope>provided</scope>
         </dependency>
