@@ -53,6 +53,17 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 
 Read the [Quick Start](./docs/userguide.md).
 
+## How to build
+
+TiSpark depends on TiKV java client project which is included as a submodule. 
+To build TiKV client:
+```
+./bin/build-client.sh
+```
+To build TiSpark itself:
+```
+mvn clean package
+```
 
 ## Follow us
 
