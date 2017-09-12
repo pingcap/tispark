@@ -21,4 +21,5 @@ object TiConfigConst {
   val GRPC_FRAME_SIZE: String = "spark.tispark.grpc.framesize"
   val GRPC_TIMEOUT: String = "spark.tispark.grpc.timeout_in_sec"
   val META_RELOAD_PERIOD: String = "spark.tispark.meta.reload_period_in_sec"
+  val GRPC_RETRY_TIMES: String = "spark.tispark.grpc.retry.times"
 }

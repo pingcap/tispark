@@ -109,6 +109,10 @@ object TiUtils {
       tiConf.setMetaReloadPeriodUnit(TimeUnit.SECONDS)
     }
 
+    if (conf.contains(TiConfigConst.GRPC_RETRY_TIMES)) {
+      tiConf.setRpcRetryTimes(conf.get(TiConfigConst.GRPC_RETRY_TIMES).toInt)
+    }
+
     tiConf
   }
 }
