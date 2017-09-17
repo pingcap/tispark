@@ -37,7 +37,7 @@ class TiContext (val session: SparkSession, addressList: List[String]) extends S
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
-  def tidbMapDatabase(dbName: String): Unit =
+  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean = false): Unit =
     meta.getDatabase(dbName).foreach {
       db => {
         meta.getTables(db).foreach {
@@ -45,7 +45,8 @@ class TiContext (val session: SparkSession, addressList: List[String]) extends S
             val rel: TiDBRelation =
               new TiDBRelation(new TiOptions(addressList, dbName, table.getName), meta)(sqlContext)
             if (!sqlContext.sparkSession.catalog.tableExists(table.getName)) {
-              sqlContext.baseRelationToDataFrame(rel).createTempView(table.getName)
+              val tableName = if (dbNameAsPrefix) db.getName + "_" + table.getName else table.getName
+              sqlContext.baseRelationToDataFrame(rel).createTempView(tableName)
               logInfo("Registered table " + table.getName)
             }
           }
