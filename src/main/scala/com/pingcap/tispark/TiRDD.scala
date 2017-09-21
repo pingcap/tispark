@@ -48,8 +48,6 @@ class TiRDD(val selectReq: TiSelectRequest,
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    context.addTaskCompletionListener{ _ => session.close }
-
     selectReq.bind
     // bypass, sum return a long type
     val tiPartition = split.asInstanceOf[TiPartition]
