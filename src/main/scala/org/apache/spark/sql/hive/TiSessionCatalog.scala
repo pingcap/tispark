@@ -15,8 +15,8 @@
 
 package org.apache.spark.sql.hive
 
-import com.pingcap.tikv.{TiCluster, TiConfiguration}
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.SparkSession
@@ -43,9 +43,9 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
                          hadoopConf) {
 
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(sparkSession.sparkContext.getConf)
-  val cluster: TiCluster = TiCluster.getCluster(tiConf)
+  val session: TiSession = TiSession.create(tiConf)
 
-  val meta: MetaManager = new MetaManager(cluster.getCatalog)
+  val meta: MetaManager = new MetaManager(session.getCatalog)
 
   override def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan = {
     synchronized {
@@ -53,7 +53,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
       val db = formatDatabaseName(name.database.getOrElse(currentDb))
       if (!meta.getDatabase(db).isEmpty && !meta.getTable(db, table).isEmpty) {
         val rel: TiDBRelation =
-          new TiDBRelation(cluster, new TiTableReference(db, table), meta)(sparkSession.sqlContext)
+          new TiDBRelation(session, new TiTableReference(db, table), meta)(sparkSession.sqlContext)
         sparkSession.sqlContext.baseRelationToDataFrame(rel).logicalPlan
       } else {
         super.lookupRelation(name, alias)

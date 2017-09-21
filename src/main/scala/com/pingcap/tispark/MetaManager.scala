@@ -18,7 +18,6 @@ package com.pingcap.tispark
 import com.google.guava4pingcap.collect.ImmutableList
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
-import com.pingcap.tikv.{TiCluster, TiConfiguration}
 
 import scala.collection.JavaConversions._
 

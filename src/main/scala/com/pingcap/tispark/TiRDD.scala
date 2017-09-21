@@ -37,9 +37,9 @@ class TiRDD(val selectReq: TiSelectRequest,
 
   type TiRow = com.pingcap.tikv.row.Row
 
-  @transient lazy val cluster: TiCluster = TiCluster.getCluster(tiConf)
+  @transient lazy val session: TiSession = TiSession.create(tiConf)
   @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
-  @transient lazy val snapshot: Snapshot = cluster.createSnapshot(ts)
+  @transient lazy val snapshot: Snapshot = session.createSnapshot(ts)
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
     val schemaInferrer: SchemaInfer = SchemaInfer.create(selectReq)
@@ -48,7 +48,7 @@ class TiRDD(val selectReq: TiSelectRequest,
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    context.addTaskCompletionListener{ _ => cluster.close() }
+    context.addTaskCompletionListener{ _ => session.close }
 
     selectReq.bind
     // bypass, sum return a long type
@@ -76,7 +76,7 @@ class TiRDD(val selectReq: TiSelectRequest,
     split.asInstanceOf[TiPartition].task.getHost :: Nil
 
   override protected def getPartitions: Array[Partition] = {
-    val keyWithRegionTasks = RangeSplitter.newSplitter(cluster.getRegionManager)
+    val keyWithRegionTasks = RangeSplitter.newSplitter(session.getRegionManager)
                  .splitRangeByRegion(selectReq.getRanges)
 
     keyWithRegionTasks.zipWithIndex.map{
