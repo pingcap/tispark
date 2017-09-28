@@ -16,12 +16,15 @@
 package com.pingcap.tispark
 
 
+import java.util.concurrent.TimeUnit
+
+import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.types._
-import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
+import org.apache.spark.{SparkConf, sql}
 
 
 object TiUtils {
@@ -87,5 +90,29 @@ object TiUtils {
       fields(i) = StructField(col.getName, TiUtils.toSparkDataType(col.getType), nullable = true, metadata)
     }
     new StructType(fields)
+  }
+
+  def sparkConfToTiConf(conf: SparkConf): TiConfiguration = {
+    val tiConf = TiConfiguration.createDefault(conf.get(TiConfigConst.PD_ADDRESSES))
+
+    if (conf.contains(TiConfigConst.GRPC_FRAME_SIZE)) {
+      tiConf.setMaxFrameSize(conf.get(TiConfigConst.GRPC_FRAME_SIZE).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.GRPC_TIMEOUT)) {
+      tiConf.setTimeout(conf.get(TiConfigConst.GRPC_TIMEOUT).toInt)
+      tiConf.setTimeoutUnit(TimeUnit.SECONDS)
+    }
+
+    if (conf.contains(TiConfigConst.META_RELOAD_PERIOD)) {
+      tiConf.setMetaReloadPeriod(conf.get(TiConfigConst.META_RELOAD_PERIOD).toInt)
+      tiConf.setMetaReloadPeriodUnit(TimeUnit.SECONDS)
+    }
+
+    if (conf.contains(TiConfigConst.GRPC_RETRY_TIMES)) {
+      tiConf.setRpcRetryTimes(conf.get(TiConfigConst.GRPC_RETRY_TIMES).toInt)
+    }
+
+    tiConf
   }
 }

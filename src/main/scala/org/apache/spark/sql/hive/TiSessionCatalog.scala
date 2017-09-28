@@ -16,7 +16,8 @@
 package org.apache.spark.sql.hive
 
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
-import com.pingcap.tispark.{MetaManager, TiDBRelation, TiOptions, TiUtils}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tispark._
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{FunctionRegistry, NoSuchDatabaseException, NoSuchTableException}
@@ -41,8 +42,10 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
                          conf,
                          hadoopConf) {
 
-  val pdAddresses: List[String] = hadoopConf.get("spark.tispark.pd.addresses", "127.0.0.1:2379").split(",").toList
-  val meta: MetaManager = new MetaManager(pdAddresses)
+  val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(sparkSession.sparkContext.getConf)
+  val session: TiSession = TiSession.create(tiConf)
+
+  val meta: MetaManager = new MetaManager(session.getCatalog)
 
   override def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan = {
     synchronized {
@@ -50,7 +53,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
       val db = formatDatabaseName(name.database.getOrElse(currentDb))
       if (!meta.getDatabase(db).isEmpty && !meta.getTable(db, table).isEmpty) {
         val rel: TiDBRelation =
-          new TiDBRelation(new TiOptions(pdAddresses, db, table), meta)(sparkSession.sqlContext)
+          new TiDBRelation(session, new TiTableReference(db, table), meta)(sparkSession.sqlContext)
         sparkSession.sqlContext.baseRelationToDataFrame(rel).logicalPlan
       } else {
         super.lookupRelation(name, alias)
@@ -147,7 +150,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
   }
 
   def tiDBToCatalogDatabase(db: TiDBInfo): CatalogDatabase = {
-    CatalogDatabase(db.getName, "TiDB Database", pdAddresses.mkString(","), null)
+    CatalogDatabase(db.getName, "TiDB Database", null, null)
   }
 
   def tiTableToCatalogTable(name: TableIdentifier, tiTable: TiTableInfo): CatalogTable = {

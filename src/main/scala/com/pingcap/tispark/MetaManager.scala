@@ -18,16 +18,12 @@ package com.pingcap.tispark
 import com.google.guava4pingcap.collect.ImmutableList
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
-import com.pingcap.tikv.{TiCluster, TiConfiguration}
 
 import scala.collection.JavaConversions._
 
 // Likely this needs to be merge to client project
 // and serving inside metastore if any
-class MetaManager(addrList: List[String]) {
-  val cluster: TiCluster = getCluster()
-  private val catalog: Catalog = cluster.getCatalog
-
+class MetaManager(catalog: Catalog) {
   def getDatabases(): List[TiDBInfo] = {
     catalog.listDatabases().toList
   }
@@ -42,10 +38,5 @@ class MetaManager(addrList: List[String]) {
 
   def getDatabase(dbName: String): Option[TiDBInfo] = {
     Option(catalog.getDatabase(dbName))
-  }
-
-  private def getCluster(): TiCluster = {
-    val conf = TiConfiguration.createDefault(addrList)
-    TiCluster.getCluster(conf)
   }
 }

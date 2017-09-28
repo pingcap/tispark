@@ -15,7 +15,9 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tispark.{MetaManager, TiDBRelation, TiOptions}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference, TiUtils}
+import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 
 import scala.collection.JavaConversions
@@ -23,7 +25,10 @@ import scala.collection.JavaConversions
 
 class TiContext (val session: SparkSession, addressList: List[String]) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
-  val meta: MetaManager = new MetaManager(addressList)
+  val conf: SparkConf = session.sparkContext.conf
+  val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
+  val tiSession: TiSession = TiSession.create(tiConf)
+  val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
   session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
 
@@ -33,7 +38,7 @@ class TiContext (val session: SparkSession, addressList: List[String]) extends S
 
   def tidbTable(dbName: String,
                 tableName: String): DataFrame = {
-    val tiRelation = new TiDBRelation(new TiOptions(addressList, dbName, tableName), meta)(sqlContext)
+    val tiRelation = new TiDBRelation(tiSession, new TiTableReference(dbName, tableName), meta)(sqlContext)
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
@@ -43,7 +48,7 @@ class TiContext (val session: SparkSession, addressList: List[String]) extends S
         meta.getTables(db).foreach {
           table => {
             val rel: TiDBRelation =
-              new TiDBRelation(new TiOptions(addressList, dbName, table.getName), meta)(sqlContext)
+              new TiDBRelation(tiSession, new TiTableReference(dbName, table.getName), meta)(sqlContext)
             if (!sqlContext.sparkSession.catalog.tableExists(table.getName)) {
               val tableName = if (dbNameAsPrefix) db.getName + "_" + table.getName else table.getName
               sqlContext.baseRelationToDataFrame(rel).createTempView(tableName)
