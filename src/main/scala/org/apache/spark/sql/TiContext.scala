@@ -20,10 +20,8 @@ import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference, TiUtils
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 
-import scala.collection.JavaConversions
 
-
-class TiContext (val session: SparkSession, addressList: List[String]) extends Serializable with Logging {
+class TiContext (val session: SparkSession) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
   val conf: SparkConf = session.sparkContext.conf
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
@@ -31,10 +29,6 @@ class TiContext (val session: SparkSession, addressList: List[String]) extends S
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
   session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
-
-  def this (session: SparkSession, addressList: java.util.List[String]) {
-    this(session, JavaConversions.asScalaBuffer(addressList).toList)
-  }
 
   def tidbTable(dbName: String,
                 tableName: String): DataFrame = {
