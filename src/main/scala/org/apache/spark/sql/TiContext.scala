@@ -16,20 +16,25 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark._
+import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference, TiUtils}
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 
+import scala.collection.JavaConversions
 
-class TiContext (val session: SparkSession) extends Serializable with Logging {
+
+class TiContext (val session: SparkSession, addressList: List[String]) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
   val conf: SparkConf = session.sparkContext.conf
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
-
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
   session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
+
+  def this (session: SparkSession, addressList: java.util.List[String]) {
+    this(session, JavaConversions.asScalaBuffer(addressList).toList)
+  }
 
   def tidbTable(dbName: String,
                 tableName: String): DataFrame = {
@@ -37,18 +42,20 @@ class TiContext (val session: SparkSession) extends Serializable with Logging {
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
-  def tidbMapDatabase(dbName: String): Unit =
+  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean = false): Unit =
     meta.getDatabase(dbName).foreach {
       db => {
         meta.getTables(db).foreach {
           table => {
             val rel: TiDBRelation =
               new TiDBRelation(tiSession, new TiTableReference(dbName, table.getName), meta)(sqlContext)
-            sqlContext.baseRelationToDataFrame(rel).createTempView(table.getName)
-            logInfo("Registered table" + table.getName)
+            if (!sqlContext.sparkSession.catalog.tableExists(table.getName)) {
+              val tableName = if (dbNameAsPrefix) db.getName + "_" + table.getName else table.getName
+              sqlContext.baseRelationToDataFrame(rel).createTempView(tableName)
+              logInfo("Registered table " + table.getName)
+            }
           }
         }
       }
     }
-
 }
