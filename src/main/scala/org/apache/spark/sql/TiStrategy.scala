@@ -53,17 +53,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   private def toCoprocessorRDD(source: TiDBRelation,
                                output: Seq[Attribute],
                                selectRequest: TiSelectRequest): SparkPlan = {
-    val schemaTypes = output.map(_.dataType)
     val table = source.table
     selectRequest.setTableInfo(table)
     // In case count(*) and nothing pushed, pick the first column
     if (selectRequest.getFields.size == 0) {
       selectRequest.addField(TiColumnRef.create(table.getColumns.get(0).getName))
     }
-    val rdd = source.logicalPlanToRDD(selectRequest)
-    val internalRdd = RDDConversions.rowToRowRdd(rdd, schemaTypes)
+    val tiRdd = source.logicalPlanToRDD(selectRequest)
 
-    RDDScanExec(output, internalRdd, "CoprocessorRDD")
+    CoprocessorRDD(output, tiRdd)
   }
 
   def aggregationToSelectRequest(groupByList: Seq[NamedExpression],

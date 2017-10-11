@@ -32,7 +32,7 @@ class TiDBRelation(session: TiSession,
 
   override lazy val schema: StructType = TiUtils.getSchemaFromTable(table)
 
-  def logicalPlanToRDD(selectRequest: TiSelectRequest): RDD[Row] = {
+  def logicalPlanToRDD(selectRequest: TiSelectRequest): TiRDD = {
     val ts: TiTimestamp = session.getTimestamp
     selectRequest.setStartTs(ts.getVersion)
 
