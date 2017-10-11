@@ -51,7 +51,7 @@ class TiRDD(val selectReq: TiSelectRequest,
     selectReq.resolve
     // bypass, sum return a long type
     val tiPartition = split.asInstanceOf[TiPartition]
-    val iterator = snapshot.select(selectReq, split.asInstanceOf[TiPartition].task)
+    val iterator = snapshot.tableRead(selectReq, split.asInstanceOf[TiPartition].task)
     val finalTypes = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {
