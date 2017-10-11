@@ -26,40 +26,43 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.StringUtils
 import org.apache.spark.sql.catalyst.{CatalystConf, TableIdentifier}
 
-
 class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
-                        globalTempViewManager: GlobalTempViewManager,
-                        sparkSession: SparkSession,
-                        functionResourceLoader: FunctionResourceLoader,
-                        functionRegistry: FunctionRegistry,
-                        conf: CatalystConf,
-                        hadoopConf: Configuration)
-  extends HiveSessionCatalog(externalCatalog,
-                         globalTempViewManager,
-                         sparkSession,
-                         functionResourceLoader,
-                         functionRegistry,
-                         conf,
-                         hadoopConf) {
+                       globalTempViewManager: GlobalTempViewManager,
+                       sparkSession: SparkSession,
+                       functionResourceLoader: FunctionResourceLoader,
+                       functionRegistry: FunctionRegistry,
+                       conf: CatalystConf,
+                       hadoopConf: Configuration)
+    extends HiveSessionCatalog(
+      externalCatalog,
+      globalTempViewManager,
+      sparkSession,
+      functionResourceLoader,
+      functionRegistry,
+      conf,
+      hadoopConf
+    ) {
 
-  val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(sparkSession.sparkContext.getConf)
+  val tiConf: TiConfiguration =
+    TiUtils.sparkConfToTiConf(sparkSession.sparkContext.getConf)
   val session: TiSession = TiSession.create(tiConf)
 
   val meta: MetaManager = new MetaManager(session.getCatalog)
 
-  override def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan = {
+  override def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan =
     synchronized {
       val table = formatTableName(name.table)
       val db = formatDatabaseName(name.database.getOrElse(currentDb))
       if (!meta.getDatabase(db).isEmpty && !meta.getTable(db, table).isEmpty) {
         val rel: TiDBRelation =
-          new TiDBRelation(session, new TiTableReference(db, table), meta)(sparkSession.sqlContext)
+          new TiDBRelation(session, new TiTableReference(db, table), meta)(
+            sparkSession.sqlContext
+          )
         sparkSession.sqlContext.baseRelationToDataFrame(rel).logicalPlan
       } else {
         super.lookupRelation(name, alias)
       }
     }
-  }
 
   override def databaseExists(db: String): Boolean = {
     val dbName = formatDatabaseName(db)
@@ -72,15 +75,14 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     }
   }
 
-  override def listDatabases(): Seq[String] = {
-    meta.getDatabases()
+  override def listDatabases(): Seq[String] =
+    meta
+      .getDatabases()
       .map(_.getName)
       .union(super.listDatabases())
-  }
 
-  override def listDatabases(pattern: String): Seq[String] = {
+  override def listDatabases(pattern: String): Seq[String] =
     StringUtils.filterPattern(listDatabases(), pattern)
-  }
 
   override def tableExists(name: TableIdentifier): Boolean = synchronized {
     val db = formatDatabaseName(name.database.getOrElse(currentDb))
@@ -94,11 +96,10 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     }
   }
 
-  private def requireDbExists(db: String): Unit = {
+  private def requireDbExists(db: String): Unit =
     if (!databaseExists(db)) {
       throw new NoSuchDatabaseException(db)
     }
-  }
 
   override def getDatabaseMetadata(db: String): CatalogDatabase = {
     val dbName = formatDatabaseName(db)
@@ -120,7 +121,9 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     catalogTable.get
   }
 
-  override def getTableMetadataOption(name: TableIdentifier): Option[CatalogTable] = {
+  override def getTableMetadataOption(
+    name: TableIdentifier
+  ): Option[CatalogTable] = {
     val db = formatDatabaseName(name.database.getOrElse(getCurrentDatabase))
     val table = formatTableName(name.table)
     requireDbExists(db)
@@ -141,7 +144,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
           TableIdentifier(name)
         }
       }
-      meta.getTables(database.get).map{ db =>
+      meta.getTables(database.get).map { db =>
         TableIdentifier(db.getName, Option(db.getName))
       } ++ localTempViews
     } else {
@@ -149,15 +152,15 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     }
   }
 
-  def tiDBToCatalogDatabase(db: TiDBInfo): CatalogDatabase = {
+  def tiDBToCatalogDatabase(db: TiDBInfo): CatalogDatabase =
     CatalogDatabase(db.getName, "TiDB Database", null, null)
-  }
 
-  def tiTableToCatalogTable(name: TableIdentifier, tiTable: TiTableInfo): CatalogTable = {
-    CatalogTable(name,
+  def tiTableToCatalogTable(name: TableIdentifier, tiTable: TiTableInfo): CatalogTable =
+    CatalogTable(
+      name,
       CatalogTableType.EXTERNAL,
       CatalogStorageFormat.empty,
       TiUtils.getSchemaFromTable(tiTable),
-      Option("TiDB"))
-  }
+      Option("TiDB")
+    )
 }

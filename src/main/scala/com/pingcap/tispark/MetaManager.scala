@@ -24,19 +24,14 @@ import scala.collection.JavaConversions._
 // Likely this needs to be merge to client project
 // and serving inside metastore if any
 class MetaManager(catalog: Catalog) {
-  def getDatabases(): List[TiDBInfo] = {
-    catalog.listDatabases().toList
-  }
+  def getDatabases: List[TiDBInfo] = catalog.listDatabases().toList
 
-  def getTables(db: TiDBInfo): List[TiTableInfo] = {
+  def getTables(db: TiDBInfo): List[TiTableInfo] =
     Option(catalog.listTables(db)).getOrElse(ImmutableList.of()).toList
-  }
 
-  def getTable(dbName: String, tableName: String): Option[TiTableInfo] = {
+  def getTable(dbName: String, tableName: String): Option[TiTableInfo] =
     Option(catalog.getTable(dbName, tableName))
-  }
 
-  def getDatabase(dbName: String): Option[TiDBInfo] = {
+  def getDatabase(dbName: String): Option[TiDBInfo] =
     Option(catalog.getDatabase(dbName))
-  }
 }
