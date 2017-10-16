@@ -50,4 +50,6 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   override def verboseString: String = {
     s"TiDB $nodeName{${tiRdd.selectReq.toString}}"
   }
+
+  override def simpleString: String = verboseString
 }
