@@ -20,9 +20,9 @@ import java.io.File
 import java.util.Properties
 
 import com.pingcap.spark.Utils._
+import com.typesafe.scalalogging.slf4j.LazyLogging
 
 import scala.collection.mutable.ArrayBuffer
-import com.typesafe.scalalogging.slf4j.LazyLogging
 
 class TestCase(val prop: Properties) extends LazyLogging {
   object RunMode extends Enumeration {
@@ -35,10 +35,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected val KeyTestBasePath = "test.basepath"
   protected val KeyTestIgnore = "test.ignore"
 
-  protected val dbNames = getOrElse(prop, KeyDumpDBList, "").split(",")
-  protected val mode = RunMode.withName(getOrElse(prop, KeyMode, "Test"))
-  protected val basePath = getOrElse(prop, KeyTestBasePath, "./testcases")
-  protected val ignoreCases = getOrElse(prop, KeyTestIgnore, "").split(",")
+  protected val dbNames: Array[String] = getOrElse(prop, KeyDumpDBList, "").split(",")
+  protected val mode: RunMode.RunMode = RunMode.withName(getOrElse(prop, KeyMode, "Test"))
+  protected val basePath: String = getOrElse(prop, KeyTestBasePath, "./testcases")
+  protected val ignoreCases: Array[String] = getOrElse(prop, KeyTestIgnore, "").split(",")
   protected lazy val jdbc = new JDBCWrapper(prop)
   protected lazy val spark = new SparkWrapper(prop)
 
@@ -59,15 +59,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
           jdbc.dumpAllTables(joinPath(basePath, dbName))
         }
       }
-      case RunMode.Load => {
-        work(basePath, false, true)
-      }
-      case RunMode.Test => {
-        work(basePath, true, false)
-      }
-      case RunMode.LoadNTest => {
-        work(basePath, true, true)
-      }
+      case RunMode.Load => work(basePath, false, true)
+
+      case RunMode.Test => work(basePath, true, false)
+
+      case RunMode.LoadNTest => work(basePath, true, true)
+
     }
   }
 
@@ -84,14 +81,14 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (dir.isDirectory) {
         dir.listFiles().map { f =>
           if (f.isDirectory) {
-            dirs.append(f.getAbsolutePath)
+            dirs += f.getAbsolutePath
           } else {
             if (f.getName.endsWith(DDLSuffix)) {
-              ddls.append(f.getAbsolutePath)
+              ddls += f.getAbsolutePath
             } else if (f.getName.endsWith(DataSuffix)) {
-              dataFiles.append(f.getAbsolutePath)
+              dataFiles += f.getAbsolutePath
             } else if (f.getName.endsWith(SQLSuffix)) {
-              testCases.append((f.getName, readFile(f.getAbsolutePath).mkString("\n")))
+              testCases += ((f.getName, readFile(f.getAbsolutePath).mkString("\n")))
             }
           }
         }
@@ -124,24 +121,24 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  def test(dbName: String, testCases: ArrayBuffer[(String, String)]) = {
+  def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     jdbc.init(dbName)
     spark.init(dbName)
 
     testCases.sortBy(_._1).foreach { case (file, sql) =>
-      logger.info(s" Query TiSpark ${file} ")
+      logger.info(s" Query TiSpark $file ")
       val actual: List[List[Any]] = time { spark.querySpark(sql) }(logger)
-      logger.info(s" \nQuery TiDB ${file} ")
+      logger.info(s" \nQuery TiDB $file ")
       val baseline: List[List[Any]] = time { jdbc.queryTiDB(sql)._2 }(logger)
       val result = compResult(actual, baseline)
       if (!result) {
-        logger.info(s"Dump diff for TiSpark ${file} \n")
+        logger.info(s"Dump diff for TiSpark $file \n")
         writeResult(actual, file + ".result.spark")
-        logger.info(s"Dump diff for TiDB ${file} \n")
+        logger.info(s"Dump diff for TiDB $file \n")
         writeResult(baseline, file + ".result.tidb")
       }
 
-      logger.info(s" \n*************** ${file} result: ${result}\n\n\n")
+      logger.info(s" \n*************** $file result: $result\n\n\n")
     }
   }
 
