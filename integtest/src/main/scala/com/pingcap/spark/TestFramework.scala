@@ -25,15 +25,16 @@ object TestFramework extends LazyLogging {
   val ConfName = "tispark_config.properties"
 
 
-  def main(args: Array[String]) = {
+  def main(args: Array[String]): Unit = {
+
     val prop: Properties = loadConf(ConfName)
       new TestCase(prop).init()
     System.exit(0)
   }
 
   def loadConf(conf: String): Properties = {
-    val confStream = getClass().getClassLoader().getResourceAsStream(conf)
-    val prop = new Properties();
+    val confStream = getClass.getClassLoader.getResourceAsStream(conf)
+    val prop = new Properties()
     prop.load(confStream)
     prop
   }

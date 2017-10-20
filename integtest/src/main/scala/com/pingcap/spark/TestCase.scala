@@ -40,7 +40,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected val basePath: String = getOrElse(prop, KeyTestBasePath, "./testcases")
   protected val ignoreCases: Array[String] = getOrElse(prop, KeyTestIgnore, "").split(",")
   protected lazy val jdbc = new JDBCWrapper(prop)
-  protected lazy val spark = new SparkWrapper(prop)
+  protected lazy val spark = new SparkWrapper()
 
   logger.info("Databases to dump: " + dbNames.mkString(","))
   logger.info("Run Mode: " + mode)
@@ -48,8 +48,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   def init(): Unit = {
     mode match {
-      case RunMode.Dump => {
-        dbNames.filter(!_.isEmpty).foreach { dbName =>
+      case RunMode.Dump => dbNames.filter(!_.isEmpty).foreach { dbName =>
           logger.info("Dumping database " + dbName)
           if (dbName == null) {
             throw new IllegalArgumentException("database name is null while dumping")
@@ -58,7 +57,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
           ensurePath(basePath, dbName)
           jdbc.dumpAllTables(joinPath(basePath, dbName))
         }
-      }
+
       case RunMode.Load => work(basePath, false, true)
 
       case RunMode.Test => work(basePath, true, false)

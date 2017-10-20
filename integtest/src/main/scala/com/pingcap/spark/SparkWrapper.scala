@@ -17,24 +17,20 @@
 
 package com.pingcap.spark
 
-import java.util.Properties
-
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import org.apache.spark.sql.{SparkSession, TiContext}
-import com.pingcap.spark.Utils._
 
 import scala.collection.mutable.ArrayBuffer
 
 
-class SparkWrapper(prop: Properties) extends LazyLogging {
-  private val KeyPDAddress = "pd.addrs"
+class SparkWrapper() extends LazyLogging {
 
   private val spark = SparkSession
     .builder()
     .appName("TiSpark Integration Test")
     .getOrCreate()
 
-  val ti = new TiContext(spark, getOrThrow(prop, KeyPDAddress).split(",").toList)
+  val ti = new TiContext(spark)
 
   def init(databaseName: String): Unit = {
     logger.info("Mapping database: " + databaseName)
@@ -45,7 +41,7 @@ class SparkWrapper(prop: Properties) extends LazyLogging {
     logger.info("Running query on spark: " + sql)
     spark.sql(sql).collect().map(row => {
       val rowRes = ArrayBuffer.empty[Any]
-      for (i <- 0 to row.length - 1) {
+      for (i <- 0 until row.length) {
         rowRes += row.get(i)
       }
       rowRes.toList
