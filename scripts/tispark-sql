@@ -50,4 +50,4 @@ fi
 
 
 export _SPARK_CMD_USAGE="Usage: ./bin/spark-sql [options] [cli option]"
-exec "${SPARK_HOME}"/bin/spark-submit --class org.apache.spark.sql.hive.thriftserver.TiSparkSQLCLIDriver "${SPARK_JARS_DIR}"/"${TISPARK_JAR}"
+exec "${SPARK_HOME}"/bin/spark-submit --class org.apache.spark.sql.hive.thriftserver.TiSparkSQLCLIDriver "${SPARK_JARS_DIR}"/"${TISPARK_JAR}" "$@"
