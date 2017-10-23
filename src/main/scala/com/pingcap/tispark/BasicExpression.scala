@@ -62,26 +62,20 @@ object BasicExpression {
       }
     }
 
-  def isSupportedExpression(expr: Expression, requestMode: Int): Boolean = {
-    // Currently, only DAG mode needs to infer type
-    if (requestMode == RequestTypes.REQ_TYPE_DAG) {
-      if (expr.children.nonEmpty) {
+  def isSupportedExpression(expr: Expression, requestTypes: RequestTypes): Boolean =
+    requestTypes match {
+      case RequestTypes.REQ_TYPE_DAG if expr.children.nonEmpty =>
         val childType = expr.children.head.dataType
-
         // if any child's data type is different from others,
-        // we do not support this expression to push down in
-        // DAG mode
-        for (child <- expr.children) {
-          if (!childType.equals(child.dataType) ||
-              // Do it recursively
-              !isSupportedExpression(child, requestMode)) {
-            return false
-          }
-        }
-      }
+        // we do not support this expression in DAG mode
+        expr.children.forall(
+          (e: Expression) =>
+            childType.eq(e.dataType) && isSupportedExpression(e, requestTypes) // Do it recursively
+        )
+      // For other request types we assume them supported
+      // by default
+      case _ => true
     }
-    true
-  }
 
   def convertToTiExpr(expr: Expression): Option[TiExpr] =
     expr match {
@@ -126,9 +120,6 @@ object BasicExpression {
 
       case Not(BasicExpression(child)) =>
         Some(new TiNot(child))
-
-      case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiLike(lhs, rhs))
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>
