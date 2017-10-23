@@ -22,5 +22,8 @@ object TiConfigConst {
   val GRPC_TIMEOUT: String = "spark.tispark.grpc.timeout_in_sec"
   val META_RELOAD_PERIOD: String = "spark.tispark.meta.reload_period_in_sec"
   val GRPC_RETRY_TIMES: String = "spark.tispark.grpc.retry.times"
+  val INDEX_SCAN_BATCH_SIZE: String = "spark.tispark.index.scan_batch_size"
+  val INDEX_SCAN_CONCURRENCY: String = "spark.tispark.index.scan_concurrency"
+  val TABLE_SCAN_CONCURRENCY: String = "spark.tispark.table.scan_concurrency"
   val ALLOW_AGG_PUSHDOWN: String = "spark.tispark.plan.allowaggpushdown"
 }

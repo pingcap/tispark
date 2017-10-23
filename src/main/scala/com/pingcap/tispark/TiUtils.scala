@@ -113,6 +113,18 @@ object TiUtils {
       tiConf.setRpcRetryTimes(conf.get(TiConfigConst.GRPC_RETRY_TIMES).toInt)
     }
 
+    if (conf.contains(TiConfigConst.INDEX_SCAN_BATCH_SIZE)) {
+      tiConf.setIndexScanBatchSize(conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.INDEX_SCAN_CONCURRENCY)) {
+      tiConf.setIndexScanConcurrency(conf.get(TiConfigConst.INDEX_SCAN_CONCURRENCY).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.TABLE_SCAN_CONCURRENCY)) {
+      tiConf.setTableScanConcurrency(conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
+    }
+
     tiConf
   }
 }
