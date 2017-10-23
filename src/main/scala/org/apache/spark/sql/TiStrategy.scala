@@ -16,7 +16,7 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
-import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiIndexInfo}
 import com.pingcap.tikv.predicates.ScanBuilder
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
@@ -52,14 +52,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
   private def toCoprocessorRDD(source: TiDBRelation,
                                output: Seq[Attribute],
-                               selectRequest: TiSelectRequest): SparkPlan = {
+                               dagRequest: TiDAGRequest): SparkPlan = {
     val table = source.table
-    selectRequest.setTableInfo(table)
-    // In case count(*) and nothing pushed, pick the first column
-    if (selectRequest.getFields.size == 0) {
-      selectRequest.addField(TiColumnRef.create(table.getColumns.get(0).getName))
+    dagRequest.setTableInfo(table)
+    if (dagRequest.getFields.isEmpty) {
+      dagRequest.addField(TiColumnRef.create(table.getColumns.get(0).getName))
     }
-    val tiRdd = source.logicalPlanToRDD(selectRequest)
+    val tiRdd = source.logicalPlanToRDD(dagRequest)
 
     CoprocessorRDD(output, tiRdd)
   }
@@ -67,58 +66,58 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def aggregationToSelectRequest(groupByList: Seq[NamedExpression],
                                  aggregates: Seq[AggregateExpression],
                                  source: TiDBRelation,
-                                 selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
+                                 dagRequest: TiDAGRequest = new TiDAGRequest): TiDAGRequest = {
     aggregates.foreach {
       case AggregateExpression(_: Average, _, _, _) =>
         throw new IllegalArgumentException("Should never be here")
 
       case AggregateExpression(f @ Sum(BasicExpression(arg)), _, _, _) =>
-        selectRequest.addAggregate(new TiSum(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(new TiSum(arg), fromSparkType(f.dataType))
 
       case AggregateExpression(f @ Count(args), _, _, _) =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
-        selectRequest.addAggregate(new TiCount(tiArgs: _*), fromSparkType(f.dataType))
+        dagRequest.addAggregate(new TiCount(tiArgs: _*), fromSparkType(f.dataType))
 
       case AggregateExpression(f @ Min(BasicExpression(arg)), _, _, _) =>
-        selectRequest.addAggregate(new TiMin(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(new TiMin(arg), fromSparkType(f.dataType))
 
       case AggregateExpression(f @ Max(BasicExpression(arg)), _, _, _) =>
-        selectRequest.addAggregate(new TiMax(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(new TiMax(arg), fromSparkType(f.dataType))
 
       case AggregateExpression(f @ First(BasicExpression(arg), _), _, _, _) =>
-        selectRequest.addAggregate(new TiFirst(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(new TiFirst(arg), fromSparkType(f.dataType))
 
       case _ =>
     }
 
     groupByList.foreach {
       case BasicExpression(keyExpr) =>
-        selectRequest.addGroupByItem(TiByItem.create(keyExpr, false))
+        dagRequest.addGroupByItem(TiByItem.create(keyExpr, false))
 
       case _ =>
     }
 
-    selectRequest
+    dagRequest
   }
 
-  def filterToSelectRequest(filters: Seq[Expression],
-                            source: TiDBRelation,
-                            selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
+  def filterToDAGRequest(filters: Seq[Expression],
+                         source: TiDBRelation,
+                         dagRequest: TiDAGRequest = new TiDAGRequest): TiDAGRequest = {
     val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val pkIndex: TiIndexInfo = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
     val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
-                                         pkIndex, source.table)
+      pkIndex, source.table)
 
-    selectRequest.addRanges(scanPlan.getKeyRanges)
-    scanPlan.getFilters.toList.map(selectRequest.addWhere)
-    selectRequest
+    dagRequest.addRanges(scanPlan.getKeyRanges)
+    scanPlan.getFilters.toList.map(dagRequest.addWhere)
+    dagRequest
   }
 
   def pruneFilterProject(projectList: Seq[NamedExpression],
                          filterPredicates: Seq[Expression],
                          source: TiDBRelation,
-                         selectRequest: TiSelectRequest = new TiSelectRequest): SparkPlan = {
+                         dagRequest: TiDAGRequest = new TiDAGRequest): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))
     val filterSet = AttributeSet(filterPredicates.flatMap(_.references))
@@ -129,7 +128,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     val residualFilter: Option[Expression] = residualFilters.reduceLeftOption(catalyst.expressions.And)
 
-    filterToSelectRequest(pushdownFilters, source, selectRequest)
+    filterToDAGRequest(pushdownFilters, source, dagRequest)
 
     // Right now we still use a projection even if the only evaluation is applying an alias
     // to a column.  Since this is a no-op, it could be avoided. However, using this
@@ -142,15 +141,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
-      projectSeq.foreach(attr => selectRequest.addField(TiColumnRef.create(attr.name)))
-      val scan = toCoprocessorRDD(source, projectSeq, selectRequest)
+      projectSeq.foreach(attr => dagRequest.addField(TiColumnRef.create(attr.name)))
+      val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic
       val projectSeq: Seq[Attribute] = (projectSet ++ filterSet).toSeq
-      projectSeq.foreach(attr => selectRequest.addField(TiColumnRef.create(attr.name)))
-      val scan = toCoprocessorRDD(source, projectSeq, selectRequest)
+      projectSeq.foreach(attr => dagRequest.addField(TiColumnRef.create(attr.name)))
+      val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
     }
   }
@@ -180,7 +179,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         originalAggExpr.isDistinct,
         NamedExpression.newExprId)
 
-    def allowAggregationPushdown(): Boolean = {
+    def allowAggregationPushDown(): Boolean = {
       sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
     }
 
@@ -207,8 +206,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       aggregateExpressions,
       resultExpressions,
       TiAggregationProjection(filters, _, source))
-        if allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
-        var selReq: TiSelectRequest = filterToSelectRequest(filters, source)
+        if allowAggregationPushDown && !aggregateExpressions.exists(_.isDistinct) =>
+        var selReq: TiDAGRequest = filterToDAGRequest(filters, source)
         val residualAggregateExpressions = aggregateExpressions.map {
           aggExpr =>
             aggExpr.aggregateFunction match {
@@ -280,7 +279,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           }.asInstanceOf[NamedExpression]
         )
 
-        val output = (groupingExpressions ++ pushdownAggregates.map(x => toAlias(x))).map(_.toAttribute)
+        val output = (pushdownAggregates.map(x => toAlias(x)) ++ groupingExpressions).map(_.toAttribute)
 
         aggregate.AggUtils.planAggregateWithoutDistinct(
           groupingExpressions,
