@@ -15,6 +15,8 @@
 
 package com.pingcap.tispark
 
+import java.util
+
 import com.pingcap.tikv._
 import com.pingcap.tikv.meta.{TiSelectRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
@@ -38,7 +40,7 @@ class TiRDD(val selectReq: TiSelectRequest,
   type TiRow = com.pingcap.tikv.row.Row
 
   @transient lazy val session: TiSession = TiSession.create(tiConf)
-  @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
+  @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema()
   @transient lazy val snapshot: Snapshot = session.createSnapshot(ts)
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
@@ -48,11 +50,11 @@ class TiRDD(val selectReq: TiSelectRequest,
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    selectReq.bind
+    selectReq.resolve()
     // bypass, sum return a long type
-    val tiPartition = split.asInstanceOf[TiPartition]
-    val iterator = snapshot.select(selectReq, split.asInstanceOf[TiPartition].task)
-    val finalTypes = rowTransformer.getTypes.toList
+    val tiPartition: TiPartition = split.asInstanceOf[TiPartition]
+    val iterator: util.Iterator[TiRow] = snapshot.tableRead(selectReq, split.asInstanceOf[TiPartition].task)
+    val finalTypes: List[DataType] = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {
       val transRow = rowTransformer.transform(row)
