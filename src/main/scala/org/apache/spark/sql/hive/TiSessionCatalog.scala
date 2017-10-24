@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{FunctionRegistry, NoSuchDatabaseException, NoSuchTableException}
 import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.catalyst.util.StringUtils
 import org.apache.spark.sql.catalyst.{CatalystConf, TableIdentifier}
 
@@ -47,16 +47,18 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
 
   val meta: MetaManager = new MetaManager(session.getCatalog)
 
-  override def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan = {
+  override def lookupRelation(tableIdent: TableIdentifier, alias: Option[String]): LogicalPlan = {
     synchronized {
-      val table = formatTableName(name.table)
-      val db = formatDatabaseName(name.database.getOrElse(currentDb))
+      val table = formatTableName(tableIdent.table)
+      val db = formatDatabaseName(tableIdent.database.getOrElse(currentDb))
       if (!meta.getDatabase(db).isEmpty && !meta.getTable(db, table).isEmpty) {
         val rel: TiDBRelation =
           new TiDBRelation(session, new TiTableReference(db, table), meta)(sparkSession.sqlContext)
-        sparkSession.sqlContext.baseRelationToDataFrame(rel).logicalPlan
+        val relPlan = sparkSession.sqlContext.baseRelationToDataFrame(rel).logicalPlan
+        val qualifiedTable = SubqueryAlias(tableIdent.table, relPlan, None)
+        alias.map(a => SubqueryAlias(a, qualifiedTable, None)).getOrElse(qualifiedTable)
       } else {
-        super.lookupRelation(name, alias)
+        super.lookupRelation(tableIdent, alias)
       }
     }
   }
