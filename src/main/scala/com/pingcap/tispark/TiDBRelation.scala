@@ -18,10 +18,9 @@ package com.pingcap.tispark
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo, TiTimestamp}
-import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{Row, SQLContext}
 
 class TiDBRelation(session: TiSession,
                    tableRef: TiTableReference,
@@ -40,6 +39,6 @@ class TiDBRelation(session: TiSession,
               session.getConf,
               tableRef,
               ts,
-              sqlContext.sparkContext)
+              sqlContext.sparkSession)
   }
 }

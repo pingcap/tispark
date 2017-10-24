@@ -26,4 +26,5 @@ object TiConfigConst {
   val INDEX_SCAN_CONCURRENCY: String = "spark.tispark.index.scan_concurrency"
   val TABLE_SCAN_CONCURRENCY: String = "spark.tispark.table.scan_concurrency"
   val ALLOW_AGG_PUSHDOWN: String = "spark.tispark.plan.allowaggpushdown"
+  val TABLE_SCAN_SPLIT_FACTOR: String = "spark.tispark.table.scan_split_factor"
 }

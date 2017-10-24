@@ -22,8 +22,8 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
-import org.apache.spark.{Partition, SparkContext, TaskContext}
+import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.{Partition, TaskContext}
 
 import scala.collection.JavaConversions._
 
@@ -32,8 +32,8 @@ class TiRDD(val selectReq: TiSelectRequest,
             val tiConf: TiConfiguration,
             val tableRef: TiTableReference,
             val ts: TiTimestamp,
-            sc: SparkContext)
-  extends RDD[Row](sc, Nil) {
+            @transient sparkSession: SparkSession)
+  extends RDD[Row](sparkSession.sparkContext, Nil) {
 
   type TiRow = com.pingcap.tikv.row.Row
 
@@ -74,8 +74,10 @@ class TiRDD(val selectReq: TiSelectRequest,
     split.asInstanceOf[TiPartition].task.getHost :: Nil
 
   override protected def getPartitions: Array[Partition] = {
+    val conf = sparkSession.conf
     val keyWithRegionTasks = RangeSplitter.newSplitter(session.getRegionManager)
-                 .splitRangeByRegion(selectReq.getRanges)
+                 .splitRangeByRegion(selectReq.getRanges,
+                                     conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt)
 
     keyWithRegionTasks.zipWithIndex.map{
       case (task, index) => new TiPartition(index, task)
