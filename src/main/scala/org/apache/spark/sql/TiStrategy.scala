@@ -15,6 +15,9 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
+import com.pingcap.tikv.meta.TiSelectRequest
+import com.pingcap.tikv.predicates.ScanBuilder
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
@@ -27,6 +30,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
+import scala.collection.JavaConversions._
 import scala.collection.{JavaConversions, mutable}
 
 
@@ -103,7 +107,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
-                                         source.table)
+      source.table)
 
     selectRequest.addRanges(scanPlan.getKeyRanges)
     scanPlan.getFilters.toList.map(selectRequest.addWhere)
@@ -122,7 +126,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val filterSet = AttributeSet(filterPredicates.flatMap(_.references))
 
     val (pushdownFilters: Seq[Expression],
-         residualFilters: Seq[Expression]) =
+    residualFilters: Seq[Expression]) =
       filterPredicates.partition(TiUtils.isSupportedFilter)
 
     val residualFilter: Option[Expression] = residualFilters.reduceLeftOption(catalyst.expressions.And)
@@ -167,9 +171,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     def newAggregate(aggFunc: AggregateFunction,
                      originalAggExpr: AggregateExpression) =
       AggregateExpression(aggFunc,
-                          originalAggExpr.mode,
-                          originalAggExpr.isDistinct,
-                          originalAggExpr.resultId)
+        originalAggExpr.mode,
+        originalAggExpr.isDistinct,
+        originalAggExpr.resultId)
 
     def newAggregateWithId(aggFunc: AggregateFunction,
                            originalAggExpr: AggregateExpression) =
