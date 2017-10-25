@@ -1,0 +1,8 @@
+DROP TABLE IF EXISTS `t1`;
+CREATE TABLE `t1` (
+  `c1` tinyint(5) DEFAULT NULL,
+  `c2` mediumint(6) DEFAULT NULL,
+  `c3` int(11) DEFAULT NULL,
+  `c4` int(11) DEFAULT NULL,
+  `c5` bigint(15) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin

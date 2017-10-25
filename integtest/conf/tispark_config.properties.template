@@ -1,4 +1,5 @@
 tidb.addr=127.0.0.1
 tidb.port=4000
 tidb.user=root
+test.mode=Test
 test.ignore=tpch

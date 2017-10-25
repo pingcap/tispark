@@ -152,7 +152,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
 
   def init(databaseName: String): String = {
     if (databaseName != null) {
-      if(!databaseExists(databaseName)) {
+      if (!databaseExists(databaseName)) {
         createDatabase(databaseName, false)
       }
       connection.setCatalog(databaseName)

@@ -1,5 +1,5 @@
-DROP TABLE IF EXISTS `test_selectivity`;
-CREATE TABLE `test_selectivity` (
+DROP TABLE IF EXISTS `test_index`;
+CREATE TABLE `test_index` (
   `a` int(11) NOT NULL,
   `b` int(11) DEFAULT NULL,
   `c` int(11) DEFAULT NULL,

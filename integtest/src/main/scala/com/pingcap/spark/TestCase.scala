@@ -69,7 +69,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  protected def work(parentPath: String, run: Boolean, load: Boolean, fromFile: Boolean): Unit = {
+  protected def work(parentPath: String, run: Boolean, load: Boolean, compareWithTiDB: Boolean): Unit = {
     val ddls = ArrayBuffer.empty[String]
     val dataFiles = ArrayBuffer.empty[String]
     val dirs = ArrayBuffer.empty[String]
@@ -81,7 +81,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
     logger.info("get ignored: " + ignoreCases.toList)
     logger.info("current dbName " + dbName + " is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))) "" else "not ") + "ignored")
 
-    if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
+    logger.info("run=" + run.toString + " load=" + load.toString + " compareWithTiDB=" + compareWithTiDB.toString)
+    if (!compareWithTiDB) {
+      if (run) {
+        test(dbName, testCases, compareWithTiDB)
+      }
+    } else if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
       if (dir.isDirectory) {
         dir.listFiles().map { f =>
           if (f.isDirectory) {
@@ -116,11 +121,11 @@ class TestCase(val prop: Properties) extends LazyLogging {
         }
       }
       if (run) {
-        test(dbName, testCases, fromFile)
+        test(dbName, testCases, compareWithTiDB)
       }
 
       dirs.foreach { dir =>
-        work(dir, run, load, fromFile)
+        work(dir, run, load, compareWithTiDB)
       }
     }
   }
@@ -158,17 +163,17 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  def testInline(dbName: String): Unit = {
-    spark.init(dbName)
+  def testInline(): Unit = {
+    spark.init("test_index")
     val actual = ExecWithSparkResult(s" select * from t1")
-    logger.info(actual.head.head.toString)
+    logger.info("result:" + actual.head.head.toString)
   }
 
-  def test(dbName: String, testCases: ArrayBuffer[(String, String)], fromFile: Boolean): Unit = {
-    if(fromFile) {
+  def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
+    if (compareWithTiDB) {
       test(dbName, testCases)
     } else {
-      testInline(dbName)
+      testInline()
     }
   }
 
