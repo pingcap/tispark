@@ -65,7 +65,9 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
   private def dumpCreateTable(table: String, path: String): Unit = {
     logger.info(s"Dumping table: $table to $path")
     val (_, res) = queryTiDB("show create table " + table)
-    val content = res.head(1).toString
+    var content = "DROP TABLE IF EXISTS "
+    content = content.concat("`" + table + "`;\n")
+    content = content.concat(res.head(1).toString)
     writeFile(content, ddlFileName(path, table))
   }
 

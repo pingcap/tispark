@@ -24,7 +24,6 @@ import com.typesafe.scalalogging.slf4j.LazyLogging
 object TestFramework extends LazyLogging {
   val ConfName = "tispark_config.properties"
 
-
   def main(args: Array[String]): Unit = {
 
     val prop: Properties = loadConf(ConfName)

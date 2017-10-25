@@ -27,7 +27,7 @@ import scala.collection.mutable.ArrayBuffer
 class TestCase(val prop: Properties) extends LazyLogging {
   object RunMode extends Enumeration {
     type RunMode = Value
-    val Test, Load, LoadNTest, Dump = Value
+    val Test, Load, LoadNTest, Dump, TestIndex = Value
   }
 
   protected val KeyDumpDBList = "test.dumpDB.databases"
@@ -58,16 +58,18 @@ class TestCase(val prop: Properties) extends LazyLogging {
           jdbc.dumpAllTables(joinPath(basePath, dbName))
         }
 
-      case RunMode.Load => work(basePath, false, true)
+      case RunMode.Load => work(basePath, false, true, true)
 
-      case RunMode.Test => work(basePath, true, false)
+      case RunMode.Test => work(basePath, true, false, true)
 
-      case RunMode.LoadNTest => work(basePath, true, true)
+      case RunMode.LoadNTest => work(basePath, true, true, true)
+
+      case RunMode.TestIndex => work(basePath, true, false, false)
 
     }
   }
 
-  protected def work(parentPath: String, run: Boolean, load: Boolean): Unit = {
+  protected def work(parentPath: String, run: Boolean, load: Boolean, fromFile: Boolean): Unit = {
     val ddls = ArrayBuffer.empty[String]
     val dataFiles = ArrayBuffer.empty[String]
     val dirs = ArrayBuffer.empty[String]
@@ -76,6 +78,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
     val testCases = ArrayBuffer.empty[(String, String)]
 
     var dbName = dir.getName
+    logger.info("get ignored: " + ignoreCases.toList)
+    logger.info("current dbName " + dbName + " is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))) "" else "not ") + "ignored")
+
     if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
       if (dir.isDirectory) {
         dir.listFiles().map { f =>
@@ -100,24 +105,36 @@ class TestCase(val prop: Properties) extends LazyLogging {
         dbName = jdbc.init(dbName)
         logger.info("Load data... ")
         ddls.foreach{ file => {
-          logger.info("Resister for DDL script " + file)
+          logger.info("Register for DDL script " + file)
           jdbc.createTable(file)
         }
         }
         dataFiles.foreach{ file => {
-          logger.info("Resister for data loading script " + file)
+          logger.info("Register for data loading script " + file)
           jdbc.loadTable(file)
         }
         }
       }
       if (run) {
-        test(dbName, testCases)
+        test(dbName, testCases, fromFile)
       }
 
       dirs.foreach { dir =>
-        work(dir, run, load)
+        work(dir, run, load, fromFile)
       }
     }
+  }
+
+  def ExecWithSparkResult(sql: String): List[List[Any]] = {
+    time {
+      spark.querySpark(sql)
+    }(logger)
+  }
+
+  def ExecWithTiDBResult(sql: String): List[List[Any]] = {
+    time {
+      jdbc.queryTiDB(sql)._2
+    }(logger)
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
@@ -126,9 +143,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
     testCases.sortBy(_._1).foreach { case (file, sql) =>
       logger.info(s" Query TiSpark $file ")
-      val actual: List[List[Any]] = time { spark.querySpark(sql) }(logger)
+      val actual = ExecWithSparkResult(sql)
       logger.info(s" \nQuery TiDB $file ")
-      val baseline: List[List[Any]] = time { jdbc.queryTiDB(sql)._2 }(logger)
+      val baseline = ExecWithTiDBResult(sql)
       val result = compResult(actual, baseline)
       if (!result) {
         logger.info(s"Dump diff for TiSpark $file \n")
@@ -138,6 +155,20 @@ class TestCase(val prop: Properties) extends LazyLogging {
       }
 
       logger.info(s" \n*************** $file result: $result\n\n\n")
+    }
+  }
+
+  def testInline(dbName: String): Unit = {
+    spark.init(dbName)
+    val actual = ExecWithSparkResult(s" select * from t1")
+    logger.info(actual.head.head.toString)
+  }
+
+  def test(dbName: String, testCases: ArrayBuffer[(String, String)], fromFile: Boolean): Unit = {
+    if(fromFile) {
+      test(dbName, testCases)
+    } else {
+      testInline(dbName)
     }
   }
 
