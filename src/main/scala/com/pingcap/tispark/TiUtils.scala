@@ -17,13 +17,11 @@ package com.pingcap.tispark
 
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
-import com.pingcap.tikv.TiConfiguration
-import com.pingcap.tikv.meta.TiTableInfo
-import com.pingcap.tikv.types._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
-import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.{SparkConf, sql}
 
 
@@ -35,6 +33,10 @@ object TiUtils {
   type TiFirst = com.pingcap.tikv.expression.aggregate.First
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiTypes = com.pingcap.tikv.types.Types
+
+  val execCounter = new AtomicLong(0)
+
+  def allocExecId(): Long = execCounter.incrementAndGet()
 
   def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
     aggExpr.aggregateFunction match {
@@ -111,6 +113,18 @@ object TiUtils {
 
     if (conf.contains(TiConfigConst.GRPC_RETRY_TIMES)) {
       tiConf.setRpcRetryTimes(conf.get(TiConfigConst.GRPC_RETRY_TIMES).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.INDEX_SCAN_BATCH_SIZE)) {
+      tiConf.setIndexScanBatchSize(conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.INDEX_SCAN_CONCURRENCY)) {
+      tiConf.setIndexScanConcurrency(conf.get(TiConfigConst.INDEX_SCAN_CONCURRENCY).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.TABLE_SCAN_CONCURRENCY)) {
+      tiConf.setTableScanConcurrency(conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
     }
 
     tiConf
