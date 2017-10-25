@@ -17,6 +17,8 @@ package com.pingcap.tispark
 
 import java.util.HashMap
 
+import com.pingcap.tikv.{TiConfiguration, TiSession}
+
 object TiSessionCache {
   private val sessionCache: HashMap[(String, Long), TiSession] = new HashMap[(String, Long), TiSession]()
 

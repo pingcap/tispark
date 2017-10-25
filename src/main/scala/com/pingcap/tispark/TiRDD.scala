@@ -15,9 +15,17 @@
 
 package com.pingcap.tispark
 
+import com.pingcap.tikv._
+import com.pingcap.tikv.meta.{TiSelectRequest, TiTimestamp}
+import com.pingcap.tikv.operation.SchemaInfer
+import com.pingcap.tikv.operation.transformer.RowTransformer
+import com.pingcap.tikv.types.DataType
+import com.pingcap.tikv.util.RangeSplitter
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext}
+
+import scala.collection.JavaConversions._
 
 
 class TiRDD(val selectReq: TiSelectRequest,

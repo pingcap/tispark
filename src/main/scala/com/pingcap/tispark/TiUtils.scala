@@ -19,9 +19,12 @@ package com.pingcap.tispark
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
+import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.types._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
-import org.apache.spark.sql.types._
+import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
 import org.apache.spark.{SparkConf, sql}
 
 
