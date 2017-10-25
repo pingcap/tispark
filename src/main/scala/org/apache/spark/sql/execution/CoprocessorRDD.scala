@@ -15,13 +15,12 @@
 
 package org.apache.spark.sql.execution
 
-import com.pingcap.tispark.TiRDD
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{Attribute, SortOrder, UnsafeProjection}
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.SQLMetrics
-import org.apache.spark.util.Utils
+import org.apache.spark.sql.tispark.TiRDD
 
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {

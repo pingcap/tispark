@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark
+package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
 import com.pingcap.tikv.meta.{TiSelectRequest, TiTimestamp}
@@ -21,6 +21,7 @@ import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
+import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext}
@@ -48,6 +49,7 @@ class TiRDD(val selectReq: TiSelectRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
     selectReq.resolve
+
     // bypass, sum return a long type
     val tiPartition = split.asInstanceOf[TiPartition]
     val session: TiSession = TiSessionCache.getSession(tiPartition.appId, tiConf)
