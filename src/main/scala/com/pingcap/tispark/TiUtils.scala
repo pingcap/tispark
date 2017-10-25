@@ -17,6 +17,7 @@ package com.pingcap.tispark
 
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.meta.TiTableInfo
@@ -35,6 +36,10 @@ object TiUtils {
   type TiFirst = com.pingcap.tikv.expression.aggregate.First
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiTypes = com.pingcap.tikv.types.Types
+
+  val execCounter = new AtomicLong(0)
+
+  def allocExecId(): Long = execCounter.incrementAndGet()
 
   def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
     aggExpr.aggregateFunction match {

@@ -37,9 +37,7 @@ class TiRDD(val selectReq: TiSelectRequest,
 
   type TiRow = com.pingcap.tikv.row.Row
 
-  @transient lazy val session: TiSession = TiSession.create(tiConf)
   @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
-  @transient lazy val snapshot: Snapshot = session.createSnapshot(ts)
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
     val schemaInferrer: SchemaInfer = SchemaInfer.create(selectReq)
@@ -48,14 +46,13 @@ class TiRDD(val selectReq: TiSelectRequest,
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    def close(): Unit = {
-      session.close()
-    }
-    context.addTaskCompletionListener{ context => close() }
-
     selectReq.resolve
     // bypass, sum return a long type
+    val appId = sparkSession.sparkContext.applicationId
     val tiPartition = split.asInstanceOf[TiPartition]
+    val session: TiSession = TiSessionCache.getSession(appId, tiPartition.execId, tiConf)
+    val snapshot: Snapshot = session.createSnapshot(ts)
+
     val iterator = snapshot.tableRead(selectReq, split.asInstanceOf[TiPartition].task)
     val finalTypes = rowTransformer.getTypes.toList
 
@@ -84,8 +81,9 @@ class TiRDD(val selectReq: TiSelectRequest,
                  .splitRangeByRegion(selectReq.getRanges,
                                      conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt)
 
-    keyWithRegionTasks.zipWithIndex.map{
-      case (task, index) => new TiPartition(index, task)
+    val execId = TiUtils.allocExecId()
+    keyWithRegionTasks.zipWithIndex.map {
+      case (task, index) => new TiPartition(index, task, execId)
     }.toArray
   }
 }

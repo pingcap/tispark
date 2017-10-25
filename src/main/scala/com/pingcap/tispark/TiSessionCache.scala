@@ -15,10 +15,21 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
-import org.apache.spark.Partition
+import java.util.HashMap
 
+import com.pingcap.tikv.{TiConfiguration, TiSession}
 
-class TiPartition(idx: Int, val task: RegionTask, val execId: Long) extends Partition {
-  override def index: Int = idx
+object TiSessionCache {
+  private val sessionCache: HashMap[(String, Long), TiSession] = new HashMap[(String, Long), TiSession]()
+
+  def getSession(appId: String, execId: Long, conf: TiConfiguration): TiSession = this.synchronized {
+    val session = sessionCache.get((appId, execId))
+    if (session == null) {
+      val newSession = TiSession.create(conf)
+      sessionCache.put((appId, execId), newSession)
+      newSession
+    } else {
+      session
+    }
+  }
 }
