@@ -39,6 +39,7 @@ class TiDBRelation(session: TiSession,
               session.getConf,
               tableRef,
               ts,
+              session,
               sqlContext.sparkSession)
   }
 }

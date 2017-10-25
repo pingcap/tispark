@@ -37,10 +37,6 @@ object TiUtils {
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiTypes = com.pingcap.tikv.types.Types
 
-  val execCounter = new AtomicLong(0)
-
-  def allocExecId(): Long = execCounter.incrementAndGet()
-
   def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>

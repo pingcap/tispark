@@ -20,13 +20,13 @@ import java.util.HashMap
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 
 object TiSessionCache {
-  private val sessionCache: HashMap[(String, Long), TiSession] = new HashMap[(String, Long), TiSession]()
+  private val sessionCache: HashMap[String, TiSession] = new HashMap[String, TiSession]()
 
-  def getSession(appId: String, execId: Long, conf: TiConfiguration): TiSession = this.synchronized {
-    val session = sessionCache.get((appId, execId))
+  def getSession(appId: String, conf: TiConfiguration): TiSession = this.synchronized {
+    val session = sessionCache.get(appId)
     if (session == null) {
       val newSession = TiSession.create(conf)
-      sessionCache.put((appId, execId), newSession)
+      sessionCache.put(appId, newSession)
       newSession
     } else {
       session
