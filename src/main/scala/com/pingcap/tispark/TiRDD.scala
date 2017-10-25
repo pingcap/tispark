@@ -32,12 +32,13 @@ class TiRDD(val selectReq: TiSelectRequest,
             val tiConf: TiConfiguration,
             val tableRef: TiTableReference,
             val ts: TiTimestamp,
-            @transient sparkSession: SparkSession)
+            @transient private val session: TiSession,
+            @transient private val sparkSession: SparkSession)
   extends RDD[Row](sparkSession.sparkContext, Nil) {
 
   type TiRow = com.pingcap.tikv.row.Row
 
-  @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
+  @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema()
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
     val schemaInferrer: SchemaInfer = SchemaInfer.create(selectReq)
@@ -46,15 +47,14 @@ class TiRDD(val selectReq: TiSelectRequest,
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    selectReq.resolve
+    selectReq.resolve()
     // bypass, sum return a long type
-    val appId = sparkSession.sparkContext.applicationId
-    val tiPartition = split.asInstanceOf[TiPartition]
-    val session: TiSession = TiSessionCache.getSession(appId, tiPartition.execId, tiConf)
+    val tiPartition: TiPartition = split.asInstanceOf[TiPartition]
+    val session: TiSession = TiSessionCache.getSession(tiPartition.appId, tiConf)
     val snapshot: Snapshot = session.createSnapshot(ts)
 
-    val iterator = snapshot.tableRead(selectReq, split.asInstanceOf[TiPartition].task)
-    val finalTypes = rowTransformer.getTypes.toList
+    val iterator: Iterator[TiRow] = snapshot.tableRead(selectReq, split.asInstanceOf[TiPartition].task)
+    val finalTypes: List[DataType] = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {
       val transRow = rowTransformer.transform(row)
@@ -81,9 +81,8 @@ class TiRDD(val selectReq: TiSelectRequest,
                  .splitRangeByRegion(selectReq.getRanges,
                                      conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt)
 
-    val execId = TiUtils.allocExecId()
     keyWithRegionTasks.zipWithIndex.map {
-      case (task, index) => new TiPartition(index, task, execId)
+      case (task, index) => new TiPartition(index, task, sparkContext.applicationId)
     }.toArray
   }
 }

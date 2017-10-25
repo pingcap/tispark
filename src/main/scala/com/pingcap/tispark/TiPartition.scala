@@ -19,6 +19,6 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import org.apache.spark.Partition
 
 
-class TiPartition(idx: Int, val task: RegionTask, val execId: Long) extends Partition {
+class TiPartition(val idx: Int, val task: RegionTask, val appId: String) extends Partition {
   override def index: Int = idx
 }

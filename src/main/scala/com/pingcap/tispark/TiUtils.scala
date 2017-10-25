@@ -17,7 +17,6 @@ package com.pingcap.tispark
 
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.meta.TiTableInfo
@@ -37,10 +36,6 @@ object TiUtils {
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiTypes = com.pingcap.tikv.types.Types
 
-  val execCounter = new AtomicLong(0)
-
-  def allocExecId(): Long = execCounter.incrementAndGet()
-
   def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
@@ -51,7 +46,7 @@ object TiUtils {
     }
   }
 
-  def isSupportedBasicExpression(expr: Expression) = {
+  def isSupportedBasicExpression(expr: Expression): Boolean = {
     BasicExpression.convertToTiExpr(expr).fold(false) {_.isSupportedExpr}
   }
 
