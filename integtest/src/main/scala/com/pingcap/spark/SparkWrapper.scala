@@ -27,14 +27,13 @@ import scala.collection.mutable.ArrayBuffer
 
 
 class SparkWrapper(prop: Properties) extends LazyLogging {
-  private val KeyPDAddress = "pd.addrs"
 
   private val spark = SparkSession
     .builder()
     .appName("TiSpark Integration Test")
     .getOrCreate()
 
-  val ti = new TiContext(spark, getOrThrow(prop, KeyPDAddress).split(",").toList)
+  val ti = new TiContext(spark)
 
   def init(databaseName: String): Unit = {
     logger.info("Mapping database: " + databaseName)
