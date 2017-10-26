@@ -47,7 +47,9 @@ object TiUtils {
   }
 
   def isSupportedBasicExpression(expr: Expression) = {
-    BasicExpression.convertToTiExpr(expr).fold(false) {_.isSupportedExpr}
+    BasicExpression.convertToTiExpr(expr).fold(false) {
+      _.isSupportedExpr
+    }
   }
 
   def isSupportedFilter(expr: Expression): Boolean = isSupportedBasicExpression(expr)
@@ -62,7 +64,11 @@ object TiUtils {
       case _: BytesType => sql.types.StringType
       case _: IntegerType => sql.types.LongType
       case _: RealType => sql.types.DoubleType
-      case _: DecimalType => DataTypes.createDecimalType(tp.getLength, tp.getDecimal)
+      // we need to make sure that tp.getLength does not result in negative number when casting.
+      case _: DecimalType =>
+        DataTypes.createDecimalType(
+          Math.min(Integer.MAX_VALUE, tp.getLength).asInstanceOf[Int],
+          tp.getDecimal)
       case _: TimestampType => sql.types.TimestampType
       case _: DateType => sql.types.DateType
     }
