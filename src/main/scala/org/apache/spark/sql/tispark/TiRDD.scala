@@ -21,12 +21,15 @@ import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
+import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext}
 
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+import scala.collection.mutable.{HashMap, ListBuffer, MultiMap, Set}
 
 
 class TiRDD(val selectReq: TiSelectRequest,
@@ -55,7 +58,7 @@ class TiRDD(val selectReq: TiSelectRequest,
     val session: TiSession = TiSessionCache.getSession(tiPartition.appId, tiConf)
     val snapshot: Snapshot = session.createSnapshot(ts)
 
-    val iterator = snapshot.tableRead(selectReq, split.asInstanceOf[TiPartition].task)
+    val iterator = snapshot.tableRead(selectReq, split.asInstanceOf[TiPartition].tasks.asJava)
     val finalTypes = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {
@@ -75,7 +78,7 @@ class TiRDD(val selectReq: TiSelectRequest,
   }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =
-    split.asInstanceOf[TiPartition].task.getHost :: Nil
+    split.asInstanceOf[TiPartition].tasks(0).getHost :: Nil
 
   override protected def getPartitions: Array[Partition] = {
     val conf = sparkSession.conf
@@ -83,8 +86,21 @@ class TiRDD(val selectReq: TiSelectRequest,
                  .splitRangeByRegion(selectReq.getRanges,
                                      conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt)
 
-    keyWithRegionTasks.zipWithIndex.map {
-      case (task, index) => new TiPartition(index, task, sparkContext.applicationId)
-    }.toArray
+    val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
+    val taskMap = new HashMap[String, Set[RegionTask]] with MultiMap[String, RegionTask]
+
+    var index = 0
+    val result = new ListBuffer[TiPartition]
+    for (task <- keyWithRegionTasks) {
+      taskMap.addBinding(task.getHost, task)
+      val tasks = taskMap.get(task.getHost).get
+      if (tasks.size >= taskPerSplit) {
+        result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+        index += 1
+        taskMap.remove(task.getHost)
+
+      }
+    }
+    result.toArray
   }
 }
