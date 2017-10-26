@@ -23,7 +23,6 @@ CLASS="com.pingcap.spark.TestFramework"
 ./load_index.sh
 
 cp ${BASEDIR}/conf/tispark_config_testindex.properties.template ${SPARK_HOME}/conf/tispark_config.properties
-
 spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,suspend=y"
 spark_test_opt=""
 
