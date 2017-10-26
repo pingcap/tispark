@@ -101,6 +101,11 @@ class TiRDD(val selectReq: TiSelectRequest,
 
       }
     }
+    // add rest
+    for (tasks <- taskMap.values) {
+      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+      index += 1
+    }
     result.toArray
   }
 }
