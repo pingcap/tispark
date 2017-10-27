@@ -17,7 +17,6 @@ package com.pingcap.tispark
 
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
@@ -134,5 +133,7 @@ object TiUtils {
     if(conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
       tiConf.setCommandPriority(CommandPri.valueOf(TiConfigConst.REQUEST_COMMAND_PRIORITY))
     }
+
+    tiConf
   }
 }
