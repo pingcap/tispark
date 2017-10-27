@@ -23,4 +23,6 @@ object TiConfigConst {
   val META_RELOAD_PERIOD: String = "spark.tispark.meta.reload_period_in_sec"
   val GRPC_RETRY_TIMES: String = "spark.tispark.grpc.retry.times"
   val ALLOW_AGG_PUSHDOWN: String = "spark.tispark.plan.allowaggpushdown"
+  val REQUEST_COMMAND_PRIORITY: String = "spark.tispark.request.command.priority"
+  val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
 }
