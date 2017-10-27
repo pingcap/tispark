@@ -82,11 +82,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     logger.info("current dbName " + dbName + " is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))) "" else "not ") + "ignored")
 
     logger.info("run=" + run.toString + " load=" + load.toString + " compareWithTiDB=" + compareWithTiDB.toString)
-    if (!compareWithTiDB) {
-      if (run) {
-        test(dbName, testCases, compareWithTiDB)
-      }
-    } else if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
+    if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
       if (dir.isDirectory) {
         dir.listFiles().map { f =>
           if (f.isDirectory) {
@@ -165,8 +161,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   def testInline(): Unit = {
     spark.init("test_index")
-    val actual = ExecWithSparkResult(s" select * from t1")
-    logger.info("result:" + actual.head.head.toString)
+    var actual = ExecWithSparkResult(s" select * from t2")
+    logger.info("result:" + actual)
+    actual = ExecWithSparkResult(s" select * from t3")
+    logger.info("result:" + actual)
+    actual = ExecWithSparkResult(s" select * from t1")
+    logger.info("result:" + actual)
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {

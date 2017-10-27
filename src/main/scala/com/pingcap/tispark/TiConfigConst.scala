@@ -27,5 +27,6 @@ object TiConfigConst {
   val TABLE_SCAN_CONCURRENCY: String = "spark.tispark.table.scan_concurrency"
   val ALLOW_AGG_PUSHDOWN: String = "spark.tispark.plan.allowaggpushdown"
   val TABLE_SCAN_SPLIT_FACTOR: String = "spark.tispark.table.scan_split_factor"
+  val TASK_PER_SPLIT: String = "spark.tispark.task_per_split"
   val PD_CLUSTER_ID: String = "spark.tispark.pd.clusterid"
 }
