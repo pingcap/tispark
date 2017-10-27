@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.{AtomicInteger, AtomicLong}
 
 import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.types._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
@@ -126,6 +127,12 @@ object TiUtils {
       tiConf.setTableScanConcurrency(conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
     }
 
-    tiConf
+    if(conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
+      tiConf.setIsolationLevel(IsolationLevel.valueOf(TiConfigConst.REQUEST_ISOLATION_LEVEL))
+    }
+
+    if(conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
+      tiConf.setCommandPriority(CommandPri.valueOf(TiConfigConst.REQUEST_COMMAND_PRIORITY))
+    }
   }
 }

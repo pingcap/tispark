@@ -29,4 +29,6 @@ object TiConfigConst {
   val TABLE_SCAN_SPLIT_FACTOR: String = "spark.tispark.table.scan_split_factor"
   val TASK_PER_SPLIT: String = "spark.tispark.task_per_split"
   val PD_CLUSTER_ID: String = "spark.tispark.pd.clusterid"
+  val REQUEST_COMMAND_PRIORITY: String = "spark.tispark.request.command.priority"
+  val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
 }
