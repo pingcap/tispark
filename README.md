@@ -88,7 +88,7 @@ public class App {
   }
 }
 ```
-We ues it to fetch all rows from table ```tpch.customer``` and print them out.
+We ues it to count all rows from table ```tpch.customer``` and print it out.
 
 4. Run ```mvn clean package``` in your console to build ```your-application.jar```
 5. ```cd``` to your spark configuration directory and add this line in your ```spark-default.conf```
