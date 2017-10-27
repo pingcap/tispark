@@ -199,7 +199,8 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.grpc.timeout_in_sec |  10 | GRPC timeout time in seconds |
 | spark.tispark.meta.reload_period_in_sec |  60 | Metastore reload period in seconds |
 | spark.tispark.plan.allowaggpushdown |  true | If allow aggregation pushdown (in case of busy TiKV nodes) |
-
+  
+*Note*: Currently you *MUST* explicitly specify `spark.tispark.pd.addresses` in your configuration file or pass it as runtime argument, or TiSpark may not work properly.
 
 ## Quick start
 
