@@ -15,8 +15,10 @@
 
 package com.pingcap.tispark
 
+import java.util
+
 import com.pingcap.tikv._
-import com.pingcap.tikv.meta.{TiSelectRequest, TiTimestamp}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
@@ -28,7 +30,7 @@ import org.apache.spark.{Partition, SparkContext, TaskContext}
 import scala.collection.JavaConversions._
 
 
-class TiRDD(val selectReq: TiSelectRequest,
+class TiRDD(val dagRequest: TiDAGRequest,
             val tiConf: TiConfiguration,
             val tableRef: TiTableReference,
             val ts: TiTimestamp,
@@ -42,17 +44,17 @@ class TiRDD(val selectReq: TiSelectRequest,
   @transient lazy val snapshot: Snapshot = session.createSnapshot(ts)
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
-    val schemaInferrer: SchemaInfer = SchemaInfer.create(selectReq)
+    val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
     val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
     (schemaInferrer.getTypes.toList, rowTransformer)
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    selectReq.bind
+    dagRequest.bind
     // bypass, sum return a long type
-    val tiPartition = split.asInstanceOf[TiPartition]
-    val iterator = snapshot.select(selectReq, split.asInstanceOf[TiPartition].task)
-    val finalTypes = rowTransformer.getTypes.toList
+    val tiPartition: TiPartition = split.asInstanceOf[TiPartition]
+    val iterator: util.Iterator[TiRow] = snapshot.select(dagRequest, split.asInstanceOf[TiPartition].task)
+    val finalTypes: List[DataType] = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {
       val transRow = rowTransformer.transform(row)
@@ -75,7 +77,7 @@ class TiRDD(val selectReq: TiSelectRequest,
 
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter.newSplitter(session.getRegionManager)
-                 .splitRangeByRegion(selectReq.getRanges)
+                 .splitRangeByRegion(dagRequest.getRanges)
 
     keyWithRegionTasks.zipWithIndex.map{
       case (task, index) => new TiPartition(index, task)
