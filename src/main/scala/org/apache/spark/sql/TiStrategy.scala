@@ -43,6 +43,14 @@ import scala.collection.{JavaConversions, mutable}
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf: SQLConf = context.conf
 
+  def allowAggregationPushdown(): Boolean = {
+    sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
+  }
+
+  def allowIndexDoubleRead(): Boolean = {
+    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_DOUBLE_READ, "false").toBoolean
+  }
+
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan.collectFirst {
       case LogicalRelation(relation: TiDBRelation, _, _) =>
@@ -106,8 +114,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                             selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
     val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
-    val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
-                                         source.table)
+    val scanPlan = if (allowIndexDoubleRead) {
+      scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+    } else {
+      scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+    }
 
     selectRequest.addRanges(scanPlan.getKeyRanges)
     scanPlan.getFilters.toList.map(selectRequest.addWhere)
@@ -181,10 +192,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         originalAggExpr.mode,
         originalAggExpr.isDistinct,
         NamedExpression.newExprId)
-
-    def allowAggregationPushdown(): Boolean = {
-      sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
-    }
 
     // TODO: This test should be done once for all children
     plan match {
