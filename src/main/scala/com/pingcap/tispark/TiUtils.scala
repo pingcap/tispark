@@ -127,11 +127,13 @@ object TiUtils {
     }
 
     if(conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
-      tiConf.setIsolationLevel(IsolationLevel.valueOf(TiConfigConst.REQUEST_ISOLATION_LEVEL))
+      val isolationLevel = IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL))
+      tiConf.setIsolationLevel(isolationLevel)
     }
 
     if(conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
-      tiConf.setCommandPriority(CommandPri.valueOf(TiConfigConst.REQUEST_COMMAND_PRIORITY))
+      val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
+      tiConf.setCommandPriority(priority)
     }
 
     tiConf
