@@ -16,7 +16,7 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
-import com.pingcap.tikv.meta.TiSelectRequest
+import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
 import com.pingcap.tikv.predicates.ScanBuilder
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
@@ -42,6 +42,14 @@ import scala.collection.{JavaConversions, mutable}
 // have multiple plan to pushdown
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf: SQLConf = context.conf
+
+  def allowAggregationPushdown(): Boolean = {
+    sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
+  }
+
+  def allowIndexDoubleRead(): Boolean = {
+    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_DOUBLE_READ, "false").toBoolean
+  }
 
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan.collectFirst {
@@ -106,8 +114,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                             selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
     val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
-    val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
-                                         source.table)
+    val scanPlan = if (allowIndexDoubleRead) {
+      scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+    } else {
+      scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+    }
 
     selectRequest.addRanges(scanPlan.getKeyRanges)
     scanPlan.getFilters.toList.map(selectRequest.addWhere)
@@ -182,10 +193,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         originalAggExpr.isDistinct,
         NamedExpression.newExprId)
 
-    def allowAggregationPushdown(): Boolean = {
-      sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
-    }
-
     // TODO: This test should be done once for all children
     plan match {
       // Collapse filters and projections and push plan directly
@@ -208,7 +215,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       groupingExpressions,
       aggregateExpressions,
       resultExpressions,
-      TiAggregationProjection(filters, _, `source`))
+      TiAggregationProjection(filters, _, source))
         if allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
         var selReq: TiSelectRequest = filterToSelectRequest(filters, source)
         val residualAggregateExpressions = aggregateExpressions.map {

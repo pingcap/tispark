@@ -19,6 +19,7 @@ package com.pingcap.tispark
 import java.util.concurrent.TimeUnit
 
 import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.types._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
@@ -46,8 +47,10 @@ object TiUtils {
     }
   }
 
-  def isSupportedBasicExpression(expr: Expression): Boolean = {
-    BasicExpression.convertToTiExpr(expr).fold(false) {_.isSupportedExpr}
+  def isSupportedBasicExpression(expr: Expression) = {
+    BasicExpression.convertToTiExpr(expr).fold(false) {
+      _.isSupportedExpr
+    }
   }
 
   def isSupportedFilter(expr: Expression): Boolean = isSupportedBasicExpression(expr)
@@ -62,7 +65,11 @@ object TiUtils {
       case _: BytesType => sql.types.StringType
       case _: IntegerType => sql.types.LongType
       case _: RealType => sql.types.DoubleType
-      case _: DecimalType => DataTypes.createDecimalType(tp.getLength, tp.getDecimal)
+      // we need to make sure that tp.getLength does not result in negative number when casting.
+      case _: DecimalType =>
+        DataTypes.createDecimalType(
+          Math.min(Integer.MAX_VALUE, tp.getLength).asInstanceOf[Int],
+          tp.getDecimal)
       case _: TimestampType => sql.types.TimestampType
       case _: DateType => sql.types.DateType
     }
@@ -123,6 +130,16 @@ object TiUtils {
 
     if (conf.contains(TiConfigConst.TABLE_SCAN_CONCURRENCY)) {
       tiConf.setTableScanConcurrency(conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
+    }
+
+    if(conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
+      val isolationLevel = IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL))
+      tiConf.setIsolationLevel(isolationLevel)
+    }
+
+    if(conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
+      val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
+      tiConf.setCommandPriority(priority)
     }
 
     tiConf
