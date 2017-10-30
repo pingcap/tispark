@@ -20,14 +20,14 @@ import java.io.File
 import java.util.Properties
 
 import com.pingcap.spark.Utils._
+import com.typesafe.scalalogging.slf4j.LazyLogging
 
 import scala.collection.mutable.ArrayBuffer
-import com.typesafe.scalalogging.slf4j.LazyLogging
 
 class TestCase(val prop: Properties) extends LazyLogging {
   object RunMode extends Enumeration {
     type RunMode = Value
-    val Test, Load, LoadNTest, Dump = Value
+    val Test, Load, LoadNTest, Dump, TestIndex = Value
   }
 
   protected val KeyDumpDBList = "test.dumpDB.databases"
@@ -35,12 +35,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected val KeyTestBasePath = "test.basepath"
   protected val KeyTestIgnore = "test.ignore"
 
-  protected val dbNames = getOrElse(prop, KeyDumpDBList, "").split(",")
-  protected val mode = RunMode.withName(getOrElse(prop, KeyMode, "Test"))
-  protected val basePath = getOrElse(prop, KeyTestBasePath, "./testcases")
-  protected val ignoreCases = getOrElse(prop, KeyTestIgnore, "").split(",")
+  protected val dbNames: Array[String] = getOrElse(prop, KeyDumpDBList, "").split(",")
+  protected val mode: RunMode.RunMode = RunMode.withName(getOrElse(prop, KeyMode, "Test"))
+  protected val basePath: String = getOrElse(prop, KeyTestBasePath, "./testcases")
+  protected val ignoreCases: Array[String] = getOrElse(prop, KeyTestIgnore, "").split(",")
   protected lazy val jdbc = new JDBCWrapper(prop)
-  protected lazy val spark = new SparkWrapper(prop)
+  protected lazy val spark = new SparkWrapper()
 
   logger.info("Databases to dump: " + dbNames.mkString(","))
   logger.info("Run Mode: " + mode)
@@ -48,8 +48,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   def init(): Unit = {
     mode match {
-      case RunMode.Dump => {
-        dbNames.filter(!_.isEmpty).foreach { dbName =>
+      case RunMode.Dump => dbNames.filter(!_.isEmpty).foreach { dbName =>
           logger.info("Dumping database " + dbName)
           if (dbName == null) {
             throw new IllegalArgumentException("database name is null while dumping")
@@ -58,20 +57,19 @@ class TestCase(val prop: Properties) extends LazyLogging {
           ensurePath(basePath, dbName)
           jdbc.dumpAllTables(joinPath(basePath, dbName))
         }
-      }
-      case RunMode.Load => {
-        work(basePath, false, true)
-      }
-      case RunMode.Test => {
-        work(basePath, true, false)
-      }
-      case RunMode.LoadNTest => {
-        work(basePath, true, true)
-      }
+
+      case RunMode.Load => work(basePath, false, true, true)
+
+      case RunMode.Test => work(basePath, true, false, true)
+
+      case RunMode.LoadNTest => work(basePath, true, true, true)
+
+      case RunMode.TestIndex => work(basePath, true, false, false)
+
     }
   }
 
-  protected def work(parentPath: String, run: Boolean, load: Boolean): Unit = {
+  protected def work(parentPath: String, run: Boolean, load: Boolean, compareWithTiDB: Boolean): Unit = {
     val ddls = ArrayBuffer.empty[String]
     val dataFiles = ArrayBuffer.empty[String]
     val dirs = ArrayBuffer.empty[String]
@@ -80,18 +78,22 @@ class TestCase(val prop: Properties) extends LazyLogging {
     val testCases = ArrayBuffer.empty[(String, String)]
 
     var dbName = dir.getName
+    logger.info("get ignored: " + ignoreCases.toList)
+    logger.info("current dbName " + dbName + " is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))) "" else "not ") + "ignored")
+
+    logger.info("run=" + run.toString + " load=" + load.toString + " compareWithTiDB=" + compareWithTiDB.toString)
     if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
       if (dir.isDirectory) {
         dir.listFiles().map { f =>
           if (f.isDirectory) {
-            dirs.append(f.getAbsolutePath)
+            dirs += f.getAbsolutePath
           } else {
             if (f.getName.endsWith(DDLSuffix)) {
-              ddls.append(f.getAbsolutePath)
+              ddls += f.getAbsolutePath
             } else if (f.getName.endsWith(DataSuffix)) {
-              dataFiles.append(f.getAbsolutePath)
+              dataFiles += f.getAbsolutePath
             } else if (f.getName.endsWith(SQLSuffix)) {
-              testCases.append((f.getName, readFile(f.getAbsolutePath).mkString("\n")))
+              testCases += ((f.getName, readFile(f.getAbsolutePath).mkString("\n")))
             }
           }
         }
@@ -104,44 +106,74 @@ class TestCase(val prop: Properties) extends LazyLogging {
         dbName = jdbc.init(dbName)
         logger.info("Load data... ")
         ddls.foreach{ file => {
-          logger.info("Resister for DDL script " + file)
+          logger.info("Register for DDL script " + file)
           jdbc.createTable(file)
         }
         }
         dataFiles.foreach{ file => {
-          logger.info("Resister for data loading script " + file)
+          logger.info("Register for data loading script " + file)
           jdbc.loadTable(file)
         }
         }
       }
       if (run) {
-        test(dbName, testCases)
+        test(dbName, testCases, compareWithTiDB)
       }
 
       dirs.foreach { dir =>
-        work(dir, run, load)
+        work(dir, run, load, compareWithTiDB)
       }
     }
   }
 
-  def test(dbName: String, testCases: ArrayBuffer[(String, String)]) = {
+  def ExecWithSparkResult(sql: String): List[List[Any]] = {
+    time {
+      spark.querySpark(sql)
+    }(logger)
+  }
+
+  def ExecWithTiDBResult(sql: String): List[List[Any]] = {
+    time {
+      jdbc.queryTiDB(sql)._2
+    }(logger)
+  }
+
+  def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     jdbc.init(dbName)
     spark.init(dbName)
 
     testCases.sortBy(_._1).foreach { case (file, sql) =>
-      logger.info(s" Query TiSpark ${file} ")
-      val actual: List[List[Any]] = time { spark.querySpark(sql) }(logger)
-      logger.info(s" \nQuery TiDB ${file} ")
-      val baseline: List[List[Any]] = time { jdbc.queryTiDB(sql)._2 }(logger)
+      logger.info(s" Query TiSpark $file ")
+      val actual = ExecWithSparkResult(sql)
+      logger.info(s" \nQuery TiDB $file ")
+      val baseline = ExecWithTiDBResult(sql)
       val result = compResult(actual, baseline)
       if (!result) {
-        logger.info(s"Dump diff for TiSpark ${file} \n")
+        logger.info(s"Dump diff for TiSpark $file \n")
         writeResult(actual, file + ".result.spark")
-        logger.info(s"Dump diff for TiDB ${file} \n")
+        logger.info(s"Dump diff for TiDB $file \n")
         writeResult(baseline, file + ".result.tidb")
       }
 
-      logger.info(s" \n*************** ${file} result: ${result}\n\n\n")
+      logger.info(s" \n*************** $file result: $result\n\n\n")
+    }
+  }
+
+  def testInline(): Unit = {
+    spark.init("test_index")
+    var actual = ExecWithSparkResult(s" select * from t2")
+    logger.info("result:" + actual)
+    actual = ExecWithSparkResult(s" select * from t3")
+    logger.info("result:" + actual)
+    actual = ExecWithSparkResult(s" select * from t1")
+    logger.info("result:" + actual)
+  }
+
+  def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
+    if (compareWithTiDB) {
+      test(dbName, testCases)
+    } else {
+      testInline()
     }
   }
 
