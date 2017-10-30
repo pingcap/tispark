@@ -21,13 +21,22 @@ A thin layer of TiSpark. Most of the logic is inside tikv-java-client library.
 https://github.com/pingcap/tikv-client-lib-java
 
 
-Uses as below
+## Usage
+### For spark-shell
+1. Download or compile tispark [here](https://github.com/pingcap/tispark).
+2. ```cd``` to your spark configuration directory and add this line in your ```spark-default.conf```
+```
+# Put your actual pd address here instead of just localhost
+spark.tispark.pd.addresses 127.0.0.1:2379
+```
+You need to change your configuration according to your actual deployment environment.
+
+3. ```cd``` to you spark home directory and run
 ```
 ./bin/spark-shell --jars /wherever-it-is/tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
-
-```
-
+Then in your spark-shell console:
+```scala
 import org.apache.spark.sql.TiContext
 val ti = new TiContext(spark) 
 
@@ -36,6 +45,75 @@ ti.tidbMapDatabase("tpch")
 
 spark.sql("select count(*) from lineitem").show
 ```
+Result:
+```
++--------+
+|count(1)|
++--------+
+|    6005|
++--------+
+```
+
+### For spark-submit
+
+1. Download or compile tispark [here](https://github.com/pingcap/tispark) and make sure it is visible in your local [maven](maven.apache.org) repository.
+2. In your project pom.xml, include the TiSpark dependency:
+```xml
+<dependency>
+    <groupId>com.pingcap.tispark</groupId>
+    <artifactId>tispark</artifactId>
+    <version>${tispark.version}</version>
+</dependency>
+```  
+3. Write your own application code. In this example, we create a Java file ```com.pingcap.spark.App``` like this:
+
+```java
+package com.pingcap.spark;
+
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.TiContext;
+ 
+public class App {
+  public static void main(String[] args) {
+    SparkSession spark = SparkSession
+            .builder()
+            .appName("TiSpark Application")
+            .getOrCreate();
+
+    TiContext ti = new TiContext(spark);
+    ti.tidbMapDatabase("tpch", false);
+    Dataset dataset = spark.sql("select count(*) from customer");
+    dataset.show();
+  }
+}
+```
+We ues it to count all rows from table ```tpch.customer``` and print it out.
+
+4. Run ```mvn clean package``` in your console to build ```your-application.jar```
+5. ```cd``` to your spark configuration directory and add this line in your ```spark-default.conf```
+```
+# Put your actual pd address here instead of just localhost
+spark.tispark.pd.addresses 127.0.0.1:2379
+```
+You need to change your configuration according to your actual deployment environment.
+
+6. ```cd``` to you spark home directory and run like this:
+```
+./bin/spark-submit --class com.pingcap.spark.App --jars /home/novemser/Documents/Code/PingCAP/tispark/target/tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar /home/novemser/Documents/Code/Java/tisparksample/target/tispark-sample-0.1.0-SNAPSHOT.jar
+```
+More information about spark-submit can be found [here](http://spark.apache.org/docs/latest/submitting-applications.html)
+
+And the results:
+```
+...dummy startup info ignored
++--------+
+|count(1)|
++--------+
+|     150|
++--------+
+```
+Complete example can be found in the project [example](example) directory.
 
 ## Configuration
 
@@ -43,12 +121,13 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 
 |    Key    | Default Value | Description |
 | ---------- | --- | --- |
-| spark.tispark.pd.addresses |  127.0.0.1:2379 | PD Cluster Addresses, split by comma |
+| spark.tispark.pd.addresses |  (empty) | PD Cluster Addresses, split by comma |
 | spark.tispark.grpc.framesize |  268435456 | Max frame size of GRPC response |
 | spark.tispark.grpc.timeout_in_sec |  10 | GRPC timeout time in seconds |
 | spark.tispark.meta.reload_period_in_sec |  60 | Metastore reload period in seconds |
 | spark.tispark.plan.allowaggpushdown |  true | If allow aggregation pushdown (in case of busy TiKV nodes) |
-
+  
+*Note*: Currently you *MUST* explicitly specify `spark.tispark.pd.addresses` in your configuration file or pass it as runtime argument, or TiSpark may not work properly.
 
 ## Quick start
 
