@@ -16,11 +16,15 @@
 package com.pingcap.tispark
 
 
+import java.util.concurrent.TimeUnit
+
+import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.types._
-import org.apache.spark.sql
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
-import org.apache.spark.sql.types.{DataType, DataTypes}
+import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
+import org.apache.spark.{SparkConf, sql}
 
 
 object TiUtils {
@@ -43,7 +47,9 @@ object TiUtils {
   }
 
   def isSupportedBasicExpression(expr: Expression) = {
-    BasicExpression.convertToTiExpr(expr).fold(false) {_.isSupportedExpr}
+    BasicExpression.convertToTiExpr(expr).fold(false) {
+      _.isSupportedExpr
+    }
   }
 
   def isSupportedFilter(expr: Expression): Boolean = isSupportedBasicExpression(expr)
@@ -58,7 +64,11 @@ object TiUtils {
       case _: BytesType => sql.types.StringType
       case _: IntegerType => sql.types.LongType
       case _: RealType => sql.types.DoubleType
-      case _: DecimalType => DataTypes.createDecimalType(tp.getLength, tp.getDecimal)
+      // we need to make sure that tp.getLength does not result in negative number when casting.
+      case _: DecimalType =>
+        DataTypes.createDecimalType(
+          Math.min(Integer.MAX_VALUE, tp.getLength).asInstanceOf[Int],
+          tp.getDecimal)
       case _: TimestampType => sql.types.TimestampType
       case _: DateType => sql.types.DateType
     }
@@ -74,5 +84,41 @@ object TiUtils {
       case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_TIMESTAMP)
       case _: sql.types.DateType => DataTypeFactory.of(Types.TYPE_DATE)
     }
+  }
+
+  def getSchemaFromTable(table: TiTableInfo): StructType = {
+    val fields = new Array[StructField](table.getColumns.size())
+    for (i <- 0 until table.getColumns.size()) {
+      val col = table.getColumns.get(i)
+      val metadata = new MetadataBuilder()
+        .putString("name", col.getName)
+        .build()
+      fields(i) = StructField(col.getName, TiUtils.toSparkDataType(col.getType), nullable = true, metadata)
+    }
+    new StructType(fields)
+  }
+
+  def sparkConfToTiConf(conf: SparkConf): TiConfiguration = {
+    val tiConf = TiConfiguration.createDefault(conf.get(TiConfigConst.PD_ADDRESSES))
+
+    if (conf.contains(TiConfigConst.GRPC_FRAME_SIZE)) {
+      tiConf.setMaxFrameSize(conf.get(TiConfigConst.GRPC_FRAME_SIZE).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.GRPC_TIMEOUT)) {
+      tiConf.setTimeout(conf.get(TiConfigConst.GRPC_TIMEOUT).toInt)
+      tiConf.setTimeoutUnit(TimeUnit.SECONDS)
+    }
+
+    if (conf.contains(TiConfigConst.META_RELOAD_PERIOD)) {
+      tiConf.setMetaReloadPeriod(conf.get(TiConfigConst.META_RELOAD_PERIOD).toInt)
+      tiConf.setMetaReloadPeriodUnit(TimeUnit.SECONDS)
+    }
+
+    if (conf.contains(TiConfigConst.GRPC_RETRY_TIMES)) {
+      tiConf.setRpcRetryTimes(conf.get(TiConfigConst.GRPC_RETRY_TIMES).toInt)
+    }
+
+    tiConf
   }
 }

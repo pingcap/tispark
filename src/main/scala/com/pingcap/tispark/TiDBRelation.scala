@@ -15,39 +15,31 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.Snapshot
+import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
-import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo}
+import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.sources.BaseRelation
-import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Row, SQLContext}
 
-class TiDBRelation(options: TiOptions, meta: MetaManager)(@transient val sqlContext: SQLContext)
-  extends BaseRelation {
-  val table: TiTableInfo = meta.getTable(options.databaseName, options.tableName)
+class TiDBRelation(session: TiSession,
+                   tableRef: TiTableReference,
+                   meta: MetaManager)
+                  (@transient val sqlContext: SQLContext) extends BaseRelation {
+  val table: TiTableInfo = meta.getTable(tableRef.databaseName, tableRef.tableName)
                                .getOrElse(throw new TiClientInternalException("Table not exist"))
 
-  lazy val snapshot: Snapshot = meta.cluster.createSnapshot()
+  override lazy val schema: StructType = TiUtils.getSchemaFromTable(table)
 
-  override def schema: StructType = {
-    val fields = new Array[StructField](table.getColumns.size())
-    for (i <- 0 until table.getColumns.size()) {
-      val col = table.getColumns.get(i)
-      val metadata = new MetadataBuilder()
-            .putString("name", col.getName)
-            .build()
-      fields(i) = StructField(col.getName, TiUtils.toSparkDataType(col.getType), nullable = true, metadata)
-    }
-    new StructType(fields)
-  }
-
-  def logicalPlanToRDD(selectRequest: TiSelectRequest): RDD[Row] = {
-    selectRequest.setStartTs(snapshot.getVersion)
-
+  def logicalPlanToRDD(selectRequest: TiSelectRequest): TiRDD = {
+    val ts: TiTimestamp = session.getTimestamp
+    selectRequest.setStartTs(ts.getVersion)
 
     new TiRDD(selectRequest,
-              options,
+              session.getConf,
+              tableRef,
+              ts,
               sqlContext.sparkContext)
   }
 }

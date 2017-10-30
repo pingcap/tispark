@@ -38,3 +38,9 @@ hs_err_pid*
 
 # ignore gradle
 .gradle
+*.spark
+*.tidb
+
+metastore_db/
+tpch
+.java-version

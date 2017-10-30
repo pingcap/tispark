@@ -16,7 +16,7 @@
 package com.pingcap.tispark
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.meta.TiSelectRequest
+import com.pingcap.tikv.meta.{TiSelectRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
@@ -28,15 +28,18 @@ import org.apache.spark.{Partition, SparkContext, TaskContext}
 import scala.collection.JavaConversions._
 
 
-class TiRDD(val selectReq: TiSelectRequest, val options: TiOptions, @transient sc: SparkContext)
+class TiRDD(val selectReq: TiSelectRequest,
+            val tiConf: TiConfiguration,
+            val tableRef: TiTableReference,
+            val ts: TiTimestamp,
+            sc: SparkContext)
   extends RDD[Row](sc, Nil) {
 
   type TiRow = com.pingcap.tikv.row.Row
 
-  @transient lazy val meta: MetaManager = new MetaManager(options.addresses)
-  @transient lazy val cluster: TiCluster = meta.cluster
-  @transient lazy val snapshot: Snapshot = cluster.createSnapshot()
+  @transient lazy val session: TiSession = TiSession.create(tiConf)
   @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
+  @transient lazy val snapshot: Snapshot = session.createSnapshot(ts)
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
     val schemaInferrer: SchemaInfer = SchemaInfer.create(selectReq)
@@ -45,8 +48,6 @@ class TiRDD(val selectReq: TiSelectRequest, val options: TiOptions, @transient s
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    context.addTaskCompletionListener{ _ => cluster.close() }
-
     selectReq.bind
     // bypass, sum return a long type
     val tiPartition = split.asInstanceOf[TiPartition]
@@ -55,7 +56,7 @@ class TiRDD(val selectReq: TiSelectRequest, val options: TiOptions, @transient s
 
     def toSparkRow(row: TiRow): Row = {
       val transRow = rowTransformer.transform(row)
-      val rowArray = new Array[Any](rowTransformer.getTypes.size)
+      val rowArray = new Array[Any](finalTypes.size)
 
       for (i <- 0 until transRow.fieldCount) {
         rowArray(i) = transRow.get(i, finalTypes(i))
@@ -69,8 +70,11 @@ class TiRDD(val selectReq: TiSelectRequest, val options: TiOptions, @transient s
     override def next(): Row = toSparkRow(iterator.next)
   }
 
+  override protected def getPreferredLocations(split: Partition): Seq[String] =
+    split.asInstanceOf[TiPartition].task.getHost :: Nil
+
   override protected def getPartitions: Array[Partition] = {
-    val keyWithRegionTasks = RangeSplitter.newSplitter(cluster.getRegionManager)
+    val keyWithRegionTasks = RangeSplitter.newSplitter(session.getRegionManager)
                  .splitRangeByRegion(selectReq.getRanges)
 
     keyWithRegionTasks.zipWithIndex.map{

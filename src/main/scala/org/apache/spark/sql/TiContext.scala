@@ -15,36 +15,41 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tispark.{MetaManager, TiDBRelation, TiOptions}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference, TiUtils}
+import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 
 
-class TiContext (val session: SparkSession, addressList: List[String]) extends Serializable with Logging {
+class TiContext (val session: SparkSession) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
-  val meta: MetaManager = new MetaManager(addressList)
+  val conf: SparkConf = session.sparkContext.conf
+  val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
+  val tiSession: TiSession = TiSession.create(tiConf)
+  val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
-  meta.loadDatabase
   session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
 
   def tidbTable(dbName: String,
                 tableName: String): DataFrame = {
-    val tiRelation = new TiDBRelation(new TiOptions(addressList, dbName, tableName), meta)(sqlContext)
+    val tiRelation = new TiDBRelation(tiSession, new TiTableReference(dbName, tableName), meta)(sqlContext)
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
-  def tidbMapDatabase(dbName: String): Unit =
+  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean = false): Unit =
     meta.getDatabase(dbName).foreach {
       db => {
-        meta.loadTables(db)
         meta.getTables(db).foreach {
           table => {
             val rel: TiDBRelation =
-              new TiDBRelation(new TiOptions(addressList, dbName, table.getName), meta)(sqlContext)
-            sqlContext.baseRelationToDataFrame(rel).createTempView(table.getName)
-            logInfo("Registered table" + table.getName)
+              new TiDBRelation(tiSession, new TiTableReference(dbName, table.getName), meta)(sqlContext)
+            if (!sqlContext.sparkSession.catalog.tableExists(table.getName)) {
+              val tableName = if (dbNameAsPrefix) db.getName + "_" + table.getName else table.getName
+              sqlContext.baseRelationToDataFrame(rel).createTempView(tableName)
+              logInfo("Registered table " + table.getName)
+            }
           }
         }
       }
     }
-
 }
