@@ -173,11 +173,18 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   // and then we don't return (don't planLater) and plan the remaining all at once
   private def doPlan(source: TiDBRelation, plan: LogicalPlan): Seq[SparkPlan] = {
 
-    val aliasMap = mutable.HashMap[Expression, Alias]()
+    val aliasMap = mutable.HashMap[(Boolean,Expression), Alias]()
     val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
     val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
 
-    def toAlias(expr: Expression) = aliasMap.getOrElseUpdate(expr, Alias(expr, expr.toString)())
+    def toAlias(expr: AggregateExpression) =
+      if (!expr.deterministic) {
+        Alias(expr, expr.toString())()
+      } else {
+        aliasMap.getOrElseUpdate(
+          (expr.deterministic, expr.canonicalized), Alias(expr, expr.toString)()
+        )
+      }
 
     def newAggregate(aggFunc: AggregateFunction,
                      originalAggExpr: AggregateExpression) =
@@ -259,7 +266,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           aggExpr =>
             avgPushdownRewriteMap
               .getOrElse(aggExpr.resultId, List(aggExpr))
-        }
+        }.distinct
 
         selReq = aggregationToSelectRequest(groupingExpressions,
           pushdownAggregates,
@@ -289,14 +296,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           }.asInstanceOf[NamedExpression]
         )
 
-        val output = (groupingExpressions ++ pushdownAggregates.map(x => toAlias(x))).map(_.toAttribute)
+        val output = (groupingExpressions ++ pushdownAggregates.map(x => toAlias(x))).map(_.toAttribute).distinct
 
         aggregate.AggUtils.planAggregateWithoutDistinct(
           groupingExpressions,
           residualAggregateExpressions,
           rewrittenResultExpression,
           toCoprocessorRDD(source, output, selReq))
-
       case _ => Nil
     }
   }
