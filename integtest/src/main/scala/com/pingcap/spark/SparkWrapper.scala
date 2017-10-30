@@ -27,7 +27,6 @@ import scala.collection.mutable.ArrayBuffer
 
 
 class SparkWrapper(prop: Properties) extends LazyLogging {
-
   private val spark = SparkSession
     .builder()
     .appName("TiSpark Integration Test")
