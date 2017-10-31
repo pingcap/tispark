@@ -32,7 +32,7 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
   override val outputOrdering: Seq[SortOrder] = Nil
 
-  val internalRdd = RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
+  val internalRdd: RDD[InternalRow] = RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
 
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")

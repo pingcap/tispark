@@ -159,21 +159,38 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  def testInline(): Unit = {
-    spark.init("test_index")
-    var actual = ExecWithSparkResult(s" select * from t2")
-    logger.info("result:" + actual)
-    actual = ExecWithSparkResult(s" select * from t3")
-    logger.info("result:" + actual)
-    actual = ExecWithSparkResult(s" select * from t1")
-    logger.info("result:" + actual)
+  def testInline(dbName: String): Unit = {
+    if(dbName.equalsIgnoreCase("test_index")) {
+      spark.init(dbName)
+      jdbc.init(dbName)
+
+      var actual = ExecWithSparkResult(s" select * from t2")
+      logger.info("result: " + actual)
+      actual = ExecWithSparkResult(s" select * from t3")
+      logger.info("result: " + actual)
+      actual = ExecWithSparkResult(s" select * from t1")
+      logger.info("result: " + actual)
+
+      actual = ExecWithTiDBResult(s"select UNIX_TIMESTAMP(c14) from t1")
+      logger.info("result: " + actual)
+      actual = ExecWithSparkResult(s"select CAST(c14 AS LONG) from t1")
+      logger.info("result: " + actual)
+      actual = ExecWithSparkResult(s"select c13 from t1")
+      logger.info("result: " + actual)
+
+      actual = ExecWithTiDBResult(s"select c14 + c13 from t1")
+      logger.info("result: " + actual)
+      actual = ExecWithSparkResult(s"select CAST(c14 AS LONG) + c13 from t1")
+      logger.info("result: " + actual)
+    }
+
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
     if (compareWithTiDB) {
       test(dbName, testCases)
     } else {
-      testInline()
+      testInline(dbName)
     }
   }
 

@@ -166,7 +166,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
     val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
 
-    //    def toAlias(expr: Expression) = aliasMap.getOrElseUpdate(expr, Alias(expr, expr.toString)())
     def toAlias(expr: AggregateExpression) =
       if (!expr.deterministic) {
         Alias(expr, expr.toString())()
@@ -297,7 +296,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           residualAggregateExpressions,
           rewrittenResultExpression,
           toCoprocessorRDD(source, output, selReq))
-
       case _ => Nil
     }
   }
