@@ -72,4 +72,3 @@ else
     echo "testing...."
     ${spark_cmd} ${spark_test_opt} 2>&1 | grep "result:\|Elapsed time:\|query on spark\|query on TiDB"
 fi
-
