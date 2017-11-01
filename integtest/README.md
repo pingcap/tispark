@@ -1,41 +1,57 @@
-### How to do Integration Test
-It requires both TiDB and Spark present. It will run Spark SQL and compare result with TiDB.
-User might attach to an existing database with existing data for testing or dump test data and schema via this tool to create testcases as well.
-Put config.properties into Spark's conf path
-Test cases will be searched recursively. DDL files is for recreate test table; SQL is for test script run for both sides. Data file is for loading test data.
+## How to do Integration Test
 
-Dump databases listed to create test data:
-```
-./dump.sh dbnameList
-```
-Database name list is separated by comma like this: db1, db2
+It requires both TiDB and Spark be present. The test framework will run queries in both TiDB and Spark and compare their results.
 
-Load test data from dumping files:
+A user might attach to an existing database with existing data for testing or dump test data and schema via this tool to create testcases as well.
+
+You may edit `properties.template` files according to your current mode
+
+Test cases will be searched recursively. 
+
+##### File Extension Introduction
+---
+    *.ddl   include SQL statements of test table schema; 
+    *.sql   include SQL test statements;
+    *.data  include test table data.
+
+#### How to start an integration test
+run `dump.sh` to create test data for databases listed in `dbNameList`:
+```
+./dump.sh dbNameList
+```
+Database name list is separated by comma, e.g. `db1, db2`
+
+**Note: By doing this you will overwrite data stored in db1.data and db2.data with data stored in your local database.**
+
+Load test data from `*.data` recursively from directory:
 ```
 ./load.sh 
 ```
-
-Run Test on existing data:
+Run Test on existing data: (use -d or --debug option to setup debug flag)
 ```
 ./test.sh [-d|--debug]
 ```
-To run tpch Test individually:
+To run tpch Test individually: (use -d or --debug option to setup debug flag)
 ```
 ./test_tpch.sh [-d|--debug]
 ```
-To run index Test individually:
+To run index Test individually: (use -h option for help)
 ```
-./test_index.sh [-d|--debug]
+./test_index.sh [-d | -a | -h | -s | -i | -r]
 ```
 
-If debug flag is presented, JVM remote debug port will open at 5005.
+In general, use `-r` flag to show result only when you run index Test
 
-And you might run manually like this for other use cases:
+*To Build up tpch test files, please follow the instructions in `test_tpch.sh`*
+
+In case debug flag is set, JVM remote debug port will open at 5005.
+
+You might also run tests manually for other use cases:
 ```
 java -Dtest.mode=Load -cp ./conf:$./lib/* com.pingcap.spark.TestFramework
 ```
 
-### Configuration
+#### Configuration
 Here is a sample for config.properties
 ```
 tidb.addr=127.0.0.1
@@ -43,7 +59,7 @@ tidb.port=4000
 tidb.user=root
 test.basepath=/Users/whoever/workspace/pingcap/tispark/integtest/testcases
 ```
-Please add ```spark.tispark.pd.addresses=127.0.0.1:2379``` in ```${SPARK_HOME}/conf/spark-defaults.conf``` beforehand
+Please add `spark.tispark.pd.addresses=127.0.0.1:2379` in `${SPARK_HOME}/conf/spark-defaults.conf` beforehand
 
 | Key                        | Desc                                      |
 | -------------------------- |:-----------------------------------------:|

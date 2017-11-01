@@ -126,27 +126,15 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  def ExecWithSparkResult(sql: String): List[List[Any]] = {
-    time {
-      spark.querySpark(sql)
-    }(logger)
-  }
-
-  def ExecWithTiDBResult(sql: String): List[List[Any]] = {
-    time {
-      jdbc.queryTiDB(sql)._2
-    }(logger)
-  }
-
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     jdbc.init(dbName)
     spark.init(dbName)
 
     testCases.sortBy(_._1).foreach { case (file, sql) =>
-      logger.info(s" Query TiSpark $file ")
-      val actual = ExecWithSparkResult(sql)
-      logger.info(s" \nQuery TiDB $file ")
-      val baseline = ExecWithTiDBResult(sql)
+      logger.info(s"Query TiSpark $file ")
+      val actual = execSpark(sql)
+      logger.info(s"\nQuery TiDB $file ")
+      val baseline = execTiDB(sql)
       val result = compResult(actual, baseline)
       if (!result) {
         logger.info(s"Dump diff for TiSpark $file \n")
@@ -155,8 +143,122 @@ class TestCase(val prop: Properties) extends LazyLogging {
         writeResult(baseline, file + ".result.tidb")
       }
 
-      logger.info(s" \n*************** $file result: $result\n\n\n")
+      logger.info(s"\n*************** $file result: $result\n\n\n")
     }
+  }
+
+  def execSpark(sql: String): List[List[Any]] = {
+    val ans = time {
+      spark.querySpark(sql)
+    }(logger)
+    logger.info("hint: " + ans.length + " row(s)")
+    ans
+  }
+
+  def execTiDB(sql: String): List[List[Any]] = {
+    val ans = time {
+      jdbc.queryTiDB(sql)._2
+    }(logger)
+    logger.info("hint: " + ans.length + " row(s)")
+    ans
+  }
+
+  private def execSparkAndShow(str: String): Unit = {
+    val spark = execSpark(str)
+    logger.info("output: " + spark)
+  }
+
+  private def execTiDBAndShow(str: String): Unit = {
+    val tidb = execTiDB(str)
+    logger.info("output: " + tidb)
+  }
+
+  private def execBoth(str: String): Unit = {
+    execSpark(str)
+    execTiDB(str)
+  }
+
+  private def execBothAndShow(str: String): Unit = {
+    execSparkAndShow(str)
+    execTiDBAndShow(str)
+  }
+
+  private def execBothAndJudge(str: String): Boolean = {
+    val tidb = execTiDB(str)
+    val spark = execSpark(str)
+    val isFalse = !tidb.equals(spark)
+    if (isFalse) {
+      logger.info(" TiDB result: " + tidb)
+      logger.info("Spark result: " + spark)
+    }
+    isFalse
+  }
+
+  private def testType(): Unit = {
+    execBothAndShow(s"select * from t1")
+    var result = false
+    result |= execBothAndJudge(s"select c1 from t1")
+    result |= execBothAndJudge(s"select c2 from t1")
+    result |= execBothAndJudge(s"select c3 from t1")
+    result |= execBothAndJudge(s"select c4 from t1")
+    result |= execBothAndJudge(s"select c5 from t1")
+    result |= execBothAndJudge(s"select c6 from t1")
+    result |= execBothAndJudge(s"select c7 from t1")
+    result |= execBothAndJudge(s"select c8 from t1")
+    result |= execBothAndJudge(s"select c9 from t1")
+    result |= execBothAndJudge(s"select c10 from t1")
+    result |= execBothAndJudge(s"select c12 from t1")
+    result |= execBothAndJudge(s"select c14 from t1")
+    result = !result
+    logger.info(s"\n*************** SQL Type Tests result: $result\n\n\n")
+  }
+
+  private def testTimeType(): Unit = {
+    execSparkAndShow(s"select * from t2")
+    execSparkAndShow(s"select * from t3")
+
+    execTiDBAndShow(s"select UNIX_TIMESTAMP(c14) from t1")
+    execSparkAndShow(s"select CAST(c14 AS LONG) from t1")
+    execSparkAndShow(s"select c13 from t1")
+
+    execTiDBAndShow(s"select c14 + c13 from t1")
+    execSparkAndShow(s"select CAST(c14 AS LONG) + c13 from t1")
+
+    logger.info(s"\n*************** SQL Time Tests result: Skipped\n\n\n")
+  }
+
+  private def testIndex(): Unit = {
+    var result = false
+    result |= execBothAndJudge("select * from test_index where a < 30")
+
+    result |= execBothAndJudge("select * from test_index where d > \'116.5\'")
+    result |= execBothAndJudge("select * from test_index where d < \'116.5\'")
+    result |= execBothAndJudge("select * from test_index where d > \'116.3\' and d < \'116.7\'")
+
+    result |= execBothAndJudge("select * from test_index where d = \'116.72873\'")
+    result |= execBothAndJudge("select * from test_index where d = \'116.72874\' and e < \'40.0452\'")
+
+    result |= execBothAndJudge("select * from test_index where c > \'2008-02-06 14:00:00\'")
+    result |= execBothAndJudge("select * from test_index where c >= \'2008-02-06 14:00:00\'")
+    result |= execBothAndJudge("select * from test_index where c < \'2008-02-06 14:00:00\'")
+    result |= execBothAndJudge("select * from test_index where c <= \'2008-02-06 14:00:00\'")
+//    result |= execBothAndJudge("select * from test_index where c = \'2008-02-06 14:00:00\'")
+    result |= execBothAndJudge("select * from test_index where c > date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where c >= date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where c < date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where c <= date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where DATE(c) = date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where DATE(c) > date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where DATE(c) >= date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where DATE(c) < date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where DATE(c) <= date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where c <> date \'2008-02-05\'")
+    result |= execBothAndJudge("select * from test_index where c > \'2008-02-04 14:00:00\' and d > \'116.5\'")
+    result |= execBothAndJudge("select * from test_index where d = \'116.72873\' and c > \'2008-02-04 14:00:00\'")
+    result |= execBothAndJudge("select * from test_index where d = \'116.72873\' and c < \'2008-02-04 14:00:00\'")
+
+    result = !result
+    logger.info(s"\n*************** Index Tests result: $result\n\n\n")
   }
 
   def testInline(dbName: String): Unit = {
@@ -164,24 +266,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
       spark.init(dbName)
       jdbc.init(dbName)
 
-      var actual = ExecWithSparkResult(s" select * from t2")
-      logger.info("result: " + actual)
-      actual = ExecWithSparkResult(s" select * from t3")
-      logger.info("result: " + actual)
-      actual = ExecWithSparkResult(s" select * from t1")
-      logger.info("result: " + actual)
+      testType()
+      testTimeType()
+      testIndex()
 
-      actual = ExecWithTiDBResult(s"select UNIX_TIMESTAMP(c14) from t1")
-      logger.info("result: " + actual)
-      actual = ExecWithSparkResult(s"select CAST(c14 AS LONG) from t1")
-      logger.info("result: " + actual)
-      actual = ExecWithSparkResult(s"select c13 from t1")
-      logger.info("result: " + actual)
-
-      actual = ExecWithTiDBResult(s"select c14 + c13 from t1")
-      logger.info("result: " + actual)
-      actual = ExecWithSparkResult(s"select CAST(c14 AS LONG) + c13 from t1")
-      logger.info("result: " + actual)
     }
 
   }

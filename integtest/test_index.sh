@@ -2,8 +2,8 @@
 set -ue
 
 BASEDIR=$(cd `dirname $0`; pwd)
-echo ${BASEDIR}
-echo "usage: <bin> [-a | -d | -h | -s | -i]"
+echo "Base directory in: ${BASEDIR}"
+echo "Usage: <bin> [-a | -d | -h | -s | -i | -r]"
 
 clear_last_diff_files() {
     for f in ./*.spark; do
@@ -18,14 +18,18 @@ clear_last_diff_files() {
 
 clear_last_diff_files
 
-isdebug=false
+isDebug=false
+showResultOnly=false
 
-while getopts ":dias" arg
+while getopts ":radish" arg
 do
-    case $arg in
+    case ${arg} in
         d)
-            isdebug=true
+            isDebug=true
             ;;
+		r)
+			showResultOnly=true
+			;;
         a)   
             cd ../tikv-client-lib-java/
             mvn clean install
@@ -44,15 +48,18 @@ do
             mvn clean install
             ;;
         h)
-            echo ">help -a make all projects"
-            echo ">help -s make tispark and integtest"
-            echo ">help -i make integtest only"
-            echo ">help -d debug mode"
-            echo ">help -h show help"
+            echo "Options"
+            echo "  -a    make all projects"
+            echo "  -s    make tispark and integtest"
+            echo "  -i    make integtest only"
+			echo "	-r	  show result only"
+            echo "  -d    debug mode"
+            echo "  -h    show help"
             exit 1
             ;;
         ?)
-            echo "unknown argument"
+            echo "Fatal: Unknown argument"
+            echo "exiting..."
             exit 1
             ;;
     esac
@@ -65,10 +72,14 @@ spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,sus
 spark_test_opt=""
 
 spark_cmd="${SPARK_HOME}/bin/spark-submit --class ${CLASS} ${BASEDIR}/lib/* --driver-java-options"
-if [ $isdebug = true ]; then
-    echo "debuging..."
+if [ ${isDebug} = true ]; then
+    echo "debugging..."
     ${spark_cmd} ${spark_debug_opt}
 else
     echo "testing...."
-    ${spark_cmd} ${spark_test_opt} 2>&1 | grep "result:\|Elapsed time:\|query on spark\|query on TiDB"
+	if [ ${showResultOnly} = true ]; then
+		${spark_cmd} ${spark_test_opt} 2>&1 | grep -F "***************" 
+	else
+		${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|result:\|Elapsed time:\|query on spark\|query on TiDB"
+	fi
 fi

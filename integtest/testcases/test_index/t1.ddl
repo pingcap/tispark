@@ -1,10 +1,10 @@
 DROP TABLE IF EXISTS `t1`;
 CREATE TABLE `t1` (
-  `c1` tinyint DEFAULT NULL,
-  `c2` mediumint DEFAULT NULL,
-  `c3` int DEFAULT NULL,
-  `c4` integer DEFAULT NULL,
-  `c5` bigint DEFAULT NULL,
+  `c1` tinyint(4) DEFAULT NULL,
+  `c2` mediumint(9) DEFAULT NULL,
+  `c3` int(11) DEFAULT NULL,
+  `c4` int(11) DEFAULT NULL,
+  `c5` bigint(20) DEFAULT NULL,
   `c6` float(6,2) DEFAULT NULL,
   `c7` double(6,2) DEFAULT NULL,
   `c8` decimal(6,2) DEFAULT NULL,
