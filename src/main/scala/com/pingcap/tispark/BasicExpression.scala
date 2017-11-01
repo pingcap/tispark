@@ -68,8 +68,13 @@ object BasicExpression {
       if (expr.children.nonEmpty) {
         val childType = expr.children.head.dataType
 
+        // if any child's data type is different from others,
+        // we do not support this expression to push down in
+        // DAG mode
         for (child <- expr.children) {
-          if (!childType.equals(child.dataType) && !isSupportedExpression(child, requestMode)) {
+          if (!childType.equals(child.dataType) ||
+            // Do it recursively
+            !isSupportedExpression(child, requestMode)) {
             return false
           }
         }
