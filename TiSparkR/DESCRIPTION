@@ -1,11 +1,10 @@
 Package: TiSparkR
 Type: Package
-Title: What the Package Does (Title Case)
+Title: TiSpark for R
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: Novemser
+Maintainer: The package maintainer <novemser@gmail.com>
+Description: Add a shabby thin layer to support TiSpark in R language.
+License: Apache 2.0
 Encoding: UTF-8
 LazyData: true
