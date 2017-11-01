@@ -77,29 +77,33 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     if (str.equalsIgnoreCase("NULL")) {
       null
     } else {
+      logger.info("value = " + str)
       tp match {
-        case "VARCHAR" | "CHAR" | "TEXT" => str
+        case "VARCHAR" | "CHAR" | "TEXT" | "TIME" => str
         case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" => BigDecimal(str)
         case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => str.toLong
         case "DATE" => Date.valueOf(str)
-        case "TIME" | "TIMESTAMP" | "DATETIME" => Timestamp.valueOf(str)
+        case "TIMESTAMP" | "DATETIME" => Timestamp.valueOf(str)
       }
     }
   }
 
   private def typeCodeFromString(tp: String): Int = {
     tp match {
-      case "VARCHAR" | "CHAR" | "TEXT" => 12
+      case "VARCHAR" | "CHAR" | "TEXT" | "TIME" => 12
       case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" => 3
       case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => 4
       case "DATE" => 91
-      case "TIME" | "TIMESTAMP" | "DATETIME" => 93
+      case "TIMESTAMP" | "DATETIME" => 93
     }
   }
 
   private def rowToString(row: List[Any]): String = row.map(valToString).mkString(Sep)
 
   private def rowFromString(row: String, types: List[String]): List[Any] = {
+    logger.info(Pattern.quote(Sep))
+    logger.info(row)
+
     row.split(Pattern.quote(Sep)).zip(types).map {
       case (value, colType) => valFromString(value, colType)
     }.toList
