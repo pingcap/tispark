@@ -15,7 +15,21 @@
 
 package com.pingcap.tispark
 
+import java.util.HashMap
 
-class TiTableReference(val databaseName: String,
-                       val tableName: String) extends Serializable {
+import com.pingcap.tikv.{TiConfiguration, TiSession}
+
+object TiSessionCache {
+  private val sessionCache: HashMap[String, TiSession] = new HashMap[String, TiSession]()
+
+  def getSession(appId: String, conf: TiConfiguration): TiSession = this.synchronized {
+    val session = sessionCache.get(appId)
+    if (session == null) {
+      val newSession = TiSession.create(conf)
+      sessionCache.put(appId, newSession)
+      newSession
+    } else {
+      session
+    }
+  }
 }

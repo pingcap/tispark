@@ -16,7 +16,7 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
-import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
+import com.pingcap.tikv.meta.TiSelectRequest
 import com.pingcap.tikv.predicates.ScanBuilder
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
@@ -57,7 +57,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     selectRequest.setTableInfo(table)
     // In case count(*) and nothing pushed, pick the first column
     if (selectRequest.getFields.size == 0) {
-      selectRequest.addField(TiColumnRef.create(table.getColumns.get(0).getName))
+      selectRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
     val tiRdd = source.logicalPlanToRDD(selectRequest)
 
@@ -106,12 +106,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                             selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
     val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
-    val pkIndex: TiIndexInfo = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
     val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
-                                         pkIndex, source.table)
+      source.table)
 
     selectRequest.addRanges(scanPlan.getKeyRanges)
     scanPlan.getFilters.toList.map(selectRequest.addWhere)
+    if (scanPlan.isIndexScan) {
+      selectRequest.setIndexInfo(scanPlan.getIndex)
+    }
     selectRequest
   }
 
@@ -124,7 +126,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val filterSet = AttributeSet(filterPredicates.flatMap(_.references))
 
     val (pushdownFilters: Seq[Expression],
-         residualFilters: Seq[Expression]) =
+    residualFilters: Seq[Expression]) =
       filterPredicates.partition(TiUtils.isSupportedFilter)
 
     val residualFilter: Option[Expression] = residualFilters.reduceLeftOption(catalyst.expressions.And)
@@ -142,14 +144,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
-      projectSeq.foreach(attr => selectRequest.addField(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => selectRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, selectRequest)
       residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic
       val projectSeq: Seq[Attribute] = (projectSet ++ filterSet).toSeq
-      projectSeq.foreach(attr => selectRequest.addField(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => selectRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, selectRequest)
       ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
     }
@@ -176,9 +178,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     def newAggregate(aggFunc: AggregateFunction,
                      originalAggExpr: AggregateExpression) =
       AggregateExpression(aggFunc,
-                          originalAggExpr.mode,
-                          originalAggExpr.isDistinct,
-                          originalAggExpr.resultId)
+        originalAggExpr.mode,
+        originalAggExpr.isDistinct,
+        originalAggExpr.resultId)
 
     def newAggregateWithId(aggFunc: AggregateFunction,
                            originalAggExpr: AggregateExpression) =
@@ -213,7 +215,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       groupingExpressions,
       aggregateExpressions,
       resultExpressions,
-      TiAggregationProjection(filters, _, source))
+      TiAggregationProjection(filters, _, `source`))
         if allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
         var selReq: TiSelectRequest = filterToSelectRequest(filters, source)
         val residualAggregateExpressions = aggregateExpressions.map {

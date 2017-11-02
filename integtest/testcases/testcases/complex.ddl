@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS `complex`;
 CREATE TABLE `complex` (
   `c1` int(11) DEFAULT NULL,
   `c2` float DEFAULT NULL,

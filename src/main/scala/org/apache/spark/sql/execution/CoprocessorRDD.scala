@@ -21,7 +21,6 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{Attribute, SortOrder, UnsafeProjection}
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.SQLMetrics
-import org.apache.spark.util.Utils
 
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
@@ -33,7 +32,7 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
   override val outputOrdering: Seq[SortOrder] = Nil
 
-  val internalRdd = RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
+  val internalRdd: RDD[InternalRow] = RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
 
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
@@ -47,7 +46,9 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
     }
   }
 
-  override def simpleString: String = {
-    s"TiDB $nodeName(${tiRdd.selectReq.toString})"
+  override def verboseString: String = {
+    s"TiDB $nodeName{${tiRdd.selectReq.toString}}"
   }
+
+  override def simpleString: String = verboseString
 }

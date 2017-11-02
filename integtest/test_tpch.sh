@@ -43,14 +43,14 @@ check_tpch_data_is_loaded
 
 CLASS="com.pingcap.spark.TestFramework"
 
-cp ${BASE_DIR}/conf/tispark_config.properties.template ${SPARK_HOME}/conf/tispark_config.properties
+cp ${BASE_DIR}/conf/tispark_config_tpch.properties.template ${SPARK_HOME}/conf/tispark_config.properties
 spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,suspend=y"
 spark_test_opt=""
 
 spark_cmd="${SPARK_HOME}/bin/spark-submit --class ${CLASS} ${BASE_DIR}/lib/* --driver-java-options"
 if [[ "$@" = *--debug ]] || [[ "$@" = *-d ]]; then
     echo "debuging..."
-    $spark_cmd $spark_debug_opt
+    $spark_cmd $spark_debug_opt 
 else
     echo "testing...."
     $spark_cmd $spark_test_opt 2>&1 | grep "result:\|time:"
