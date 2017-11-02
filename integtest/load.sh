@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 
-BASEDIR=$(dirname "$0")
+BASEDIR=$(cd `dirname $0`; pwd)
 CLASS="com.pingcap.spark.TestFramework"
 
-java -Dtest.mode=Load -cp ${BASEDIR}/conf:${BASEDIR}/lib/* $CLASS 
-
-echo "If you have not load tpch data yet, please execute following command"
-echo "cd tpch/scripts"
-echo "bash genandloadalldata.sh"
+cp ${BASEDIR}/conf/tispark_config_load.properties.template ${BASEDIR}/conf/tispark_config.properties
+cp ${BASEDIR}/conf/tispark_config_load.properties.template ${SPARK_HOME}/conf/tispark_config.properties
+java -Dtest.mode=Load -cp ${BASEDIR}/conf:${BASEDIR}/lib/* ${CLASS}
