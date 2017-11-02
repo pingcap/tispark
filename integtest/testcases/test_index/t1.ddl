@@ -1,0 +1,18 @@
+DROP TABLE IF EXISTS `t1`;
+CREATE TABLE `t1` (
+  `c1` tinyint(4) DEFAULT NULL,
+  `c2` mediumint(9) DEFAULT NULL,
+  `c3` int(11) DEFAULT NULL,
+  `c4` int(11) DEFAULT NULL,
+  `c5` bigint(20) DEFAULT NULL,
+  `c6` float(6,2) DEFAULT NULL,
+  `c7` double(6,2) DEFAULT NULL,
+  `c8` decimal(6,2) DEFAULT NULL,
+  `c9` varchar(15) DEFAULT NULL,
+  `c10` char(15) DEFAULT NULL,
+  `c11` text DEFAULT NULL,
+  `c12` date DEFAULT NULL,
+  `c13` time DEFAULT NULL,
+  `c14` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `c15` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin

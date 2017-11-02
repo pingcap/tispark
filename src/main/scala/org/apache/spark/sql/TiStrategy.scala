@@ -212,9 +212,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       groupingExpressions,
       aggregateExpressions,
       resultExpressions,
-      TiAggregationProjection(filters, _, source))
+      TiAggregationProjection(filters, _, `source`))
         if allowAggregationPushDown && !aggregateExpressions.exists(_.isDistinct) =>
-        var selReq: TiDAGRequest = filterToDAGRequest(filters, source)
+        var dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
         val residualAggregateExpressions = aggregateExpressions.map {
           aggExpr =>
             aggExpr.aggregateFunction match {
@@ -258,10 +258,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
               .getOrElse(aggExpr.resultId, List(aggExpr))
         }.distinct
 
-        selReq = aggregationToSelectRequest(groupingExpressions,
+        dagReq = aggregationToSelectRequest(groupingExpressions,
           pushdownAggregates,
           source,
-          selReq)
+          dagReq)
 
         val rewrittenResultExpression = resultExpressions.map(
           expr => expr.transformDown {
@@ -292,7 +292,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           groupingExpressions,
           residualAggregateExpressions,
           rewrittenResultExpression,
-          toCoprocessorRDD(source, output, selReq))
+          toCoprocessorRDD(source, output, dagReq))
       case _ => Nil
     }
   }
