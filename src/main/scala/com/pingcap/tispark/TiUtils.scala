@@ -70,6 +70,7 @@ object TiUtils {
           Math.min(Integer.MAX_VALUE, tp.getLength).asInstanceOf[Int],
           tp.getDecimal)
       case _: TimestampType => sql.types.TimestampType
+      case _: DurationType => sql.types.LongType
       case _: DateType => sql.types.DateType
     }
   }
