@@ -8,20 +8,20 @@ You may edit `properties.template` files according to your current mode
 
 Test cases will be searched recursively. 
 
-#### File Extension Introduction
+### File Extension Introduction
 
     *.ddl   include SQL statements of test table schema; 
     *.sql   include SQL test statements;
     *.data  include test table data.
 
-#### How to start an integration test
+### How to start an integration test
 run `dump.sh` to create test data for databases listed in `dbNameList`:
 ```
 ./dump.sh dbNameList
 ```
 `dbNameList` is separated by comma, e.g. `db1,db2`
 
-**Note: By doing this you will overwrite data stored in db1.data and db2.data with data stored in your local database.**
+> Note: By doing this you will overwrite data stored in db1.data and db2.data with data stored in your local database.
 
 Load test data from `*.data` recursively from directory:
 ```
@@ -42,7 +42,7 @@ To run index Test individually: (use -h option for help)
 
 In general, use `-r` flag to show result only when you run index Test
 
-*To Build up tpch test files, please follow the instructions in `test_tpch.sh`*
+> To Build up tpch test files, please follow the instructions in `test_tpch.sh`
 
 In case debug flag is set, JVM remote debug port will open at 5005.
 
@@ -51,7 +51,7 @@ You might also run tests manually for other use cases:
 java -Dtest.mode=Load -cp ./conf:$./lib/* com.pingcap.spark.TestFramework
 ```
 
-#### Demo: Adding a new test case
+### Demo: Adding a new test case
 
 Before you add a new test case, you may first dump your database from storage containing test data.
 
@@ -74,7 +74,7 @@ Write your own sql statement in `.sql` file and put them in the same directory w
 Run `./test.sh` and start integration test containing your own test cases.
 
 
-#### Configuration
+### Configuration
 Here is a sample for config.properties
 ```
 tidb.addr=127.0.0.1
