@@ -19,6 +19,7 @@ import java.sql.{Date, Timestamp}
 
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
+import com.pingcap.tikv.types.DurationType
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Remainder, Subtract}
 import org.apache.spark.sql.types._
 
@@ -53,6 +54,7 @@ object BasicExpression {
         // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd
         case DateType => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int]).toString
         case TimestampType => new Timestamp(value.asInstanceOf[Long])
+        case DurationType => value.asInstanceOf[Long]
         case StringType => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
         case _ => value
