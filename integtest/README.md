@@ -8,8 +8,8 @@ You may edit `properties.template` files according to your current mode
 
 Test cases will be searched recursively. 
 
-##### File Extension Introduction
----
+#### File Extension Introduction
+
     *.ddl   include SQL statements of test table schema; 
     *.sql   include SQL test statements;
     *.data  include test table data.
@@ -51,7 +51,7 @@ You might also run tests manually for other use cases:
 java -Dtest.mode=Load -cp ./conf:$./lib/* com.pingcap.spark.TestFramework
 ```
 
-### Demo: Adding a new test case
+#### Demo: Adding a new test case
 
 Before you add a new test case, you may first dump your database from storage containing test data.
 
