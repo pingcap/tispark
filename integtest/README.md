@@ -19,7 +19,7 @@ run `dump.sh` to create test data for databases listed in `dbNameList`:
 ```
 ./dump.sh dbNameList
 ```
-Database name list is separated by comma, e.g. `db1, db2`
+`dbNameList` is separated by comma, e.g. `db1,db2`
 
 **Note: By doing this you will overwrite data stored in db1.data and db2.data with data stored in your local database.**
 
@@ -50,6 +50,29 @@ You might also run tests manually for other use cases:
 ```
 java -Dtest.mode=Load -cp ./conf:$./lib/* com.pingcap.spark.TestFramework
 ```
+
+### Demo: Adding a new test case
+
+Before you add a new test case, you may first dump your database from storage containing test data.
+
+```
+./dump.sh db1[,db2[,...]]
+```
+
+Or you can make your own data with `*.ddl` and `*.data` files, check `t1.data` and `t1.ddl` in directory `./testcase/test_index/` for 
+brief example. Remember if you create data in this way, its parent directory name would define the database containing test data. In the 
+case above, table `t1` would be created in database `test_index`.
+
+Now you can load your data by executing
+
+```
+./load.sh
+```
+
+Write your own sql statement in `.sql` file and put them in the same directory with local data. Statement format should be accepted by both spark and tidb in order it works. See `./testcase/test_index/t1.sql` for example.
+
+Run `./test.sh` and start integration test containing your own test cases.
+
 
 #### Configuration
 Here is a sample for config.properties

@@ -132,15 +132,15 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     val placeholders = List.fill(row.size)("?").mkString(",")
     val stat = s"insert into $table values ($placeholders)"
     val ps = connection.prepareStatement(stat)
-    row.zipWithIndex.map { case (value, index) =>
+    row.zipWithIndex.foreach { case (value, index) =>
         val pos = index + 1
         value match {
-          case bd: BigDecimal => ps.setBigDecimal(pos, bd.bigDecimal).→(index)
-          case l: Long => ps.setLong(pos, l).→(index)
-          case d: Date => ps.setDate(pos, d).→(index)
-          case s: String => ps.setString(pos, s).→(index)
-          case ts: Timestamp => ps.setTimestamp(pos, ts).→(index)
-          case null => ps.setNull(pos, typeCodeFromString(schema(index))).→(index)
+          case bd: BigDecimal => ps.setBigDecimal(pos, bd.bigDecimal)
+          case l: Long => ps.setLong(pos, l)
+          case d: Date => ps.setDate(pos, d)
+          case s: String => ps.setString(pos, s)
+          case ts: Timestamp => ps.setTimestamp(pos, ts)
+          case null => ps.setNull(pos, typeCodeFromString(schema(index)))
         }
     }
     ps.executeUpdate()
