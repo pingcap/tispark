@@ -1,6 +1,6 @@
 ## TiSpark on PySpark:
 ### Usage
-1. Make sure you have the latest version of [TiSpark]() and a `jar` with all TiSpark's dependencies.
+1. Make sure you have the latest version of [TiSpark](https://github.com/pingcap/tispark) and a `jar` with all TiSpark's dependencies.
 
 2. Run this command in your `SPARK_HOME` directory:
 ```
