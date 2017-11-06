@@ -30,7 +30,7 @@ do
 		r)
 			showResultStats=true
 			;;
-        a)   
+        a)
             cd ../tikv-client-lib-java/
             mvn clean install
             cd ../

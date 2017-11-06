@@ -57,14 +57,14 @@ class TestCase(val prop: Properties) extends LazyLogging {
   def init(): Unit = {
     mode match {
       case RunMode.Dump => dbNames.filter(!_.isEmpty).foreach { dbName =>
-          logger.info("Dumping database " + dbName)
-          if (dbName == null) {
-            throw new IllegalArgumentException("database name is null while dumping")
-          }
-          jdbc.init(dbName)
-          ensurePath(basePath, dbName)
-          jdbc.dumpAllTables(joinPath(basePath, dbName))
+        logger.info("Dumping database " + dbName)
+        if (dbName == null) {
+          throw new IllegalArgumentException("database name is null while dumping")
         }
+        jdbc.init(dbName)
+        ensurePath(basePath, dbName)
+        jdbc.dumpAllTables(joinPath(basePath, dbName))
+      }
 
       case RunMode.Load => work(basePath, false, true, true)
 
@@ -165,7 +165,6 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (!result) {
         testsFailed += 1
         printDiff(s"$dbName.$file", sql, actual, baseline)
-
       }
       testsExecuted += 1
 
@@ -318,12 +317,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
 
     def compValue(lhs: Any, rhs: Any): Boolean = lhs match {
-        case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
-          Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
-        case _: Number | _: BigInt | _: java.math.BigInteger =>
-          toInteger(lhs) == toInteger(rhs)
+      case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
+        Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
+      case _: Number | _: BigInt | _: java.math.BigInteger =>
+        toInteger(lhs) == toInteger(rhs)
       case _ => lhs == rhs
-      }
+    }
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {
       if (lhs == null && rhs == null) {
