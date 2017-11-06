@@ -1,14 +1,4 @@
-from pyspark.sql import SparkSession
-# $example off:init_session$
-
-# $example on:schema_inferring$
-from pyspark.sql import Row
-# $example off:schema_inferring$
-
-# $example on:programmatic_schema$
-# Import data types
-from pyspark.sql.types import *
-from py4j.java_gateway import java_import, JavaObject
+from py4j.java_gateway import java_import
 from pyspark.context import SparkContext
 
 
