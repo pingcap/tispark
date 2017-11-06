@@ -49,9 +49,9 @@ spark_test_opt=""
 
 spark_cmd="${SPARK_HOME}/bin/spark-submit --class ${CLASS} ${BASE_DIR}/lib/* --driver-java-options"
 if [[ "$@" = *--debug ]] || [[ "$@" = *-d ]]; then
-    echo "debuging..."
-    $spark_cmd $spark_debug_opt
+    echo "debugging..."
+    ${spark_cmd} ${spark_debug_opt}
 else
     echo "testing...."
-    $spark_cmd $spark_test_opt 2>&1 | grep "result:\|time:"
+    $spark_cmd ${spark_test_opt} 2>&1 | grep "result:\|time:"
 fi
