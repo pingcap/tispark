@@ -27,7 +27,7 @@ import scala.collection.mutable.ArrayBuffer
 class TestCase(val prop: Properties) extends LazyLogging {
   object RunMode extends Enumeration {
     type RunMode = Value
-    val Test, Load, LoadNTest, Dump, TestIndex = Value
+    val Test, Load, LoadNTest, Dump, TestIndex, TestDAG = Value
   }
 
   protected val KeyDumpDBList = "test.dumpDB.databases"
@@ -65,6 +65,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
       case RunMode.LoadNTest => work(basePath, true, true, true)
 
       case RunMode.TestIndex => work(basePath, true, false, false)
+
+      case RunMode.TestDAG => work(basePath, true, false, false)
 
     }
   }
@@ -270,8 +272,26 @@ class TestCase(val prop: Properties) extends LazyLogging {
       testTimeType()
       testIndex()
 
+    } else if (dbName.equalsIgnoreCase("tispark_test")) {
+      spark.init(dbName)
+      jdbc.init(dbName)
+
+      val colList = jdbc.getTableColumnNames("full_data_type_table")
+      val dagTestCase = new DAGTestCase(colList)
+      testDAG(dagTestCase.createTypeTestCases)
     }
 
+  }
+
+  def testDAG(list: List[String]): Unit = {
+    var result = false
+
+    for (sql <- list) {
+      result |= execBothAndJudge(sql)
+      logger.info("*************** Test sql " + result + ":" + sql)
+    }
+    result = !result
+    logger.info("*************** Overall DAG test :" + result)
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {

@@ -50,7 +50,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    dagRequest.bind
+    dagRequest.resolve
     // bypass, sum return a long type
     val tiPartition: TiPartition = split.asInstanceOf[TiPartition]
     val iterator: util.Iterator[TiRow] = snapshot.select(dagRequest, split.asInstanceOf[TiPartition].task)

@@ -31,7 +31,6 @@ object BasicExpression {
   type TiMinus = com.pingcap.tikv.expression.scalar.Minus
   type TiMultiply = com.pingcap.tikv.expression.scalar.Multiply
   type TiDivide = com.pingcap.tikv.expression.scalar.Divide
-  type TiMod = com.pingcap.tikv.expression.scalar.Mod
   type TiIsNull = com.pingcap.tikv.expression.scalar.IsNull
   type TiGreaterEqual = com.pingcap.tikv.expression.scalar.GreaterEqual
   type TiGreaterThan = com.pingcap.tikv.expression.scalar.GreaterThan
@@ -99,10 +98,6 @@ object BasicExpression {
 
       case Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(new TiDivide(lhs, rhs))
-
-      // MOD is not supported in DAG mode
-      //      case Remainder(BasicExpression(lhs), BasicExpression(rhs)) =>
-      //        Some(new TiMod(lhs, rhs))
 
       case Alias(BasicExpression(child), _) =>
         Some(child)

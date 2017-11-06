@@ -18,6 +18,7 @@
 package com.pingcap.spark
 
 import java.sql.{Connection, Date, DriverManager, Timestamp}
+import java.util
 import java.util.Properties
 import java.util.regex.Pattern
 
@@ -213,6 +214,16 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       retSet += row.toList
     }
     (retSchema.toList, retSet.toList)
+  }
+
+  def getTableColumnNames(tableName: String) = {
+    val rs = connection.createStatement().executeQuery("select * from " + tableName + " limit 1")
+    val metaData = rs.getMetaData
+    var resList = ArrayBuffer.empty[String]
+    for (i <- 1 to metaData.getColumnCount) {
+      resList += metaData.getColumnName(i)
+    }
+    resList.toList
   }
 
   def close(): Unit = {
