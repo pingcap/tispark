@@ -29,9 +29,9 @@ ti.tidbMapDatabase("tpch_test", False)
 sql("select count(*) from customer").show()
  
 # Result
-+--------+
-|count(1)|
-+--------+
-|     150|
-+--------+
+# +--------+
+# |count(1)|
+# +--------+
+# |     150|
+# +--------+
 ```
