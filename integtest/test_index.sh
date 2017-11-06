@@ -52,7 +52,7 @@ do
             echo "  -a    make all projects"
             echo "  -s    make tiSpark and integration test projects"
             echo "  -i    make integration test only"
-			echo "	-r	  show result stats (SQL, outputs, time consumed, etc.)"
+            echo "  -r    show result stats (SQL, outputs, time consumed, etc.)"
             echo "  -d    debug mode"
             echo "  -h    show help"
             exit 1
