@@ -78,8 +78,8 @@ if [ ${isDebug} = true ]; then
 else
     echo "testing...."
 	if [ ${showResultStats} = true ]; then
-		${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB"
+		${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB\|FAILED.\|PASSED.\|SKIPPED."
 	else
-		${spark_cmd} ${spark_test_opt} 2>&1 | grep "Tests result:\|Result:"
+		${spark_cmd} ${spark_test_opt} 2>&1 | grep "Tests result:\|Result:\|FAILED.\|PASSED.\|SKIPPED."
 	fi
 fi

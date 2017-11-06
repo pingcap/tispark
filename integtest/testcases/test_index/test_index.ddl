@@ -3,8 +3,8 @@ CREATE TABLE `test_index` (
   `a` int(11) NOT NULL,
   `b` smallint(11) DEFAULT NULL,
   `c` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `d` float DEFAULT NULL,
-  `e` float DEFAULT NULL,
+  `d` varchar(20) DEFAULT NULL,
+  `e` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`a`),
   KEY `idx_c` (`c`),
   KEY `idx_de` (`d`,`e`)
