@@ -56,7 +56,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val table = source.table
     dagRequest.setTableInfo(table)
     if (dagRequest.getFields.isEmpty) {
-      dagRequest.addField(TiColumnRef.create(table.getColumns.get(0).getName))
+      dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
     val tiRdd = source.logicalPlanToRDD(dagRequest)
 
@@ -141,14 +141,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
-      projectSeq.foreach(attr => dagRequest.addField(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => dagRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic
       val projectSeq: Seq[Attribute] = (projectSet ++ filterSet).toSeq
-      projectSeq.foreach(attr => dagRequest.addField(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => dagRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
     }
