@@ -19,7 +19,7 @@ clear_last_diff_files() {
 clear_last_diff_files
 
 isDebug=false
-showResultOnly=false
+showResultStats=false
 
 while getopts ":radish" arg
 do
@@ -28,9 +28,9 @@ do
             isDebug=true
             ;;
 		r)
-			showResultOnly=true
+			showResultStats=true
 			;;
-        a)   
+        a)
             cd ../tikv-client-lib-java/
             mvn clean install
             cd ../
@@ -50,9 +50,9 @@ do
         h)
             echo "Options"
             echo "  -a    make all projects"
-            echo "  -s    make tispark and integtest"
-            echo "  -i    make integtest only"
-			echo "	-r	  show result only"
+            echo "  -s    make tiSpark and integration test projects"
+            echo "  -i    make integration test only"
+            echo "  -r    show result stats (SQL, outputs, time consumed, etc.)"
             echo "  -d    debug mode"
             echo "  -h    show help"
             exit 1
@@ -77,9 +77,9 @@ if [ ${isDebug} = true ]; then
     ${spark_cmd} ${spark_debug_opt}
 else
     echo "testing...."
-	if [ ${showResultOnly} = true ]; then
-		${spark_cmd} ${spark_test_opt} 2>&1 | grep -F "***************" 
+	if [ ${showResultStats} = true ]; then
+		${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB\|FAILED.\|PASSED.\|SKIPPED."
 	else
-		${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|result:\|Elapsed time:\|query on spark\|query on TiDB"
+		${spark_cmd} ${spark_test_opt} 2>&1 | grep "Tests result:\|Result:\|FAILED.\|PASSED.\|SKIPPED."
 	fi
 fi

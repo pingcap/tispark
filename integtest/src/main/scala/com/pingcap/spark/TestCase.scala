@@ -42,6 +42,14 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected lazy val jdbc = new JDBCWrapper(prop)
   protected lazy val spark = new SparkWrapper()
 
+  protected var testsFailed = 0
+  protected var testsExecuted = 0
+  protected var testsSkipped = 0
+  protected var inlineSQLNumber = 0
+
+  private val tidbExceptionOutput = "TiDB execution failed with exception caught"
+  private val sparkExceptionOutput = "Spark execution failed with exception caught"
+
   logger.info("Databases to dump: " + dbNames.mkString(","))
   logger.info("Run Mode: " + mode)
   logger.info("basePath: " + basePath)
@@ -49,14 +57,14 @@ class TestCase(val prop: Properties) extends LazyLogging {
   def init(): Unit = {
     mode match {
       case RunMode.Dump => dbNames.filter(!_.isEmpty).foreach { dbName =>
-          logger.info("Dumping database " + dbName)
-          if (dbName == null) {
-            throw new IllegalArgumentException("database name is null while dumping")
-          }
-          jdbc.init(dbName)
-          ensurePath(basePath, dbName)
-          jdbc.dumpAllTables(joinPath(basePath, dbName))
+        logger.info("Dumping database " + dbName)
+        if (dbName == null) {
+          throw new IllegalArgumentException("database name is null while dumping")
         }
+        jdbc.init(dbName)
+        ensurePath(basePath, dbName)
+        jdbc.dumpAllTables(joinPath(basePath, dbName))
+      }
 
       case RunMode.Load => work(basePath, false, true, true)
 
@@ -69,6 +77,16 @@ class TestCase(val prop: Properties) extends LazyLogging {
       case RunMode.TestDAG => work(basePath, true, false, false)
 
     }
+
+    mode match {
+      case RunMode.Test | RunMode.TestIndex =>
+        logger.warn("Result: All tests done.")
+        logger.warn("Result: Tests run: " + testsExecuted
+          + "  Tests succeeded: " + (testsExecuted - testsFailed - testsSkipped)
+          + "  Tests failed: " + testsFailed
+          + "  Tests skipped: " + testsSkipped)
+      case _ =>
+    }
   }
 
   protected def work(parentPath: String, run: Boolean, load: Boolean, compareWithTiDB: Boolean): Unit = {
@@ -80,10 +98,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
     val testCases = ArrayBuffer.empty[(String, String)]
 
     var dbName = dir.getName
-    logger.info("get ignored: " + ignoreCases.toList)
-    logger.info("current dbName " + dbName + " is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))) "" else "not ") + "ignored")
+    logger.info(s"get ignored: ${ignoreCases.toList}")
+    logger.info(s"current dbName $dbName is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))) "" else "not ") + "ignored")
 
-    logger.info("run=" + run.toString + " load=" + load.toString + " compareWithTiDB=" + compareWithTiDB.toString)
+    logger.info(s"run=${run.toString} load=${load.toString} compareWithTiDB=${compareWithTiDB.toString}")
     if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
       if (dir.isDirectory) {
         dir.listFiles().map { f =>
@@ -104,16 +122,16 @@ class TestCase(val prop: Properties) extends LazyLogging {
       }
 
       if (load) {
-        logger.info("Switch to " + dbName)
+        logger.info(s"Switch to $dbName")
         dbName = jdbc.init(dbName)
         logger.info("Load data... ")
         ddls.foreach{ file => {
-          logger.info("Register for DDL script " + file)
+          logger.info(s"Register for DDL script $file")
           jdbc.createTable(file)
         }
         }
         dataFiles.foreach{ file => {
-          logger.info("Register for data loading script " + file)
+          logger.info(s"Register for data loading script $file")
           jdbc.loadTable(file)
         }
         }
@@ -128,6 +146,14 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
+  private def printDiff(sqlName: String, sql: String, TiDB: List[List[Any]], TiSpark: List[List[Any]]): Unit = {
+    logger.info(s"$sql\n")
+    logger.info(s"Dump diff for TiSpark $sqlName \n")
+    writeResult(TiDB, sqlName + ".result.spark")
+    logger.info(s"Dump diff for TiDB $sqlName \n")
+    writeResult(TiSpark, sqlName + ".result.tidb")
+  }
+
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     jdbc.init(dbName)
     spark.init(dbName)
@@ -139,139 +165,133 @@ class TestCase(val prop: Properties) extends LazyLogging {
       val baseline = execTiDB(sql)
       val result = compResult(actual, baseline)
       if (!result) {
-        logger.info(s"Dump diff for TiSpark $file \n")
-        writeResult(actual, file + ".result.spark")
-        logger.info(s"Dump diff for TiDB $file \n")
-        writeResult(baseline, file + ".result.tidb")
+        testsFailed += 1
+        printDiff(s"$dbName.$file", sql, actual, baseline)
       }
+      testsExecuted += 1
 
-      logger.info(s"\n*************** $file result: $result\n\n\n")
+      logger.warn(s"\n*************** $file result: $result\n\n\n")
+    }
+  }
+
+  def execTiDB(sql: String): List[List[Any]] = {
+    try {
+      val ans = time {
+        jdbc.queryTiDB(sql)._2
+      }(logger)
+      logger.info(s"hint: ${ans.length} row(s)")
+      ans
+    } catch {
+      case e: Exception => throw e
     }
   }
 
   def execSpark(sql: String): List[List[Any]] = {
-    val ans = time {
-      spark.querySpark(sql)
-    }(logger)
-    logger.info("hint: " + ans.length + " row(s)")
-    ans
+    try {
+      val ans = time {
+        spark.querySpark(sql)
+      }(logger)
+      logger.info(s"hint: ${ans.length} row(s)")
+      ans
+    } catch {
+      case e: Exception => throw e
+    }
   }
 
-  def execTiDB(sql: String): List[List[Any]] = {
-    val ans = time {
-      jdbc.queryTiDB(sql)._2
-    }(logger)
-    logger.info("hint: " + ans.length + " row(s)")
-    ans
+  def execTiDBAndShow(str: String): Unit = {
+    try{
+      val tidb = execTiDB(str)
+      logger.info(s"output: $tidb")
+    } catch {
+      case e: Exception =>
+        logger.error(s"$tidbExceptionOutput: ${e.getMessage}\n")
+    }
   }
 
-  private def execSparkAndShow(str: String): Unit = {
-    val spark = execSpark(str)
-    logger.info("output: " + spark)
+  def execSparkAndShow(str: String): Unit = {
+    try {
+      val spark = execSpark(str)
+      logger.info(s"output: $spark")
+    } catch {
+      case e: Exception =>
+        logger.error(s"$sparkExceptionOutput: ${e.getMessage}\n")
+    }
   }
 
-  private def execTiDBAndShow(str: String): Unit = {
-    val tidb = execTiDB(str)
-    logger.info("output: " + tidb)
-  }
-
-  private def execBoth(str: String): Unit = {
-    execSpark(str)
-    execTiDB(str)
-  }
-
-  private def execBothAndShow(str: String): Unit = {
-    execSparkAndShow(str)
+  def execBothAndShow(str: String): Unit = {
+    testsExecuted += 1
+    inlineSQLNumber += 1
     execTiDBAndShow(str)
+    execSparkAndShow(str)
   }
 
-  private def execBothAndJudge(str: String): Boolean = {
-    val tidb = execTiDB(str)
-    val spark = execSpark(str)
-    val isFalse = !tidb.equals(spark)
+  def execBothAndSkip(str: String): Boolean = {
+    execBothAndJudge(str, skipped = true)
+  }
+
+  def execBothAndJudge(str: String, skipped: Boolean = false): Boolean = {
+    var tidb: List[List[Any]] = List.empty
+    var spark: List[List[Any]] = List.empty
+
+    testsExecuted += 1
+    if (skipped) {
+      testsSkipped += 1
+    } else {
+      inlineSQLNumber += 1
+    }
+
+    var tidbRunTimeError = false
+    var sparkRunTimeError = false
+
+    try {
+      tidb = execTiDB(str)
+    } catch {
+      case e: Exception =>
+        logger.error(s"$tidbExceptionOutput: ${e.getMessage}\n")
+        tidb = List.apply(List.apply[String](e.getMessage))
+        tidbRunTimeError = true
+    }
+    try {
+      spark = execSpark(str)
+    } catch {
+      case e: Exception =>
+        logger.error(s"$sparkExceptionOutput: ${e.printStackTrace()}\n")
+        spark = List.apply(List.apply[String](e.getMessage))
+        sparkRunTimeError = true
+    }
+
+    val isFalse = tidbRunTimeError || sparkRunTimeError || !compResult(tidb, spark)
     if (isFalse) {
-      logger.info(" TiDB result: " + tidb)
-      logger.info("Spark result: " + spark)
+      if(skipped) {
+        logger.warn(s"TEST SKIPPED.\n")
+      } else {
+        logger.warn(s"TEST FAILED.\n")
+      }
+      logger.warn(s"TiDB output: $tidb")
+      logger.warn(s"Spark output: $spark")
+      if (!skipped) {
+        testsFailed += 1
+        printDiff(s"inlineTest$inlineSQLNumber", str, tidb, spark)
+      } else {
+        return false
+      }
+    } else {
+      if(skipped) {
+        logger.warn(s"TEST SKIPPED.\n")
+      } else {
+        logger.info(s"TEST PASSED.\n")
+      }
     }
     isFalse
   }
 
-  private def testType(): Unit = {
-    execBothAndShow(s"select * from t1")
-    var result = false
-    result |= execBothAndJudge(s"select c1 from t1")
-    result |= execBothAndJudge(s"select c2 from t1")
-    result |= execBothAndJudge(s"select c3 from t1")
-    result |= execBothAndJudge(s"select c4 from t1")
-    result |= execBothAndJudge(s"select c5 from t1")
-    result |= execBothAndJudge(s"select c6 from t1")
-    result |= execBothAndJudge(s"select c7 from t1")
-    result |= execBothAndJudge(s"select c8 from t1")
-    result |= execBothAndJudge(s"select c9 from t1")
-    result |= execBothAndJudge(s"select c10 from t1")
-    result |= execBothAndJudge(s"select c12 from t1")
-    result |= execBothAndJudge(s"select c14 from t1")
-    result = !result
-    logger.info(s"\n*************** SQL Type Tests result: $result\n\n\n")
-  }
-
-  private def testTimeType(): Unit = {
-    execSparkAndShow(s"select * from t2")
-    execSparkAndShow(s"select * from t3")
-
-    execTiDBAndShow(s"select UNIX_TIMESTAMP(c14) from t1")
-    execSparkAndShow(s"select CAST(c14 AS LONG) from t1")
-    execSparkAndShow(s"select c13 from t1")
-
-    execTiDBAndShow(s"select c14 + c13 from t1")
-    execSparkAndShow(s"select CAST(c14 AS LONG) + c13 from t1")
-
-    logger.info(s"\n*************** SQL Time Tests result: Skipped\n\n\n")
-  }
-
-  private def testIndex(): Unit = {
-    var result = false
-    result |= execBothAndJudge("select * from test_index where a < 30")
-
-    result |= execBothAndJudge("select * from test_index where d > \'116.5\'")
-    result |= execBothAndJudge("select * from test_index where d < \'116.5\'")
-    result |= execBothAndJudge("select * from test_index where d > \'116.3\' and d < \'116.7\'")
-
-    result |= execBothAndJudge("select * from test_index where d = \'116.72873\'")
-    result |= execBothAndJudge("select * from test_index where d = \'116.72874\' and e < \'40.0452\'")
-
-    result |= execBothAndJudge("select * from test_index where c > \'2008-02-06 14:00:00\'")
-    result |= execBothAndJudge("select * from test_index where c >= \'2008-02-06 14:00:00\'")
-    result |= execBothAndJudge("select * from test_index where c < \'2008-02-06 14:00:00\'")
-    result |= execBothAndJudge("select * from test_index where c <= \'2008-02-06 14:00:00\'")
-//    result |= execBothAndJudge("select * from test_index where c = \'2008-02-06 14:00:00\'")
-    result |= execBothAndJudge("select * from test_index where c > date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where c >= date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where c < date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where c <= date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where DATE(c) = date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where DATE(c) > date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where DATE(c) >= date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where DATE(c) < date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where DATE(c) <= date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where c <> date \'2008-02-05\'")
-    result |= execBothAndJudge("select * from test_index where c > \'2008-02-04 14:00:00\' and d > \'116.5\'")
-    result |= execBothAndJudge("select * from test_index where d = \'116.72873\' and c > \'2008-02-04 14:00:00\'")
-    result |= execBothAndJudge("select * from test_index where d = \'116.72873\' and c < \'2008-02-04 14:00:00\'")
-
-    result = !result
-    logger.info(s"\n*************** Index Tests result: $result\n\n\n")
-  }
-
-  def testInline(dbName: String): Unit = {
+  private def testInline(dbName: String): Unit = {
     if(dbName.equalsIgnoreCase("test_index")) {
-      spark.init(dbName)
-      jdbc.init(dbName)
-
-      testType()
-      testTimeType()
-      testIndex()
-
+      val testIndex: TestIndex = new TestIndex(prop)
+      testIndex.run(dbName)
+      testsExecuted += testIndex.testsExecuted
+      testsSkipped += testIndex.testsSkipped
+      testsFailed += testIndex.testsFailed
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
       spark.init(dbName)
       jdbc.init(dbName)
@@ -294,7 +314,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     logger.info("*************** Overall DAG test :" + result)
   }
 
-  def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
+  private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
     if (compareWithTiDB) {
       test(dbName, testCases)
     } else {
@@ -302,7 +322,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  def compResult(lhs: List[List[Any]], rhs: List[List[Any]]): Boolean = {
+  private def compResult(lhs: List[List[Any]], rhs: List[List[Any]]): Boolean = {
     def toDouble(x: Any): Double = x match {
       case d: Double => d
       case d: Float => d.toDouble
@@ -317,12 +337,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
 
     def compValue(lhs: Any, rhs: Any): Boolean = lhs match {
-        case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
-          Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
-        case _: Number | _: BigInt | _: java.math.BigInteger =>
-          toInteger(lhs) == toInteger(rhs)
+      case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
+        Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
+      case _: Number | _: BigInt | _: java.math.BigInteger =>
+        toInteger(lhs) == toInteger(rhs)
       case _ => lhs == rhs
-      }
+    }
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {
       if (lhs == null && rhs == null) {
@@ -341,7 +361,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  def writeResult(rowList: List[List[Any]], path: String): Unit = {
+  private def writeResult(rowList: List[List[Any]], path: String): Unit = {
     val sb = StringBuilder.newBuilder
     rowList.foreach{
       row => {
