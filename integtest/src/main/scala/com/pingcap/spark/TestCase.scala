@@ -148,6 +148,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   private def printDiff(sqlName: String, sql: String, TiDB: List[List[Any]], TiSpark: List[List[Any]]): Unit = {
     logger.info(s"$sql\n")
+    writeResult(List(List(sql)), sqlName + ".testSql")
     logger.info(s"Dump diff for TiSpark $sqlName \n")
     writeResult(TiDB, sqlName + ".result.spark")
     logger.info(s"Dump diff for TiDB $sqlName \n")
@@ -285,7 +286,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     isFalse
   }
 
-  private def testInline(dbName: String): Unit = {
+  def testInline(dbName: String): Unit = {
     if(dbName.equalsIgnoreCase("test_index")) {
       val testIndex: TestIndex = new TestIndex(prop)
       testIndex.run(dbName)
@@ -299,6 +300,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
       val colList = jdbc.getTableColumnNames("full_data_type_table")
       val dagTestCase = new DAGTestCase(colList)
       testDAG(dagTestCase.createTypeTestCases)
+//      var s = "select A.tp_longtext, B.tp_longtext from full_data_type_table A join full_data_type_table B on A.id_dt = B.id_dt where A.id_dt = B.id_dt order by A.id_dt limit 2"
+//      execBothAndJudge(s)
     }
 
   }
@@ -308,10 +311,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
     for (sql <- list) {
       result |= execBothAndJudge(sql)
-      logger.info("*************** Test sql " + result + ":" + sql)
+      logger.info("result: Test sql " + result + ":" + sql)
     }
     result = !result
-    logger.info("*************** Overall DAG test :" + result)
+    logger.info("result: Overall DAG test :" + result)
   }
 
   private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {

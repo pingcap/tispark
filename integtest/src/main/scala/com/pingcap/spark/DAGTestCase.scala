@@ -25,11 +25,39 @@ class DAGTestCase(colList: List[String]) {
     var res = ArrayBuffer.empty[String]
     for (op <- compareOpList) {
       for (tp <- colList) {
-        res += basicSelfJoin + where(binaryOpWithName(tp, tp, op))
+        res += selfJoinSelect(
+          List(
+            tableColDot(LEFT_TB_NAME, tp),
+            tableColDot(RIGHT_TB_NAME, tp)
+          )
+        ) +
+          where(binaryOpWithName(tp, tp, op)) +
+          orderBy(tableColDot(LEFT_TB_NAME, tp))
       }
     }
 
     res.toList
+  }
+
+  def selfJoinSelect(cols: List[String]): String = {
+    var colList = ""
+    for (col <- cols) {
+      colList += col + ","
+    }
+
+    if (colList.length > 0) {
+      colList = colList.substring(0, colList.length - 1)
+    }
+
+    s"select " +
+      colList +
+      s" from " +
+      s"full_data_type_table $LEFT_TB_NAME join full_data_type_table $RIGHT_TB_NAME " +
+      s"on $LEFT_TB_NAME.id_dt = $RIGHT_TB_NAME.id_dt"
+  }
+
+  def orderBy(condition: String): String = {
+    " order by " + condition
   }
 
   def where(condition: String): String = {

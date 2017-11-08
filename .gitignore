@@ -40,6 +40,7 @@ hs_err_pid*
 .gradle
 *.spark
 *.tidb
+*.testSql
 
 metastore_db/
 tpch
