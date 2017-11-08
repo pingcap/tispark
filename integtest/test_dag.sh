@@ -14,6 +14,10 @@ clear_last_diff_files() {
         [ -e "$f" ] && rm *.tidb
         break
     done
+    for f in ./*.testSql; do
+        [ -e "$f" ] && rm *.testSql
+        break
+    done
 }
 
 clear_last_diff_files
