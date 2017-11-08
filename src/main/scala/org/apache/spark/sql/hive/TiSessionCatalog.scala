@@ -51,7 +51,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     synchronized {
       val table = formatTableName(tableIdent.table)
       val db = formatDatabaseName(tableIdent.database.getOrElse(currentDb))
-      if (!meta.getDatabase(db).isEmpty && !meta.getTable(db, table).isEmpty) {
+      if (meta.getDatabase(db).isDefined && meta.getTable(db, table).isDefined) {
         val rel: TiDBRelation =
           new TiDBRelation(session, new TiTableReference(db, table), meta)(sparkSession.sqlContext)
         val relPlan = sparkSession.sqlContext.baseRelationToDataFrame(rel).logicalPlan
@@ -67,7 +67,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     val dbName = formatDatabaseName(db)
     val tiDB = meta.getDatabase(dbName)
 
-    if (!tiDB.isEmpty) {
+    if (tiDB.isDefined) {
       true
     } else {
       externalCatalog.databaseExists(dbName)
@@ -75,7 +75,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
   }
 
   override def listDatabases(): Seq[String] = {
-    meta.getDatabases()
+    meta.getDatabases
       .map(_.getName)
       .union(super.listDatabases())
   }
@@ -89,7 +89,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     val table = formatTableName(name.table)
     val tiTable = meta.getTable(db, table)
 
-    if (!tiTable.isEmpty) {
+    if (tiTable.isDefined) {
       true
     } else {
       externalCatalog.tableExists(db, table)
@@ -106,7 +106,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     val dbName = formatDatabaseName(db)
     requireDbExists(dbName)
     val tiDB = meta.getDatabase(dbName)
-    if (!tiDB.isEmpty) {
+    if (tiDB.isDefined) {
       tiDBToCatalogDatabase(tiDB.get)
     } else {
       externalCatalog.getDatabase(dbName)
@@ -127,7 +127,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     val table = formatTableName(name.table)
     requireDbExists(db)
     val tiTable = meta.getTable(db, table)
-    if (!tiTable.isEmpty) {
+    if (tiTable.isDefined) {
       Option(tiTableToCatalogTable(name, tiTable.get))
     } else {
       externalCatalog.getTableOption(db, table)
@@ -137,7 +137,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
   override def listTables(db: String, pattern: String): Seq[TableIdentifier] = {
     val dbName = formatDatabaseName(db)
     val database = meta.getDatabase(dbName)
-    if (!database.isEmpty) {
+    if (database.isDefined) {
       val localTempViews = synchronized {
         StringUtils.filterPattern(tempTables.keys.toSeq, pattern).map { name =>
           TableIdentifier(name)

@@ -47,7 +47,7 @@ object TiUtils {
     }
   }
 
-  def isSupportedBasicExpression(expr: Expression) = {
+  def isSupportedBasicExpression(expr: Expression): Boolean = {
     BasicExpression.convertToTiExpr(expr).fold(false) {
       _.isSupportedExpr
     }
