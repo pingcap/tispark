@@ -31,5 +31,5 @@ object TiConfigConst {
   val PD_CLUSTER_ID: String = "spark.tispark.pd.clusterid"
   val REQUEST_COMMAND_PRIORITY: String = "spark.tispark.request.command.priority"
   val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
-  val ALLOW_INDEX_DOUBLE_READ: String = "spark.tispark.plan.allow_index_double"
+  val ALLOW_INDEX_DOUBLE_READ: String = "spark.tispark.plan.allow_index_double_read"
 }
