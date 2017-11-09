@@ -8,15 +8,13 @@ class DAGTestCase(colList: List[String]) {
   val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
   val LEFT_TB_NAME = "A"
   val RIGHT_TB_NAME = "B"
-  val basicSelfJoin: String = s"select * from " +
-    s"full_data_type_table $LEFT_TB_NAME join full_data_type_table $RIGHT_TB_NAME " +
-    s"on $LEFT_TB_NAME.id_dt = $RIGHT_TB_NAME.id_dt"
+  val TABLE_NAME = "full_data_type_table"
 
   // TODO: Eliminate these bugs
   private final val colSkipSet: ImmutableSet[String] =
     ImmutableSet.builder()
       .add("tp_bit") // bit cannot be push down
-      .add("tp_datetime") //time zone shift
+      .add("tp_datetime") // time zone shift
       .add("tp_year") // year in spark shows extra month and day
       .add("tp_time") // Time format is not the same in TiDB and spark
       .build()
@@ -59,7 +57,7 @@ class DAGTestCase(colList: List[String]) {
     s"select " +
       colList +
       s" from " +
-      s"full_data_type_table $LEFT_TB_NAME join full_data_type_table $RIGHT_TB_NAME " +
+      s"$TABLE_NAME $LEFT_TB_NAME join full_data_type_table $RIGHT_TB_NAME " +
       s"on $LEFT_TB_NAME.id_dt = $RIGHT_TB_NAME.id_dt"
   }
 
