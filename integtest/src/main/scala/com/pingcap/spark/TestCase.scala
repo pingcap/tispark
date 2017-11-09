@@ -147,9 +147,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
   private def printDiff(sqlName: String, sql: String, TiDB: List[List[Any]], TiSpark: List[List[Any]]): Unit = {
     logger.info(s"$sql\n")
     logger.info(s"Dump diff for TiSpark $sqlName \n")
-    writeResult(sql, TiDB, sqlName + ".result.spark")
+    writeResult(sql, TiDB, sqlName + ".result.tidb")
     logger.info(s"Dump diff for TiDB $sqlName \n")
-    writeResult(sql, TiSpark, sqlName + ".result.tidb")
+    writeResult(sql, TiSpark, sqlName + ".result.spark")
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
