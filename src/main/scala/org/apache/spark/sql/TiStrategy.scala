@@ -16,8 +16,9 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
-import com.pingcap.tikv.meta.{TiDAGRequest, TiIndexInfo}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo}
 import com.pingcap.tikv.predicates.ScanBuilder
+import com.pingcap.tikv.types.BitType
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
@@ -71,20 +72,20 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       case AggregateExpression(_: Average, _, _, _) =>
         throw new IllegalArgumentException("Should never be here")
 
-      case AggregateExpression(f @ Sum(BasicExpression(arg)), _, _, _) =>
+      case AggregateExpression(f@Sum(BasicExpression(arg)), _, _, _) =>
         dagRequest.addAggregate(new TiSum(arg), fromSparkType(f.dataType))
 
-      case AggregateExpression(f @ Count(args), _, _, _) =>
+      case AggregateExpression(f@Count(args), _, _, _) =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
         dagRequest.addAggregate(new TiCount(tiArgs: _*), fromSparkType(f.dataType))
 
-      case AggregateExpression(f @ Min(BasicExpression(arg)), _, _, _) =>
+      case AggregateExpression(f@Min(BasicExpression(arg)), _, _, _) =>
         dagRequest.addAggregate(new TiMin(arg), fromSparkType(f.dataType))
 
-      case AggregateExpression(f @ Max(BasicExpression(arg)), _, _, _) =>
+      case AggregateExpression(f@Max(BasicExpression(arg)), _, _, _) =>
         dagRequest.addAggregate(new TiMax(arg), fromSparkType(f.dataType))
 
-      case AggregateExpression(f @ First(BasicExpression(arg), _), _, _, _) =>
+      case AggregateExpression(f@First(BasicExpression(arg), _), _, _, _) =>
         dagRequest.addAggregate(new TiFirst(arg), fromSparkType(f.dataType))
 
       case _ =>
@@ -103,7 +104,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def filterToDAGRequest(filters: Seq[Expression],
                          source: TiDBRelation,
                          dagRequest: TiDAGRequest = new TiDAGRequest): TiDAGRequest = {
-    val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
+    val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val pkIndex: TiIndexInfo = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
     val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
@@ -123,7 +124,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val filterSet = AttributeSet(filterPredicates.flatMap(_.references))
 
     val (pushdownFilters: Seq[Expression],
-         residualFilters: Seq[Expression]) =
+    residualFilters: Seq[Expression]) =
       filterPredicates.partition(TiUtils.isSupportedFilter)
 
     val residualFilter: Option[Expression] = residualFilters.reduceLeftOption(catalyst.expressions.And)
@@ -162,15 +163,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val aliasMap = mutable.HashMap[Expression, Alias]()
     val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
     val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
+    val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
+    source.table.getColumns.foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
 
     def toAlias(expr: Expression) = aliasMap.getOrElseUpdate(expr, Alias(expr, expr.toString)())
 
     def newAggregate(aggFunc: AggregateFunction,
                      originalAggExpr: AggregateExpression) =
       AggregateExpression(aggFunc,
-                          originalAggExpr.mode,
-                          originalAggExpr.isDistinct,
-                          originalAggExpr.resultId)
+        originalAggExpr.mode,
+        originalAggExpr.isDistinct,
+        originalAggExpr.resultId)
 
     def newAggregateWithId(aggFunc: AggregateFunction,
                            originalAggExpr: AggregateExpression) =
@@ -183,10 +186,39 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
     }
 
+    def allowExpPushDown(expression: Expression): Boolean = {
+      if (expression.children.isEmpty) {
+        expression match {
+          case attr: AttributeReference =>
+            return nameTypeMap.contains(attr.name) &&
+              !nameTypeMap.get(attr.name).head.isInstanceOf[BitType]
+          case _ => return true
+        }
+      } else {
+        for (expr <- expression.children) {
+          if (!allowExpPushDown(expr)) {
+            return false
+          }
+        }
+      }
+
+      true
+    }
+
+    def allowExpsPushDown(expList: Seq[Expression]): Boolean = {
+      for (exp <- expList) {
+        if (!allowExpPushDown(exp)) {
+          return false
+        }
+      }
+      true
+    }
+
     // TODO: This test should be done once for all children
     plan match {
       // Collapse filters and projections and push plan directly
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
+      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+        if allowExpsPushDown(filters) =>
         pruneFilterProject(projectList, filters, source) :: Nil
 
       // Basic logic of original Spark's aggregation plan is:
