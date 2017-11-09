@@ -43,6 +43,14 @@ import scala.collection.{JavaConversions, mutable}
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf: SQLConf = context.conf
 
+  def allowAggregationPushdown(): Boolean = {
+    sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
+  }
+
+  def allowIndexDoubleRead(): Boolean = {
+    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_DOUBLE_READ, "false").toBoolean
+  }
+
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan.collectFirst {
       case LogicalRelation(relation: TiDBRelation, _, _) =>
@@ -57,7 +65,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     selectRequest.setTableInfo(table)
     // In case count(*) and nothing pushed, pick the first column
     if (selectRequest.getFields.size == 0) {
-      selectRequest.addField(TiColumnRef.create(table.getColumns.get(0).getName))
+      selectRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
     val tiRdd = source.logicalPlanToRDD(selectRequest)
 
@@ -106,12 +114,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                             selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
     val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
-    val pkIndex: TiIndexInfo = TiIndexInfo.generateFakePrimaryKeyIndex(source.table)
-    val scanPlan = scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters),
-                                         pkIndex, source.table)
+    val scanPlan = if (allowIndexDoubleRead) {
+      scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+    } else {
+      scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+    }
 
     selectRequest.addRanges(scanPlan.getKeyRanges)
     scanPlan.getFilters.toList.map(selectRequest.addWhere)
+    if (scanPlan.isIndexScan) {
+      selectRequest.setIndexInfo(scanPlan.getIndex)
+    }
     selectRequest
   }
 
@@ -142,14 +155,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
-      projectSeq.foreach(attr => selectRequest.addField(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => selectRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, selectRequest)
       residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic
       val projectSeq: Seq[Attribute] = (projectSet ++ filterSet).toSeq
-      projectSeq.foreach(attr => selectRequest.addField(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => selectRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, selectRequest)
       ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
     }
@@ -186,10 +199,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         originalAggExpr.mode,
         originalAggExpr.isDistinct,
         NamedExpression.newExprId)
-
-    def allowAggregationPushdown(): Boolean = {
-      sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
-    }
 
     // TODO: This test should be done once for all children
     plan match {
