@@ -1,5 +1,6 @@
 ## TiSpark on PySpark:
 ### Usage
+#### Via pyspark
 1. Make sure you have the latest version of [TiSpark](https://github.com/pingcap/tispark) and a `jar` with all TiSpark's dependencies.
 
 2. Run this command in your `SPARK_HOME` directory:
@@ -35,3 +36,5 @@ sql("select count(*) from customer").show()
 # |     150|
 # +--------+
 ```
+#### Via wheel
+See [pytispark](https://pypi.python.org/pypi?:action=display&name=pytispark&version=0.1.1) and use it via wheel.
