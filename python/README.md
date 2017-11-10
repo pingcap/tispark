@@ -37,7 +37,7 @@ sql("select count(*) from customer").show()
 # +--------+
 ```
 #### Via pip
-1. Use ```pip install pytispark``` in your console to install `tispark`  
+1. Use ```pip install pytispark``` in your console to install `pytispark`  
 
 2. Make sure you have the latest version of [TiSpark](https://github.com/pingcap/tispark) and a `jar` with all TiSpark's dependencies.
 
