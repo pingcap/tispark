@@ -2,12 +2,12 @@ from setuptools import setup
 setup(
     name = 'pytispark',
     packages = ['pytispark'],
-    version = '0.1.1',
+    version = '0.1.3',
     description = 'TiSpark support for python',
     author = 'PingCAP',
     author_email = 'novemser@gmail.com',
     url = 'https://github.com/pingcap/tispark',
-    keywords = ['tispark', 'python', 'spark'],
+    keywords = ['tispark', 'spark', 'tidb', 'olap'],
     license='Apache 2.0',
     classifiers=[
         # How mature is this project? Common values are
@@ -23,4 +23,5 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
+    install_requires = ['pyspark', 'py4j']
 )

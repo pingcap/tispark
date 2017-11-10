@@ -64,4 +64,4 @@ sql("select count(*) from customer").show()
 # +--------+
 
 ```
-See [pytispark](https://pypi.python.org/pypi?:action=display&name=pytispark&version=0.1.1) for more information.
+See [pytispark](https://pypi.python.org/pypi?:action=display&name=pytispark) for more information.
