@@ -239,6 +239,10 @@ select count(*) from account;
 1 row selected (1.97 seconds)
 ```
 
+## TiSparkR
+A thin layer build for supporting R language with TiSpark
+Please refer to [this document](../TiSparkR/README.md) for usage
+
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?
