@@ -32,7 +32,6 @@ class TiContext:
     """
     Get the TiContext java representation
     """
-
     def getContext(self):
         return self.ti
 
