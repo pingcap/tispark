@@ -241,7 +241,7 @@ select count(*) from account;
 
 ## TiSparkR
 A thin layer build for supporting R language with TiSpark
-Please refer to [this document](../TiSparkR/README.md) for usage
+Please refer to [this document](../TiSparkR/README.md) for usage.
 
 ## FAQ
 
