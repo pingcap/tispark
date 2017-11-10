@@ -36,5 +36,32 @@ sql("select count(*) from customer").show()
 # |     150|
 # +--------+
 ```
-#### Via wheel
-See [pytispark](https://pypi.python.org/pypi?:action=display&name=pytispark&version=0.1.1) and use it via wheel.
+#### Via pip
+1. Use ```pip install pytispark``` in your console to install `tispark`  
+
+2. Make sure you have the latest version of [TiSpark](https://github.com/pingcap/tispark) and a `jar` with all TiSpark's dependencies.
+
+3. Run this command in your `SPARK_HOME` directory:
+```
+./bin/pyspark --jars /where-ever-it-is/tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar
+```
+
+4. Use as below:
+```python
+import pytispark.pytispark as pti
+ 
+ti = pti.TiContext(spark)
+ 
+ti.tidbMapDatabase("tpch", False)
+ 
+sql("select count(*) from customer").show()
+
+# Result
+# +--------+
+# |count(1)|
+# +--------+
+# |     150|
+# +--------+
+
+```
+See [pytispark](https://pypi.python.org/pypi?:action=display&name=pytispark&version=0.1.1) for more information.
