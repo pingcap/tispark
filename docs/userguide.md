@@ -239,6 +239,10 @@ select count(*) from account;
 1 row selected (1.97 seconds)
 ```
 
+## TiSpark on PySpark
+A python package build for supporting Python language with TiSpark
+Please refer to [this document](../python/README.md) for usage.
+
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?
