@@ -19,6 +19,7 @@ package com.pingcap.tispark
 import java.util.concurrent.TimeUnit
 
 import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.types._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
@@ -49,7 +50,9 @@ object TiUtils {
   def isSupportedBasicExpression(expr: Expression): Boolean = {
     if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
 
-    BasicExpression.convertToTiExpr(expr).fold(false) {_.isSupportedExpr}
+    BasicExpression.convertToTiExpr(expr).fold(false) {
+      _.isSupportedExpr
+    }
   }
 
   def isSupportedFilter(expr: Expression): Boolean = isSupportedBasicExpression(expr)
@@ -117,6 +120,28 @@ object TiUtils {
 
     if (conf.contains(TiConfigConst.GRPC_RETRY_TIMES)) {
       tiConf.setRpcRetryTimes(conf.get(TiConfigConst.GRPC_RETRY_TIMES).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.INDEX_SCAN_BATCH_SIZE)) {
+      tiConf.setIndexScanBatchSize(conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.INDEX_SCAN_CONCURRENCY)) {
+      tiConf.setIndexScanConcurrency(conf.get(TiConfigConst.INDEX_SCAN_CONCURRENCY).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.TABLE_SCAN_CONCURRENCY)) {
+      tiConf.setTableScanConcurrency(conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
+    }
+
+    if(conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
+      val isolationLevel = IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL))
+      tiConf.setIsolationLevel(isolationLevel)
+    }
+
+    if(conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
+      val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
+      tiConf.setCommandPriority(priority)
     }
 
     tiConf

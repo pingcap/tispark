@@ -20,6 +20,7 @@ import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources.BaseRelation
+import org.apache.spark.sql.tispark.TiRDD
 import org.apache.spark.sql.types.StructType
 
 class TiDBRelation(session: TiSession,
@@ -39,6 +40,7 @@ class TiDBRelation(session: TiSession,
               session.getConf,
               tableRef,
               ts,
-              sqlContext.sparkContext)
+              session,
+              sqlContext.sparkSession)
   }
 }

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark
+package org.apache.spark.sql.tispark
 
 import java.util
 
@@ -23,25 +23,28 @@ import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
+import com.pingcap.tikv.util.RangeSplitter.RegionTask
+import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
-import org.apache.spark.{Partition, SparkContext, TaskContext}
+import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.{Partition, TaskContext}
 
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+import scala.collection.mutable.{HashMap, ListBuffer, MultiMap, Set}
 
 
 class TiRDD(val dagRequest: TiDAGRequest,
             val tiConf: TiConfiguration,
             val tableRef: TiTableReference,
             val ts: TiTimestamp,
-            sc: SparkContext)
-  extends RDD[Row](sc, Nil) {
+            @transient private val session: TiSession,
+            @transient private val sparkSession: SparkSession)
+  extends RDD[Row](sparkSession.sparkContext, Nil) {
 
   type TiRow = com.pingcap.tikv.row.Row
 
-  @transient lazy val session: TiSession = TiSession.create(tiConf)
   @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
-  @transient lazy val snapshot: Snapshot = session.createSnapshot(ts)
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
     val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
@@ -51,10 +54,14 @@ class TiRDD(val dagRequest: TiDAGRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
     dagRequest.resolve()
+
     // bypass, sum return a long type
-    val tiPartition: TiPartition = split.asInstanceOf[TiPartition]
-    val iterator: util.Iterator[TiRow] = snapshot.select(dagRequest, split.asInstanceOf[TiPartition].task)
-    val finalTypes: List[DataType] = rowTransformer.getTypes.toList
+    val tiPartition = split.asInstanceOf[TiPartition]
+    val session: TiSession = TiSessionCache.getSession(tiPartition.appId, tiConf)
+    val snapshot: Snapshot = session.createSnapshot(ts)
+
+    val iterator = snapshot.tableRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+    val finalTypes = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {
       val transRow = rowTransformer.transform(row)
@@ -73,14 +80,34 @@ class TiRDD(val dagRequest: TiDAGRequest,
   }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =
-    split.asInstanceOf[TiPartition].task.getHost :: Nil
+    split.asInstanceOf[TiPartition].tasks(0).getHost :: Nil
 
   override protected def getPartitions: Array[Partition] = {
+    val conf = sparkSession.conf
     val keyWithRegionTasks = RangeSplitter.newSplitter(session.getRegionManager)
-                 .splitRangeByRegion(dagRequest.getRanges)
+                 .splitRangeByRegion(dagRequest.getRanges,
+                                     conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt)
 
-    keyWithRegionTasks.zipWithIndex.map{
-      case (task, index) => new TiPartition(index, task)
-    }.toArray
+    val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
+    val taskMap = new HashMap[String, Set[RegionTask]] with MultiMap[String, RegionTask]
+
+    var index = 0
+    val result = new ListBuffer[TiPartition]
+    for (task <- keyWithRegionTasks) {
+      taskMap.addBinding(task.getHost, task)
+      val tasks = taskMap.get(task.getHost).get
+      if (tasks.size >= taskPerSplit) {
+        result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+        index += 1
+        taskMap.remove(task.getHost)
+
+      }
+    }
+    // add rest
+    for (tasks <- taskMap.values) {
+      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+      index += 1
+    }
+    result.toArray
   }
 }

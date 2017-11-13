@@ -75,7 +75,6 @@ class TestCase(val prop: Properties) extends LazyLogging {
       case RunMode.TestIndex => work(basePath, true, false, false)
 
       case RunMode.TestDAG => work(basePath, true, false, false)
-
     }
 
     mode match {
@@ -286,35 +285,15 @@ class TestCase(val prop: Properties) extends LazyLogging {
     isFalse
   }
 
-  def testInline(dbName: String): Unit = {
+  private def testInline(dbName: String): Unit = {
     if(dbName.equalsIgnoreCase("test_index")) {
       val testIndex: TestIndex = new TestIndex(prop)
       testIndex.run(dbName)
       testsExecuted += testIndex.testsExecuted
       testsSkipped += testIndex.testsSkipped
       testsFailed += testIndex.testsFailed
-    } else if (dbName.equalsIgnoreCase("tispark_test")) {
-      spark.init(dbName)
-      jdbc.init(dbName)
-
-      val colList = jdbc.getTableColumnNames("full_data_type_table")
-      val dagTestCase = new DAGTestCase(colList)
-      testDAG(dagTestCase.createTypeTestCases)
-//      var s = "select A.tp_longtext, B.tp_longtext from full_data_type_table A join full_data_type_table B on A.id_dt = B.id_dt where A.id_dt = B.id_dt order by A.id_dt limit 2"
-//      execBothAndJudge(s)
     }
 
-  }
-
-  def testDAG(list: List[String]): Unit = {
-    var result = false
-
-    for (sql <- list) {
-      result |= execBothAndJudge(sql)
-      logger.info("result: Test sql " + result + ":" + sql)
-    }
-    result = !result
-    logger.info("result: Overall DAG test :" + result)
   }
 
   private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
