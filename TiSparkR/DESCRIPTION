@@ -1,0 +1,11 @@
+Package: TiSparkR
+Type: Package
+Title: TiSpark for R
+Version: 0.1.0
+Author: PingCAP
+Maintainer: Novemser <novemser@gmail.com>
+Description: A shabby thin layer to support TiSpark in R language.
+License: Apache 2.0
+Copyright: 2017 PingCAP, Inc.
+Encoding: UTF-8
+LazyData: true
