@@ -55,7 +55,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     if (currentDatabaseName == null) {
       throw new IllegalStateException("need initialization")
     }
-    val tables = connection.getMetaData.getTables(currentDatabaseName, null, "%", Array("TABLE"))
+    val tables = connection.getMetaData.getTables(currentDatabaseName, null, "%", scala.Array("TABLE"))
     while (tables.next()) {
       val table = tables.getString("TABLE_NAME")
       dumpCreateTable(table, path)
