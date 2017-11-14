@@ -15,8 +15,10 @@
 
 package org.apache.spark.sql.tispark
 
+import java.util
+
 import com.pingcap.tikv._
-import com.pingcap.tikv.meta.{TiSelectRequest, TiTimestamp}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
@@ -32,7 +34,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.{HashMap, ListBuffer, MultiMap, Set}
 
 
-class TiRDD(val selectReq: TiSelectRequest,
+class TiRDD(val dagRequest: TiDAGRequest,
             val tiConf: TiConfiguration,
             val tableRef: TiTableReference,
             val ts: TiTimestamp,
@@ -45,20 +47,20 @@ class TiRDD(val selectReq: TiSelectRequest,
   @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
-    val schemaInferrer: SchemaInfer = SchemaInfer.create(selectReq)
+    val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
     val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
     (schemaInferrer.getTypes.toList, rowTransformer)
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    selectReq.resolve
+    dagRequest.resolve()
 
     // bypass, sum return a long type
     val tiPartition = split.asInstanceOf[TiPartition]
     val session: TiSession = TiSessionCache.getSession(tiPartition.appId, tiConf)
     val snapshot: Snapshot = session.createSnapshot(ts)
 
-    val iterator = snapshot.tableRead(selectReq, split.asInstanceOf[TiPartition].tasks.asJava)
+    val iterator = snapshot.tableRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
     val finalTypes = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {
@@ -83,7 +85,7 @@ class TiRDD(val selectReq: TiSelectRequest,
   override protected def getPartitions: Array[Partition] = {
     val conf = sparkSession.conf
     val keyWithRegionTasks = RangeSplitter.newSplitter(session.getRegionManager)
-                 .splitRangeByRegion(selectReq.getRanges,
+                 .splitRangeByRegion(dagRequest.getRanges,
                                      conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt)
 
     val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
