@@ -17,7 +17,8 @@
 
 package com.pingcap.spark
 
-import java.sql.{Connection, Date, DriverManager, Timestamp}
+import java.sql._
+import java.util
 import java.util.Properties
 import java.util.regex.Pattern
 
@@ -54,7 +55,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     if (currentDatabaseName == null) {
       throw new IllegalStateException("need initialization")
     }
-    val tables = connection.getMetaData.getTables(currentDatabaseName, null, "%", Array("TABLE"))
+    val tables = connection.getMetaData.getTables(currentDatabaseName, null, "%", scala.Array("TABLE"))
     while (tables.next()) {
       val table = tables.getString("TABLE_NAME")
       dumpCreateTable(table, path)
@@ -113,8 +114,8 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     val query = s"select * from $table"
     val (schema, result) = queryTiDB(query)
     val content = table + "\n" +
-                  schema.mkString(Sep) + "\n" +
-                  result.map(rowToString).mkString("\n")
+      schema.mkString(Sep) + "\n" +
+      result.map(rowToString).mkString("\n")
 
     writeFile(content, dataFileName(path, table))
   }
@@ -208,11 +209,27 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       val row = ArrayBuffer.empty[Any]
 
       for (i <- 1 to rsMetaData.getColumnCount) {
-        row += resultSet.getObject(i)
+        val tp = rsMetaData.getColumnType(i)
+        if (tp == Types.BLOB) {
+          val blob = resultSet.getBlob(i)
+          row += new String(blob.getBytes(0, blob.length().asInstanceOf[Int]))
+        } else {
+          row += resultSet.getObject(i)
+        }
       }
       retSet += row.toList
     }
     (retSchema.toList, retSet.toList)
+  }
+
+  def getTableColumnNames(tableName: String) = {
+    val rs = connection.createStatement().executeQuery("select * from " + tableName + " limit 1")
+    val metaData = rs.getMetaData
+    var resList = ArrayBuffer.empty[String]
+    for (i <- 1 to metaData.getColumnCount) {
+      resList += metaData.getColumnName(i)
+    }
+    resList.toList
   }
 
   def close(): Unit = {

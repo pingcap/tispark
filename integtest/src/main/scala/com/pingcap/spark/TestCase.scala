@@ -27,7 +27,7 @@ import scala.collection.mutable.ArrayBuffer
 class TestCase(val prop: Properties) extends LazyLogging {
   object RunMode extends Enumeration {
     type RunMode = Value
-    val Test, Load, LoadNTest, Dump, TestIndex = Value
+    val Test, Load, LoadNTest, Dump, TestIndex, TestDAG = Value
   }
 
   protected val KeyDumpDBList = "test.dumpDB.databases"
@@ -74,6 +74,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
       case RunMode.TestIndex => work(basePath, true, false, false)
 
+      case RunMode.TestDAG => work(basePath, true, false, false)
     }
 
     mode match {
@@ -145,11 +146,26 @@ class TestCase(val prop: Properties) extends LazyLogging {
   }
 
   private def printDiff(sqlName: String, sql: String, TiDB: List[List[Any]], TiSpark: List[List[Any]]): Unit = {
+    for (row <- TiSpark) {
+      for (str <- row) {
+        if (str.toString.contains("type mismatch")) {
+          return
+        }
+      }
+    }
+    for (row <- TiDB) {
+      for (str <- row) {
+        if (str.toString.contains("value out of range")) {
+          return
+        }
+      }
+    }
     logger.info(s"$sql\n")
+    writeResult(List(List(sql)), sqlName + ".testSql")
     logger.info(s"Dump diff for TiSpark $sqlName \n")
-    writeResult(TiDB, sqlName + ".result.spark")
+    writeResult(TiDB, sqlName + ".result.tidb")
     logger.info(s"Dump diff for TiDB $sqlName \n")
-    writeResult(TiSpark, sqlName + ".result.tidb")
+    writeResult(TiSpark, sqlName + ".result.spark")
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
@@ -290,8 +306,30 @@ class TestCase(val prop: Properties) extends LazyLogging {
       testsExecuted += testIndex.testsExecuted
       testsSkipped += testIndex.testsSkipped
       testsFailed += testIndex.testsFailed
+    } else if (dbName.equalsIgnoreCase("tispark_test")) {
+      spark.init(dbName)
+      jdbc.init(dbName)
+
+      val colList = jdbc.getTableColumnNames("full_data_type_table")
+      val dagTestCase = new DAGTestCase(colList)
+      testDAG(dagTestCase.createPlaceHolderTest ++ dagTestCase.createCartesianTypeTestCases)
+//      var s = "select A.tp_longtext, B.tp_longtext from full_data_type_table A join full_data_type_table B on A.id_dt = B.id_dt where A.id_dt = B.id_dt order by A.id_dt limit 2"
+//      execBothAndJudge(s)
     }
 
+  }
+
+  def testDAG(list: List[String]): Unit = {
+    var result = false
+
+    for (sql <- list) {
+      val exeRes = execBothAndJudge(sql)
+      if (exeRes)
+        logger.error("result: Test sql failed, " + sql)
+      result |= exeRes
+    }
+    result = !result
+    logger.info("result: Overall DAG test :" + result)
   }
 
   private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
