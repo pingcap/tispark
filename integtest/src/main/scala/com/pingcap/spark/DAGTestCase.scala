@@ -13,8 +13,8 @@ class DAGTestCase(colList: List[String]) {
   private val SCALE_FACTOR = 4 * 4
   private val ID_COL = "id_dt"
   private val PLACE_HOLDER = List[String](
-    LITERAL_NULL, // Null
-    "'PingCAP'", // a simple test string
+//    LITERAL_NULL, // Null
+//    "'PingCAP'", // a simple test string
     Long.MaxValue.toString, // MAX of long
     BigDecimal.apply(2147868.65536).toString() // Decimal value
   )
@@ -55,7 +55,9 @@ class DAGTestCase(colList: List[String]) {
     for (op <- compareOpList) {
       for (lCol <- colList) {
         for (rCol <- colList) {
-          res += buildBinarySelfJoinQuery(lCol, rCol, op)
+          if (!colSkipSet.contains(lCol) && !colSkipSet.contains(rCol)) {
+            res += buildBinarySelfJoinQuery(lCol, rCol, op)
+          }
         }
       }
     }
@@ -67,13 +69,15 @@ class DAGTestCase(colList: List[String]) {
     var res = ArrayBuffer.empty[String]
     for (op <- compareOpList) {
       for (col <- colList) {
-        for (placeHolder <- PLACE_HOLDER) {
-          res += select(countId()) + where(binaryOpWithName(
-            col,
-            placeHolder,
-            op,
-            withTbName = false
-          ))
+        if (!colSkipSet.contains(col)) {
+          for (placeHolder <- PLACE_HOLDER) {
+            res += select(countId()) + where(binaryOpWithName(
+              col,
+              placeHolder,
+              op,
+              withTbName = false
+            ))
+          }
         }
       }
     }

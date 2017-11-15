@@ -146,6 +146,13 @@ class TestCase(val prop: Properties) extends LazyLogging {
   }
 
   private def printDiff(sqlName: String, sql: String, TiDB: List[List[Any]], TiSpark: List[List[Any]]): Unit = {
+    for (row <- TiSpark) {
+      for (str <- row) {
+        if (str.toString.contains("type mismatch")) {
+          return
+        }
+      }
+    }
     logger.info(s"$sql\n")
     writeResult(List(List(sql)), sqlName + ".testSql")
     logger.info(s"Dump diff for TiSpark $sqlName \n")
