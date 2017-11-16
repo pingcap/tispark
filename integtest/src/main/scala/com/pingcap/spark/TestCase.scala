@@ -148,14 +148,20 @@ class TestCase(val prop: Properties) extends LazyLogging {
   private def printDiff(sqlName: String, sql: String, TiDB: List[List[Any]], TiSpark: List[List[Any]]): Unit = {
     for (row <- TiSpark) {
       for (str <- row) {
-        if (str.toString.contains("type mismatch")) {
+        if (str != null &&
+          (str.toString.contains("type mismatch") ||
+            str.toString.contains("only support precision")||
+        str.toString.contains("Error converting access pointsnull"))) {
           return
         }
       }
     }
     for (row <- TiDB) {
       for (str <- row) {
-        if (str.toString.contains("value out of range")) {
+        if (str != null &&
+          (str.toString.contains("out of range")||
+            str.toString.contains("BIGINT")||
+        str.toString.contains("invalid time format"))) {
           return
         }
       }
@@ -312,7 +318,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
       val colList = jdbc.getTableColumnNames("full_data_type_table")
       val dagTestCase = new DAGTestCase(colList)
-      testDAG(dagTestCase.createPlaceHolderTest ++ dagTestCase.createCartesianTypeTestCases)
+      testDAG(dagTestCase.createArithmeticTest)
+//      testDAG(dagTestCase.createPlaceHolderTest ++ dagTestCase.createCartesianTypeTestCases)
 //      var s = "select A.tp_longtext, B.tp_longtext from full_data_type_table A join full_data_type_table B on A.id_dt = B.id_dt where A.id_dt = B.id_dt order by A.id_dt limit 2"
 //      execBothAndJudge(s)
     }
@@ -347,6 +354,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       case d: java.math.BigDecimal => d.doubleValue()
       case d: BigDecimal => d.bigDecimal.doubleValue()
       case d: Number => d.doubleValue()
+      case _ => 0.0
     }
 
     def toInteger(x: Any): Long = x match {

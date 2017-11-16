@@ -6,32 +6,45 @@ import scala.collection.mutable.ArrayBuffer
 
 class DAGTestCase(colList: List[String]) {
   private val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
+  private val arithmeticOpList = List("+", "-", "*", "/", "%")
   private val LEFT_TB_NAME = "A"
   private val RIGHT_TB_NAME = "B"
   private val TABLE_NAME = "full_data_type_table"
   private val LITERAL_NULL = "null"
   private val SCALE_FACTOR = 4 * 4
   private val ID_COL = "id_dt"
-  private val PLACE_HOLDER = List[String](
-    //    LITERAL_NULL, // Null
-    "'PingCAP'", // a simple test string
-    Long.MaxValue.toString, // MAX of long
+  private val ARITHMETIC_CONSTANT = List[String](
+    java.lang.Long.MAX_VALUE.toString,
+    java.lang.Long.MIN_VALUE.toString,
+    java.lang.Double.MAX_VALUE.toString,
+    java.lang.Double.MIN_VALUE.toString,
+    java.lang.Integer.MAX_VALUE.toString,
+    java.lang.Integer.MIN_VALUE.toString,
+    java.lang.Short.MAX_VALUE.toString,
+    java.lang.Short.MIN_VALUE.toString,
+    java.lang.Byte.MAX_VALUE.toString,
+    java.lang.Byte.MIN_VALUE.toString,
     BigDecimal.apply(2147868.65536).toString() // Decimal value
   )
+  private val PLACE_HOLDER = List[String](
+    //    LITERAL_NULL, // Null
+    "'PingCAP'" // a simple test string
+  ) ++ ARITHMETIC_CONSTANT
 
   // TODO: Eliminate these bugs
   private final val colSkipSet: ImmutableSet[String] =
     ImmutableSet.builder()
       .add("tp_bit") // bit cannot be push down
-      .add("tp_datetime") // time zone shift
-      .add("tp_year") // year in spark shows extra month and day
-      .add("tp_time") // Time format is not the same in TiDB and spark
+      //      .add("tp_datetime") // time zone shift
+      //      .add("tp_year") // year in spark shows extra month and day
+      //      .add("tp_time") // Time format is not the same in TiDB and spark
       .add("tp_enum")
       .add("tp_set")
-      .add("tp_binary")
-      .add("tp_blob")
+      //      .add("tp_binary")
+      //      .add("tp_blob")
       .add("tp_nvarchar")
       .add("tp_char")
+      .add("tp_varchar")
       .build()
 
   /**
@@ -65,6 +78,25 @@ class DAGTestCase(colList: List[String]) {
     }
 
     res.toList
+  }
+
+  def createArithmeticTest: List[String] = {
+    var res = ArrayBuffer.empty[String]
+    for (op <- arithmeticOpList) {
+      for (lCol <- colList) {
+        for (rCol <- ARITHMETIC_CONSTANT) {
+          if (!colSkipSet.contains(lCol) && !colSkipSet.contains(rCol)) {
+            res += select(arithmeticOp(lCol, rCol, op)) + orderBy(ID_COL) + limit(10)
+          }
+        }
+      }
+    }
+
+    res.toList
+  }
+
+  def arithmeticOp(l: String, r: String, op: String): String = {
+    l + " " + op + " " + r
   }
 
   def createPlaceHolderTest: List[String] = {
@@ -158,13 +190,13 @@ class DAGTestCase(colList: List[String]) {
   def dot() = "."
 
   def limit(num: Int): String = {
-    "limit " + num
+    " limit " + num
   }
 }
 
 object DAGTestCase {
   def main(args: Array[String]): Unit = {
-    for (str <- new DAGTestCase(List("tp1", "tp2", "tp3")).createSymmetryTypeTestCases) {
+    for (str <- new DAGTestCase(List("tp1", "tp2", "tp3")).createArithmeticTest) {
       println(str)
     }
   }
