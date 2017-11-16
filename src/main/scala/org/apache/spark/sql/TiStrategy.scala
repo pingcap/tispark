@@ -16,8 +16,9 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
-import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiSelectRequest}
 import com.pingcap.tikv.predicates.ScanBuilder
+import com.pingcap.tikv.types.BitType
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
@@ -176,6 +177,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val aliasMap = mutable.HashMap[(Boolean,Expression), Alias]()
     val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
     val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
+    val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
+    source.table.getColumns.foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
 
     def toAlias(expr: AggregateExpression) =
       if (!expr.deterministic) {
@@ -200,10 +203,46 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         originalAggExpr.isDistinct,
         NamedExpression.newExprId)
 
+    /**
+      * Is expression allowed to be pushed down
+      * @param expression the expression to examine
+      * @return whether expression can be pushed down
+      */
+    def allowExpPushDown(expression: Expression): Boolean = {
+      if (expression.children.isEmpty) {
+        expression match {
+          // bit type is not allowed to be pushed down
+          case attr: AttributeReference =>
+            return nameTypeMap.contains(attr.name) &&
+              !nameTypeMap.get(attr.name).head.isInstanceOf[BitType]
+          case _ => return true
+        }
+      } else {
+        for (expr <- expression.children) {
+          if (!allowExpPushDown(expr)) {
+            return false
+          }
+        }
+      }
+
+      true
+    }
+
+    def allowFiltersPushDown(expList: Seq[Expression]): Boolean = {
+      for (exp <- expList) {
+        if (!allowExpPushDown(exp)) {
+          return false
+        }
+      }
+      true
+    }
+
+
     // TODO: This test should be done once for all children
     plan match {
       // Collapse filters and projections and push plan directly
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
+      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+      if allowFiltersPushDown(filters) =>
         pruneFilterProject(projectList, filters, source) :: Nil
 
       // Basic logic of original Spark's aggregation plan is:
