@@ -166,12 +166,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
         }
       }
     }
-    logger.info(s"$sql\n")
-    writeResult(List(List(sql)), sqlName + ".testSql")
-    logger.info(s"Dump diff for TiSpark $sqlName \n")
-    writeResult(TiDB, sqlName + ".result.tidb")
+    writeResult(sql, TiSpark, sqlName + ".result.spark")
     logger.info(s"Dump diff for TiDB $sqlName \n")
-    writeResult(TiSpark, sqlName + ".result.spark")
+    writeResult(sql, TiDB, sqlName + ".result.tidb")
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
@@ -282,7 +279,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
     val isFalse = tidbRunTimeError || sparkRunTimeError || !compResult(tidb, spark)
     if (isFalse) {
-      if(skipped) {
+      if (skipped) {
         logger.warn(s"TEST SKIPPED.\n")
       } else {
         logger.warn(s"TEST FAILED.\n")
@@ -296,7 +293,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
         return false
       }
     } else {
-      if(skipped) {
+      if (skipped) {
         logger.warn(s"TEST SKIPPED.\n")
       } else {
         logger.info(s"TEST PASSED.\n")
@@ -305,25 +302,33 @@ class TestCase(val prop: Properties) extends LazyLogging {
     isFalse
   }
 
+  def run(dbName: String): Unit = {}
+
+  private def testAndCalc(myTest: TestCase, dbName: String): Unit = {
+    myTest.inlineSQLNumber = inlineSQLNumber
+    myTest.run(dbName)
+    testsExecuted += myTest.testsExecuted
+    testsSkipped += myTest.testsSkipped
+    testsFailed += myTest.testsFailed
+    inlineSQLNumber = myTest.inlineSQLNumber
+  }
+
   private def testInline(dbName: String): Unit = {
-    if(dbName.equalsIgnoreCase("test_index")) {
-      val testIndex: TestIndex = new TestIndex(prop)
-      testIndex.run(dbName)
-      testsExecuted += testIndex.testsExecuted
-      testsSkipped += testIndex.testsSkipped
-      testsFailed += testIndex.testsFailed
-    } else if (dbName.equalsIgnoreCase("tispark_test")) {
+    if (dbName.equalsIgnoreCase("test_index")) {
+      testAndCalc(new TestIndex(prop), dbName)
+    } else if (dbName.equalsIgnoreCase("test_types")) {
+      testAndCalc(new TestTypes(prop), dbName)
+    }else if (dbName.equalsIgnoreCase("tispark_test")) {
       spark.init(dbName)
       jdbc.init(dbName)
 
       val colList = jdbc.getTableColumnNames("full_data_type_table")
       val dagTestCase = new DAGTestCase(colList)
       testDAG(dagTestCase.createArithmeticTest)
-//      testDAG(dagTestCase.createPlaceHolderTest ++ dagTestCase.createCartesianTypeTestCases)
-//      var s = "select A.tp_longtext, B.tp_longtext from full_data_type_table A join full_data_type_table B on A.id_dt = B.id_dt where A.id_dt = B.id_dt order by A.id_dt limit 2"
-//      execBothAndJudge(s)
+      //      testDAG(dagTestCase.createPlaceHolderTest ++ dagTestCase.createCartesianTypeTestCases)
+      //      var s = "select A.tp_longtext, B.tp_longtext from full_data_type_table A join full_data_type_table B on A.id_dt = B.id_dt where A.id_dt = B.id_dt order by A.id_dt limit 2"
+      //      execBothAndJudge(s)
     }
-
   }
 
   def testDAG(list: List[String]): Unit = {
@@ -387,8 +392,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  private def writeResult(rowList: List[List[Any]], path: String): Unit = {
+  private def writeResult(sql: String, rowList: List[List[Any]], path: String): Unit = {
     val sb = StringBuilder.newBuilder
+    sb.append(sql + "\n")
     rowList.foreach{
       row => {
         row.foreach{
