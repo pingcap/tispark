@@ -324,7 +324,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
       val colList = jdbc.getTableColumnNames("full_data_type_table")
       val dagTestCase = new DAGTestCase(colList)
-      testDAG(dagTestCase.createArithmeticTest)
+      testDAG(dagTestCase.createSymmetryTypeTestCases)
       //      testDAG(dagTestCase.createPlaceHolderTest ++ dagTestCase.createCartesianTypeTestCases)
       //      var s = "select A.tp_longtext, B.tp_longtext from full_data_type_table A join full_data_type_table B on A.id_dt = B.id_dt where A.id_dt = B.id_dt order by A.id_dt limit 2"
       //      execBothAndJudge(s)

@@ -57,7 +57,7 @@ class DAGTestCase(colList: List[String]) {
     for (op <- compareOpList) {
       for (tp <- colList) {
         if (!colSkipSet.contains(tp)) {
-          res += buildBinarySelfJoinQuery(tp, tp, op)
+          res += buildBinarySelfJoinQuery(tp, tp, op) + limit()
         }
       }
     }
@@ -164,7 +164,7 @@ class DAGTestCase(colList: List[String]) {
       colList +
       s" from " +
       s"$TABLE_NAME $LEFT_TB_NAME join full_data_type_table $RIGHT_TB_NAME " +
-      s"on $LEFT_TB_NAME.id_dt > $RIGHT_TB_NAME.id_dt * $SCALE_FACTOR"
+      s"on $LEFT_TB_NAME.id_dt = $RIGHT_TB_NAME.id_dt "
   }
 
   def orderBy(condition: String): String = {
@@ -189,7 +189,7 @@ class DAGTestCase(colList: List[String]) {
 
   def dot() = "."
 
-  def limit(num: Int): String = {
+  def limit(num: Int = 20): String = {
     " limit " + num
   }
 }

@@ -14,7 +14,7 @@ CREATE TABLE `all_data_types` (
   `datetime` datetime NOT NULL,
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `time` time NOT NULL,
-  `year` year UNSIGNED NOT NULL,
+  `year` year NOT NULL,
   `char` char(10) NOT NULL,
   `tinyblob` tinyblob NOT NULL,
   `tinytext` tinytext NOT NULL,
