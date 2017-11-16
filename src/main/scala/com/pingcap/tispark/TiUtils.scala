@@ -16,16 +16,21 @@
 package com.pingcap.tispark
 
 
+import java.util
 import java.util.concurrent.TimeUnit
+import java.util.stream.{Collector, Collectors}
+import scala.collection.JavaConversions._
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
-import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
 import org.apache.spark.{SparkConf, sql}
+
+import scala.collection.mutable
 
 
 object TiUtils {
@@ -53,7 +58,38 @@ object TiUtils {
     }
   }
 
-  def isSupportedFilter(expr: Expression): Boolean = isSupportedBasicExpression(expr)
+  /**
+    * Is expression allowed to be pushed down
+    *
+    * @param expr the expression to examine
+    * @return whether expression can be pushed down
+    */
+  def isPushDownSupported(expr: Expression, source: TiDBRelation): Boolean = {
+    val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
+    source.table.getColumns.foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
+
+    if (expr.children.isEmpty) {
+      expr match {
+        // bit type is not allowed to be pushed down
+        case attr: AttributeReference =>
+          return nameTypeMap.contains(attr.name) &&
+            !nameTypeMap.get(attr.name).head.isInstanceOf[BitType]
+        case _ => return true
+      }
+    } else {
+      for (expr <- expr.children) {
+        if (!isPushDownSupported(expr, source)) {
+          return false
+        }
+      }
+    }
+
+    true
+  }
+
+  def isSupportedFilter(expr: Expression, source: TiDBRelation): Boolean = {
+    isSupportedBasicExpression(expr) && isPushDownSupported(expr, source)
+  }
 
   // if contains UDF / functions that cannot be folded
   def isSupportedGroupingExpr(expr: NamedExpression): Boolean = isSupportedBasicExpression(expr)
@@ -132,12 +168,12 @@ object TiUtils {
       tiConf.setTableScanConcurrency(conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
     }
 
-    if(conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
+    if (conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
       val isolationLevel = IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL))
       tiConf.setIsolationLevel(isolationLevel)
     }
 
-    if(conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
+    if (conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
       val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
       tiConf.setCommandPriority(priority)
     }
