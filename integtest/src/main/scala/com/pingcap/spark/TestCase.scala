@@ -386,9 +386,14 @@ class TestCase(val prop: Properties) extends LazyLogging {
         }
       }
     }
-
-    !lhs.zipWithIndex.exists {
-      case (row, i) => !compRow(row, rhs(i))
+    try {
+      !lhs.zipWithIndex.exists {
+        case (row, i) => !compRow(row, rhs(i))
+      }
+    } catch {
+      // TODO:Remove this temporary exception handling
+//      case _:RuntimeException => false
+      case _: Throwable =>false
     }
   }
 
