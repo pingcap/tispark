@@ -115,7 +115,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                             selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
     val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
-    val scanPlan = if (allowIndexDoubleRead) {
+    val scanPlan = if (allowIndexDoubleRead()) {
       scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
     } else {
       scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
@@ -226,7 +226,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       aggregateExpressions,
       resultExpressions,
       TiAggregationProjection(filters, _, `source`))
-        if allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
+        if groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source)) &&
+           aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source)) &&
+           allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
         var selReq: TiSelectRequest = filterToSelectRequest(filters, source)
         val residualAggregateExpressions = aggregateExpressions.map {
           aggExpr =>
@@ -315,9 +317,7 @@ object TiAggregation {
   type ReturnType = PhysicalAggregation.ReturnType
 
   def unapply(a: Any): Option[ReturnType] = a match {
-    case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child)
-      if groupingExpressions.forall(TiUtils.isSupportedGroupingExpr) &&
-        aggregateExpressions.forall(TiUtils.isSupportedAggregate) =>
+    case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
       Some(groupingExpressions, aggregateExpressions, resultExpressions, child)
 
     case _ => Option.empty[ReturnType]
