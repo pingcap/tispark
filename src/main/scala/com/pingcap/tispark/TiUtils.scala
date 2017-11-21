@@ -16,12 +16,10 @@
 package com.pingcap.tispark
 
 
-import java.util
 import java.util.concurrent.TimeUnit
-import java.util.stream.{Collector, Collectors}
-import scala.collection.JavaConversions._
 
 import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.expression.TiExpr
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
@@ -30,6 +28,7 @@ import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
 import org.apache.spark.{SparkConf, sql}
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 
@@ -42,19 +41,21 @@ object TiUtils {
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiTypes = com.pingcap.tikv.types.Types
 
-  def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
+  def isSupportedAggregate(aggExpr: AggregateExpression, tiDBRelation: TiDBRelation): Boolean = {
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           !aggExpr.aggregateFunction
-            .children.exists(expr => !isSupportedBasicExpression(expr))
+            .children.exists(expr => !isSupportedBasicExpression(expr, tiDBRelation))
       case _ => false
     }
   }
 
-  def isSupportedBasicExpression(expr: Expression): Boolean = {
+  def isSupportedBasicExpression(expr: Expression, tiDBRelation: TiDBRelation): Boolean = {
     BasicExpression.convertToTiExpr(expr).fold(false) {
-      _.isSupportedExpr
+      expr: TiExpr =>
+        expr.resolve(tiDBRelation.table)
+        return expr.isSupportedExpr
     }
   }
 
@@ -88,11 +89,11 @@ object TiUtils {
   }
 
   def isSupportedFilter(expr: Expression, source: TiDBRelation): Boolean = {
-    isSupportedBasicExpression(expr) && isPushDownSupported(expr, source)
+    isSupportedBasicExpression(expr, source) && isPushDownSupported(expr, source)
   }
 
   // if contains UDF / functions that cannot be folded
-  def isSupportedGroupingExpr(expr: NamedExpression): Boolean = isSupportedBasicExpression(expr)
+  def isSupportedGroupingExpr(expr: NamedExpression, source: TiDBRelation): Boolean = isSupportedBasicExpression(expr, source)
 
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
