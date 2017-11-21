@@ -16,8 +16,9 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
-import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiSelectRequest}
 import com.pingcap.tikv.predicates.ScanBuilder
+import com.pingcap.tikv.types.BitType
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
@@ -138,7 +139,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     val (pushdownFilters: Seq[Expression],
          residualFilters: Seq[Expression]) =
-      filterPredicates.partition(TiUtils.isSupportedFilter)
+      filterPredicates.partition((expression: Expression) =>
+        TiUtils.isSupportedFilter(expression, source))
 
     val residualFilter: Option[Expression] = residualFilters.reduceLeftOption(catalyst.expressions.And)
 
@@ -199,6 +201,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         originalAggExpr.mode,
         originalAggExpr.isDistinct,
         NamedExpression.newExprId)
+
 
     // TODO: This test should be done once for all children
     plan match {
@@ -329,7 +332,7 @@ object TiAggregationProjection {
     // all projection expressions are column references
     case PhysicalOperation(projects, filters, rel@LogicalRelation(source: TiDBRelation, _, _))
       if projects.forall(_.isInstanceOf[Attribute]) &&
-        filters.forall(TiUtils.isSupportedFilter) =>
+        filters.forall((expression: Expression) => TiUtils.isSupportedFilter(expression, source)) =>
       Some((filters, rel, source))
     case _ => Option.empty[ReturnType]
   }
