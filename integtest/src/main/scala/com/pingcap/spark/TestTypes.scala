@@ -63,7 +63,6 @@ class TestTypes(prop: Properties) extends TestCase(prop) {
     result |= execBothAndJudge(s"select `datetime` from all_data_types")
     result |= execBothAndJudge(s"select `timestamp` from all_data_types")
     result |= execBothAndJudge(s"select `time` from all_data_types")
-    result |= execBothAndSkip(s"select `year` from all_data_types")
     result |= execBothAndJudge(s"select `char` from all_data_types")
     result |= execBothAndSkip(s"select `tinyblob` from all_data_types")
     result |= execBothAndSkip(s"select `tinytext` from all_data_types")
@@ -96,6 +95,13 @@ class TestTypes(prop: Properties) extends TestCase(prop) {
 
     result |= execBothAndSkip(s"select c15 from t1")
     result |= execBothAndSkip(s"select UNIX_TIMESTAMP(c15) from t1")
+
+    result |= execBothAndJudge("select `datetime` from all_data_types where `datetime` > now()")
+    result |= execBothAndJudge("select `datetime` from all_data_types where `datetime` < now()")
+    result |= execBothAndJudge("select `timestamp` from all_data_types where `timestamp` > now()")
+    result |= execBothAndJudge("select `timestamp` from all_data_types where `timestamp` < now()")
+
+    result |= execBothAndJudge("select `timestamp` from all_data_types where `timestamp` < now()")
 
     result = !result
     logger.warn(s"\n*************** SQL Time Tests result: " + (if (result) "true" else "Fixing...Skipped") + "\n\n\n")
