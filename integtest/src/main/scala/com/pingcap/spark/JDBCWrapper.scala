@@ -72,19 +72,24 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     writeFile(content, ddlFileName(path, table))
   }
 
-  private def valToString(value: Any): String = Option(value).getOrElse("NULL").toString
+  private def valToString(value: Any): String = {
+    logger.info(if (value == null) "NULL" else value.getClass.toString)
+    Option(value).getOrElse("NULL").toString
+  }
 
   private def valFromString(str: String, tp: String): Any = {
     if (str.equalsIgnoreCase("NULL")) {
+      logger.info("value is null")
       null
     } else {
       logger.info("value = " + str)
       tp match {
         case "VARCHAR" | "CHAR" | "TEXT" | "TIME" => str
         case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" => BigDecimal(str)
-        case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => str.toLong
+        case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" | "YEAR" => str.toLong
         case "DATE" => Date.valueOf(str)
         case "TIMESTAMP" | "DATETIME" => Timestamp.valueOf(str)
+        case "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" | "BLOB" => str.getBytes
         case _ => str
       }
     }
@@ -97,6 +102,10 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => 4
       case "DATE" => 91
       case "TIMESTAMP" | "DATETIME" => 93
+      case "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" | "BLOB" => 2004
+//      case "BINARY" => -2
+//      case "VARBINARY" => -3
+      case _ => 1111
     }
   }
 
@@ -135,6 +144,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     val ps = connection.prepareStatement(stat)
     row.zipWithIndex.foreach { case (value, index) =>
         val pos = index + 1
+        logger.info(if (value == null) "NULL" else value.getClass.toString)
         value match {
           case bd: BigDecimal => ps.setBigDecimal(pos, bd.bigDecimal)
           case l: Long => ps.setLong(pos, l)

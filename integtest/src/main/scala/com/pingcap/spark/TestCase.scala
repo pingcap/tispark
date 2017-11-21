@@ -16,6 +16,7 @@
  */
 
 package com.pingcap.spark
+
 import java.io.File
 import java.util.Properties
 
@@ -25,6 +26,7 @@ import com.typesafe.scalalogging.slf4j.LazyLogging
 import scala.collection.mutable.ArrayBuffer
 
 class TestCase(val prop: Properties) extends LazyLogging {
+
   object RunMode extends Enumeration {
     type RunMode = Value
     val Test, Load, LoadNTest, Dump, TestIndex, TestDAG = Value
@@ -124,12 +126,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
         logger.info(s"Switch to $dbName")
         dbName = jdbc.init(dbName)
         logger.info("Load data... ")
-        ddls.foreach{ file => {
+        ddls.foreach { file => {
           logger.info(s"Register for DDL script $file")
           jdbc.createTable(file)
         }
         }
-        dataFiles.foreach{ file => {
+        dataFiles.foreach { file => {
           logger.info(s"Register for data loading script $file")
           jdbc.loadTable(file)
         }
@@ -150,8 +152,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
       for (str <- row) {
         if (str != null &&
           (str.toString.contains("type mismatch") ||
-            str.toString.contains("only support precision")||
-        str.toString.contains("Error converting access pointsnull"))) {
+            str.toString.contains("only support precision") ||
+            str.toString.contains("Error converting access pointsnull"))) {
           return
         }
       }
@@ -159,9 +161,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
     for (row <- TiDB) {
       for (str <- row) {
         if (str != null &&
-          (str.toString.contains("out of range")||
-            str.toString.contains("BIGINT")||
-        str.toString.contains("invalid time format"))) {
+          (str.toString.contains("out of range") ||
+            str.toString.contains("BIGINT") ||
+            str.toString.contains("invalid time format"))) {
           return
         }
       }
@@ -216,7 +218,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   }
 
   def execTiDBAndShow(str: String): Unit = {
-    try{
+    try {
       val tidb = execTiDB(str)
       logger.info(s"output: $tidb")
     } catch {
@@ -318,16 +320,20 @@ class TestCase(val prop: Properties) extends LazyLogging {
       testAndCalc(new TestIndex(prop), dbName)
     } else if (dbName.equalsIgnoreCase("test_types")) {
       testAndCalc(new TestTypes(prop), dbName)
-    }else if (dbName.equalsIgnoreCase("tispark_test")) {
+    } else if (dbName.equalsIgnoreCase("tispark_test")) {
       spark.init(dbName)
       jdbc.init(dbName)
 
       val colList = jdbc.getTableColumnNames("full_data_type_table")
       val dagTestCase = new DAGTestCase(colList)
-      testDAG(dagTestCase.createSymmetryTypeTestCases)
-      //      testDAG(dagTestCase.createPlaceHolderTest ++ dagTestCase.createCartesianTypeTestCases)
-      //      var s = "select A.tp_longtext, B.tp_longtext from full_data_type_table A join full_data_type_table B on A.id_dt = B.id_dt where A.id_dt = B.id_dt order by A.id_dt limit 2"
-      //      execBothAndJudge(s)
+      testDAG(
+        dagTestCase.createSymmetryTypeTestCases ++
+          dagTestCase.createCartesianTypeTestCases ++
+          dagTestCase.createArithmeticTest ++
+          dagTestCase.createPlaceHolderTest
+      )
+    } else if (dbName.equalsIgnoreCase("test_null")) {
+      testAndCalc(new TestNull(prop), dbName)
     }
   }
 
@@ -386,23 +392,24 @@ class TestCase(val prop: Properties) extends LazyLogging {
         }
       }
     }
+
     try {
       !lhs.zipWithIndex.exists {
         case (row, i) => !compRow(row, rhs(i))
       }
     } catch {
       // TODO:Remove this temporary exception handling
-//      case _:RuntimeException => false
-      case _: Throwable =>false
+      //      case _:RuntimeException => false
+      case _: Throwable => false
     }
   }
 
   private def writeResult(sql: String, rowList: List[List[Any]], path: String): Unit = {
     val sb = StringBuilder.newBuilder
     sb.append(sql + "\n")
-    rowList.foreach{
+    rowList.foreach {
       row => {
-        row.foreach{
+        row.foreach {
           value => sb.append(value + " ")
         }
         sb.append("\n")
