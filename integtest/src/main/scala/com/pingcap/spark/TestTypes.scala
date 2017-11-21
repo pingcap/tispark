@@ -63,7 +63,6 @@ class TestTypes(prop: Properties) extends TestCase(prop) {
     result |= execBothAndJudge(s"select `datetime` from all_data_types")
     result |= execBothAndJudge(s"select `timestamp` from all_data_types")
     result |= execBothAndJudge(s"select `time` from all_data_types")
-    result |= execBothAndSkip(s"select `year` from all_data_types")
     result |= execBothAndJudge(s"select `char` from all_data_types")
     result |= execBothAndSkip(s"select `tinyblob` from all_data_types")
     result |= execBothAndSkip(s"select `tinytext` from all_data_types")

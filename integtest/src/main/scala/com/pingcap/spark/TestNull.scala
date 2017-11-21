@@ -24,7 +24,6 @@ class TestNull(prop: Properties) extends TestCase(prop) {
     result |= execBothAndJudge(s"select `datetime` from all_nullable_data_types")
     result |= execBothAndJudge(s"select `timestamp` from all_nullable_data_types")
     result |= execBothAndJudge(s"select `time` from all_nullable_data_types")
-    result |= execBothAndSkip(s"select `year` from all_nullable_data_types")
     result |= execBothAndJudge(s"select `char` from all_nullable_data_types")
     result |= execBothAndSkip(s"select `tinyblob` from all_nullable_data_types")
     result |= execBothAndSkip(s"select `tinytext` from all_nullable_data_types")
@@ -43,9 +42,18 @@ class TestNull(prop: Properties) extends TestCase(prop) {
     logger.warn(s"\n*************** NULL Tests result: $result\n\n\n")
   }
 
+  private def testConditions(): Unit = {
+    var result = false
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` = null")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` <> null")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` in (null)")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` not in (null)")
+  }
+
   override def run(dbName: String): Unit = {
     spark.init(dbName)
     jdbc.init(dbName)
     testNull()
+    testConditions()
   }
 }

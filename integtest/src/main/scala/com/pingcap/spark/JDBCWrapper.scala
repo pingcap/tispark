@@ -88,6 +88,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
         case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" | "YEAR" => str.toLong
         case "DATE" => Date.valueOf(str)
         case "TIMESTAMP" | "DATETIME" => Timestamp.valueOf(str)
+        case "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" | "BLOB" => str.getBytes
         case _ => str
       }
     }
