@@ -52,6 +52,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_DOUBLE_READ, "false").toBoolean
   }
 
+  def useStreamingProcess(): Boolean = {
+    sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toBoolean
+  }
+
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan.collectFirst {
       case LogicalRelation(relation: TiDBRelation, _, _) =>
@@ -75,7 +79,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def aggregationToSelectRequest(groupByList: Seq[NamedExpression],
                                  aggregates: Seq[AggregateExpression],
                                  source: TiDBRelation,
-                                 dagRequest: TiDAGRequest = new TiDAGRequest): TiDAGRequest = {
+                                 dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())): TiDAGRequest = {
     aggregates.foreach {
       case AggregateExpression(_: Average, _, _, _) =>
         throw new IllegalArgumentException("Should never be here")
@@ -111,10 +115,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
   def filterToDAGRequest(filters: Seq[Expression],
                          source: TiDBRelation,
-                         dagRequest: TiDAGRequest = new TiDAGRequest): TiDAGRequest = {
+                         dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())): TiDAGRequest = {
     val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
-    val scanPlan = if (allowIndexDoubleRead) {
+    val scanPlan = if (allowIndexDoubleRead()) {
       scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
     } else {
       scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
@@ -131,7 +135,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def pruneFilterProject(projectList: Seq[NamedExpression],
                          filterPredicates: Seq[Expression],
                          source: TiDBRelation,
-                         dagRequest: TiDAGRequest = new TiDAGRequest): SparkPlan = {
+                         dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))
     val filterSet = AttributeSet(filterPredicates.flatMap(_.references))
