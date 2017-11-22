@@ -1,10 +1,12 @@
 package com.pingcap.spark
 
+import java.util.Properties
+
 import com.google.common.collect.ImmutableSet
 
 import scala.collection.mutable.ArrayBuffer
 
-class DAGTestCase(colList: List[String]) {
+class DAGTestCase(colList: List[String], prop: Properties) extends TestCase(prop) {
   private val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
   private val arithmeticOpList = List("+", "-", "*", "/", "%")
   private val LEFT_TB_NAME = "A"
@@ -43,6 +45,8 @@ class DAGTestCase(colList: List[String]) {
       .add("tp_binary")
       .add("tp_blob")
       .build()
+  // ***********************************************************************************************
+  // ******************************** Below is test cases generated ********************************
 
   /**
     * We create test for each type, each operator
@@ -92,10 +96,6 @@ class DAGTestCase(colList: List[String]) {
     res.toList
   }
 
-  def arithmeticOp(l: String, r: String, op: String): String = {
-    l + " " + op + " " + r
-  }
-
   def createPlaceHolderTest: List[String] = {
     var res = ArrayBuffer.empty[String]
     for (op <- compareOpList) {
@@ -115,6 +115,9 @@ class DAGTestCase(colList: List[String]) {
 
     res.toList
   }
+
+  // ***********************************************************************************************
+  // ******************************** Below is SQL build helper ************************************
 
   def buildBinarySelfJoinQuery(lCol: String, rCol: String, op: String): String = {
     selfJoinSelect(
@@ -186,15 +189,11 @@ class DAGTestCase(colList: List[String]) {
 
   def dot() = "."
 
+  def arithmeticOp(l: String, r: String, op: String): String = {
+    l + " " + op + " " + r
+  }
+
   def limit(num: Int = 20): String = {
     " limit " + num
-  }
-}
-
-object eDAGTestCase {
-  def main(args: Array[String]): Unit = {
-    for (str <- new DAGTestCase(List("tp1", "tp2", "tp3")).createArithmeticTest) {
-      println(str)
-    }
   }
 }
