@@ -16,9 +16,8 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
-import com.pingcap.tikv.meta.{TiColumnInfo, TiSelectRequest}
+import com.pingcap.tikv.meta.TiSelectRequest
 import com.pingcap.tikv.predicates.ScanBuilder
-import com.pingcap.tikv.types.BitType
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
@@ -64,9 +63,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                                selectRequest: TiSelectRequest): SparkPlan = {
     val table = source.table
     selectRequest.setTableInfo(table)
-    // In case count(*) and nothing pushed, pick the first column
+
+    val firstColumn = TiColumnRef.create(table.getColumns.get(0).getName, table)
     if (selectRequest.getFields.size == 0) {
-      selectRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
+      selectRequest.addRequiredColumn(firstColumn)
+    }
+    if (!selectRequest.getGroupByItems.isEmpty && selectRequest.getAggregates.isEmpty) {
+      selectRequest.addAggregate(new TiFirst(firstColumn))
+      selectRequest.skipAggregatesAt(0)
     }
     val tiRdd = source.logicalPlanToRDD(selectRequest)
 
