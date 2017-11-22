@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1509532948142.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "FAF9E1B1",
+    "lastKnownWriteTime" : 1509535453,
+    "last_content_update" : 1509535453145,
+    "path" : "~/Documents/Code/PingCAP/tispark/TiSparkR/R/tisparkR.R",
+    "project_path" : "R/tisparkR.R",
+    "properties" : {
+        "cursorPosition" : "13,0",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 4,
+    "source_on_save" : true,
+    "source_window" : "",
+    "type" : "r_source"
+}

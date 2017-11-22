@@ -35,16 +35,13 @@ class DAGTestCase(colList: List[String]) {
   private final val colSkipSet: ImmutableSet[String] =
     ImmutableSet.builder()
       .add("tp_bit") // bit cannot be push down
-      //      .add("tp_datetime") // time zone shift
-      //      .add("tp_year") // year in spark shows extra month and day
-      //      .add("tp_time") // Time format is not the same in TiDB and spark
+      .add("tp_datetime") // time zone shift
+      .add("tp_year") // year in spark shows extra month and day
+      .add("tp_time") // Time format is not the same in TiDB and spark
       .add("tp_enum")
       .add("tp_set")
-      //      .add("tp_binary")
-      //      .add("tp_blob")
-      .add("tp_nvarchar")
-      .add("tp_char")
-      .add("tp_varchar")
+      .add("tp_binary")
+      .add("tp_blob")
       .build()
 
   /**
@@ -164,7 +161,7 @@ class DAGTestCase(colList: List[String]) {
       colList +
       s" from " +
       s"$TABLE_NAME $LEFT_TB_NAME join full_data_type_table $RIGHT_TB_NAME " +
-      s"on $LEFT_TB_NAME.id_dt = $RIGHT_TB_NAME.id_dt "
+      s"on $LEFT_TB_NAME.id_dt > $RIGHT_TB_NAME.id_dt * $SCALE_FACTOR"
   }
 
   def orderBy(condition: String): String = {
@@ -194,7 +191,7 @@ class DAGTestCase(colList: List[String]) {
   }
 }
 
-object DAGTestCase {
+object eDAGTestCase {
   def main(args: Array[String]): Unit = {
     for (str <- new DAGTestCase(List("tp1", "tp2", "tp3")).createArithmeticTest) {
       println(str)

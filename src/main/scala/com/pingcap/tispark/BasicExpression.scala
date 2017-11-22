@@ -16,19 +16,21 @@
 package com.pingcap.tispark
 
 import java.sql.{Date, Timestamp}
+import java.util.Objects
 
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
+import com.pingcap.tikv.types.RequestTypes
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Remainder, Subtract}
 import org.apache.spark.sql.types._
 
 object BasicExpression {
   implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
+
   type TiPlus = com.pingcap.tikv.expression.scalar.Plus
   type TiMinus = com.pingcap.tikv.expression.scalar.Minus
   type TiMultiply = com.pingcap.tikv.expression.scalar.Multiply
   type TiDivide = com.pingcap.tikv.expression.scalar.Divide
-  type TiMod = com.pingcap.tikv.expression.scalar.Mod
   type TiIsNull = com.pingcap.tikv.expression.scalar.IsNull
   type TiGreaterEqual = com.pingcap.tikv.expression.scalar.GreaterEqual
   type TiGreaterThan = com.pingcap.tikv.expression.scalar.GreaterThan
@@ -39,7 +41,6 @@ object BasicExpression {
   type TiNot = com.pingcap.tikv.expression.scalar.Not
 
   final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
-
 
 
   def convertLiteral(value: Any, dataType: DataType): Any = {
@@ -60,6 +61,27 @@ object BasicExpression {
     }
   }
 
+  def isSupportedExpression(expr: Expression, requestMode: Int): Boolean = {
+    // Currently, only DAG mode needs to infer type
+    if (requestMode == RequestTypes.REQ_TYPE_DAG) {
+      if (expr.children.nonEmpty) {
+        val childType = expr.children.head.dataType
+
+        // if any child's data type is different from others,
+        // we do not support this expression to push down in
+        // DAG mode
+        for (child <- expr.children) {
+          if (!childType.equals(child.dataType) ||
+            // Do it recursively
+            !isSupportedExpression(child, requestMode)) {
+            return false
+          }
+        }
+      }
+    }
+    true
+  }
+
   def convertToTiExpr(expr: Expression): Option[TiExpr] = {
     expr match {
       case Literal(value, dataType) =>
@@ -76,9 +98,6 @@ object BasicExpression {
 
       case Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(new TiDivide(lhs, rhs))
-
-      case Remainder(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiMod(lhs, rhs))
 
       case Alias(BasicExpression(child), _) =>
         Some(child)

@@ -52,6 +52,8 @@ object TiUtils {
   }
 
   def isSupportedBasicExpression(expr: Expression, tiDBRelation: TiDBRelation): Boolean = {
+    if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
+
     BasicExpression.convertToTiExpr(expr).fold(false) {
       expr: TiExpr =>
         expr.resolve(tiDBRelation.table)
