@@ -204,6 +204,18 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     }
   }
 
+  def toOutput(value: Any): Any = {
+    value match {
+      case _: Array[Byte] =>
+        var str: String = new String
+        for (b <- value.asInstanceOf[Array[Byte]]) {
+          str = str.concat(b.toString)
+        }
+        str
+      case default => default
+    }
+  }
+
   def queryTiDB(query: String): (List[String], List[List[Any]]) = {
     logger.info("Running query on TiDB: " + query)
     val statement = connection.createStatement()
@@ -218,7 +230,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       val row = ArrayBuffer.empty[Any]
 
       for (i <- 1 to rsMetaData.getColumnCount) {
-        row += resultSet.getObject(i)
+        row += toOutput(resultSet.getObject(i))
       }
       retSet += row.toList
     }
