@@ -322,33 +322,11 @@ class TestCase(val prop: Properties) extends LazyLogging {
     } else if (dbName.equalsIgnoreCase("test_types")) {
       testAndCalc(new TestTypes(prop), dbName)
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
-      spark.init(dbName)
-      jdbc.init(dbName)
-
       val colList = jdbc.getTableColumnNames("full_data_type_table")
-      val dagTestCase = new DAGTestCase(colList)
-      testDAG(
-        dagTestCase.createSymmetryTypeTestCases ++
-          dagTestCase.createCartesianTypeTestCases ++
-          dagTestCase.createArithmeticTest ++
-          dagTestCase.createPlaceHolderTest
-      )
+      testAndCalc(new DAGTestCase(colList, prop), dbName)
     } else if (dbName.equalsIgnoreCase("test_null")) {
       testAndCalc(new TestNull(prop), dbName)
     }
-  }
-
-  def testDAG(list: List[String]): Unit = {
-    var result = false
-
-    for (sql <- list) {
-      val exeRes = execBothAndJudge(sql)
-      if (exeRes)
-        logger.error("result: Test sql failed, " + sql)
-      result |= exeRes
-    }
-    result = !result
-    logger.info("result: Overall DAG test :" + result)
   }
 
   private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
