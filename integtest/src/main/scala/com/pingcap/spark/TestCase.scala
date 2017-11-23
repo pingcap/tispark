@@ -299,6 +299,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
       testAndCalc(new TestIndex(prop), dbName)
     } else if (dbName.equalsIgnoreCase("test_types")) {
       testAndCalc(new TestTypes(prop), dbName)
+    } else if (dbName.equalsIgnoreCase("test_null")) {
+      testAndCalc(new TestNull(prop), dbName)
     }
   }
 

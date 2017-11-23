@@ -20,8 +20,9 @@ clear_last_diff_files
 
 isDebug=false
 showResultStats=false
+showFailedOnly=false
 
-while getopts ":radish" arg
+while getopts ":fradish" arg
 do
     case ${arg} in
         d)
@@ -30,6 +31,9 @@ do
 		r)
 			showResultStats=true
 			;;
+		f)
+		    showFailedOnly=true
+		    ;;
         a)
             cd ../tikv-client-lib-java/
             mvn clean install
@@ -53,6 +57,7 @@ do
             echo "  -s    make tiSpark and integration test projects"
             echo "  -i    make integration test only"
             echo "  -r    show result stats (SQL, outputs, time consumed, etc.)"
+            echo "  -f    show failed only"
             echo "  -d    debug mode"
             echo "  -h    show help"
             exit 1
@@ -72,14 +77,26 @@ spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,sus
 spark_test_opt=""
 
 spark_cmd="${SPARK_HOME}/bin/spark-submit --class ${CLASS} ${BASEDIR}/lib/* --driver-java-options"
+
+filter=""
+
 if [ ${isDebug} = true ]; then
     echo "debugging..."
     ${spark_cmd} ${spark_debug_opt}
 else
     echo "testing...."
 	if [ ${showResultStats} = true ]; then
-		${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB\|FAILED.\|PASSED.\|SKIPPED.\|exception caught"
+	    if [ ${showFailedOnly} = true ]; then
+	        filter="hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB\|FAILED."
+	    else
+	        filter="hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB\|FAILED.\|PASSED.\|SKIPPED.\|exception caught"
+	    fi
 	else
-		${spark_cmd} ${spark_test_opt} 2>&1 | grep "Tests result:\|Result:\|exception caught.\|FAILED.\|PASSED.\|SKIPPED."
+	    if [ ${showFailedOnly} = true ]; then
+	        filter="Tests result:\|Result:\|exception caught.\|FAILED."
+	    else
+	        filter="Tests result:\|Result:\|exception caught.\|FAILED.\|PASSED.\|SKIPPED."
+	    fi
 	fi
+	${spark_cmd} ${spark_test_opt} 2>&1 | grep "${filter}"
 fi
