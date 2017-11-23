@@ -35,9 +35,9 @@ To run tpch Test individually: (use -d or --debug option to setup debug flag)
 ```
 ./test_tpch.sh [-d|--debug]
 ```
-To run index Test individually: (use -h option for help)
+To run other Tests individually: (use -h option for help)
 ```
-./test_index.sh [-d | -a | -h | -s | -i | -r]
+./test_no_tpch.sh [-d | -a | -h | -s | -i | -r]
 ```
 
 In general, use `-r` flag to show result only when you run index Test

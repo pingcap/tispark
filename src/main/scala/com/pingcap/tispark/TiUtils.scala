@@ -19,13 +19,17 @@ package com.pingcap.tispark
 import java.util.concurrent.TimeUnit
 
 import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.expression.TiExpr
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
-import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
 import org.apache.spark.{SparkConf, sql}
+
+import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 
 object TiUtils {
@@ -37,26 +41,59 @@ object TiUtils {
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiTypes = com.pingcap.tikv.types.Types
 
-  def isSupportedAggregate(aggExpr: AggregateExpression): Boolean = {
+  def isSupportedAggregate(aggExpr: AggregateExpression, tiDBRelation: TiDBRelation): Boolean = {
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           !aggExpr.aggregateFunction
-            .children.exists(expr => !isSupportedBasicExpression(expr))
+            .children.exists(expr => !isSupportedBasicExpression(expr, tiDBRelation))
       case _ => false
     }
   }
 
-  def isSupportedBasicExpression(expr: Expression): Boolean = {
+  def isSupportedBasicExpression(expr: Expression, tiDBRelation: TiDBRelation): Boolean = {
     BasicExpression.convertToTiExpr(expr).fold(false) {
-      _.isSupportedExpr
+      expr: TiExpr =>
+        expr.resolve(tiDBRelation.table)
+        return expr.isSupportedExpr
     }
   }
 
-  def isSupportedFilter(expr: Expression): Boolean = isSupportedBasicExpression(expr)
+  /**
+    * Is expression allowed to be pushed down
+    *
+    * @param expr the expression to examine
+    * @return whether expression can be pushed down
+    */
+  def isPushDownSupported(expr: Expression, source: TiDBRelation): Boolean = {
+    val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
+    source.table.getColumns.foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
+
+    if (expr.children.isEmpty) {
+      expr match {
+        // bit type is not allowed to be pushed down
+        case attr: AttributeReference =>
+          return nameTypeMap.contains(attr.name) &&
+            !nameTypeMap.get(attr.name).head.isInstanceOf[BitType]
+        case _ => return true
+      }
+    } else {
+      for (expr <- expr.children) {
+        if (!isPushDownSupported(expr, source)) {
+          return false
+        }
+      }
+    }
+
+    true
+  }
+
+  def isSupportedFilter(expr: Expression, source: TiDBRelation): Boolean = {
+    isSupportedBasicExpression(expr, source) && isPushDownSupported(expr, source)
+  }
 
   // if contains UDF / functions that cannot be folded
-  def isSupportedGroupingExpr(expr: NamedExpression): Boolean = isSupportedBasicExpression(expr)
+  def isSupportedGroupingExpr(expr: NamedExpression, source: TiDBRelation): Boolean = isSupportedBasicExpression(expr, source)
 
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
@@ -132,12 +169,12 @@ object TiUtils {
       tiConf.setTableScanConcurrency(conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
     }
 
-    if(conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
+    if (conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
       val isolationLevel = IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL))
       tiConf.setIsolationLevel(isolationLevel)
     }
 
-    if(conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
+    if (conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
       val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
       tiConf.setCommandPriority(priority)
     }

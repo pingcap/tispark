@@ -84,6 +84,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
         case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => str.toLong
         case "DATE" => Date.valueOf(str)
         case "TIMESTAMP" | "DATETIME" => Timestamp.valueOf(str)
+        case _ => str
       }
     }
   }
@@ -101,7 +102,6 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
   private def rowToString(row: List[Any]): String = row.map(valToString).mkString(Sep)
 
   private def rowFromString(row: String, types: List[String]): List[Any] = {
-    logger.info(Pattern.quote(Sep))
     logger.info(row)
 
     row.split(Pattern.quote(Sep)).zip(types).map {

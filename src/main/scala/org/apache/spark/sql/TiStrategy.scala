@@ -16,8 +16,9 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
-import com.pingcap.tikv.meta.{TiIndexInfo, TiSelectRequest}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiSelectRequest}
 import com.pingcap.tikv.predicates.ScanBuilder
+import com.pingcap.tikv.types.BitType
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
@@ -114,7 +115,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                             selectRequest: TiSelectRequest = new TiSelectRequest): TiSelectRequest = {
     val tiFilters:Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
-    val scanPlan = if (allowIndexDoubleRead) {
+    val scanPlan = if (allowIndexDoubleRead()) {
       scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
     } else {
       scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
@@ -138,7 +139,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     val (pushdownFilters: Seq[Expression],
          residualFilters: Seq[Expression]) =
-      filterPredicates.partition(TiUtils.isSupportedFilter)
+      filterPredicates.partition((expression: Expression) =>
+        TiUtils.isSupportedFilter(expression, source))
 
     val residualFilter: Option[Expression] = residualFilters.reduceLeftOption(catalyst.expressions.And)
 
@@ -200,6 +202,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         originalAggExpr.isDistinct,
         NamedExpression.newExprId)
 
+
     // TODO: This test should be done once for all children
     plan match {
       // Collapse filters and projections and push plan directly
@@ -223,7 +226,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       aggregateExpressions,
       resultExpressions,
       TiAggregationProjection(filters, _, `source`))
-        if allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
+        if groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source)) &&
+           aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source)) &&
+           allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
         var selReq: TiSelectRequest = filterToSelectRequest(filters, source)
         val residualAggregateExpressions = aggregateExpressions.map {
           aggExpr =>
@@ -312,9 +317,7 @@ object TiAggregation {
   type ReturnType = PhysicalAggregation.ReturnType
 
   def unapply(a: Any): Option[ReturnType] = a match {
-    case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child)
-      if groupingExpressions.forall(TiUtils.isSupportedGroupingExpr) &&
-        aggregateExpressions.forall(TiUtils.isSupportedAggregate) =>
+    case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
       Some(groupingExpressions, aggregateExpressions, resultExpressions, child)
 
     case _ => Option.empty[ReturnType]
@@ -329,7 +332,7 @@ object TiAggregationProjection {
     // all projection expressions are column references
     case PhysicalOperation(projects, filters, rel@LogicalRelation(source: TiDBRelation, _, _))
       if projects.forall(_.isInstanceOf[Attribute]) &&
-        filters.forall(TiUtils.isSupportedFilter) =>
+        filters.forall((expression: Expression) => TiUtils.isSupportedFilter(expression, source)) =>
       Some((filters, rel, source))
     case _ => Option.empty[ReturnType]
   }

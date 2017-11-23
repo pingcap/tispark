@@ -23,48 +23,6 @@ import java.util.Properties
   */
 class TestIndex(prop: Properties) extends TestCase(prop) {
 
-  private def testType(): Unit = {
-    execBothAndShow(s"select * from t1")
-    var result = false
-    result |= execBothAndJudge(s"select c1 from t1")
-    result |= execBothAndJudge(s"select c2 from t1")
-    result |= execBothAndJudge(s"select c3 from t1")
-    result |= execBothAndJudge(s"select c4 from t1")
-    result |= execBothAndJudge(s"select c5 from t1")
-    result |= execBothAndJudge(s"select c6 from t1")
-    result |= execBothAndJudge(s"select c7 from t1")
-    result |= execBothAndJudge(s"select c8 from t1")
-    result |= execBothAndJudge(s"select c9 from t1")
-    result |= execBothAndJudge(s"select c10 from t1")
-    result |= execBothAndSkip(s"select c11 from t1")
-    result |= execBothAndJudge(s"select c12 from t1")
-    result |= execBothAndSkip(s"select c13 from t1")
-    result |= execBothAndJudge(s"select c14 from t1")
-    result |= execBothAndSkip(s"select c15 from t1")
-
-    result = !result
-    logger.warn(s"\n*************** SQL Type Tests result: $result\n\n\n")
-  }
-
-  private def testTimeType(): Unit = {
-    execSparkAndShow(s"select * from t2")
-    execSparkAndShow(s"select * from t3")
-    var result = false
-
-    result |= execBothAndSkip(s"select UNIX_TIMESTAMP(c14) from t1")
-    execSparkAndShow(s"select CAST(c14 AS LONG) from t1")
-    execSparkAndShow(s"select c13 from t1")
-
-    execTiDBAndShow(s"select c14 + c13 from t1")
-    execSparkAndShow(s"select CAST(c14 AS LONG) + c13 from t1")
-
-    result |= execBothAndSkip(s"select c15 from t1")
-    result |= execBothAndSkip(s"select UNIX_TIMESTAMP(c15) from t1")
-
-    result = !result
-    logger.warn(s"\n*************** SQL Time Tests result: " + (if (result) "true" else "Fixing...Skipped") + "\n\n\n")
-  }
-
   private def testIndex(): Unit = {
     var result = false
     result |= execBothAndJudge("select * from test_index where a < 30")
@@ -101,11 +59,9 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     logger.warn(s"\n*************** Index Tests result: $result\n\n\n")
   }
 
-  def run(dbName: String): Unit = {
+  override def run(dbName: String): Unit = {
     spark.init(dbName)
     jdbc.init(dbName)
-    testType()
-    testTimeType()
     testIndex()
   }
 
