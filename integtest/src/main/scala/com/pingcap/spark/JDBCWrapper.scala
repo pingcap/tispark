@@ -150,6 +150,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
           case d: Date => ps.setDate(pos, d)
           case s: String => ps.setString(pos, s)
           case ts: Timestamp => ps.setTimestamp(pos, ts)
+          case ba: Array[Byte] => ps.setBytes(pos, ba)
           case null => ps.setNull(pos, typeCodeFromString(schema(index)))
         }
     }
