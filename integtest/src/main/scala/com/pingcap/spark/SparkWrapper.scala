@@ -40,6 +40,18 @@ class SparkWrapper() extends LazyLogging {
     ti.tidbMapDatabase(databaseName)
   }
 
+  def toOutput(value: Any): Any = {
+    value match {
+      case _: Array[Byte] =>
+        var str: String = new String
+        for (b <- value.asInstanceOf[Array[Byte]]) {
+          str = str.concat(b.toString)
+        }
+        str
+      case default => default
+    }
+  }
+
   def querySpark(sql: String): List[List[Any]] = {
     logger.info("Running query on spark: " + sql)
     val df = spark.sql(sql)
@@ -48,13 +60,7 @@ class SparkWrapper() extends LazyLogging {
     df.collect().map(row => {
       val rowRes = ArrayBuffer.empty[Any]
       for (i <- 0 until row.length) {
-        var rowData = row.get(i)
-        // If the very data from spark is binary type, we need to do some translation
-        if (schema(i).dataType.isInstanceOf[BinaryType]) {
-          rowData = new String(rowData.asInstanceOf[Array[Byte]])
-        }
-
-        rowRes += rowData
+        rowRes += toOutput(row.get(i))
       }
       rowRes.toList
     }).toList

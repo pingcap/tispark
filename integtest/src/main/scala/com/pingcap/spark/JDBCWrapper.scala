@@ -103,8 +103,8 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       case "DATE" => 91
       case "TIMESTAMP" | "DATETIME" => 93
       case "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" | "BLOB" => 2004
-      //      case "BINARY" => -2
-      //      case "VARBINARY" => -3
+//      case "BINARY" => -2
+//      case "VARBINARY" => -3
       case _ => 1111
     }
   }
@@ -208,6 +208,18 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     }
   }
 
+  def toOutput(value: Any): Any = {
+    value match {
+      case _: Array[Byte] =>
+        var str: String = new String
+        for (b <- value.asInstanceOf[Array[Byte]]) {
+          str = str.concat(b.toString)
+        }
+        str
+      case default => default
+    }
+  }
+
   def queryTiDB(query: String): (List[String], List[List[Any]]) = {
     logger.info("Running query on TiDB: " + query)
     val statement = connection.createStatement()
@@ -222,13 +234,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       val row = ArrayBuffer.empty[Any]
 
       for (i <- 1 to rsMetaData.getColumnCount) {
-        val tp = rsMetaData.getColumnType(i)
-        if (tp == Types.BLOB || tp == Types.BIT || tp == Types.VARBINARY) {
-          val blob = resultSet.getBytes(i)
-          row += new String(blob)
-        } else {
-          row += resultSet.getObject(i)
-        }
+        row += toOutput(resultSet.getObject(i))
       }
       retSet += row.toList
     }
