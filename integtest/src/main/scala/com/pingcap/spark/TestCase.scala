@@ -322,8 +322,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     } else if (dbName.equalsIgnoreCase("test_types")) {
       testAndCalc(new TestTypes(prop), dbName)
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
-      val colList = jdbc.getTableColumnNames("full_data_type_table")
-      testAndCalc(new DAGTestCase(colList, prop), dbName)
+      testAndCalc(new DAGTestCase(prop), dbName)
     } else if (dbName.equalsIgnoreCase("test_null")) {
       testAndCalc(new TestNull(prop), dbName)
     }

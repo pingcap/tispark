@@ -103,8 +103,8 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       case "DATE" => 91
       case "TIMESTAMP" | "DATETIME" => 93
       case "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" | "BLOB" => 2004
-//      case "BINARY" => -2
-//      case "VARBINARY" => -3
+      //      case "BINARY" => -2
+      //      case "VARBINARY" => -3
       case _ => 1111
     }
   }
@@ -143,16 +143,17 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     val stat = s"insert into $table values ($placeholders)"
     val ps = connection.prepareStatement(stat)
     row.zipWithIndex.foreach { case (value, index) =>
-        val pos = index + 1
-        logger.info(if (value == null) "NULL" else value.getClass.toString)
-        value match {
-          case bd: BigDecimal => ps.setBigDecimal(pos, bd.bigDecimal)
-          case l: Long => ps.setLong(pos, l)
-          case d: Date => ps.setDate(pos, d)
-          case s: String => ps.setString(pos, s)
-          case ts: Timestamp => ps.setTimestamp(pos, ts)
-          case null => ps.setNull(pos, typeCodeFromString(schema(index)))
-        }
+      val pos = index + 1
+      logger.info(if (value == null) "NULL" else value.getClass.toString)
+      value match {
+        case bd: BigDecimal => ps.setBigDecimal(pos, bd.bigDecimal)
+        case l: Long => ps.setLong(pos, l)
+        case d: Date => ps.setDate(pos, d)
+        case s: String => ps.setString(pos, s)
+        case ts: Timestamp => ps.setTimestamp(pos, ts)
+        case null => ps.setNull(pos, typeCodeFromString(schema(index)))
+        case b: Blob => ps.setBlob(pos, b)
+      }
     }
     ps.executeUpdate()
   }
@@ -161,7 +162,9 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     logger.info("Loading data from : " + path)
     val lines = readFile(path)
     val (table, schema, rows) = (lines.head, lines(1).split(Pattern.quote(Sep)).toList, lines.drop(2))
-    val rowData: List[List[Any]] = rows.map { rowFromString(_, schema) }
+    val rowData: List[List[Any]] = rows.map {
+      rowFromString(_, schema)
+    }
     rowData.map(insertRow(_, schema, table))
   }
 
@@ -220,9 +223,9 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
 
       for (i <- 1 to rsMetaData.getColumnCount) {
         val tp = rsMetaData.getColumnType(i)
-        if (tp == Types.BLOB) {
-          val blob = resultSet.getBlob(i)
-          row += new String(blob.getBytes(0, blob.length().asInstanceOf[Int]))
+        if (tp == Types.BLOB || tp == Types.BIT || tp == Types.VARBINARY) {
+          val blob = resultSet.getBytes(i)
+          row += new String(blob)
         } else {
           row += resultSet.getObject(i)
         }

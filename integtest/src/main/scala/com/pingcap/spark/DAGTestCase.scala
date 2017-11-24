@@ -10,7 +10,7 @@ import scala.collection.mutable
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-class DAGTestCase(colList: List[String], prop: Properties) extends TestCase(prop) {
+class DAGTestCase(prop: Properties) extends TestCase(prop) {
   private val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
   private val arithmeticOpList = List("+", "-", "*", "/", "%")
   private val LEFT_TB_NAME = "A"
@@ -37,6 +37,7 @@ class DAGTestCase(colList: List[String], prop: Properties) extends TestCase(prop
     //    LITERAL_NULL, // Null
     "'PingCAP'" // a simple test string
   ) ++ ARITHMETIC_CONSTANT
+  private var colList: List[String] = _
 
   // TODO: Eliminate these bugs
   private final val colSkipSet: ImmutableSet[String] =
@@ -54,13 +55,16 @@ class DAGTestCase(colList: List[String], prop: Properties) extends TestCase(prop
   private val colSet: mutable.Set[String] = mutable.Set()
 
   override def run(dbName: String): Unit = {
+    spark.init(dbName)
+    jdbc.init(dbName)
+    colList = jdbc.getTableColumnNames("full_data_type_table")
     prepareTestCol()
-
     testBundle(
-      createSymmetryTypeTestCases ++
-        createCartesianTypeTestCases ++
-        createArithmeticTest ++
-        createPlaceHolderTest
+//      createSymmetryTypeTestCases ++
+//        createCartesianTypeTestCases ++
+//        createArithmeticTest ++
+//        createPlaceHolderTest
+    createInTest()
     )
   }
 
@@ -79,7 +83,7 @@ class DAGTestCase(colList: List[String], prop: Properties) extends TestCase(prop
     createLogical("and") ::: createLogical("or")
   }
 
-  private def createLogical(op:String): List[String] = {
+  private def createLogical(op: String): List[String] = {
     colSet.flatMap((lCol: String) =>
       colSet.map((rCol: String) =>
         select(lCol, rCol) + where(
@@ -92,9 +96,25 @@ class DAGTestCase(colList: List[String], prop: Properties) extends TestCase(prop
       )).toList
   }
 
-  def createBit() = {
-
-  }
+  def createInTest(): List[String] = List(
+    select("tp_int") + where(binaryOpWithName("tp_int", "(2333, 601508558, 4294967296, 4294967295)", "in", withTbName = false)),
+    select("tp_bigint") + where(binaryOpWithName("tp_bigint", "(122222, -2902580959275580308, 9223372036854775807, 9223372036854775808)", "in", withTbName = false)),
+    select("tp_varchar") + where(binaryOpWithName("tp_varchar", "('nova', 'a948ddcf-9053-4700-916c-983d4af895ef')", "in", withTbName = false)),
+    select("tp_decimal") + where(binaryOpWithName("tp_decimal", "(2, 3, 4)", "in", withTbName = false)),
+    select("tp_decimal") + where(binaryOpWithName("tp_decimal", "(2, 3, 4)", "in", withTbName = false)),
+    select("tp_double") + where(binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in", withTbName = false)),
+    select("tp_float") + where(binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in", withTbName = false)),
+    select("tp_datetime") + where(binaryOpWithName("tp_datetime", "('2043-11-28 00:00:00','2017-09-07 11:11:11','1986-02-03 00:00:00')", "in", withTbName = false)),
+    select("tp_date") + where(binaryOpWithName("tp_date", "('2017-11-02', '2043-11-28 00:00:00')", "in", withTbName = false)),
+    select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "('2017-11-02 16:48:01')", "in", withTbName = false)),
+    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in", withTbName = false)),
+    select("tp_real") + where(binaryOpWithName("tp_real", "(4.44,0.5194052764001038)", "in", withTbName = false)),
+    select("tp_longtext") + where(binaryOpWithName("tp_longtext", "('很长的一段文字', 'OntPHB22qwSxriGUQ9RLfoiRkEMfEYFZdnAkL7SdpfD59MfmUXpKUAXiJpegn6dcMyfRyBhNw9efQfrl2yMmtM0zJx3ScAgTIA8djNnmCnMVzHgPWVYfHRnl8zENOD5SbrI4HAazss9xBVpikAgxdXKvlxmhfNoYIK0YYnO84MXKkMUinjPQ7zWHbh5lImp7g9HpIXgtkFFTXVvCaTr8mQXXOl957dxePeUvPv28GUdnzXTzk7thTbsWAtqU7YaK4QC4z9qHpbt5ex9ck8uHz2RoptFw71RIoKGiPsBD9YwXAS19goDM2H0yzVtDNJ6ls6jzXrGlJ6gIRG73Er0tVyourPdM42a5oDihfVP6XxjOjS0cmVIIppDSZIofkRfRhQWAunheFbEEPSHx3eybQ6pSIFd34Natgr2erFjyxFIRr7J535HT9aIReYIlocKK2ZI9sfcwhX0PeDNohY2tvHbsrHE0MlKCyVSTjPxszvFjCPlyqwQy')", "in", withTbName = false)),
+    select("tp_text") + where(binaryOpWithName("tp_text", "('一般的文字', 'dQWD3XwSTevpbP5hADFdNO0dQvaueFhnGcJAm045mGv5fXttso')", "in", withTbName = false))
+//    select("tp_bit") + where(binaryOpWithName("tp_bit", "(1)", "in", withTbName = false))
+//    select("tp_enum") + where(binaryOpWithName("tp_enum", "(1)", "in", withTbName = false)),
+//    select("tp_set") + where(binaryOpWithName("tp_set", "('a,b')", "in", withTbName = false))
+  )
 
   def distinct(cols: String*): String = {
     s" distinct$cols ".replace("WrappedArray", "")
@@ -254,7 +274,7 @@ class DAGTestCase(colList: List[String], prop: Properties) extends TestCase(prop
 
 object DAGTestCase {
   def main(args: Array[String]): Unit = {
-    val dAGTestCase = new DAGTestCase(List("tp1", "tp2", "tp3"), new Properties())
+    val dAGTestCase = new DAGTestCase(new Properties())
     dAGTestCase.prepareTestCol()
     for (str <- dAGTestCase.createLogicalAndOr) {
       println(str)
