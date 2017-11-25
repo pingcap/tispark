@@ -22,11 +22,11 @@ import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartit
 import org.apache.spark.sql.execution.metric.SQLMetrics
 import org.apache.spark.sql.tispark.TiRDD
 
-
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
 
   override lazy val metrics = Map(
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"))
+    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
+  )
 
   override val nodeName: String = "CoprocessorRDD"
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
