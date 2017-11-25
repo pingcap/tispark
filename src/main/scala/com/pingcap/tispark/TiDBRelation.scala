@@ -20,14 +20,15 @@ import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources.BaseRelation
+import org.apache.spark.sql.tispark.TiRDD
 import org.apache.spark.sql.types.StructType
 
-class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaManager)(
-  @transient val sqlContext: SQLContext
-) extends BaseRelation {
-  val table: TiTableInfo = meta
-    .getTable(tableRef.databaseName, tableRef.tableName)
-    .getOrElse(throw new TiClientInternalException("Table not exist"))
+class TiDBRelation(session: TiSession,
+                   tableRef: TiTableReference,
+                   meta: MetaManager)
+                  (@transient val sqlContext: SQLContext) extends BaseRelation {
+  val table: TiTableInfo = meta.getTable(tableRef.databaseName, tableRef.tableName)
+                               .getOrElse(throw new TiClientInternalException("Table not exist"))
 
   override lazy val schema: StructType = TiUtils.getSchemaFromTable(table)
 
@@ -35,12 +36,11 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     val ts: TiTimestamp = session.getTimestamp
     selectRequest.setStartTs(ts.getVersion)
 
-    new TiRDD(
-      selectRequest,
-      session.getConf,
-      tableRef,
-      ts,
-      sqlContext.sparkContext
-    )
+    new TiRDD(selectRequest,
+              session.getConf,
+              tableRef,
+              ts,
+              session,
+              sqlContext.sparkSession)
   }
 }

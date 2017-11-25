@@ -22,90 +22,91 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{FunctionRegistry, NoSuchDatabaseException, NoSuchTableException}
 import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.catalyst.util.StringUtils
 import org.apache.spark.sql.catalyst.{CatalystConf, TableIdentifier}
 
-class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
-                       globalTempViewManager: GlobalTempViewManager,
-                       sparkSession: SparkSession,
-                       functionResourceLoader: FunctionResourceLoader,
-                       functionRegistry: FunctionRegistry,
-                       conf: CatalystConf,
-                       hadoopConf: Configuration)
-    extends HiveSessionCatalog(
-      externalCatalog,
-      globalTempViewManager,
-      sparkSession,
-      functionResourceLoader,
-      functionRegistry,
-      conf,
-      hadoopConf
-    ) {
 
-  val tiConf: TiConfiguration =
-    TiUtils.sparkConfToTiConf(sparkSession.sparkContext.getConf)
+class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
+                        globalTempViewManager: GlobalTempViewManager,
+                        sparkSession: SparkSession,
+                        functionResourceLoader: FunctionResourceLoader,
+                        functionRegistry: FunctionRegistry,
+                        conf: CatalystConf,
+                        hadoopConf: Configuration)
+  extends HiveSessionCatalog(externalCatalog,
+                         globalTempViewManager,
+                         sparkSession,
+                         functionResourceLoader,
+                         functionRegistry,
+                         conf,
+                         hadoopConf) {
+
+  val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(sparkSession.sparkContext.getConf)
   val session: TiSession = TiSession.create(tiConf)
 
   val meta: MetaManager = new MetaManager(session.getCatalog)
 
-  override def lookupRelation(name: TableIdentifier, alias: Option[String]): LogicalPlan =
+  override def lookupRelation(tableIdent: TableIdentifier, alias: Option[String]): LogicalPlan = {
     synchronized {
-      val table = formatTableName(name.table)
-      val db = formatDatabaseName(name.database.getOrElse(currentDb))
-      if (!meta.getDatabase(db).isEmpty && !meta.getTable(db, table).isEmpty) {
+      val table = formatTableName(tableIdent.table)
+      val db = formatDatabaseName(tableIdent.database.getOrElse(currentDb))
+      if (meta.getDatabase(db).isDefined && meta.getTable(db, table).isDefined) {
         val rel: TiDBRelation =
-          new TiDBRelation(session, new TiTableReference(db, table), meta)(
-            sparkSession.sqlContext
-          )
-        sparkSession.sqlContext.baseRelationToDataFrame(rel).logicalPlan
+          new TiDBRelation(session, new TiTableReference(db, table), meta)(sparkSession.sqlContext)
+        val relPlan = sparkSession.sqlContext.baseRelationToDataFrame(rel).logicalPlan
+        val qualifiedTable = SubqueryAlias(tableIdent.table, relPlan, None)
+        alias.map(a => SubqueryAlias(a, qualifiedTable, None)).getOrElse(qualifiedTable)
       } else {
-        super.lookupRelation(name, alias)
+        super.lookupRelation(tableIdent, alias)
       }
     }
+  }
 
   override def databaseExists(db: String): Boolean = {
     val dbName = formatDatabaseName(db)
     val tiDB = meta.getDatabase(dbName)
 
-    if (!tiDB.isEmpty) {
+    if (tiDB.isDefined) {
       true
     } else {
       externalCatalog.databaseExists(dbName)
     }
   }
 
-  override def listDatabases(): Seq[String] =
-    meta
-      .getDatabases()
+  override def listDatabases(): Seq[String] = {
+    meta.getDatabases
       .map(_.getName)
       .union(super.listDatabases())
+  }
 
-  override def listDatabases(pattern: String): Seq[String] =
+  override def listDatabases(pattern: String): Seq[String] = {
     StringUtils.filterPattern(listDatabases(), pattern)
+  }
 
   override def tableExists(name: TableIdentifier): Boolean = synchronized {
     val db = formatDatabaseName(name.database.getOrElse(currentDb))
     val table = formatTableName(name.table)
     val tiTable = meta.getTable(db, table)
 
-    if (!tiTable.isEmpty) {
+    if (tiTable.isDefined) {
       true
     } else {
       externalCatalog.tableExists(db, table)
     }
   }
 
-  private def requireDbExists(db: String): Unit =
+  private def requireDbExists(db: String): Unit = {
     if (!databaseExists(db)) {
       throw new NoSuchDatabaseException(db)
     }
+  }
 
   override def getDatabaseMetadata(db: String): CatalogDatabase = {
     val dbName = formatDatabaseName(db)
     requireDbExists(dbName)
     val tiDB = meta.getDatabase(dbName)
-    if (!tiDB.isEmpty) {
+    if (tiDB.isDefined) {
       tiDBToCatalogDatabase(tiDB.get)
     } else {
       externalCatalog.getDatabase(dbName)
@@ -121,14 +122,12 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     catalogTable.get
   }
 
-  override def getTableMetadataOption(
-    name: TableIdentifier
-  ): Option[CatalogTable] = {
+  override def getTableMetadataOption(name: TableIdentifier): Option[CatalogTable] = {
     val db = formatDatabaseName(name.database.getOrElse(getCurrentDatabase))
     val table = formatTableName(name.table)
     requireDbExists(db)
     val tiTable = meta.getTable(db, table)
-    if (!tiTable.isEmpty) {
+    if (tiTable.isDefined) {
       Option(tiTableToCatalogTable(name, tiTable.get))
     } else {
       externalCatalog.getTableOption(db, table)
@@ -138,13 +137,13 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
   override def listTables(db: String, pattern: String): Seq[TableIdentifier] = {
     val dbName = formatDatabaseName(db)
     val database = meta.getDatabase(dbName)
-    if (!database.isEmpty) {
+    if (database.isDefined) {
       val localTempViews = synchronized {
         StringUtils.filterPattern(tempTables.keys.toSeq, pattern).map { name =>
           TableIdentifier(name)
         }
       }
-      meta.getTables(database.get).map { db =>
+      meta.getTables(database.get).map{ db =>
         TableIdentifier(db.getName, Option(db.getName))
       } ++ localTempViews
     } else {
@@ -152,15 +151,15 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     }
   }
 
-  def tiDBToCatalogDatabase(db: TiDBInfo): CatalogDatabase =
+  def tiDBToCatalogDatabase(db: TiDBInfo): CatalogDatabase = {
     CatalogDatabase(db.getName, "TiDB Database", null, null)
+  }
 
-  def tiTableToCatalogTable(name: TableIdentifier, tiTable: TiTableInfo): CatalogTable =
-    CatalogTable(
-      name,
+  def tiTableToCatalogTable(name: TableIdentifier, tiTable: TiTableInfo): CatalogTable = {
+    CatalogTable(name,
       CatalogTableType.EXTERNAL,
       CatalogStorageFormat.empty,
       TiUtils.getSchemaFromTable(tiTable),
-      Option("TiDB")
-    )
+      Option("TiDB"))
+  }
 }

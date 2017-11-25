@@ -175,12 +175,17 @@ And stop it like below:
 
 Assuming you have successfully started the TiSpark cluster as described above, here's a quick introduction to how to use Spark SQL for OLAP analysis. Here we use a table named `lineitem` in the `tpch` database as an example.
 
+Add 
+```
+spark.tispark.pd.addresses 192.168.1.100:2379
+```
+entry in your ./conf/spark-defaults.conf, assuming that your PD node is located at `192.168.1.100`, port `2379`:
 
-In the Spark-Shell, enter the following command, assuming that your PD node is located at `192.168.1.100`, port `2379`:
+In the Spark-Shell, enter the following command:
 
 ```
 import org.apache.spark.sql.TiContext
-val ti = new TiContext (spark, List ("192.168.1.100:2379")
+val ti = new TiContext (spark)
 ti.tidbMapDatabase ("tpch")
 
 ```
@@ -233,6 +238,10 @@ select count(*) from account;
 +-----------+--+
 1 row selected (1.97 seconds)
 ```
+
+## TiSparkR
+TiSparkR is a thin layer built for supporting R language with TiSpark
+Refer to [this document](../TiSparkR/README.md) for usage.
 
 ## FAQ
 
