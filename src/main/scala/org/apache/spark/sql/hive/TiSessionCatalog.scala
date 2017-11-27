@@ -26,21 +26,22 @@ import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.catalyst.util.StringUtils
 import org.apache.spark.sql.catalyst.{CatalystConf, TableIdentifier}
 
-
 class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
-                        globalTempViewManager: GlobalTempViewManager,
-                        sparkSession: SparkSession,
-                        functionResourceLoader: FunctionResourceLoader,
-                        functionRegistry: FunctionRegistry,
-                        conf: CatalystConf,
-                        hadoopConf: Configuration)
-  extends HiveSessionCatalog(externalCatalog,
-                         globalTempViewManager,
-                         sparkSession,
-                         functionResourceLoader,
-                         functionRegistry,
-                         conf,
-                         hadoopConf) {
+                       globalTempViewManager: GlobalTempViewManager,
+                       sparkSession: SparkSession,
+                       functionResourceLoader: FunctionResourceLoader,
+                       functionRegistry: FunctionRegistry,
+                       conf: CatalystConf,
+                       hadoopConf: Configuration)
+    extends HiveSessionCatalog(
+      externalCatalog,
+      globalTempViewManager,
+      sparkSession,
+      functionResourceLoader,
+      functionRegistry,
+      conf,
+      hadoopConf
+    ) {
 
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(sparkSession.sparkContext.getConf)
   val session: TiSession = TiSession.create(tiConf)
@@ -143,7 +144,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
           TableIdentifier(name)
         }
       }
-      meta.getTables(database.get).map{ db =>
+      meta.getTables(database.get).map { db =>
         TableIdentifier(db.getName, Option(db.getName))
       } ++ localTempViews
     } else {
@@ -156,10 +157,12 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
   }
 
   def tiTableToCatalogTable(name: TableIdentifier, tiTable: TiTableInfo): CatalogTable = {
-    CatalogTable(name,
+    CatalogTable(
+      name,
       CatalogTableType.EXTERNAL,
       CatalogStorageFormat.empty,
       TiUtils.getSchemaFromTable(tiTable),
-      Option("TiDB"))
+      Option("TiDB")
+    )
   }
 }

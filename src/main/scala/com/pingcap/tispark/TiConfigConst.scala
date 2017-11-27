@@ -15,7 +15,6 @@
 
 package com.pingcap.tispark
 
-
 object TiConfigConst {
   val PD_ADDRESSES: String = "spark.tispark.pd.addresses"
   val GRPC_FRAME_SIZE: String = "spark.tispark.grpc.framesize"

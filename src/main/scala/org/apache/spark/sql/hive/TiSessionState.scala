@@ -17,11 +17,11 @@ package org.apache.spark.sql.hive
 
 import org.apache.spark.sql.SparkSession
 
-
 class TiSessionState(sparkSession: SparkSession) extends HiveSessionState(sparkSession) {
+
   /**
-    * Internal catalog for managing table and database states.
-    */
+   * Internal catalog for managing table and database states.
+   */
   override lazy val catalog = new TiSessionCatalog(
     sparkSession.sharedState.externalCatalog.asInstanceOf[HiveExternalCatalog],
     sparkSession.sharedState.globalTempViewManager,
@@ -29,5 +29,6 @@ class TiSessionState(sparkSession: SparkSession) extends HiveSessionState(sparkS
     functionResourceLoader,
     functionRegistry,
     conf,
-    newHadoopConf())
+    newHadoopConf()
+  )
 }

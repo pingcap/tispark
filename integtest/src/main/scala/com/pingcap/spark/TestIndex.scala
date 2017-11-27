@@ -34,12 +34,11 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     result |= execBothAndJudge("select * from test_index where d = \'116.72873\'")
     result |= execBothAndJudge("select * from test_index where d = \'116.72874\' and e < \'40.0452\'")
 
-    result |= execBothAndJudge("select * from test_index where c > \'2008-02-06 14:00:00\'")
-    result |= execBothAndJudge("select * from test_index where c >= \'2008-02-06 14:00:00\'")
-    result |= execBothAndJudge("select * from test_index where c < \'2008-02-06 14:00:00\'")
-    result |= execBothAndJudge("select * from test_index where c <= \'2008-02-06 14:00:00\'")
-    //  TODO: this case should be fixed later
-    result |= execBothAndSkip("select * from test_index where c = \'2008-02-06 14:00:00\'")
+    result |= execBothAndJudge("select * from test_index where c > \'2008-02-06 14:03:58\'")
+    result |= execBothAndJudge("select * from test_index where c >= \'2008-02-06 14:03:58\'")
+    result |= execBothAndJudge("select * from test_index where c < \'2008-02-06 14:03:58\'")
+    result |= execBothAndJudge("select * from test_index where c <= \'2008-02-06 14:03:58\'")
+    result |= execBothAndJudge("select * from test_index where c = \'2008-02-06 14:03:58\'")
 
     result |= execBothAndJudge("select * from test_index where c > date \'2008-02-05\'")
     result |= execBothAndJudge("select * from test_index where c >= date \'2008-02-05\'")

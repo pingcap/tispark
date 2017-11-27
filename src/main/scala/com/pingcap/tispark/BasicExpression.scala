@@ -17,6 +17,8 @@ package com.pingcap.tispark
 
 import java.sql.{Date, Timestamp}
 
+import scala.language.implicitConversions
+
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Remainder, Subtract}
@@ -24,6 +26,7 @@ import org.apache.spark.sql.types._
 
 object BasicExpression {
   implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
+
   type TiPlus = com.pingcap.tikv.expression.scalar.Plus
   type TiMinus = com.pingcap.tikv.expression.scalar.Minus
   type TiMultiply = com.pingcap.tikv.expression.scalar.Multiply
@@ -40,9 +43,7 @@ object BasicExpression {
 
   final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
 
-
-
-  def convertLiteral(value: Any, dataType: DataType): Any = {
+  def convertLiteral(value: Any, dataType: DataType): Any =
     // all types from literals are passed according to DataType's InternalType definition
     if (value == null || dataType == null) {
       null
@@ -51,16 +52,15 @@ object BasicExpression {
         // In Spark Date is encoded as integer of days after 1970-01-01
         // and sql.Date is constructed as milliseconds after 1970-01-01
         // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd
-        case DateType => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int]).toString
-        case TimestampType => new Timestamp(value.asInstanceOf[Long])
-        case StringType => value.toString
+        case DateType       => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int]).toString
+        case TimestampType  => new Timestamp(value.asInstanceOf[Long])
+        case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
-        case _ => value
+        case _              => value
       }
     }
-  }
 
-  def convertToTiExpr(expr: Expression): Option[TiExpr] = {
+  def convertToTiExpr(expr: Expression): Option[TiExpr] =
     expr match {
       case Literal(value, dataType) =>
         Some(TiConstant.create(convertLiteral(value, dataType)))
@@ -116,7 +116,6 @@ object BasicExpression {
       // TODO: Remove it and let it fail once done all translation
       case _ => Option.empty[TiExpr]
     }
-  }
 
   def unapply(expr: Expression): Option[TiExpr] = convertToTiExpr(expr)
 }

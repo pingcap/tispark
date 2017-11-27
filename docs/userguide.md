@@ -239,9 +239,9 @@ select count(*) from account;
 1 row selected (1.97 seconds)
 ```
 
-## TiSpark on PySpark
-A python package build for supporting Python language with TiSpark
-Please refer to [this document](../python/README.md) for usage.
+## TiSparkR
+TiSparkR is a thin layer built for supporting R language with TiSpark
+Refer to [this document](../TiSparkR/README.md) for usage.
 
 ## FAQ
 

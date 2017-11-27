@@ -48,6 +48,14 @@ class TestNull(prop: Properties) extends TestCase(prop) {
     result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` <> null")
     result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` in (null)")
     result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` not in (null)")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` is null")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` = 3000000")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` <= 3000000")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` >= 3000000")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` between 0 and 5000000")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` not between 20 and 50")
+    result |= execBothAndJudge(s"select `int` from all_nullable_data_types where `int` in (null, 3000000)")
+
   }
 
   override def run(dbName: String): Unit = {
