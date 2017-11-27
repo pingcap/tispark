@@ -27,10 +27,10 @@ import org.apache.spark.sql.internal.{SessionState, SharedState}
 import org.apache.spark.util.Utils
 import org.apache.spark.{SparkConf, SparkContext}
 
-
-class TiSparkSession(@transient override val sparkContext: SparkContext,
-                     @transient private val existingSharedState: Option[SharedState])
-  extends SparkSession(sparkContext) {
+class TiSparkSession(
+  @transient override val sparkContext: SparkContext,
+  @transient private val existingSharedState: Option[SharedState]
+) extends SparkSession(sparkContext) {
 
   private[sql] def this(sc: SparkContext) {
     this(sc, None)
@@ -42,24 +42,19 @@ class TiSparkSession(@transient override val sparkContext: SparkContext,
   @transient
   override lazy val sessionState: SessionState = new TiSessionState(this)
 
-  override def newSession(): SparkSession = {
-    new TiSparkSession(sparkContext, Some(sharedState))
-  }
+  override def newSession(): SparkSession = new TiSparkSession(sparkContext, Some(sharedState))
 
   experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
 }
-
-
 
 @InterfaceStability.Stable
 object TiSparkSession {
 
   /**
-    * Builder for [[TiSparkSession]].
-    */
+   * Builder for [[TiSparkSession]].
+   */
   @InterfaceStability.Stable
   class Builder extends Logging {
-
     private[this] val options = new scala.collection.mutable.HashMap[String, String]
 
     private[this] var userSuppliedContext: Option[SparkContext] = None
@@ -70,113 +65,118 @@ object TiSparkSession {
     }
 
     /**
-      * Sets a name for the application, which will be shown in the Spark web UI.
-      * If no application name is set, a randomly generated name will be used.
-      *
-      * @since 2.0.0
-      */
+     * Sets a name for the application, which will be shown in the Spark web UI.
+     * If no application name is set, a randomly generated name will be used.
+     *
+     * @since 2.0.0
+     */
     def appName(name: String): Builder = config("spark.app.name", name)
 
     /**
-      * Sets a config option. Options set using this method are automatically propagated to
-      * both `SparkConf` and SparkSession's own configuration.
-      *
-      * @since 2.0.0
-      */
+     * Sets a config option. Options set using this method are automatically propagated to
+     * both `SparkConf` and SparkSession's own configuration.
+     *
+     * @since 2.0.0
+     */
     def config(key: String, value: String): Builder = synchronized {
       options += key -> value
       this
     }
 
     /**
-      * Sets a config option. Options set using this method are automatically propagated to
-      * both `SparkConf` and SparkSession's own configuration.
-      *
-      * @since 2.0.0
-      */
+     * Sets a config option. Options set using this method are automatically propagated to
+     * both `SparkConf` and SparkSession's own configuration.
+     *
+     * @since 2.0.0
+     */
     def config(key: String, value: Long): Builder = synchronized {
       options += key -> value.toString
       this
     }
 
     /**
-      * Sets a config option. Options set using this method are automatically propagated to
-      * both `SparkConf` and SparkSession's own configuration.
-      *
-      * @since 2.0.0
-      */
+     * Sets a config option. Options set using this method are automatically propagated to
+     * both `SparkConf` and SparkSession's own configuration.
+     *
+     * @since 2.0.0
+     */
     def config(key: String, value: Double): Builder = synchronized {
       options += key -> value.toString
       this
     }
 
     /**
-      * Sets a config option. Options set using this method are automatically propagated to
-      * both `SparkConf` and SparkSession's own configuration.
-      *
-      * @since 2.0.0
-      */
+     * Sets a config option. Options set using this method are automatically propagated to
+     * both `SparkConf` and SparkSession's own configuration.
+     *
+     * @since 2.0.0
+     */
     def config(key: String, value: Boolean): Builder = synchronized {
       options += key -> value.toString
       this
     }
 
     /**
-      * Sets a list of config options based on the given `SparkConf`.
-      *
-      * @since 2.0.0
-      */
+     * Sets a list of config options based on the given `SparkConf`.
+     *
+     * @since 2.0.0
+     */
     def config(conf: SparkConf): Builder = synchronized {
       conf.getAll.foreach { case (k, v) => options += k -> v }
       this
     }
 
     /**
-      * Sets the Spark master URL to connect to, such as "local" to run locally, "local[4]" to
-      * run locally with 4 cores, or "spark://master:7077" to run on a Spark standalone cluster.
-      *
-      * @since 2.0.0
-      */
+     * Sets the Spark master URL to connect to, such as "local" to run locally, "local[4]" to
+     * run locally with 4 cores, or "spark://master:7077" to run on a Spark standalone cluster.
+     *
+     * @since 2.0.0
+     */
     def master(master: String): Builder = config("spark.master", master)
 
     /**
-      * Enables Hive support, including connectivity to a persistent Hive metastore, support for
-      * Hive serdes, and Hive user-defined functions.
-      *
-      * @since 2.0.0
-      */
+     * Enables Hive support, including connectivity to a persistent Hive metastore, support for
+     * Hive serdes, and Hive user-defined functions.
+     *
+     * @since 2.0.0
+     */
     def enableHiveSupport(): Builder = synchronized {
       if (hiveClassesArePresent) {
         config(CATALOG_IMPLEMENTATION.key, "hive")
       } else {
         throw new IllegalArgumentException(
           "Unable to instantiate SparkSession with Hive support because " +
-            "Hive classes are not found.")
+            "Hive classes are not found."
+        )
       }
     }
 
     /**
-      * Gets an existing [[SparkSession]] or, if there is no existing one, creates a new
-      * one based on the options set in this builder.
-      *
-      * This method first checks whether there is a valid thread-local SparkSession,
-      * and if yes, return that one. It then checks whether there is a valid global
-      * default SparkSession, and if yes, return that one. If no valid global default
-      * SparkSession exists, the method creates a new SparkSession and assigns the
-      * newly created SparkSession as the global default.
-      *
-      * In case an existing SparkSession is returned, the config options specified in
-      * this builder will be applied to the existing SparkSession.
-      *
-      * @since 2.0.0
-      */
+     * Gets an existing [[SparkSession]] or, if there is no existing one, creates a new
+     * one based on the options set in this builder.
+     *
+     * This method first checks whether there is a valid thread-local SparkSession,
+     * and if yes, return that one. It then checks whether there is a valid global
+     * default SparkSession, and if yes, return that one. If no valid global default
+     * SparkSession exists, the method creates a new SparkSession and assigns the
+     * newly created SparkSession as the global default.
+     *
+     * In case an existing SparkSession is returned, the config options specified in
+     * this builder will be applied to the existing SparkSession.
+     *
+     * @since 2.0.0
+     */
     def getOrCreate(): SparkSession = synchronized {
       // Get the session from current thread's active session.
       var session = activeThreadSession.get()
       if ((session ne null) && !session.sparkContext.isStopped) {
-        options.foreach { case (k, v) => session.sessionState.conf.setConfString(k, v) }
+        options.foreach {
+          case (k, v) => session.sessionState.conf.setConfString(k, v)
+        }
         if (options.nonEmpty) {
-          logWarning("Using an existing SparkSession; some configuration may not take effect.")
+          logWarning(
+            "Using an existing SparkSession; some configuration may not take effect."
+          )
         }
         return session
       }
@@ -186,7 +186,9 @@ object TiSparkSession {
         // If the current thread does not have an active session, get it from the global session.
         session = defaultSession.get()
         if ((session ne null) && !session.sparkContext.isStopped) {
-          options.foreach { case (k, v) => session.sessionState.conf.setConfString(k, v) }
+          options.foreach {
+            case (k, v) => session.sessionState.conf.setConfString(k, v)
+          }
           if (options.nonEmpty) {
             logWarning("Using an existing SparkSession; some configuration may not take effect.")
           }
@@ -212,7 +214,9 @@ object TiSparkSession {
           sc
         }
         session = new TiSparkSession(sparkContext)
-        options.foreach { case (k, v) => session.sessionState.conf.setConfString(k, v) }
+        options.foreach {
+          case (k, v) => session.sessionState.conf.setConfString(k, v)
+        }
         defaultSession.set(session)
 
         // Register a successfully instantiated context to the singleton. This should be at the
@@ -233,43 +237,35 @@ object TiSparkSession {
   def builder(): Builder = new Builder
 
   /**
-    * Changes the SparkSession that will be returned in this thread and its children when
-    * SparkSession.getOrCreate() is called. This can be used to ensure that a given thread receives
-    * a SparkSession with an isolated session, instead of the global (first created) context.
-    *
-    * @since 2.0.0
-    */
-  def setActiveSession(session: SparkSession): Unit = {
-    activeThreadSession.set(session)
-  }
+   * Changes the SparkSession that will be returned in this thread and its children when
+   * SparkSession.getOrCreate() is called. This can be used to ensure that a given thread receives
+   * a SparkSession with an isolated session, instead of the global (first created) context.
+   *
+   * @since 2.0.0
+   */
+  def setActiveSession(session: SparkSession): Unit = activeThreadSession.set(session)
 
   /**
-    * Clears the active SparkSession for current thread. Subsequent calls to getOrCreate will
-    * return the first created context instead of a thread-local override.
-    *
-    * @since 2.0.0
-    */
-  def clearActiveSession(): Unit = {
-    activeThreadSession.remove()
-  }
+   * Clears the active SparkSession for current thread. Subsequent calls to getOrCreate will
+   * return the first created context instead of a thread-local override.
+   *
+   * @since 2.0.0
+   */
+  def clearActiveSession(): Unit = activeThreadSession.remove()
 
   /**
-    * Sets the default SparkSession that is returned by the builder.
-    *
-    * @since 2.0.0
-    */
-  def setDefaultSession(session: SparkSession): Unit = {
-    defaultSession.set(session)
-  }
+   * Sets the default SparkSession that is returned by the builder.
+   *
+   * @since 2.0.0
+   */
+  def setDefaultSession(session: SparkSession): Unit = defaultSession.set(session)
 
   /**
-    * Clears the default SparkSession that is returned by the builder.
-    *
-    * @since 2.0.0
-    */
-  def clearDefaultSession(): Unit = {
-    defaultSession.set(null)
-  }
+   * Clears the default SparkSession that is returned by the builder.
+   *
+   * @since 2.0.0
+   */
+  def clearDefaultSession(): Unit = defaultSession.set(null)
 
   private[sql] def getActiveSession: Option[SparkSession] = Option(activeThreadSession.get)
 
@@ -291,9 +287,9 @@ object TiSparkSession {
   private val HIVE_SESSION_STATE_CLASS_NAME = "org.apache.spark.sql.hive.HiveSessionState"
 
   /**
-    * @return true if Hive classes can be loaded, otherwise false.
-    */
-  private[spark] def hiveClassesArePresent: Boolean = {
+   * @return true if Hive classes can be loaded, otherwise false.
+   */
+  private[spark] def hiveClassesArePresent: Boolean =
     try {
       Utils.classForName(HIVE_SESSION_STATE_CLASS_NAME)
       Utils.classForName("org.apache.hadoop.hive.conf.HiveConf")
@@ -301,6 +297,5 @@ object TiSparkSession {
     } catch {
       case _: ClassNotFoundException | _: NoClassDefFoundError => false
     }
-  }
 
 }

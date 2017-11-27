@@ -32,7 +32,7 @@ private[hive] object TiSparkSQLEnv extends Logging {
   var sqlContext: SQLContext = _
   var sparkContext: SparkContext = _
 
-  def   init() {
+  def init() {
     if (sqlContext == null) {
       val sparkConf = new SparkConf(loadDefaults = true)
       // If user doesn't specify the appName, we want to get [SparkSQL::localHostName] instead of
@@ -42,18 +42,31 @@ private[hive] object TiSparkSQLEnv extends Logging {
         .filterNot(_ == classOf[SparkSQLCLIDriver].getName)
 
       sparkConf
-        .setAppName(maybeAppName.getOrElse(s"SparkSQL::${Utils.localHostName()}"))
+        .setAppName(
+          maybeAppName.getOrElse(s"SparkSQL::${Utils.localHostName()}")
+        )
 
       // Injection point for TiSparkSession
-      val sparkSession = TiSparkSession.builder.config(sparkConf).enableHiveSupport().getOrCreate()
+      val sparkSession = TiSparkSession.builder
+        .config(sparkConf)
+        .enableHiveSupport()
+        .getOrCreate()
       sparkContext = sparkSession.sparkContext
       sqlContext = sparkSession.sqlContext
 
-      val sessionState = sparkSession.sessionState.asInstanceOf[HiveSessionState]
-      sessionState.metadataHive.setOut(new PrintStream(System.out, true, "UTF-8"))
-      sessionState.metadataHive.setInfo(new PrintStream(System.err, true, "UTF-8"))
-      sessionState.metadataHive.setError(new PrintStream(System.err, true, "UTF-8"))
-      sparkSession.conf.set("spark.sql.hive.version", HiveUtils.hiveExecutionVersion)
+      val sessionState =
+        sparkSession.sessionState.asInstanceOf[HiveSessionState]
+      sessionState.metadataHive.setOut(
+        new PrintStream(System.out, true, "UTF-8")
+      )
+      sessionState.metadataHive.setInfo(
+        new PrintStream(System.err, true, "UTF-8")
+      )
+      sessionState.metadataHive.setError(
+        new PrintStream(System.err, true, "UTF-8")
+      )
+      sparkSession.conf
+        .set("spark.sql.hive.version", HiveUtils.hiveExecutionVersion)
     }
   }
 

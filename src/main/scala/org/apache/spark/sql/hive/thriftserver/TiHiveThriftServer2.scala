@@ -32,23 +32,23 @@ import org.apache.spark.sql.hive.thriftserver.ReflectionUtils.setSuperField
 import org.apache.spark.sql.hive.thriftserver.ui.ThriftServerTab
 import org.apache.spark.util.{ShutdownHookManager, Utils}
 
-
 object TiHiveThriftServer2 extends Logging {
   var LOG = LogFactory.getLog(classOf[HiveServer2])
   var uiTab: Option[ThriftServerTab] = None
   var listener: HiveThriftServer2Listener = _
 
   /**
-    * :: DeveloperApi ::
-    * Starts a new thrift server with the given context.
-    */
+   * :: DeveloperApi ::
+   * Starts a new thrift server with the given context.
+   */
   @DeveloperApi
   def startWithContext(sqlContext: SQLContext): Unit = {
     val server = new HiveThriftServer2(sqlContext)
 
     val executionHive = HiveUtils.newClientForExecution(
       sqlContext.sparkContext.conf,
-      sqlContext.sessionState.newHadoopConf())
+      sqlContext.sessionState.newHadoopConf()
+    )
 
     server.init(executionHive.conf)
     server.start()
@@ -63,7 +63,8 @@ object TiHiveThriftServer2 extends Logging {
 
   def main(args: Array[String]) {
     Utils.initDaemon(log)
-    val optionsProcessor = new HiveServer2.ServerOptionsProcessor("TiHiveThriftServer2")
+    val optionsProcessor =
+      new HiveServer2.ServerOptionsProcessor("TiHiveThriftServer2")
     optionsProcessor.parse(args)
 
     logInfo("Starting SparkContext")
@@ -76,7 +77,8 @@ object TiHiveThriftServer2 extends Logging {
 
     val executionHive = HiveUtils.newClientForExecution(
       TiSparkSQLEnv.sqlContext.sparkContext.conf,
-      TiSparkSQLEnv.sqlContext.sessionState.newHadoopConf())
+      TiSparkSQLEnv.sqlContext.sessionState.newHadoopConf()
+    )
 
     try {
       val server = new TiHiveThriftServer2(TiSparkSQLEnv.sqlContext)
@@ -87,15 +89,19 @@ object TiHiveThriftServer2 extends Logging {
       HiveThriftServer2.listener = listener
 
       TiSparkSQLEnv.sparkContext.addSparkListener(listener)
-      uiTab = if (TiSparkSQLEnv.sparkContext.getConf.getBoolean("spark.ui.enabled", true)) {
-        Some(new ThriftServerTab(TiSparkSQLEnv.sparkContext))
-      } else {
-        None
-      }
+      uiTab =
+        if (TiSparkSQLEnv.sparkContext.getConf
+              .getBoolean("spark.ui.enabled", true)) {
+          Some(new ThriftServerTab(TiSparkSQLEnv.sparkContext))
+        } else {
+          None
+        }
       // If application was killed before HiveThriftServer2 start successfully then SparkSubmit
       // process can not exit, so check whether if SparkContext was stopped.
       if (TiSparkSQLEnv.sparkContext.stopped.get()) {
-        logError("SparkContext has stopped even if HiveServer2 has started, so exit")
+        logError(
+          "SparkContext has stopped even if HiveServer2 has started, so exit"
+        )
         System.exit(-1)
       }
     } catch {
@@ -106,9 +112,8 @@ object TiHiveThriftServer2 extends Logging {
   }
 }
 
-
 private[hive] class TiHiveThriftServer2(sqlContext: SQLContext)
-  extends HiveServer2
+    extends HiveServer2
     with ReflectedCompositeService {
   // state is tracked internally so that the server only attempts to shut down if it successfully
   // started, and then once only.
@@ -135,15 +140,12 @@ private[hive] class TiHiveThriftServer2(sqlContext: SQLContext)
     transportMode.toLowerCase(Locale.ENGLISH).equals("http")
   }
 
-
   override def start(): Unit = {
     super.start()
     started.set(true)
   }
 
-  override def stop(): Unit = {
-    if (started.getAndSet(false)) {
-      super.stop()
-    }
+  override def stop(): Unit = if (started.getAndSet(false)) {
+    super.stop()
   }
 }

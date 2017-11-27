@@ -15,7 +15,6 @@
 
 package com.pingcap.tispark
 
-
 import java.util.concurrent.TimeUnit
 
 import com.pingcap.tikv.TiConfiguration
@@ -31,7 +30,6 @@ import org.apache.spark.{SparkConf, sql}
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-
 object TiUtils {
   type TiSum = com.pingcap.tikv.expression.aggregate.Sum
   type TiCount = com.pingcap.tikv.expression.aggregate.Count
@@ -45,29 +43,29 @@ object TiUtils {
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
-          !aggExpr.aggregateFunction
-            .children.exists(expr => !isSupportedBasicExpression(expr, tiDBRelation))
+          !aggExpr.aggregateFunction.children
+            .exists(expr => !isSupportedBasicExpression(expr, tiDBRelation))
       case _ => false
     }
   }
 
   def isSupportedBasicExpression(expr: Expression, tiDBRelation: TiDBRelation): Boolean = {
-    BasicExpression.convertToTiExpr(expr).fold(false) {
-      expr: TiExpr =>
-        expr.resolve(tiDBRelation.table)
-        return expr.isSupportedExpr
+    BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpr =>
+      expr.resolve(tiDBRelation.table)
+      return expr.isSupportedExpr
     }
   }
 
   /**
-    * Is expression allowed to be pushed down
-    *
-    * @param expr the expression to examine
-    * @return whether expression can be pushed down
-    */
+   * Is expression allowed to be pushed down
+   *
+   * @param expr the expression to examine
+   * @return whether expression can be pushed down
+   */
   def isPushDownSupported(expr: Expression, source: TiDBRelation): Boolean = {
     val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
-    source.table.getColumns.foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
+    source.table.getColumns
+      .foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
 
     if (expr.children.isEmpty) {
       expr match {
@@ -93,34 +91,36 @@ object TiUtils {
   }
 
   // if contains UDF / functions that cannot be folded
-  def isSupportedGroupingExpr(expr: NamedExpression, source: TiDBRelation): Boolean = isSupportedBasicExpression(expr, source)
+  def isSupportedGroupingExpr(expr: NamedExpression, source: TiDBRelation): Boolean =
+    isSupportedBasicExpression(expr, source)
 
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
     tp match {
       case _: RawBytesType => sql.types.BinaryType
-      case _: BytesType => sql.types.StringType
-      case _: IntegerType => sql.types.LongType
-      case _: RealType => sql.types.DoubleType
+      case _: BytesType    => sql.types.StringType
+      case _: IntegerType  => sql.types.LongType
+      case _: RealType     => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
       case _: DecimalType =>
         DataTypes.createDecimalType(
           Math.min(Integer.MAX_VALUE, tp.getLength).asInstanceOf[Int],
-          tp.getDecimal)
+          tp.getDecimal
+        )
       case _: TimestampType => sql.types.TimestampType
-      case _: DateType => sql.types.DateType
+      case _: DateType      => sql.types.DateType
     }
   }
 
   def fromSparkType(tp: DataType): TiDataType = {
     tp match {
-      case _: sql.types.BinaryType => DataTypeFactory.of(Types.TYPE_BLOB)
-      case _: sql.types.StringType => DataTypeFactory.of(Types.TYPE_VARCHAR)
-      case _: sql.types.LongType => DataTypeFactory.of(Types.TYPE_LONG)
-      case _: sql.types.DoubleType => DataTypeFactory.of(Types.TYPE_DOUBLE)
-      case _: sql.types.DecimalType => DataTypeFactory.of(Types.TYPE_NEW_DECIMAL)
+      case _: sql.types.BinaryType    => DataTypeFactory.of(Types.TYPE_BLOB)
+      case _: sql.types.StringType    => DataTypeFactory.of(Types.TYPE_VARCHAR)
+      case _: sql.types.LongType      => DataTypeFactory.of(Types.TYPE_LONG)
+      case _: sql.types.DoubleType    => DataTypeFactory.of(Types.TYPE_DOUBLE)
+      case _: sql.types.DecimalType   => DataTypeFactory.of(Types.TYPE_NEW_DECIMAL)
       case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_TIMESTAMP)
-      case _: sql.types.DateType => DataTypeFactory.of(Types.TYPE_DATE)
+      case _: sql.types.DateType      => DataTypeFactory.of(Types.TYPE_DATE)
     }
   }
 
@@ -131,7 +131,8 @@ object TiUtils {
       val metadata = new MetadataBuilder()
         .putString("name", col.getName)
         .build()
-      fields(i) = StructField(col.getName, TiUtils.toSparkDataType(col.getType), nullable = true, metadata)
+      fields(i) =
+        StructField(col.getName, TiUtils.toSparkDataType(col.getType), nullable = true, metadata)
     }
     new StructType(fields)
   }
