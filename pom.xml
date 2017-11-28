@@ -108,6 +108,8 @@
         </dependency>
     </dependencies>
     <build>
+        <sourceDirectory>src/main/scala</sourceDirectory>
+        <testSourceDirectory>src/test/scala</testSourceDirectory>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -227,6 +229,22 @@
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.antipathy</groupId>
+                <artifactId>mvn-scalafmt</artifactId>
+                <version>0.5_1.3.0</version>
+                <configuration>
+                    <configLocation>${project.basedir}/scalafmt.conf</configLocation>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>format</goal>
                         </goals>
                     </execution>
                 </executions>

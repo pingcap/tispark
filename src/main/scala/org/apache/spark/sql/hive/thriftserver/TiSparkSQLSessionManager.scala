@@ -31,9 +31,8 @@ import org.apache.spark.sql.hive.thriftserver.ReflectionUtils.{getAncestorField,
 import org.apache.spark.sql.hive.thriftserver.server.SparkSQLOperationManager
 import org.apache.spark.sql.hive.{HiveSessionState, HiveUtils}
 
-
 private[hive] class TiSparkSQLSessionManager(hiveServer: HiveServer2, sqlContext: SQLContext)
-  extends SessionManager(hiveServer)
+    extends SessionManager(hiveServer)
     with ReflectedCompositeService {
 
   private lazy val sparkSqlOperationManager = new SparkSQLOperationManager()
@@ -46,10 +45,15 @@ private[hive] class TiSparkSQLSessionManager(hiveServer: HiveServer2, sqlContext
       invoke(classOf[SessionManager], this, "initOperationLogRootDir")
     }
 
-    val backgroundPoolSize = hiveConf.getIntVar(ConfVars.HIVE_SERVER2_ASYNC_EXEC_THREADS)
-    setSuperField(this, "backgroundOperationPool", Executors.newFixedThreadPool(backgroundPoolSize))
-    getAncestorField[Log](this, 3, "LOG").info(
-      s"HiveServer2: Async execution pool size $backgroundPoolSize")
+    val backgroundPoolSize =
+      hiveConf.getIntVar(ConfVars.HIVE_SERVER2_ASYNC_EXEC_THREADS)
+    setSuperField(
+      this,
+      "backgroundOperationPool",
+      Executors.newFixedThreadPool(backgroundPoolSize)
+    )
+    getAncestorField[Log](this, 3, "LOG")
+      .info(s"HiveServer2: Async execution pool size $backgroundPoolSize")
 
     setSuperField(this, "operationManager", sparkSqlOperationManager)
     addService(sparkSqlOperationManager)
@@ -57,20 +61,29 @@ private[hive] class TiSparkSQLSessionManager(hiveServer: HiveServer2, sqlContext
     initCompositeService(hiveConf)
   }
 
-  override def openSession(
-                            protocol: TProtocolVersion,
-                            username: String,
-                            passwd: String,
-                            ipAddress: String,
-                            sessionConf: java.util.Map[String, String],
-                            withImpersonation: Boolean,
-                            delegationToken: String): SessionHandle = {
+  override def openSession(protocol: TProtocolVersion,
+                           username: String,
+                           passwd: String,
+                           ipAddress: String,
+                           sessionConf: java.util.Map[String, String],
+                           withImpersonation: Boolean,
+                           delegationToken: String): SessionHandle = {
     val sessionHandle =
-      super.openSession(protocol, username, passwd, ipAddress, sessionConf, withImpersonation,
-        delegationToken)
+      super.openSession(
+        protocol,
+        username,
+        passwd,
+        ipAddress,
+        sessionConf,
+        withImpersonation,
+        delegationToken
+      )
     val session = super.getSession(sessionHandle)
     TiHiveThriftServer2.listener.onSessionCreated(
-      session.getIpAddress, sessionHandle.getSessionId.toString, session.getUsername)
+      session.getIpAddress,
+      sessionHandle.getSessionId.toString,
+      session.getUsername
+    )
     val sessionState = sqlContext.sessionState.asInstanceOf[HiveSessionState]
     val ctx = if (sessionState.hiveThriftServerSingleSession) {
       sqlContext
@@ -86,7 +99,9 @@ private[hive] class TiSparkSQLSessionManager(hiveServer: HiveServer2, sqlContext
   }
 
   override def closeSession(sessionHandle: SessionHandle) {
-    TiHiveThriftServer2.listener.onSessionClosed(sessionHandle.getSessionId.toString)
+    TiHiveThriftServer2.listener.onSessionClosed(
+      sessionHandle.getSessionId.toString
+    )
     super.closeSession(sessionHandle)
     sparkSqlOperationManager.sessionToActivePool.remove(sessionHandle)
     sparkSqlOperationManager.sessionToContexts.remove(sessionHandle)

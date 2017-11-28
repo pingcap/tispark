@@ -30,22 +30,24 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{AnalysisException, SQLContext}
 import org.apache.spark.sql.execution.QueryExecution
 
-
-private[hive] class TiSparkSQLDriver(val context: SQLContext = TiSparkSQLEnv.sqlContext)
-  extends Driver
+private[hive] class TiSparkSQLDriver(
+  val context: SQLContext = TiSparkSQLEnv.sqlContext
+) extends Driver
     with Logging {
 
   private[hive] var tableSchema: Schema = _
   private[hive] var hiveResponse: Seq[String] = _
 
-  override def init(): Unit = {
-  }
+  override def init(): Unit = {}
 
   private def getResultSetSchema(query: QueryExecution): Schema = {
     val analyzed = query.analyzed
     logDebug(s"Result Schema: ${analyzed.output}")
     if (analyzed.output.isEmpty) {
-      new Schema(Arrays.asList(new FieldSchema("Response code", "string", "")), null)
+      new Schema(
+        Arrays.asList(new FieldSchema("Response code", "string", "")),
+        null
+      )
     } else {
       val fieldSchemas = analyzed.output.map { attr =>
         new FieldSchema(attr.name, attr.dataType.catalogString, "")
@@ -55,23 +57,33 @@ private[hive] class TiSparkSQLDriver(val context: SQLContext = TiSparkSQLEnv.sql
     }
   }
 
-  override def run(command: String): CommandProcessorResponse = {
+  override def run(command: String): CommandProcessorResponse =
     // TODO unify the error code
     try {
       context.sparkContext.setJobDescription(command)
-      val execution = context.sessionState.executePlan(context.sql(command).logicalPlan)
+      val execution =
+        context.sessionState.executePlan(context.sql(command).logicalPlan)
       hiveResponse = execution.hiveResultString()
       tableSchema = getResultSetSchema(execution)
       new CommandProcessorResponse(0)
     } catch {
       case ae: AnalysisException =>
         logDebug(s"Failed in [$command]", ae)
-        new CommandProcessorResponse(1, ExceptionUtils.getStackTrace(ae), null, ae)
+        new CommandProcessorResponse(
+          1,
+          ExceptionUtils.getStackTrace(ae),
+          null,
+          ae
+        )
       case cause: Throwable =>
         logError(s"Failed in [$command]", cause)
-        new CommandProcessorResponse(1, ExceptionUtils.getStackTrace(cause), null, cause)
+        new CommandProcessorResponse(
+          1,
+          ExceptionUtils.getStackTrace(cause),
+          null,
+          cause
+        )
     }
-  }
 
   override def close(): Int = {
     hiveResponse = null
@@ -79,7 +91,7 @@ private[hive] class TiSparkSQLDriver(val context: SQLContext = TiSparkSQLEnv.sql
     0
   }
 
-  override def getResults(res: JList[_]): Boolean = {
+  override def getResults(res: JList[_]): Boolean =
     if (hiveResponse == null) {
       false
     } else {
@@ -87,7 +99,6 @@ private[hive] class TiSparkSQLDriver(val context: SQLContext = TiSparkSQLEnv.sql
       hiveResponse = null
       true
     }
-  }
 
   override def getSchema: Schema = tableSchema
 

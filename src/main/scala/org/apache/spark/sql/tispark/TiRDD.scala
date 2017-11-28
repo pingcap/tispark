@@ -40,11 +40,12 @@ class TiRDD(val dagRequest: TiDAGRequest,
             val ts: TiTimestamp,
             @transient private val session: TiSession,
             @transient private val sparkSession: SparkSession)
-  extends RDD[Row](sparkSession.sparkContext, Nil) {
+    extends RDD[Row](sparkSession.sparkContext, Nil) {
 
   type TiRow = com.pingcap.tikv.row.Row
 
-  @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) = initializeSchema
+  @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) =
+    initializeSchema
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
     val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
@@ -84,9 +85,12 @@ class TiRDD(val dagRequest: TiDAGRequest,
 
   override protected def getPartitions: Array[Partition] = {
     val conf = sparkSession.conf
-    val keyWithRegionTasks = RangeSplitter.newSplitter(session.getRegionManager)
-                 .splitRangeByRegion(dagRequest.getRanges,
-                                     conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt)
+    val keyWithRegionTasks = RangeSplitter
+      .newSplitter(session.getRegionManager)
+      .splitRangeByRegion(
+        dagRequest.getRanges,
+        conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt
+      )
 
     val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
     val taskMap = new HashMap[String, Set[RegionTask]] with MultiMap[String, RegionTask]

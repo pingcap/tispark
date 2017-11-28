@@ -43,9 +43,9 @@ import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.util.ShutdownHookManager
 
 /**
-  * This code doesn't support remote connections in Hive 1.2+, as the underlying CliDriver
-  * has dropped its support.
-  */
+ * This code doesn't support remote connections in Hive 1.2+, as the underlying CliDriver
+ * has dropped its support.
+ */
 private[hive] object TiSparkSQLCLIDriver extends Logging {
   private val prompt = "tispark-sql"
   private val continuedPrompt = "".padTo(prompt.length, ' ')
@@ -54,10 +54,10 @@ private[hive] object TiSparkSQLCLIDriver extends Logging {
   installSignalHandler()
 
   /**
-    * Install an interrupt callback to cancel all Spark jobs. In Hive's CliDriver#processLine(),
-    * a signal handler will invoke this registered callback if a Ctrl+C signal is detected while
-    * a command is being processed by the current thread.
-    */
+   * Install an interrupt callback to cancel all Spark jobs. In Hive's CliDriver#processLine(),
+   * a signal handler will invoke this registered callback if a Ctrl+C signal is detected while
+   * a command is being processed by the current thread.
+   */
   def installSignalHandler() {
     HiveInterruptUtils.add(new HiveInterruptCallback {
       override def interrupt() {
@@ -115,7 +115,9 @@ private[hive] object TiSparkSQLCLIDriver extends Logging {
     SessionState.start(sessionState)
 
     // Clean up after we exit
-    ShutdownHookManager.addShutdownHook { () => TiSparkSQLEnv.stop() }
+    ShutdownHookManager.addShutdownHook { () =>
+      TiSparkSQLEnv.stop()
+    }
 
     val remoteMode = isRemoteMode(sessionState)
     // "-h" option has been passed, so connect to Hive thrift server.
@@ -150,8 +152,8 @@ private[hive] object TiSparkSQLCLIDriver extends Logging {
     }
 
     if (sessionState.database != null) {
-      TiSparkSQLEnv.sqlContext.sessionState.catalog.setCurrentDatabase(
-        s"${sessionState.database}")
+      TiSparkSQLEnv.sqlContext.sessionState.catalog
+        .setCurrentDatabase(s"${sessionState.database}")
     }
 
     // Execute -i init files (always in silent mode)
@@ -192,13 +194,17 @@ private[hive] object TiSparkSQLCLIDriver extends Logging {
         val historyFile = historyDirectory + File.separator + ".hivehistory"
         reader.setHistory(new FileHistory(new File(historyFile)))
       } else {
-        logWarning("WARNING: Directory for Hive history file: " + historyDirectory +
-          " does not exist.   History will not be available during this session.")
+        logWarning(
+          "WARNING: Directory for Hive history file: " + historyDirectory +
+            " does not exist.   History will not be available during this session."
+        )
       }
     } catch {
       case e: Exception =>
-        logWarning("WARNING: Encountered an error while trying to initialize Hive's " +
-          "history file.  History will not be available during this session.")
+        logWarning(
+          "WARNING: Encountered an error while trying to initialize Hive's " +
+            "history file.  History will not be available during this session."
+        )
         logWarning(e.getMessage)
     }
 
@@ -210,7 +216,9 @@ private[hive] object TiSparkSQLCLIDriver extends Logging {
             h.flush()
           } catch {
             case e: IOException =>
-              logWarning("WARNING: Failed to write command history file: " + e.getMessage)
+              logWarning(
+                "WARNING: Failed to write command history file: " + e.getMessage
+              )
           }
         case _ =>
       }
@@ -222,17 +230,25 @@ private[hive] object TiSparkSQLCLIDriver extends Logging {
         clientTransportTSocketField.setAccessible(true)
 
         transport = clientTransportTSocketField.get(sessionState).asInstanceOf[TSocket]
-    */
+     */
     transport = null
 
     var ret = 0
     var prefix = ""
-    val currentDB = ReflectionUtils.invokeStatic(classOf[CliDriver], "getFormattedDb",
-      classOf[HiveConf] -> conf, classOf[CliSessionState] -> sessionState)
+    val currentDB = ReflectionUtils.invokeStatic(
+      classOf[CliDriver],
+      "getFormattedDb",
+      classOf[HiveConf] -> conf,
+      classOf[CliSessionState] -> sessionState
+    )
 
     def promptWithCurrentDB: String = s"$prompt$currentDB"
-    def continuedPromptWithDBSpaces: String = continuedPrompt + ReflectionUtils.invokeStatic(
-      classOf[CliDriver], "spacesForString", classOf[String] -> currentDB)
+    def continuedPromptWithDBSpaces: String =
+      continuedPrompt + ReflectionUtils.invokeStatic(
+        classOf[CliDriver],
+        "spacesForString",
+        classOf[String] -> currentDB
+      )
 
     var currentPrompt = promptWithCurrentDB
     var line = reader.readLine(currentPrompt + "> ")
@@ -261,11 +277,9 @@ private[hive] object TiSparkSQLCLIDriver extends Logging {
     System.exit(ret)
   }
 
-
-  def isRemoteMode(state: CliSessionState): Boolean = {
+  def isRemoteMode(state: CliSessionState): Boolean =
     //    sessionState.isRemoteMode
     state.isHiveServerQuery
-  }
 
 }
 
@@ -296,9 +310,12 @@ private[hive] class TiSparkSQLCLIDriver extends CliDriver with Logging {
     throw new RuntimeException("Remote operations not supported")
   }
 
-  override def setHiveVariables(hiveVariables: java.util.Map[String, String]): Unit = {
-    hiveVariables.asScala.foreach(kv => TiSparkSQLEnv.sqlContext.conf.setConfString(kv._1, kv._2))
-  }
+  override def setHiveVariables(
+    hiveVariables: java.util.Map[String, String]
+  ): Unit =
+    hiveVariables.asScala.foreach(
+      kv => TiSparkSQLEnv.sqlContext.conf.setConfString(kv._1, kv._2)
+    )
 
   override def processCmd(cmd: String): Int = {
     val cmd_trimmed: String = cmd.trim()
@@ -306,12 +323,12 @@ private[hive] class TiSparkSQLCLIDriver extends CliDriver with Logging {
     val tokens: Array[String] = cmd_trimmed.split("\\s+")
     val cmd_1: String = cmd_trimmed.substring(tokens(0).length()).trim()
     if (cmd_lower.equals("quit") ||
-      cmd_lower.equals("exit")) {
+        cmd_lower.equals("exit")) {
       sessionState.close()
       System.exit(0)
     }
     if (tokens(0).toLowerCase(Locale.ROOT).equals("source") ||
-      cmd_trimmed.startsWith("!") || isRemoteMode) {
+        cmd_trimmed.startsWith("!") || isRemoteMode) {
       val start = System.currentTimeMillis()
       super.processCmd(cmd)
       val end = System.currentTimeMillis()
@@ -326,8 +343,9 @@ private[hive] class TiSparkSQLCLIDriver extends CliDriver with Logging {
       if (proc != null) {
         // scalastyle:off println
         if (proc.isInstanceOf[Driver] || proc.isInstanceOf[SetProcessor] ||
-          proc.isInstanceOf[AddResourceProcessor] || proc.isInstanceOf[ListResourceProcessor] ||
-          proc.isInstanceOf[ResetProcessor] ) {
+            proc.isInstanceOf[AddResourceProcessor] || proc
+              .isInstanceOf[ListResourceProcessor] ||
+            proc.isInstanceOf[ResetProcessor]) {
           val driver = new TiSparkSQLDriver
 
           driver.init()
@@ -345,7 +363,7 @@ private[hive] class TiSparkSQLCLIDriver extends CliDriver with Logging {
           if (ret != 0) {
             // For analysis exception, only the error is printed out to the console.
             rc.getException() match {
-              case e : AnalysisException =>
+              case e: AnalysisException =>
                 err.println(s"""Error in query: ${e.getMessage}""")
               case _ => err.println(rc.getErrorMessage())
             }
@@ -355,7 +373,10 @@ private[hive] class TiSparkSQLCLIDriver extends CliDriver with Logging {
 
           val res = new JArrayList[String]()
 
-          if (HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_CLI_PRINT_HEADER)) {
+          if (HiveConf.getBoolVar(
+                conf,
+                HiveConf.ConfVars.HIVE_CLI_PRINT_HEADER
+              )) {
             // Print the column names.
             Option(driver.getSchema.getFieldSchemas).foreach { fields =>
               out.println(fields.asScala.map(_.getName).mkString("\t"))
@@ -375,8 +396,10 @@ private[hive] class TiSparkSQLCLIDriver extends CliDriver with Logging {
             case e: IOException =>
               console.printError(
                 s"""Failed with exception ${e.getClass.getName}: ${e.getMessage}
-                   |${org.apache.hadoop.util.StringUtils.stringifyException(e)}
-                 """.stripMargin)
+                   |${org.apache.hadoop.util.StringUtils
+                     .stringifyException(e)}
+                 """.stripMargin
+              )
               ret = 1
           }
 
@@ -404,4 +427,3 @@ private[hive] class TiSparkSQLCLIDriver extends CliDriver with Logging {
     }
   }
 }
-
