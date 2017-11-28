@@ -77,29 +77,30 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     CoprocessorRDD(output, tiRdd)
   }
 
-  def aggregationToDAGRequest(groupByList: Seq[NamedExpression],
-                              aggregates: Seq[AggregateExpression],
-                              source: TiDBRelation,
-                              dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())
-                             ): TiDAGRequest = {
+  def aggregationToDAGRequest(
+    groupByList: Seq[NamedExpression],
+    aggregates: Seq[AggregateExpression],
+    source: TiDBRelation,
+    dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())
+  ): TiDAGRequest = {
     aggregates.foreach {
       case AggregateExpression(_: Average, _, _, _) =>
         throw new IllegalArgumentException("Should never be here")
 
-      case AggregateExpression(f@Sum(BasicExpression(arg)), _, _, _) =>
+      case AggregateExpression(f @ Sum(BasicExpression(arg)), _, _, _) =>
         dagRequest.addAggregate(new TiSum(arg), fromSparkType(f.dataType))
 
-      case AggregateExpression(f@Count(args), _, _, _) =>
+      case AggregateExpression(f @ Count(args), _, _, _) =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
         dagRequest.addAggregate(new TiCount(tiArgs: _*), fromSparkType(f.dataType))
 
-      case AggregateExpression(f@Min(BasicExpression(arg)), _, _, _) =>
+      case AggregateExpression(f @ Min(BasicExpression(arg)), _, _, _) =>
         dagRequest.addAggregate(new TiMin(arg), fromSparkType(f.dataType))
 
-      case AggregateExpression(f@Max(BasicExpression(arg)), _, _, _) =>
+      case AggregateExpression(f @ Max(BasicExpression(arg)), _, _, _) =>
         dagRequest.addAggregate(new TiMax(arg), fromSparkType(f.dataType))
 
-      case AggregateExpression(f@First(BasicExpression(arg), _), _, _, _) =>
+      case AggregateExpression(f @ First(BasicExpression(arg), _), _, _, _) =>
         dagRequest.addAggregate(new TiFirst(arg), fromSparkType(f.dataType))
 
       case _ =>
@@ -115,10 +116,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def filterToDAGRequest(filters: Seq[Expression],
-                         source: TiDBRelation,
-                         dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())
-                        ): TiDAGRequest = {
+  def filterToDAGRequest(
+    filters: Seq[Expression],
+    source: TiDBRelation,
+    dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())
+  ): TiDAGRequest = {
     val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val scanPlan = if (allowIndexDoubleRead()) {
@@ -135,16 +137,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def pruneFilterProject(projectList: Seq[NamedExpression],
-                         filterPredicates: Seq[Expression],
-                         source: TiDBRelation,
-                         dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())): SparkPlan = {
+  def pruneFilterProject(
+    projectList: Seq[NamedExpression],
+    filterPredicates: Seq[Expression],
+    source: TiDBRelation,
+    dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())
+  ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))
     val filterSet = AttributeSet(filterPredicates.flatMap(_.references))
 
-    val (pushdownFilters: Seq[Expression],
-    residualFilters: Seq[Expression]) =
+    val (pushdownFilters: Seq[Expression], residualFilters: Seq[Expression]) =
       filterPredicates.partition(
         (expression: Expression) => TiUtils.isSupportedFilter(expression, source)
       )
@@ -160,7 +163,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     // TODO: Decouple final output schema from expression evaluation so this copy can be
     // avoided safely.
     if (AttributeSet(projectList.map(_.toAttribute)) == projectSet &&
-      filterSet.subsetOf(projectSet)) {
+        filterSet.subsetOf(projectSet)) {
       // When it is possible to just use column pruning to get the right projection and
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
@@ -232,23 +235,23 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // 3. resultExpressions: finalAgg1 + 1, the finalAgg1 is the reference to final result
       // of the aggregation
       case TiAggregation(
-      groupingExpressions,
-      aggregateExpressions,
-      resultExpressions,
-      TiAggregationProjection(filters, _, `source`)
-      )
-        if groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source)) &&
-          aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source)) &&
-          allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
+          groupingExpressions,
+          aggregateExpressions,
+          resultExpressions,
+          TiAggregationProjection(filters, _, `source`, projects)
+          )
+          if groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source)) &&
+            aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source)) &&
+            allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
         var dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
         val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
           aggExpr.aggregateFunction match {
             // here aggExpr is the original AggregationExpression
             // and will be pushed down to TiKV
-            case Max(_) => newAggregate(Max(toAlias(aggExpr).toAttribute), aggExpr)
-            case Min(_) => newAggregate(Min(toAlias(aggExpr).toAttribute), aggExpr)
+            case Max(_)   => newAggregate(Max(toAlias(aggExpr).toAttribute), aggExpr)
+            case Min(_)   => newAggregate(Min(toAlias(aggExpr).toAttribute), aggExpr)
             case Count(_) => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
-            case Sum(_) => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
+            case Sum(_)   => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
             case First(_, ignoreNullsExpr) =>
               newAggregate(First(toAlias(aggExpr).toAttribute, ignoreNullsExpr), aggExpr)
             case _ => aggExpr
@@ -260,7 +263,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
             // Spark has lift agg + 1 up to resultExpressions
             // We need to modify the reference there as well to forge
             // Divide(sum/count) + 1
-            case aggExpr@AggregateExpression(Average(ref), _, _, _) =>
+            case aggExpr @ AggregateExpression(Average(ref), _, _, _) =>
               // Need a type promotion
               val sumToPush = newAggregate(Sum(ref), aggExpr)
               val countToPush = newAggregate(Count(ref), aggExpr)
@@ -312,12 +315,51 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           .map(_.toAttribute)
           .distinct
 
+        val projectSeq: Seq[Attribute] = projects.asInstanceOf[Seq[Attribute]]
+        projectSeq.foreach(attr => dagReq.addRequiredColumn(TiColumnRef.create(attr.name)))
+
+//        val (functionsWithDistinct, functionsWithoutDistinct) =
+//          aggregateExpressions.partition(_.isDistinct)
+
         aggregate.AggUtils.planAggregateWithoutDistinct(
           groupingExpressions,
           residualAggregateExpressions,
           rewrittenResultExpression,
           toCoprocessorRDD(source, output, dagReq)
         )
+//        val aggregateOperator =
+//          if (aggregateExpressions.map(_.aggregateFunction).exists(!_.supportsPartial)) {
+//            if (functionsWithDistinct.nonEmpty) {
+//              sys.error(
+//                "Distinct columns cannot exist in Aggregate operator containing " +
+//                  "aggregate functions which don't support partial aggregation."
+//              )
+//            } else {
+//              aggregate.AggUtils.planAggregateWithoutPartial(
+//                groupingExpressions,
+//                aggregateExpressions,
+//                resultExpressions,
+//                toCoprocessorRDD(source, output, dagReq)
+//              )
+//            }
+//          } else if (functionsWithDistinct.isEmpty) {
+//            aggregate.AggUtils.planAggregateWithoutDistinct(
+//              groupingExpressions,
+//              aggregateExpressions,
+//              resultExpressions,
+//              toCoprocessorRDD(source, output, dagReq)
+//            )
+//          } else {
+//            aggregate.AggUtils.planAggregateWithOneDistinct(
+//              groupingExpressions,
+//              functionsWithDistinct,
+//              functionsWithoutDistinct,
+//              resultExpressions,
+//              toCoprocessorRDD(source, output, dagReq)
+//            )
+//          }
+//
+//        aggregateOperator
       case _ => Nil
     }
   }
@@ -335,15 +377,15 @@ object TiAggregation {
 }
 
 object TiAggregationProjection {
-  type ReturnType = (Seq[Expression], LogicalPlan, TiDBRelation)
+  type ReturnType = (Seq[Expression], LogicalPlan, TiDBRelation, Seq[NamedExpression])
 
   def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
     // Only push down aggregates projection when all filters can be applied and
     // all projection expressions are column references
-    case PhysicalOperation(projects, filters, rel@LogicalRelation(source: TiDBRelation, _, _))
-      if projects.forall(_.isInstanceOf[Attribute]) &&
-        filters.forall(TiUtils.isSupportedFilter(_, source)) =>
-      Some((filters, rel, source))
+    case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _))
+        if projects.forall(_.isInstanceOf[Attribute]) &&
+          filters.forall(TiUtils.isSupportedFilter(_, source)) =>
+      Some((filters, rel, source, projects))
     case _ => Option.empty[ReturnType]
   }
 }

@@ -210,9 +210,9 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
 
   def toOutput(value: Any): Any = {
     value match {
-      case _: Array[Byte] =>
+      case _: scala.Array[Byte] =>
         var str: String = new String
-        for (b <- value.asInstanceOf[Array[Byte]]) {
+        for (b <- value.asInstanceOf[scala.Array[Byte]]) {
           str = str.concat(b.toString)
         }
         str

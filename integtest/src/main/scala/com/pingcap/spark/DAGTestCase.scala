@@ -22,8 +22,10 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   private val ARITHMETIC_CONSTANT = List[String](
     java.lang.Long.MAX_VALUE.toString,
     java.lang.Long.MIN_VALUE.toString,
-    java.lang.Double.MAX_VALUE.toString,
-    java.lang.Double.MIN_VALUE.toString,
+//    java.lang.Double.MAX_VALUE.toString,
+//    java.lang.Double.MIN_VALUE.toString,
+    3.14159265358979D.toString,
+    "1E10",
     java.lang.Integer.MAX_VALUE.toString,
     java.lang.Integer.MIN_VALUE.toString,
     java.lang.Short.MAX_VALUE.toString,
@@ -60,11 +62,12 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     colList = jdbc.getTableColumnNames("full_data_type_table")
     prepareTestCol()
     testBundle(
-//      createSymmetryTypeTestCases ++
-//        createCartesianTypeTestCases ++
-//        createArithmeticTest ++
-//        createPlaceHolderTest
-    createInTest()
+      createSymmetryTypeTestCases ++
+        //        createCartesianTypeTestCases ++
+        createArithmeticTest ++
+        createPlaceHolderTest
+      //          createInTest()
+      //      createDistinct
     )
   }
 
@@ -73,11 +76,6 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     colSkipSet.foreach(colSet.remove)
   }
 
-  def createDistinct(): List[String] = {
-    colSet.map((str: String) =>
-      select(distinct(str))
-    ).toList
-  }
 
   def createLogicalAndOr(): List[String] = {
     createLogical("and") ::: createLogical("or")
@@ -111,14 +109,10 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     select("tp_real") + where(binaryOpWithName("tp_real", "(4.44,0.5194052764001038)", "in", withTbName = false)),
     select("tp_longtext") + where(binaryOpWithName("tp_longtext", "('很长的一段文字', 'OntPHB22qwSxriGUQ9RLfoiRkEMfEYFZdnAkL7SdpfD59MfmUXpKUAXiJpegn6dcMyfRyBhNw9efQfrl2yMmtM0zJx3ScAgTIA8djNnmCnMVzHgPWVYfHRnl8zENOD5SbrI4HAazss9xBVpikAgxdXKvlxmhfNoYIK0YYnO84MXKkMUinjPQ7zWHbh5lImp7g9HpIXgtkFFTXVvCaTr8mQXXOl957dxePeUvPv28GUdnzXTzk7thTbsWAtqU7YaK4QC4z9qHpbt5ex9ck8uHz2RoptFw71RIoKGiPsBD9YwXAS19goDM2H0yzVtDNJ6ls6jzXrGlJ6gIRG73Er0tVyourPdM42a5oDihfVP6XxjOjS0cmVIIppDSZIofkRfRhQWAunheFbEEPSHx3eybQ6pSIFd34Natgr2erFjyxFIRr7J535HT9aIReYIlocKK2ZI9sfcwhX0PeDNohY2tvHbsrHE0MlKCyVSTjPxszvFjCPlyqwQy')", "in", withTbName = false)),
     select("tp_text") + where(binaryOpWithName("tp_text", "('一般的文字', 'dQWD3XwSTevpbP5hADFdNO0dQvaueFhnGcJAm045mGv5fXttso')", "in", withTbName = false))
-//    select("tp_bit") + where(binaryOpWithName("tp_bit", "(1)", "in", withTbName = false))
-//    select("tp_enum") + where(binaryOpWithName("tp_enum", "(1)", "in", withTbName = false)),
-//    select("tp_set") + where(binaryOpWithName("tp_set", "('a,b')", "in", withTbName = false))
+    //    select("tp_bit") + where(binaryOpWithName("tp_bit", "(1)", "in", withTbName = false))
+    //    select("tp_enum") + where(binaryOpWithName("tp_enum", "(1)", "in", withTbName = false)),
+    //    select("tp_set") + where(binaryOpWithName("tp_set", "('a,b')", "in", withTbName = false))
   )
-
-  def distinct(cols: String*): String = {
-    s" distinct$cols ".replace("WrappedArray", "")
-  }
 
   def testBundle(list: List[String]): Unit = {
     var result = false
@@ -136,6 +130,12 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   // ***********************************************************************************************
   // ******************************** Below is test cases generated ********************************
 
+  def createDistinct(): List[String] = {
+    colSet.map((str: String) =>
+      select(distinct(str)) + orderBy(str)
+    ).toList
+  }
+
   /**
     * We create test for each type, each operator
     *
@@ -143,11 +143,13 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     */
   def createSymmetryTypeTestCases: List[String] = {
     compareOpList.flatMap((op: String) => {
-      colSet.map((tp: String) => buildBinarySelfJoinQuery(tp, tp, op) + limit()).toList
+      colSet.map((tp: String) =>
+        select(tp, tp) + where(binaryOpWithName(tp, tp, op, withTbName = false)) + limit())
+        .toList
     })
   }
 
-  def createCartesianTypeTestCases: List[String] = {
+  def createSelfJoinTypeTest: List[String] = {
     compareOpList.flatMap((op: String) =>
       colSet.flatMap((lCol: String) =>
         colSet.map((rCol: String) =>
@@ -157,13 +159,29 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     )
   }
 
+  def createCartesianTypeTestCases: List[String] = {
+    compareOpList.flatMap((op: String) =>
+      colSet.flatMap((lCol: String) =>
+        colSet.map((rCol: String) =>
+          select(lCol, rCol) + where(binaryOpWithName(lCol, rCol, op, withTbName = false)) + limit()
+        )
+      )
+    )
+  }
+
   def createArithmeticTest: List[String] = {
     var res = ArrayBuffer.empty[String]
+    val skipLocalSet = mutable.Set[String]()
+    skipLocalSet.add("tp_nvarchar")
+    skipLocalSet.add("tp_varchar")
+    skipLocalSet.add("tp_char")
     for (op <- arithmeticOpList) {
-      for (lCol <- colList) {
-        for (rCol <- ARITHMETIC_CONSTANT) {
-          if (!colSkipSet.contains(rCol)) {
-            res += select(arithmeticOp(lCol, rCol, op)) + orderBy(ID_COL) + limit(10)
+      for (lCol <- colSet) {
+        if (!skipLocalSet.contains(lCol)) {
+          for (rCol <- ARITHMETIC_CONSTANT) {
+            if (!colSkipSet.contains(rCol)) {
+              res += select(arithmeticOp(lCol, rCol, op)) + orderBy(ID_COL) + limit(10)
+            }
           }
         }
       }
@@ -174,16 +192,22 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
 
   def createPlaceHolderTest: List[String] = {
     var res = ArrayBuffer.empty[String]
+    val skipLocalSet = mutable.Set[String]()
+    skipLocalSet.add("tp_nvarchar")
+    skipLocalSet.add("tp_varchar")
+    skipLocalSet.add("tp_char")
+
     for (op <- compareOpList) {
       for (col <- colSet) {
-        for (placeHolder <- PLACE_HOLDER) {
-          res += select(countId()) + where(binaryOpWithName(
-            col,
-            placeHolder,
-            op,
-            withTbName = false
-          ))
-        }
+        if (!skipLocalSet.contains(col))
+          for (placeHolder <- PLACE_HOLDER) {
+            res += select(countId()) + where(binaryOpWithName(
+              col,
+              placeHolder,
+              op,
+              withTbName = false
+            ))
+          }
       }
     }
 
@@ -193,15 +217,29 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   // ***********************************************************************************************
   // ******************************** Below is SQL build helper ************************************
 
+  def distinct(cols: String*): String = {
+    s" distinct$cols ".replace("WrappedArray", "")
+  }
+
+  def groupBy(cols: String*): String = {
+    s" group by $cols ".replace("WrappedArray", "")
+  }
+
   def buildBinarySelfJoinQuery(lCol: String, rCol: String, op: String): String = {
     selfJoinSelect(
       Array(
+        tableColDot(LEFT_TB_NAME, ID_COL),
         tableColDot(LEFT_TB_NAME, lCol),
         tableColDot(RIGHT_TB_NAME, rCol)
       ): _*
     ) +
       where(binaryOpWithName(lCol, rCol, op)) +
-      orderBy(tableColDot(LEFT_TB_NAME, ID_COL))
+      orderBy(
+        Array(
+          tableColDot(LEFT_TB_NAME, ID_COL),
+          tableColDot(RIGHT_TB_NAME, ID_COL)
+        ): _*
+      )
   }
 
   def countId(): String = {
@@ -241,8 +279,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       s"on $LEFT_TB_NAME.id_dt > $RIGHT_TB_NAME.id_dt * $SCALE_FACTOR"
   }
 
-  def orderBy(condition: String): String = {
-    " order by " + condition
+  def orderBy(cols: String*): String = {
+    s" order by $cols ".replace("WrappedArray", "").replace("(", "").replace(")", "")
   }
 
   def where(condition: String): String = {
@@ -269,15 +307,5 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
 
   def limit(num: Int = 20): String = {
     " limit " + num
-  }
-}
-
-object DAGTestCase {
-  def main(args: Array[String]): Unit = {
-    val dAGTestCase = new DAGTestCase(new Properties())
-    dAGTestCase.prepareTestCol()
-    for (str <- dAGTestCase.createLogicalAndOr) {
-      println(str)
-    }
   }
 }

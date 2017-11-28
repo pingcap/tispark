@@ -33,7 +33,6 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{HashMap, ListBuffer, MultiMap, Set}
 
-
 class TiRDD(val dagRequest: TiDAGRequest,
             val tiConf: TiConfiguration,
             val tableRef: TiTableReference,

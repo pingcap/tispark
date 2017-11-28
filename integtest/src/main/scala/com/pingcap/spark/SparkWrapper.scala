@@ -60,7 +60,11 @@ class SparkWrapper() extends LazyLogging {
     df.collect().map(row => {
       val rowRes = ArrayBuffer.empty[Any]
       for (i <- 0 until row.length) {
-        rowRes += toOutput(row.get(i))
+        if (schema(i).dataType.isInstanceOf[BinaryType]) {
+          rowRes += new String(row.get(i).asInstanceOf[Array[Byte]])
+        } else {
+          rowRes += toOutput(row.get(i))
+        }
       }
       rowRes.toList
     }).toList

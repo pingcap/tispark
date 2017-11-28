@@ -72,8 +72,8 @@ object BasicExpression {
         // DAG mode
         for (child <- expr.children) {
           if (!childType.equals(child.dataType) ||
-            // Do it recursively
-            !isSupportedExpression(child, requestMode)) {
+              // Do it recursively
+              !isSupportedExpression(child, requestMode)) {
             return false
           }
         }
