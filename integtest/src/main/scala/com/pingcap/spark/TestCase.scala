@@ -52,6 +52,14 @@ class TestCase(val prop: Properties) extends LazyLogging {
   private val tidbExceptionOutput = "TiDB execution failed with exception caught"
   private val sparkExceptionOutput = "Spark execution failed with exception caught"
 
+  private final val SparkIgnore = Set[String](
+    "type mismatch", "only support precision", "Error converting access pointsnull"
+  )
+
+  private final val TiDBIgnore = Set[String](
+    "out of range", "BIGINT", "other error: unknown error Other", "invalid time format"
+  )
+
   logger.info("Databases to dump: " + dbNames.mkString(","))
   logger.info("Run Mode: " + mode)
   logger.info("basePath: " + basePath)
@@ -147,31 +155,24 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  private def printDiff(sqlName: String, sql: String, TiDB: List[List[Any]], TiSpark: List[List[Any]]): Unit = {
-    for (row <- TiSpark) {
-      for (str <- row) {
-        if (str != null &&
-          (str.toString.contains("type mismatch") ||
-            str.toString.contains("only support precision") ||
-            str.toString.contains("Error converting access pointsnull"))) {
-          return
-        }
-      }
-    }
-    for (row <- TiDB) {
-      for (str <- row) {
-        if (str != null &&
-          (str.toString.contains("out of range") ||
-            str.toString.contains("BIGINT") ||
-            str.toString.contains("invalid time format"))) {
-          return
-        }
-      }
-    }
+  private def printDiff(sqlName: String, sql: String, tiDb: List[List[Any]], tiSpark: List[List[Any]]): Unit = {
+    // ignore specific print result
+    if (tiSpark.exists(
+      (row: List[Any]) => row.exists(
+        (str: Any) => SparkIgnore.exists(
+          (i: String) => str.toString.contains(i)
+        )))) return
+
+    if (tiDb.exists(
+      (row: List[Any]) => row.exists(
+        (str: Any) => TiDBIgnore.exists(
+          (i: String) => str.toString.contains(i)
+        )))) return
+
     logger.info(s"Dump diff for TiSpark $sqlName \n")
-    writeResult(sql, TiDB, sqlName + ".result.tidb")
+    writeResult(sql, tiDb, sqlName + ".result.tidb")
     logger.info(s"Dump diff for TiDB $sqlName \n")
-    writeResult(sql, TiSpark, sqlName + ".result.spark")
+    writeResult(sql, tiSpark, sqlName + ".result.spark")
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
