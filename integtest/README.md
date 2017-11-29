@@ -35,6 +35,10 @@ To run tpch Test individually: (use -d or --debug option to setup debug flag)
 ```
 ./test_tpch.sh [-d|--debug]
 ```
+To run DAG push down mode complete test: (use -d or --debug option to setup debug flag)
+```bash
+./test_dag.sh [-d|--debug]
+```
 To run other Tests individually: (use -h option for help)
 ```
 ./test_no_tpch.sh [-d | -a | -h | -s | -i | -r]
