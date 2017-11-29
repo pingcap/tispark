@@ -313,13 +313,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
         val output = (pushdownAggregates.map(x => toAlias(x)) ++ groupingExpressions)
           .map(_.toAttribute)
-          .distinct
 
         val projectSeq: Seq[Attribute] = projects.asInstanceOf[Seq[Attribute]]
         projectSeq.foreach(attr => dagReq.addRequiredColumn(TiColumnRef.create(attr.name)))
 
-//        val (functionsWithDistinct, functionsWithoutDistinct) =
-//          aggregateExpressions.partition(_.isDistinct)
 
         aggregate.AggUtils.planAggregateWithoutDistinct(
           groupingExpressions,
@@ -327,39 +324,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           rewrittenResultExpression,
           toCoprocessorRDD(source, output, dagReq)
         )
-//        val aggregateOperator =
-//          if (aggregateExpressions.map(_.aggregateFunction).exists(!_.supportsPartial)) {
-//            if (functionsWithDistinct.nonEmpty) {
-//              sys.error(
-//                "Distinct columns cannot exist in Aggregate operator containing " +
-//                  "aggregate functions which don't support partial aggregation."
-//              )
-//            } else {
-//              aggregate.AggUtils.planAggregateWithoutPartial(
-//                groupingExpressions,
-//                aggregateExpressions,
-//                resultExpressions,
-//                toCoprocessorRDD(source, output, dagReq)
-//              )
-//            }
-//          } else if (functionsWithDistinct.isEmpty) {
-//            aggregate.AggUtils.planAggregateWithoutDistinct(
-//              groupingExpressions,
-//              aggregateExpressions,
-//              resultExpressions,
-//              toCoprocessorRDD(source, output, dagReq)
-//            )
-//          } else {
-//            aggregate.AggUtils.planAggregateWithOneDistinct(
-//              groupingExpressions,
-//              functionsWithDistinct,
-//              functionsWithoutDistinct,
-//              resultExpressions,
-//              toCoprocessorRDD(source, output, dagReq)
-//            )
-//          }
-//
-//        aggregateOperator
       case _ => Nil
     }
   }
