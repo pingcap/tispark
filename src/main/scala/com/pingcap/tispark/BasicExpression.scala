@@ -52,8 +52,9 @@ object BasicExpression {
       dataType match {
         // In Spark Date is encoded as integer of days after 1970-01-01
         // and sql.Date is constructed as milliseconds after 1970-01-01
-        // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd
-        case DateType       => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int]).toString
+        // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd,
+        // but seems change in DAG mode
+        case DateType       => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int])
         case TimestampType  => new Timestamp(value.asInstanceOf[Long])
         case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
