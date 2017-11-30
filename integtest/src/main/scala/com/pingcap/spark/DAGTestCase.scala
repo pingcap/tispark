@@ -36,7 +36,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     BigDecimal.apply(2147868.65536).toString() // Decimal value
   )
   private val PLACE_HOLDER = List[String](
-    //    LITERAL_NULL, // Null
+    LITERAL_NULL, // Null
     "'PingCAP'" // a simple test string
   ) ++ ARITHMETIC_CONSTANT
   private var colList: List[String] = _
@@ -72,6 +72,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
         createArithmeticAgg ++
         createFirstLast ++
         createUnion ++
+        createAggregate ++
         createHaving
     )
   }
