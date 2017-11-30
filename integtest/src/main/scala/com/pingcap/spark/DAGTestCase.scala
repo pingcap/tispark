@@ -62,18 +62,19 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     colList = jdbc.getTableColumnNames("full_data_type_table")
     prepareTestCol()
     testBundle(
+      List("select tp_year,tp_date,tp_datetime,tp_timestamp from full_data_type_table limit 20")
       //      createSymmetryTypeTestCases ++
-      createCartesianTypeTestCases ++
-        createArithmeticTest ++
-        createPlaceHolderTest ++
-        createInTest ++
-        createDistinct ++
-        createBetween ++
-        createArithmeticAgg ++
-        createFirstLast ++
-        createUnion ++
-        createAggregate ++
-        createHaving
+//      createCartesianTypeTestCases ++
+//        createArithmeticTest ++
+//        createPlaceHolderTest ++
+//        createInTest ++
+//        createDistinct ++
+//        createBetween ++
+//        createArithmeticAgg ++
+//        createFirstLast ++
+//        createUnion ++
+//        createAggregate ++
+//        createHaving
     )
   }
 
@@ -259,16 +260,26 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     skipLocalSet.add("tp_varchar")
     skipLocalSet.add("tp_char")
 
+    val arithmeticSkipSet = mutable.Set[String]()
+    arithmeticSkipSet.add("int")
+    arithmeticSkipSet.add("float")
+    arithmeticSkipSet.add("decimal")
+    arithmeticSkipSet.add("double")
+    arithmeticSkipSet.add("real")
+    arithmeticSkipSet.add(ID_COL)
+
     for (op <- compareOpList) {
       for (col <- colSet) {
         if (!skipLocalSet.contains(col))
           for (placeHolder <- PLACE_HOLDER) {
-            res += select(countId()) + where(binaryOpWithName(
-              col,
-              placeHolder,
-              op,
-              withTbName = false
-            ))
+            if (!placeHolder.eq("'PingCAP'") || !arithmeticSkipSet.exists(col.contains(_))) {
+              res += select(countId()) + where(binaryOpWithName(
+                col,
+                placeHolder,
+                op,
+                withTbName = false
+              ))
+            }
           }
       }
     }

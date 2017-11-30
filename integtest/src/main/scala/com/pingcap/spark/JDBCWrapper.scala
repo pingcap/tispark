@@ -18,6 +18,7 @@
 package com.pingcap.spark
 
 import java.sql._
+import java.time.{Duration, Year}
 import java.util
 import java.util.Properties
 import java.util.regex.Pattern
@@ -208,7 +209,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     }
   }
 
-  def toOutput(value: Any): Any = {
+  def toOutput(value: Any, colType: String): Any = {
     value match {
       case _: scala.Array[Byte] =>
         var str: String = new String
@@ -216,6 +217,8 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
           str = str.concat(b.toString)
         }
         str
+      case _: Date if colType.equalsIgnoreCase("YEAR") =>
+        value.toString.split("-")(0)
       case default => default
     }
   }
@@ -234,7 +237,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       val row = ArrayBuffer.empty[Any]
 
       for (i <- 1 to rsMetaData.getColumnCount) {
-        row += toOutput(resultSet.getObject(i))
+        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
       }
       retSet += row.toList
     }
