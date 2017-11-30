@@ -5,6 +5,8 @@ BASEDIR=$(cd `dirname $0`; pwd)
 echo "Base directory in: ${BASEDIR}"
 echo "Usage: <bin> [-h | -g | -a | -d | -s | -i | -r | -t <sql> | -b <db>]"
 echo "Note: <sql> must be quoted. e.g., \"select * from t\""
+echo "You may use sql-only like this:"
+echo "./test_no_tpch.sh -t \"select * from t\" -b \"test\""
 
 clear_last_diff_files() {
     for f in ./*.spark; do
