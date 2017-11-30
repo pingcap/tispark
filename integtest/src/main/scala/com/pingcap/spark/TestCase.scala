@@ -357,7 +357,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
         Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
       case _: Number | _: BigInt | _: java.math.BigInteger =>
         toInteger(lhs) == toInteger(rhs)
-      case _ => lhs == rhs
+      case _ => lhs == rhs || lhs.toString == rhs.toString
     }
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {
