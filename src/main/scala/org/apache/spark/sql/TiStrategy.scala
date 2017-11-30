@@ -17,6 +17,7 @@ package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
 import com.pingcap.tikv.meta.TiDAGRequest
+import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanBuilder
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
@@ -54,6 +55,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toBoolean
   }
 
+  def pushDownType(): PushDownType = {
+    if (useStreamingProcess()) {
+      PushDownType.STREAMING
+    } else {
+      PushDownType.NORMAL
+    }
+  }
+
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan
       .collectFirst {
@@ -81,7 +90,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     groupByList: Seq[NamedExpression],
     aggregates: Seq[AggregateExpression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
   ): TiDAGRequest = {
     aggregates.foreach {
       case AggregateExpression(_: Average, _, _, _) =>
@@ -119,7 +128,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def filterToDAGRequest(
     filters: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
@@ -141,7 +150,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(useStreamingProcess())
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
   ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))
