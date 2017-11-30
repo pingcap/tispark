@@ -23,7 +23,7 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
 import org.apache.spark.{SparkConf, sql}
 
@@ -75,6 +75,11 @@ object TiUtils {
         case attr: AttributeReference =>
           return nameTypeMap.contains(attr.name) &&
             !nameTypeMap.get(attr.name).head.isInstanceOf[BitType]
+        // TODO:Currently we do not support literal null type push down
+        // when TiConstant is ready to support literal null or we have other
+        // options, remove this.
+        case constant: Literal =>
+          return constant.value != null
         case _ => return true
       }
     } else {
