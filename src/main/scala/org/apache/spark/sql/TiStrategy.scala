@@ -219,7 +219,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     // TODO: This test should be done once for all children
     plan match {
       // Collapse filters and projections and push plan directly
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
+      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+          if filters.forall(TiUtils.isSupportedFilter(_, source)) =>
         pruneFilterProject(projectList, filters, source) :: Nil
 
       // Basic logic of original Spark's aggregation plan is:
