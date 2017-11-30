@@ -136,7 +136,13 @@ elif [ "${mode}" == "QueryOnly" ]; then
         echo "test.db=$db" >> ${SPARK_HOME}/conf/tispark_config.properties
     fi
     echo "Running statement $sql"
-    ${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|Result:\|Elapsed time:\|query on\|exception caught"
+    if [ ${isDebug} = true ]; then
+        echo "debugging..."
+        ${spark_cmd} ${spark_debug_opt}
+    else
+        echo "testing..."
+        ${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|Result:\|Elapsed time:\|query on\|exception caught"
+    fi
 else
     echo "UnKnown test mode: $mode. Aborting..."
 fi
