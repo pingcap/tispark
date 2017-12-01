@@ -4,4 +4,6 @@ SHA1=`git describe --tags`
 echo '
 package com.pingcap.tispark
 
-object TiSparkVersion { val CommitVersion: String = "'${SHA1}'" }' > src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
+import com.pingcap.tikv.TiVersion
+
+object TiSparkVersion { val version: String = "'${SHA1}'-Client:" + TiVersion.CommitVersion }' > src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
