@@ -41,6 +41,10 @@ spark.sql("select count(*) from lineitem").show
 ```
 ti.version
 ```
+or
+```
+spark.sql("select ti_version()").show
+```
 
 ## Configuration
 
