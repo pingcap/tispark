@@ -27,8 +27,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
-  session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
-  sqlContext.udf.register("ti_version", () => TiSparkVersion.version)
+  TiUtils.sessionInitialize(session)
 
   final val version: String = TiSparkVersion.version
 

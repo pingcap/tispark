@@ -17,6 +17,7 @@ package org.apache.spark.sql
 
 import java.util.concurrent.atomic.AtomicReference
 
+import com.pingcap.tispark.TiUtils
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
@@ -44,7 +45,7 @@ class TiSparkSession(
 
   override def newSession(): SparkSession = new TiSparkSession(sparkContext, Some(sharedState))
 
-  experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
+  TiUtils.sessionInitialize(this)
 }
 
 @InterfaceStability.Stable

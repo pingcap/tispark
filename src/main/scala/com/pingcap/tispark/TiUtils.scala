@@ -22,6 +22,7 @@ import com.pingcap.tikv.expression.TiExpr
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
+import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
@@ -183,5 +184,10 @@ object TiUtils {
     }
 
     tiConf
+  }
+
+  def sessionInitialize(session: SparkSession): Unit = {
+    session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
+    session.udf.register("ti_version", () => TiSparkVersion.version)
   }
 }
