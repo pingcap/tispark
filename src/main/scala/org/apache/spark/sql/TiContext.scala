@@ -29,7 +29,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
 
   session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
 
-  def Version: String = TiSparkVersion.CommitVersion + "-Client:" + TiVersion.CommitVersion
+  def version: String = TiSparkVersion.CommitVersion + "-Client:" + TiVersion.CommitVersion
 
   def tidbTable(dbName: String, tableName: String): DataFrame = {
     val tiRelation = new TiDBRelation(
