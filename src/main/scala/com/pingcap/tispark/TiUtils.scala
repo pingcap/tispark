@@ -31,6 +31,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 object TiUtils {
+  val CommitVersion = "test"
   type TiSum = com.pingcap.tikv.expression.aggregate.Sum
   type TiCount = com.pingcap.tikv.expression.aggregate.Count
   type TiMin = com.pingcap.tikv.expression.aggregate.Min
