@@ -24,6 +24,7 @@ class TestNull(prop: Properties) extends TestCase(prop) {
     result |= execBothAndJudge(s"select `double` from all_nullable_data_types")
     result |= execBothAndJudge(s"select `decimal` from all_nullable_data_types")
     result |= execBothAndJudge(s"select `datetime` from all_nullable_data_types")
+    result |= execBothAndJudge(s"select `timestamp` from all_nullable_data_types")
     result |= execBothAndJudge(s"select `time` from all_nullable_data_types")
     result |= execBothAndJudge(s"select `char` from all_nullable_data_types")
     result |= execBothAndSkip(s"select `tinyblob` from all_nullable_data_types")

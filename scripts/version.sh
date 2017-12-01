@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 #   Copyright 2017 PingCAP, Inc.
 #
@@ -14,10 +14,11 @@
 #   limitations under the License.
 #
 
-BASEDIR=$(dirname "$0")/../
 
-git submodule update --init --recursive --remote --merge
+SHA1=`git describe --tags`
+echo '
+package com.pingcap.tispark
 
-cd ${BASEDIR}/tikv-client-lib-java
-mvn clean install
+import com.pingcap.tikv.TiVersion
 
+object TiSparkVersion { val version: String = "'${SHA1}'-CLI-" + TiVersion.CommitVersion }' > src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
