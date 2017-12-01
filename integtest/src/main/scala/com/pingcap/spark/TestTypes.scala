@@ -20,7 +20,9 @@ import java.util.Properties
 
 /**
   * Created by birdstorm on 2017/11/5.
+  * The following Tests will be merged into DAGTests
   */
+@Deprecated
 class TestTypes(prop: Properties) extends TestCase(prop) {
 
   private def testType(): Unit = {
@@ -93,15 +95,22 @@ class TestTypes(prop: Properties) extends TestCase(prop) {
     execTiDBAndShow(s"select c14 + c13 from t1")
     execSparkAndShow(s"select CAST(c14 AS LONG) + c13 from t1")
 
-    result |= execBothAndSkip(s"select c15 from t1")
-    result |= execBothAndSkip(s"select UNIX_TIMESTAMP(c15) from t1")
-
     result |= execBothAndJudge("select `datetime` from all_data_types where `datetime` > now()")
     result |= execBothAndJudge("select `datetime` from all_data_types where `datetime` < now()")
     result |= execBothAndJudge("select `timestamp` from all_data_types where `timestamp` > now()")
     result |= execBothAndJudge("select `timestamp` from all_data_types where `timestamp` < now()")
-
     result |= execBothAndJudge("select `timestamp` from all_data_types where `timestamp` < now()")
+
+    result |= execBothAndJudge("select `datetime` from all_data_types where `datetime` = '2015-02-23 12:01:00'")
+    result |= execBothAndJudge("select `datetime` from all_data_types where `datetime` <= '2015-02-23 12:01:00'")
+    result |= execBothAndJudge("select `datetime` from all_data_types where `datetime` >= '2015-02-23 12:01:00'")
+    result |= execBothAndJudge("select `datetime` from all_data_types where `datetime` != '2015-02-23 12:01:00'")
+
+    // for the following tests check their status in https://github.com/pingcap/tikv-client-lib-java/issues/164
+    result |= execBothAndSkip("select `datetime` from all_data_types group by `datetime`")
+    result |= execBothAndJudge("select dayofyear(`datetime`) from all_data_types group by 1")
+    result |= execBothAndSkip("select `datetime`, count(*) from all_data_types group by `datetime`")
+    result |= execBothAndJudge("select count(`datetime`) from all_data_types")
 
     result = !result
     logger.warn(s"\n*************** SQL Time Tests result: " + (if (result) "true" else "Fixing...Skipped") + "\n\n\n")

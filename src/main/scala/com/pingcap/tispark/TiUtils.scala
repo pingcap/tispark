@@ -22,6 +22,7 @@ import com.pingcap.tikv.expression.TiExpr
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
+import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
@@ -31,6 +32,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 object TiUtils {
+  val CommitVersion = "test"
   type TiSum = com.pingcap.tikv.expression.aggregate.Sum
   type TiCount = com.pingcap.tikv.expression.aggregate.Count
   type TiMin = com.pingcap.tikv.expression.aggregate.Min
@@ -107,6 +109,7 @@ object TiUtils {
           Math.min(Integer.MAX_VALUE, tp.getLength).asInstanceOf[Int],
           tp.getDecimal
         )
+      case _: DateTimeType  => sql.types.TimestampType
       case _: TimestampType => sql.types.TimestampType
       case _: DateType      => sql.types.DateType
     }
@@ -181,5 +184,10 @@ object TiUtils {
     }
 
     tiConf
+  }
+
+  def sessionInitialize(session: SparkSession): Unit = {
+    session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
+    session.udf.register("ti_version", () => TiSparkVersion.version)
   }
 }

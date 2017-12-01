@@ -4,7 +4,9 @@ import java.util.Properties
 
 /**
   * Created by birdstorm on 2017/11/15.
+  * The following tests will be merged into DAGTests
   */
+@Deprecated
 class TestNull(prop: Properties) extends TestCase(prop) {
 
   private def testNull(): Unit = {
