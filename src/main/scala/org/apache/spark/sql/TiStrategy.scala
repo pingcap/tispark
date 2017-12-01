@@ -313,7 +313,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
         val output = (groupingExpressions ++ pushdownAggregates.map(x => toAlias(x)))
           .map(_.toAttribute)
-          .distinct
 
         aggregate.AggUtils.planAggregateWithoutDistinct(
           groupingExpressions,
