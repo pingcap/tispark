@@ -37,6 +37,11 @@ ti.tidbMapDatabase("tpch")
 spark.sql("select count(*) from lineitem").show
 ```
 
+## Current Version
+```
+ti.version
+```
+
 ## Configuration
 
 Below configurations can be put together with spark-defaults.conf or passed in the same way as other Spark config properties.
