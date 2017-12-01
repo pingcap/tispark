@@ -73,7 +73,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
   private final val TiDBIgnore = Set[String](
     "out of range",
     "BIGINT",
-    "invalid time format"
+    "invalid time format",
+    "line 1 column 13 near"
   )
 
   logger.info("Databases to dump: " + dbNames.mkString(","))

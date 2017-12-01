@@ -19,11 +19,10 @@ import java.sql.{Date, Timestamp}
 import java.util.Objects
 
 import scala.language.implicitConversions
-
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
 import com.pingcap.tikv.types.RequestTypes
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Remainder, Subtract}
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Remainder, Subtract}
 import org.apache.spark.sql.types._
 
 object BasicExpression {
@@ -41,6 +40,7 @@ object BasicExpression {
   type TiEqual = com.pingcap.tikv.expression.scalar.Equal
   type TiNotEqual = com.pingcap.tikv.expression.scalar.NotEqual
   type TiNot = com.pingcap.tikv.expression.scalar.Not
+  type TiLike = com.pingcap.tikv.expression.scalar.Like
 
   final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
 
@@ -126,6 +126,9 @@ object BasicExpression {
 
       case Not(BasicExpression(child)) =>
         Some(new TiNot(child))
+
+      case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(new TiLike(lhs, rhs))
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>
