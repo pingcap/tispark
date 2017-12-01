@@ -55,6 +55,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected var testsExecuted = 0
   protected var testsSkipped = 0
   protected var inlineSQLNumber = 0
+  protected var ignoredTest = 0
+  protected var errorTest = 0
 
   private val tidbExceptionOutput = "TiDB execution failed with exception caught"
   private val sparkExceptionOutput = "Spark execution failed with exception caught"
@@ -62,8 +64,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
   private final val SparkIgnore = Set[String](
     "type mismatch",
     "only support precision",
-    "Invalid Flag type for TimestampType: 8"
-//    "unknown error Other"
+    "Invalid Flag type for TimestampType: 8",
+    "Decimal scale (18) cannot be greater than precision (-254)"
+    //    "unknown error Other"
     //    "Error converting access pointsnull"
   )
 
@@ -76,7 +79,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   logger.info("Databases to dump: " + dbNames.mkString(","))
   logger.info("Run Mode: " + mode)
   logger.info("basePath: " + basePath)
-  logger.info("use these DataBases only: " + (if(dbAssigned) useDatabase.head else "None"))
+  logger.info("use these DataBases only: " + (if (dbAssigned) useDatabase.head else "None"))
 
   def init(): Unit = {
 
@@ -182,18 +185,29 @@ class TestCase(val prop: Properties) extends LazyLogging {
       (row: List[Any]) => row.exists(
         (str: Any) => SparkIgnore.exists(
           (i: String) => str.toString.contains(i)
-        )))) return
+        )))) {
+      ignoredTest += 1
+      return
+    }
 
     if (tiDb.exists(
       (row: List[Any]) => row.exists(
         (str: Any) => TiDBIgnore.exists(
           (i: String) => str.toString.contains(i)
-        )))) return
+        )))) {
+      ignoredTest += 1
+      return
+    }
 
-    logger.info(s"Dump diff for TiSpark $sqlName \n")
-    writeResult(sql, tiDb, sqlName + ".result.tidb")
-    logger.info(s"Dump diff for TiDB $sqlName \n")
-    writeResult(sql, tiSpark, sqlName + ".result.spark")
+    errorTest += 1
+    try {
+      logger.info(s"Dump diff for TiSpark $sqlName \n")
+      writeResult(sql, tiDb, sqlName + ".result.tidb")
+      logger.info(s"Dump diff for TiDB $sqlName \n")
+      writeResult(sql, tiSpark, sqlName + ".result.spark")
+    } catch {
+      case e : Exception => logger.error("Write file error:" + e.getMessage)
+    }
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {

@@ -27,10 +27,10 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   private val ARITHMETIC_CONSTANT = List[String](
     java.lang.Long.MAX_VALUE.toString,
     java.lang.Long.MIN_VALUE.toString,
-    //    java.lang.Double.MAX_VALUE.toString,
-    //    java.lang.Double.MIN_VALUE.toString,
+    java.lang.Double.MAX_VALUE.toString,
+    java.lang.Double.MIN_VALUE.toString,
     3.14159265358979D.toString,
-    "1E10",
+    "2.34E10",
     java.lang.Integer.MAX_VALUE.toString,
     java.lang.Integer.MIN_VALUE.toString,
     java.lang.Short.MAX_VALUE.toString,
@@ -112,13 +112,15 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     var result = false
 
     for (sql <- list) {
-      val exeRes = execBothAndJudge(sql)
-      if (exeRes)
-        logger.error("result: Test sql failed, " + sql)
-      result |= exeRes
+      try {
+        execBothAndJudge(sql)
+      } catch {
+        case _: Throwable => logger.error("result: Run SQL " + sql + " Failed!")
+      }
     }
     result = !result
-    logger.info("result: Overall DAG test :" + result)
+    logger.warn("result: Total DAG test run:" + inlineSQLNumber + " of " + list.size)
+    logger.warn(s"result: Test ignored count:$ignoredTest, failed count:$errorTest")
   }
 
   // ***********************************************************************************************
@@ -137,8 +139,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   }
 
   def createHaving(): List[String] = List(
-    s"select tp_int%1000 from $TABLE_NAME group by (tp_int%1000) having sum(tp_int%1000) > 100 ${orderBy("tp_int")}",
-    s"select tp_bigint%1000 from $TABLE_NAME group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 ${orderBy("tp_bigint")}"
+    s"select tp_int%1000 from $TABLE_NAME group by (tp_int%1000) having sum(tp_int%1000) > 100",
+    s"select tp_bigint%1000 from $TABLE_NAME group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100"
   )
 
   def createArithmeticAgg(): List[String] = colSet.map((col: String) => s"select sum($col),avg($col),min($col),max($col) from $TABLE_NAME group by $col ${orderBy(col)}").toList
@@ -163,7 +165,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     "select a.id_dt from full_data_type_table a left outer join (select id_dt from full_data_type_table  where tp_decimal <> 1E10) b on a.id_dt = b.id_dt where b.id_dt is null"
   )
 
-  def createAggregate(): List[String] = colSet.map((str: String) => select(str) + groupBy(str) + orderBy(ID_COL)).toList
+  def createAggregate(): List[String] = colSet.map((str: String) => select(str) + groupBy(str) + orderBy(str)).toList
 
   def createInTest(): List[String] = List(
     select("tp_int") + where(binaryOpWithName("tp_int", "(2333, 601508558, 4294967296, 4294967295)", "in", withTbName = false)),
