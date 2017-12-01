@@ -72,7 +72,7 @@ done
 CLASS="com.pingcap.spark.TestFramework"
 
 cp ${BASEDIR}/conf/tispark_config_dag.properties.template ${SPARK_HOME}/conf/tispark_config.properties
-spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,suspsadasdasend=y"
+spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,suspend=y"
 spark_test_opt=""
 
 spark_cmd="${SPARK_HOME}/bin/spark-submit --class ${CLASS} ${BASEDIR}/lib/* --driver-java-options"

@@ -12,8 +12,9 @@ import scala.collection.mutable.ArrayBuffer
 
 class DAGTestCase(prop: Properties) extends TestCase(prop) {
   private val SPARK_DEFAULT_TO_IGNORE = Set[String](
-    "select tp_datetime,tp_date from full_data_type_table  where tp_datetime = tp_date limit 20",// we cannot get anything from spark, but can get some data from TiDB
-    "select tp_date,tp_datetime from full_data_type_table  where tp_date = tp_datetime limit 20"
+    "select tp_datetime,tp_date from full_data_type_table  where tp_datetime = tp_date order by id_dt  limit 20", // we cannot get anything from spark, but can get some data from TiDB
+    "select tp_date,tp_datetime from full_data_type_table  where tp_date = tp_datetime order by id_dt  limit 20",
+    "select tp_date,tp_datetime from full_data_type_table  where tp_date < tp_datetime order by id_dt  limit 20"
   )
   private val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
   private val arithmeticOpList = List("+", "-", "*", "/", "%")
@@ -49,10 +50,10 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   // TODO: Eliminate these bugs
   private final val colSkipSet: ImmutableSet[String] =
     ImmutableSet.builder()
-//      .add("tp_bit") // bit cannot be push down
-//      .add("tp_datetime") // time zone shift
-//      .add("tp_year") // year in spark shows extra month and day
-//      .add("tp_time") // Time format is not the same in TiDB and spark
+      //      .add("tp_bit") // bit cannot be push down
+      //      .add("tp_datetime") // time zone shift
+      //      .add("tp_year") // year in spark shows extra month and day
+      //      .add("tp_time") // Time format is not the same in TiDB and spark
       .add("tp_enum")
       .add("tp_set")
       .add("tp_binary")
@@ -67,8 +68,9 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     colList = jdbc.getTableColumnNames("full_data_type_table")
     prepareTestCol()
     testBundle(
-//      createSymmetryTypeTestCases ++
-        createCartesianTypeTestCases ++
+      //      createSelfJoinTypeTest ++
+      //      createSymmetryTypeTestCases ++
+      createCartesianTypeTestCases ++
         createArithmeticTest ++
         createPlaceHolderTest ++
         createInTest ++
@@ -208,9 +210,16 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   }
 
   def createSelfJoinTypeTest: List[String] = {
+    val skipLocalSet = mutable.Set[String]()
+    skipLocalSet.add("tp_nvarchar")
+    skipLocalSet.add("tp_varchar")
+    skipLocalSet.add("tp_char")
+    skipLocalSet.add("tp_mediumtext")
+    skipLocalSet.add("tp_longtext")
+
     compareOpList.flatMap((op: String) =>
-      colSet.flatMap((lCol: String) =>
-        colSet.map((rCol: String) =>
+      colSet.diff(skipLocalSet).flatMap((lCol: String) =>
+        colSet.diff(skipLocalSet).map((rCol: String) =>
           buildBinarySelfJoinQuery(lCol, rCol, op)
         )
       )
@@ -270,6 +279,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     arithmeticSkipSet.add("decimal")
     arithmeticSkipSet.add("double")
     arithmeticSkipSet.add("real")
+    arithmeticSkipSet.add("bit")
     arithmeticSkipSet.add(ID_COL)
 
     for (op <- compareOpList) {

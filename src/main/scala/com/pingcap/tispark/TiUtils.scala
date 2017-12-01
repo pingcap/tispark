@@ -43,8 +43,7 @@ object TiUtils {
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
-          !aggExpr.aggregateFunction.children
-            .exists(expr => !isSupportedBasicExpression(expr, tiDBRelation))
+          aggExpr.aggregateFunction.children.forall(isSupportedBasicExpression(_, tiDBRelation))
       case _ => false
     }
   }
@@ -71,10 +70,10 @@ object TiUtils {
 
     if (expr.children.isEmpty) {
       expr match {
-        // bit type is not allowed to be pushed down
-        case attr: AttributeReference =>
-          return nameTypeMap.contains(attr.name) &&
-            !nameTypeMap.get(attr.name).head.isInstanceOf[BitType]
+        // bit/duration type is not allowed to be pushed down
+        case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
+          val head = nameTypeMap.get(attr.name).head
+          return !head.isInstanceOf[BitType] && head.getTypeCode != Types.TYPE_DURATION
         // TODO:Currently we do not support literal null type push down
         // when TiConstant is ready to support literal null or we have other
         // options, remove this.
