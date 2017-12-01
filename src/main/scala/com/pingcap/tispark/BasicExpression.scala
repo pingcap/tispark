@@ -127,9 +127,6 @@ object BasicExpression {
       case Not(BasicExpression(child)) =>
         Some(new TiNot(child))
 
-      case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiLike(lhs, rhs))
-
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>
         // Do we need add ValToType in TiExpr?
