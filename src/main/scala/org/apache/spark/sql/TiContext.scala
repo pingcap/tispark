@@ -28,6 +28,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
   session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
+  sqlContext.udf.register("ti_version", () => version)
 
   def version: String = TiSparkVersion.CommitVersion + "-Client:" + TiVersion.CommitVersion
 
