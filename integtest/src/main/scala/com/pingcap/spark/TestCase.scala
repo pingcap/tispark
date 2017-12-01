@@ -16,6 +16,7 @@
  */
 
 package com.pingcap.spark
+
 import java.io.File
 import java.util.Properties
 
@@ -25,20 +26,28 @@ import com.typesafe.scalalogging.slf4j.LazyLogging
 import scala.collection.mutable.ArrayBuffer
 
 class TestCase(val prop: Properties) extends LazyLogging {
+
   object RunMode extends Enumeration {
     type RunMode = Value
-    val Test, Load, LoadNTest, Dump, TestIndex = Value
+    val Test, Load, LoadNTest, Dump, TestIndex, TestDAG, SqlOnly = Value
   }
 
   protected val KeyDumpDBList = "test.dumpDB.databases"
   protected val KeyMode = "test.mode"
   protected val KeyTestBasePath = "test.basepath"
   protected val KeyTestIgnore = "test.ignore"
+  protected val KeyTestDBToUse = "test.db"
+  protected val KeyTestSql = "test.sql"
 
   protected val dbNames: Array[String] = getOrElse(prop, KeyDumpDBList, "").split(",")
-  protected val mode: RunMode.RunMode = RunMode.withName(getOrElse(prop, KeyMode, "Test"))
+  protected val sqlCheck: String = getOrElse(prop, KeyTestSql, "")
+  protected val oneSqlOnly: Boolean = sqlCheck != ""
+  protected val mode: RunMode.RunMode = if (oneSqlOnly) RunMode.SqlOnly else RunMode.withName(getOrElse(prop, KeyMode, "Test"))
   protected val basePath: String = getOrElse(prop, KeyTestBasePath, "./testcases")
   protected val ignoreCases: Array[String] = getOrElse(prop, KeyTestIgnore, "").split(",")
+  protected val useDatabase: Array[String] = getOrElse(prop, KeyTestDBToUse, "").split(",")
+  protected val dbAssigned: Boolean = !useDatabase.isEmpty && !useDatabase.head.isEmpty
+
   protected lazy val jdbc = new JDBCWrapper(prop)
   protected lazy val spark = new SparkWrapper()
 
@@ -46,15 +55,35 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected var testsExecuted = 0
   protected var testsSkipped = 0
   protected var inlineSQLNumber = 0
+  protected var ignoredTest = 0
+  protected var errorTest = 0
 
   private val tidbExceptionOutput = "TiDB execution failed with exception caught"
   private val sparkExceptionOutput = "Spark execution failed with exception caught"
 
+  private final val SparkIgnore = Set[String](
+    "type mismatch",
+    "only support precision",
+    "Invalid Flag type for TimestampType: 8",
+    "Decimal scale (18) cannot be greater than precision (-254)"
+    //    "unknown error Other"
+    //    "Error converting access pointsnull"
+  )
+
+  private final val TiDBIgnore = Set[String](
+    "out of range",
+    "BIGINT",
+    "invalid time format",
+    "line 1 column 13 near"
+  )
+
   logger.info("Databases to dump: " + dbNames.mkString(","))
   logger.info("Run Mode: " + mode)
   logger.info("basePath: " + basePath)
+  logger.info("use these DataBases only: " + (if (dbAssigned) useDatabase.head else "None"))
 
   def init(): Unit = {
+
     mode match {
       case RunMode.Dump => dbNames.filter(!_.isEmpty).foreach { dbName =>
         logger.info("Dumping database " + dbName)
@@ -74,6 +103,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
       case RunMode.TestIndex => work(basePath, true, false, false)
 
+      case RunMode.TestDAG => work(basePath, true, false, false)
+
+      case RunMode.SqlOnly => work(basePath, true, false, false)
     }
 
     mode match {
@@ -97,7 +129,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
     var dbName = dir.getName
     logger.info(s"get ignored: ${ignoreCases.toList}")
-    logger.info(s"current dbName $dbName is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))) "" else "not ") + "ignored")
+    logger.info(s"current dbName $dbName is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))
+      && (!dbAssigned || useDatabase.exists(_.equalsIgnoreCase(dbName)))) "" else "not ") +
+      "ignored")
 
     logger.info(s"run=${run.toString} load=${load.toString} compareWithTiDB=${compareWithTiDB.toString}")
     if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
@@ -123,19 +157,21 @@ class TestCase(val prop: Properties) extends LazyLogging {
         logger.info(s"Switch to $dbName")
         dbName = jdbc.init(dbName)
         logger.info("Load data... ")
-        ddls.foreach{ file => {
+        ddls.foreach { file => {
           logger.info(s"Register for DDL script $file")
           jdbc.createTable(file)
         }
         }
-        dataFiles.foreach{ file => {
+        dataFiles.foreach { file => {
           logger.info(s"Register for data loading script $file")
           jdbc.loadTable(file)
         }
         }
       }
       if (run) {
-        test(dbName, testCases, compareWithTiDB)
+        if (!dbAssigned || useDatabase.exists(_.equalsIgnoreCase(dbName))) {
+          test(dbName, testCases, compareWithTiDB)
+        }
       }
 
       dirs.foreach { dir =>
@@ -144,12 +180,35 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  private def printDiff(sqlName: String, sql: String, TiDB: List[List[Any]], TiSpark: List[List[Any]]): Unit = {
-    logger.info(s"$sql\n")
-    logger.info(s"Dump diff for TiSpark $sqlName \n")
-    writeResult(sql, TiSpark, sqlName + ".result.spark")
-    logger.info(s"Dump diff for TiDB $sqlName \n")
-    writeResult(sql, TiDB, sqlName + ".result.tidb")
+  private def printDiff(sqlName: String, sql: String, tiDb: List[List[Any]], tiSpark: List[List[Any]]): Unit = {
+    // ignore specific print result
+    if (tiSpark.exists(
+      (row: List[Any]) => row.exists(
+        (str: Any) => SparkIgnore.exists(
+          (i: String) => str.toString.contains(i)
+        )))) {
+      ignoredTest += 1
+      return
+    }
+
+    if (tiDb.exists(
+      (row: List[Any]) => row.exists(
+        (str: Any) => TiDBIgnore.exists(
+          (i: String) => str.toString.contains(i)
+        )))) {
+      ignoredTest += 1
+      return
+    }
+
+    errorTest += 1
+    try {
+      logger.info(s"Dump diff for TiSpark $sqlName \n")
+      writeResult(sql, tiDb, sqlName + ".result.tidb")
+      logger.info(s"Dump diff for TiDB $sqlName \n")
+      writeResult(sql, tiSpark, sqlName + ".result.spark")
+    } catch {
+      case e : Exception => logger.error("Write file error:" + e.getMessage)
+    }
   }
 
   def test(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
@@ -197,7 +256,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   }
 
   def execTiDBAndShow(str: String): Unit = {
-    try{
+    try {
       val tidb = execTiDB(str)
       logger.info(s"output: $tidb")
     } catch {
@@ -299,16 +358,29 @@ class TestCase(val prop: Properties) extends LazyLogging {
       testAndCalc(new TestIndex(prop), dbName)
     } else if (dbName.equalsIgnoreCase("test_types")) {
       testAndCalc(new TestTypes(prop), dbName)
+    } else if (dbName.equalsIgnoreCase("tispark_test")) {
+      testAndCalc(new DAGTestCase(prop), dbName)
     } else if (dbName.equalsIgnoreCase("test_null")) {
       testAndCalc(new TestNull(prop), dbName)
     }
   }
 
+  private def testSql(dbName: String, sql: String): Unit = {
+    spark.init(dbName)
+    execSparkAndShow(sql)
+  }
+
   private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
-    if (compareWithTiDB) {
-      test(dbName, testCases)
-    } else {
-      testInline(dbName)
+    try {
+      if (oneSqlOnly) {
+        testSql(dbName, sqlCheck)
+      } else if (compareWithTiDB) {
+        test(dbName, testCases)
+      } else {
+        testInline(dbName)
+      }
+    } catch {
+      case e: Exception => logger.info(e.getMessage)
     }
   }
 
@@ -319,6 +391,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       case d: java.math.BigDecimal => d.doubleValue()
       case d: BigDecimal => d.bigDecimal.doubleValue()
       case d: Number => d.doubleValue()
+      case _ => 0.0
     }
 
     def toInteger(x: Any): Long = x match {
@@ -331,7 +404,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
         Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
       case _: Number | _: BigInt | _: java.math.BigInteger =>
         toInteger(lhs) == toInteger(rhs)
-      case _ => lhs == rhs
+      case _ => lhs == rhs || lhs.toString == rhs.toString
     }
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {
@@ -346,17 +419,23 @@ class TestCase(val prop: Properties) extends LazyLogging {
       }
     }
 
-    !lhs.zipWithIndex.exists {
-      case (row, i) => !compRow(row, rhs(i))
+    try {
+      !lhs.zipWithIndex.exists {
+        case (row, i) => !compRow(row, rhs(i))
+      }
+    } catch {
+      // TODO:Remove this temporary exception handling
+      //      case _:RuntimeException => false
+      case _: Throwable => false
     }
   }
 
   private def writeResult(sql: String, rowList: List[List[Any]], path: String): Unit = {
     val sb = StringBuilder.newBuilder
     sb.append(sql + "\n")
-    rowList.foreach{
+    rowList.foreach {
       row => {
-        row.foreach{
+        row.foreach {
           value => sb.append(value + " ")
         }
         sb.append("\n")

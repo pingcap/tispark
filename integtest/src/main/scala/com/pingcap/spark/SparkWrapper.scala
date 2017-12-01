@@ -17,8 +17,12 @@
 
 package com.pingcap.spark
 
+import java.sql.Types
+
 import com.typesafe.scalalogging.slf4j.LazyLogging
+import org.apache.spark.sql.types.{BinaryType, DataType}
 import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.unsafe.types.ByteArray
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -50,10 +54,17 @@ class SparkWrapper() extends LazyLogging {
 
   def querySpark(sql: String): List[List[Any]] = {
     logger.info("Running query on spark: " + sql)
-    spark.sql(sql).collect().map(row => {
+    val df = spark.sql(sql)
+    val schema = df.schema.fields
+
+    df.collect().map(row => {
       val rowRes = ArrayBuffer.empty[Any]
       for (i <- 0 until row.length) {
-        rowRes += toOutput(row.get(i))
+        if (schema(i).dataType.isInstanceOf[BinaryType]) {
+          rowRes += new String(row.get(i).asInstanceOf[Array[Byte]])
+        } else {
+          rowRes += toOutput(row.get(i))
+        }
       }
       rowRes.toList
     }).toList
