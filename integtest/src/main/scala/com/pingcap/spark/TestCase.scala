@@ -29,18 +29,25 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   object RunMode extends Enumeration {
     type RunMode = Value
-    val Test, Load, LoadNTest, Dump, TestIndex, TestDAG = Value
+    val Test, Load, LoadNTest, Dump, TestIndex, TestDAG, SqlOnly = Value
   }
 
   protected val KeyDumpDBList = "test.dumpDB.databases"
   protected val KeyMode = "test.mode"
   protected val KeyTestBasePath = "test.basepath"
   protected val KeyTestIgnore = "test.ignore"
+  protected val KeyTestDBToUse = "test.db"
+  protected val KeyTestSql = "test.sql"
 
   protected val dbNames: Array[String] = getOrElse(prop, KeyDumpDBList, "").split(",")
-  protected val mode: RunMode.RunMode = RunMode.withName(getOrElse(prop, KeyMode, "Test"))
+  protected val sqlCheck: String = getOrElse(prop, KeyTestSql, "")
+  protected val oneSqlOnly: Boolean = sqlCheck != ""
+  protected val mode: RunMode.RunMode = if (oneSqlOnly) RunMode.SqlOnly else RunMode.withName(getOrElse(prop, KeyMode, "Test"))
   protected val basePath: String = getOrElse(prop, KeyTestBasePath, "./testcases")
   protected val ignoreCases: Array[String] = getOrElse(prop, KeyTestIgnore, "").split(",")
+  protected val useDatabase: Array[String] = getOrElse(prop, KeyTestDBToUse, "").split(",")
+  protected val dbAssigned: Boolean = !useDatabase.isEmpty
+
   protected lazy val jdbc = new JDBCWrapper(prop)
   protected lazy val spark = new SparkWrapper()
 
@@ -71,6 +78,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   logger.info("basePath: " + basePath)
 
   def init(): Unit = {
+
     mode match {
       case RunMode.Dump => dbNames.filter(!_.isEmpty).foreach { dbName =>
         logger.info("Dumping database " + dbName)
@@ -91,6 +99,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
       case RunMode.TestIndex => work(basePath, true, false, false)
 
       case RunMode.TestDAG => work(basePath, true, false, false)
+
+      case RunMode.SqlOnly => work(basePath, true, false, false)
     }
 
     mode match {
@@ -114,7 +124,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
     var dbName = dir.getName
     logger.info(s"get ignored: ${ignoreCases.toList}")
-    logger.info(s"current dbName $dbName is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))) "" else "not ") + "ignored")
+    logger.info(s"current dbName $dbName is " + (if (ignoreCases.exists(_.equalsIgnoreCase(dbName))
+      && (!dbAssigned || useDatabase.exists(_.equalsIgnoreCase(dbName)))) "" else "not ") +
+      "ignored")
 
     logger.info(s"run=${run.toString} load=${load.toString} compareWithTiDB=${compareWithTiDB.toString}")
     if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
@@ -152,7 +164,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
         }
       }
       if (run) {
-        test(dbName, testCases, compareWithTiDB)
+        if (!dbAssigned || useDatabase.exists(_.equalsIgnoreCase(dbName))) {
+          test(dbName, testCases, compareWithTiDB)
+        }
       }
 
       dirs.foreach { dir =>
@@ -335,8 +349,15 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
+  private def testSql(dbName: String, sql: String): Unit = {
+    spark.init(dbName)
+    execSparkAndShow(sql)
+  }
+
   private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
-    if (compareWithTiDB) {
+    if (oneSqlOnly) {
+      testSql(dbName, sqlCheck)
+    } else if (compareWithTiDB) {
       test(dbName, testCases)
     } else {
       testInline(dbName)
