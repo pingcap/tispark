@@ -46,7 +46,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected val basePath: String = getOrElse(prop, KeyTestBasePath, "./testcases")
   protected val ignoreCases: Array[String] = getOrElse(prop, KeyTestIgnore, "").split(",")
   protected val useDatabase: Array[String] = getOrElse(prop, KeyTestDBToUse, "").split(",")
-  protected val dbAssigned: Boolean = !useDatabase.isEmpty
+  protected val dbAssigned: Boolean = !useDatabase.isEmpty && !useDatabase.head.isEmpty
 
   protected lazy val jdbc = new JDBCWrapper(prop)
   protected lazy val spark = new SparkWrapper()
@@ -76,6 +76,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   logger.info("Databases to dump: " + dbNames.mkString(","))
   logger.info("Run Mode: " + mode)
   logger.info("basePath: " + basePath)
+  logger.info("use these DataBases only: " + (if(dbAssigned) useDatabase.head else "None"))
 
   def init(): Unit = {
 
@@ -355,12 +356,16 @@ class TestCase(val prop: Properties) extends LazyLogging {
   }
 
   private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareWithTiDB: Boolean): Unit = {
-    if (oneSqlOnly) {
-      testSql(dbName, sqlCheck)
-    } else if (compareWithTiDB) {
-      test(dbName, testCases)
-    } else {
-      testInline(dbName)
+    try {
+      if (oneSqlOnly) {
+        testSql(dbName, sqlCheck)
+      } else if (compareWithTiDB) {
+        test(dbName, testCases)
+      } else {
+        testInline(dbName)
+      }
+    } catch {
+      case e: Exception => logger.info(e.getMessage)
     }
   }
 

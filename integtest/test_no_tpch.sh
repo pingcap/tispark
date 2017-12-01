@@ -98,7 +98,7 @@ spark_test_opt=""
 if [ "${mode}" == "Integration" ]; then
     filter=""
     cp ${BASEDIR}/conf/tispark_config_testindex.properties.template ${SPARK_HOME}/conf/tispark_config.properties
-    if ![ -z "${db}" ]; then
+    if ! [ -z "${db}" ]; then
         echo "test.db=$db" >> ${SPARK_HOME}/conf/tispark_config.properties
     fi
     if [ ${isDebug} = true ]; then
