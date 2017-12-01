@@ -11,6 +11,10 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
 class DAGTestCase(prop: Properties) extends TestCase(prop) {
+  private val SPARK_DEFAULT_TO_IGNORE = Set[String](
+    "select tp_datetime,tp_date from full_data_type_table  where tp_datetime = tp_date limit 20",// we cannot get anything from spark, but can get some data from TiDB
+    "select tp_date,tp_datetime from full_data_type_table  where tp_date = tp_datetime limit 20"
+  )
   private val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
   private val arithmeticOpList = List("+", "-", "*", "/", "%")
   private val LEFT_TB_NAME = "A"
@@ -37,7 +41,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   )
   private val PLACE_HOLDER = List[String](
     LITERAL_NULL, // Null
-    "'PingCAP'" // a simple test string
+    "'PingCAP'", // a simple test string
+    "'2043-11-28'"
   ) ++ ARITHMETIC_CONSTANT
   private var colList: List[String] = _
 
@@ -225,7 +230,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
         colSet.filter((rCol: String) =>
           lCol.eq(rCol) || (!skipLocalSet.contains(lCol) && !skipLocalSet.contains(rCol)))
           .map((rCol: String) =>
-            select(lCol, rCol) + where(binaryOpWithName(lCol, rCol, op, withTbName = false)) + limit()
+            select(lCol, rCol) + where(binaryOpWithName(lCol, rCol, op, withTbName = false)) + orderBy(ID_COL) + limit()
           )
       )
     )

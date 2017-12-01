@@ -99,7 +99,7 @@ object TiUtils {
 
   // if contains UDF / functions that cannot be folded
   def isSupportedGroupingExpr(expr: NamedExpression, source: TiDBRelation): Boolean =
-    isSupportedBasicExpression(expr, source)
+    isSupportedBasicExpression(expr, source) && isPushDownSupported(expr, source)
 
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {

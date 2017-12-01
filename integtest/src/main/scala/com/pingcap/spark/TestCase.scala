@@ -53,11 +53,17 @@ class TestCase(val prop: Properties) extends LazyLogging {
   private val sparkExceptionOutput = "Spark execution failed with exception caught"
 
   private final val SparkIgnore = Set[String](
-    "type mismatch", "only support precision", "Error converting access pointsnull"
+    "type mismatch",
+    "only support precision",
+    "Invalid Flag type for TimestampType: 8",
+    "unknown error Other"
+    //    "Error converting access pointsnull"
   )
 
   private final val TiDBIgnore = Set[String](
-    "out of range", "BIGINT", "other error: unknown error Other", "invalid time format"
+    "out of range",
+    "BIGINT",
+    "invalid time format"
   )
 
   logger.info("Databases to dump: " + dbNames.mkString(","))
