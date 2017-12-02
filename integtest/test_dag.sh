@@ -84,6 +84,6 @@ else
 	if [ ${showResultOnly} = true ]; then
 		${spark_cmd} ${spark_test_opt} 2>&1 | grep -F "***************"
 	else
-		${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|result:\|Elapsed time:\|query on spark\|query on TiDB"
+		${spark_cmd} ${spark_test_opt} 2>&1 | grep "Running num:\|hint:\|output:\|result:\|Elapsed time:\|query on spark\|query on TiDB"
 	fi
 fi

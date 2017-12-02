@@ -50,6 +50,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   protected lazy val jdbc = new JDBCWrapper(prop)
   protected lazy val spark = new SparkWrapper()
+  protected lazy val sparkJDBC = new SparkJDBCWrapper(prop)
 
   protected var testsFailed = 0
   protected var testsExecuted = 0
@@ -60,21 +61,22 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   private val tidbExceptionOutput = "TiDB execution failed with exception caught"
   private val sparkExceptionOutput = "Spark execution failed with exception caught"
+  private val sparkJDBCExceptionOutput = "Spark JDBC execution failed with exception caught"
 
   private final val SparkIgnore = Set[String](
     "type mismatch",
     "only support precision",
     "Invalid Flag type for TimestampType: 8",
-    "Decimal scale (18) cannot be greater than precision (-254)"
+    "Decimal scale (18) cannot be greater than precision "
     //    "unknown error Other"
     //    "Error converting access pointsnull"
   )
 
   private final val TiDBIgnore = Set[String](
-    "out of range",
-    "BIGINT",
-    "invalid time format",
-    "line 1 column 13 near"
+//    "out of range",
+//    "BIGINT",
+//    "invalid time format",
+//    "line 1 column 13 near"
   )
 
   logger.info("Databases to dump: " + dbNames.mkString(","))
@@ -181,10 +183,11 @@ class TestCase(val prop: Properties) extends LazyLogging {
   }
 
   private def printDiff(sqlName: String, sql: String, tiDb: List[List[Any]], tiSpark: List[List[Any]]): Unit = {
+    val ignoreCase = SparkIgnore ++ TiDBIgnore
     // ignore specific print result
     if (tiSpark.exists(
       (row: List[Any]) => row.exists(
-        (str: Any) => SparkIgnore.exists(
+        (str: Any) => ignoreCase.exists(
           (i: String) => str.toString.contains(i)
         )))) {
       ignoredTest += 1
@@ -193,7 +196,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
     if (tiDb.exists(
       (row: List[Any]) => row.exists(
-        (str: Any) => TiDBIgnore.exists(
+        (str: Any) => ignoreCase.exists(
           (i: String) => str.toString.contains(i)
         )))) {
       ignoredTest += 1
@@ -207,7 +210,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       logger.info(s"Dump diff for TiDB $sqlName \n")
       writeResult(sql, tiSpark, sqlName + ".result.spark")
     } catch {
-      case e : Exception => logger.error("Write file error:" + e.getMessage)
+      case e: Exception => logger.error("Write file error:" + e.getMessage)
     }
   }
 
@@ -242,6 +245,17 @@ class TestCase(val prop: Properties) extends LazyLogging {
       case e: Exception => throw e
     }
   }
+
+  def execSparkJDBC(sql: String): List[List[Any]] =
+    try {
+      val ans = time {
+        sparkJDBC.querySpark(sql)
+      }(logger)
+      logger.info(s"hint: ${ans.length} row(s)")
+      ans
+    } catch {
+      case e: Exception => throw e
+    }
 
   def execSpark(sql: String): List[List[Any]] = {
     try {
@@ -284,6 +298,62 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   def execBothAndSkip(str: String): Boolean = {
     execBothAndJudge(str, skipped = true)
+  }
+
+  def execSparkBothAndJudge(str: String, skipped: Boolean = false): Boolean = {
+    var sparkJDBC: List[List[Any]] = List.empty
+    var tiSpark: List[List[Any]] = List.empty
+
+    testsExecuted += 1
+    if (skipped) {
+      testsSkipped += 1
+    } else {
+      inlineSQLNumber += 1
+    }
+
+    var tidbRunTimeError = false
+    var sparkRunTimeError = false
+
+    try {
+      sparkJDBC = execSparkJDBC(str)
+    } catch {
+      case e: Exception =>
+        logger.error(s"$sparkJDBCExceptionOutput: ${e.getMessage}\n")
+        sparkJDBC = List.apply(List.apply[String](e.getMessage))
+        tidbRunTimeError = true
+    }
+    try {
+      tiSpark = execSpark(str)
+    } catch {
+      case e: Exception =>
+        logger.error(s"$sparkExceptionOutput: ${e.printStackTrace()}\n")
+        tiSpark = List.apply(List.apply[String](e.getMessage))
+        sparkRunTimeError = true
+    }
+
+    val isFalse = tidbRunTimeError || sparkRunTimeError || !compResult(sparkJDBC, tiSpark)
+    if (isFalse) {
+      if (skipped) {
+        logger.warn(s"TEST SKIPPED.\n")
+      } else {
+        logger.warn(s"TEST FAILED.\n")
+      }
+      logger.warn(s"SparkJDBC output: $sparkJDBC")
+      logger.warn(s"TiSpark output: $tiSpark")
+      if (!skipped) {
+        testsFailed += 1
+        printDiff(s"inlineTest$inlineSQLNumber", str, sparkJDBC, tiSpark)
+      } else {
+        return false
+      }
+    } else {
+      if (skipped) {
+        logger.warn(s"TEST SKIPPED.\n")
+      } else {
+        logger.info(s"TEST PASSED.\n")
+      }
+    }
+    isFalse
   }
 
   def execBothAndJudge(str: String, skipped: Boolean = false): Boolean = {
