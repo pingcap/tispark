@@ -171,7 +171,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       sortOrder.foreach(
         (order: SortOrder) =>
           request.addOrderByItem(
-            TiByItem.create(BasicExpression.convertToTiExpr(order.child).get, false)
+            TiByItem.create(
+              BasicExpression.convertToTiExpr(order.child).get,
+              order.direction.sql.equalsIgnoreCase("DESC")
+            )
         )
       )
       pruneFilterProject(projectList, filters, source, request)
