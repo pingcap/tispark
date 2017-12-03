@@ -24,7 +24,7 @@ import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, ExprId, Expression, IntegerLiteral, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, ExprId, Expression, IntegerLiteral, NamedExpression, SortOrder}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -158,6 +158,26 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
   }
 
+  def takeOrderedAndProject(
+    limit: Int,
+    sortOrder: Seq[SortOrder],
+    projectList: Seq[NamedExpression],
+    child: LogicalPlan
+  ): SparkPlan = child match {
+    case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+        if limit > 0 =>
+      val request = new TiDAGRequest(pushDownType())
+      request.setLimit(limit)
+      sortOrder.foreach(
+        (order: SortOrder) =>
+          request.addOrderByItem(
+            TiByItem.create(BasicExpression.convertToTiExpr(order.child).get, false)
+        )
+      )
+      pruneFilterProject(projectList, filters, source, request)
+    case _ => planLater(child)
+  }
+
   def pruneFilterProject(
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
@@ -242,12 +262,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       case logical.ReturnAnswer(rootPlan) =>
         rootPlan match {
           case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
-            execution.TakeOrderedAndProjectExec(limit, order, child.output, planLater(child)) :: Nil
+            takeOrderedAndProject(limit, order, child.output, child) :: Nil
           case logical.Limit(
               IntegerLiteral(limit),
               logical.Project(projectList, logical.Sort(order, true, child))
               ) =>
-            execution.TakeOrderedAndProjectExec(limit, order, projectList, planLater(child)) :: Nil
+            takeOrderedAndProject(limit, order, projectList, child) :: Nil
           case logical.Limit(IntegerLiteral(limit), child) =>
             collectLimit(limit, child) :: Nil
           case other => planLater(other) :: Nil
