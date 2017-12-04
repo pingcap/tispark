@@ -17,12 +17,11 @@
 
 package com.pingcap.spark
 
-import java.sql.{Date, Types}
+import java.sql.Date
 
 import com.typesafe.scalalogging.slf4j.LazyLogging
-import org.apache.spark.sql.types.{BinaryType, DataType, StructField, StructType}
+import org.apache.spark.sql.types.{BinaryType, StructField}
 import org.apache.spark.sql.{DataFrame, SparkSession, TiContext}
-import org.apache.spark.unsafe.types.ByteArray
 
 import scala.collection.mutable.ArrayBuffer
 

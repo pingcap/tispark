@@ -1,13 +1,11 @@
 package com.pingcap.spark
 
 import java.util.Properties
-import java.util.stream.Collector
 
 import com.google.common.collect.ImmutableSet
-import com.typesafe.scalalogging.slf4j.Logger
 
-import scala.collection.mutable
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 class DAGTestCase(prop: Properties) extends TestCase(prop) {
@@ -64,7 +62,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   private val colSet: mutable.Set[String] = mutable.Set()
 
   override def run(dbName: String): Unit = {
-    sparkJDBC.init(dbName)
+    spark_jdbc.init(dbName)
     spark.init(dbName)
     jdbc.init(dbName)
     colList = jdbc.getTableColumnNames("full_data_type_table")
@@ -73,16 +71,16 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       //      createSelfJoinTypeTest ++
       //      createSymmetryTypeTestCases ++
       createCartesianTypeTestCases ++
-        createArithmeticTest ++
-        createPlaceHolderTest ++
-        createInTest ++
-        createDistinct ++
-        createBetween ++
-        createArithmeticAgg ++
-        createFirstLast ++
-        createUnion ++
-        createAggregate ++
-        createHaving
+      createArithmeticTest ++
+      createPlaceHolderTest ++
+      createInTest ++
+      createDistinct ++
+      createBetween ++
+      createArithmeticAgg ++
+      createFirstLast ++
+      createUnion ++
+      createAggregate ++
+      createHaving
     )
   }
 

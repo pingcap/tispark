@@ -23,7 +23,7 @@ import com.pingcap.spark.Utils.getOrThrow
 import org.apache.spark.sql.{Row, SparkSession}
 
 class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
-  private val sparkJDBC = SparkSession
+  private val spark_jdbc = SparkSession
     .builder()
     .appName("TiSpark Integration Test SparkJDBCWrapper")
     .getOrCreate()
@@ -39,24 +39,27 @@ class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
   private val jdbcUrl = s"jdbc:mysql://$jdbcHostname:$jdbcPort?user=$jdbcUsername"
   private var dbName = ""
   private var tableNames: Array[String] = _
-  private final val tablePostFix = "_jdbc_view"
 
   override def init(databaseName: String): Unit = {
-    val tableDF = sparkJDBC.read.format("jdbc")
-      .option("url", jdbcUrl)
-      .option("dbtable", "information_schema.tables")
-      .option("user", jdbcUsername)
-      .option("driver", "com.mysql.jdbc.Driver")
-      .load()
-      .filter(s"table_schema = '$databaseName'")
-      .select("TABLE_NAME")
-    tableNames = tableDF.collect().map((row: Row) => row.get(0).toString)
-    tableNames.foreach(createTempView(databaseName, _))
-    dbName = databaseName
+    try {
+      val tableDF = spark_jdbc.read.format("jdbc")
+        .option("url", jdbcUrl)
+        .option("dbtable", "information_schema.tables")
+        .option("user", jdbcUsername)
+        .option("driver", "com.mysql.jdbc.Driver")
+        .load()
+        .filter(s"table_schema = '$databaseName'")
+        .select("TABLE_NAME")
+      tableNames = tableDF.collect().map((row: Row) => row.get(0).toString)
+      tableNames.foreach(createTempView(databaseName, _))
+      dbName = databaseName
+    } catch {
+      case e: Exception => logger.error(s"Error when fetching jdbc data using $jdbcUrl: " + e.getMessage)
+    }
   }
 
   def createTempView(dbName: String, viewName: String): Unit = {
-    sparkJDBC.read.format("jdbc")
+    spark_jdbc.read.format("jdbc")
       .option("url", jdbcUrl)
       .option("dbtable", s"$dbName.$viewName")
       .option("user", jdbcUsername)
@@ -68,7 +71,7 @@ class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
 
   override def querySpark(sql: String): List[List[Any]] = {
     logger.info("Running query on spark with jdbc: " + sql)
-    val df = sparkJDBC.sql(sql)
+    val df = spark_jdbc.sql(sql)
     val schema = df.schema.fields
 
     dfData(df, schema)
