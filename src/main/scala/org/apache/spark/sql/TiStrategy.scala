@@ -23,8 +23,9 @@ import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, ExprId, Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, ExprId, Expression, IntegerLiteral, NamedExpression, SortOrder}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
+import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
@@ -87,11 +88,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   def aggregationToDAGRequest(
-    groupByList: Seq[NamedExpression],
-    aggregates: Seq[AggregateExpression],
-    source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
-  ): TiDAGRequest = {
+                               groupByList: Seq[NamedExpression],
+                               aggregates: Seq[AggregateExpression],
+                               source: TiDBRelation,
+                               dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
+                             ): TiDAGRequest = {
     aggregates.foreach {
       case AggregateExpression(_: Average, _, _, _) =>
         throw new IllegalArgumentException("Should never be here")
@@ -126,10 +127,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   def filterToDAGRequest(
-    filters: Seq[Expression],
-    source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
-  ): TiDAGRequest = {
+                          filters: Seq[Expression],
+                          source: TiDBRelation,
+                          dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
+                        ): TiDAGRequest = {
     val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val scanPlan = if (allowIndexDoubleRead()) {
@@ -146,12 +147,76 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
+  def addSortOrder(request: TiDAGRequest, sortOrder: Seq[SortOrder]): Unit =
+    if (sortOrder != null) {
+      sortOrder.foreach(
+        (order: SortOrder) =>
+          request.addOrderByItem(
+            TiByItem.create(
+              BasicExpression.convertToTiExpr(order.child).get,
+              order.direction.sql.equalsIgnoreCase("DESC")
+            )
+          )
+      )
+    }
+
+  def pruneTopNFilterProject(
+                              limit: Int,
+                              projectList: Seq[NamedExpression],
+                              filterPredicates: Seq[Expression],
+                              source: TiDBRelation,
+                              sortOrder: Seq[SortOrder] = null
+                            ): SparkPlan = {
+    val request = new TiDAGRequest(pushDownType())
+    request.setLimit(limit)
+    addSortOrder(request, sortOrder)
+    pruneFilterProject(projectList, filterPredicates, source, request)
+  }
+
+  def collectLimit(limit: Int, child: LogicalPlan): Seq[SparkPlan] =
+    takeOrderedAndProject(limit, null, child)
+
+  def takeOrderedAndProject(
+                             limit: Int,
+                             sortOrder: Seq[SortOrder],
+                             child: LogicalPlan
+                           ): Seq[SparkPlan] = {
+    // If sortOrder is not null, limit must be greater than 0
+    if (limit < 0 || (sortOrder == null && limit == 0)) {
+      return Nil
+    }
+
+    child match {
+      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+        if filters.forall(TiUtils.isSupportedFilter(_, source)) =>
+        pruneTopNFilterProject(limit, projectList, filters, source) :: Nil
+      case TiAggregation(
+      groupingExpressions,
+      aggregateExpressions,
+      resultExpressions,
+      TiAggregationProjection(filters, _, source, projects)
+      ) if validGroupAggregate(groupingExpressions, aggregateExpressions, source) =>
+        val dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
+        dagReq.setLimit(limit)
+        addSortOrder(dagReq, sortOrder)
+        groupAggregateProjection(
+          groupingExpressions,
+          aggregateExpressions,
+          resultExpressions,
+          projects,
+          source,
+          dagReq
+        )
+      case _ => Nil
+    }
+  }
+
   def pruneFilterProject(
-    projectList: Seq[NamedExpression],
-    filterPredicates: Seq[Expression],
-    source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
-  ): SparkPlan = {
+                          projectList: Seq[NamedExpression],
+                          filterPredicates: Seq[Expression],
+                          source: TiDBRelation,
+                          dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
+                        ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))
     val filterSet = AttributeSet(filterPredicates.flatMap(_.references))
@@ -172,7 +237,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     // TODO: Decouple final output schema from expression evaluation so this copy can be
     // avoided safely.
     if (AttributeSet(projectList.map(_.toAttribute)) == projectSet &&
-        filterSet.subsetOf(projectSet)) {
+      filterSet.subsetOf(projectSet)) {
       // When it is possible to just use column pruning to get the right projection and
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
@@ -190,24 +255,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
   }
 
-  // We do through similar logic with original Spark as in SparkStrategies.scala
-  // Difference is we need to test if a sub-plan can be consumed all together by TiKV
-  // and then we don't return (don't planLater) and plan the remaining all at once
-  private def doPlan(source: TiDBRelation, plan: LogicalPlan): Seq[SparkPlan] = {
-
+  def groupAggregateProjection(
+                                groupingExpressions: Seq[NamedExpression],
+                                aggregateExpressions: Seq[AggregateExpression],
+                                resultExpressions: Seq[NamedExpression],
+                                projects: Seq[NamedExpression],
+                                source: TiDBRelation,
+                                dagReq: TiDAGRequest
+                              ): Seq[SparkPlan] = {
     val aliasMap = mutable.HashMap[(Boolean, Expression), Alias]()
     val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
     val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
-
-    def toAlias(expr: AggregateExpression) =
-      if (!expr.deterministic) {
-        Alias(expr, expr.toString())()
-      } else {
-        aliasMap.getOrElseUpdate(
-          (expr.deterministic, expr.canonicalized),
-          Alias(expr, expr.toString)()
-        )
-      }
 
     def newAggregate(aggFunc: AggregateFunction, originalAggExpr: AggregateExpression) =
       AggregateExpression(
@@ -225,8 +283,126 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         NamedExpression.newExprId
       )
 
+    def toAlias(expr: AggregateExpression) =
+      if (!expr.deterministic) {
+        Alias(expr, expr.toString())()
+      } else {
+        aliasMap.getOrElseUpdate(
+          (expr.deterministic, expr.canonicalized),
+          Alias(expr, expr.toString)()
+        )
+      }
+
+    val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
+      aggExpr.aggregateFunction match {
+        // here aggExpr is the original AggregationExpression
+        // and will be pushed down to TiKV
+        case Max(_)   => newAggregate(Max(toAlias(aggExpr).toAttribute), aggExpr)
+        case Min(_)   => newAggregate(Min(toAlias(aggExpr).toAttribute), aggExpr)
+        case Count(_) => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
+        case Sum(_)   => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
+        case First(_, ignoreNullsExpr) =>
+          newAggregate(First(toAlias(aggExpr).toAttribute, ignoreNullsExpr), aggExpr)
+        case _ => aggExpr
+      }
+    } flatMap { aggExpr =>
+      aggExpr match {
+        // We have to separate average into sum and count
+        // and for outside expression such as average(x) + 1,
+        // Spark has lift agg + 1 up to resultExpressions
+        // We need to modify the reference there as well to forge
+        // Divide(sum/count) + 1
+        case aggExpr @ AggregateExpression(Average(ref), _, _, _) =>
+          // Need a type promotion
+          val sumToPush = newAggregate(Sum(ref), aggExpr)
+          val countToPush = newAggregate(Count(ref), aggExpr)
+
+          // Need a new expression id since they are not simply rewrite as above
+          val sumFinal = newAggregateWithId(Sum(toAlias(sumToPush).toAttribute), aggExpr)
+          val countFinal = newAggregateWithId(Sum(toAlias(countToPush).toAttribute), aggExpr)
+
+          avgPushdownRewriteMap(aggExpr.resultId) = List(sumToPush, countToPush)
+          avgFinalRewriteMap(aggExpr.resultId) = List(sumFinal, countFinal)
+          List(sumFinal, countFinal)
+        case _ => aggExpr :: Nil
+      }
+    }
+
+    val pushdownAggregates = aggregateExpressions.flatMap { aggExpr =>
+      avgPushdownRewriteMap
+        .getOrElse(aggExpr.resultId, List(aggExpr))
+    }.distinct
+
+    aggregationToDAGRequest(groupingExpressions, pushdownAggregates, source, dagReq)
+
+    val rewrittenResultExpression = resultExpressions.map(
+      expr =>
+        expr
+          .transformDown {
+            case aggExpr: AttributeReference if avgFinalRewriteMap.contains(aggExpr.exprId) =>
+              // Replace the original Average expression with Div of Alias
+              val sumCountPair = avgFinalRewriteMap(aggExpr.exprId)
+
+              // We missed the chance for auto-coerce already
+              // so manual cast needed
+              // Also, convert into resultAttribute since
+              // they are created by tiSpark without Spark conversion
+              // TODO: Is DoubleType a best target type for all?
+              Cast(
+                Divide(
+                  Cast(sumCountPair.head.resultAttribute, DoubleType),
+                  Cast(sumCountPair(1).resultAttribute, DoubleType)
+                ),
+                aggExpr.dataType
+              )
+            case other => other
+          }
+          .asInstanceOf[NamedExpression]
+    )
+
+    val output = (pushdownAggregates.map(x => toAlias(x)) ++ groupingExpressions)
+      .map(_.toAttribute)
+
+    val projectSeq: Seq[Attribute] = projects.asInstanceOf[Seq[Attribute]]
+    projectSeq.foreach(attr => dagReq.addRequiredColumn(TiColumnRef.create(attr.name)))
+
+    aggregate.AggUtils.planAggregateWithoutDistinct(
+      groupingExpressions,
+      residualAggregateExpressions,
+      rewrittenResultExpression,
+      toCoprocessorRDD(source, output, dagReq)
+    )
+  }
+
+  def validGroupAggregate(groupingExpressions: Seq[NamedExpression],
+                          aggregateExpressions: Seq[AggregateExpression],
+                          source: TiDBRelation): Boolean = {
+    allowAggregationPushdown &&
+      groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source)) &&
+      aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source)) &&
+      !aggregateExpressions.exists(_.isDistinct)
+  }
+
+  // We do through similar logic with original Spark as in SparkStrategies.scala
+  // Difference is we need to test if a sub-plan can be consumed all together by TiKV
+  // and then we don't return (don't planLater) and plan the remaining all at once
+  private def doPlan(source: TiDBRelation, plan: LogicalPlan): Seq[SparkPlan] = {
     // TODO: This test should be done once for all children
     plan match {
+      case logical.ReturnAnswer(rootPlan) =>
+        rootPlan match {
+          case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+            takeOrderedAndProject(limit, order, child)
+          case logical.Limit(
+          IntegerLiteral(limit),
+          logical.Project(_, logical.Sort(order, true, child))
+          ) =>
+            takeOrderedAndProject(limit, order, child)
+          case logical.Limit(IntegerLiteral(limit), child) =>
+            collectLimit(limit, child)
+          case other => planLater(other) :: Nil
+        }
+
       // Collapse filters and projections and push plan directly
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
         pruneFilterProject(projectList, filters, source) :: Nil
@@ -244,93 +420,19 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // 3. resultExpressions: finalAgg1 + 1, the finalAgg1 is the reference to final result
       // of the aggregation
       case TiAggregation(
+      groupingExpressions,
+      aggregateExpressions,
+      resultExpressions,
+      TiAggregationProjection(filters, _, `source`, projects)
+      ) if validGroupAggregate(groupingExpressions, aggregateExpressions, source) =>
+        val dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
+        groupAggregateProjection(
           groupingExpressions,
           aggregateExpressions,
           resultExpressions,
-          TiAggregationProjection(filters, _, `source`, projects)
-          )
-          if groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source)) &&
-            aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source)) &&
-            allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
-        var dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
-        val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
-          aggExpr.aggregateFunction match {
-            // here aggExpr is the original AggregationExpression
-            // and will be pushed down to TiKV
-            case Max(_)   => newAggregate(Max(toAlias(aggExpr).toAttribute), aggExpr)
-            case Min(_)   => newAggregate(Min(toAlias(aggExpr).toAttribute), aggExpr)
-            case Count(_) => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
-            case Sum(_)   => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
-            case First(_, ignoreNullsExpr) =>
-              newAggregate(First(toAlias(aggExpr).toAttribute, ignoreNullsExpr), aggExpr)
-            case _ => aggExpr
-          }
-        } flatMap { aggExpr =>
-          aggExpr match {
-            // We have to separate average into sum and count
-            // and for outside expression such as average(x) + 1,
-            // Spark has lift agg + 1 up to resultExpressions
-            // We need to modify the reference there as well to forge
-            // Divide(sum/count) + 1
-            case aggExpr @ AggregateExpression(Average(ref), _, _, _) =>
-              // Need a type promotion
-              val sumToPush = newAggregate(Sum(ref), aggExpr)
-              val countToPush = newAggregate(Count(ref), aggExpr)
-
-              // Need a new expression id since they are not simply rewrite as above
-              val sumFinal = newAggregateWithId(Sum(toAlias(sumToPush).toAttribute), aggExpr)
-              val countFinal = newAggregateWithId(Sum(toAlias(countToPush).toAttribute), aggExpr)
-
-              avgPushdownRewriteMap(aggExpr.resultId) = List(sumToPush, countToPush)
-              avgFinalRewriteMap(aggExpr.resultId) = List(sumFinal, countFinal)
-              List(sumFinal, countFinal)
-            case _ => aggExpr :: Nil
-          }
-        }
-
-        val pushdownAggregates = aggregateExpressions.flatMap { aggExpr =>
-          avgPushdownRewriteMap
-            .getOrElse(aggExpr.resultId, List(aggExpr))
-        }.distinct
-
-        dagReq = aggregationToDAGRequest(groupingExpressions, pushdownAggregates, source, dagReq)
-
-        val rewrittenResultExpression = resultExpressions.map(
-          expr =>
-            expr
-              .transformDown {
-                case aggExpr: AttributeReference if avgFinalRewriteMap.contains(aggExpr.exprId) =>
-                  // Replace the original Average expression with Div of Alias
-                  val sumCountPair = avgFinalRewriteMap(aggExpr.exprId)
-
-                  // We missed the chance for auto-coerce already
-                  // so manual cast needed
-                  // Also, convert into resultAttribute since
-                  // they are created by tiSpark without Spark conversion
-                  // TODO: Is DoubleType a best target type for all?
-                  Cast(
-                    Divide(
-                      Cast(sumCountPair.head.resultAttribute, DoubleType),
-                      Cast(sumCountPair(1).resultAttribute, DoubleType)
-                    ),
-                    aggExpr.dataType
-                  )
-                case other => other
-              }
-              .asInstanceOf[NamedExpression]
-        )
-
-        val output = (pushdownAggregates.map(x => toAlias(x)) ++ groupingExpressions)
-          .map(_.toAttribute)
-
-        val projectSeq: Seq[Attribute] = projects.asInstanceOf[Seq[Attribute]]
-        projectSeq.foreach(attr => dagReq.addRequiredColumn(TiColumnRef.create(attr.name)))
-
-        aggregate.AggUtils.planAggregateWithoutDistinct(
-          groupingExpressions,
-          residualAggregateExpressions,
-          rewrittenResultExpression,
-          toCoprocessorRDD(source, output, dagReq)
+          projects,
+          `source`,
+          dagReq
         )
       case _ => Nil
     }
@@ -355,8 +457,8 @@ object TiAggregationProjection {
     // Only push down aggregates projection when all filters can be applied and
     // all projection expressions are column references
     case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _))
-        if projects.forall(_.isInstanceOf[Attribute]) &&
-          filters.forall(TiUtils.isSupportedFilter(_, source)) =>
+      if projects.forall(_.isInstanceOf[Attribute]) &&
+        filters.forall(TiUtils.isSupportedFilter(_, source)) =>
       Some((filters, rel, source, projects))
     case _ => Option.empty[ReturnType]
   }
