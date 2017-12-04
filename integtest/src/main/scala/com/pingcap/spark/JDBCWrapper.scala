@@ -17,7 +17,9 @@
 
 package com.pingcap.spark
 
-import java.sql.{Connection, Date, DriverManager, Timestamp}
+import java.sql._
+import java.time.{Duration, Year}
+import java.util
 import java.util.Properties
 import java.util.regex.Pattern
 
@@ -54,7 +56,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     if (currentDatabaseName == null) {
       throw new IllegalStateException("need initialization")
     }
-    val tables = connection.getMetaData.getTables(currentDatabaseName, null, "%", Array("TABLE"))
+    val tables = connection.getMetaData.getTables(currentDatabaseName, null, "%", scala.Array("TABLE"))
     while (tables.next()) {
       val table = tables.getString("TABLE_NAME")
       dumpCreateTable(table, path)
@@ -122,8 +124,8 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     val query = s"select * from $table"
     val (schema, result) = queryTiDB(query)
     val content = table + "\n" +
-                  schema.mkString(Sep) + "\n" +
-                  result.map(rowToString).mkString("\n")
+      schema.mkString(Sep) + "\n" +
+      result.map(rowToString).mkString("\n")
 
     writeFile(content, dataFileName(path, table))
   }
@@ -142,17 +144,17 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     val stat = s"insert into $table values ($placeholders)"
     val ps = connection.prepareStatement(stat)
     row.zipWithIndex.foreach { case (value, index) =>
-        val pos = index + 1
-        logger.info(if (value == null) "NULL" else value.getClass.toString)
-        value match {
-          case bd: BigDecimal => ps.setBigDecimal(pos, bd.bigDecimal)
-          case l: Long => ps.setLong(pos, l)
-          case d: Date => ps.setDate(pos, d)
-          case s: String => ps.setString(pos, s)
-          case ts: Timestamp => ps.setTimestamp(pos, ts)
-          case ba: Array[Byte] => ps.setBytes(pos, ba)
-          case null => ps.setNull(pos, typeCodeFromString(schema(index)))
-        }
+      val pos = index + 1
+      logger.info(if (value == null) "NULL" else value.getClass.toString)
+      value match {
+        case bd: BigDecimal => ps.setBigDecimal(pos, bd.bigDecimal)
+        case l: Long => ps.setLong(pos, l)
+        case d: Date => ps.setDate(pos, d)
+        case s: String => ps.setString(pos, s)
+        case ts: Timestamp => ps.setTimestamp(pos, ts)
+        case null => ps.setNull(pos, typeCodeFromString(schema(index)))
+        case b: Blob => ps.setBlob(pos, b)
+      }
     }
     ps.executeUpdate()
   }
@@ -161,7 +163,9 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     logger.info("Loading data from : " + path)
     val lines = readFile(path)
     val (table, schema, rows) = (lines.head, lines(1).split(Pattern.quote(Sep)).toList, lines.drop(2))
-    val rowData: List[List[Any]] = rows.map { rowFromString(_, schema) }
+    val rowData: List[List[Any]] = rows.map {
+      rowFromString(_, schema)
+    }
     rowData.map(insertRow(_, schema, table))
   }
 
@@ -205,14 +209,16 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     }
   }
 
-  def toOutput(value: Any): Any = {
+  def toOutput(value: Any, colType: String): Any = {
     value match {
-      case _: Array[Byte] =>
+      case _: scala.Array[Byte] =>
         var str: String = new String
-        for (b <- value.asInstanceOf[Array[Byte]]) {
+        for (b <- value.asInstanceOf[scala.Array[Byte]]) {
           str = str.concat(b.toString)
         }
         str
+      case _: Date if colType.equalsIgnoreCase("YEAR") =>
+        value.toString.split("-")(0)
       case default => default
     }
   }
@@ -231,11 +237,21 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       val row = ArrayBuffer.empty[Any]
 
       for (i <- 1 to rsMetaData.getColumnCount) {
-        row += toOutput(resultSet.getObject(i))
+        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
       }
       retSet += row.toList
     }
     (retSchema.toList, retSet.toList)
+  }
+
+  def getTableColumnNames(tableName: String) = {
+    val rs = connection.createStatement().executeQuery("select * from " + tableName + " limit 1")
+    val metaData = rs.getMetaData
+    var resList = ArrayBuffer.empty[String]
+    for (i <- 1 to metaData.getColumnCount) {
+      resList += metaData.getColumnName(i)
+    }
+    resList.toList
   }
 
   def close(): Unit = {

@@ -16,12 +16,13 @@
 package com.pingcap.tispark
 
 import java.sql.{Date, Timestamp}
+import java.util.Objects
 
 import scala.language.implicitConversions
-
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Remainder, Subtract}
+import com.pingcap.tikv.types.RequestTypes
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Remainder, Subtract}
 import org.apache.spark.sql.types._
 
 object BasicExpression {
@@ -31,7 +32,6 @@ object BasicExpression {
   type TiMinus = com.pingcap.tikv.expression.scalar.Minus
   type TiMultiply = com.pingcap.tikv.expression.scalar.Multiply
   type TiDivide = com.pingcap.tikv.expression.scalar.Divide
-  type TiMod = com.pingcap.tikv.expression.scalar.Mod
   type TiIsNull = com.pingcap.tikv.expression.scalar.IsNull
   type TiGreaterEqual = com.pingcap.tikv.expression.scalar.GreaterEqual
   type TiGreaterThan = com.pingcap.tikv.expression.scalar.GreaterThan
@@ -40,6 +40,7 @@ object BasicExpression {
   type TiEqual = com.pingcap.tikv.expression.scalar.Equal
   type TiNotEqual = com.pingcap.tikv.expression.scalar.NotEqual
   type TiNot = com.pingcap.tikv.expression.scalar.Not
+  type TiLike = com.pingcap.tikv.expression.scalar.Like
 
   final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
 
@@ -51,14 +52,36 @@ object BasicExpression {
       dataType match {
         // In Spark Date is encoded as integer of days after 1970-01-01
         // and sql.Date is constructed as milliseconds after 1970-01-01
-        // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd
-        case DateType       => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int]).toString
+        // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd,
+        // but seems change in DAG mode
+        case DateType       => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int])
         case TimestampType  => new Timestamp(value.asInstanceOf[Long])
         case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
         case _              => value
       }
     }
+
+  def isSupportedExpression(expr: Expression, requestMode: Int): Boolean = {
+    // Currently, only DAG mode needs to infer type
+    if (requestMode == RequestTypes.REQ_TYPE_DAG) {
+      if (expr.children.nonEmpty) {
+        val childType = expr.children.head.dataType
+
+        // if any child's data type is different from others,
+        // we do not support this expression to push down in
+        // DAG mode
+        for (child <- expr.children) {
+          if (!childType.equals(child.dataType) ||
+              // Do it recursively
+              !isSupportedExpression(child, requestMode)) {
+            return false
+          }
+        }
+      }
+    }
+    true
+  }
 
   def convertToTiExpr(expr: Expression): Option[TiExpr] =
     expr match {
@@ -76,9 +99,6 @@ object BasicExpression {
 
       case Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(new TiDivide(lhs, rhs))
-
-      case Remainder(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiMod(lhs, rhs))
 
       case Alias(BasicExpression(child), _) =>
         Some(child)
@@ -106,6 +126,9 @@ object BasicExpression {
 
       case Not(BasicExpression(child)) =>
         Some(new TiNot(child))
+
+      case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(new TiLike(lhs, rhs))
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>

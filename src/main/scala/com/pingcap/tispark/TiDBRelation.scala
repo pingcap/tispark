@@ -17,7 +17,7 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
-import com.pingcap.tikv.meta.{TiSelectRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.tispark.TiRDD
@@ -32,10 +32,10 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
 
   override lazy val schema: StructType = TiUtils.getSchemaFromTable(table)
 
-  def logicalPlanToRDD(selectRequest: TiSelectRequest): TiRDD = {
+  def logicalPlanToRDD(dagRequest: TiDAGRequest): TiRDD = {
     val ts: TiTimestamp = session.getTimestamp
-    selectRequest.setStartTs(ts.getVersion)
+    dagRequest.setStartTs(ts.getVersion)
 
-    new TiRDD(selectRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
+    new TiRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
   }
 }
