@@ -190,23 +190,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
           if filters.forall(TiUtils.isSupportedFilter(_, source)) =>
         pruneTopNFilterProject(limit, projectList, filters, source) :: Nil
-      case TiAggregation(
-          groupingExpressions,
-          aggregateExpressions,
-          resultExpressions,
-          TiAggregationProjection(filters, _, source, projects)
-          ) if validGroupAggregate(groupingExpressions, aggregateExpressions, source) =>
-        val dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
-        dagReq.setLimit(limit)
-        addSortOrder(dagReq, sortOrder)
-        groupAggregateProjection(
-          groupingExpressions,
-          aggregateExpressions,
-          resultExpressions,
-          projects,
-          source,
-          dagReq
-        )
       case _ => Nil
     }
   }
