@@ -26,6 +26,31 @@ mysql_user="root"
 mysql_password="root"
 use_raw_mysql=false
 
+tidb_addr=
+tidb_port=
+tidb_user=
+
+read_properties() {
+    file=${BASE_CONF}
+
+    if [ -f "$file" ]
+    then
+      echo "$file found."
+
+      while IFS='=' read -r key value
+      do
+        key=$(echo ${key} | tr '.' '_')
+        eval "${key}='${value}'"
+      done < "$file"
+
+      echo "Address   = " ${tidb_addr}
+      echo "User port = " ${tidb_port}
+      echo "User name = " ${tidb_user}
+    else
+      echo "$file not found."
+    fi
+}
+
 addMysqlInfo() {
     use_raw_mysql=true
     echo "spark.use_raw_mysql=true" >> ${TISPARK_CONF}
@@ -76,5 +101,6 @@ check_tpch_data_is_loaded() {
 }
 
 load_DAG_Table() {
-    mysql -h 127.0.0.1 -P 4000 -u root < ./testcases/tispark_test/TisparkTest.sql
+    read_properties
+    mysql -h ${tidb_addr} -P ${tidb_port} -u "${tidb_user}" < ./testcases/tispark_test/TisparkTest.sql
 }
