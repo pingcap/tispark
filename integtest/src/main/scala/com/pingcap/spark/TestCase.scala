@@ -183,11 +183,18 @@ class TestCase(val prop: Properties) extends LazyLogging {
   }
 
   private def printDiff(sqlName: String, sql: String, tiDb: List[List[Any]], tiSpark: List[List[Any]]): Unit = {
+<<<<<<< HEAD
     val ignoreCase = SparkIgnore ++ TiDBIgnore
     // ignore specific print result
     if (tiSpark.exists(
       (row: List[Any]) => row.exists(
         (str: Any) => ignoreCase.exists(
+=======
+    // ignore specific print result
+    if (tiSpark.exists(
+      (row: List[Any]) => row.exists(
+        (str: Any) => SparkIgnore.exists(
+>>>>>>> origin/master
           (i: String) => str.toString.contains(i)
         )))) {
       ignoredTest += 1
@@ -196,7 +203,11 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
     if (tiDb.exists(
       (row: List[Any]) => row.exists(
+<<<<<<< HEAD
         (str: Any) => ignoreCase.exists(
+=======
+        (str: Any) => TiDBIgnore.exists(
+>>>>>>> origin/master
           (i: String) => str.toString.contains(i)
         )))) {
       ignoredTest += 1
@@ -210,7 +221,11 @@ class TestCase(val prop: Properties) extends LazyLogging {
       logger.info(s"Dump diff for TiDB $sqlName \n")
       writeResult(sql, tiSpark, sqlName + ".result.spark")
     } catch {
+<<<<<<< HEAD
       case e: Exception => logger.error("Write file error:" + e.getMessage)
+=======
+      case e : Exception => logger.error("Write file error:" + e.getMessage)
+>>>>>>> origin/master
     }
   }
 
