@@ -94,9 +94,8 @@ object TiUtils {
     true
   }
 
-  def isSupportedFilter(expr: Expression, source: TiDBRelation): Boolean = {
+  def isSupportedFilter(expr: Expression, source: TiDBRelation): Boolean =
     isSupportedBasicExpression(expr, source) && isPushDownSupported(expr, source)
-  }
 
   // if contains UDF / functions that cannot be folded
   def isSupportedGroupingExpr(expr: NamedExpression, source: TiDBRelation): Boolean =

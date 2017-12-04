@@ -148,24 +148,24 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def collectLimit(limit: Int, child: LogicalPlan): SparkPlan = {
+  def collectLimit(limit: Int, child: LogicalPlan, source: TiDBRelation): SparkPlan =
     child match {
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
+      case PhysicalOperation(projectList, filters, LogicalRelation(_, _, _))
+          if filters.forall(TiUtils.isSupportedFilter(_, source)) => // Only filters supported to push down can apply limit operation
         val request = new TiDAGRequest(pushDownType())
         request.setLimit(limit)
         pruneFilterProject(projectList, filters, source, request)
       case _ => planLater(child)
     }
-  }
 
   def takeOrderedAndProject(
     limit: Int,
     sortOrder: Seq[SortOrder],
-    projectList: Seq[NamedExpression],
-    child: LogicalPlan
+    child: LogicalPlan,
+    source: TiDBRelation
   ): SparkPlan = child match {
-    case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
-        if limit > 0 =>
+    case PhysicalOperation(projectList, filters, LogicalRelation(_, _, _))
+        if limit > 0 && filters.forall(TiUtils.isSupportedFilter(_, source)) =>
       val request = new TiDAGRequest(pushDownType())
       request.setLimit(limit)
       sortOrder.foreach(
@@ -265,14 +265,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       case logical.ReturnAnswer(rootPlan) =>
         rootPlan match {
           case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
-            takeOrderedAndProject(limit, order, child.output, child) :: Nil
+            takeOrderedAndProject(limit, order, child, source) :: Nil
           case logical.Limit(
               IntegerLiteral(limit),
-              logical.Project(projectList, logical.Sort(order, true, child))
+              logical.Project(_, logical.Sort(order, true, child))
               ) =>
-            takeOrderedAndProject(limit, order, projectList, child) :: Nil
+            takeOrderedAndProject(limit, order, child, source) :: Nil
           case logical.Limit(IntegerLiteral(limit), child) =>
-            collectLimit(limit, child) :: Nil
+            collectLimit(limit, child, source) :: Nil
           case other => planLater(other) :: Nil
         }
 
