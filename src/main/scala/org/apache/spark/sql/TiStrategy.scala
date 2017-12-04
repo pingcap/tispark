@@ -23,8 +23,9 @@ import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, ExprId, Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, ExprId, Expression, IntegerLiteral, NamedExpression, SortOrder}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
+import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
@@ -146,6 +147,39 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
+  def collectLimit(limit: Int, child: LogicalPlan, source: TiDBRelation): SparkPlan =
+    child match {
+      case PhysicalOperation(projectList, filters, LogicalRelation(_, _, _))
+          if filters.forall(TiUtils.isSupportedFilter(_, source)) => // Only filters supported to push down can apply limit operation
+        val request = new TiDAGRequest(pushDownType())
+        request.setLimit(limit)
+        pruneFilterProject(projectList, filters, source, request)
+      case _ => planLater(child)
+    }
+
+  def takeOrderedAndProject(
+    limit: Int,
+    sortOrder: Seq[SortOrder],
+    child: LogicalPlan,
+    source: TiDBRelation
+  ): SparkPlan = child match {
+    case PhysicalOperation(projectList, filters, LogicalRelation(_, _, _))
+        if limit > 0 && filters.forall(TiUtils.isSupportedFilter(_, source)) =>
+      val request = new TiDAGRequest(pushDownType())
+      request.setLimit(limit)
+      sortOrder.foreach(
+        (order: SortOrder) =>
+          request.addOrderByItem(
+            TiByItem.create(
+              BasicExpression.convertToTiExpr(order.child).get,
+              order.direction.sql.equalsIgnoreCase("DESC")
+            )
+        )
+      )
+      pruneFilterProject(projectList, filters, source, request)
+    case _ => planLater(child)
+  }
+
   def pruneFilterProject(
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
@@ -227,6 +261,20 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     // TODO: This test should be done once for all children
     plan match {
+      case logical.ReturnAnswer(rootPlan) =>
+        rootPlan match {
+          case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+            takeOrderedAndProject(limit, order, child, source) :: Nil
+          case logical.Limit(
+              IntegerLiteral(limit),
+              logical.Project(_, logical.Sort(order, true, child))
+              ) =>
+            takeOrderedAndProject(limit, order, child, source) :: Nil
+          case logical.Limit(IntegerLiteral(limit), child) =>
+            collectLimit(limit, child, source) :: Nil
+          case other => planLater(other) :: Nil
+        }
+
       // Collapse filters and projections and push plan directly
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
         pruneFilterProject(projectList, filters, source) :: Nil

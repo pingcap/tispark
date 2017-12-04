@@ -43,7 +43,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   private val PLACE_HOLDER = List[String](
     LITERAL_NULL, // Null
     "'PingCAP'", // a simple test string
-    "'2043-11-28'"
+    "'2043-11-28'",
+    "'2017-09-07 11:11:11'"
   ) ++ ARITHMETIC_CONSTANT
   private var colList: List[String] = _
 
@@ -56,13 +57,14 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       //      .add("tp_time") // Time format is not the same in TiDB and spark
       .add("tp_enum")
       .add("tp_set")
-      .add("tp_binary")
-      .add("tp_blob")
+//      .add("tp_binary")
+//      .add("tp_blob")
       .build()
 
   private val colSet: mutable.Set[String] = mutable.Set()
 
   override def run(dbName: String): Unit = {
+    sparkJDBC.init(dbName)
     spark.init(dbName)
     jdbc.init(dbName)
     colList = jdbc.getTableColumnNames("full_data_type_table")
@@ -110,10 +112,13 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
 
   def testBundle(list: List[String]): Unit = {
     var result = false
-
+    val startTime = System.currentTimeMillis()
+    var count = 0
     for (sql <- list) {
       try {
-        execBothAndJudge(sql)
+        count += 1
+        execSparkBothAndJudge(sql)
+        logger.info("Running num: " + count + " sql took " + (System.currentTimeMillis() - startTime) / 1000 + "s")
       } catch {
         case _: Throwable => logger.error("result: Run SQL " + sql + " Failed!")
       }
