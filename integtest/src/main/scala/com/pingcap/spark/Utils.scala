@@ -60,6 +60,15 @@ object Utils {
     }
   }
 
+  def getFlag(prop: Properties, key: String): Boolean = {
+    val jvmProp = System.getProperty(key)
+    if (jvmProp != null) {
+      jvmProp.equalsIgnoreCase("true")
+    } else {
+      Option(prop.getProperty(key)).getOrElse("false").equalsIgnoreCase("true")
+    }
+  }
+
   def getOrElse(prop: Properties, key: String, defValue: String): String = {
     val jvmProp = System.getProperty(key)
     if (jvmProp != null) {

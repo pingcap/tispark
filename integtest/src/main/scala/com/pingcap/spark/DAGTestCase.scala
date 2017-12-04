@@ -1,13 +1,11 @@
 package com.pingcap.spark
 
 import java.util.Properties
-import java.util.stream.Collector
 
 import com.google.common.collect.ImmutableSet
-import com.typesafe.scalalogging.slf4j.Logger
 
-import scala.collection.mutable
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 class DAGTestCase(prop: Properties) extends TestCase(prop) {
@@ -43,7 +41,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   private val PLACE_HOLDER = List[String](
     LITERAL_NULL, // Null
     "'PingCAP'", // a simple test string
-    "'2043-11-28'"
+    "'2043-11-28'",
+    "'2017-09-07 11:11:11'"
   ) ++ ARITHMETIC_CONSTANT
   private var colList: List[String] = _
 
@@ -56,13 +55,14 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       //      .add("tp_time") // Time format is not the same in TiDB and spark
       .add("tp_enum")
       .add("tp_set")
-      .add("tp_binary")
-      .add("tp_blob")
+//      .add("tp_binary")
+//      .add("tp_blob")
       .build()
 
   private val colSet: mutable.Set[String] = mutable.Set()
 
-  override def run(dbName: String): Unit = {
+  override def run(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
+    spark_jdbc.init(dbName)
     spark.init(dbName)
     jdbc.init(dbName)
     colList = jdbc.getTableColumnNames("full_data_type_table")
@@ -71,16 +71,16 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       //      createSelfJoinTypeTest ++
       //      createSymmetryTypeTestCases ++
       createCartesianTypeTestCases ++
-        createArithmeticTest ++
-        createPlaceHolderTest ++
-        createInTest ++
-        createDistinct ++
-        createBetween ++
-        createArithmeticAgg ++
-        createFirstLast ++
-        createUnion ++
-        createAggregate ++
-        createHaving
+      createArithmeticTest ++
+      createPlaceHolderTest ++
+      createInTest ++
+      createDistinct ++
+      createBetween ++
+      createArithmeticAgg ++
+      createFirstLast ++
+      createUnion ++
+      createAggregate ++
+      createHaving
     )
   }
 
@@ -110,17 +110,20 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
 
   def testBundle(list: List[String]): Unit = {
     var result = false
-
+    val startTime = System.currentTimeMillis()
+    var count = 0
     for (sql <- list) {
       try {
-        execBothAndJudge(sql)
+        count += 1
+        execAllAndJudge(sql)
+        logger.info("Running num: " + count + " sql took " + (System.currentTimeMillis() - startTime) / 1000 + "s")
       } catch {
         case _: Throwable => logger.error("result: Run SQL " + sql + " Failed!")
       }
     }
     result = !result
-    logger.warn("result: Total DAG test run:" + inlineSQLNumber + " of " + list.size)
-    logger.warn(s"result: Test ignored count:$ignoredTest, failed count:$errorTest")
+    logger.warn("Result: Total DAG test run:" + inlineSQLNumber + " of " + list.size)
+    logger.warn(s"Result: Test ignored count:$testsSkipped, failed count:$testsFailed")
   }
 
   // ***********************************************************************************************
