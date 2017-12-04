@@ -17,9 +17,7 @@
 
 package com.pingcap.spark
 
-import java.sql._
-import java.time.{Duration, Year}
-import java.util
+import java.sql.{Blob, Connection, Date, DriverManager, Timestamp}
 import java.util.Properties
 import java.util.regex.Pattern
 
@@ -32,6 +30,10 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
   private val KeyTiDBAddress = "tidb.addr"
   private val KeyTiDBPort = "tidb.port"
   private val KeyTiDBUser = "tidb.user"
+  private val KeyUseRawSparkMySql = "spark.use_raw_mysql"
+  private val KeyMysqlAddress = "mysql.addr"
+  private val KeyMysqlUser = "mysql.user"
+  private val KeyMysqlPassword = "mysql.password"
 
   private val Sep: String = "|"
 
@@ -39,17 +41,22 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
   private var currentDatabaseName: String = _
 
   private val connection: Connection = {
-    val jdbcUsername = getOrThrow(prop, KeyTiDBUser)
-    val jdbcHostname = getOrThrow(prop, KeyTiDBAddress)
-    val jdbcPort = Integer.parseInt(getOrThrow(prop, KeyTiDBPort))
-    val jdbcUrl = s"jdbc:mysql://$jdbcHostname:$jdbcPort?user=$jdbcUsername"
+    val useRawSparkMySql: Boolean = getFlag(prop, KeyUseRawSparkMySql)
+    val jdbcUsername = if(useRawSparkMySql) getOrThrow(prop, KeyMysqlUser) else getOrThrow(prop, KeyTiDBUser)
+    val jdbcHostname = if(useRawSparkMySql) getOrThrow(prop, KeyMysqlAddress) else getOrThrow(prop, KeyTiDBAddress)
+    val jdbcPort = if(useRawSparkMySql) 0 else Integer.parseInt(getOrThrow(prop, KeyTiDBPort))
+    val jdbcPassword = if(useRawSparkMySql) getOrThrow(prop, KeyMysqlPassword) else ""
+    val jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
+      (if (useRawSparkMySql) "" else s":$jdbcPort") +
+      s"/?user=$jdbcUsername&password=$jdbcPassword"
 
     logger.info("jdbcUsername: " + jdbcUsername)
     logger.info("jdbcHostname: " + jdbcHostname)
+    logger.info("jdbcPassword: " + jdbcPassword)
     logger.info("jdbcPort: " + jdbcPort)
     logger.info("jdbcUrl: " + jdbcUrl)
 
-    DriverManager.getConnection(jdbcUrl, jdbcUsername, "")
+    DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
   }
 
   def dumpAllTables(path: String): Unit = {
@@ -152,6 +159,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
         case d: Date => ps.setDate(pos, d)
         case s: String => ps.setString(pos, s)
         case ts: Timestamp => ps.setTimestamp(pos, ts)
+        case ba: Array[Byte] => ps.setBytes(pos, ba)
         case null => ps.setNull(pos, typeCodeFromString(schema(index)))
         case b: Blob => ps.setBlob(pos, b)
       }
@@ -171,6 +179,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
 
   def init(databaseName: String): String = {
     if (databaseName != null) {
+      logger.info("?????" + databaseName)
       if (!databaseExists(databaseName)) {
         createDatabase(databaseName, false)
       }
@@ -244,7 +253,7 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     (retSchema.toList, retSet.toList)
   }
 
-  def getTableColumnNames(tableName: String) = {
+  def getTableColumnNames(tableName: String): List[String] = {
     val rs = connection.createStatement().executeQuery("select * from " + tableName + " limit 1")
     val metaData = rs.getMetaData
     var resList = ArrayBuffer.empty[String]

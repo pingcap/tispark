@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -ue
 
-BASE_DIR=$(cd `dirname $0`; pwd)
-echo ${BASE_DIR}
+source _env.sh
+
+echo ${BASEDIR}
 echo "usage: <bin> [-d | --debug]"
 
 clear_last_diff_files() {
@@ -17,7 +18,7 @@ clear_last_diff_files() {
 }
 
 check_tpch_dir_is_present() {
-    if [ ! -d "${BASE_DIR}/tpch" ]; then
+    if [ ! -d "$BASEDIR/tpch" ]; then
         echo "tpch is not present. You have to clone it to your local machine."
         echo "this script is required to generate and load tpch database to TiDB cluster."
         echo "git clone https://github.com/zhexuany/tispark_tpch tpch"
@@ -41,17 +42,13 @@ clear_last_diff_files
 check_tpch_dir_is_present
 check_tpch_data_is_loaded
 
-CLASS="com.pingcap.spark.TestFramework"
+cp ${PATH_TO_CONF}/tispark_config_tpch.properties.template ${TISPARK_CONF}
+cp ${PATH_TO_CONF}/tispark_config_tpch.properties.template ${PATH_TO_CONF}/tispark_config.properties
 
-cp ${BASE_DIR}/conf/tispark_config_tpch.properties.template ${SPARK_HOME}/conf/tispark_config.properties
-spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,suspend=y"
-spark_test_opt=""
-
-spark_cmd="${SPARK_HOME}/bin/spark-submit --class ${CLASS} ${BASE_DIR}/lib/* --driver-java-options"
 if [[ "$@" = *--debug ]] || [[ "$@" = *-d ]]; then
-    echo "debuging..."
-    $spark_cmd $spark_debug_opt 
+    echo "debugging..."
+    ${spark_cmd} ${spark_debug_opt}
 else
     echo "testing...."
-    $spark_cmd $spark_test_opt 2>&1 | grep "result:\|time:"
+    ${spark_cmd} ${spark_test_opt} 2>&1 | grep "result:\|time:"
 fi

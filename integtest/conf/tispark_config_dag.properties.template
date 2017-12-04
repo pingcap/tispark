@@ -2,4 +2,4 @@ tidb.addr=127.0.0.1
 tidb.port=4000
 tidb.user=root
 test.mode=TestDAG
-test.ignore=tpch,test_index,tpch_TEST,test_types,test_null
+test.db=tispark_test

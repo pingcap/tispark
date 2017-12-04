@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -ue
 
-BASEDIR=$(cd `dirname $0`; pwd)
-echo "Base directory in: ${BASEDIR}"
+source _env.sh
+
+echo "Base directory in: $BASEDIR"
 echo "Usage: <bin> [-h | -g | -a | -d | -s | -i | -r | -t <sql> | -b <db>]"
 echo "Note: <sql> must be quoted. e.g., \"select * from t\""
 echo "You may use sql-only like this:"
@@ -87,19 +88,12 @@ do
     esac
 done
 
-CLASS="com.pingcap.spark.TestFramework"
-
-spark_cmd="${SPARK_HOME}/bin/spark-submit --class ${CLASS} ${BASEDIR}/lib/* --driver-java-options"
-spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,suspend=y"
-spark_test_opt=""
-
-#exit -1
 
 if [ "${mode}" == "Integration" ]; then
     filter=""
-    cp ${BASEDIR}/conf/tispark_config_testindex.properties.template ${SPARK_HOME}/conf/tispark_config.properties
+    cp ${PATH_TO_CONF}/tispark_config_testindex.properties.template ${TISPARK_CONF}
     if ! [ -z "${db}" ]; then
-        echo "test.db=$db" >> ${SPARK_HOME}/conf/tispark_config.properties
+        echo "test.db=$db" >> ${PATH_TO_CONF}/tispark_config.properties
     fi
     if [ ${isDebug} = true ]; then
         echo "debugging..."
@@ -122,18 +116,18 @@ if [ "${mode}" == "Integration" ]; then
         ${spark_cmd} ${spark_test_opt} 2>&1 | grep "${filter}"
     fi
 elif [ "${mode}" == "QueryOnly" ]; then
-    cp ${BASEDIR}/conf/tispark_config.properties.template ${SPARK_HOME}/conf/tispark_config.properties
+    cp ${PATH_TO_CONF}/tispark_config.properties.template ${TISPARK_CONF}
     if [ -z "${sql}" ]; then
         echo "sql can not be empty. Aborting..."
         exit -1
     else
-        echo "test.sql=$sql" >> ${SPARK_HOME}/conf/tispark_config.properties
+        echo "test.sql=$sql" >> ${PATH_TO_CONF}/tispark_config.properties
     fi
     if [ -z "${db}" ]; then
         echo "DB name not specified. Aborting..."
         exit -1
     else
-        echo "test.db=$db" >> ${SPARK_HOME}/conf/tispark_config.properties
+        echo "test.db=$db" >> ${PATH_TO_CONF}/tispark_config.properties
     fi
     echo "Running statement $sql"
     if [ ${isDebug} = true ]; then

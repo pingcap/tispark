@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -ue
 
-BASEDIR=$(cd `dirname $0`; pwd)
+source _env.sh
+
 echo "Base directory in: ${BASEDIR}"
 echo "Usage: <bin> [-a | -d | -h | -s | -i | -r]"
 
@@ -69,13 +70,8 @@ do
     esac
 done
 
-CLASS="com.pingcap.spark.TestFramework"
+cp ${PATH_TO_CONF}/tispark_config_dag.properties.template ${TISPARK_CONF}
 
-cp ${BASEDIR}/conf/tispark_config_dag.properties.template ${SPARK_HOME}/conf/tispark_config.properties
-spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,suspend=y"
-spark_test_opt=""
-
-spark_cmd="${SPARK_HOME}/bin/spark-submit --class ${CLASS} ${BASEDIR}/lib/* --driver-java-options"
 if [ ${isDebug} = true ]; then
     echo "debugging..."
     ${spark_cmd} ${spark_debug_opt}
