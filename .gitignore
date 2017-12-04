@@ -41,6 +41,7 @@ hs_err_pid*
 .gradle
 *.spark
 *.tidb
+*.jdbc
 *.testSql
 
 metastore_db/
