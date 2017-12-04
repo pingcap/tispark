@@ -9,17 +9,6 @@ echo "Note: <sql> must be quoted. e.g., \"select * from t\""
 echo "You may use sql-only like this:"
 echo "./test_no_tpch.sh -t \"select * from t\" -b \"test\""
 
-clear_last_diff_files() {
-    for f in ./*.spark; do
-        [ -e "$f" ] && rm *.spark
-        break
-    done
-    for f in ./*.tidb; do
-        [ -e "$f" ] && rm *.tidb
-        break
-    done
-}
-
 clear_last_diff_files
 
 isDebug=false
@@ -92,8 +81,10 @@ done
 if [ "${mode}" == "Integration" ]; then
     filter=""
     cp ${PATH_TO_CONF}/tispark_config_testindex.properties.template ${TISPARK_CONF}
+    cp ${PATH_TO_CONF}/tispark_config_testindex.properties.template ${BASE_CONF}
     if ! [ -z "${db}" ]; then
-        echo "test.db=$db" >> ${PATH_TO_CONF}/tispark_config.properties
+        echo "test.db=$db" >> ${TISPARK_CONF}
+        echo "test.db=$db" >> ${BASE_CONF}
     fi
     if [ ${isDebug} = true ]; then
         echo "debugging..."
@@ -117,17 +108,20 @@ if [ "${mode}" == "Integration" ]; then
     fi
 elif [ "${mode}" == "QueryOnly" ]; then
     cp ${PATH_TO_CONF}/tispark_config.properties.template ${TISPARK_CONF}
+    cp ${PATH_TO_CONF}/tispark_config.properties.template ${BASE_CONF}
     if [ -z "${sql}" ]; then
         echo "sql can not be empty. Aborting..."
         exit -1
     else
-        echo "test.sql=$sql" >> ${PATH_TO_CONF}/tispark_config.properties
+        echo "test.sql=$sql" >> ${TISPARK_CONF}
+        echo "test.sql=$sql" >> ${BASE_CONF}
     fi
     if [ -z "${db}" ]; then
         echo "DB name not specified. Aborting..."
         exit -1
     else
-        echo "test.db=$db" >> ${PATH_TO_CONF}/tispark_config.properties
+        echo "test.db=$db" >> ${TISPARK_CONF}
+        echo "test.db=$db" >> ${BASE_CONF}
     fi
     echo "Running statement $sql"
     if [ ${isDebug} = true ]; then

@@ -38,3 +38,43 @@ addMysqlInfo() {
     echo "mysql.user=$mysql_user" >> ${BASE_CONF}
     echo "mysql.password=$mysql_password" >> ${BASE_CONF}
 }
+
+clear_last_diff_files() {
+    for f in ./*.spark; do
+        [ -e "$f" ] && rm *.spark
+        break
+    done
+    for f in ./*.tidb; do
+        [ -e "$f" ] && rm *.tidb
+        break
+    done
+    for f in ./*.jdbc; do
+        [ -e "$f" ] && rm *.jdbc
+        break
+    done
+}
+
+check_tpch_dir_is_present() {
+    if [ ! -d "$BASEDIR/tpch" ]; then
+        echo "tpch is not present. You have to clone it to your local machine."
+        echo "this script is required to generate and load tpch database to TiDB cluster."
+        echo "git clone https://github.com/zhexuany/tispark_tpch tpch"
+        exit
+    fi
+}
+
+check_tpch_data_is_loaded() {
+    if [ hash mysql 2>/dev/null ]; then
+        echo "please install mysql first."
+        exit
+    fi
+    res=`mysql -h 127.0.0.1 -P 4000 -u root -e "show databases" | grep "tpch_test" > /dev/null; echo "$?"`
+    if [ ! "$res" -eq 0 ]; then
+        echo "please load tpch data to tidb cluster first."
+        exit
+    fi
+}
+
+load_DAG_Table() {
+    mysql -h 127.0.0.1 -P 4000 -u root < ./testcases/tispark_test/TisparkTest.sql
+}

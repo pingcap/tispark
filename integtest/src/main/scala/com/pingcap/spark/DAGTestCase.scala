@@ -61,7 +61,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
 
   private val colSet: mutable.Set[String] = mutable.Set()
 
-  override def run(dbName: String): Unit = {
+  override def run(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     spark_jdbc.init(dbName)
     spark.init(dbName)
     jdbc.init(dbName)
@@ -115,15 +115,15 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     for (sql <- list) {
       try {
         count += 1
-        execSparkBothAndJudge(sql)
+        execAllAndJudge(sql)
         logger.info("Running num: " + count + " sql took " + (System.currentTimeMillis() - startTime) / 1000 + "s")
       } catch {
         case _: Throwable => logger.error("result: Run SQL " + sql + " Failed!")
       }
     }
     result = !result
-    logger.warn("result: Total DAG test run:" + inlineSQLNumber + " of " + list.size)
-    logger.warn(s"result: Test ignored count:$ignoredTest, failed count:$errorTest")
+    logger.warn("Result: Total DAG test run:" + inlineSQLNumber + " of " + list.size)
+    logger.warn(s"Result: Test ignored count:$testsSkipped, failed count:$testsFailed")
   }
 
   // ***********************************************************************************************

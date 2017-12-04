@@ -70,7 +70,7 @@ class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
   }
 
   override def querySpark(sql: String): List[List[Any]] = {
-    logger.info("Running query on spark with jdbc: " + sql)
+    logger.info("Running query on spark-jdbc: " + sql)
     val df = spark_jdbc.sql(sql)
     val schema = df.schema.fields
 
