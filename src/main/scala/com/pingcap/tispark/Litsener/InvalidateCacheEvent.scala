@@ -15,17 +15,6 @@
 
 package com.pingcap.tispark.Litsener
 
-import org.apache.log4j.Logger
-import org.apache.spark.scheduler.{SparkListener, SparkListenerJobEnd, SparkListenerJobStart, SparkListenerStageCompleted}
+class InvalidateCacheEvent {
 
-class PDCacheInvalidateListener extends SparkListener {
-  protected val logger: Logger = Logger.getLogger(this.getClass)
-
-  override def onJobStart(jobStart: SparkListenerJobStart): Unit = {
-    logger.info("Job started.")
-  }
-
-  override def onJobEnd(jobEnd: SparkListenerJobEnd): Unit = {
-    logger.info("Job ended.")
-  }
 }

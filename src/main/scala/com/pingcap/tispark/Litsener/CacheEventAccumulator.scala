@@ -15,17 +15,18 @@
 
 package com.pingcap.tispark.Litsener
 
-import org.apache.log4j.Logger
-import org.apache.spark.scheduler.{SparkListener, SparkListenerJobEnd, SparkListenerJobStart, SparkListenerStageCompleted}
+import org.apache.spark.util.AccumulatorV2
 
-class PDCacheInvalidateListener extends SparkListener {
-  protected val logger: Logger = Logger.getLogger(this.getClass)
+class CacheEventAccumulator extends AccumulatorV2[InvalidateCacheEvent, InvalidateCacheEvent] {
+  override def isZero: Boolean = ???
 
-  override def onJobStart(jobStart: SparkListenerJobStart): Unit = {
-    logger.info("Job started.")
-  }
+  override def copy(): AccumulatorV2[InvalidateCacheEvent, InvalidateCacheEvent] = ???
 
-  override def onJobEnd(jobEnd: SparkListenerJobEnd): Unit = {
-    logger.info("Job ended.")
-  }
+  override def reset(): Unit = ???
+
+  override def add(v: InvalidateCacheEvent): Unit = ???
+
+  override def merge(other: AccumulatorV2[InvalidateCacheEvent, InvalidateCacheEvent]): Unit = ???
+
+  override def value: InvalidateCacheEvent = ???
 }
