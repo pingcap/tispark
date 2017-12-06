@@ -18,6 +18,8 @@
 package com.pingcap.spark
 
 import java.io.File
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.util.Properties
 
 import com.pingcap.spark.Utils._
@@ -66,6 +68,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     "type mismatch",
     "only support precision",
     "Invalid Flag type for TimestampType: 8",
+    "Invalid Flag type for DateTimeType: 8",
     "Decimal scale (18) cannot be greater than precision "
     //    "unknown error Other"
     //    "Error converting access pointsnull"
@@ -402,9 +405,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
     val isFalse = sparkJDBCRunTimeError || sparkRunTimeError || !compResult(spark_jdbc, spark)
     if (isFalse) {
       if (skipped) {
-        logger.warn(s"TEST SKIPPED.\n")
+        logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.warn(s"TEST FAILED.\n")
+        logger.warn(s"Test Failed. #$inlineSQLNumber\n")
       }
       logger.warn(s"Spark-JDBC output: $spark_jdbc")
       logger.warn(s"Spark output: $spark")
@@ -416,9 +419,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
       }
     } else {
       if (skipped) {
-        logger.warn(s"TEST SKIPPED.\n")
+        logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.info(s"TEST PASSED.\n")
+        logger.info(s"Test PASSED. #$inlineSQLNumber\n")
       }
     }
     isFalse
@@ -458,9 +461,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
     val isFalse = tidbRunTimeError || sparkRunTimeError || !compResult(tidb, spark)
     if (isFalse) {
       if (skipped) {
-        logger.warn(s"TEST SKIPPED.\n")
+        logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.warn(s"TEST FAILED.\n")
+        logger.warn(s"Test Failed. #$inlineSQLNumber\n")
       }
       logger.warn(s"TiDB output: $tidb")
       logger.warn(s"Spark output: $spark")
@@ -471,9 +474,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
       }
     } else {
       if (skipped) {
-        logger.warn(s"TEST SKIPPED.\n")
+        logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.info(s"TEST PASSED.\n")
+        logger.info(s"Test PASSED. #$inlineSQLNumber\n")
       }
     }
     isFalse
@@ -533,7 +536,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
     if (isFalse) {
       if (skipped) {
-        logger.warn(s"TEST SKIPPED.\n")
+        logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       }
       if (isTiDBvsSparkFalse) {
         logger.warn(s"TiDB output: $tidb")
@@ -545,19 +548,21 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (!skipped) {
         if (checkTiDBIgnore(tidb) || checkSparkIgnore(spark) || checkSparkJDBCIgnore(spark_jdbc)) {
           testsSkipped += 1
+          logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
         } else {
           testsFailed += 1
           printDiffSparkJDBC(s"inlineTest$inlineSQLNumber", str, spark_jdbc, spark)
           printDiff(s"inlineTest$inlineSQLNumber", str, tidb, spark)
+          logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
         }
       } else {
         return false
       }
     } else {
       if (skipped) {
-        logger.warn(s"TEST SKIPPED.\n")
+        logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.info(s"TEST PASSED.\n")
+        logger.info(s"Test PASSED. #$inlineSQLNumber\n")
       }
     }
     isFalse
@@ -618,11 +623,17 @@ class TestCase(val prop: Properties) extends LazyLogging {
       case d: Number => d.longValue()
     }
 
+    def toString(value: Any): String = {
+      new SimpleDateFormat("yy-MM-dd HH:mm:ss").format(value)
+    }
+
     def compValue(lhs: Any, rhs: Any): Boolean = lhs match {
       case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
         Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
       case _: Number | _: BigInt | _: java.math.BigInteger =>
         toInteger(lhs) == toInteger(rhs)
+      case _: Timestamp =>
+        toString(lhs) == toString(rhs)
       case _ => lhs == rhs || lhs.toString == rhs.toString
     }
 
