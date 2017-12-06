@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
+set -ue
 
-BASEDIR=$(cd `dirname $0`; pwd)
-CLASS="com.pingcap.spark.TestFramework"
+source _env.sh
 
-cp ${BASEDIR}/conf/tispark_config_dump.properties.template ${BASEDIR}/conf/tispark_config.properties
-cp ${BASEDIR}/conf/tispark_config_dump.properties.template ${SPARK_HOME}/conf/tispark_config.properties
-java -Dtest.mode=Dump -Dtest.dumpDB.databases="$@" -cp ${BASEDIR}/conf:${BASEDIR}/lib/* ${CLASS}
+cp ${PATH_TO_CONF}/tispark_config_dump.properties.template ${PATH_TO_CONF}/tispark_config.properties
+cp ${PATH_TO_CONF}/tispark_config_dump.properties.template ${TISPARK_CONF}
+java -Dtest.mode=Dump -Dtest.dumpDB.databases="$@" -cp ${PATH_TO_CONF}:${BASEDIR}/lib/* ${CLASS}

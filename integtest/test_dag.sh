@@ -7,7 +7,7 @@ echo "Base directory in: $BASEDIR"
 echo "Usage: <bin> [-h | -g | -a | -d | -s | -i | -r | -t <sql> | -b <db>]"
 echo "Note: <sql> must be quoted. e.g., \"select * from t\""
 echo "You may use sql-only like this:"
-echo "./test_no_tpch.sh -t \"select * from t\" -b \"test\""
+echo "./test_dag.sh -t \"select * from t\" -b \"test\""
 
 clear_last_diff_files
 
@@ -77,11 +77,12 @@ do
     esac
 done
 
+load_DAG_Table
 
 if [ "${mode}" == "Integration" ]; then
     filter=""
-    cp ${PATH_TO_CONF}/tispark_config_testindex.properties.template ${TISPARK_CONF}
-    cp ${PATH_TO_CONF}/tispark_config_testindex.properties.template ${BASE_CONF}
+    cp ${PATH_TO_CONF}/tispark_config_dag.properties.template ${TISPARK_CONF}
+    cp ${PATH_TO_CONF}/tispark_config_dag.properties.template ${BASE_CONF}
     if ! [ -z "${db}" ]; then
         echo "test.db=$db" >> ${TISPARK_CONF}
         echo "test.db=$db" >> ${BASE_CONF}
@@ -93,13 +94,13 @@ if [ "${mode}" == "Integration" ]; then
         echo "testing...."
         if [ ${showResultStats} = true ]; then
             if [ ${showFailedOnly} = true ]; then
-                filter="hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB\|FAILED."
+                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED."
             else
-                filter="hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB\|FAILED.\|PASSED.\|SKIPPED.\|exception caught"
+                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED.\|PASSED.\|SKIPPED.\|exception caught"
             fi
         else
             if [ ${showFailedOnly} = true ]; then
-                filter="Tests result:\|Result:\|exception caught.\|FAILED."
+                filter="Tests result:\|Result:\|exception caught.\|FAILED.\|file error"
             else
                 filter="Tests result:\|Result:\|exception caught.\|FAILED.\|PASSED.\|SKIPPED."
             fi

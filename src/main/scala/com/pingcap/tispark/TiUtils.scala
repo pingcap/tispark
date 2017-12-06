@@ -22,6 +22,7 @@ import com.pingcap.tikv.expression.TiExpr
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
+import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
@@ -31,6 +32,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 object TiUtils {
+  val CommitVersion = "test"
   type TiSum = com.pingcap.tikv.expression.aggregate.Sum
   type TiCount = com.pingcap.tikv.expression.aggregate.Count
   type TiMin = com.pingcap.tikv.expression.aggregate.Min
@@ -43,13 +45,14 @@ object TiUtils {
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
-          !aggExpr.aggregateFunction.children
-            .exists(expr => !isSupportedBasicExpression(expr, tiDBRelation))
+          aggExpr.aggregateFunction.children.forall(isSupportedBasicExpression(_, tiDBRelation))
       case _ => false
     }
   }
 
   def isSupportedBasicExpression(expr: Expression, tiDBRelation: TiDBRelation): Boolean = {
+    if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
+
     BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpr =>
       expr.resolve(tiDBRelation.table)
       return expr.isSupportedExpr
@@ -69,10 +72,10 @@ object TiUtils {
 
     if (expr.children.isEmpty) {
       expr match {
-        // bit type is not allowed to be pushed down
-        case attr: AttributeReference =>
-          return nameTypeMap.contains(attr.name) &&
-            !nameTypeMap.get(attr.name).head.isInstanceOf[BitType]
+        // bit/duration type is not allowed to be pushed down
+        case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
+          val head = nameTypeMap.get(attr.name).head
+          return !head.isInstanceOf[BitType] && head.getTypeCode != Types.TYPE_DURATION
         // TODO:Currently we do not support literal null type push down
         // when TiConstant is ready to support literal null or we have other
         // options, remove this.
@@ -97,7 +100,7 @@ object TiUtils {
 
   // if contains UDF / functions that cannot be folded
   def isSupportedGroupingExpr(expr: NamedExpression, source: TiDBRelation): Boolean =
-    isSupportedBasicExpression(expr, source)
+    isSupportedBasicExpression(expr, source) && isPushDownSupported(expr, source)
 
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
@@ -112,6 +115,7 @@ object TiUtils {
           Math.min(Integer.MAX_VALUE, tp.getLength).asInstanceOf[Int],
           tp.getDecimal
         )
+      case _: DateTimeType  => sql.types.TimestampType
       case _: TimestampType => sql.types.TimestampType
       case _: DateType      => sql.types.DateType
     }
@@ -186,5 +190,10 @@ object TiUtils {
     }
 
     tiConf
+  }
+
+  def sessionInitialize(session: SparkSession): Unit = {
+    session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
+    session.udf.register("ti_version", () => TiSparkVersion.version)
   }
 }

@@ -2,6 +2,7 @@
 .idea
 *.iml
 target
+src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
 
 # ignore eclipse configuration 
 .project
@@ -40,6 +41,8 @@ hs_err_pid*
 .gradle
 *.spark
 *.tidb
+*.jdbc
+*.testSql
 
 metastore_db/
 tpch

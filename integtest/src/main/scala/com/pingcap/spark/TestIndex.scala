@@ -18,6 +18,8 @@ package com.pingcap.spark
 
 import java.util.Properties
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   * Created by birdstorm on 2017/11/5.
   */
@@ -58,7 +60,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     logger.warn(s"\n*************** Index Tests result: $result\n\n\n")
   }
 
-  override def run(dbName: String): Unit = {
+  override def run(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     spark.init(dbName)
     jdbc.init(dbName)
     testIndex()

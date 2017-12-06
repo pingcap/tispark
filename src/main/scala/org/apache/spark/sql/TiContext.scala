@@ -15,8 +15,8 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference, TiUtils}
+import com.pingcap.tikv.{TiConfiguration, TiSession, TiVersion}
+import com.pingcap.tispark._
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 
@@ -27,7 +27,9 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
-  session.experimental.extraStrategies ++= Seq(new TiStrategy(sqlContext))
+  TiUtils.sessionInitialize(session)
+
+  final val version: String = TiSparkVersion.version
 
   def tidbTable(dbName: String, tableName: String): DataFrame = {
     val tiRelation = new TiDBRelation(

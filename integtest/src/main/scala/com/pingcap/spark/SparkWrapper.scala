@@ -17,8 +17,11 @@
 
 package com.pingcap.spark
 
+import java.sql.Date
+
 import com.typesafe.scalalogging.slf4j.LazyLogging
-import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.types.{BinaryType, StructField}
+import org.apache.spark.sql.{DataFrame, SparkSession, TiContext}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -28,6 +31,7 @@ class SparkWrapper() extends LazyLogging {
     .builder()
     .appName("TiSpark Integration Test")
     .getOrCreate()
+    .newSession()
 
   val ti = new TiContext(spark)
 
@@ -36,7 +40,7 @@ class SparkWrapper() extends LazyLogging {
     ti.tidbMapDatabase(databaseName)
   }
 
-  def toOutput(value: Any): Any = {
+  def toOutput(value: Any, colType: String): Any = {
     value match {
       case _: Array[Byte] =>
         var str: String = new String
@@ -44,18 +48,30 @@ class SparkWrapper() extends LazyLogging {
           str = str.concat(b.toString)
         }
         str
+      case _: Date if colType.equalsIgnoreCase("YEAR") =>
+        value.toString.split("-")(0)
       case default => default
     }
   }
 
-  def querySpark(sql: String): List[List[Any]] = {
-    logger.info("Running query on spark: " + sql)
-    spark.sql(sql).collect().map(row => {
+  def dfData(df: DataFrame, schema: scala.Array[StructField]): List[List[Any]] =
+    df.collect().map(row => {
       val rowRes = ArrayBuffer.empty[Any]
       for (i <- 0 until row.length) {
-        rowRes += toOutput(row.get(i))
+        if (schema(i).dataType.isInstanceOf[BinaryType]) {
+          rowRes += new String(row.get(i).asInstanceOf[Array[Byte]])
+        } else {
+          rowRes += toOutput(row.get(i), schema(i).dataType.typeName)
+        }
       }
       rowRes.toList
     }).toList
+
+  def querySpark(sql: String): List[List[Any]] = {
+    logger.info("Running query on spark: " + sql)
+    val df = spark.sql(sql)
+    val schema = df.schema.fields
+
+    dfData(df, schema)
   }
 }
