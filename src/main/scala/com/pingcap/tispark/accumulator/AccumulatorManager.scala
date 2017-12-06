@@ -13,8 +13,18 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark.Litsener
+package com.pingcap.tispark.accumulator
 
-class InvalidateCacheEvent {
+import com.pingcap.tikv.event.CacheInvalidateEvent
 
+object AccumulatorManager {
+  final val ACCUMULATOR_NAME = "CacheInvalidateAccumulator"
+  final val CACHE_INVALIDATE_ACCUMULATOR = new CacheInvalidateAccumulator
+  final val CACHE_ACCUMULATOR_FUNCTION =
+    new java.util.function.Function[CacheInvalidateEvent, Void] {
+      override def apply(t: CacheInvalidateEvent): Void = {
+        CACHE_INVALIDATE_ACCUMULATOR.add(t)
+        null
+      }
+    }
 }
