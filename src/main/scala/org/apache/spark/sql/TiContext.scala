@@ -32,17 +32,20 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiSession: TiSession = TiSession.create(tiConf, AccumulatorManager.CACHE_ACCUMULATOR_FUNCTION)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
-  val cacheListener =
+  // Add a job listener for cache invalidation requests for each TiContext created.
+  sparkContext.addSparkListener(
     new PDCacheInvalidateListener(
       AccumulatorManager.CACHE_INVALIDATE_ACCUMULATOR,
       CacheInvalidateEventHandler(tiSession.getRegionManager)
     )
+  )
 
-  sparkContext.addSparkListener(cacheListener)
+  // Register accumulator in spark context.
   sparkContext.register(
     AccumulatorManager.CACHE_INVALIDATE_ACCUMULATOR,
     AccumulatorManager.ACCUMULATOR_NAME
   )
+
   TiUtils.sessionInitialize(session)
 
   final val version: String = TiSparkVersion.version

@@ -23,6 +23,17 @@ import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.event.CacheInvalidateEvent.CacheType
 import com.pingcap.tikv.region.RegionManager
 
+/**
+  * A CacheInvalidateEventHandler as it's name indicates what this class will do.
+  *
+  * Since there's only one event and one event handler currently in the project, we
+  * don't need to over-design our event handler to support millions of other events.
+  *
+  * Refactor this if we need to support tons of events.
+  *
+  * @param regionManager Region manager used for sending invalidating cache. Usually
+  *                      it's Spark driver's regionManager
+  */
 class CacheInvalidateEventHandler(regionManager: RegionManager) {
   private final val logger = Logger.getLogger(getClass.getName)
 
