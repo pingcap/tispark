@@ -94,7 +94,7 @@ if [ "${mode}" == "Integration" ]; then
         echo "testing...."
         if [ ${showResultStats} = true ]; then
             if [ ${showFailedOnly} = true ]; then
-                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED."
+                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED.\|file error"
             else
                 filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED.\|PASSED.\|SKIPPED.\|exception caught"
             fi
@@ -102,7 +102,7 @@ if [ "${mode}" == "Integration" ]; then
             if [ ${showFailedOnly} = true ]; then
                 filter="Tests result:\|Result:\|exception caught.\|FAILED.\|file error"
             else
-                filter="Tests result:\|Result:\|exception caught.\|FAILED.\|PASSED.\|SKIPPED."
+                filter="Tests result:\|Result:\|FAILED.\|PASSED.\|SKIPPED."
             fi
         fi
         ${spark_cmd} ${spark_test_opt} 2>&1 | grep "${filter}"
@@ -130,7 +130,7 @@ elif [ "${mode}" == "QueryOnly" ]; then
         ${spark_cmd} ${spark_debug_opt}
     else
         echo "testing..."
-        ${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|Result:\|Elapsed time:\|query on\|exception caught"
+        ${spark_cmd} ${spark_test_opt} 2>&1 | grep "hint:\|output:\|Result:\|Elapsed time:\|query on"
     fi
 else
     echo "UnKnown test mode: $mode. Aborting..."
