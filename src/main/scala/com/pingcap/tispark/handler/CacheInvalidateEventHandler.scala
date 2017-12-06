@@ -24,22 +24,11 @@ import com.pingcap.tikv.event.CacheInvalidateEvent.CacheType
 import com.pingcap.tikv.region.RegionManager
 
 class CacheInvalidateEventHandler(regionManager: RegionManager) {
-  val regionStoreHandler = new RegionStoreInvalidateHandler
-  val leaderHandler = new LeaderUpdateHandler
+  private final val logger = Logger.getLogger(getClass.getName)
 
   def handle(e: CacheInvalidateEvent): Unit = e.getCacheType match {
-    case CacheType.REGION_STORE => regionStoreHandler.handle(e)
-    case CacheType.LEADER       => leaderHandler.handle(e)
-    case _                      => throw new IllegalArgumentException("Unsupported cache invalidate type.")
-  }
-
-  /**
-   * Used for updating region/store cache in the given regionManager
-   */
-  class RegionStoreInvalidateHandler extends CacheInvalidateEventHandler(regionManager) {
-    val logger: Logger = Logger.getLogger(getClass.getName)
-
-    override def handle(e: CacheInvalidateEvent): Unit = {
+    case CacheType.REGION_STORE =>
+      // Used for updating region/store cache in the given regionManager
       if (e.shouldUpdateRegion()) {
         logger.warning(s"Invalidating region ${e.getRegionId} cache at executor.")
         regionManager.invalidateRegion(e.getRegionId)
@@ -49,23 +38,14 @@ class CacheInvalidateEventHandler(regionManager: RegionManager) {
         logger.warning(s"Invalidating store ${e.getStoreId} cache at executor.")
         regionManager.invalidateStore(e.getStoreId)
       }
-    }
-  }
-
-  /**
-   * Used for updating leader information cached in the given regionManager
-   */
-  class LeaderUpdateHandler extends CacheInvalidateEventHandler(regionManager) {
-    val logger: Logger = Logger.getLogger(getClass.getName)
-
-    override def handle(e: CacheInvalidateEvent): Unit = {
+    case CacheType.LEADER =>
+      // Used for updating leader information cached in the given regionManager
       logger.warning(
         s"Invalidating leader of region:${e.getRegionId} store:${e.getStoreId} cache at executor."
       )
       regionManager.updateLeader(e.getRegionId, e.getStoreId)
-    }
+    case _ => throw new IllegalArgumentException("Unsupported cache invalidate type.")
   }
-
 }
 
 object CacheInvalidateEventHandler {
