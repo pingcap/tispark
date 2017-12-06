@@ -23,27 +23,22 @@ import org.apache.spark.util.AccumulatorV2
 import org.spark_project.jetty.util.ConcurrentHashSet
 
 class CacheInvalidateAccumulator
-    extends AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] {
-  private val eventSet: util.Set[CacheInvalidateEvent] = new ConcurrentHashSet[CacheInvalidateEvent]
+  extends AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] {
+  private final val eventSet: util.Set[CacheInvalidateEvent] = new ConcurrentHashSet[CacheInvalidateEvent]
 
   override def isZero: Boolean = eventSet.isEmpty
 
-  override def reset(): Unit = {
-    eventSet.clear()
-  }
+  override def reset(): Unit = eventSet.clear()
 
-  override def add(v: CacheInvalidateEvent): Unit = {
-    eventSet.add(v)
-  }
+  override def add(v: CacheInvalidateEvent): Unit = eventSet.add(v)
 
   override def copy(): AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] = {
-    var accumulator = new CacheInvalidateAccumulator
-    eventSet.foreach(accumulator.add(_))
+    val accumulator = new CacheInvalidateAccumulator
+    eventSet.foreach(accumulator.add)
     accumulator
   }
 
-  override def merge(other: AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]]): Unit =
-    ???
+  override def merge(other: AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]]): Unit = eventSet.addAll(other.value)
 
   override def value: Seq[CacheInvalidateEvent] = eventSet.toList
 }

@@ -20,13 +20,14 @@ package com.pingcap.tispark.listener
 import java.util.logging.Logger
 
 import com.pingcap.tikv.event.CacheInvalidateEvent
+import com.pingcap.tikv.event.CacheInvalidateEvent.CacheType
 import com.pingcap.tikv.region.RegionManager
 import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import org.apache.spark.scheduler.{SparkListener, SparkListenerJobEnd, SparkListenerJobStart}
 
 class PDCacheInvalidateListener(cacheInvalidateAccumulator: CacheInvalidateAccumulator,
                                 regionManager: RegionManager)
-    extends SparkListener {
+  extends SparkListener {
   val logger: Logger = Logger.getLogger(getClass.getName)
 
   override def onJobStart(jobStart: SparkListenerJobStart): Unit = {
@@ -39,17 +40,23 @@ class PDCacheInvalidateListener(cacheInvalidateAccumulator: CacheInvalidateAccum
       logger.warning(
         s"Receiving ${eventList.size} invalidate cache request(s) from job ${jobEnd.jobId} at executor."
       )
-      eventList.foreach((e: CacheInvalidateEvent) => {
-        if (e.shouldUpdateRegion()) {
-          logger.warning(s"Invalidating region ${e.getRegionId} cache at executor.")
-          regionManager.invalidateRegion(e.getRegionId)
-        }
+      eventList.foreach((e: CacheInvalidateEvent) => e.getCacheType match {
+        case CacheType.REGION_STORE =>
+          if (e.shouldUpdateRegion()) {
+            logger.warning(s"Invalidating region ${e.getRegionId} cache at executor.")
+            regionManager.invalidateRegion(e.getRegionId)
+          }
 
-        if (e.shouldUpdateStore()) {
-          logger.warning(s"Invalidating store ${e.getStoreId} cache at executor.")
-          regionManager.invalidateStore(e.getStoreId)
-        }
-      })
+          if (e.shouldUpdateStore()) {
+            logger.warning(s"Invalidating store ${e.getStoreId} cache at executor.")
+            regionManager.invalidateStore(e.getStoreId)
+          }
+        case CacheType.LEADER =>
+          logger.warning(s"Invalidating leader of region:${e.getRegionId} store:${e.getStoreId} cache at executor.")
+          regionManager.updateLeader(e.getRegionId, e.getStoreId)
+        case _ => _
+      }
+      )
     }
   }
 }
