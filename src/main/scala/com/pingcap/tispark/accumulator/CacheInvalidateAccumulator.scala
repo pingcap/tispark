@@ -22,6 +22,14 @@ import com.pingcap.tikv.event.CacheInvalidateEvent
 import org.apache.spark.util.AccumulatorV2
 import org.spark_project.jetty.util.ConcurrentHashSet
 
+/**
+ * A cache invalidate request collector.
+ *
+ * In common execution of a spark job, executor nodes may receive cache invalidate information
+ * and flush executor's own cache store in that node, without explicitly notifying driver node
+ * to invalidate cache information. This class is used for accumulating cache invalidate event
+ * and make driver node easier to decide when to update it's PD-cache.
+ */
 class CacheInvalidateAccumulator
     extends AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] {
   private final val eventSet: util.Set[CacheInvalidateEvent] =

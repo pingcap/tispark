@@ -33,6 +33,9 @@ class CacheInvalidateEventHandler(regionManager: RegionManager) {
     case _                      => throw new IllegalArgumentException("Unsupported cache invalidate type.")
   }
 
+  /**
+   * Used for updating region/store cache in the given regionManager
+   */
   class RegionStoreInvalidateHandler extends CacheInvalidateEventHandler(regionManager) {
     val logger: Logger = Logger.getLogger(getClass.getName)
 
@@ -49,6 +52,9 @@ class CacheInvalidateEventHandler(regionManager: RegionManager) {
     }
   }
 
+  /**
+   * Used for updating leader information cached in the given regionManager
+   */
   class LeaderUpdateHandler extends CacheInvalidateEventHandler(regionManager) {
     val logger: Logger = Logger.getLogger(getClass.getName)
 

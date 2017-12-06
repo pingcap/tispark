@@ -23,6 +23,7 @@ object AccumulatorManager {
   final val CACHE_ACCUMULATOR_FUNCTION =
     new java.util.function.Function[CacheInvalidateEvent, Void] {
       override def apply(t: CacheInvalidateEvent): Void = {
+        // this operation shall be executed in executor nodes
         CACHE_INVALIDATE_ACCUMULATOR.add(t)
         null
       }
