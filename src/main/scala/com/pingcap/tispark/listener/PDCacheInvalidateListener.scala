@@ -30,12 +30,10 @@ class PDCacheInvalidateListener(cacheInvalidateAccumulator: CacheInvalidateAccum
   val logger: Logger = Logger.getLogger(getClass.getName)
 
   override def onJobStart(jobStart: SparkListenerJobStart): Unit = {
-    logger.warning("I am running.......")
     cacheInvalidateAccumulator.reset()
   }
 
   override def onJobEnd(jobEnd: SparkListenerJobEnd): Unit = {
-    logger.warning("Fuck Job ended......")
     if (!cacheInvalidateAccumulator.isZero) {
       val eventList = cacheInvalidateAccumulator.value
       logger.warning(
