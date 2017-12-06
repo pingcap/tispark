@@ -15,14 +15,9 @@
 
 package org.apache.spark.sql
 
-import java.util.function
-
-import scala.collection.JavaConverters._
-import scala.collection.JavaConversions._
-import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
-import com.pingcap.tispark.accumulator.{AccumulatorManager, CacheInvalidateAccumulator}
+import com.pingcap.tispark.accumulator.AccumulatorManager
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
 import com.pingcap.tispark.listener.PDCacheInvalidateListener
 import org.apache.spark.internal.Logging

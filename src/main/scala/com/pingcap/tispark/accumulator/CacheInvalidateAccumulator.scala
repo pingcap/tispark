@@ -33,7 +33,7 @@ import org.spark_project.jetty.util.ConcurrentHashSet
 class CacheInvalidateAccumulator
     extends AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] {
   private final val eventSet: util.Set[CacheInvalidateEvent] =
-    new ConcurrentHashSet[CacheInvalidateEvent]
+    new util.HashSet[CacheInvalidateEvent]
 
   override def isZero: Boolean = eventSet.isEmpty
 

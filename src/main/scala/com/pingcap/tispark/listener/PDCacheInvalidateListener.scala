@@ -36,7 +36,7 @@ class PDCacheInvalidateListener(cacheInvalidateAccumulator: CacheInvalidateAccum
     if (!cacheInvalidateAccumulator.isZero) {
       val eventList = cacheInvalidateAccumulator.value
       logger.warning(
-        s"Receiving ${eventList.size} invalidate cache request(s) from job ${jobEnd.jobId} at executor."
+        s"Receiving ${eventList.size} invalidate cache request(s) from job ${jobEnd.jobId} at driver."
       )
       eventList.foreach(handler.handle)
     }
