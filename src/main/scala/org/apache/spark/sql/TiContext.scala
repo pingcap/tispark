@@ -23,6 +23,7 @@ import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import com.pingcap.tispark.accumulator.{AccumulatorManager, CacheInvalidateAccumulator}
+import com.pingcap.tispark.handler.CacheInvalidateEventHandler
 import com.pingcap.tispark.listener.PDCacheInvalidateListener
 import org.apache.spark.internal.Logging
 import org.apache.spark.{SparkConf, SparkContext}
@@ -39,7 +40,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val cacheListener =
     new PDCacheInvalidateListener(
       AccumulatorManager.CACHE_INVALIDATE_ACCUMULATOR,
-      tiSession.getRegionManager
+      CacheInvalidateEventHandler(tiSession.getRegionManager)
     )
 
   sparkContext.addSparkListener(cacheListener)
