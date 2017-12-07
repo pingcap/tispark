@@ -434,7 +434,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           aggregateExpressions,
           resultExpressions,
           TiAggregationProjection(filters, _, `source`, projects)
-          ) if validGroupAggregate(groupingExpressions, aggregateExpressions, source) =>
+          ) if isValidAggregates(groupingExpressions, aggregateExpressions, source) =>
         val dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
         groupAggregateProjection(
           groupingExpressions,
