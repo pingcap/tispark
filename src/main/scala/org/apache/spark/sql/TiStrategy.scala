@@ -15,7 +15,7 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.expression.{TiByItem, TiColumnRef, TiExpr}
+import com.pingcap.tikv.expression.{aggregate => _, _}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanBuilder
@@ -42,6 +42,10 @@ import scala.collection.{JavaConversions, mutable}
 // have multiple plan to pushdown
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf: SQLConf = context.conf
+  def blacklist: ExpressionBlacklist = {
+    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
+    new ExpressionBlacklist(blacklistString)
+  }
 
   def allowAggregationPushdown(): Boolean = {
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
@@ -158,7 +162,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     val (pushdownFilters: Seq[Expression], residualFilters: Seq[Expression]) =
       filterPredicates.partition(
-        (expression: Expression) => TiUtils.isSupportedFilter(expression, source)
+        (expression: Expression) => TiUtils.isSupportedFilter(expression, source, blacklist)
       )
 
     val residualFilter: Option[Expression] =
@@ -247,12 +251,19 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           groupingExpressions,
           aggregateExpressions,
           resultExpressions,
-          TiAggregationProjection(filters, _, `source`, projects)
+          TiAggregationProjection(filterExpressions, _, `source`, projectExpressions)
           )
-          if groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source)) &&
-            aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source)) &&
-            allowAggregationPushdown && !aggregateExpressions.exists(_.isDistinct) =>
-        var dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
+          // Aggregation can be pushed down iff:
+          // 1. Config enables aggregates push-down
+          // 2. all filters can be pushed down
+          // 3. all aggregation and group expressions can be pushed down
+          // 4. non aggregates are in distinct mode
+          if allowAggregationPushdown &&
+            filterExpressions.forall(TiUtils.isSupportedFilter(_, source, blacklist)) &&
+            groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
+            aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source, blacklist)) &&
+            !aggregateExpressions.exists(_.isDistinct) =>
+        var dagReq: TiDAGRequest = filterToDAGRequest(filterExpressions, source)
         val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
           aggExpr.aggregateFunction match {
             // here aggExpr is the original AggregationExpression
@@ -323,7 +334,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         val output = (pushdownAggregates.map(x => toAlias(x)) ++ groupingExpressions)
           .map(_.toAttribute)
 
-        val projectSeq: Seq[Attribute] = projects.asInstanceOf[Seq[Attribute]]
+        val projectSeq: Seq[Attribute] = projectExpressions.asInstanceOf[Seq[Attribute]]
         projectSeq.foreach(attr => dagReq.addRequiredColumn(TiColumnRef.create(attr.name)))
 
         aggregate.AggUtils.planAggregateWithoutDistinct(
@@ -355,8 +366,7 @@ object TiAggregationProjection {
     // Only push down aggregates projection when all filters can be applied and
     // all projection expressions are column references
     case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _))
-        if projects.forall(_.isInstanceOf[Attribute]) &&
-          filters.forall(TiUtils.isSupportedFilter(_, source)) =>
+        if projects.forall(_.isInstanceOf[Attribute]) =>
       Some((filters, rel, source, projects))
     case _ => Option.empty[ReturnType]
   }

@@ -63,6 +63,7 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.table.scan_concurrency |  512 | Maximal threads for table scan (shared among tasks inside each JVM) |
 | spark.tispark.request.command.priority |  "Low" | "Low", "Normal", "High" which impacts resource to get in TiKV. Low is recommended for not disturbing OLTP workload |
 | spark.tispark.coprocess.streaming |  false | Whether to use streaming for response fetching |
+| spark.tispark.plan.unsupported_pushdown_exprs |  "" | A comma separated list of expressions. In case you have very old version of TiKV, you might disable some of the expression push-down if not supported |
 
 
 ## Quick start
