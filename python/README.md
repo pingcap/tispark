@@ -48,13 +48,16 @@ sql("select count(*) from customer").show()
 
 4. Use as below:
 ```python
+from pyspark.sql import SparkSession
 import pytispark.pytispark as pti
- 
+
+spark = SparkSession.builder.master("Your master url").appName("Your app name").getOrCreate()
+
 ti = pti.TiContext(spark)
  
 ti.tidbMapDatabase("tpch", False)
  
-sql("select count(*) from customer").show()
+spark.sql("select count(*) from customer").show()
 
 # Result
 # +--------+
