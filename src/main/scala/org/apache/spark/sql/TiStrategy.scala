@@ -173,24 +173,24 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     pruneFilterProject(projectList, filterPredicates, source, request)
   }
 
-  def collectLimit(limit: Int, child: LogicalPlan): Seq[SparkPlan] =
+  def collectLimit(limit: Int, child: LogicalPlan): SparkPlan =
     takeOrderedAndProject(limit, null, child)
 
   def takeOrderedAndProject(
     limit: Int,
     sortOrder: Seq[SortOrder],
     child: LogicalPlan
-  ): Seq[SparkPlan] = {
+  ): SparkPlan = {
     // If sortOrder is not null, limit must be greater than 0
     if (limit < 0 || (sortOrder == null && limit == 0)) {
-      return Nil
+      return planLater(child)
     }
 
     child match {
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
           if filters.forall(TiUtils.isSupportedFilter(_, source)) =>
-        pruneTopNFilterProject(limit, projectList, filters, source) :: Nil
-      case _ => Nil
+        pruneTopNFilterProject(limit, projectList, filters, source, sortOrder)
+      case _ => planLater(child)
     }
   }
 
@@ -357,7 +357,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     )
   }
 
-  def validGroupAggregate(groupingExpressions: Seq[NamedExpression],
+  def isValidAggregates(groupingExpressions: Seq[NamedExpression],
                           aggregateExpressions: Seq[AggregateExpression],
                           source: TiDBRelation): Boolean = {
     allowAggregationPushdown &&
@@ -375,16 +375,43 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       case logical.ReturnAnswer(rootPlan) =>
         rootPlan match {
           case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
-            takeOrderedAndProject(limit, order, child)
+            execution.TakeOrderedAndProjectExec(
+              limit,
+              order,
+              child.output,
+              takeOrderedAndProject(limit, order, child)
+            ) :: Nil
           case logical.Limit(
               IntegerLiteral(limit),
-              logical.Project(_, logical.Sort(order, true, child))
+              logical.Project(projectList, logical.Sort(order, true, child))
               ) =>
-            takeOrderedAndProject(limit, order, child)
+            execution.TakeOrderedAndProjectExec(
+              limit,
+              order,
+              projectList,
+              takeOrderedAndProject(limit, order, child)
+            ) :: Nil
           case logical.Limit(IntegerLiteral(limit), child) =>
-            collectLimit(limit, child)
+            execution.CollectLimitExec(limit, collectLimit(limit, child)) :: Nil
           case other => planLater(other) :: Nil
         }
+      case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+        execution.TakeOrderedAndProjectExec(
+          limit,
+          order,
+          child.output,
+          takeOrderedAndProject(limit, order, child)
+        ) :: Nil
+      case logical.Limit(
+          IntegerLiteral(limit),
+          logical.Project(projectList, logical.Sort(order, true, child))
+          ) =>
+        execution.TakeOrderedAndProjectExec(
+          limit,
+          order,
+          projectList,
+          takeOrderedAndProject(limit, order, child)
+        ) :: Nil
 
       // Collapse filters and projections and push plan directly
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
