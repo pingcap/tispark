@@ -366,7 +366,8 @@ object TiAggregationProjection {
     // Only push down aggregates projection when all filters can be applied and
     // all projection expressions are column references
     case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _))
-        if projects.forall(_.isInstanceOf[Attribute]) => Some((filters, rel, source, projects))
+        if projects.forall(_.isInstanceOf[Attribute]) =>
+      Some((filters, rel, source, projects))
     case _ => Option.empty[ReturnType]
   }
 }
