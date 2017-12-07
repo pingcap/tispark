@@ -42,7 +42,7 @@ import scala.collection.{JavaConversions, mutable}
 // have multiple plan to pushdown
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf: SQLConf = context.conf
-  val blacklist: ExpressionBlacklist = {
+  def blacklist: ExpressionBlacklist = {
     val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
     new ExpressionBlacklist(blacklistString)
   }
