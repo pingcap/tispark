@@ -27,7 +27,8 @@ object TiSessionCache {
   def getSession(appId: String, conf: TiConfiguration): TiSession = this.synchronized {
     val session = sessionCache.get(appId)
     if (session == null) {
-      val newSession = TiSession.create(conf, AccumulatorManager.CACHE_ACCUMULATOR_FUNCTION)
+      val newSession = TiSession.create(conf)
+      session.injectCallBackFunc(AccumulatorManager.CACHE_ACCUMULATOR_FUNCTION)
       sessionCache.put(appId, newSession)
       newSession
     } else {

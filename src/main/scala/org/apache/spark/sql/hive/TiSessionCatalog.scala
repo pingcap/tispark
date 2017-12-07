@@ -45,7 +45,8 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     ) {
 
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(sparkSession.sparkContext.getConf)
-  val session: TiSession = TiSession.create(tiConf, AccumulatorManager.CACHE_ACCUMULATOR_FUNCTION)
+  val session: TiSession = TiSession.create(tiConf)
+  session.injectCallBackFunc(AccumulatorManager.CACHE_ACCUMULATOR_FUNCTION)
 
   val meta: MetaManager = new MetaManager(session.getCatalog)
 
