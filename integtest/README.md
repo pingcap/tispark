@@ -36,12 +36,16 @@ To run tpch Test individually: (use -d or --debug option to setup debug flag)
 ./test_tpch.sh [-d|--debug]
 ```
 To run DAG push down mode complete test: (use -d or --debug option to setup debug flag)
-```bash
-./test_dag.sh [-d|--debug]
+```
+./test_dag.sh [-h | -g | -a | -d | -s | -i | -r | -t <sql> | -b <db>]
 ```
 To run other Tests individually: (use -h option for help)
 ```
-./test_no_tpch.sh [-d | -a | -h | -s | -i | -r]
+./test_no_tpch.sh [-h | -g | -a | -d | -s | -i | -r | -t <sql> | -b <db>]
+```
+To run all above tests:
+```
+./test_all.sh
 ```
 
 In general, use `-r` flag to show result only when you run index Test
@@ -95,7 +99,7 @@ Please add `spark.tispark.pd.addresses=127.0.0.1:2379` in `${SPARK_HOME}/conf/sp
 | tidb.port      | TiDB Port      |
 | tidb.user      | TiDB username |
 | test.basepath | Test case base path include .ddl, .sql and .data files |
-| test.mode     | Test: Run test only; Load: Load only; LoadNTest: Load and Test; Dump: Dump database specified by test.dumpDB.databases |
+| test.mode     | Test: Run test only; Load: Load only; LoadNTest: Load and Test; Dump: Dump database specified by test.dumpDB.databases; TestDAG: Test with dag framework; SqlOnly: Run sql statement specified|
 | test.dumpDB.databases  | Database to dump. Required for dump database |
 | test.ignore      | Test path to ignore. Separated by comma |
-
+| test.db      | Database to use implicitly |
