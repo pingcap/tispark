@@ -15,13 +15,9 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
-import .CACHE_INVALIDATE_ACCUMULATOR
-import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
-import com.pingcap.tispark.handler.CacheInvalidateEventHandler
-import com.pingcap.tispark.listener.{PDCacheInvalidateListener, RegisterHelper}
+import com.pingcap.tispark.listener.RegisterHelper
 import org.apache.spark.internal.Logging
 import org.apache.spark.{SparkConf, SparkContext}
 
