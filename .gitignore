@@ -47,4 +47,3 @@ hs_err_pid*
 metastore_db/
 tpch
 .java-version
-/integtest/conf/tispark_config.properties

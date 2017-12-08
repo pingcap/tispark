@@ -40,7 +40,9 @@ read_properties() {
       while IFS='=' read -r key value
       do
         key=$(echo ${key} | tr '.' '_')
-        eval "${key}='${value}'"
+        if ! [ -z "${key}" ]; then
+            eval "${key}='${value}'"
+        fi
       done < "$file"
 
       echo "Address   = " ${tidb_addr}
@@ -51,20 +53,85 @@ read_properties() {
     fi
 }
 
-addMysqlInfo() {
-    use_raw_mysql=true
-    echo "spark.use_raw_mysql=true" >> ${TISPARK_CONF}
-    echo "mysql.addr=$mysql_addr" >> ${TISPARK_CONF}
-    echo "mysql.user=$mysql_user" >> ${TISPARK_CONF}
-    echo "mysql.password=$mysql_password" >> ${TISPARK_CONF}
+read_properties
 
-    echo "spark.use_raw_mysql=true" >> ${BASE_CONF}
-    echo "mysql.addr=$mysql_addr" >> ${BASE_CONF}
-    echo "mysql.user=$mysql_user" >> ${BASE_CONF}
-    echo "mysql.password=$mysql_password" >> ${BASE_CONF}
+create_conf_db_options() {
+    echo "tidb.addr=$tidb_addr" >  ${BASE_CONF}
+    echo "tidb.port=$tidb_port" >> ${BASE_CONF}
+    echo "tidb.user=$tidb_user" >> ${BASE_CONF}
+    echo "" >> ${BASE_CONF}
+    echo "# Options below will be refreshed each time. You don't have to change them" >> ${BASE_CONF}
+    echo "" >> ${BASE_CONF}
 }
 
-clear_last_diff_files() {
+create_conf() {
+    echo "create default conf..."
+    create_conf_db_options
+    echo "test.mode=Test"    >> ${BASE_CONF}
+    echo "test.ignore=tpch" >> ${BASE_CONF}
+
+    cp ${BASE_CONF} ${TISPARK_CONF}
+}
+
+create_conf_no_tpch() {
+    echo "create conf for custom tests..."
+    create_conf_db_options
+    echo "test.mode=TestIndex"    >> ${BASE_CONF}
+    echo "test.ignore=tpch,tpch_test,tispark_test" >> ${BASE_CONF}
+
+    cp ${BASE_CONF} ${TISPARK_CONF}
+}
+
+create_conf_dag() {
+    echo "create conf for dag tests..."
+    create_conf_db_options
+    echo "test.mode=TestDAG"    >> ${BASE_CONF}
+    echo "test.db=tispark_test" >> ${BASE_CONF}
+
+    cp ${BASE_CONF} ${TISPARK_CONF}
+}
+
+create_conf_tpch() {
+    echo "create conf for TPCH tests..."
+    create_conf_db_options
+    echo "test.mode=Test"    >> ${BASE_CONF}
+    echo "test.db=tpch_test" >> ${BASE_CONF}
+
+    cp ${BASE_CONF} ${TISPARK_CONF}
+}
+
+create_conf_load() {
+    echo "create conf for loading data..."
+    create_conf_db_options
+    echo "test.mode=Load"    >> ${BASE_CONF}
+    echo "test.ignore=tpch,tpch_TEST,test_index" >> ${BASE_CONF}
+
+    cp ${BASE_CONF} ${TISPARK_CONF}
+}
+
+create_conf_dump() {
+    echo "create conf for dumping data..."
+    create_conf_db_options
+    echo "test.mode=Dump"    >> ${BASE_CONF}
+    echo "test.ignore=tpch" >> ${BASE_CONF}
+
+    cp ${BASE_CONF} ${TISPARK_CONF}
+}
+
+#add_MySQL_info() {
+#    use_raw_mysql=true
+#    echo "spark.use_raw_mysql=true" >> ${TISPARK_CONF}
+#    echo "mysql.addr=$mysql_addr" >> ${TISPARK_CONF}
+#    echo "mysql.user=$mysql_user" >> ${TISPARK_CONF}
+#    echo "mysql.password=$mysql_password" >> ${TISPARK_CONF}
+#
+#    echo "spark.use_raw_mysql=true" >> ${BASE_CONF}
+#    echo "mysql.addr=$mysql_addr" >> ${BASE_CONF}
+#    echo "mysql.user=$mysql_user" >> ${BASE_CONF}
+#    echo "mysql.password=$mysql_password" >> ${BASE_CONF}
+#}
+
+clear_all_diff_files() {
     for f in ./*.spark; do
         [ -e "$f" ] && rm *.spark
         break
@@ -75,6 +142,21 @@ clear_last_diff_files() {
     done
     for f in ./*.jdbc; do
         [ -e "$f" ] && rm *.jdbc
+        break
+    done
+}
+
+clear_last_diff_files() {
+    for f in ./inlineTest*.spark; do
+        [ -e "$f" ] && rm inlineTest*.spark
+        break
+    done
+    for f in ./inlineTest*.tidb; do
+        [ -e "$f" ] && rm inlineTest*.tidb
+        break
+    done
+    for f in ./inlineTest*.jdbc; do
+        [ -e "$f" ] && rm inlineTest*.jdbc
         break
     done
 }
@@ -93,7 +175,7 @@ check_tpch_data_is_loaded() {
         echo "please install mysql first."
         exit
     fi
-    res=`mysql -h 127.0.0.1 -P 4000 -u root -e "show databases" | grep "tpch_test" > /dev/null; echo "$?"`
+    res=`mysql -h ${tidb_addr} -P ${tidb_port} -u "${tidb_user}" -e "show databases" | grep "tpch_test" > /dev/null; echo "$?"`
     if [ ! "$res" -eq 0 ]; then
         echo "please load tpch data to tidb cluster first."
         exit
@@ -101,6 +183,41 @@ check_tpch_data_is_loaded() {
 }
 
 load_DAG_Table() {
-    read_properties
     mysql -h ${tidb_addr} -P ${tidb_port} -u "${tidb_user}" < ./testcases/tispark_test/TisparkTest.sql
+}
+
+rename_result_files_no_tpch() {
+    for f in ./inlineTest*.jdbc; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}";
+    done
+    for f in ./inlineTest*.spark; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}";
+    done
+    for f in ./inlineTest*.tidb; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}";
+    done
+}
+
+rename_result_files_dag() {
+    for f in ./inlineTest*.jdbc; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}";
+    done
+    for f in ./inlineTest*.spark; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}";
+    done
+    for f in ./inlineTest*.tidb; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}";
+    done
+}
+
+rename_result_files_tpch() {
+    for f in ./inlineTest*.jdbc; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestTPCH}";
+    done
+    for f in ./inlineTest*.spark; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestTPCH}";
+    done
+    for f in ./inlineTest*.tidb; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestTPCH}";
+    done
 }
