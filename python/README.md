@@ -64,4 +64,35 @@ sql("select count(*) from customer").show()
 # +--------+
 
 ```
+
+#### Via spark-submit
+1. Create a Python file named `test.py` as below:
+```python
+from pyspark.sql import SparkSession
+import pytispark.pytispark as pti
+
+spark = SparkSession.builder.master("Your master url").appName("Your app name").getOrCreate()
+
+ti = pti.TiContext(spark)
+ 
+ti.tidbMapDatabase("tpch", False)
+ 
+spark.sql("select count(*) from customer").show()
+```
+
+2. Prepare your TiSpark environment as above and execute
+```bash
+./bin/spark-submit --jars /where-ever-it-is/tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar test.py
+```
+
+3. Result:
+```
++--------+
+|count(1)|
++--------+
+|     150|
++--------+
+```
+
+
 See [pytispark](https://pypi.python.org/pypi?:action=display&name=pytispark) for more information.
