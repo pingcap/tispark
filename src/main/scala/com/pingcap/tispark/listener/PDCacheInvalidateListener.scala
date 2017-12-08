@@ -17,13 +17,16 @@
 
 package com.pingcap.tispark.listener
 
+import java.util.Objects
 import java.util.logging.Logger
 
 import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
+import org.apache.spark.SparkContext
 import org.apache.spark.scheduler.{SparkListener, SparkListenerJobEnd, SparkListenerJobStart}
 
-class PDCacheInvalidateListener(cacheInvalidateAccumulator: CacheInvalidateAccumulator,
+class PDCacheInvalidateListener(sparkContext: SparkContext,
+                                cacheInvalidateAccumulator: CacheInvalidateAccumulator,
                                 handler: CacheInvalidateEventHandler)
     extends SparkListener {
   val logger: Logger = Logger.getLogger(getClass.getName)
