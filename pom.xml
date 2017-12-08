@@ -15,7 +15,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <junit.version>4.12</junit.version>
+        <scalatest.version>3.0.4</scalatest.version>
         <spark.version>2.1.1</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11</scala.version>
@@ -82,10 +82,15 @@
         </dependency>
 
         <!-- for test -->
+        <!--<dependency>-->
+            <!--<groupId>org.scalactic</groupId>-->
+            <!--<artifactId>scalactic_${scala.version}</artifactId>-->
+            <!--<version>${scalatest.version}</version>-->
+        <!--</dependency>-->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.version}</artifactId>
+            <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
