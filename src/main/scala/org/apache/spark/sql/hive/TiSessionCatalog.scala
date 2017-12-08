@@ -18,7 +18,6 @@ package org.apache.spark.sql.hive
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
-import com.pingcap.tispark.accumulator.AccumulatorManager
 import com.pingcap.tispark.listener.RegisterHelper
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkContext

@@ -18,8 +18,8 @@ package org.apache.spark.sql
 import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
-import com.pingcap.tispark.accumulator.AccumulatorManager.CACHE_INVALIDATE_ACCUMULATOR
-import com.pingcap.tispark.accumulator.{AccumulatorManager, CacheInvalidateAccumulator}
+import .CACHE_INVALIDATE_ACCUMULATOR
+import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
 import com.pingcap.tispark.listener.{PDCacheInvalidateListener, RegisterHelper}
 import org.apache.spark.internal.Logging
