@@ -15,17 +15,37 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.{TiConfiguration, TiSession, TiVersion}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
-import org.apache.spark.SparkConf
+import com.pingcap.tispark.accumulator.AccumulatorManager
+import com.pingcap.tispark.handler.CacheInvalidateEventHandler
+import com.pingcap.tispark.listener.PDCacheInvalidateListener
 import org.apache.spark.internal.Logging
+import org.apache.spark.{SparkConf, SparkContext}
 
 class TiContext(val session: SparkSession) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
   val conf: SparkConf = session.sparkContext.conf
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
+  val sparkContext: SparkContext = session.sparkContext
+
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+  tiSession.injectCallBackFunc(AccumulatorManager.CACHE_ACCUMULATOR_FUNCTION)
+
+  // Add a job listener for cache invalidation requests for each TiContext created.
+  sparkContext.addSparkListener(
+    new PDCacheInvalidateListener(
+      AccumulatorManager.CACHE_INVALIDATE_ACCUMULATOR,
+      CacheInvalidateEventHandler(tiSession.getRegionManager)
+    )
+  )
+
+  // Register accumulator in spark context.
+  sparkContext.register(
+    AccumulatorManager.CACHE_INVALIDATE_ACCUMULATOR,
+    AccumulatorManager.ACCUMULATOR_NAME
+  )
 
   TiUtils.sessionInitialize(session)
 
