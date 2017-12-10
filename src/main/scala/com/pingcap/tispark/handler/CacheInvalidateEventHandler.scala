@@ -66,6 +66,7 @@ class CacheInvalidateEventHandler(regionManager: RegionManager,
         if (failCallback != null) {
           failCallback(event)
         }
+        return
     }
     if (successCallback != null) {
       successCallback(event)
