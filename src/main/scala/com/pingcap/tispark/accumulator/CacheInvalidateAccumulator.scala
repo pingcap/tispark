@@ -16,11 +16,11 @@
 package com.pingcap.tispark.accumulator
 
 import java.util
-import scala.collection.JavaConversions._
 
 import com.pingcap.tikv.event.CacheInvalidateEvent
 import org.apache.spark.util.AccumulatorV2
-import org.spark_project.jetty.util.ConcurrentHashSet
+
+import scala.collection.JavaConversions._
 
 /**
  * A cache invalidate request collector.
@@ -51,4 +51,6 @@ class CacheInvalidateAccumulator
     eventSet.addAll(other.value)
 
   override def value: Seq[CacheInvalidateEvent] = eventSet.toList
+
+  def remove(event: CacheInvalidateEvent): Boolean = eventSet.remove(event)
 }

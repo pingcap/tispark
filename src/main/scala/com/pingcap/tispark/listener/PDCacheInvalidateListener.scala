@@ -21,24 +21,26 @@ import java.util.logging.Logger
 
 import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
-import org.apache.spark.scheduler.{SparkListener, SparkListenerJobEnd, SparkListenerJobStart}
+import org.apache.spark.scheduler.{SparkListener, SparkListenerJobEnd}
 
-class PDCacheInvalidateListener(cacheInvalidateAccumulator: CacheInvalidateAccumulator,
+class PDCacheInvalidateListener(accumulator: CacheInvalidateAccumulator,
                                 handler: CacheInvalidateEventHandler)
     extends SparkListener {
-  val logger: Logger = Logger.getLogger(getClass.getName)
-
-  override def onJobStart(jobStart: SparkListenerJobStart): Unit = {
-    cacheInvalidateAccumulator.reset()
-  }
+  private final val logger: Logger = Logger.getLogger(getClass.getName)
 
   override def onJobEnd(jobEnd: SparkListenerJobEnd): Unit = {
-    if (!cacheInvalidateAccumulator.isZero) {
-      val eventList = cacheInvalidateAccumulator.value
-      logger.warning(
-        s"Receiving ${eventList.size} invalidate cache request(s) from job ${jobEnd.jobId} at driver."
-      )
-      eventList.foreach(handler.handle)
+    if (accumulator != null && !accumulator.isZero && handler != null) {
+      synchronized {
+        if (!accumulator.isZero) {
+          val events = accumulator.value
+          logger.warning(
+            s"Receiving ${events.size} cache invalidation request(s) from job ${jobEnd.jobId} at driver. " +
+              s"This indicates that there's exception(s) thrown in executor node when communicating with " +
+              s"TiKV, checkout executors' log for more information."
+          )
+          events.foreach(handler.handle)
+        }
+      }
     }
   }
 }

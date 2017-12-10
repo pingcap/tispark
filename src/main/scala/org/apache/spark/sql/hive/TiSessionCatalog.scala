@@ -18,7 +18,6 @@ package org.apache.spark.sql.hive
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
-import com.pingcap.tispark.accumulator.AccumulatorManager
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{FunctionRegistry, NoSuchDatabaseException, NoSuchTableException}
@@ -46,7 +45,6 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
 
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(sparkSession.sparkContext.getConf)
   val session: TiSession = TiSession.create(tiConf)
-  session.injectCallBackFunc(AccumulatorManager.CACHE_ACCUMULATOR_FUNCTION)
 
   val meta: MetaManager = new MetaManager(session.getCatalog)
 
