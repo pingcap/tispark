@@ -26,8 +26,6 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
   val conf: SparkConf = session.sparkContext.conf
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
-  val sparkContext: SparkContext = session.sparkContext
-
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
   TiUtils.sessionInitialize(session)
