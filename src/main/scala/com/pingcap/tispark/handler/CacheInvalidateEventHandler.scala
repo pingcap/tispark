@@ -58,6 +58,9 @@ class CacheInvalidateEventHandler(regionManager: RegionManager,
             s"Invalidating leader of region:${event.getRegionId} store:${event.getStoreId} cache at driver."
           )
           regionManager.updateLeader(event.getRegionId, event.getStoreId)
+        case CacheType.REQ_FAILED =>
+          logger.warn(s"Request failed cache invalidation for region ${event.getRegionId}")
+          regionManager.onRequestFail(event.getRegionId, event.getStoreId)
         case _ => throw new IllegalArgumentException("Unsupported cache invalidate type.")
       }
     } catch {
