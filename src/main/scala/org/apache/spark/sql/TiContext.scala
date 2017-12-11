@@ -17,7 +17,6 @@ package org.apache.spark.sql
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
-import com.pingcap.tispark.listener.CacheListenerManager
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 

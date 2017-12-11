@@ -34,7 +34,7 @@ import org.apache.spark.SparkContext
 private class CacheListenerManager(sc: SparkContext, regionManager: RegionManager) {
   def init(): Unit = {
     if (sc != null && regionManager != null) {
-      sc.register(CACHE_INVALIDATE_ACCUMULATOR)
+      sc.register(CACHE_INVALIDATE_ACCUMULATOR, CACHE_ACCUMULATOR_NAME)
       sc.addSparkListener(
         new PDCacheInvalidateListener(
           CACHE_INVALIDATE_ACCUMULATOR,
@@ -52,6 +52,7 @@ private class CacheListenerManager(sc: SparkContext, regionManager: RegionManage
 object CacheListenerManager {
   private var manager: CacheListenerManager = _
   private final val logger = Logger.getLogger(getClass.getName)
+  final val CACHE_ACCUMULATOR_NAME = "CacheInvalidateAccumulator"
   final val CACHE_INVALIDATE_ACCUMULATOR = new CacheInvalidateAccumulator
   final var CACHE_ACCUMULATOR_FUNCTION =
     new java.util.function.Function[CacheInvalidateEvent, Void] {
