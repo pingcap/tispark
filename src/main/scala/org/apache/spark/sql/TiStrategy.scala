@@ -56,6 +56,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_DOUBLE_READ, "false").toBoolean
   }
 
+  def useIndexFirst(): Boolean = {
+    sqlConf.getConfString(TiConfigConst.USE_INDEX_SCAN_FIRST, "false").toBoolean
+  }
+
   def useStreamingProcess(): Boolean = {
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toBoolean
   }
@@ -138,7 +142,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val scanPlan = if (allowIndexDoubleRead()) {
-      scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+      if (useIndexFirst() && source.table.getIndices != null && !source.table.getIndices.isEmpty) {
+        scanBuilder.buildIndexScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+      } else {
+        scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+      }
     } else {
       scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
     }
