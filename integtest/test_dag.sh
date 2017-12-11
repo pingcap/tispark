@@ -9,7 +9,7 @@ echo "Note: <sql> must be quoted. e.g., \"select * from t\""
 echo "You may use sql-only like this:"
 echo "./test_dag.sh -t \"select * from t\" -b \"test\""
 
-clear_last_diff_files
+clear_last_diff_files_DAG
 
 isDebug=false
 showResultStats=false

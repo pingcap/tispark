@@ -244,13 +244,13 @@ class TestCase(val prop: Properties) extends LazyLogging {
     spark.init(dbName)
 
     testCases.sortBy(_._1).foreach { case (file, sql) =>
-      logger.info(s"Query TiSpark $file ")
-      val actual = execSpark(sql)
-      logger.info(s"\nQuery Spark $file ")
-      val baseline = execSparkJDBC(sql)
-      val result = compResult(actual, baseline)
+      logger.info(s"\nquery on Spark $file ")
+      val spark_jdbc = execSparkJDBC(sql)
+      logger.info(s"query on TiSpark $file ")
+      val spark = execSpark(sql)
+      val result = compResult(spark_jdbc, spark)
       if (!result) {
-        printDiffSparkJDBC(s"$dbName.$file", sql, actual, baseline)
+        printDiffSparkJDBC(s"$dbName.$file", sql, spark_jdbc, spark)
       }
       testsExecuted += 1
 
@@ -263,13 +263,13 @@ class TestCase(val prop: Properties) extends LazyLogging {
     spark.init(dbName)
 
     testCases.sortBy(_._1).foreach { case (file, sql) =>
-      logger.info(s"Query TiSpark $file ")
-      val actual = execSpark(sql)
-      logger.info(s"\nQuery TiDB $file ")
-      val baseline = execTiDB(sql)
-      val result = compResult(actual, baseline)
+      logger.info(s"query on TiSpark $file ")
+      val spark = execSpark(sql)
+      logger.info(s"\nquery on TiDB $file ")
+      val tidb = execTiDB(sql)
+      val result = compResult(tidb, spark)
       if (!result) {
-        printDiff(s"$dbName.$file", sql, actual, baseline)
+        printDiff(s"$dbName.$file", sql, tidb, spark)
       }
       testsExecuted += 1
 
@@ -598,6 +598,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
     try {
       if (oneSqlOnly) {
         testSql(dbName, sqlCheck)
+      } else if (dbName.equalsIgnoreCase("tpch_test")) {
+        testSparkAndSparkJDBC(dbName, testCases)
       } else if (compareNeeded) {
         test(dbName, testCases)
       } else {
@@ -627,14 +629,15 @@ class TestCase(val prop: Properties) extends LazyLogging {
       new SimpleDateFormat("yy-MM-dd HH:mm:ss").format(value)
     }
 
-    def compValue(lhs: Any, rhs: Any): Boolean = lhs match {
+    def compValue(lhs: Any, rhs: Any): Boolean = rhs match {
       case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
         Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
       case _: Number | _: BigInt | _: java.math.BigInteger =>
         toInteger(lhs) == toInteger(rhs)
       case _: Timestamp =>
         toString(lhs) == toString(rhs)
-      case _ => lhs == rhs || lhs.toString == rhs.toString
+      case _ =>
+        lhs == rhs || lhs.toString == rhs.toString
     }
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {

@@ -55,7 +55,6 @@ if [ ${isDebug} = true ]; then
     ./test_tpch.sh -d
     rename_result_files_tpch
 else
-    echo "testing...."
     clear_all_diff_files
     ./test_no_tpch.sh
     rename_result_files_no_tpch

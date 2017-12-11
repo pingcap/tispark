@@ -161,6 +161,49 @@ clear_last_diff_files() {
     done
 }
 
+clear_last_diff_files_DAG() {
+    clear_last_diff_files
+    for f in ./TestDAG*.spark; do
+        [ -e "$f" ] && rm TestDAG*.spark
+        break
+    done
+    for f in ./TestDAG*.tidb; do
+        [ -e "$f" ] && rm TestDAG*.tidb
+        break
+    done
+    for f in ./TestDAG*.jdbc; do
+        [ -e "$f" ] && rm TestDAG*.jdbc
+        break
+    done
+}
+
+clear_last_diff_files_tpch() {
+    for f in ./tpch_test*.spark; do
+        [ -e "$f" ] && rm tpch_test*.spark
+        break
+    done
+    for f in ./tpch_test*.tidb; do
+        [ -e "$f" ] && rm tpch_test*.tidb
+        break
+    done
+    for f in ./tpch_test*.jdbc; do
+        [ -e "$f" ] && rm tpch_test*.jdbc
+        break
+    done
+    for f in ./TestTPCH*.spark; do
+        [ -e "$f" ] && rm TestTPCH*.spark
+        break
+    done
+    for f in ./TestTPCH*.tidb; do
+        [ -e "$f" ] && rm TestTPCH*.tidb
+        break
+    done
+    for f in ./TestTPCH*.jdbc; do
+        [ -e "$f" ] && rm TestTPCH*.jdbc
+        break
+    done
+}
+
 check_tpch_dir_is_present() {
     if [ ! -d "$BASEDIR/tpch" ]; then
         echo "tpch is not present. You have to clone it to your local machine."
@@ -187,37 +230,46 @@ load_DAG_Table() {
 }
 
 rename_result_files_no_tpch() {
-    for f in ./inlineTest*.jdbc; do
-        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}";
+    for f in ./*.jdbc; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}"
+        # break
     done
-    for f in ./inlineTest*.spark; do
-        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}";
+    for f in ./*.spark; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}"
+        # break
     done
-    for f in ./inlineTest*.tidb; do
-        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}";
+    for f in ./*.tidb; do
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}"
+        # break
     done
 }
 
 rename_result_files_dag() {
     for f in ./inlineTest*.jdbc; do
-        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}";
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}"
+        # break
     done
     for f in ./inlineTest*.spark; do
-        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}";
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}"
+        # break
     done
     for f in ./inlineTest*.tidb; do
-        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}";
+        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}"
+        # break
     done
 }
 
 rename_result_files_tpch() {
-    for f in ./inlineTest*.jdbc; do
-        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestTPCH}";
+    for f in ./tpch_test*.jdbc; do
+        [ -e "$f" ] && mv "$f" "${f/tpch_test/TestTPCH}"
+        # break
     done
-    for f in ./inlineTest*.spark; do
-        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestTPCH}";
+    for f in ./tpch_test*.spark; do
+        [ -e "$f" ] && mv "$f" "${f/tpch_test/TestTPCH}"
+        # break
     done
-    for f in ./inlineTest*.tidb; do
-        [ -e "$f" ] && mv "$f" "${f/inlineTest/TestTPCH}";
+    for f in ./tpch_test*.tidb; do
+        [ -e "$f" ] && mv "$f" "${f/tpch_test/TestTPCH}"
+        # break
     done
 }
