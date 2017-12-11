@@ -22,10 +22,10 @@ import com.pingcap.tikv.expression.{ExpressionBlacklist, TiExpr}
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
-import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.{SparkConf, sql}
 
 import scala.collection.JavaConversions._
@@ -80,7 +80,10 @@ object TiUtils {
         // bit/duration type is not allowed to be pushed down
         case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
           val head = nameTypeMap.get(attr.name).head
-          return !head.isInstanceOf[BitType] && head.getTypeCode != Types.TYPE_DURATION
+          return !head.isInstanceOf[BitType] &&
+            head.getTypeCode != Types.TYPE_DURATION &&
+            head.getTypeCode != Types.TYPE_TIMESTAMP &&
+            head.getTypeCode != Types.TYPE_DATETIME
         // TODO:Currently we do not support literal null type push down
         // when TiConstant is ready to support literal null or we have other
         // options, remove this.
