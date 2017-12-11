@@ -17,10 +17,9 @@ package org.apache.spark.sql
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
-import com.pingcap.tispark.handler.CacheInvalidateEventHandler
-import com.pingcap.tispark.listener.PDCacheInvalidateListener
+import com.pingcap.tispark.listener.CacheListenerManager
+import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
-import org.apache.spark.{SparkConf, SparkContext}
 
 class TiContext(val session: SparkSession) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
@@ -28,8 +27,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
-  TiUtils.sessionInitialize(session)
-  TiUtils.initCacheInvalidationFramework(session, tiSession)
+  TiUtils.sessionInitialize(session, tiSession)
 
   final val version: String = TiSparkVersion.version
 

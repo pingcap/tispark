@@ -39,11 +39,15 @@ class CacheInvalidateAccumulator
 
   override def reset(): Unit = eventSet.clear()
 
-  override def add(v: CacheInvalidateEvent): Unit = eventSet.add(v)
+  override def add(v: CacheInvalidateEvent): Unit = eventSet.synchronized {
+    eventSet.add(v)
+  }
 
   override def copy(): AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] = {
     val accumulator = new CacheInvalidateAccumulator
-    eventSet.foreach(accumulator.add)
+    eventSet.synchronized {
+      accumulator.eventSet.addAll(eventSet)
+    }
     accumulator
   }
 
@@ -52,5 +56,7 @@ class CacheInvalidateAccumulator
 
   override def value: Seq[CacheInvalidateEvent] = eventSet.toList
 
-  def remove(event: CacheInvalidateEvent): Boolean = eventSet.remove(event)
+  def remove(event: CacheInvalidateEvent): Boolean = eventSet.synchronized {
+    eventSet.remove(event)
+  }
 }

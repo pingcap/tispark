@@ -18,7 +18,7 @@ package com.pingcap.tispark
 import java.util.HashMap
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import org.apache.spark.SparkContext
+import com.pingcap.tispark.listener.CacheListenerManager
 
 object TiSessionCache {
   private val sessionCache: HashMap[String, TiSession] = new HashMap[String, TiSession]()
@@ -27,16 +27,11 @@ object TiSessionCache {
     val session = sessionCache.get(appId)
     if (session == null) {
       val newSession = TiSession.create(conf)
+      newSession.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
       sessionCache.put(appId, newSession)
       newSession
     } else {
       session
-    }
-  }
-
-  def putSession(appId: String, session: TiSession): Unit = this.synchronized {
-    if (session != null && appId != null && !appId.isEmpty) {
-      sessionCache.put(appId, session)
     }
   }
 }

@@ -26,7 +26,7 @@ import com.pingcap.tikv.types._
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
-import com.pingcap.tispark.listener.PDCacheInvalidateListener
+import com.pingcap.tispark.listener.{CacheListenerManager, PDCacheInvalidateListener}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
@@ -208,47 +208,10 @@ object TiUtils {
     tiConf
   }
 
-  def sessionInitialize(session: SparkSession): Unit = {
+  def sessionInitialize(session: SparkSession, tiSession: TiSession): Unit = {
     session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
     session.udf.register("ti_version", () => TiSparkVersion.version)
-  }
-
-  /**
-   * Initialize cache invalidation frame work for the given session.
-   *
-   * @param sparkSession The spark session used for attaching a spark job listener.
-   * @param tiSession    The TiSession to inject a callback function for sending cache
-   *                     invalidate events. This TiSession is used for the executors
-   *                     to retrieve the callback function.
-   */
-  def initCacheInvalidationFramework(sparkSession: SparkSession, tiSession: TiSession): Unit = {
-    val accumulator = new CacheInvalidateAccumulator
-    // One accumulator per callback function
-    val callBack = new java.util.function.Function[CacheInvalidateEvent, Void] {
-      override def apply(t: CacheInvalidateEvent): Void = {
-        // this operation shall be executed in executor nodes
-        accumulator.add(t);
-        null
-      }
-    }
-
-    // One callback func per TiSession
-    tiSession.injectCallBackFunc(callBack)
-
-    // One listener per spark session
-    sparkSession.sparkContext.addSparkListener(
-      new PDCacheInvalidateListener(
-        accumulator,
-        CacheInvalidateEventHandler(
-          tiSession.getRegionManager,
-          (e) => accumulator.remove(e), // remove the event after successfully invalidate it
-          null
-        )
-      )
-    )
-
-    // We need to put this TiSession(injected with a call back function) to session
-    // cache in order to let executors retrieve the very callback func.
-    TiSessionCache.putSession(sparkSession.sparkContext.applicationId, tiSession)
+    CacheListenerManager.initCacheListener(session.sparkContext, tiSession.getRegionManager)
+    tiSession.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
   }
 }
