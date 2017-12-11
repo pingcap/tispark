@@ -33,4 +33,5 @@ object TiConfigConst {
   val ALLOW_INDEX_DOUBLE_READ: String = "spark.tispark.plan.allow_index_double_read"
   val COPROCESS_STREAMING: String = "spark.tispark.coprocess.streaming"
   val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"
+  val PREFERRED_INDICES: String = "spark.tispark.plan.preferred_indices"
 }

@@ -19,6 +19,7 @@ import com.pingcap.tikv.expression.{ExpressionBlacklist, TiByItem, TiColumnRef, 
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanBuilder
+import com.pingcap.tikv.predicates.ScanBuilder.ScanPlan
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
@@ -58,6 +59,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
   def useStreamingProcess(): Boolean = {
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toBoolean
+  }
+
+  def preferredIndices(): List[String] = {
+    sqlConf
+      .getConfString(TiConfigConst.PREFERRED_INDICES, "")
+      .split(",")
+      .toList
+      .map(_.trim)
+      .filter(!_.isEmpty)
   }
 
   def pushDownType(): PushDownType = {
@@ -135,12 +145,32 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
   ): TiDAGRequest = {
-    val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
+    val tiFilters = JavaConversions.seqAsJavaList(filters.collect {
+      case BasicExpression(expr) => expr
+    })
     val scanBuilder: ScanBuilder = new ScanBuilder
+    val indices = preferredIndices
     val scanPlan = if (allowIndexDoubleRead()) {
-      scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+      var plan: ScanPlan = null
+      var cost = Double.MaxValue
+      indices.foreach { idxName =>
+        source.table.getIndices.find(i => i.getName.equalsIgnoreCase(idxName)).foreach { idx =>
+          {
+            val curPlan = scanBuilder.buildScan(tiFilters, idx, source.table)
+            if (curPlan.getCost < cost) {
+              plan = curPlan
+              cost = curPlan.getCost
+            }
+          }
+        }
+      }
+      if (plan == null) {
+        scanBuilder.buildScan(tiFilters, source.table)
+      } else {
+        plan
+      }
     } else {
-      scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+      scanBuilder.buildTableScan(tiFilters, source.table)
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
