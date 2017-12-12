@@ -55,7 +55,7 @@ object BasicExpression {
         // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd,
         // but seems change in DAG mode
         case DateType       => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int])
-        case TimestampType  => new Timestamp(value.asInstanceOf[Long])
+        case TimestampType  => new Timestamp(value.asInstanceOf[Long] / 1000)
         case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
         case _              => value
