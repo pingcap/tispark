@@ -154,7 +154,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       var plan: ScanPlan = null
       var cost = Double.MaxValue
       source.table.getIndices
-        .filter{ index => userIndices.exists(index.getName.equalsIgnoreCase(_)) }
+        .filter { index => userIndices.exists(index.getName.equalsIgnoreCase(_)) }
         .foreach { index =>
           val curPlan = scanBuilder.buildScan(tiFilters, index, source.table)
           if (curPlan.getCost < cost) {
