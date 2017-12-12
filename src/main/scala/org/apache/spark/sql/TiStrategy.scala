@@ -149,21 +149,19 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       case BasicExpression(expr) => expr
     })
     val scanBuilder: ScanBuilder = new ScanBuilder
-    val indices = preferredIndices
+    val userIndices = preferredIndices
     val scanPlan = if (allowIndexDoubleRead()) {
       var plan: ScanPlan = null
       var cost = Double.MaxValue
-      indices.foreach { idxName =>
-        source.table.getIndices.find(i => i.getName.equalsIgnoreCase(idxName)).foreach { idx =>
-          {
-            val curPlan = scanBuilder.buildScan(tiFilters, idx, source.table)
-            if (curPlan.getCost < cost) {
-              plan = curPlan
-              cost = curPlan.getCost
-            }
+      source.table.getIndices
+        .filter{ index => userIndices.exists(index.getName.equalsIgnoreCase(_)) }
+        .foreach { index =>
+          val curPlan = scanBuilder.buildScan(tiFilters, index, source.table)
+          if (curPlan.getCost < cost) {
+            plan = curPlan
+            cost = curPlan.getCost
           }
         }
-      }
       if (plan == null) {
         scanBuilder.buildScan(tiFilters, source.table)
       } else {
