@@ -38,11 +38,7 @@ private class CacheListenerManager(sc: SparkContext, regionManager: RegionManage
       sc.addSparkListener(
         new PDCacheInvalidateListener(
           CACHE_INVALIDATE_ACCUMULATOR,
-          CacheInvalidateEventHandler(
-            regionManager,
-            (e) => CACHE_INVALIDATE_ACCUMULATOR.remove(e),
-            null
-          )
+          CacheInvalidateEventHandler(regionManager)
         )
       )
     }

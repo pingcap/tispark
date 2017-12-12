@@ -20,6 +20,7 @@ package com.pingcap.tispark.handler
 import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.event.CacheInvalidateEvent.CacheType
 import com.pingcap.tikv.region.RegionManager
+import com.pingcap.tispark.listener.CacheListenerManager.CACHE_INVALIDATE_ACCUMULATOR
 import org.slf4j.LoggerFactory
 
 /**
@@ -33,9 +34,7 @@ import org.slf4j.LoggerFactory
  * @param regionManager Region manager used for sending invalidating cache. Usually
  *                      it's Spark driver's regionManager
  */
-class CacheInvalidateEventHandler(regionManager: RegionManager,
-                                  successCallback: (CacheInvalidateEvent) => Unit,
-                                  failCallback: (CacheInvalidateEvent) => Unit) {
+class CacheInvalidateEventHandler(regionManager: RegionManager) {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   def handle(event: CacheInvalidateEvent): Unit = {
@@ -44,46 +43,35 @@ class CacheInvalidateEventHandler(regionManager: RegionManager,
         case CacheType.REGION_STORE =>
           // Used for updating region/store cache in the given regionManager
           if (event.shouldUpdateRegion()) {
-            logger.warn(s"Invalidating region ${event.getRegionId} cache at driver.")
+            logger.info(s"Invalidating region ${event.getRegionId} cache at driver.")
             regionManager.invalidateRegion(event.getRegionId)
           }
 
           if (event.shouldUpdateStore()) {
-            logger.warn(s"Invalidating store ${event.getStoreId} cache at driver.")
+            logger.info(s"Invalidating store ${event.getStoreId} cache at driver.")
             regionManager.invalidateStore(event.getStoreId)
           }
         case CacheType.LEADER =>
           // Used for updating leader information cached in the given regionManager
-          logger.warn(
+          logger.info(
             s"Invalidating leader of region:${event.getRegionId} store:${event.getStoreId} cache at driver."
           )
           regionManager.updateLeader(event.getRegionId, event.getStoreId)
         case CacheType.REQ_FAILED =>
-          logger.warn(s"Request failed cache invalidation for region ${event.getRegionId}")
+          logger.info(s"Request failed cache invalidation for region ${event.getRegionId}")
           regionManager.onRequestFail(event.getRegionId, event.getStoreId)
         case _ => throw new IllegalArgumentException("Unsupported cache invalidate type.")
       }
     } catch {
       case e: Exception =>
         logger.error(s"Updating cache failed:${e.getMessage}")
-        if (failCallback != null) {
-          failCallback(event)
-        }
         return
     }
-    if (successCallback != null) {
-      successCallback(event)
-    }
+    CACHE_INVALIDATE_ACCUMULATOR.remove(event)
   }
 }
 
 object CacheInvalidateEventHandler {
-  def apply(regionManager: RegionManager,
-            successCallback: (CacheInvalidateEvent) => Unit,
-            failCallback: (CacheInvalidateEvent) => Unit): CacheInvalidateEventHandler =
-    new CacheInvalidateEventHandler(
-      regionManager,
-      successCallback,
-      failCallback
-    )
+  def apply(regionManager: RegionManager): CacheInvalidateEventHandler =
+    new CacheInvalidateEventHandler(regionManager)
 }

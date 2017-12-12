@@ -33,7 +33,7 @@ class PDCacheInvalidateListener(accumulator: CacheInvalidateAccumulator,
       synchronized {
         if (!accumulator.isZero) {
           val events = accumulator.value
-          logger.warning(
+          logger.info(
             s"Receiving ${events.size} cache invalidation request(s) from job ${jobEnd.jobId} at driver. " +
               s"This indicates that there's exception(s) thrown in executor node when communicating with " +
               s"TiKV, checkout executors' log for more information."
