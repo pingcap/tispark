@@ -163,7 +163,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
-    scanPlan.getFilters.toList.map(dagRequest.addWhere)
+    scanPlan.getFilters.foreach(dagRequest.addWhere)
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
     }
