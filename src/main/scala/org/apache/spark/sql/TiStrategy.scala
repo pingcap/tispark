@@ -150,25 +150,16 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     })
     val scanBuilder: ScanBuilder = new ScanBuilder
     val userIndices = preferredIndices
-    val scanPlan = if (allowIndexDoubleRead()) {
-      var plan: ScanPlan = null
-      var cost = Double.MaxValue
+    val defaultScanPlan = () => scanBuilder.buildScan(tiFilters, source.table)
+    val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       source.table.getIndices
         .filter { index => userIndices.exists(index.getName.equalsIgnoreCase(_)) }
-        .foreach { index =>
-          val curPlan = scanBuilder.buildScan(tiFilters, index, source.table)
-          if (curPlan.getCost < cost) {
-            plan = curPlan
-            cost = curPlan.getCost
-          }
-        }
-      if (plan == null) {
-        scanBuilder.buildScan(tiFilters, source.table)
-      } else {
-        plan
-      }
+        .map(idx => scanBuilder.buildScan(tiFilters, idx, source.table))
+        .sortBy(_.getCost)
+        .headOption
+        .getOrElse(defaultScanPlan())
     } else {
-      scanBuilder.buildTableScan(tiFilters, source.table)
+      defaultScanPlan()
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
