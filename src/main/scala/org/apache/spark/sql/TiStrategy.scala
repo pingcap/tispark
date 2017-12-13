@@ -91,6 +91,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     CoprocessorRDD(output, tiRdd)
   }
 
+  private def toHandleRDD(source: TiDBRelation, dagRequest: TiDAGRequest): SparkPlan = {
+    val table = source.table
+    dagRequest.setTableInfo(table)
+    if (dagRequest.getFields.isEmpty) {
+      dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
+    }
+    val tiHandleRDD = source.logicalPlanToHandleRDD(dagRequest)
+
+    HandleRDD(tiHandleRDD)
+  }
+
   def aggregationToDAGRequest(
     groupByList: Seq[NamedExpression],
     aggregates: Seq[AggregateExpression],
@@ -240,8 +251,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
       projectSeq.foreach(attr => dagRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
-      val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
-      residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
+      if (dagRequest.isIndexScan) {
+        val scan = ArrangeHandle(toHandleRDD(source, dagRequest))
+        residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
+      } else {
+        val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
+        residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
+      }
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic

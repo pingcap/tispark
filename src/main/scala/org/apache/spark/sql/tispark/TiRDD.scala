@@ -97,7 +97,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
       val handleNum = handleRDD.cache().count()
       println(s"Handle Num:$handleNum")
       val handleList = new TLongArrayList()
-      handleRDD.collect().forall(handleList.add)
+      handleRDD.collect().foreach(row => handleList.add(row.getLong(0)))
       keyWithRegionTasks = RangeSplitter
         .newSplitter(session.getRegionManager)
         .splitHandlesByRegion(

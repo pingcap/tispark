@@ -16,11 +16,14 @@
 package org.apache.spark.sql.execution
 
 import org.apache.spark.rdd.RDD
+import org.apache.spark.serializer.Serializer
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{Attribute, SortOrder, UnsafeProjection}
-import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, SortOrder, UnsafeProjection}
+import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, SinglePartition, UnknownPartitioning}
+import org.apache.spark.sql.execution.exchange.ShuffleExchange
 import org.apache.spark.sql.execution.metric.SQLMetrics
-import org.apache.spark.sql.tispark.TiRDD
+import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
+import org.apache.spark.sql.types.{LongType, Metadata}
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
 
@@ -51,4 +54,59 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   }
 
   override def simpleString: String = verboseString
+}
+
+case class HandleRDD(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
+  override val nodeName: String = "HandleRDD"
+
+  override lazy val metrics = Map(
+    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
+  )
+  override val outputPartitioning: Partitioning = UnknownPartitioning(0)
+  override val outputOrdering: Seq[SortOrder] = Nil
+
+  val internalRDD: RDD[InternalRow] =
+    RDDConversions.rowToRowRdd(tiHandleRDD, output.map(_.dataType))
+
+  override protected def doExecute(): RDD[InternalRow] = {
+    val numOutputRows = longMetric("numOutputRows")
+
+    internalRDD.mapPartitionsWithIndexInternal { (index, iter) =>
+      val proj = UnsafeProjection.create(schema)
+      proj.initialize(index)
+      iter.map { r =>
+        numOutputRows += 1
+        proj(r)
+      }
+    }
+  }
+
+  override def output: Seq[Attribute] =
+    Seq(AttributeReference("Handle", LongType, nullable = false, Metadata.empty)())
+
+  override def verboseString: String = {
+    s"TiDB $nodeName{${tiHandleRDD.dagRequest.toString}}"
+  }
+
+  override def simpleString: String = verboseString
+}
+
+case class ArrangeHandle(child: SparkPlan) extends UnaryExecNode {
+  private val serializer: Serializer = new UnsafeRowSerializer(child.output.size)
+
+  override def outputPartitioning: Partitioning = SinglePartition
+
+  override protected def doExecute(): RDD[InternalRow] = {
+    val shuffled = new ShuffledRowRDD(
+      ShuffleExchange
+        .prepareShuffleDependency(child.execute(), child.output, SinglePartition, serializer)
+    )
+    shuffled.mapPartitionsInternal(
+      (rows: Iterator[InternalRow]) => {
+        rows
+      }
+    )
+  }
+
+  override def output: Seq[Attribute] = child.output
 }

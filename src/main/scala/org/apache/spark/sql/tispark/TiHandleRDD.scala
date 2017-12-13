@@ -21,7 +21,7 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext}
 
 import scala.collection.JavaConversions._
@@ -35,10 +35,10 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
                   val ts: TiTimestamp,
                   @transient private val session: TiSession,
                   @transient private val sparkSession: SparkSession)
-    extends RDD[Long](sparkSession.sparkContext, Nil) {
+    extends RDD[Row](sparkSession.sparkContext, Nil) {
 
-  override def compute(split: Partition, context: TaskContext): Iterator[Long] =
-    new Iterator[Long] {
+  override def compute(split: Partition, context: TaskContext): Iterator[Row] =
+    new Iterator[Row] {
       dagRequest.resolve()
       // bypass, sum return a long type
       val tiPartition = split.asInstanceOf[TiPartition]
@@ -48,7 +48,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
 
       override def hasNext: Boolean = iterator.hasNext
 
-      override def next(): Long = iterator.next()
+      override def next(): Row = Row.apply(iterator.next())
     }
 
   override protected def getPartitions: Array[Partition] = {
