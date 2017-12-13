@@ -591,7 +591,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   private def testSql(dbName: String, sql: String): Unit = {
     spark.init(dbName)
+    spark_jdbc.init(dbName)
     execSparkAndShow(sql)
+    execSparkJDBCAndShow(sql)
   }
 
   private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareNeeded: Boolean): Unit = {
