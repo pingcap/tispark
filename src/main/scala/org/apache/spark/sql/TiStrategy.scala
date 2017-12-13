@@ -153,7 +153,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val defaultScanPlan = () => scanBuilder.buildScan(tiFilters, source.table)
     val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       source.table.getIndices
-        .filter { index => userIndices.exists(index.getName.equalsIgnoreCase(_)) }
+        .filter { index =>
+          userIndices.exists(index.getName.equalsIgnoreCase(_))
+        }
         .map(idx => scanBuilder.buildScan(tiFilters, idx, source.table))
         .sortBy(_.getCost)
         .headOption
