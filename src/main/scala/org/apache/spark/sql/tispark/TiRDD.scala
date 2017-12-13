@@ -23,6 +23,7 @@ import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
+import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext}
@@ -59,7 +60,8 @@ class TiRDD(val dagRequest: TiDAGRequest,
     private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
     private val snapshot = session.createSnapshot(ts)
 
-    private val iterator = snapshot.tableRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+    private val iterator =
+      snapshot.tableRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
     private val finalTypes = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {
@@ -83,16 +85,32 @@ class TiRDD(val dagRequest: TiDAGRequest,
 
   override protected def getPartitions: Array[Partition] = {
     val conf = sparkSession.conf
-    val keyWithRegionTasks = RangeSplitter
+    var keyWithRegionTasks: mutable.Seq[RangeSplitter.RegionTask] = RangeSplitter
       .newSplitter(session.getRegionManager)
       .splitRangeByRegion(
         dagRequest.getRanges,
         conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt
       )
 
+    if (dagRequest.isIndexScan) {
+      val handleRDD = new TiHandleRDD(dagRequest, tiConf, tableRef, ts, session, sparkSession)
+      val handleNum = handleRDD.cache().count()
+      println(s"Handle Num:$handleNum")
+      val handleList = new TLongArrayList()
+      handleRDD.collect().forall(handleList.add)
+      keyWithRegionTasks = RangeSplitter
+        .newSplitter(session.getRegionManager)
+        .splitHandlesByRegion(
+          dagRequest.getTableInfo.getId,
+          handleList
+        )
+      println("RegionTasks size:" + keyWithRegionTasks.size())
+      dagRequest.clearIndexInfo()
+    }
+
     val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
-      with mutable.MultiMap[String, RegionTask]
+    with mutable.MultiMap[String, RegionTask]
 
     var index = 0
     val result = new ListBuffer[TiPartition]
