@@ -48,9 +48,12 @@ class SparkWrapper() extends LazyLogging {
           str = str.concat(b.toString)
         }
         str
+      case _: BigDecimal =>
+        value.asInstanceOf[BigDecimal].setScale(2, BigDecimal.RoundingMode.HALF_UP)
       case _: Date if colType.equalsIgnoreCase("YEAR") =>
         value.toString.split("-")(0)
-      case default => default
+      case default =>
+        default
     }
   }
 

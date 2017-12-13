@@ -80,8 +80,7 @@ done
 
 if [ "${mode}" == "Integration" ]; then
     filter=""
-    cp ${PATH_TO_CONF}/tispark_config_testindex.properties.template ${TISPARK_CONF}
-    cp ${PATH_TO_CONF}/tispark_config_testindex.properties.template ${BASE_CONF}
+    create_conf_no_tpch
     if ! [ -z "${db}" ]; then
         echo "test.db=$db" >> ${TISPARK_CONF}
         echo "test.db=$db" >> ${BASE_CONF}
@@ -107,8 +106,7 @@ if [ "${mode}" == "Integration" ]; then
         ${spark_cmd} ${spark_test_opt} 2>&1 | grep "${filter}"
     fi
 elif [ "${mode}" == "QueryOnly" ]; then
-    cp ${PATH_TO_CONF}/tispark_config.properties.template ${TISPARK_CONF}
-    cp ${PATH_TO_CONF}/tispark_config.properties.template ${BASE_CONF}
+    create_conf
     if [ -z "${sql}" ]; then
         echo "sql can not be empty. Aborting..."
         exit -1
