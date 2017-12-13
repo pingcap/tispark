@@ -6,12 +6,11 @@ source _env.sh
 echo ${BASEDIR}
 echo "usage: <bin> [-d | --debug]"
 
-clear_last_diff_files
+clear_last_diff_files_tpch
 check_tpch_dir_is_present
 check_tpch_data_is_loaded
 
-cp ${PATH_TO_CONF}/tispark_config_tpch.properties.template ${TISPARK_CONF}
-cp ${PATH_TO_CONF}/tispark_config_tpch.properties.template ${PATH_TO_CONF}/tispark_config.properties
+create_conf_tpch
 
 if [[ "$@" = *--debug ]] || [[ "$@" = *-d ]]; then
     echo "debugging..."

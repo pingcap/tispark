@@ -22,7 +22,7 @@ import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.internal.Logging
 import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
 import org.apache.spark.sql.execution.ui.SQLListener
-import org.apache.spark.sql.hive.TiSessionState
+import org.apache.spark.sql.hive.{TiSessionCatalog, TiSessionState}
 import org.apache.spark.sql.internal.StaticSQLConf.CATALOG_IMPLEMENTATION
 import org.apache.spark.sql.internal.{SessionState, SharedState}
 import org.apache.spark.util.Utils
@@ -45,7 +45,10 @@ class TiSparkSession(
 
   override def newSession(): SparkSession = new TiSparkSession(sparkContext, Some(sharedState))
 
-  TiUtils.sessionInitialize(this)
+  TiUtils.sessionInitialize(
+    this,
+    sessionState.catalog.asInstanceOf[TiSessionCatalog].session
+  )
 }
 
 @InterfaceStability.Stable
