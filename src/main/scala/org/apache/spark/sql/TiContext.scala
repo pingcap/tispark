@@ -15,7 +15,7 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.{TiConfiguration, TiSession, TiVersion}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
@@ -26,8 +26,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
-
-  TiUtils.sessionInitialize(session)
+  TiUtils.sessionInitialize(session, tiSession)
 
   final val version: String = TiSparkVersion.version
 
