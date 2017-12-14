@@ -15,7 +15,9 @@
 
 package org.apache.spark.sql
 
+
 import com.pingcap.tikv.tools.RegionUtils
+
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import org.apache.spark.SparkConf
@@ -28,9 +30,11 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+
   val debug: DebugTool = new DebugTool
 
-  TiUtils.sessionInitialize(session)
+  TiUtils.sessionInitialize(session, tiSession)
+
 
   final val version: String = TiSparkVersion.version
 
