@@ -252,6 +252,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       val spark = execSpark(sql)
       val result = compResult(spark_jdbc, spark)
       if (!result) {
+        testsFailed += 1
         printDiffSparkJDBC(s"$dbName.$file", sql, spark_jdbc, spark)
       }
       testsExecuted += 1

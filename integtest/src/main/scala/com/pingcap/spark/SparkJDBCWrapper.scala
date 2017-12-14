@@ -21,7 +21,6 @@ import java.util.Properties
 
 import com.pingcap.spark.Utils.getOrThrow
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.storage.StorageLevel
 
 class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
   private val spark_jdbc = SparkSession
@@ -66,7 +65,6 @@ class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
       .option("user", jdbcUsername)
       .option("driver", "com.mysql.jdbc.Driver")
       .load()
-      .persist(StorageLevel.MEMORY_AND_DISK)
       .createOrReplaceTempView(viewName)
   }
 
