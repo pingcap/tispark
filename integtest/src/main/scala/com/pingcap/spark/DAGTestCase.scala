@@ -142,8 +142,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   }
 
   def createHaving(): List[String] = List(
-    s"select tp_int%1000 from $TABLE_NAME group by (tp_int%1000) having sum(tp_int%1000) > 100",
-    s"select tp_bigint%1000 from $TABLE_NAME group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100"
+    s"select tp_int%1000 a, count(*) from $TABLE_NAME group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a",
+    s"select tp_bigint%1000 a, count(*) from $TABLE_NAME group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a"
   )
 
   def createArithmeticAgg(): List[String] = colSet.map((col: String) => s"select sum($col),avg($col),min($col),max($col) from $TABLE_NAME group by $col ${orderBy(col)}").toList
