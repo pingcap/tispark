@@ -19,6 +19,7 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.execution.{ShuffleHandleExec, HandleRDD}
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
@@ -39,10 +40,12 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     new TiRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
   }
 
-  def logicalPlanToHandleRDD(dagRequest: TiDAGRequest): TiHandleRDD = {
+  def logicalPlanToHandleRDD(dagRequest: TiDAGRequest): ShuffleHandleExec = {
     val ts: TiTimestamp = session.getTimestamp
     dagRequest.setStartTs(ts.getVersion)
-
-    new TiHandleRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
+    dagRequest.resolve()
+    val tiHandleRDD =
+      new TiHandleRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
+    ShuffleHandleExec(HandleRDD(tiHandleRDD), dagRequest, session.getConf)
   }
 }

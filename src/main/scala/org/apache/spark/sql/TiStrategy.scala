@@ -99,7 +99,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
     val tiHandleRDD = source.logicalPlanToHandleRDD(dagRequest)
 
-    HandleRDD(tiHandleRDD)
+    SortExec(tiHandleRDD.outputOrdering, global = true, child = tiHandleRDD)
   }
 
   def aggregationToDAGRequest(
@@ -252,7 +252,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
       projectSeq.foreach(attr => dagRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
       if (dagRequest.isIndexScan) {
-        val scan = ArrangeHandle(toHandleRDD(source, dagRequest))
+        val scan = toHandleRDD(source, dagRequest)
         residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
       } else {
         val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
