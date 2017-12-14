@@ -97,9 +97,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     if (dagRequest.getFields.isEmpty) {
       dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
-    val tiHandleRDD = source.logicalPlanToHandleRDD(dagRequest)
-
-    SortExec(tiHandleRDD.outputOrdering, global = true, child = tiHandleRDD)
+    val tiHandleRDD = source.logicalPlanToHandlePlan(dagRequest)
+    tiHandleRDD
+//    SortExec(tiHandleRDD.outputOrdering, global = true, child = tiHandleRDD)
   }
 
   def aggregationToDAGRequest(

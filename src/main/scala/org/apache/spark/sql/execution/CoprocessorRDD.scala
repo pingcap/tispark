@@ -67,14 +67,14 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   override def simpleString: String = verboseString
 }
 
-case class HandleRDD(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
+case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   override val nodeName: String = "HandleRDD"
 
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
   )
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
-  override val outputOrdering: Seq[SortOrder] = Seq(SortOrder(output.head, Ascending))
+//  override val outputOrdering: Seq[SortOrder] = Seq(SortOrder(output.head, Ascending))
 
   val internalRDD: RDD[InternalRow] =
     RDDConversions.rowToRowRdd(tiHandleRDD, output.map(_.dataType))
@@ -93,6 +93,7 @@ case class HandleRDD(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   }
 
   final lazy val attributeRef = Seq(
+    AttributeReference("RegionId", LongType, nullable = false, Metadata.empty)(),
     AttributeReference("Handle", LongType, nullable = false, Metadata.empty)()
   )
 
@@ -117,7 +118,7 @@ case class ShuffleHandleExec(child: SparkPlan, dagReq: TiDAGRequest, tiConf: TiC
   override val outputOrdering: Seq[SortOrder] = child.outputOrdering
 
   override protected def doExecute(): RDD[InternalRow] = {
-    val shuffledRDD = new ShuffledRowRDD(
+    new ShuffledRowRDD(
       ShuffleExchange
         .prepareShuffleDependency(
           child.execute(),
@@ -126,10 +127,6 @@ case class ShuffleHandleExec(child: SparkPlan, dagReq: TiDAGRequest, tiConf: TiC
           serializer
         )
     )
-    val handles = new TLongArrayList
-    shuffledRDD.map(r => r.getLong(0)).collect().foreach(handles.add)
-    println(s"Handles added:${handles.size()}")
-    shuffledRDD
   }
 
   override def output: Seq[Attribute] = child.output

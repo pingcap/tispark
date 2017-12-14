@@ -15,6 +15,8 @@
 
 package org.apache.spark.sql.tispark
 
+import com.google.proto4pingcap.ByteString
+import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
@@ -41,14 +43,24 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
     new Iterator[Row] {
       dagRequest.resolve()
       // bypass, sum return a long type
-      val tiPartition = split.asInstanceOf[TiPartition]
-      val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
-      val snapshot = session.createSnapshot(ts)
-      val iterator = snapshot.handleRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+      private val tiPartition = split.asInstanceOf[TiPartition]
+      private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
+      private val snapshot = session.createSnapshot(ts)
+      private val iterator =
+        snapshot.handleRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+      private val tableId = dagRequest.getTableInfo.getId
 
       override def hasNext: Boolean = iterator.hasNext
 
-      override def next(): Row = Row.apply(iterator.next())
+      override def next(): Row = {
+        val regionManager = session.getRegionManager
+        val handle = iterator.next()
+        val key = TableCodec.encodeRowKeyWithHandleBytes(tableId, handle)
+        val region = regionManager.getRegionByKey(ByteString.copyFrom(key))
+
+        // Returns Region:Handle K-V pair
+        Row.apply(region.getId, handle)
+      }
     }
 
   override protected def getPartitions: Array[Partition] = {
