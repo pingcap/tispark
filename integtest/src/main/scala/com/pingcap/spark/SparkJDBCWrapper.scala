@@ -65,7 +65,6 @@ class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
       .option("user", jdbcUsername)
       .option("driver", "com.mysql.jdbc.Driver")
       .load()
-      .cache()
       .createOrReplaceTempView(viewName)
   }
 
