@@ -54,6 +54,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected lazy val spark = new SparkWrapper()
   protected lazy val spark_jdbc = new SparkJDBCWrapper(prop)
 
+  private val eps = 1.0e-6
+
   protected var testsFailed = 0
   protected var testsExecuted = 0
   protected var testsSkipped = 0
@@ -629,9 +631,11 @@ class TestCase(val prop: Properties) extends LazyLogging {
       new SimpleDateFormat("yy-MM-dd HH:mm:ss").format(value)
     }
 
-    def compValue(lhs: Any, rhs: Any): Boolean = rhs match {
+    def compValue(lhs: Any, rhs: Any): Boolean = lhs match {
       case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
-        Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
+        val l = toDouble(lhs)
+        val r = toDouble(rhs)
+        Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps || lhs.toString == rhs.toString
       case _: Number | _: BigInt | _: java.math.BigInteger =>
         toInteger(lhs) == toInteger(rhs)
       case _: Timestamp =>
