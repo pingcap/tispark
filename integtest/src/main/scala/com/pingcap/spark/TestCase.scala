@@ -632,17 +632,21 @@ class TestCase(val prop: Properties) extends LazyLogging {
       new SimpleDateFormat("yy-MM-dd HH:mm:ss").format(value)
     }
 
-    def compValue(lhs: Any, rhs: Any): Boolean = lhs match {
-      case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
-        val l = toDouble(lhs)
-        val r = toDouble(rhs)
-        Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps || lhs.toString == rhs.toString
-      case _: Number | _: BigInt | _: java.math.BigInteger =>
-        toInteger(lhs) == toInteger(rhs)
-      case _: Timestamp =>
-        toString(lhs) == toString(rhs)
-      case _ =>
-        lhs == rhs || lhs.toString == rhs.toString
+    def compValue(lhs: Any, rhs: Any): Boolean = {
+      if (lhs == rhs || lhs.toString == rhs.toString) {
+        true
+      } else lhs match {
+        case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
+          val l = toDouble(lhs)
+          val r = toDouble(rhs)
+          Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
+        case _: Number | _: BigInt | _: java.math.BigInteger =>
+          toInteger(lhs) == toInteger(rhs)
+        case _: Timestamp =>
+          toString(lhs) == toString(rhs)
+        case _ =>
+          false
+      }
     }
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {
