@@ -63,20 +63,12 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
       NamedExpression.newExprId
     )
 
-    val shuffleExchange = ShuffleExchange(
-      HashPartitioning(
-        /* region id */ Seq(handlePlan.output.head),
-        numShufflePartitions
-      ),
-      handlePlan
-    )
-
     val sortAgg = AggUtils
       .planAggregateWithoutPartial(
         Seq(handlePlan.attributeRef.head),
         Seq(aggExpr),
         Seq(handlePlan.output.head, aggExpr.resultAttribute),
-        shuffleExchange
+        handlePlan
       )
       .head
 
