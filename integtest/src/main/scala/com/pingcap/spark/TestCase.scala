@@ -54,6 +54,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected lazy val spark = new SparkWrapper()
   protected lazy val spark_jdbc = new SparkJDBCWrapper(prop)
 
+  private val eps = 1.0e-6
+
   protected var testsFailed = 0
   protected var testsExecuted = 0
   protected var testsSkipped = 0
@@ -250,6 +252,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       val spark = execSpark(sql)
       val result = compResult(spark_jdbc, spark)
       if (!result) {
+        testsFailed += 1
         printDiffSparkJDBC(s"$dbName.$file", sql, spark_jdbc, spark)
       }
       testsExecuted += 1
@@ -629,10 +632,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
       new SimpleDateFormat("yy-MM-dd HH:mm:ss").format(value)
     }
 
-    def compValue(lhs: Any, rhs: Any): Boolean =
-      if (lhs == rhs || lhs.toString.eq(rhs.toString)) {
+    def compValue(lhs: Any, rhs: Any): Boolean = {
+      if (lhs == rhs || lhs.toString == rhs.toString) {
         true
-      } else rhs match {
+      } else lhs match {
         case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
           val l = toDouble(lhs)
           val r = toDouble(rhs)
@@ -641,8 +644,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
           toInteger(lhs) == toInteger(rhs)
         case _: Timestamp =>
           toString(lhs) == toString(rhs)
-        case _ => false
+        case _ =>
+          false
       }
+    }
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {
       if (lhs == null && rhs == null) {
