@@ -18,10 +18,13 @@ package com.pingcap.tispark
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
-import org.apache.spark.sql.{SQLContext, execution}
-import org.apache.spark.sql.catalyst.expressions.{Alias, NamedExpression}
+import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
+import org.apache.spark.sql.catalyst.plans.physical.HashPartitioning
 import org.apache.spark.sql.execution._
+import org.apache.spark.sql.execution.aggregate.AggUtils
+import org.apache.spark.sql.execution.exchange.ShuffleExchange
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
@@ -42,7 +45,9 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     new TiRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
   }
 
-  def logicalPlanToHandlePlan(dagRequest: TiDAGRequest): SparkPlan = {
+  def logicalPlanToRegionHandlePlan(dagRequest: TiDAGRequest,
+                                    numShufflePartitions: Int,
+                                    output: Seq[Attribute]): SparkPlan = {
     val ts: TiTimestamp = session.getTimestamp
     dagRequest.setStartTs(ts.getVersion)
     dagRequest.resolve()
@@ -50,23 +55,39 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
       new TiHandleRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
     val handlePlan = HandleRDDExec(tiHandleRDD)
     val aggFunc = CollectSet(handlePlan.attributeRef.last)
+
     val aggExpr = AggregateExpression(
       aggFunc,
       Complete,
       isDistinct = true,
       NamedExpression.newExprId
     )
-    aggregate.AggUtils
-      .planAggregateWithoutPartial(
+
+    val shuffleExchange = ShuffleExchange(
+      HashPartitioning(
+        /* region id */ Seq(handlePlan.output.head),
+        numShufflePartitions
+      ),
+      handlePlan
+    )
+
+    val sortAgg = AggUtils
+      .planAggregateWithoutDistinct(
         Seq(handlePlan.attributeRef.head),
         Seq(aggExpr),
-        Seq(aggExpr.resultAttribute, handlePlan.output.head),
-        ShuffleHandleExec(
-          handlePlan,
-          dagRequest,
-          session.getConf
-        )
+        Seq(handlePlan.output.head, aggExpr.resultAttribute),
+        shuffleExchange
       )
       .head
+
+    RegionTaskExec(
+      sortAgg,
+      output,
+      dagRequest,
+      session.getConf,
+      session.getTimestamp,
+      session,
+      sqlContext.sparkSession
+    )
   }
 }

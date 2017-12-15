@@ -92,22 +92,6 @@ class TiRDD(val dagRequest: TiDAGRequest,
         conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt
       )
 
-    if (dagRequest.isIndexScan) {
-      val handleRDD = new TiHandleRDD(dagRequest, tiConf, tableRef, ts, session, sparkSession)
-      val handleNum = handleRDD.cache().count()
-      println(s"Handle Num:$handleNum")
-      val handleList = new TLongArrayList()
-      handleRDD.collect().foreach(row => handleList.add(row.getLong(0)))
-      keyWithRegionTasks = RangeSplitter
-        .newSplitter(session.getRegionManager)
-        .splitHandlesByRegion(
-          dagRequest.getTableInfo.getId,
-          handleList
-        )
-      println("RegionTasks size:" + keyWithRegionTasks.size())
-      dagRequest.clearIndexInfo()
-    }
-
     val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
     with mutable.MultiMap[String, RegionTask]
