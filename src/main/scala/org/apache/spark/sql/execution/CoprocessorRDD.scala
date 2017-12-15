@@ -15,6 +15,8 @@
 
 package org.apache.spark.sql.execution
 
+import java.util.logging.Logger
+
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
@@ -115,6 +117,8 @@ case class RegionTaskExec(child: SparkPlan,
                           @transient private val sparkSession: SparkSession)
     extends UnaryExecNode {
 
+  private val logger = Logger.getLogger(getClass.getName)
+
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
     "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of collected handles"),
@@ -148,12 +152,12 @@ case class RegionTaskExec(child: SparkPlan,
               handleList
             )
           numHandles += handles.length
-          println("Handle.size():" + handles.length)
+          logger.info("Handle.size():" + handles.length)
           numRegionTasks += keyWithRegionTasks.size()
-          println("KeyWithRegionTasks.size():" + keyWithRegionTasks.size())
+          logger.info("KeyWithRegionTasks.size():" + keyWithRegionTasks.size())
           val firstTask = keyWithRegionTasks.head
-          println(
-            s"RegionTask=>Host:${firstTask.getHost},RegionId:${firstTask.getRegion},StoreId:${firstTask.getStore}"
+          logger.info(
+            s"RegionTask=>Host:${firstTask.getHost},RegionId:${firstTask.getRegion.getId},Store:{id=${firstTask.getStore.getId},addr=${firstTask.getStore.getAddress}}"
           )
           val snapshot = session.createSnapshot(ts)
           val iterator =
