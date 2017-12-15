@@ -72,7 +72,7 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     )
 
     val sortAgg = AggUtils
-      .planAggregateWithoutDistinct(
+      .planAggregateWithoutPartial(
         Seq(handlePlan.attributeRef.head),
         Seq(aggExpr),
         Seq(handlePlan.output.head, aggExpr.resultAttribute),
