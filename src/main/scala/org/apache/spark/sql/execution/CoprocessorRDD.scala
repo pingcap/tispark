@@ -117,8 +117,6 @@ case class RegionTaskExec(child: SparkPlan,
                           @transient private val sparkSession: SparkSession)
     extends UnaryExecNode {
 
-  private val logger = Logger.getLogger(getClass.getName)
-
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
     "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of collected handles"),
@@ -139,6 +137,7 @@ case class RegionTaskExec(child: SparkPlan,
       .execute()
       .mapPartitionsWithIndexInternal { (index, iter) =>
         iter.flatMap { row =>
+          val logger = Logger.getLogger(getClass.getName)
           val handles = row.getArray(1).toLongArray()
           val session = TiSessionCache.getSession(appId, tiConf)
           val handleList = new TLongArrayList()
