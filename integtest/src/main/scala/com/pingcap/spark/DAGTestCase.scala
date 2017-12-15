@@ -14,36 +14,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     "select tp_date,tp_datetime from full_data_type_table  where tp_date = tp_datetime order by id_dt  limit 20",
     "select tp_date,tp_datetime from full_data_type_table  where tp_date < tp_datetime order by id_dt  limit 20"
   )
-  private val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
-  private val arithmeticOpList = List("+", "-", "*", "/", "%")
-  private val LEFT_TB_NAME = "A"
-  private val RIGHT_TB_NAME = "B"
-  private val TABLE_NAME = "full_data_type_table"
-  private val LITERAL_NULL = "null"
-  private val SCALE_FACTOR = 4 * 4
-  private val ID_COL = "id_dt"
-  private val ARITHMETIC_CONSTANT = List[String](
-    java.lang.Long.MAX_VALUE.toString,
-    java.lang.Long.MIN_VALUE.toString,
-    java.lang.Double.MAX_VALUE.toString,
-    java.lang.Double.MIN_VALUE.toString,
-    3.14159265358979D.toString,
-    "2.34E10",
-    java.lang.Integer.MAX_VALUE.toString,
-    java.lang.Integer.MIN_VALUE.toString,
-    java.lang.Short.MAX_VALUE.toString,
-    java.lang.Short.MIN_VALUE.toString,
-    java.lang.Byte.MAX_VALUE.toString,
-    java.lang.Byte.MIN_VALUE.toString,
-    "0",
-    BigDecimal.apply(2147868.65536).toString() // Decimal value
-  )
-  private val PLACE_HOLDER = List[String](
-    LITERAL_NULL, // Null
-    "'PingCAP'", // a simple test string
-    "'2043-11-28'",
-    "'2017-09-07 11:11:11'"
-  ) ++ ARITHMETIC_CONSTANT
+
   private var colList: List[String] = _
 
   // TODO: Eliminate these bugs
