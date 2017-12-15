@@ -148,9 +148,13 @@ case class RegionTaskExec(child: SparkPlan,
               handleList
             )
           numHandles += handles.length
-          println("\nHandle.size():" + handles.length)
+          println("Handle.size():" + handles.length)
           numRegionTasks += keyWithRegionTasks.size()
-          println("\nKeyWithRegionTasks.size():" + keyWithRegionTasks.size())
+          println("KeyWithRegionTasks.size():" + keyWithRegionTasks.size())
+          val firstTask = keyWithRegionTasks.head
+          println(
+            s"RegionTask=>Host:${firstTask.getHost},RegionId:${firstTask.getRegion},StoreId:${firstTask.getStore}"
+          )
           val snapshot = session.createSnapshot(ts)
           val iterator =
             snapshot.tableRead(dagRequest, keyWithRegionTasks)
