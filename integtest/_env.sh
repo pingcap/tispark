@@ -242,6 +242,7 @@ rename_result_files_no_tpch() {
         [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}"
         # break
     done
+    echo "renamed files to TestNoTPCH"
 }
 
 rename_result_files_dag() {
@@ -257,6 +258,7 @@ rename_result_files_dag() {
         [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}"
         # break
     done
+    echo "renamed files to TestDAG"
 }
 
 rename_result_files_tpch() {
@@ -272,4 +274,5 @@ rename_result_files_tpch() {
         [ -e "$f" ] && mv "$f" "${f/tpch_test/TestTPCH}"
         # break
     done
+    echo "renamed files to TestTPCH"
 }

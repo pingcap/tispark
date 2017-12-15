@@ -18,15 +18,12 @@ package com.pingcap.tispark
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
-import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.expression.{ExpressionBlacklist, TiExpr}
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
-import com.pingcap.tispark.handler.CacheInvalidateEventHandler
-import com.pingcap.tispark.listener.{CacheListenerManager, PDCacheInvalidateListener}
+import com.pingcap.tispark.listener.CacheListenerManager
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
