@@ -16,8 +16,7 @@
 package org.apache.spark.sql.execution
 
 import java.util
-import java.util.concurrent.{Callable, ExecutorCompletionService, Executors}
-import java.util.logging.Logger
+import java.util.concurrent.{Callable, ExecutorCompletionService}
 
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
@@ -28,6 +27,7 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.TiSessionCache
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
+import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
@@ -39,7 +39,6 @@ import org.apache.spark.sql.types.{LongType, Metadata}
 import org.apache.spark.sql.{Row, SparkSession}
 
 import scala.collection.JavaConversions._
-import scala.concurrent.{ExecutionContext, Future, blocking}
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
 
@@ -145,9 +144,7 @@ case class RegionTaskExec(child: SparkPlan,
           val session = TiSessionCache.getSession(appId, tiConf)
           val handleIterator: util.Iterator[Long] = handles.iterator
           var batchCount = 0
-          val batchSize = session.getConf.getIndexScanRegionBatch
-//          val batchSize = 500
-//          val executorCtx = ExecutionContext.fromExecutor(session.getThreadPoolForIndexScan)
+          val batchSize = session.getConf.getIndexScanBatchSize
 
           val completionService =
             new ExecutorCompletionService[util.Iterator[TiRow]](session.getThreadPoolForIndexScan)
@@ -176,33 +173,53 @@ case class RegionTaskExec(child: SparkPlan,
             Row.fromSeq(rowArray)
           }
 
-          dagRequest.clearIndexInfo()
-          while (handleIterator.hasNext) {
-            val handleList = feedBatch()
-            batchCount += 1
-            val task = new Callable[util.Iterator[TiRow]] {
-              override def call(): util.Iterator[TiRow] = {
-                val tasks = RangeSplitter
-                  .newSplitter(session.getRegionManager)
-                  .splitHandlesByRegion(
-                    dagRequest.getTableInfo.getId,
-                    handleList
-                  )
-                numHandles += handleList.size()
-                logger.info("Mini batch handles size:" + handleList.size())
-                numRegionTasks += tasks.size()
-                logger.info("Mini batch RegionTasks size:" + tasks.size())
-                val firstTask = tasks.head
-                logger.info(
-                  s"Mini batch first RegionTask=>Host:${firstTask.getHost}," +
-                    s"RegionId:${firstTask.getRegion.getId}," +
-                    s"Store:{id=${firstTask.getStore.getId},addr=${firstTask.getStore.getAddress}}"
-                )
+          def isDowngrade: Boolean = {
+            handles.length > session.getConf.getRegionIndexScanDowngradeThreshold
+          }
 
-                CoprocessIterator.getRowIterator(dagRequest, tasks, session)
-              }
+          // Downgrade to full table scan for a region
+          if (isDowngrade) {
+            dagRequest.resetRanges(dagRequest.getDownGradeRanges)
+            dagRequest.resetFilters(dagRequest.getDowngradeFilters)
+            val tasks = RangeSplitter
+              .newSplitter(session.getRegionManager)
+              .splitRangeByRegion(null)
+            numRegionTasks += tasks.size()
+
+            logger.warn(s"Index scan downgrade to table scan with ${tasks.size()} region tasks")
+            if (tasks.size() == 1) {
+              logger.info(s"Unary task downgraded,Task=${tasks.head}")
             }
-            completionService.submit(task)
+            rowIterator = CoprocessIterator.getRowIterator(dagRequest, tasks, session)
+          } else {
+            dagRequest.clearIndexInfo()
+            while (handleIterator.hasNext) {
+              val handleList = feedBatch()
+              batchCount += 1
+              val task = new Callable[util.Iterator[TiRow]] {
+                override def call(): util.Iterator[TiRow] = {
+                  val tasks = RangeSplitter
+                    .newSplitter(session.getRegionManager)
+                    .splitHandlesByRegion(
+                      dagRequest.getTableInfo.getId,
+                      handleList
+                    )
+                  numHandles += handleList.size()
+                  logger.info("Single batch handles size:" + handleList.size())
+                  numRegionTasks += tasks.size()
+                  logger.info("Single batch RegionTasks size:" + tasks.size())
+                  val firstTask = tasks.head
+                  logger.info(
+                    s"Single batch first RegionTask={Host:${firstTask.getHost}," +
+                      s"RegionId:${firstTask.getRegion.getId}," +
+                      s"Store:{id=${firstTask.getStore.getId},addr=${firstTask.getStore.getAddress}}}"
+                  )
+
+                  CoprocessIterator.getRowIterator(dagRequest, tasks, session)
+                }
+              }
+              completionService.submit(task)
+            }
           }
 
           val resultIter = new util.Iterator[UnsafeRow] {
@@ -254,7 +271,7 @@ case class RegionTaskExec(child: SparkPlan,
   }
 
   override def verboseString: String = {
-    s"TiSpark $nodeName{range=${dagRequest.getRanges.toSeq.map(KeyRangeUtils.toString)}}"
+    s"TiSpark $nodeName{indexRange=${dagRequest.getRanges.map(KeyRangeUtils.toString).mkString("(", ",", ")")}}"
   }
 
   override def simpleString: String = verboseString
