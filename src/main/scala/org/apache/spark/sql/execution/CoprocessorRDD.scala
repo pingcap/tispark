@@ -221,7 +221,7 @@ case class RegionTaskExec(child: SparkPlan,
             logger.info(
               s"Unary task downgraded, task info:Host={${task.getHost}}, " +
                 s"Region={${task.getRegion}}, " +
-                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}"
+                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}"
             )
             val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
             with mutable.MultiMap[String, RegionTask]
@@ -251,6 +251,8 @@ case class RegionTaskExec(child: SparkPlan,
                   CoprocessIterator.getRowIterator(dagRequest, taskList, session)
                 }
               }
+              // TODO: may need to use other completionService rather than index scan's
+              // Still, is okay to do like this.
               completionService.submit(task)
             })
           } else {
