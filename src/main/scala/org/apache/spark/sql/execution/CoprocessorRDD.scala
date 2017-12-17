@@ -127,7 +127,7 @@ case class RegionTaskExec(child: SparkPlan,
 
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
-    "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of collected handles"),
+    "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of handles used in double scan"),
     "numRegionTasks" -> SQLMetrics.createMetric(sparkContext, "number of executed region tasks")
   )
 
@@ -243,6 +243,7 @@ case class RegionTaskExec(child: SparkPlan,
               result.append(tasks.toSeq)
               index += 1
             }
+            numRegionTasks += result.size
 
             result.foreach(taskList => {
               taskCount += 1
