@@ -17,7 +17,9 @@ package org.apache.spark.sql.execution
 
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
+import scala.reflect._
 
+import com.google.common.collect.Range
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.iterator.CoprocessIterator
@@ -40,6 +42,7 @@ import org.apache.spark.sql.types.{LongType, Metadata}
 import org.apache.spark.sql.{Row, SparkSession}
 
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
@@ -214,7 +217,7 @@ case class RegionTaskExec(child: SparkPlan,
 
             tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
-              .splitRangeByRegion(tasks.head.getRanges)
+              .splitRangeByRegion(KeyRangeUtils.mergeRanges(tasks.head.getRanges))
             proceedTasksOrThrow(tasks)
 
             val task = tasks.head
