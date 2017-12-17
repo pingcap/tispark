@@ -38,6 +38,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
                   @transient private val session: TiSession,
                   @transient private val sparkSession: SparkSession)
     extends RDD[Row](sparkSession.sparkContext, Nil) {
+  var lastHandelReadTimeMs: Long = 0
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] =
     new Iterator[Row] {
@@ -54,7 +55,9 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
 
       override def next(): Row = {
         val regionManager = session.getRegionManager
+        val start = System.currentTimeMillis()
         val handle = iterator.next()
+        lastHandelReadTimeMs = System.currentTimeMillis() - start
         val key = TableCodec.encodeRowKeyWithHandleBytes(tableId, handle)
         val region = regionManager.getRegionByKey(ByteString.copyFrom(key))
 

@@ -75,7 +75,8 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   override val nodeName: String = "HandleRDD"
 
   override lazy val metrics = Map(
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of selected handles")
+    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of selected handles"),
+    "handleReadTime" -> SQLMetrics.createMetric(sparkContext, "time of handles selection in ms")
   )
 
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
@@ -85,11 +86,13 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
+    val handleReadTime = longMetric("handleReadTime")
 
     internalRDD.mapPartitionsWithIndexInternal { (index, iter) =>
       val proj = UnsafeProjection.create(schema)
       proj.initialize(index)
       iter.map { r =>
+        handleReadTime += tiHandleRDD.lastHandelReadTimeMs
         numOutputRows += 1
         proj(r)
       }
@@ -176,6 +179,8 @@ case class RegionTaskExec(child: SparkPlan,
           def isDowngrade: Boolean = {
             handles.length > session.getConf.getRegionIndexScanDowngradeThreshold
           }
+          // We need to clear index info in order to perform table scan
+          dagRequest.clearIndexInfo()
 
           // Downgrade to full table scan for a region
           if (isDowngrade) {
@@ -192,7 +197,6 @@ case class RegionTaskExec(child: SparkPlan,
             }
             rowIterator = CoprocessIterator.getRowIterator(dagRequest, tasks, session)
           } else {
-            dagRequest.clearIndexInfo()
             while (handleIterator.hasNext) {
               val handleList = feedBatch()
               batchCount += 1
@@ -224,8 +228,8 @@ case class RegionTaskExec(child: SparkPlan,
 
           val resultIter = new util.Iterator[UnsafeRow] {
             override def hasNext: Boolean = {
-              // RowIter has not been initialized
-              if (rowIterator == null) {
+
+              def proceedNextBatchTask(): Boolean = {
                 // For each batch fetch job, we get the first rowIterator with row data
                 while (batchCount > 0) {
                   rowIterator = completionService.take().get()
@@ -238,21 +242,16 @@ case class RegionTaskExec(child: SparkPlan,
                 }
                 // No rowIterator in any remaining batch fetch jobs contains data, return false
                 false
+              }
+
+              // RowIter has not been initialized
+              if (rowIterator == null) {
+                proceedNextBatchTask()
               } else {
                 if (rowIterator.hasNext) {
                   return true
                 }
-                // Current rowIterator ran out of data, proceed to next rowIterator
-                while (batchCount > 0) {
-                  rowIterator = completionService.take().get()
-                  batchCount -= 1
-
-                  if (rowIterator.hasNext) {
-                    return true
-                  }
-                }
-                // No rowIterator in any remaining batch fetch jobs contains data, return false
-                false
+                proceedNextBatchTask()
               }
             }
 
