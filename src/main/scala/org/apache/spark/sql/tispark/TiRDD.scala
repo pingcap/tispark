@@ -85,7 +85,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
 
   override protected def getPartitions: Array[Partition] = {
     val conf = sparkSession.conf
-    var keyWithRegionTasks: mutable.Seq[RangeSplitter.RegionTask] = RangeSplitter
+    val keyWithRegionTasks = RangeSplitter
       .newSplitter(session.getRegionManager)
       .splitRangeByRegion(
         dagRequest.getRanges,
