@@ -188,7 +188,7 @@ case class RegionTaskExec(child: SparkPlan,
             dagRequest.resetFilters(dagRequest.getDowngradeFilters)
             val tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
-              .splitRangeByRegion(null)
+              .splitRangeByRegion(dagRequest.getRanges)
             numRegionTasks += tasks.size()
 
             logger.warn(s"Index scan downgrade to table scan with ${tasks.size()} region tasks")
