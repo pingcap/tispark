@@ -60,10 +60,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toBoolean
   }
 
-  def numShufflePartitions(): Int = {
-    sqlConf.numShufflePartitions
-  }
-
   def pushDownType(): PushDownType = {
     if (useStreamingProcess()) {
       PushDownType.STREAMING
@@ -90,22 +86,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     if (dagRequest.getFields.isEmpty) {
       dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
-    val tiRdd = source.logicalPlanToRDD(dagRequest)
 
-    CoprocessorRDD(output, tiRdd)
-  }
-
-  private def toHandleRDD(source: TiDBRelation,
-                          output: Seq[Attribute],
-                          dagRequest: TiDAGRequest): SparkPlan = {
-    val table = source.table
-    dagRequest.setTableInfo(table)
-    if (dagRequest.getFields.isEmpty) {
-      dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
+    if (dagRequest.isIndexScan) {
+      source.logicalPlanToRegionHandlePlan(dagRequest, output)
+    } else {
+      val tiRdd = source.logicalPlanToRDD(dagRequest)
+      CoprocessorRDD(output, tiRdd)
     }
-
-    source.logicalPlanToRegionHandlePlan(dagRequest, numShufflePartitions(), output)
-//    SortExec(tiHandleRDD.outputOrdering, global = true, child = tiHandleRDD)
   }
 
   def aggregationToDAGRequest(
@@ -262,13 +249,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
       projectSeq.foreach(attr => dagRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
-      if (dagRequest.isIndexScan) {
-        val scan = toHandleRDD(source, projectSeq, dagRequest)
-        residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
-      } else {
-        val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
-        residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
-      }
+      val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
+      residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic

@@ -45,9 +45,7 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     new TiRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
   }
 
-  def logicalPlanToRegionHandlePlan(dagRequest: TiDAGRequest,
-                                    numShufflePartitions: Int,
-                                    output: Seq[Attribute]): SparkPlan = {
+  def logicalPlanToRegionHandlePlan(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
     val ts: TiTimestamp = session.getTimestamp
     dagRequest.setStartTs(ts.getVersion)
     dagRequest.resolve()
