@@ -586,7 +586,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     if (dbName.equalsIgnoreCase("test_index")) {
       testAndCalc(new TestIndex(prop), dbName, testCases)
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
-//      testAndCalc(new DAGTestCase(prop), dbName, testCases)
+      testAndCalc(new DAGTestCase(prop), dbName, testCases)
     } else if (dbName.equalsIgnoreCase("issue_test")) {
       testAndCalc(new IssueTestCase(prop), dbName, testCases)
     } else {
