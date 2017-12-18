@@ -34,6 +34,35 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
   override protected val compareOpList = List("=", "<", ">", "<=", ">=")
   override protected val arithmeticOpList = List()
 
+  protected val ARITHMETIC_CONSTANT: List[String] = List[String](
+    java.lang.Long.MAX_VALUE.toString,
+    java.lang.Long.MIN_VALUE.toString,
+    java.lang.Double.MAX_VALUE.toString,
+    java.lang.Double.MIN_VALUE.toString,
+    3.14159265358979D.toString,
+    "2.34E10",
+    java.lang.Integer.MAX_VALUE.toString,
+    java.lang.Integer.MIN_VALUE.toString,
+    java.lang.Short.MAX_VALUE.toString,
+    java.lang.Short.MIN_VALUE.toString,
+    java.lang.Byte.MAX_VALUE.toString,
+    java.lang.Byte.MIN_VALUE.toString,
+    "0",
+    BigDecimal.apply(2147868.65536).toString() // Decimal value
+  )
+  protected val PLACE_HOLDER: List[String] = List[String](
+    LITERAL_NULL, // Null
+    "'PingCAP'", // a simple test string
+    "'2017-10-30'",
+    "'0af51329-d907-4199-9bb0-8a99e09b8271'",
+    "'2017-11-02 00:00:00'",
+    "'2017-11-02'",
+    "'2017-11-02 08:47:43'",
+    "'2017'",
+    "'oHQKaFHQ7N'",
+    "'Q1GHo'"
+  ) ++ ARITHMETIC_CONSTANT
+
   // TODO: Eliminate these bugs
   private final val colSkipSet: ImmutableSet[String] =
     ImmutableSet.builder()
@@ -107,11 +136,11 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     prepareTestCol()
     testIndex()
     testFullDataTable(
-        createArithmeticTest ++
-        createPlaceHolderTest ++
-        createInTest ++
-        createBetween
-//        createAggregate
+        createPlaceHolderTest
+//        ++ createDoublePlaceHolderTest
+        ++ createInTest
+        ++ createBetween
+        ++ createAggregate
     )
   }
 
@@ -130,10 +159,9 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
       colSet.map((rCol: String) =>
         select(lCol, rCol) + where(
           binaryOpWithName(
-            binaryOpWithName(lCol, rCol, "=", withTbName = false),
-            binaryOpWithName(lCol, "0", ">", withTbName = false),
-            op,
-            withTbName = false
+            binaryOpWithName(lCol, rCol, "="),
+            binaryOpWithName(lCol, "0", ">"),
+            op
           ))
       )).toList
   }
@@ -142,32 +170,32 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
   // ******************************** Below is test cases generated ********************************
 
   def createBetween(): List[String] = List(
-    select("tp_int") + where(binaryOpWithName("tp_int", "-1202333 and 601508558", "between", withTbName = false) + orderBy(ID_COL)),
-    select("tp_bigint") + where(binaryOpWithName("tp_bigint", "-2902580959275580308 and 9223372036854775807", "between", withTbName = false) + orderBy(ID_COL)),
-    select("tp_decimal") + where(binaryOpWithName("tp_decimal", "2 and 200", "between", withTbName = false) + orderBy(ID_COL)),
-    select("tp_double") + where(binaryOpWithName("tp_double", "0.2054466 and 3.1415926", "between", withTbName = false) + orderBy(ID_COL)),
-    select("tp_float") + where(binaryOpWithName("tp_double", "-313.1415926 and 30.9412022", "between", withTbName = false) + orderBy(ID_COL)),
-    select("tp_datetime") + where(binaryOpWithName("tp_datetime", "'2043-11-28 00:00:00' and '2017-09-07 11:11:11'", "between", withTbName = false) + orderBy(ID_COL)),
-    select("tp_date") + where(binaryOpWithName("tp_date", "'2017-11-02' and '2043-11-28'", "between", withTbName = false) + orderBy(ID_COL)),
-    select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "815587200000 and 1511862599000", "between", withTbName = false) + orderBy(ID_COL)),
-    select("tp_year") + where(binaryOpWithName("tp_year", "1993 and 2017", "between", withTbName = false) + orderBy(ID_COL)),
-    select("tp_real") + where(binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between", withTbName = false) + orderBy(ID_COL))
+    select("tp_int") + where(binaryOpWithName("tp_int", "-1202333 and 601508558", "between") + orderBy(ID_COL)),
+    select("tp_bigint") + where(binaryOpWithName("tp_bigint", "-2902580959275580308 and 9223372036854775807", "between") + orderBy(ID_COL)),
+    select("tp_decimal") + where(binaryOpWithName("tp_decimal", "2 and 200", "between") + orderBy(ID_COL)),
+    select("tp_double") + where(binaryOpWithName("tp_double", "0.2054466 and 3.1415926", "between") + orderBy(ID_COL)),
+    select("tp_float") + where(binaryOpWithName("tp_double", "-313.1415926 and 30.9412022", "between") + orderBy(ID_COL)),
+    select("tp_datetime") + where(binaryOpWithName("tp_datetime", "'2043-11-28 00:00:00' and '2017-09-07 11:11:11'", "between") + orderBy(ID_COL)),
+    select("tp_date") + where(binaryOpWithName("tp_date", "'2017-11-02' and '2043-11-28'", "between") + orderBy(ID_COL)),
+    select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "815587200000 and 1511862599000", "between") + orderBy(ID_COL)),
+    select("tp_year") + where(binaryOpWithName("tp_year", "1993 and 2017", "between") + orderBy(ID_COL)),
+    select("tp_real") + where(binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between") + orderBy(ID_COL))
   )
 
   def createAggregate(): List[String] = colSet.map((str: String) => select(str) + groupBy(str) + orderBy(str)).toList
 
   def createInTest(): List[String] = List(
-    select("tp_int") + where(binaryOpWithName("tp_int", "(2333, 601508558, 4294967296, 4294967295)", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_bigint") + where(binaryOpWithName("tp_bigint", "(122222, -2902580959275580308, 9223372036854775807, 9223372036854775808)", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_varchar") + where(binaryOpWithName("tp_varchar", "('nova', 'a948ddcf-9053-4700-916c-983d4af895ef')", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_decimal") + where(binaryOpWithName("tp_decimal", "(2, 3, 4)", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_double") + where(binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_float") + where(binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_datetime") + where(binaryOpWithName("tp_datetime", "('2043-11-28 00:00:00','2017-09-07 11:11:11','1986-02-03 00:00:00')", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_date") + where(binaryOpWithName("tp_date", "('2017-11-02', '2043-11-28 00:00:00')", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "('2017-11-02 16:48:01')", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in", withTbName = false) + orderBy(ID_COL)),
-    select("tp_real") + where(binaryOpWithName("tp_real", "(4.44,0.5194052764001038)", "in", withTbName = false) + orderBy(ID_COL))
+    select("tp_int") + where(binaryOpWithName("tp_int", "(2333, 601508558, 4294967296, 4294967295)", "in") + orderBy(ID_COL)),
+    select("tp_bigint") + where(binaryOpWithName("tp_bigint", "(122222, -2902580959275580308, 9223372036854775807, 9223372036854775808)", "in") + orderBy(ID_COL)),
+    select("tp_varchar") + where(binaryOpWithName("tp_varchar", "('nova', 'a948ddcf-9053-4700-916c-983d4af895ef')", "in") + orderBy(ID_COL)),
+    select("tp_decimal") + where(binaryOpWithName("tp_decimal", "(2, 3, 4)", "in") + orderBy(ID_COL)),
+    select("tp_double") + where(binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in") + orderBy(ID_COL)),
+    select("tp_float") + where(binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in") + orderBy(ID_COL)),
+    select("tp_datetime") + where(binaryOpWithName("tp_datetime", "('2043-11-28 00:00:00','2017-09-07 11:11:11','1986-02-03 00:00:00')", "in") + orderBy(ID_COL)),
+    select("tp_date") + where(binaryOpWithName("tp_date", "('2017-11-02', '2043-11-28 00:00:00')", "in") + orderBy(ID_COL)),
+    select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "('2017-11-02 16:48:01')", "in") + orderBy(ID_COL)),
+    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in") + orderBy(ID_COL)),
+    select("tp_real") + where(binaryOpWithName("tp_real", "(4.44,0.5194052764001038)", "in") + orderBy(ID_COL))
   )
 
   /**
@@ -175,26 +203,6 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     *
     * @return
     */
-  def createArithmeticTest: List[String] = {
-    var res = ArrayBuffer.empty[String]
-    val skipLocalSet = mutable.Set[String]()
-    skipLocalSet.add("tp_nvarchar")
-    skipLocalSet.add("tp_varchar")
-    skipLocalSet.add("tp_char")
-    for (op <- arithmeticOpList) {
-      for (lCol <- colSet) {
-        if (!skipLocalSet.contains(lCol)) {
-          for (rCol <- ARITHMETIC_CONSTANT) {
-            if (!colSkipSet.contains(rCol)) {
-              res += select(arithmeticOp(lCol, rCol, op)) + orderBy(ID_COL) + limit(10)
-            }
-          }
-        }
-      }
-    }
-
-    res.toList
-  }
 
   def createPlaceHolderTest: List[String] = {
     var res = ArrayBuffer.empty[String]
@@ -220,11 +228,52 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
               res += select() + where(binaryOpWithName(
                 col,
                 placeHolder,
-                op,
-                withTbName = false
+                op
               ))
             }
           }
+      }
+    }
+
+    res.toList
+  }
+
+  def createDoublePlaceHolderTest: List[String] = {
+    var res = ArrayBuffer.empty[String]
+    val skipLocalSet = mutable.Set[String]()
+    skipLocalSet.add("tp_nvarchar")
+    skipLocalSet.add("tp_varchar")
+    skipLocalSet.add("tp_char")
+
+    val arithmeticSkipSet = mutable.Set[String]()
+    arithmeticSkipSet.add("int")
+    arithmeticSkipSet.add("float")
+    arithmeticSkipSet.add("decimal")
+    arithmeticSkipSet.add("double")
+    arithmeticSkipSet.add("real")
+    arithmeticSkipSet.add("bit")
+    arithmeticSkipSet.add(ID_COL)
+
+    for (op <- compareOpList) {
+      for (col <- colSet) if (!skipLocalSet.contains(col)) {
+        val flag = !arithmeticSkipSet.exists(col.contains(_))
+        for (placeHolder <- PLACE_HOLDER) if (!placeHolder.eq("'PingCAP'") || flag) {
+          for (col2 <- colSet) if (!skipLocalSet.contains(col2)) {
+            val flag2 = !arithmeticSkipSet.exists(col2.contains(_))
+            for (placeHolder2 <- PLACE_HOLDER) if (!placeHolder2.eq("'PingCAP'") || flag2) {
+              res += select() + where(
+                binaryOpWithName(
+                  col,
+                  placeHolder,
+                  "=") + " and " +
+                binaryOpWithName(
+                  col2,
+                  placeHolder2,
+                  op)
+              )
+            }
+          }
+        }
       }
     }
 
@@ -269,12 +318,8 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     " where " + condition
   }
 
-  def binaryOpWithName(leftCol: String, rightCol: String, op: String, withTbName: Boolean = true): String = {
-    if (withTbName) {
-      ""
-    } else {
-      leftCol + " " + op + " " + rightCol
-    }
+  def binaryOpWithName(leftCol: String, rightCol: String, op: String): String = {
+    leftCol + " " + op + " " + rightCol
   }
 
   def arithmeticOp(l: String, r: String, op: String): String = {
