@@ -13,6 +13,10 @@ class IssueTestCase(prop: Properties) extends TestCase(prop) {
   /**
     * An example of Tests for issues
     * Use "Test"+"Client"/"Spark"+<IssueNumber> for test name.
+    * Common test includes building test table from TiDB
+    * and retrieving result from TiSpark.
+    * Remember to call refresh() after test data is built or renewed.
+    *
     * @param dbName Name of database, the default is issue_test
     */
   private def TestClient0198(dbName: String): Unit = {
@@ -45,7 +49,6 @@ class IssueTestCase(prop: Properties) extends TestCase(prop) {
 
   override def run(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     databaseName = dbName
-    refresh()
     TestClient0198(dbName)
   }
 
