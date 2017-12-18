@@ -287,12 +287,12 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     skipLocalSet.add("tp_char")
 
     val arithmeticSkipSet = mutable.Set[String]()
-    arithmeticSkipSet.add("int")
-    arithmeticSkipSet.add("float")
-    arithmeticSkipSet.add("decimal")
-    arithmeticSkipSet.add("double")
-    arithmeticSkipSet.add("real")
-    arithmeticSkipSet.add("bit")
+    arithmeticSkipSet.add("tp_int")
+    arithmeticSkipSet.add("tp_float")
+    arithmeticSkipSet.add("tp_decimal")
+    arithmeticSkipSet.add("tp_double")
+    arithmeticSkipSet.add("tp_real")
+    arithmeticSkipSet.add("tp_bit")
     arithmeticSkipSet.add(ID_COL)
 
     for (op <- compareOpList) {

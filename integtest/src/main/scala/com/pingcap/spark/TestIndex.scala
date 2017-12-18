@@ -137,7 +137,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     testIndex()
     testFullDataTable(
         createPlaceHolderTest
-//        ++ createDoublePlaceHolderTest
+        ++ createDoublePlaceHolderTest
         ++ createInTest
         ++ createBetween
         ++ createAggregate
@@ -212,12 +212,11 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     skipLocalSet.add("tp_char")
 
     val arithmeticSkipSet = mutable.Set[String]()
-    arithmeticSkipSet.add("int")
-    arithmeticSkipSet.add("float")
-    arithmeticSkipSet.add("decimal")
-    arithmeticSkipSet.add("double")
-    arithmeticSkipSet.add("real")
-    arithmeticSkipSet.add("bit")
+    arithmeticSkipSet.add("tp_int")
+    arithmeticSkipSet.add("tp_float")
+    arithmeticSkipSet.add("tp_decimal")
+    arithmeticSkipSet.add("tp_double")
+    arithmeticSkipSet.add("tp_real")
     arithmeticSkipSet.add(ID_COL)
 
     for (op <- compareOpList) {
@@ -225,7 +224,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
         if (!skipLocalSet.contains(col))
           for (placeHolder <- PLACE_HOLDER) {
             if (!placeHolder.eq("'PingCAP'") || !arithmeticSkipSet.exists(col.contains(_))) {
-              res += select() + where(binaryOpWithName(
+              res += select(col) + where(binaryOpWithName(
                 col,
                 placeHolder,
                 op
@@ -240,36 +239,29 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
 
   def createDoublePlaceHolderTest: List[String] = {
     var res = ArrayBuffer.empty[String]
-    val skipLocalSet = mutable.Set[String]()
-    skipLocalSet.add("tp_nvarchar")
-    skipLocalSet.add("tp_varchar")
-    skipLocalSet.add("tp_char")
 
-    val arithmeticSkipSet = mutable.Set[String]()
-    arithmeticSkipSet.add("int")
-    arithmeticSkipSet.add("float")
-    arithmeticSkipSet.add("decimal")
-    arithmeticSkipSet.add("double")
-    arithmeticSkipSet.add("real")
-    arithmeticSkipSet.add("bit")
-    arithmeticSkipSet.add(ID_COL)
+    val arithmeticSet = mutable.Set[String]()
+    arithmeticSet.add("tp_int")
+    arithmeticSet.add("tp_float")
+    arithmeticSet.add("tp_decimal")
+    arithmeticSet.add("tp_double")
+    arithmeticSet.add("tp_real")
+    arithmeticSet.add(ID_COL)
 
     for (op <- compareOpList) {
-      for (col <- colSet) if (!skipLocalSet.contains(col)) {
-        val flag = !arithmeticSkipSet.exists(col.contains(_))
-        for (placeHolder <- PLACE_HOLDER) if (!placeHolder.eq("'PingCAP'") || flag) {
-          for (col2 <- colSet) if (!skipLocalSet.contains(col2)) {
-            val flag2 = !arithmeticSkipSet.exists(col2.contains(_))
-            for (placeHolder2 <- PLACE_HOLDER) if (!placeHolder2.eq("'PingCAP'") || flag2) {
-              res += select() + where(
+      for (col <- arithmeticSet) {
+        for (placeHolder <- ARITHMETIC_CONSTANT) {
+          for (col2 <- arithmeticSet) {
+            for (placeHolder2 <- ARITHMETIC_CONSTANT) {
+              res += select(col, col2) + where(
                 binaryOpWithName(
                   col,
                   placeHolder,
                   "=") + " and " +
-                binaryOpWithName(
-                  col2,
-                  placeHolder2,
-                  op)
+                  binaryOpWithName(
+                    col2,
+                    placeHolder2,
+                    op)
               )
             }
           }

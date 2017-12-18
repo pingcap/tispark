@@ -72,8 +72,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
     "Invalid Flag type for TimestampType: 8",
     "Invalid Flag type for DateTimeType: 8",
     "Decimal scale (18) cannot be greater than precision ",
-    "0E-11",
-    "overflows"
+    "0E-11", // unresolvable precision fault
+    "overflows",
+    "2017-01-01" // timestamp error
     //    "unknown error Other"
     //    "Error converting access pointsnull"
   )
