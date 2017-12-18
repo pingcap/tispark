@@ -17,9 +17,7 @@ package org.apache.spark.sql.execution
 
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
-import scala.reflect._
 
-import com.google.common.collect.Range
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.iterator.CoprocessIterator
@@ -27,7 +25,7 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache}
+import com.pingcap.tispark.TiSessionCache
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
@@ -42,7 +40,6 @@ import org.apache.spark.sql.types.{LongType, Metadata}
 import org.apache.spark.sql.{Row, SparkSession}
 
 import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
@@ -131,7 +128,9 @@ case class RegionTaskExec(child: SparkPlan,
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
     "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of handles used in double scan"),
-    "numRegionTasks" -> SQLMetrics.createMetric(sparkContext, "number of executed region tasks")
+    "numDowngradedTasks" -> SQLMetrics.createMetric(sparkContext, "number of downgraded tasks"),
+    "numIndexScanTasks" -> SQLMetrics
+      .createMetric(sparkContext, "number of index double read tasks")
   )
 
   private val appId = SparkContext.getOrCreate().appName
@@ -144,7 +143,8 @@ case class RegionTaskExec(child: SparkPlan,
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
     val numHandles = longMetric("numHandles")
-    val numRegionTasks = longMetric("numRegionTasks")
+    val numIndexScanTasks = longMetric("numIndexScanTasks")
+    val numDowngradedTasks = longMetric("numDowngradedTasks")
     child
       .execute()
       .mapPartitionsWithIndexInternal { (index, iter) =>
@@ -246,7 +246,7 @@ case class RegionTaskExec(child: SparkPlan,
               result.append(tasks.toSeq)
               index += 1
             }
-            numRegionTasks += result.size
+            numDowngradedTasks += result.size
 
             result.foreach(taskList => {
               taskCount += 1
@@ -263,6 +263,10 @@ case class RegionTaskExec(child: SparkPlan,
             while (handleIterator.hasNext) {
               val handleList = feedBatch()
               taskCount += 1
+              numHandles += handleList.size()
+              logger.info("Single batch handles size:" + handleList.size())
+              numIndexScanTasks += 1
+
               val task = new Callable[util.Iterator[TiRow]] {
                 override def call(): util.Iterator[TiRow] = {
                   val tasks = RangeSplitter
@@ -273,10 +277,6 @@ case class RegionTaskExec(child: SparkPlan,
                     )
                   proceedTasksOrThrow(tasks)
 
-                  numHandles += handleList.size()
-                  logger.info("Single batch handles size:" + handleList.size())
-                  numRegionTasks += tasks.size()
-                  logger.info("Single batch RegionTasks size:" + tasks.size())
                   val firstTask = tasks.head
                   logger.info(
                     s"Single batch first RegionTask={Host:${firstTask.getHost}," +
