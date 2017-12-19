@@ -53,14 +53,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
   protected val PLACE_HOLDER: List[String] = List[String](
     LITERAL_NULL, // Null
     "'PingCAP'", // a simple test string
-    "'2017-10-30'",
-    "'0af51329-d907-4199-9bb0-8a99e09b8271'",
-    "'2017-11-02 00:00:00'",
-    "'2017-11-02'",
-    "'2017-11-02 08:47:43'",
-    "'2017'",
-    "'oHQKaFHQ7N'",
-    "'Q1GHo'"
+    "'2017-11-02'"
   ) ++ ARITHMETIC_CONSTANT
 
   // TODO: Eliminate these bugs
@@ -137,7 +130,8 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     testIndex()
     testFullDataTable(
         createPlaceHolderTest
-        ++ createDoublePlaceHolderTest
+//        ++ createDoublePlaceHolderTest
+        ++ createJoin
         ++ createInTest
         ++ createBetween
         ++ createAggregate
@@ -182,6 +176,16 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     select("tp_real") + where(binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between") + orderBy(ID_COL))
   )
 
+  def createJoin(): List[String] = {
+    val skipLocalSet = mutable.Set[String]()
+    skipLocalSet.add("tp_nvarchar")
+    skipLocalSet.add("tp_varchar")
+    skipLocalSet.add("tp_char")
+
+    colSet.diff(skipLocalSet).map((col: String) =>
+      s"select a.$ID_COL from $TABLE_NAME a join $TABLE_NAME b on a.$col = b.$col order by a.$col").toList
+  }
+
   def createAggregate(): List[String] = colSet.map((str: String) => select(str) + groupBy(str) + orderBy(str)).toList
 
   def createInTest(): List[String] = List(
@@ -211,25 +215,15 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     skipLocalSet.add("tp_varchar")
     skipLocalSet.add("tp_char")
 
-    val arithmeticSkipSet = mutable.Set[String]()
-    arithmeticSkipSet.add("tp_int")
-    arithmeticSkipSet.add("tp_float")
-    arithmeticSkipSet.add("tp_decimal")
-    arithmeticSkipSet.add("tp_double")
-    arithmeticSkipSet.add("tp_real")
-    arithmeticSkipSet.add(ID_COL)
-
     for (op <- compareOpList) {
       for (col <- colSet) {
         if (!skipLocalSet.contains(col))
           for (placeHolder <- PLACE_HOLDER) {
-            if (!placeHolder.eq("'PingCAP'") || !arithmeticSkipSet.exists(col.contains(_))) {
-              res += select(col) + where(binaryOpWithName(
-                col,
-                placeHolder,
-                op
-              ))
-            }
+            res += select(col) + where(binaryOpWithName(
+              col,
+              placeHolder,
+              op
+            ))
           }
       }
     }
