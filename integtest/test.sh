@@ -12,7 +12,8 @@ check_tpch_data_is_loaded
 
 CLASS="com.pingcap.spark.TestFramework"
 
-cp ${PATH_TO_CONF}/tispark_config.properties.template ${TISPARK_CONF}
+create_conf
+
 spark_debug_opt="-Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=5005,suspend=y"
 spark_test_opt=""
 

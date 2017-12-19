@@ -16,16 +16,18 @@
 package com.pingcap.tispark
 
 import java.util.concurrent.TimeUnit
+import java.util.logging.Logger
 
-import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.expression.{ExpressionBlacklist, TiExpr}
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
-import org.apache.spark.sql.{SparkSession, TiStrategy}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tispark.listener.CacheListenerManager
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.{SparkConf, sql}
 
 import scala.collection.JavaConversions._
@@ -40,6 +42,8 @@ object TiUtils {
   type TiFirst = com.pingcap.tikv.expression.aggregate.First
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiTypes = com.pingcap.tikv.types.Types
+
+  private final val logger = Logger.getLogger(getClass.getName)
 
   def isSupportedAggregate(aggExpr: AggregateExpression,
                            tiDBRelation: TiDBRelation,
@@ -201,8 +205,10 @@ object TiUtils {
     tiConf
   }
 
-  def sessionInitialize(session: SparkSession): Unit = {
+  def sessionInitialize(session: SparkSession, tiSession: TiSession): Unit = {
     session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
     session.udf.register("ti_version", () => TiSparkVersion.version)
+    CacheListenerManager.initCacheListener(session.sparkContext, tiSession.getRegionManager)
+    tiSession.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
   }
 }

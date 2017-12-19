@@ -232,6 +232,18 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     }
   }
 
+  def execTiDB(query: String): Boolean = {
+    try {
+      logger.info("Running query on TiDB: " + query)
+      val statement = connection.createStatement()
+      statement.execute(query)
+    } catch {
+      case e: Exception =>
+        logger.error("Executing \'" + query + "\' failed: " + e.getMessage)
+        false
+    }
+  }
+
   def queryTiDB(query: String): (List[String], List[List[Any]]) = {
     logger.info("Running query on TiDB: " + query)
     val statement = connection.createStatement()

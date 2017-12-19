@@ -16,14 +16,14 @@
 package com.pingcap.tispark
 
 import java.sql.{Date, Timestamp}
-import java.util.Objects
 
-import scala.language.implicitConversions
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
 import com.pingcap.tikv.types.RequestTypes
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Remainder, Subtract}
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
 import org.apache.spark.sql.types._
+
+import scala.language.implicitConversions
 
 object BasicExpression {
   implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
@@ -55,7 +55,7 @@ object BasicExpression {
         // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd,
         // but seems change in DAG mode
         case DateType       => new Date(MILLISEC_PER_DAY * value.asInstanceOf[Int])
-        case TimestampType  => new Timestamp(value.asInstanceOf[Long])
+        case TimestampType  => new Timestamp(value.asInstanceOf[Long] / 1000)
         case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
         case _              => value
