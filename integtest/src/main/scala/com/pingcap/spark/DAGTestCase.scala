@@ -130,7 +130,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       }
     }
     result = !result
-    logger.warn("Result: Total DAG test run:" + inlineSQLNumber + " of " + list.size)
+    logger.warn(s"Result: Total DAG test run: ${list.size - testsSkipped} of ${list.size}")
     logger.warn(s"Result: Test ignored count:$testsSkipped, failed count:$testsFailed")
   }
 

@@ -117,7 +117,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
       }
     }
     result = !result
-    logger.warn(s"Result: Total Index test run: $inlineSQLNumber of ${list.size}")
+    logger.warn(s"Result: Total Index test run: ${list.size - testsSkipped} of ${list.size}")
     logger.warn(s"Result: Test ignored count:$testsSkipped, failed count:$testsFailed")
   }
 
