@@ -135,6 +135,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
           + "  Tests skipped: " + testsSkipped)
       case _ =>
     }
+
+    jdbc.close()
+    spark.close()
+    spark_jdbc.close()
   }
 
   protected def work(parentPath: String, run: Boolean, load: Boolean, compareNeeded: Boolean): Unit = {

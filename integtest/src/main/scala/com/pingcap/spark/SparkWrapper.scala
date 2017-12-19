@@ -77,4 +77,8 @@ class SparkWrapper() extends LazyLogging {
 
     dfData(df, schema)
   }
+
+  def close(): Unit = {
+    spark.close()
+  }
 }
