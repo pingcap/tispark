@@ -275,6 +275,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     skipLocalSet.add("tp_nvarchar")
     skipLocalSet.add("tp_varchar")
     skipLocalSet.add("tp_char")
+    skipLocalSet.add("tp_year")
 
     val arithmeticSkipSet = mutable.Set[String]()
     arithmeticSkipSet.add("tp_int")
