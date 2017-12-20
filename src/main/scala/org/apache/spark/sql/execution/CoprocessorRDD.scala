@@ -78,8 +78,7 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   override val nodeName: String = "HandleRDD"
 
   override lazy val metrics = Map(
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of selected handles"),
-    "handleReadTime" -> SQLMetrics.createMetric(sparkContext, "time of handles selection in ms")
+    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of selected handles")
   )
 
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
@@ -89,13 +88,11 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
-    val handleReadTime = longMetric("handleReadTime")
 
     internalRDD.mapPartitionsWithIndexInternal { (index, iter) =>
       val proj = UnsafeProjection.create(schema)
       proj.initialize(index)
       iter.map { r =>
-        handleReadTime += tiHandleRDD.lastHandelReadTimeMs
         numOutputRows += 1
         proj(r)
       }
@@ -148,13 +145,15 @@ case class RegionTaskExec(child: SparkPlan,
     child
       .execute()
       .mapPartitionsWithIndexInternal { (index, iter) =>
+        val logger = Logger.getLogger(getClass.getName)
+        val session = TiSessionCache.getSession(appId, tiConf)
+        val batchSize = session.getConf.getIndexScanBatchSize
+        logger.info(s"In partition No.$index")
+
         iter.flatMap { row =>
-          val logger = Logger.getLogger(getClass.getName)
           val handles = row.getArray(1).toLongArray()
-          val session = TiSessionCache.getSession(appId, tiConf)
           val handleIterator: util.Iterator[Long] = handles.iterator
           var taskCount = 0
-          val batchSize = session.getConf.getIndexScanBatchSize
 
           val completionService =
             new ExecutorCompletionService[util.Iterator[TiRow]](session.getThreadPoolForIndexScan)
@@ -212,7 +211,8 @@ case class RegionTaskExec(child: SparkPlan,
 
             logger.warn(
               s"Index scan handle size:${handles.length} exceed downgrade threshold:$downgradeThreshold" +
-                s", downgrade to table scan with ${tasks.size()} region tasks"
+                s", downgrade to table scan with ${tasks.size()} region tasks, " +
+                s"original index scan task has ${tasks.head.getRanges.size()} ranges."
             )
 
             tasks = RangeSplitter
@@ -224,7 +224,8 @@ case class RegionTaskExec(child: SparkPlan,
             logger.info(
               s"Unary task downgraded, task info:Host={${task.getHost}}, " +
                 s"Region={${task.getRegion}}, " +
-                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}"
+                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}" +
+                s"RangesListSize=${task.getRanges.size()}}"
             )
             val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
             with mutable.MultiMap[String, RegionTask]
@@ -281,7 +282,8 @@ case class RegionTaskExec(child: SparkPlan,
                   logger.info(
                     s"Single batch first RegionTask={Host:${firstTask.getHost}," +
                       s"Region:${firstTask.getRegion}," +
-                      s"Store:{id=${firstTask.getStore.getId},addr=${firstTask.getStore.getAddress}}}"
+                      s"Store:{id=${firstTask.getStore.getId},addr=${firstTask.getStore.getAddress}}" +
+                      s"RangesListSize:${firstTask.getRanges.size()}}"
                   )
 
                   CoprocessIterator.getRowIterator(dagRequest, tasks, session)
