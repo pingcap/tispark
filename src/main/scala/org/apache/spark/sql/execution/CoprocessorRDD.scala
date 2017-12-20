@@ -209,22 +209,27 @@ case class RegionTaskExec(child: SparkPlan,
               )
             proceedTasksOrThrow(tasks)
 
+            val taskRanges = tasks.head.getRanges
             logger.warn(
               s"Index scan handle size:${handles.length} exceed downgrade threshold:$downgradeThreshold" +
                 s", downgrade to table scan with ${tasks.size()} region tasks, " +
-                s"original index scan task has ${tasks.head.getRanges.size()} ranges."
+                s"original index scan task has ${taskRanges.size()} ranges, will try to merge."
             )
 
             tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
-              .splitRangeByRegion(KeyRangeUtils.mergeRanges(tasks.head.getRanges))
+              .splitRangeByRegion(KeyRangeUtils.mergeRanges(taskRanges))
             proceedTasksOrThrow(tasks)
 
             val task = tasks.head
             logger.info(
+              s"Merged ${taskRanges.size()} index ranges to ${task.getRanges.size()} ranges."
+            )
+            logger.info(
               s"Unary task downgraded, task info:Host={${task.getHost}}, " +
-                s"Region={${task.getRegion}}, " +
-                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}" +
+                s"RegionId={${task.getRegion.getId}}, " +
+                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
+                s"Range={${KeyRangeUtils.toString(task.getRanges.head)}}, " +
                 s"RangesListSize=${task.getRanges.size()}}"
             )
             val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
