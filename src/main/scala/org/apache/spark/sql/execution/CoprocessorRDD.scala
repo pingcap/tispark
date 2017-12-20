@@ -31,12 +31,12 @@ import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, SortOrder, UnsafeProjection, UnsafeRow}
+import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, GenericInternalRow, SortOrder, UnsafeProjection, UnsafeRow}
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.SQLMetrics
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
-import org.apache.spark.sql.types.{LongType, Metadata}
+import org.apache.spark.sql.types.{DataType, LongType, Metadata}
 import org.apache.spark.sql.{Row, SparkSession}
 
 import scala.collection.JavaConversions._
@@ -136,6 +136,19 @@ case class RegionTaskExec(child: SparkPlan,
   type TiRow = com.pingcap.tikv.row.Row
 
   override val nodeName: String = "RegionTaskExec"
+
+  def rowToInternalRow(row: Row, outputTypes: Seq[DataType]): InternalRow = {
+    val numColumns = outputTypes.length
+    val mutableRow = new GenericInternalRow(numColumns)
+    val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
+    var i = 0
+    while (i < numColumns) {
+      mutableRow(i) = converters(i)(row(i))
+      i += 1
+    }
+
+    mutableRow
+  }
 
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
@@ -328,12 +341,14 @@ case class RegionTaskExec(child: SparkPlan,
             }
 
             override def next(): UnsafeRow = {
+              numOutputRows += 1
               // Unsafe row projection
               val proj = UnsafeProjection.create(schema)
               proj.initialize(index)
               val sparkRow = toSparkRow(rowIterator.next())
-              numOutputRows += 1
-              proj(InternalRow.fromSeq(sparkRow.toSeq))
+              val outputTypes = output.map(_.dataType)
+              // Need to convert spark row to internal row for Catalyst
+              proj(rowToInternalRow(sparkRow, outputTypes))
             }
           }
           resultIter
