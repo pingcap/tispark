@@ -37,19 +37,9 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     "'PingCAP'", // a simple test string
     "'2017-11-02'",
     "'2017-10-30'",
-    "'2017-10-30'",
     "'2017-09-07 11:11:11'",
-    "'0af51329-d907-4199-9bb0-8a99e09b8271'",
-    "'2017-11-02 00:00:00'",
-    "'2017-11-02'",
     "'2017-11-02 08:47:43'",
-    "'oHQKaFHQ7N'",
-    "'Q1GHo'",
-    "'rMF2QEimRewq1HrG3hn6E1qhrbWhCS09sZlOSvdLzvdvR8uN68lBKuVTB5f4ikQDnsv4UdPHQ8D2MFWZjKAP3B7KOXW3S6DERO8cSxlZDKN85caPkDJjBQiopsJw16q75hOBQ9ad1M4D1wJKWa6AOlU3NCF62d8nY3Wx7OMTJsmU593jGCCGBUj1B3Ayf5zkDC5JxUQqC6KiASWfbgdt9XFMrOwPlNHsbvLgIFFH0oDEzThYt8VkA27Q8I0zftfCfx9OSOcpXiKhAVrnkjpzNrui0UsqNIzoFkQUFmeKnIv3Pu8wooPBTHOWfOqGteE976mwXcstXMkMCJuFtms08fGcXGnPPCQwiSlpNYMtqcgYNkPqsMoMnlQGohWns0tG582DFRbm3Jz8yebOlSunroiPzRreIKpqtBcKavmVJLRevWT4xNbkgiGMv8INUvHrP5tUdk2Ask0Vlo3NgXQHZE0HFqg5Hcwj62HysxTESYjvUwTBJrdg'",
-    "'rWUVjuJhFiSmnWWVCSGKNc4q4LJuioArD2rHI1rRicnlXadvJckG03nKCEQms17YjwvNF13VOfxWSpMb4uIRGgUtaUQJxVdOWWqg'",
-    "'xqvfMDq7rZpIu4Odhb27To9SAc4Jo5iIYN2VJDBbVg6a750E8l'",
-    "'sqECyXRecV8EbGi6nr1o'",
-    "'16:47:43'"
+    "'fYfSp'"
   ) ++ ARITHMETIC_CONSTANT
 
   private var colList: List[String] = _

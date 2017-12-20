@@ -56,14 +56,22 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     "'2017-11-02'"
   ) ++ ARITHMETIC_CONSTANT
 
+  protected val DATE_DATA: List[String] = List[String](
+    "'2017-10-30'",
+    "'2017-11-02'"
+  )
+
+  protected val DATETIME_DATA: List[String] = List[String](
+    "'2017-11-02 00:00:00'",
+    "'2017-11-02 08:47:43'",
+    "'2017-09-07 11:11:11'"
+  )
+
   // TODO: Eliminate these bugs
   private final val colSkipSet: ImmutableSet[String] =
     ImmutableSet.builder()
       //      .add("tp_datetime") // time zone shift
       .add("tp_year") // year in spark shows extra month and day
-      //      .add("tp_time") // Time format is not the same in TiDB and spark
-      //      .add("tp_binary")
-      //      .add("tp_blob")
       .build()
 
   private val colSet: mutable.Set[String] = mutable.Set()
@@ -104,7 +112,6 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
   }
 
   def testFullDataTable(list: List[String]): Unit = {
-    var result = false
     val startTime = System.currentTimeMillis()
     var count = 0
     for (sql <- list) {
@@ -116,7 +123,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
         case _: Throwable => logger.error("result: Run SQL " + sql + " Failed!")
       }
     }
-    result = !result
+
     logger.warn(s"Result: Total Index test run: ${list.size - testsSkipped} of ${list.size}")
     logger.warn(s"Result: Test ignored count:$testsSkipped, failed count:$testsFailed")
   }
@@ -130,11 +137,12 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     testIndex()
     testFullDataTable(
         createPlaceHolderTest
-//        ++ createDoublePlaceHolderTest
+//        ++ createDoublePlaceHolderTest // data set too large for double placeHolder
         ++ createJoin
         ++ createInTest
         ++ createBetween
         ++ createAggregate
+        ++ createSpecial
     )
   }
 
@@ -162,6 +170,28 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
 
   // ***********************************************************************************************
   // ******************************** Below is test cases generated ********************************
+
+  def createSpecial(): List[String] = {
+    var list: List[String] = List.empty[String]
+    for (op <- compareOpList) {
+      for (date <- DATE_DATA) {
+        list ++= List(s"select * from $TABLE_NAME where tp_date " + op + s" date($date)")
+      }
+    }
+
+    for (op <- compareOpList) {
+      for (datetime <- DATETIME_DATA) {
+        list ++= List(s"select * from $TABLE_NAME where tp_datetime " + op + s" timestamp($datetime)")
+      }
+    }
+
+    for (op <- compareOpList) {
+      for (timestamp <- DATETIME_DATA) {
+        list ++= List(s"select * from $TABLE_NAME where tp_timestamp " + op + s" timestamp($timestamp)")
+      }
+    }
+    list
+  }
 
   def createBetween(): List[String] = List(
     select("tp_int") + where(binaryOpWithName("tp_int", "-1202333 and 601508558", "between") + orderBy(ID_COL)),
@@ -236,6 +266,10 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
 
     val arithmeticSet = mutable.Set[String]()
     arithmeticSet.add("tp_int")
+    arithmeticSet.add("tp_tinyint")
+    arithmeticSet.add("tp_smallint")
+    arithmeticSet.add("tp_mediumint")
+    arithmeticSet.add("tp_bigint")
     arithmeticSet.add("tp_float")
     arithmeticSet.add("tp_decimal")
     arithmeticSet.add("tp_double")
