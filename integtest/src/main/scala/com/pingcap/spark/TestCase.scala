@@ -77,7 +77,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   )
 
   private final val TiDBIgnore = Set[String](
-    "out of range"
+//    "out of range"
 //    "BIGINT",
 //    "invalid time format",
 //    "line 1 column 13 near"
