@@ -14,15 +14,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     "select tp_date,tp_datetime from full_data_type_table  where tp_date = tp_datetime order by id_dt  limit 20",
     "select tp_date,tp_datetime from full_data_type_table  where tp_date < tp_datetime order by id_dt  limit 20"
   )
-  private val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
-  private val arithmeticOpList = List("+", "-", "*", "/", "%")
-  private val LEFT_TB_NAME = "A"
-  private val RIGHT_TB_NAME = "B"
-  private val TABLE_NAME = "full_data_type_table"
-  private val LITERAL_NULL = "null"
-  private val SCALE_FACTOR = 4 * 4
-  private val ID_COL = "id_dt"
-  private val ARITHMETIC_CONSTANT = List[String](
+
+  protected val ARITHMETIC_CONSTANT: List[String] = List[String](
     java.lang.Long.MAX_VALUE.toString,
     java.lang.Long.MIN_VALUE.toString,
     java.lang.Double.MAX_VALUE.toString,
@@ -36,14 +29,19 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     java.lang.Byte.MAX_VALUE.toString,
     java.lang.Byte.MIN_VALUE.toString,
     "0",
+    "2017",
     BigDecimal.apply(2147868.65536).toString() // Decimal value
   )
-  private val PLACE_HOLDER = List[String](
+  protected val PLACE_HOLDER: List[String] = List[String](
     LITERAL_NULL, // Null
     "'PingCAP'", // a simple test string
-    "'2043-11-28'",
-    "'2017-09-07 11:11:11'"
+    "'2017-11-02'",
+    "'2017-10-30'",
+    "'2017-09-07 11:11:11'",
+    "'2017-11-02 08:47:43'",
+    "'fYfSp'"
   ) ++ ARITHMETIC_CONSTANT
+
   private var colList: List[String] = _
 
   // TODO: Eliminate these bugs
@@ -122,7 +120,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       }
     }
     result = !result
-    logger.warn("Result: Total DAG test run:" + inlineSQLNumber + " of " + list.size)
+    logger.warn(s"Result: Total DAG test run: ${list.size - testsSkipped} of ${list.size}")
     logger.warn(s"Result: Test ignored count:$testsSkipped, failed count:$testsFailed")
   }
 
@@ -277,14 +275,15 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     skipLocalSet.add("tp_nvarchar")
     skipLocalSet.add("tp_varchar")
     skipLocalSet.add("tp_char")
+    skipLocalSet.add("tp_year")
 
     val arithmeticSkipSet = mutable.Set[String]()
-    arithmeticSkipSet.add("int")
-    arithmeticSkipSet.add("float")
-    arithmeticSkipSet.add("decimal")
-    arithmeticSkipSet.add("double")
-    arithmeticSkipSet.add("real")
-    arithmeticSkipSet.add("bit")
+    arithmeticSkipSet.add("tp_int")
+    arithmeticSkipSet.add("tp_float")
+    arithmeticSkipSet.add("tp_decimal")
+    arithmeticSkipSet.add("tp_double")
+    arithmeticSkipSet.add("tp_real")
+    arithmeticSkipSet.add("tp_bit")
     arithmeticSkipSet.add(ID_COL)
 
     for (op <- compareOpList) {

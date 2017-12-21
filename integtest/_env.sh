@@ -229,6 +229,10 @@ load_DAG_Table() {
     mysql -h ${tidb_addr} -P ${tidb_port} -u "${tidb_user}" < ./testcases/tispark_test/TisparkTest.sql
 }
 
+load_Index_Table() {
+    mysql -h ${tidb_addr} -P ${tidb_port} -u "${tidb_user}" < ./testcases/test_index/testIndex.sql
+}
+
 rename_result_files_no_tpch() {
     for f in ./*.jdbc; do
         [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}"
