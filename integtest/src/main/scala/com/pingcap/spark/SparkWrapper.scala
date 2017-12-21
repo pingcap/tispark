@@ -27,16 +27,22 @@ import scala.collection.mutable.ArrayBuffer
 
 
 class SparkWrapper() extends LazyLogging {
-  private val spark = SparkSession
-    .builder()
-    .appName("TiSpark Integration Test")
-    .getOrCreate()
-    .newSession()
+  private var spark = newSession()
 
-  val ti = new TiContext(spark)
+  var ti = new TiContext(spark)
+
+  private def newSession(): SparkSession = {
+    SparkSession
+      .builder()
+      .appName("TiSpark Integration Test")
+      .getOrCreate()
+      .newSession()
+  }
 
   def init(databaseName: String): Unit = {
     logger.info("Mapping database: " + databaseName)
+    spark = newSession() // renew spark session or the schema may fail to refresh
+    ti = new TiContext(spark)
     ti.tidbMapDatabase(databaseName)
   }
 
@@ -76,5 +82,9 @@ class SparkWrapper() extends LazyLogging {
     val schema = df.schema.fields
 
     dfData(df, schema)
+  }
+
+  def close(): Unit = {
+    spark.close()
   }
 }

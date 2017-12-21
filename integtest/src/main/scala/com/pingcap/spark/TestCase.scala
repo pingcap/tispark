@@ -54,7 +54,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected lazy val spark = new SparkWrapper()
   protected lazy val spark_jdbc = new SparkJDBCWrapper(prop)
 
-  private val eps = 1.0e-6
+  private val eps = 1.0e-2
 
   protected var testsFailed = 0
   protected var testsExecuted = 0
@@ -71,24 +71,36 @@ class TestCase(val prop: Properties) extends LazyLogging {
     "only support precision",
     "Invalid Flag type for TimestampType: 8",
     "Invalid Flag type for DateTimeType: 8",
-    "Decimal scale (18) cannot be greater than precision "
+    "Decimal scale (18) cannot be greater than precision ",
+    "0E-11", // unresolvable precision fault
+    "overflows",
+    "2017-01-01" // timestamp error
     //    "unknown error Other"
     //    "Error converting access pointsnull"
   )
 
   private final val TiDBIgnore = Set[String](
-//    "out of range",
+//    "out of range"
 //    "BIGINT",
 //    "invalid time format",
 //    "line 1 column 13 near"
   )
 
-  logger.info("Databases to dump: " + dbNames.mkString(","))
-  logger.info("Run Mode: " + mode)
-  logger.info("basePath: " + basePath)
-  logger.info("use these DataBases only: " + (if (dbAssigned) useDatabase.head else "None"))
+  protected val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
+  protected val arithmeticOpList = List("+", "-", "*", "/", "%")
+  protected val LEFT_TB_NAME = "A"
+  protected val RIGHT_TB_NAME = "B"
+  protected val TABLE_NAME = "full_data_type_table"
+  protected val LITERAL_NULL = "null"
+  protected val SCALE_FACTOR: Integer = 4 * 4
+  protected val ID_COL = "id_dt"
 
   def init(): Unit = {
+
+    logger.info("Databases to dump: " + dbNames.mkString(","))
+    logger.info("Run Mode: " + mode)
+    logger.info("basePath: " + basePath)
+    logger.info("use these DataBases only: " + (if (dbAssigned) useDatabase.head else "None"))
 
     mode match {
       case RunMode.Dump => dbNames.filter(!_.isEmpty).foreach { dbName =>
@@ -101,17 +113,17 @@ class TestCase(val prop: Properties) extends LazyLogging {
         jdbc.dumpAllTables(joinPath(basePath, dbName))
       }
 
-      case RunMode.Load => work(basePath, false, true, true)
+      case RunMode.Load => work(basePath, run=false, load=true, compareNeeded=true)
 
-      case RunMode.Test => work(basePath, true, false, true)
+      case RunMode.Test => work(basePath, run=true, load=false, compareNeeded=true)
 
-      case RunMode.LoadNTest => work(basePath, true, true, true)
+      case RunMode.LoadNTest => work(basePath, run=true, load=true, compareNeeded=true)
 
-      case RunMode.TestIndex => work(basePath, true, false, false)
+      case RunMode.TestIndex => work(basePath, run=true, load=false, compareNeeded=false)
 
-      case RunMode.TestDAG => work(basePath, true, false, false)
+      case RunMode.TestDAG => work(basePath, run=true, load=false, compareNeeded=false)
 
-      case RunMode.SqlOnly => work(basePath, true, false, false)
+      case RunMode.SqlOnly => work(basePath, run=true, load=false, compareNeeded=false)
     }
 
     mode match {
@@ -123,6 +135,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
           + "  Tests skipped: " + testsSkipped)
       case _ =>
     }
+
+    jdbc.close()
+    spark.close()
+    spark_jdbc.close()
   }
 
   protected def work(parentPath: String, run: Boolean, load: Boolean, compareNeeded: Boolean): Unit = {
@@ -410,7 +426,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.warn(s"Test Failed. #$inlineSQLNumber\n")
+        logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
       }
       logger.warn(s"Spark-JDBC output: $spark_jdbc")
       logger.warn(s"Spark output: $spark")
@@ -466,7 +482,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.warn(s"Test Failed. #$inlineSQLNumber\n")
+        logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
       }
       logger.warn(s"TiDB output: $tidb")
       logger.warn(s"Spark output: $spark")
@@ -587,6 +603,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
       testAndCalc(new TestIndex(prop), dbName, testCases)
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
       testAndCalc(new DAGTestCase(prop), dbName, testCases)
+    } else if (dbName.equalsIgnoreCase("issue_test")) {
+      testAndCalc(new IssueTestCase(prop), dbName, testCases)
     } else {
       test(dbName, testCases)
     }

@@ -104,7 +104,7 @@ create_conf_load() {
     echo "create conf for loading data..."
     create_conf_db_options
     echo "test.mode=Load"    >> ${BASE_CONF}
-    echo "test.ignore=tpch,tpch_TEST,test_index" >> ${BASE_CONF}
+    echo "test.ignore=tpch,tpch_TEST" >> ${BASE_CONF}
 
     cp ${BASE_CONF} ${TISPARK_CONF}
 }
@@ -227,6 +227,10 @@ check_tpch_data_is_loaded() {
 
 load_DAG_Table() {
     mysql -h ${tidb_addr} -P ${tidb_port} -u "${tidb_user}" < ./testcases/tispark_test/TisparkTest.sql
+}
+
+load_Index_Table() {
+    mysql -h ${tidb_addr} -P ${tidb_port} -u "${tidb_user}" < ./testcases/test_index/testIndex.sql
 }
 
 rename_result_files_no_tpch() {
