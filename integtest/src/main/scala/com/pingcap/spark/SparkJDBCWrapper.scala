@@ -75,4 +75,8 @@ class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
 
     dfData(df, schema)
   }
+
+  override def close(): Unit = {
+    spark_jdbc.close()
+  }
 }
