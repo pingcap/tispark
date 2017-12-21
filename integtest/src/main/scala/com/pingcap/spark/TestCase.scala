@@ -54,6 +54,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected lazy val spark = new SparkWrapper()
   protected lazy val spark_jdbc = new SparkJDBCWrapper(prop)
 
+  private val eps = 1.0e-2
+
   protected var testsFailed = 0
   protected var testsExecuted = 0
   protected var testsSkipped = 0
@@ -250,6 +252,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       val spark = execSpark(sql)
       val result = compResult(spark_jdbc, spark)
       if (!result) {
+        testsFailed += 1
         printDiffSparkJDBC(s"$dbName.$file", sql, spark_jdbc, spark)
       }
       testsExecuted += 1
@@ -407,7 +410,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.warn(s"Test Failed. #$inlineSQLNumber\n")
+        logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
       }
       logger.warn(s"Spark-JDBC output: $spark_jdbc")
       logger.warn(s"Spark output: $spark")
@@ -463,7 +466,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.warn(s"Test Failed. #$inlineSQLNumber\n")
+        logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
       }
       logger.warn(s"TiDB output: $tidb")
       logger.warn(s"Spark output: $spark")
@@ -584,6 +587,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
       testAndCalc(new TestIndex(prop), dbName, testCases)
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
       testAndCalc(new DAGTestCase(prop), dbName, testCases)
+    } else if (dbName.equalsIgnoreCase("issue_test")) {
+      testAndCalc(new IssueTestCase(prop), dbName, testCases)
     } else {
       test(dbName, testCases)
     }
@@ -629,15 +634,21 @@ class TestCase(val prop: Properties) extends LazyLogging {
       new SimpleDateFormat("yy-MM-dd HH:mm:ss").format(value)
     }
 
-    def compValue(lhs: Any, rhs: Any): Boolean = rhs match {
-      case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
-        Math.abs(toDouble(lhs) - toDouble(rhs)) < 0.01
-      case _: Number | _: BigInt | _: java.math.BigInteger =>
-        toInteger(lhs) == toInteger(rhs)
-      case _: Timestamp =>
-        toString(lhs) == toString(rhs)
-      case _ =>
-        lhs == rhs || lhs.toString == rhs.toString
+    def compValue(lhs: Any, rhs: Any): Boolean = {
+      if (lhs == rhs || lhs.toString == rhs.toString) {
+        true
+      } else lhs match {
+        case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
+          val l = toDouble(lhs)
+          val r = toDouble(rhs)
+          Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
+        case _: Number | _: BigInt | _: java.math.BigInteger =>
+          toInteger(lhs) == toInteger(rhs)
+        case _: Timestamp =>
+          toString(lhs) == toString(rhs)
+        case _ =>
+          false
+      }
     }
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {
