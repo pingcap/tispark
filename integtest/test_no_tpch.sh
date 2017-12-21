@@ -77,6 +77,7 @@ do
     esac
 done
 
+load_Index_Table
 
 if [ "${mode}" == "Integration" ]; then
     filter=""
@@ -92,15 +93,15 @@ if [ "${mode}" == "Integration" ]; then
         echo "testing...."
         if [ ${showResultStats} = true ]; then
             if [ ${showFailedOnly} = true ]; then
-                filter="hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB\|FAILED."
+                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED.\|file error"
             else
-                filter="hint:\|output:\|Result:\|Elapsed time:\|query on spark\|query on TiDB\|FAILED.\|PASSED.\|SKIPPED.\|exception caught"
+                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED.\|PASSED.\|SKIPPED.\|exception caught"
             fi
         else
             if [ ${showFailedOnly} = true ]; then
-                filter="Tests result:\|Result:\|exception caught.\|FAILED."
+                filter="Tests result:\|Result:\|exception caught.\|FAILED.\|file error"
             else
-                filter="Tests result:\|Result:\|exception caught.\|FAILED.\|PASSED.\|SKIPPED."
+                filter="Tests result:\|Result:\|FAILED.\|PASSED.\|SKIPPED."
             fi
         fi
         ${spark_cmd} ${spark_test_opt} 2>&1 | grep "${filter}"
