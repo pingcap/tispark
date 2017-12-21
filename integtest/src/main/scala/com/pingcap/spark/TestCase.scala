@@ -54,7 +54,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   protected lazy val spark = new SparkWrapper()
   protected lazy val spark_jdbc = new SparkJDBCWrapper(prop)
 
-  private val eps = 1.0e-6
+  private val eps = 1.0e-2
 
   protected var testsFailed = 0
   protected var testsExecuted = 0
@@ -80,7 +80,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   )
 
   private final val TiDBIgnore = Set[String](
-//    "out of range",
+//    "out of range"
 //    "BIGINT",
 //    "invalid time format",
 //    "line 1 column 13 near"
@@ -426,7 +426,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.warn(s"Test Failed. #$inlineSQLNumber\n")
+        logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
       }
       logger.warn(s"Spark-JDBC output: $spark_jdbc")
       logger.warn(s"Spark output: $spark")
@@ -482,7 +482,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
       } else {
-        logger.warn(s"Test Failed. #$inlineSQLNumber\n")
+        logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
       }
       logger.warn(s"TiDB output: $tidb")
       logger.warn(s"Spark output: $spark")
@@ -603,6 +603,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
       testAndCalc(new TestIndex(prop), dbName, testCases)
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
       testAndCalc(new DAGTestCase(prop), dbName, testCases)
+    } else if (dbName.equalsIgnoreCase("issue_test")) {
+      testAndCalc(new IssueTestCase(prop), dbName, testCases)
     } else {
       test(dbName, testCases)
     }
