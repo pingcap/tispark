@@ -273,21 +273,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
-    val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
-    val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
+    val deterministicAggAliases = aggregateExpressions.collect {
+      case e if e.deterministic => e -> Alias(e.canonicalized, e.toString())()
+    }.toMap
 
-    def newAggregateWithId(aggFunc: AggregateFunction, originalAggExpr: AggregateExpression) =
-      originalAggExpr.copy(aggregateFunction = aggFunc, resultId = newExprId)
-
-    val aliasPushedPartialResult: AggregateExpression => Alias = {
-      val deterministicAggAliases = aggregateExpressions.collect {
-        case e if e.deterministic => e -> Alias(e.canonicalized, e.toString())()
-      }.toMap
-
-      def aliasWithNewId(e: Expression) = Alias(e, e.toString)(exprId = newExprId)
-
-      e: AggregateExpression =>
-        deterministicAggAliases.getOrElse(e, aliasWithNewId(e))
+    def aliasPushedPartialResult(e: AggregateExpression): Alias = {
+      deterministicAggAliases.getOrElse(e, Alias(e, e.toString())())
     }
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
@@ -302,77 +293,31 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       val partialResultRef = aliasPushedPartialResult(aggExpr).toAttribute
 
       aggExpr.aggregateFunction match {
-        case e: Max   => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Min   => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Sum   => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: First => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case _: Count => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
-        case _        => aggExpr
-      }
-    } flatMap { aggExpr =>
-      aggExpr.aggregateFunction match {
-        // We have to separate average into sum and count
-        // and for outside expression such as average(x) + 1,
-        // Spark has lift agg + 1 up to resultExpressions
-        // We need to modify the reference there as well to forge
-        // Divide(sum, count) + 1
-        case Average(ref) =>
-          // Need a type promotion
-          val sumToPush = aggExpr.copy(aggregateFunction = Sum(ref))
-          val countToPush = aggExpr.copy(aggregateFunction = Count(ref))
-
-          // Need a new expression id since they are not simply rewrite as above
-          val partialSumRef = aliasPushedPartialResult(sumToPush).toAttribute
-          val sumFinal = newAggregateWithId(Sum(partialSumRef), aggExpr)
-
-          val partialCountRef = aliasPushedPartialResult(countToPush).toAttribute
-          val countFinal = newAggregateWithId(Sum(partialCountRef), aggExpr)
-
-          avgPushdownRewriteMap(aggExpr.resultId) = List(sumToPush, countToPush)
-          avgFinalRewriteMap(aggExpr.resultId) = List(sumFinal, countFinal)
-          List(sumFinal, countFinal)
-        case _ => aggExpr :: Nil
+        case e: Max     => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Min     => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Sum     => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: First   => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case _: Count   => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
+        case _: Average => throw new IllegalStateException("All AVGs should have been rewritten.")
+        case _          => aggExpr
       }
     }
 
-    val pushdownAggregates = aggregateExpressions.flatMap { aggExpr =>
-      avgPushdownRewriteMap.getOrElse(aggExpr.resultId, List(aggExpr))
-    }.distinct
+    aggregationToDAGRequest(groupingExpressions, aggregateExpressions, source, dagReq)
 
-    aggregationToDAGRequest(groupingExpressions, pushdownAggregates, source, dagReq)
+    projects
+      .map { _.toAttribute.name }
+      .map { TiColumnRef.create }
+      .foreach { dagReq.addRequiredColumn }
 
-    val rewrittenResultExpression = resultExpressions.map {
-      _.transformDown {
-        case aggExpr: AttributeReference if avgFinalRewriteMap.contains(aggExpr.exprId) =>
-          // Replace the original Average expression with Div of Alias
-          val sumCountPair = avgFinalRewriteMap(aggExpr.exprId)
-
-          // We missed the chance for auto-coerce already
-          // so manual cast needed
-          // Also, convert into resultAttribute since
-          // they are created by tiSpark without Spark conversion
-          // TODO: Is DoubleType a best target type for all?
-          Cast(
-            Divide(
-              Cast(sumCountPair.head.resultAttribute, DoubleType),
-              Cast(sumCountPair(1).resultAttribute, DoubleType)
-            ),
-            aggExpr.dataType
-          )
-        case other => other
-      }.asInstanceOf[NamedExpression]
+    val output = (aggregateExpressions.map(aliasPushedPartialResult) ++ groupingExpressions).map {
+      _.toAttribute
     }
-
-    val output = (pushdownAggregates.map(x => aliasPushedPartialResult(x)) ++ groupingExpressions)
-      .map(_.toAttribute)
-
-    val projectSeq: Seq[Attribute] = projects.asInstanceOf[Seq[Attribute]]
-    projectSeq.foreach(attr => dagReq.addRequiredColumn(TiColumnRef.create(attr.name)))
 
     aggregate.AggUtils.planAggregateWithoutDistinct(
       groupingExpressions,
       residualAggregateExpressions,
-      rewrittenResultExpression,
+      resultExpressions,
       toCoprocessorRDD(source, output, dagReq)
     )
   }
