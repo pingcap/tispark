@@ -26,6 +26,7 @@ import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtil
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
 import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, ExprId, Expression, IntegerLiteral, NamedExpression, SortOrder}
+import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -276,14 +277,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
 
     def newAggregateWithId(aggFunc: AggregateFunction, originalAggExpr: AggregateExpression) =
-      originalAggExpr.copy(aggregateFunction = aggFunc, resultId = NamedExpression.newExprId)
+      originalAggExpr.copy(aggregateFunction = aggFunc, resultId = newExprId)
 
     val aliasPushedPartialResult: AggregateExpression => Alias = {
       val deterministicAggAliases = aggregateExpressions.collect {
         case e if e.deterministic => e -> Alias(e.canonicalized, e.toString())()
       }.toMap
 
-      def aliasWithNewId(e: Expression) = Alias(e, e.toString)(exprId = NamedExpression.newExprId)
+      def aliasWithNewId(e: Expression) = Alias(e, e.toString)(exprId = newExprId)
 
       e: AggregateExpression =>
         deterministicAggAliases.getOrElse(e, aliasWithNewId(e))
@@ -455,9 +456,42 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 object TiAggregation {
   type ReturnType = PhysicalAggregation.ReturnType
 
-  def unapply(a: Any): Option[ReturnType] = a match {
+  def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
     case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
-      Some(groupingExpressions, aggregateExpressions, resultExpressions, child)
+      // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
+      // converted `Sum`s and `Count`s down to TiKV.
+      val averages = aggregateExpressions.collect {
+        case a @ AggregateExpression(_: Average, _, _, _) => a
+      }.distinct
+
+      val avgRewriteMap = averages.map {
+        case a @ AggregateExpression(Average(ref), _, _, _) =>
+          a.resultAttribute -> Seq(
+            a.copy(aggregateFunction = Sum(ref), resultId = newExprId),
+            a.copy(aggregateFunction = Count(ref), resultId = newExprId)
+          )
+      }.toMap
+
+      val extraAggregateExpressions = avgRewriteMap.values.reduceOption { _ ++ _ }.getOrElse(Nil)
+
+      val rewrite: PartialFunction[Expression, Expression] = avgRewriteMap.map {
+        case (ref, Seq(sum, count)) =>
+          val castedSum = Cast(sum.resultAttribute, DoubleType)
+          val castedCount = Cast(count.resultAttribute, DoubleType)
+          val division = Cast(Divide(castedSum, castedCount), ref.dataType)
+          (ref: Expression) -> Alias(division, ref.name)(exprId = ref.exprId)
+      }
+
+      val rewrittenResultExpressions = resultExpressions.map {
+        _.transform(rewrite).asInstanceOf[NamedExpression]
+      }
+
+      Some(
+        groupingExpressions,
+        (aggregateExpressions ++ extraAggregateExpressions).distinct,
+        rewrittenResultExpressions,
+        child
+      )
 
     case _ => Option.empty[ReturnType]
   }
