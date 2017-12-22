@@ -271,49 +271,48 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
-    val aliasMap = mutable.HashMap[(Boolean, Expression), Alias]()
     val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
     val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
 
     def newAggregateWithId(aggFunc: AggregateFunction, originalAggExpr: AggregateExpression) =
-      AggregateExpression(
-        aggFunc,
-        originalAggExpr.mode,
-        originalAggExpr.isDistinct,
-        NamedExpression.newExprId
-      )
+      originalAggExpr.copy(aggregateFunction = aggFunc, resultId = NamedExpression.newExprId)
 
-    def toAlias(expr: AggregateExpression) =
-      if (!expr.deterministic) {
-        Alias(expr, expr.toString())()
-      } else {
-        aliasMap.getOrElseUpdate(
-          (expr.deterministic, expr.canonicalized),
-          Alias(expr, expr.toString)()
-        )
-      }
+    val toAlias: AggregateExpression => Alias = {
+      lazy val deterministicAggAliases = aggregateExpressions.collect {
+        case e if e.deterministic => e -> Alias(e.canonicalized, e.toString())()
+      }.toMap
+
+      e: AggregateExpression =>
+        deterministicAggAliases.getOrElse(e, Alias(e, e.toString())())
+    }
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
-      aggExpr.aggregateFunction match {
-        // here aggExpr is the original AggregationExpression
-        // and will be pushed down to TiKV
-        case Max(_)   => aggExpr.copy(aggregateFunction = Max(toAlias(aggExpr).toAttribute))
-        case Min(_)   => aggExpr.copy(aggregateFunction = Min(toAlias(aggExpr).toAttribute))
-        case Count(_) => aggExpr.copy(aggregateFunction = Sum(toAlias(aggExpr).toAttribute))
-        case Sum(_)   => aggExpr.copy(aggregateFunction = Sum(toAlias(aggExpr).toAttribute))
-        case First(_, ignoreNullsExpr) =>
-          aggExpr.copy(aggregateFunction = First(toAlias(aggExpr).toAttribute, ignoreNullsExpr))
+      // As `aggExpr` is being pushing down to TiKV, we need to replace the original Catalyst
+      // aggregate expressions with new ones that merges the partial aggregation results returned by
+      // TiKV.
+      //
+      // NOTE: Unlike simple aggregate functions (e.g., `Max`, `Min`, etc.), `Count` must be
+      // replaced with a `Sum` to sum up the partial counts returned by TiKV.
 
-        case _ => aggExpr
+      // An attribute referring to the partial aggregation results returned by TiKV.
+      val ref = toAlias(aggExpr).toAttribute
+
+      aggExpr.aggregateFunction match {
+        case e: Max   => aggExpr.copy(aggregateFunction = e.copy(child = ref))
+        case e: Min   => aggExpr.copy(aggregateFunction = e.copy(child = ref))
+        case e: Sum   => aggExpr.copy(aggregateFunction = e.copy(child = ref))
+        case e: First => aggExpr.copy(aggregateFunction = e.copy(child = ref))
+        case _: Count => aggExpr.copy(aggregateFunction = Sum(ref))
+        case _        => aggExpr
       }
     } flatMap { aggExpr =>
-      aggExpr match {
+      aggExpr.aggregateFunction match {
         // We have to separate average into sum and count
         // and for outside expression such as average(x) + 1,
         // Spark has lift agg + 1 up to resultExpressions
         // We need to modify the reference there as well to forge
         // Divide(sum/count) + 1
-        case aggExpr @ AggregateExpression(Average(ref), _, _, _) =>
+        case Average(ref) =>
           // Need a type promotion
           val sumToPush = aggExpr.copy(aggregateFunction = Sum(ref))
           val countToPush = aggExpr.copy(aggregateFunction = Count(ref))
@@ -330,8 +329,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
 
     val pushdownAggregates = aggregateExpressions.flatMap { aggExpr =>
-      avgPushdownRewriteMap
-        .getOrElse(aggExpr.resultId, List(aggExpr))
+      avgPushdownRewriteMap.getOrElse(aggExpr.resultId, List(aggExpr))
     }.distinct
 
     aggregationToDAGRequest(groupingExpressions, pushdownAggregates, source, dagReq)
