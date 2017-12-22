@@ -278,13 +278,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     def newAggregateWithId(aggFunc: AggregateFunction, originalAggExpr: AggregateExpression) =
       originalAggExpr.copy(aggregateFunction = aggFunc, resultId = NamedExpression.newExprId)
 
-    val toAlias: AggregateExpression => Alias = {
+    val aliasPushedPartialResult: AggregateExpression => Alias = {
       val deterministicAggAliases = aggregateExpressions.collect {
         case e if e.deterministic => e -> Alias(e.canonicalized, e.toString())()
       }.toMap
 
+      def aliasWithNewId(e: Expression) = Alias(e, e.toString)(exprId = NamedExpression.newExprId)
+
       e: AggregateExpression =>
-        deterministicAggAliases.getOrElse(e, Alias(e, e.toString())())
+        deterministicAggAliases.getOrElse(e, aliasWithNewId(e))
     }
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
@@ -296,14 +298,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // replaced with a `Sum` to sum up the partial counts returned by TiKV.
 
       // An attribute referring to the partial aggregation results returned by TiKV.
-      val ref = toAlias(aggExpr).toAttribute
+      val partialResultRef = aliasPushedPartialResult(aggExpr).toAttribute
 
       aggExpr.aggregateFunction match {
-        case e: Max   => aggExpr.copy(aggregateFunction = e.copy(child = ref))
-        case e: Min   => aggExpr.copy(aggregateFunction = e.copy(child = ref))
-        case e: Sum   => aggExpr.copy(aggregateFunction = e.copy(child = ref))
-        case e: First => aggExpr.copy(aggregateFunction = e.copy(child = ref))
-        case _: Count => aggExpr.copy(aggregateFunction = Sum(ref))
+        case e: Max   => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Min   => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Sum   => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: First => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case _: Count => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
         case _        => aggExpr
       }
     } flatMap { aggExpr =>
@@ -312,15 +314,18 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         // and for outside expression such as average(x) + 1,
         // Spark has lift agg + 1 up to resultExpressions
         // We need to modify the reference there as well to forge
-        // Divide(sum/count) + 1
+        // Divide(sum, count) + 1
         case Average(ref) =>
           // Need a type promotion
           val sumToPush = aggExpr.copy(aggregateFunction = Sum(ref))
           val countToPush = aggExpr.copy(aggregateFunction = Count(ref))
 
           // Need a new expression id since they are not simply rewrite as above
-          val sumFinal = newAggregateWithId(Sum(toAlias(sumToPush).toAttribute), aggExpr)
-          val countFinal = newAggregateWithId(Sum(toAlias(countToPush).toAttribute), aggExpr)
+          val partialSumRef = aliasPushedPartialResult(sumToPush).toAttribute
+          val sumFinal = newAggregateWithId(Sum(partialSumRef), aggExpr)
+
+          val partialCountRef = aliasPushedPartialResult(countToPush).toAttribute
+          val countFinal = newAggregateWithId(Sum(partialCountRef), aggExpr)
 
           avgPushdownRewriteMap(aggExpr.resultId) = List(sumToPush, countToPush)
           avgFinalRewriteMap(aggExpr.resultId) = List(sumFinal, countFinal)
@@ -357,7 +362,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       }.asInstanceOf[NamedExpression]
     }
 
-    val output = (pushdownAggregates.map(x => toAlias(x)) ++ groupingExpressions)
+    val output = (pushdownAggregates.map(x => aliasPushedPartialResult(x)) ++ groupingExpressions)
       .map(_.toAttribute)
 
     val projectSeq: Seq[Attribute] = projects.asInstanceOf[Seq[Attribute]]
