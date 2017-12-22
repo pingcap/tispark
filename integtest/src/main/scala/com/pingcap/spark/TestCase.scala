@@ -232,12 +232,20 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
+  def checkIgnore(value: Any, str: String): Boolean = {
+    if (value == null) {
+      false
+    } else {
+      value.toString.contains(str)
+    }
+  }
+
   def checkSparkIgnore(tiSpark: List[List[Any]]): Boolean = {
     val ignoreCase = SparkIgnore ++ TiDBIgnore
     tiSpark.exists(
       (row: List[Any]) => row.exists(
         (str: Any) => ignoreCase.exists(
-          (i: String) => str.toString.contains(i)
+          (i: String) => checkIgnore(str, i)
         )))
   }
 
@@ -245,7 +253,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     tiDb.exists(
       (row: List[Any]) => row.exists(
         (str: Any) => TiDBIgnore.exists(
-          (i: String) => str.toString.contains(i)
+          (i: String) => checkIgnore(str, i)
         )))
   }
 
@@ -253,7 +261,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     sparkJDBC.exists(
       (row: List[Any]) => row.exists(
         (str: Any) => SparkIgnore.exists(
-          (i: String) => str.toString.contains(i)
+          (i: String) => checkIgnore(str, i)
         )))
   }
 
@@ -612,7 +620,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   private def testSql(dbName: String, sql: String): Unit = {
     spark.init(dbName)
-    execSparkAndShow(sql)
+    spark_jdbc.init(dbName)
+    logger.info(if (execSparkBothAndJudge(sql)) "TEST FAILED." else "TEST PASSED.")
   }
 
   private def test(dbName: String, testCases: ArrayBuffer[(String, String)], compareNeeded: Boolean): Unit = {
