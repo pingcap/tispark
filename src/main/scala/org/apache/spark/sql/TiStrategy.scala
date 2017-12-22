@@ -17,7 +17,7 @@ package org.apache.spark.sql
 
 import java.time.ZonedDateTime
 
-import com.pingcap.tikv.expression.{ExpressionBlacklist, TiByItem, TiColumnRef, TiExpr}
+import com.pingcap.tikv.expression.{ExpressionBlacklist, TiByItem, TiColumnRef}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanBuilder
@@ -34,8 +34,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
-import scala.collection.JavaConversions._
-import scala.collection.{JavaConversions, mutable}
+import scala.collection.mutable
 
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
@@ -149,16 +148,18 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
+    import scala.collection.JavaConverters._
+
+    val tiFilters = filters.collect { case BasicExpression(expr) => expr }.asJava
     val scanBuilder: ScanBuilder = new ScanBuilder
     val scanPlan = if (allowIndexDoubleRead()) {
-      scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+      scanBuilder.buildScan(tiFilters, source.table)
     } else {
-      scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+      scanBuilder.buildTableScan(tiFilters, source.table)
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
-    scanPlan.getFilters.toList.map(dagRequest.addWhere)
+    scanPlan.getFilters.asScala.foreach(dagRequest.addWhere)
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
     }
