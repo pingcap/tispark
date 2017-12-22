@@ -203,8 +203,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     child: LogicalPlan,
     project: Seq[NamedExpression]
   ): SparkPlan = {
-    // If sortOrder is not null, limit must be greater than 0
-    if (limit < 0 || (sortOrder == null && limit == 0)) {
+    // If sortOrder is empty, limit must be greater than 0
+    if (limit < 0 || (sortOrder.isEmpty && limit == 0)) {
       return execution.TakeOrderedAndProjectExec(limit, sortOrder, project, planLater(child))
     }
 
