@@ -15,13 +15,12 @@
 
 package org.apache.spark.sql
 
-
 import com.pingcap.tikv.tools.RegionUtils
-
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
+
 import scala.collection.JavaConverters._
 
 class TiContext(val session: SparkSession) extends Serializable with Logging {
@@ -34,7 +33,6 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val debug: DebugTool = new DebugTool
 
   TiUtils.sessionInitialize(session, tiSession)
-
 
   final val version: String = TiSparkVersion.version
 
