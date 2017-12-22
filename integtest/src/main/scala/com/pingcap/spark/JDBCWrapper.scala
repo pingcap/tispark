@@ -168,20 +168,24 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
   }
 
   def loadTable(path: String): Unit = {
-    logger.info("Loading data from : " + path)
-    val lines = readFile(path)
-    val (table, schema, rows) = (lines.head, lines(1).split(Pattern.quote(Sep)).toList, lines.drop(2))
-    val rowData: List[List[Any]] = rows.map {
-      rowFromString(_, schema)
+    try {
+      logger.info("Loading data from : " + path)
+      val lines = readFile(path)
+      val (table, schema, rows) = (lines.head, lines(1).split(Pattern.quote(Sep)).toList, lines.drop(2))
+      val rowData: List[List[Any]] = rows.map {
+        rowFromString(_, schema)
+      }
+      rowData.map(insertRow(_, schema, table))
+    } catch {
+      case e: Exception => logger.error("Error loading table from path: " + e.getMessage)
     }
-    rowData.map(insertRow(_, schema, table))
   }
 
   def init(databaseName: String): String = {
     if (databaseName != null) {
-      logger.info("?????" + databaseName)
+      logger.info("fetching " + databaseName)
       if (!databaseExists(databaseName)) {
-        createDatabase(databaseName, false)
+        createDatabase(databaseName, cleanup = false)
       }
       connection.setCatalog(databaseName)
       currentDatabaseName = databaseName

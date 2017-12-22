@@ -133,12 +133,11 @@ class TestCase(val prop: Properties) extends LazyLogging {
           + "  Tests succeeded: " + (testsExecuted - testsFailed - testsSkipped)
           + "  Tests failed: " + testsFailed
           + "  Tests skipped: " + testsSkipped)
+        jdbc.close()
+        spark.close()
+        spark_jdbc.close()
       case _ =>
     }
-
-    jdbc.close()
-    spark.close()
-    spark_jdbc.close()
   }
 
   protected def work(parentPath: String, run: Boolean, load: Boolean, compareNeeded: Boolean): Unit = {
@@ -156,49 +155,53 @@ class TestCase(val prop: Properties) extends LazyLogging {
       "ignored")
 
     logger.info(s"run=${run.toString} load=${load.toString} compareNeeded=${compareNeeded.toString}")
-    if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
-      if (dir.isDirectory) {
-        dir.listFiles().map { f =>
-          if (f.isDirectory) {
-            dirs += f.getAbsolutePath
-          } else {
-            if (f.getName.endsWith(DDLSuffix)) {
-              ddls += f.getAbsolutePath
-            } else if (f.getName.endsWith(DataSuffix)) {
-              dataFiles += f.getAbsolutePath
-            } else if (f.getName.endsWith(SQLSuffix)) {
-              testCases += ((f.getName, readFile(f.getAbsolutePath).mkString("\n")))
+    try {
+      if (!ignoreCases.exists(_.equalsIgnoreCase(dbName))) {
+        if (dir.isDirectory) {
+          dir.listFiles().map { f =>
+            if (f.isDirectory) {
+              dirs += f.getAbsolutePath
+            } else {
+              if (f.getName.endsWith(DDLSuffix)) {
+                ddls += f.getAbsolutePath
+              } else if (f.getName.endsWith(DataSuffix)) {
+                dataFiles += f.getAbsolutePath
+              } else if (f.getName.endsWith(SQLSuffix)) {
+                testCases += ((f.getName, readFile(f.getAbsolutePath).mkString("\n")))
+              }
             }
           }
+        } else {
+          throw new IllegalArgumentException("Cannot prepare non-folder")
         }
-      } else {
-        throw new IllegalArgumentException("Cannot prepare non-folder")
-      }
 
-      if (load) {
-        logger.info(s"Switch to $dbName")
-        dbName = jdbc.init(dbName)
-        logger.info("Load data... ")
-        ddls.foreach { file => {
-          logger.info(s"Register for DDL script $file")
-          jdbc.createTable(file)
+        if (load) {
+          logger.info(s"Switch to $dbName")
+          dbName = jdbc.init(dbName)
+          logger.info("Load data... ")
+          ddls.foreach { file => {
+            logger.info(s"Register for DDL script $file")
+            jdbc.createTable(file)
+          }
+          }
+          dataFiles.foreach { file => {
+            logger.info(s"Register for data loading script $file")
+            jdbc.loadTable(file)
+          }
+          }
         }
+        if (run) {
+          if (!dbAssigned || useDatabase.exists(_.equalsIgnoreCase(dbName))) {
+            test(dbName, testCases, compareNeeded)
+          }
         }
-        dataFiles.foreach { file => {
-          logger.info(s"Register for data loading script $file")
-          jdbc.loadTable(file)
-        }
-        }
-      }
-      if (run) {
-        if (!dbAssigned || useDatabase.exists(_.equalsIgnoreCase(dbName))) {
-          test(dbName, testCases, compareNeeded)
-        }
-      }
 
-      dirs.foreach { dir =>
-        work(dir, run, load, compareNeeded)
+        dirs.foreach { dir =>
+          work(dir, run, load, compareNeeded)
+        }
       }
+    } catch {
+      case e: Exception => logger.error("Unexpected error occured: " + e.getMessage)
     }
   }
 
@@ -608,11 +611,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   private def testInline(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     if (dbName.equalsIgnoreCase("test_index")) {
+      testAndCalc(new IssueTestCase(prop), dbName, testCases)
       testAndCalc(new TestIndex(prop), dbName, testCases)
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
       testAndCalc(new DAGTestCase(prop), dbName, testCases)
-    } else if (dbName.equalsIgnoreCase("issue_test")) {
-      testAndCalc(new IssueTestCase(prop), dbName, testCases)
     } else {
       test(dbName, testCases)
     }
