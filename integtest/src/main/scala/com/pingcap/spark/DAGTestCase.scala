@@ -71,6 +71,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       createCartesianTypeTestCases ++
       createArithmeticTest ++
       createPlaceHolderTest ++
+      createCount ++
       createInTest ++
       createDistinct ++
       createBetween ++
@@ -160,6 +161,11 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     select("tp_year") + where(binaryOpWithName("tp_year", "1993 and 2017", "between", withTbName = false)),
     select("tp_real") + where(binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between", withTbName = false))
   )
+
+  def createCount(): List[String] = {
+    colSet.map((col: String) =>
+      select(s"count($col)")) .toList
+  }
 
   def issueList(): List[String] = List(
     "select a.id_dt from full_data_type_table a where a.id_dt not in (select id_dt from full_data_type_table  where tp_decimal <> 1E10)",
