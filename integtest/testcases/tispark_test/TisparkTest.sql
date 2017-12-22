@@ -56,6 +56,87 @@ CREATE TABLE `full_data_type_table` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+CREATE INDEX `idx_tp_int`
+ON `full_data_type_table` (tp_int);
+
+CREATE INDEX `idx_tp_varchar`
+ON `full_data_type_table` (tp_varchar);
+
+CREATE INDEX `idx_tp_datetime`
+ON `full_data_type_table` (tp_datetime);
+
+CREATE INDEX `idx_tp_blob`
+ON `full_data_type_table` (tp_blob(5));
+
+CREATE INDEX `idx_tp_date`
+ON `full_data_type_table` (tp_date);
+
+CREATE INDEX `idx_tp_timestamp`
+ON `full_data_type_table` (tp_timestamp);
+
+CREATE INDEX `idx_tp_year`
+ON `full_data_type_table` (tp_year);
+
+CREATE INDEX `idx_tp_bigint`
+ON `full_data_type_table` (tp_bigint);
+
+CREATE INDEX `idx_tp_decimal`
+ON `full_data_type_table` (tp_decimal);
+
+CREATE INDEX `idx_tp_double`
+ON `full_data_type_table` (tp_double);
+
+CREATE INDEX `idx_tp_float`
+ON `full_data_type_table` (tp_float);
+
+CREATE INDEX `idx_tp_mediumint`
+ON `full_data_type_table` (tp_mediumint);
+
+CREATE INDEX `idx_tp_real`
+ON `full_data_type_table` (tp_real);
+
+CREATE INDEX `idx_tp_smallint`
+ON `full_data_type_table` (tp_smallint);
+
+CREATE INDEX `idx_tp_tinyint`
+ON `full_data_type_table` (tp_tinyint);
+
+CREATE INDEX `idx_tp_char`
+ON `full_data_type_table` (tp_char);
+
+CREATE INDEX `idx_tp_char_5`
+ON `full_data_type_table` (tp_char(5));
+
+CREATE INDEX `idx_tp_nvarchar`
+ON `full_data_type_table` (tp_nvarchar);
+
+CREATE INDEX `idx_tp_nvarchar_5`
+ON `full_data_type_table` (tp_nvarchar(5));
+
+CREATE INDEX `idx_tp_longtext_5`
+ON `full_data_type_table` (tp_longtext(5));
+
+CREATE INDEX `idx_tp_mediumtext_5`
+ON `full_data_type_table` (tp_mediumtext(5));
+
+CREATE INDEX `idx_tp_text_5`
+ON `full_data_type_table` (tp_text(5));
+
+CREATE INDEX `idx_tp_tinytext_5`
+ON `full_data_type_table` (tp_tinytext(5));
+
+CREATE INDEX `idx_tp_bit`
+ON `full_data_type_table` (tp_bit);
+
+CREATE INDEX `idx_tp_time`
+ON `full_data_type_table` (tp_time);
+
+CREATE INDEX `idx_tp_enum`
+ON `full_data_type_table` (tp_enum);
+
+CREATE INDEX `idx_tp_set`
+ON `full_data_type_table` (tp_set);
+
 --
 -- Dumping data for table `full_data_type_table`
 --

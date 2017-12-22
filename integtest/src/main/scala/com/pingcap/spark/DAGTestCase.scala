@@ -49,7 +49,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
   // TODO: Eliminate these bugs
   private final val colSkipSet: ImmutableSet[String] =
     ImmutableSet.builder()
-      //      .add("tp_bit") // bit cannot be push down
+            .add("tp_bit") // bit cannot be push down
       //      .add("tp_datetime") // time zone shift
       //      .add("tp_year") // year in spark shows extra month and day
       //      .add("tp_time") // Time format is not the same in TiDB and spark

@@ -22,6 +22,7 @@ import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.expression.{ExpressionBlacklist, TiExpr}
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
+import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
@@ -44,7 +45,6 @@ object TiUtils {
   type TiMax = com.pingcap.tikv.expression.aggregate.Max
   type TiFirst = com.pingcap.tikv.expression.aggregate.First
   type TiDataType = com.pingcap.tikv.types.DataType
-  type TiTypes = com.pingcap.tikv.types.Types
 
   private final val logger = Logger.getLogger(getClass.getName)
 
@@ -87,7 +87,7 @@ object TiUtils {
         // bit/duration type is not allowed to be pushed down
         case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
           val head = nameTypeMap.get(attr.name).head
-          return !head.isInstanceOf[BitType] && head.getTypeCode != Types.TYPE_DURATION
+          return !head.isInstanceOf[BitType] && head.getType != MySQLType.TypeDuration
         // TODO:Currently we do not support literal null type push down
         // when TiConstant is ready to support literal null or we have other
         // options, remove this.
@@ -121,10 +121,10 @@ object TiUtils {
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
     tp match {
-      case _: RawBytesType => sql.types.BinaryType
-      case _: BytesType    => sql.types.StringType
-      case _: IntegerType  => sql.types.LongType
-      case _: RealType     => sql.types.DoubleType
+      case _: StringType  => sql.types.StringType
+      case _: BytesType   => sql.types.BinaryType
+      case _: IntegerType => sql.types.LongType
+      case _: RealType    => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
       case _: DecimalType =>
         DataTypes.createDecimalType(
@@ -139,13 +139,13 @@ object TiUtils {
 
   def fromSparkType(tp: DataType): TiDataType = {
     tp match {
-      case _: sql.types.BinaryType    => DataTypeFactory.of(Types.TYPE_BLOB)
-      case _: sql.types.StringType    => DataTypeFactory.of(Types.TYPE_VARCHAR)
-      case _: sql.types.LongType      => DataTypeFactory.of(Types.TYPE_LONG)
-      case _: sql.types.DoubleType    => DataTypeFactory.of(Types.TYPE_DOUBLE)
-      case _: sql.types.DecimalType   => DataTypeFactory.of(Types.TYPE_NEW_DECIMAL)
-      case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_TIMESTAMP)
-      case _: sql.types.DateType      => DataTypeFactory.of(Types.TYPE_DATE)
+      case _: sql.types.BinaryType    => BytesType.BLOB
+      case _: sql.types.StringType    => StringType.VARCHAR
+      case _: sql.types.LongType      => IntegerType.BIGINT
+      case _: sql.types.DoubleType    => RealType.DOUBLE
+      case _: sql.types.DecimalType   => DecimalType.DECIMAL
+      case _: sql.types.TimestampType => TimestampType.TIMESTAMP
+      case _: sql.types.DateType      => DateType.DATE
     }
   }
 
