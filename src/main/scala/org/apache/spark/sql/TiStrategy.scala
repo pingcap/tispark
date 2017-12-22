@@ -45,24 +45,25 @@ import scala.collection.{JavaConversions, mutable}
 // have multiple plan to pushdown
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf: SQLConf = context.conf
-  def blacklist: ExpressionBlacklist = {
+
+  private def blacklist: ExpressionBlacklist = {
     val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
     new ExpressionBlacklist(blacklistString)
   }
 
-  def allowAggregationPushdown(): Boolean = {
+  private def allowAggregationPushdown(): Boolean = {
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
   }
 
-  def allowIndexDoubleRead(): Boolean = {
+  private def allowIndexDoubleRead(): Boolean = {
     sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_DOUBLE_READ, "false").toBoolean
   }
 
-  def useStreamingProcess(): Boolean = {
+  private def useStreamingProcess(): Boolean = {
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toBoolean
   }
 
-  def timeZoneOffset(): Int = {
+  private def timeZoneOffset(): Int = {
     sqlConf
       .getConfString(
         TiConfigConst.KV_TIMEZONE_OFFSET,
@@ -71,7 +72,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       .toInt
   }
 
-  def pushDownType(): PushDownType = {
+  private def pushDownType(): PushDownType = {
     if (useStreamingProcess()) {
       PushDownType.STREAMING
     } else {
@@ -89,9 +90,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       .flatten
   }
 
-  private def toCoprocessorRDD(source: TiDBRelation,
-                               output: Seq[Attribute],
-                               dagRequest: TiDAGRequest): SparkPlan = {
+  private def toCoprocessorRDD(
+    source: TiDBRelation,
+    output: Seq[Attribute],
+    dagRequest: TiDAGRequest
+  ): SparkPlan = {
     val table = source.table
     dagRequest.setTableInfo(table)
     if (dagRequest.getFields.isEmpty) {
@@ -102,30 +105,30 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     CoprocessorRDD(output, tiRdd)
   }
 
-  def aggregationToDAGRequest(
+  private def aggregationToDAGRequest(
     groupByList: Seq[NamedExpression],
     aggregates: Seq[AggregateExpression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    aggregates.foreach {
-      case AggregateExpression(_: Average, _, _, _) =>
+    aggregates.map { _.aggregateFunction }.foreach {
+      case _: Average =>
         throw new IllegalArgumentException("Should never be here")
 
-      case AggregateExpression(f @ Sum(BasicExpression(arg)), _, _, _) =>
+      case f @ Sum(BasicExpression(arg)) =>
         dagRequest.addAggregate(new TiSum(arg), fromSparkType(f.dataType))
 
-      case AggregateExpression(f @ Count(args), _, _, _) =>
+      case f @ Count(args) =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
         dagRequest.addAggregate(new TiCount(tiArgs: _*), fromSparkType(f.dataType))
 
-      case AggregateExpression(f @ Min(BasicExpression(arg)), _, _, _) =>
+      case f @ Min(BasicExpression(arg)) =>
         dagRequest.addAggregate(new TiMin(arg), fromSparkType(f.dataType))
 
-      case AggregateExpression(f @ Max(BasicExpression(arg)), _, _, _) =>
+      case f @ Max(BasicExpression(arg)) =>
         dagRequest.addAggregate(new TiMax(arg), fromSparkType(f.dataType))
 
-      case AggregateExpression(f @ First(BasicExpression(arg), _), _, _, _) =>
+      case f @ First(BasicExpression(arg), _) =>
         dagRequest.addAggregate(new TiFirst(arg), fromSparkType(f.dataType))
 
       case _ =>
@@ -141,7 +144,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def filterToDAGRequest(
+  private def filterToDAGRequest(
     filters: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
@@ -162,25 +165,22 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def addSortOrder(request: TiDAGRequest, sortOrder: Seq[SortOrder]): Unit =
-    if (sortOrder != null) {
-      sortOrder.foreach(
-        (order: SortOrder) =>
-          request.addOrderByItem(
-            TiByItem.create(
-              BasicExpression.convertToTiExpr(order.child).get,
-              order.direction.sql.equalsIgnoreCase("DESC")
-            )
+  private def addSortOrder(request: TiDAGRequest, sortOrder: Seq[SortOrder]): Unit =
+    sortOrder.foreach { order: SortOrder =>
+      request.addOrderByItem(
+        TiByItem.create(
+          BasicExpression.convertToTiExpr(order.child).get,
+          order.direction.sql.equalsIgnoreCase("DESC")
         )
       )
     }
 
-  def pruneTopNFilterProject(
+  private def pruneTopNFilterProject(
     limit: Int,
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
-    sortOrder: Seq[SortOrder] = null
+    sortOrder: Seq[SortOrder]
   ): SparkPlan = {
     val request = new TiDAGRequest(pushDownType(), timeZoneOffset())
     request.setLimit(limit)
@@ -188,14 +188,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     pruneFilterProject(projectList, filterPredicates, source, request)
   }
 
-  def collectLimit(limit: Int, child: LogicalPlan): SparkPlan = child match {
+  private def collectLimit(limit: Int, child: LogicalPlan): SparkPlan = child match {
     case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
         if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
-      pruneTopNFilterProject(limit, projectList, filters, source, null)
+      pruneTopNFilterProject(limit, projectList, filters, source, Nil)
     case _ => planLater(child)
   }
 
-  def takeOrderedAndProject(
+  private def takeOrderedAndProject(
     limit: Int,
     sortOrder: Seq[SortOrder],
     child: LogicalPlan,
@@ -219,7 +219,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
   }
 
-  def pruneFilterProject(
+  private def pruneFilterProject(
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
@@ -263,7 +263,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
   }
 
-  def groupAggregateProjection(
+  private def groupAggregateProjection(
     groupingExpressions: Seq[NamedExpression],
     aggregateExpressions: Seq[AggregateExpression],
     resultExpressions: Seq[NamedExpression],
@@ -334,30 +334,27 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     aggregationToDAGRequest(groupingExpressions, pushdownAggregates, source, dagReq)
 
-    val rewrittenResultExpression = resultExpressions.map(
-      expr =>
-        expr
-          .transformDown {
-            case aggExpr: AttributeReference if avgFinalRewriteMap.contains(aggExpr.exprId) =>
-              // Replace the original Average expression with Div of Alias
-              val sumCountPair = avgFinalRewriteMap(aggExpr.exprId)
+    val rewrittenResultExpression = resultExpressions.map {
+      _.transformDown {
+        case aggExpr: AttributeReference if avgFinalRewriteMap.contains(aggExpr.exprId) =>
+          // Replace the original Average expression with Div of Alias
+          val sumCountPair = avgFinalRewriteMap(aggExpr.exprId)
 
-              // We missed the chance for auto-coerce already
-              // so manual cast needed
-              // Also, convert into resultAttribute since
-              // they are created by tiSpark without Spark conversion
-              // TODO: Is DoubleType a best target type for all?
-              Cast(
-                Divide(
-                  Cast(sumCountPair.head.resultAttribute, DoubleType),
-                  Cast(sumCountPair(1).resultAttribute, DoubleType)
-                ),
-                aggExpr.dataType
-              )
-            case other => other
-          }
-          .asInstanceOf[NamedExpression]
-    )
+          // We missed the chance for auto-coerce already
+          // so manual cast needed
+          // Also, convert into resultAttribute since
+          // they are created by tiSpark without Spark conversion
+          // TODO: Is DoubleType a best target type for all?
+          Cast(
+            Divide(
+              Cast(sumCountPair.head.resultAttribute, DoubleType),
+              Cast(sumCountPair(1).resultAttribute, DoubleType)
+            ),
+            aggExpr.dataType
+          )
+        case other => other
+      }.asInstanceOf[NamedExpression]
+    }
 
     val output = (pushdownAggregates.map(x => toAlias(x)) ++ groupingExpressions)
       .map(_.toAttribute)
@@ -373,10 +370,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     )
   }
 
-  def isValidAggregates(groupingExpressions: Seq[NamedExpression],
-                        aggregateExpressions: Seq[AggregateExpression],
-                        filters: Seq[Expression],
-                        source: TiDBRelation): Boolean = {
+  private def isValidAggregates(
+    groupingExpressions: Seq[NamedExpression],
+    aggregateExpressions: Seq[AggregateExpression],
+    filters: Seq[Expression],
+    source: TiDBRelation
+  ): Boolean = {
     allowAggregationPushdown &&
     filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) &&
     groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
