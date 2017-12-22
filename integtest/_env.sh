@@ -104,7 +104,7 @@ create_conf_load() {
     echo "create conf for loading data..."
     create_conf_db_options
     echo "test.mode=Load"    >> ${BASE_CONF}
-    echo "test.ignore=tpch,tpch_TEST,test_index" >> ${BASE_CONF}
+    echo "test.ignore=tpch,tpch_TEST" >> ${BASE_CONF}
 
     cp ${BASE_CONF} ${TISPARK_CONF}
 }
@@ -229,6 +229,10 @@ load_DAG_Table() {
     mysql -h ${tidb_addr} -P ${tidb_port} -u "${tidb_user}" < ./testcases/tispark_test/TisparkTest.sql
 }
 
+load_Index_Table() {
+    mysql -h ${tidb_addr} -P ${tidb_port} -u "${tidb_user}" < ./testcases/test_index/testIndex.sql
+}
+
 rename_result_files_no_tpch() {
     for f in ./*.jdbc; do
         [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}"
@@ -242,6 +246,7 @@ rename_result_files_no_tpch() {
         [ -e "$f" ] && mv "$f" "${f/inlineTest/TestNoTPCH}"
         # break
     done
+    echo "renamed files to TestNoTPCH"
 }
 
 rename_result_files_dag() {
@@ -257,6 +262,7 @@ rename_result_files_dag() {
         [ -e "$f" ] && mv "$f" "${f/inlineTest/TestDAG}"
         # break
     done
+    echo "renamed files to TestDAG"
 }
 
 rename_result_files_tpch() {
@@ -272,4 +278,5 @@ rename_result_files_tpch() {
         [ -e "$f" ] && mv "$f" "${f/tpch_test/TestTPCH}"
         # break
     done
+    echo "renamed files to TestTPCH"
 }

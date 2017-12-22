@@ -17,5 +17,5 @@ if [[ "$@" = *--debug ]] || [[ "$@" = *-d ]]; then
     ${spark_cmd} ${spark_debug_opt}
 else
     echo "testing...."
-    ${spark_cmd} ${spark_test_opt} 2>&1 | grep "result:\|time:"
+    ${spark_cmd} ${spark_test_opt} 2>&1 | grep "result:\|time:\|Result:"
 fi
