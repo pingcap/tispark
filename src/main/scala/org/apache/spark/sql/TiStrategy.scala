@@ -275,14 +275,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val avgPushdownRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
     val avgFinalRewriteMap = mutable.HashMap[ExprId, List[AggregateExpression]]()
 
-    def newAggregate(aggFunc: AggregateFunction, originalAggExpr: AggregateExpression) =
-      AggregateExpression(
-        aggFunc,
-        originalAggExpr.mode,
-        originalAggExpr.isDistinct,
-        originalAggExpr.resultId
-      )
-
     def newAggregateWithId(aggFunc: AggregateFunction, originalAggExpr: AggregateExpression) =
       AggregateExpression(
         aggFunc,
@@ -305,12 +297,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       aggExpr.aggregateFunction match {
         // here aggExpr is the original AggregationExpression
         // and will be pushed down to TiKV
-        case Max(_)   => newAggregate(Max(toAlias(aggExpr).toAttribute), aggExpr)
-        case Min(_)   => newAggregate(Min(toAlias(aggExpr).toAttribute), aggExpr)
-        case Count(_) => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
-        case Sum(_)   => newAggregate(Sum(toAlias(aggExpr).toAttribute), aggExpr)
+        case Max(_)   => aggExpr.copy(aggregateFunction = Max(toAlias(aggExpr).toAttribute))
+        case Min(_)   => aggExpr.copy(aggregateFunction = Min(toAlias(aggExpr).toAttribute))
+        case Count(_) => aggExpr.copy(aggregateFunction = Sum(toAlias(aggExpr).toAttribute))
+        case Sum(_)   => aggExpr.copy(aggregateFunction = Sum(toAlias(aggExpr).toAttribute))
         case First(_, ignoreNullsExpr) =>
-          newAggregate(First(toAlias(aggExpr).toAttribute, ignoreNullsExpr), aggExpr)
+          aggExpr.copy(aggregateFunction = First(toAlias(aggExpr).toAttribute, ignoreNullsExpr))
+
         case _ => aggExpr
       }
     } flatMap { aggExpr =>
@@ -322,8 +315,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         // Divide(sum/count) + 1
         case aggExpr @ AggregateExpression(Average(ref), _, _, _) =>
           // Need a type promotion
-          val sumToPush = newAggregate(Sum(ref), aggExpr)
-          val countToPush = newAggregate(Count(ref), aggExpr)
+          val sumToPush = aggExpr.copy(aggregateFunction = Sum(ref))
+          val countToPush = aggExpr.copy(aggregateFunction = Count(ref))
 
           // Need a new expression id since they are not simply rewrite as above
           val sumFinal = newAggregateWithId(Sum(toAlias(sumToPush).toAttribute), aggExpr)
