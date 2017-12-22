@@ -278,7 +278,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       originalAggExpr.copy(aggregateFunction = aggFunc, resultId = NamedExpression.newExprId)
 
     val toAlias: AggregateExpression => Alias = {
-      lazy val deterministicAggAliases = aggregateExpressions.collect {
+      val deterministicAggAliases = aggregateExpressions.collect {
         case e if e.deterministic => e -> Alias(e.canonicalized, e.toString())()
       }.toMap
 
