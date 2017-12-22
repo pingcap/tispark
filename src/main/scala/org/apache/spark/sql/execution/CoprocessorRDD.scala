@@ -158,10 +158,16 @@ case class RegionTaskExec(child: SparkPlan,
     child
       .execute()
       .mapPartitionsWithIndexInternal { (index, iter) =>
+        // For each partition, we do some initialization work
         val logger = Logger.getLogger(getClass.getName)
+        logger.info(s"In partition No.$index")
         val session = TiSessionCache.getSession(appId, tiConf)
         val batchSize = session.getConf.getIndexScanBatchSize
-        logger.info(s"In partition No.$index")
+        // We need to clear index info in order to perform table scan
+        dagRequest.clearIndexInfo()
+        val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
+        val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
+        val finalTypes = rowTransformer.getTypes.toList
 
         iter.flatMap { row =>
           val handles = row.getArray(1).toLongArray()
@@ -170,9 +176,6 @@ case class RegionTaskExec(child: SparkPlan,
 
           val completionService =
             new ExecutorCompletionService[util.Iterator[TiRow]](session.getThreadPoolForIndexScan)
-          val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
-          val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
-          val finalTypes = rowTransformer.getTypes.toList
           var rowIterator: util.Iterator[TiRow] = null
 
           def feedBatch(): TLongArrayList = {
@@ -205,8 +208,38 @@ case class RegionTaskExec(child: SparkPlan,
             }
           }
 
-          // We need to clear index info in order to perform table scan
-          dagRequest.clearIndexInfo()
+          def splitTasks(tasks: Seq[RegionTask]): mutable.Seq[RegionTask] = {
+            val finalTasks = mutable.ListBuffer[RegionTask]()
+            tasks.foreach(finalTasks += _)
+            while (finalTasks.exists(isTaskRangeSizeInvalid)) {
+              val tasksToSplit = mutable.ListBuffer[RegionTask]()
+              finalTasks.filter(isTaskRangeSizeInvalid).foreach(tasksToSplit.add)
+              tasksToSplit.foreach(task => {
+                val newRanges = task.getRanges.grouped(task.getRanges.size() / 2)
+                newRanges.foreach(range => {
+                  finalTasks += new RegionTask(task.getRegion, task.getStore, range)
+                })
+                finalTasks -= task
+              })
+            }
+            logger.info(s"Split ${tasks.size} tasks into ${finalTasks.size} tasks.")
+            finalTasks
+          }
+
+          def isTaskRangeSizeInvalid(task: RegionTask): Boolean = {
+            task == null ||
+            task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
+          }
+
+          def submitTasks(tasks: util.List[RegionTask]): Unit = {
+            taskCount += 1
+            val task = new Callable[util.Iterator[TiRow]] {
+              override def call(): util.Iterator[TiRow] = {
+                CoprocessIterator.getRowIterator(dagRequest, tasks, session)
+              }
+            }
+            completionService.submit(task)
+          }
 
           // Downgrade to full table scan for a region
           if (isDowngrade) {
@@ -267,47 +300,33 @@ case class RegionTaskExec(child: SparkPlan,
             }
             numDowngradedTasks += result.size
 
-            result.foreach(taskList => {
-              taskCount += 1
-              val task = new Callable[util.Iterator[TiRow]] {
-                override def call(): util.Iterator[TiRow] = {
-                  CoprocessIterator.getRowIterator(dagRequest, taskList, session)
-                }
-              }
-              // TODO: may need to use other completionService rather than index scan's
-              // Still, is okay to do like this.
-              completionService.submit(task)
-            })
+            result.foreach(submitTasks(_))
           } else {
             while (handleIterator.hasNext) {
               val handleList = feedBatch()
-              taskCount += 1
               numHandles += handleList.size()
               logger.info("Single batch handles size:" + handleList.size())
               numIndexScanTasks += 1
+              var tasks = RangeSplitter
+                .newSplitter(session.getRegionManager)
+                .splitHandlesByRegion(
+                  dagRequest.getTableInfo.getId,
+                  handleList
+                )
+              proceedTasksOrThrow(tasks)
+              tasks = splitTasks(tasks)
 
-              val task = new Callable[util.Iterator[TiRow]] {
-                override def call(): util.Iterator[TiRow] = {
-                  val tasks = RangeSplitter
-                    .newSplitter(session.getRegionManager)
-                    .splitHandlesByRegion(
-                      dagRequest.getTableInfo.getId,
-                      handleList
-                    )
-                  proceedTasksOrThrow(tasks)
+              logger.info(s"Single batch RegionTask size:${tasks.size()}")
+              tasks.foreach(task => {
+                logger.info(
+                  s"Single batch RegionTask={Host:${task.getHost}," +
+                    s"Region:${task.getRegion}," +
+                    s"Store:{id=${task.getStore.getId},address=${task.getStore.getAddress}}, " +
+                    s"RangesListSize:${task.getRanges.size()}}"
+                )
+              })
 
-                  val firstTask = tasks.head
-                  logger.info(
-                    s"Single batch first RegionTask={Host:${firstTask.getHost}," +
-                      s"Region:${firstTask.getRegion}," +
-                      s"Store:{id=${firstTask.getStore.getId},addr=${firstTask.getStore.getAddress}}" +
-                      s"RangesListSize:${firstTask.getRanges.size()}}"
-                  )
-
-                  CoprocessIterator.getRowIterator(dagRequest, tasks, session)
-                }
-              }
-              completionService.submit(task)
+              submitTasks(tasks)
             }
           }
 
