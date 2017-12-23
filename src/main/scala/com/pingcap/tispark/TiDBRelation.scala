@@ -21,10 +21,8 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
-import org.apache.spark.sql.catalyst.plans.physical.HashPartitioning
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.aggregate.AggUtils
-import org.apache.spark.sql.execution.exchange.ShuffleExchange
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
@@ -52,7 +50,7 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     val tiHandleRDD =
       new TiHandleRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
     val handlePlan = HandleRDDExec(tiHandleRDD)
-    val aggFunc = CollectSet(handlePlan.attributeRef.last)
+    val aggFunc = CollectHandles(handlePlan.attributeRef.last)
 
     val aggExpr = AggregateExpression(
       aggFunc,
