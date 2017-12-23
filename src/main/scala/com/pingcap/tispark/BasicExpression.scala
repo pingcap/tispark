@@ -19,10 +19,9 @@ import java.sql.{Date, Timestamp}
 
 import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
-import com.pingcap.tikv.types.RequestTypes
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
+import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Remainder, Subtract}
 import org.apache.spark.sql.types._
-
 import scala.language.implicitConversions
 
 object BasicExpression {
