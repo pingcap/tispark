@@ -108,7 +108,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           (columnRef: TiColumnRef) =>
             typeBlackList.isUnsupportedType(columnRef.getColumnInfo.getType.simpleTypeName)
         )) {
-      throw new IgnoreUnsupportedTypeException("Unsupported type found.")
+      throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
     } else {
       val tiRdd = source.logicalPlanToRDD(dagRequest)
 
@@ -412,66 +412,60 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   // and then we don't return (don't planLater) and plan the remaining all at once
   private def doPlan(source: TiDBRelation, plan: LogicalPlan): Seq[SparkPlan] = {
     // TODO: This test should be done once for all children
-    try {
-      plan match {
-        case logical.ReturnAnswer(rootPlan) =>
-          rootPlan match {
-            case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
-              takeOrderedAndProject(limit, order, child, child.output) :: Nil
-            case logical.Limit(
-                IntegerLiteral(limit),
-                logical.Project(projectList, logical.Sort(order, true, child))
-                ) =>
-              takeOrderedAndProject(limit, order, child, projectList) :: Nil
-            case logical.Limit(IntegerLiteral(limit), child) =>
-              execution.CollectLimitExec(limit, collectLimit(limit, child)) :: Nil
-            case other => planLater(other) :: Nil
-          }
-        case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
-          takeOrderedAndProject(limit, order, child, child.output) :: Nil
-        case logical.Limit(
-            IntegerLiteral(limit),
-            logical.Project(projectList, logical.Sort(order, true, child))
-            ) =>
-          takeOrderedAndProject(limit, order, child, projectList) :: Nil
+    plan match {
+      case logical.ReturnAnswer(rootPlan) =>
+        rootPlan match {
+          case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+            takeOrderedAndProject(limit, order, child, child.output) :: Nil
+          case logical.Limit(
+              IntegerLiteral(limit),
+              logical.Project(projectList, logical.Sort(order, true, child))
+              ) =>
+            takeOrderedAndProject(limit, order, child, projectList) :: Nil
+          case logical.Limit(IntegerLiteral(limit), child) =>
+            execution.CollectLimitExec(limit, collectLimit(limit, child)) :: Nil
+          case other => planLater(other) :: Nil
+        }
+      case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+        takeOrderedAndProject(limit, order, child, child.output) :: Nil
+      case logical.Limit(
+          IntegerLiteral(limit),
+          logical.Project(projectList, logical.Sort(order, true, child))
+          ) =>
+        takeOrderedAndProject(limit, order, child, projectList) :: Nil
 
-        // Collapse filters and projections and push plan directly
-        case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
-          pruneFilterProject(projectList, filters, source) :: Nil
+      // Collapse filters and projections and push plan directly
+      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
+        pruneFilterProject(projectList, filters, source) :: Nil
 
-        // Basic logic of original Spark's aggregation plan is:
-        // PhysicalAggregation extractor will rewrite original aggregation
-        // into aggregateExpressions and resultExpressions.
-        // resultExpressions contains only references [[AttributeReference]]
-        // to the result of aggregation. resultExpressions might contain projections
-        // like Add(sumResult, 1).
-        // For a aggregate like agg(expr) + 1, the rewrite process is: rewrite agg(expr) ->
-        // 1. pushdown: agg(expr) as agg1, if avg then sum(expr), count(expr)
-        // 2. residual expr (for Spark itself): agg(agg1) as finalAgg1 the parameter is a
-        // reference to pushed plan's corresponding aggregation
-        // 3. resultExpressions: finalAgg1 + 1, the finalAgg1 is the reference to final result
-        // of the aggregation
-        case TiAggregation(
-            groupingExpressions,
-            aggregateExpressions,
-            resultExpressions,
-            TiAggregationProjection(filters, _, `source`, projects)
-            ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
-          val dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
-          groupAggregateProjection(
-            groupingExpressions,
-            aggregateExpressions,
-            resultExpressions,
-            projects,
-            `source`,
-            dagReq
-          )
-        case _ => Nil
-      }
-    } catch {
-      case e: IgnoreUnsupportedTypeException =>
-        println(e.getMessage)
-        Nil
+      // Basic logic of original Spark's aggregation plan is:
+      // PhysicalAggregation extractor will rewrite original aggregation
+      // into aggregateExpressions and resultExpressions.
+      // resultExpressions contains only references [[AttributeReference]]
+      // to the result of aggregation. resultExpressions might contain projections
+      // like Add(sumResult, 1).
+      // For a aggregate like agg(expr) + 1, the rewrite process is: rewrite agg(expr) ->
+      // 1. pushdown: agg(expr) as agg1, if avg then sum(expr), count(expr)
+      // 2. residual expr (for Spark itself): agg(agg1) as finalAgg1 the parameter is a
+      // reference to pushed plan's corresponding aggregation
+      // 3. resultExpressions: finalAgg1 + 1, the finalAgg1 is the reference to final result
+      // of the aggregation
+      case TiAggregation(
+          groupingExpressions,
+          aggregateExpressions,
+          resultExpressions,
+          TiAggregationProjection(filters, _, `source`, projects)
+          ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
+        val dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
+        groupAggregateProjection(
+          groupingExpressions,
+          aggregateExpressions,
+          resultExpressions,
+          projects,
+          `source`,
+          dagReq
+        )
+      case _ => Nil
     }
   }
 }
