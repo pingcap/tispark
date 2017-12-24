@@ -217,7 +217,7 @@ case class RegionTaskExec(child: SparkPlan,
               tasksToSplit.foreach(task => {
                 val newRanges = task.getRanges.grouped(task.getRanges.size() / 2)
                 newRanges.foreach(range => {
-                  finalTasks += new RegionTask(task.getRegion, task.getStore, range)
+                  finalTasks += RegionTask.newInstance(task.getRegion, task.getStore, range)
                 })
                 finalTasks -= task
               })
