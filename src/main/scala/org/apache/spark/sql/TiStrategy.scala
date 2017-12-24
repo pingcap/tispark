@@ -99,7 +99,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
 
     if (dagRequest.isIndexScan) {
-      source.logicalPlanToRegionHandlePlan(dagRequest, output)
+      source.dagRequestToRegionTaskExec(dagRequest, output)
     } else {
       val tiRdd = source.logicalPlanToRDD(dagRequest)
       CoprocessorRDD(output, tiRdd)

@@ -198,16 +198,36 @@ case class RegionTaskExec(child: SparkPlan,
             Row.fromSeq(rowArray)
           }
 
-          def isDowngrade: Boolean = {
+          /**
+           * Checks whether a request should be downgraded according to some restrictions
+           *
+           * @return true, the request should be downgraded, false otherwise.
+           */
+          def shouldDowngrade: Boolean = {
             handles.length > downgradeThreshold
           }
 
+          /**
+           * Checks whether the tasks are valid.
+           *
+           * Currently we only check whether the task list contains only one [[RegionTask]],
+           * since in each partition, handles received are from the same region.
+           *
+           * @param tasks tasks to examine
+           */
           def proceedTasksOrThrow(tasks: Seq[RegionTask]): Unit = {
             if (tasks.lengthCompare(1) != 0) {
               throw new RuntimeException(s"Unexpected region task size:${tasks.size}, expecting 1")
             }
           }
 
+          /**
+           * If one task's ranges list exceeds some threshold, we split it into tow sub tasks and
+           * each has half of the original ranges.
+           *
+           * @param tasks task list to examine
+           * @return split task list
+           */
           def splitTasks(tasks: Seq[RegionTask]): mutable.Seq[RegionTask] = {
             val finalTasks = mutable.ListBuffer[RegionTask]()
             tasks.foreach(finalTasks += _)
@@ -241,12 +261,14 @@ case class RegionTaskExec(child: SparkPlan,
             completionService.submit(task)
           }
 
-          // Downgrade to full table scan for a region
-          if (isDowngrade) {
+          if (shouldDowngrade) {
+            // Should downgrade to full table scan for a region
             val handleList = new TLongArrayList()
             handles.foreach(handleList.add)
+            // Restore original filters to perform table scan logic
             dagRequest.resetFilters(dagRequest.getDowngradeFilters)
 
+            // After `splitHandlesByRegion`, ranges in the task are arranged in order
             var tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
               .splitHandlesByRegion(
@@ -262,6 +284,8 @@ case class RegionTaskExec(child: SparkPlan,
                 s"original index scan task has ${taskRanges.size()} ranges, will try to merge."
             )
 
+            // We merge potential separate index ranges from `taskRanges` into one large range
+            // and create a new RegionTask
             tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
               .splitRangeByRegion(KeyRangeUtils.mergeRanges(taskRanges))
@@ -278,30 +302,11 @@ case class RegionTaskExec(child: SparkPlan,
                 s"Range={${KeyRangeUtils.toString(task.getRanges.head)}}, " +
                 s"RangesListSize=${task.getRanges.size()}}"
             )
-            val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
-            with mutable.MultiMap[String, RegionTask]
+            numDowngradedTasks += 1
 
-            //TODO : some split configs
-            var index = 0
-            val result = new ListBuffer[Seq[RegionTask]]
-            tasks.foreach(task => {
-              hostTasksMap.addBinding(task.getHost, task)
-              val tasks = hostTasksMap(task.getHost)
-              if (tasks.nonEmpty) {
-                result.append(tasks.toSeq)
-                index += 1
-                hostTasksMap.remove(task.getHost)
-              }
-            })
-            // add rest
-            for (tasks <- hostTasksMap.values) {
-              result.append(tasks.toSeq)
-              index += 1
-            }
-            numDowngradedTasks += result.size
-
-            result.foreach(submitTasks(_))
+            submitTasks(tasks)
           } else {
+            // Request doesn't need to be downgraded
             while (handleIterator.hasNext) {
               val handleList = feedBatch()
               numHandles += handleList.size()
@@ -330,6 +335,7 @@ case class RegionTaskExec(child: SparkPlan,
             }
           }
 
+          // The result iterator serves as an wrapper to the final result we fetched from region tasks
           val resultIter = new util.Iterator[UnsafeRow] {
             override def hasNext: Boolean = {
 
@@ -348,7 +354,7 @@ case class RegionTaskExec(child: SparkPlan,
                 false
               }
 
-              // RowIter has not been initialized
+              // RowIterator has not been initialized
               if (rowIterator == null) {
                 proceedNextBatchTask()
               } else {

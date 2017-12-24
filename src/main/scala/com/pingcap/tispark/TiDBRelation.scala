@@ -43,13 +43,15 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     new TiRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
   }
 
-  def logicalPlanToRegionHandlePlan(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
+  def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
     val ts: TiTimestamp = session.getTimestamp
     dagRequest.setStartTs(ts.getVersion)
     dagRequest.resolve()
+
     val tiHandleRDD =
       new TiHandleRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
     val handlePlan = HandleRDDExec(tiHandleRDD)
+    // collect handles as a list
     val aggFunc = CollectHandles(handlePlan.attributeRef.last)
 
     val aggExpr = AggregateExpression(
@@ -61,9 +63,9 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
 
     val sortAgg = AggUtils
       .planAggregateWithoutPartial(
-        Seq(handlePlan.attributeRef.head),
+        Seq(handlePlan.attributeRef.head), // group by region id
         Seq(aggExpr),
-        Seq(handlePlan.output.head, aggExpr.resultAttribute),
+        Seq(handlePlan.output.head, aggExpr.resultAttribute), // output <region, handleList>
         handlePlan
       )
       .head
