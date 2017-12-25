@@ -30,7 +30,7 @@ object Utils {
   val DataSuffix = ".data"
   val SQLSuffix = ".sql"
 
-  def TryResource[T](res: T) (closeOp: T => Unit) (taskOp: T => Unit): Unit = {
+  def TryResource[T](res: T)(closeOp: T => Unit)(taskOp: T => Unit): Unit = {
     try {
       taskOp(res)
     } finally {
@@ -39,7 +39,7 @@ object Utils {
   }
 
   def writeFile(content: String, path: String): Unit = {
-    TryResource(new PrintWriter(path)) (_.close()) { _.print(content) }
+    TryResource(new PrintWriter(path))(_.close()) { _.print(content) }
   }
 
   def readFile(path: String): List[String] = {
@@ -90,8 +90,12 @@ object Utils {
   def isDataFile(path: String) = path.endsWith(DataSuffix)
   def isSQLFile(path: String) = path.endsWith(SQLSuffix)
 
-  def ddlFileName(basePath: String, table: String) = Paths.get(basePath, table + DDLSuffix).toAbsolutePath.toString
-  def dataFileName(basePath: String, table: String) = Paths.get(basePath, table + DataSuffix).toAbsolutePath.toString
-  def joinPath(basePath: String, paths: String*) = Paths.get(basePath, paths: _*).toAbsolutePath.toString
-  def ensurePath(basePath: String, paths: String*) = new File(joinPath(basePath, paths: _*)).mkdirs()
+  def ddlFileName(basePath: String, table: String) =
+    Paths.get(basePath, table + DDLSuffix).toAbsolutePath.toString
+  def dataFileName(basePath: String, table: String) =
+    Paths.get(basePath, table + DataSuffix).toAbsolutePath.toString
+  def joinPath(basePath: String, paths: String*) =
+    Paths.get(basePath, paths: _*).toAbsolutePath.toString
+  def ensurePath(basePath: String, paths: String*) =
+    new File(joinPath(basePath, paths: _*)).mkdirs()
 }

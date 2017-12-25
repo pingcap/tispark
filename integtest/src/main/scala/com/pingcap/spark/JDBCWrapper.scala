@@ -42,10 +42,12 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
 
   private val connection: Connection = {
     val useRawSparkMySql: Boolean = getFlag(prop, KeyUseRawSparkMySql)
-    val jdbcUsername = if(useRawSparkMySql) getOrThrow(prop, KeyMysqlUser) else getOrThrow(prop, KeyTiDBUser)
-    val jdbcHostname = if(useRawSparkMySql) getOrThrow(prop, KeyMysqlAddress) else getOrThrow(prop, KeyTiDBAddress)
-    val jdbcPort = if(useRawSparkMySql) 0 else Integer.parseInt(getOrThrow(prop, KeyTiDBPort))
-    val jdbcPassword = if(useRawSparkMySql) getOrThrow(prop, KeyMysqlPassword) else ""
+    val jdbcUsername =
+      if (useRawSparkMySql) getOrThrow(prop, KeyMysqlUser) else getOrThrow(prop, KeyTiDBUser)
+    val jdbcHostname =
+      if (useRawSparkMySql) getOrThrow(prop, KeyMysqlAddress) else getOrThrow(prop, KeyTiDBAddress)
+    val jdbcPort = if (useRawSparkMySql) 0 else Integer.parseInt(getOrThrow(prop, KeyTiDBPort))
+    val jdbcPassword = if (useRawSparkMySql) getOrThrow(prop, KeyMysqlPassword) else ""
     val jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
       (if (useRawSparkMySql) "" else s":$jdbcPort") +
       s"/?user=$jdbcUsername&password=$jdbcPassword"
@@ -63,7 +65,8 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     if (currentDatabaseName == null) {
       throw new IllegalStateException("need initialization")
     }
-    val tables = connection.getMetaData.getTables(currentDatabaseName, null, "%", scala.Array("TABLE"))
+    val tables =
+      connection.getMetaData.getTables(currentDatabaseName, null, "%", scala.Array("TABLE"))
     while (tables.next()) {
       val table = tables.getString("TABLE_NAME")
       dumpCreateTable(table, path)
@@ -93,24 +96,26 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
       logger.info("value = " + str)
       tp match {
         case "VARCHAR" | "CHAR" | "TEXT" | "TIME" => str
-        case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" => BigDecimal(str)
-        case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" | "YEAR" => str.toLong
-        case "DATE" => Date.valueOf(str)
-        case "TIMESTAMP" | "DATETIME" => Timestamp.valueOf(str)
+        case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" =>
+          BigDecimal(str)
+        case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" | "YEAR" =>
+          str.toLong
+        case "DATE"                                          => Date.valueOf(str)
+        case "TIMESTAMP" | "DATETIME"                        => Timestamp.valueOf(str)
         case "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" | "BLOB" => str.getBytes
-        case _ => str
+        case _                                               => str
       }
     }
   }
 
   private def typeCodeFromString(tp: String): Int = {
     tp match {
-      case "VARCHAR" | "CHAR" | "TEXT" | "TIME" => 12
+      case "VARCHAR" | "CHAR" | "TEXT" | "TIME"                                     => 12
       case "FLOAT" | "REAL" | "DOUBLE" | "DOUBLE PRECISION" | "DECIMAL" | "NUMERIC" => 3
-      case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT" => 4
-      case "DATE" => 91
-      case "TIMESTAMP" | "DATETIME" => 93
-      case "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" | "BLOB" => 2004
+      case "TINYINT" | "SMALLINT" | "MEDIUMINT" | "INT" | "INTEGER" | "BIGINT"      => 4
+      case "DATE"                                                                   => 91
+      case "TIMESTAMP" | "DATETIME"                                                 => 93
+      case "TINYBLOB" | "MEDIUMBLOB" | "LONGBLOB" | "BLOB"                          => 2004
 //      case "BINARY" => -2
 //      case "VARBINARY" => -3
       case _ => 1111
@@ -122,9 +127,13 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
   private def rowFromString(row: String, types: List[String]): List[Any] = {
     logger.info(row)
 
-    row.split(Pattern.quote(Sep)).zip(types).map {
-      case (value, colType) => valFromString(value, colType)
-    }.toList
+    row
+      .split(Pattern.quote(Sep))
+      .zip(types)
+      .map {
+        case (value, colType) => valFromString(value, colType)
+      }
+      .toList
   }
 
   private def dumpTableContent(table: String, path: String): Unit = {
@@ -150,19 +159,20 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     val placeholders = List.fill(row.size)("?").mkString(",")
     val stat = s"insert into $table values ($placeholders)"
     val ps = connection.prepareStatement(stat)
-    row.zipWithIndex.foreach { case (value, index) =>
-      val pos = index + 1
-      logger.info(if (value == null) "NULL" else value.getClass.toString)
-      value match {
-        case bd: BigDecimal => ps.setBigDecimal(pos, bd.bigDecimal)
-        case l: Long => ps.setLong(pos, l)
-        case d: Date => ps.setDate(pos, d)
-        case s: String => ps.setString(pos, s)
-        case ts: Timestamp => ps.setTimestamp(pos, ts)
-        case ba: Array[Byte] => ps.setBytes(pos, ba)
-        case null => ps.setNull(pos, typeCodeFromString(schema(index)))
-        case b: Blob => ps.setBlob(pos, b)
-      }
+    row.zipWithIndex.foreach {
+      case (value, index) =>
+        val pos = index + 1
+        logger.info(if (value == null) "NULL" else value.getClass.toString)
+        value match {
+          case bd: BigDecimal  => ps.setBigDecimal(pos, bd.bigDecimal)
+          case l: Long         => ps.setLong(pos, l)
+          case d: Date         => ps.setDate(pos, d)
+          case s: String       => ps.setString(pos, s)
+          case ts: Timestamp   => ps.setTimestamp(pos, ts)
+          case ba: Array[Byte] => ps.setBytes(pos, ba)
+          case null            => ps.setNull(pos, typeCodeFromString(schema(index)))
+          case b: Blob         => ps.setBlob(pos, b)
+        }
     }
     ps.executeUpdate()
   }
@@ -171,7 +181,8 @@ class JDBCWrapper(prop: Properties) extends LazyLogging {
     try {
       logger.info("Loading data from : " + path)
       val lines = readFile(path)
-      val (table, schema, rows) = (lines.head, lines(1).split(Pattern.quote(Sep)).toList, lines.drop(2))
+      val (table, schema, rows) =
+        (lines.head, lines(1).split(Pattern.quote(Sep)).toList, lines.drop(2))
       val rowData: List[List[Any]] = rows.map {
         rowFromString(_, schema)
       }
