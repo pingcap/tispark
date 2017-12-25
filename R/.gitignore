@@ -1,0 +1,10 @@
+*.o
+*.so
+*.Rd
+lib
+pkg/man
+pkg/html
+TiSparkR.Rproj
+.Rproj.user
+.Rhistory
+.Rbuildignore
