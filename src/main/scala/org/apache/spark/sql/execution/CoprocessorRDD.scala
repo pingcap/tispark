@@ -77,7 +77,7 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   override val nodeName: String = "HandleRDD"
 
   override lazy val metrics = Map(
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of selected handles")
+    "numOutputRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions")
   )
 
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
@@ -86,13 +86,13 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
     RDDConversions.rowToRowRdd(tiHandleRDD, output.map(_.dataType))
 
   override protected def doExecute(): RDD[InternalRow] = {
-    val numOutputRows = longMetric("numOutputRows")
+    val numOutputRegions = longMetric("numOutputRegions")
 
     internalRDD.mapPartitionsWithIndexInternal { (index, iter) =>
       val proj = UnsafeProjection.create(schema)
       proj.initialize(index)
       iter.map { r =>
-        numOutputRows += 1
+        numOutputRegions += 1
         proj(r)
       }
     }
