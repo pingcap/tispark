@@ -2,7 +2,7 @@
 .idea
 *.iml
 target
-src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
+core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
 
 # ignore eclipse configuration 
 .project
@@ -48,3 +48,6 @@ metastore_db/
 tpch
 .java-version
 /integtest/conf/tispark_config.properties
+
+tikv-client/kvproto
+tikv-client/tipb
