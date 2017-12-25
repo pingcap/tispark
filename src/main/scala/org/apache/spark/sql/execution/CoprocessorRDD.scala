@@ -36,12 +36,11 @@ import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference,
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.SQLMetrics
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
-import org.apache.spark.sql.types.{DataType, LongType, Metadata}
+import org.apache.spark.sql.types.{ArrayType, DataType, LongType, Metadata}
 import org.apache.spark.sql.{Row, SparkSession}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
 
@@ -101,7 +100,12 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 
   final lazy val attributeRef = Seq(
     AttributeReference("RegionId", LongType, nullable = false, Metadata.empty)(),
-    AttributeReference("Handle", LongType, nullable = false, Metadata.empty)()
+    AttributeReference(
+      "Handles",
+      ArrayType(LongType, containsNull = false),
+      nullable = false,
+      Metadata.empty
+    )()
   )
 
   override def output: Seq[Attribute] = attributeRef

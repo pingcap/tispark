@@ -42,7 +42,7 @@ case class CollectHandles(child: Expression,
 
   override def nullable: Boolean = true
 
-  override def dataType: DataType = ArrayType(child.dataType)
+  override def dataType: DataType = ArrayType(LongType)
 
   override def inputTypes: Seq[AbstractDataType] = Seq(AnyDataType)
 
@@ -65,7 +65,7 @@ case class CollectHandles(child: Expression,
   override def update(b: InternalRow, input: InternalRow): Unit = {
     val value = child.eval(input)
     if (value != null) {
-      buffer.add(value.asInstanceOf[Long])
+      buffer.addAll(value.asInstanceOf[GenericArrayData].toLongArray())
     }
   }
 

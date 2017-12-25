@@ -22,6 +22,8 @@ import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
+import gnu.trove.list.linked.TLongLinkedList
+import gnu.trove.map.hash.TLongObjectHashMap
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext}
@@ -46,20 +48,37 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
       private val snapshot = session.createSnapshot(ts)
-      private val iterator =
+      private val handleIter =
         snapshot.handleRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
       private val tableId = dagRequest.getTableInfo.getId
+      private val regionManager = session.getRegionManager
+      private val regionHandleMap = new TLongObjectHashMap[TLongLinkedList]()
+      // Fetch all handles
+      while (handleIter.hasNext) {
+        val handle = handleIter.next()
+        val key = TableCodec.encodeRowKeyWithHandleBytes(tableId, handle)
+        val regionId = regionManager
+          .getRegionByKey(ByteString.copyFrom(key))
+          .getId
+
+        if (!regionHandleMap.containsKey(regionId)) {
+          regionHandleMap.put(regionId, new TLongLinkedList())
+        }
+
+        regionHandleMap.get(regionId).add(handle)
+      }
+
+      private val iterator = regionHandleMap.iterator()
 
       override def hasNext: Boolean = iterator.hasNext
 
       override def next(): Row = {
-        val regionManager = session.getRegionManager
-        val handle = iterator.next()
-        val key = TableCodec.encodeRowKeyWithHandleBytes(tableId, handle)
-        val region = regionManager.getRegionByKey(ByteString.copyFrom(key))
+        iterator.advance()
+        val regionId = iterator.key
+        val handleList = iterator.value
 
-        // Returns Region:Handle K-V pair
-        Row.apply(region.getId, handle)
+        // Returns Region:[handle1, handle2, handle3...] K-V pair
+        Row.apply(regionId, handleList.toArray())
       }
     }
 
