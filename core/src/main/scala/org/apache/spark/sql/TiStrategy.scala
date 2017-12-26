@@ -50,7 +50,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     new ExpressionBlacklist(blacklistString)
   }
 
-  def allowAggregationPushdown(): Boolean = {
+  def allowAggregationPushDown(): Boolean = {
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
   }
 
@@ -386,7 +386,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                         aggregateExpressions: Seq[AggregateExpression],
                         filters: Seq[Expression],
                         source: TiDBRelation): Boolean = {
-    allowAggregationPushdown &&
+    allowAggregationPushDown &&
     filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) &&
     groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
     aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source, blacklist)) &&
