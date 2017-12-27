@@ -17,6 +17,8 @@ package org.apache.spark.sql
 
 import java.time.ZonedDateTime
 
+import scala.collection.JavaConversions._
+
 import com.pingcap.tikv.codec.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.scalar.TiScalarFunction
 import com.pingcap.tikv.expression.{aggregate => _, _}
@@ -37,8 +39,6 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
-import scala.collection.JavaConversions._
-import scala.collection.mutable.ArrayBuffer
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
 // We cannot pass context around during planning so
@@ -162,14 +162,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def extractColumnFromFilter(tiFilter: TiExpr, result: ArrayBuffer[TiColumnRef]): Unit =
-    tiFilter match {
-      case fun: TiScalarFunction =>
-        fun.getArgs.foreach(extractColumnFromFilter(_, result))
-      case col: TiColumnRef =>
-        result.add(col)
-      case _ =>
-    }
+  def referencedTiColumns(expression: TiExpr): Seq[TiColumnRef] = expression match {
+    case f: TiScalarFunction => f.getArgs.flatMap { referencedTiColumns }
+    case ref: TiColumnRef    => Seq(ref)
+    case _                   => Nil
+  }
 
   private def filterToDAGRequest(
     filters: Seq[Expression],
@@ -336,23 +333,19 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
 
-    projects
+    val projectionTiRefs = projects
       .map { _.toAttribute.name }
       .map { TiColumnRef.create }
-      .foreach { dagReq.addRequiredColumn }
+
+    val filterTiRefs = filters
+      .collect { case BasicExpression(tiExpr) => tiExpr }
+      .flatMap { referencedTiColumns }
+
+    projectionTiRefs ++ filterTiRefs foreach { dagReq.addRequiredColumn }
 
     val output = (aggregateExpressions.map(aliasPushedPartialResult) ++ groupingExpressions).map {
       _.toAttribute
     }
-
-    val requiredCols = ArrayBuffer[TiColumnRef]()
-
-    filters
-      .collect { case BasicExpression(expr) => expr }
-      .foreach { extractColumnFromFilter(_, requiredCols) }
-
-    requiredCols
-      .foreach { dagReq.addRequiredColumn }
 
     aggregate.AggUtils.planAggregateWithoutDistinct(
       groupingExpressions,
