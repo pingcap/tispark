@@ -18,7 +18,8 @@ package org.apache.spark.sql
 import com.pingcap.tikv.expression.scalar.TiScalarFunction
 import java.time.ZonedDateTime
 
-import com.pingcap.tikv.expression.{ExpressionBlacklist, TiByItem, TiColumnRef, TiExpr}
+import com.pingcap.tikv.codec.IgnoreUnsupportedTypeException
+import com.pingcap.tikv.expression.{aggregate => _, _}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanBuilder
@@ -50,6 +51,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def blacklist: ExpressionBlacklist = {
     val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
     new ExpressionBlacklist(blacklistString)
+  }
+
+  def typeBlackList: TypeBlacklist = {
+    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "")
+    new TypeBlacklist(blacklistString)
   }
 
   def allowAggregationPushdown(): Boolean = {
@@ -101,9 +107,18 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     if (dagRequest.getFields.isEmpty) {
       dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
-    val tiRdd = source.logicalPlanToRDD(dagRequest)
+    dagRequest.resolve()
+    val notAllowPushDown = dagRequest.getFields
+      .map { _.getColumnInfo.getType.simpleTypeName }
+      .exists { typeBlackList.isUnsupportedType }
 
-    CoprocessorRDD(output, tiRdd)
+    if (notAllowPushDown) {
+      throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
+    } else {
+      val tiRdd = source.logicalPlanToRDD(dagRequest)
+
+      CoprocessorRDD(output, tiRdd)
+    }
   }
 
   def aggregationToDAGRequest(
