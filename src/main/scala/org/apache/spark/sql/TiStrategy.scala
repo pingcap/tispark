@@ -272,11 +272,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
     val deterministicAggAliases = aggregateExpressions.collect {
-      case e if e.deterministic => e -> Alias(e.canonicalized, e.toString())()
+      case e if e.deterministic => (e: Expression) -> Alias(e.canonicalized, e.toString())()
     }.toMap
 
     def aliasPushedPartialResult(e: AggregateExpression): Alias = {
-      deterministicAggAliases.getOrElse(e, Alias(e, e.toString())())
+      deterministicAggAliases.getOrElse(e.canonicalized, Alias(e, e.toString())())
     }
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
