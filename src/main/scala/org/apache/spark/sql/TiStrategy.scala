@@ -104,10 +104,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
     dagRequest.resolve()
-    if (dagRequest.getFields.exists(
-          (columnRef: TiColumnRef) =>
-            typeBlackList.isUnsupportedType(columnRef.getColumnInfo.getType.simpleTypeName)
-        )) {
+    val notAllowPushDown = dagRequest.getFields
+      .map { _.getColumnInfo.getType.simpleTypeName }
+      .exists { typeBlackList.isUnsupportedType }
+
+    if (notAllowPushDown) {
       throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
     } else {
       val tiRdd = source.logicalPlanToRDD(dagRequest)
