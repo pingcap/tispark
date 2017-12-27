@@ -334,7 +334,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     filters
       .collect { case BasicExpression(expr) => expr }
-      .foreach(extractColumnFromFilter(_, requiredCols))
+      .foreach { extractColumnFromFilter(_, requiredCols) }
 
     requiredCols
       .foreach { dagReq.addRequiredColumn }
