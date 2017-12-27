@@ -34,4 +34,5 @@ object TiConfigConst {
   val COPROCESS_STREAMING: String = "spark.tispark.coprocess.streaming"
   val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"
   val KV_TIMEZONE_OFFSET: String = "spark.tispark.request.timezone.offset"
+  val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported"
 }

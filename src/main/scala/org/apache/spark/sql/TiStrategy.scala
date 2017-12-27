@@ -17,8 +17,9 @@ package org.apache.spark.sql
 
 import java.time.ZonedDateTime
 
+import com.pingcap.tikv.codec.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.scalar.TiScalarFunction
-import com.pingcap.tikv.expression.{ExpressionBlacklist, TiByItem, TiColumnRef, TiExpr}
+import com.pingcap.tikv.expression.{aggregate => _, _}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanBuilder
@@ -50,6 +51,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   private def blacklist: ExpressionBlacklist = {
     val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
     new ExpressionBlacklist(blacklistString)
+  }
+
+  def typeBlackList: TypeBlacklist = {
+    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "")
+    new TypeBlacklist(blacklistString)
   }
 
   private def allowAggregationPushdown(): Boolean = {
@@ -98,14 +104,23 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   ): SparkPlan = {
     val table = source.table
     dagRequest.setTableInfo(table)
-    // Need to resolve column info after add aggregation push downs
-    dagRequest.resolve()
     if (dagRequest.getFields.isEmpty) {
       dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
-    val tiRdd = source.logicalPlanToRDD(dagRequest)
+    // Need to resolve column info after add aggregation push downs
+    dagRequest.resolve()
 
-    CoprocessorRDD(output, tiRdd)
+    val notAllowPushDown = dagRequest.getFields
+      .map { _.getColumnInfo.getType.simpleTypeName }
+      .exists { typeBlackList.isUnsupportedType }
+
+    if (notAllowPushDown) {
+      throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
+    } else {
+      val tiRdd = source.logicalPlanToRDD(dagRequest)
+
+      CoprocessorRDD(output, tiRdd)
+    }
   }
 
   private def aggregationToDAGRequest(
