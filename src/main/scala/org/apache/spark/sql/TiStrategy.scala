@@ -342,6 +342,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }.distinct
 
     aggregationToDAGRequest(groupingExpressions, pushdownAggregates, source, dagReq)
+    // Need to resolve column info after add aggregation push downs
+    dagReq.setTableInfo(source.table)
+    dagReq.resolve()
 
     val rewrittenResultExpression = resultExpressions.map(
       expr =>
