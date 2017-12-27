@@ -304,7 +304,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       }
     }
 
-    aggregationToDAGRequest(groupingExpressions, aggregateExpressions, source, dagReq)
+    aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
 
     projects
       .map { _.toAttribute.name }
