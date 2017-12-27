@@ -39,6 +39,8 @@ public class IntegerType extends DataType {
     super(tp);
   }
 
+  public String simpleTypeName() { return "int"; }
+
   @Override
   public Object decodeNotNull(int flag, CodecDataInput cdi) {
     return decodeNotNullPrimitive(flag, cdi);

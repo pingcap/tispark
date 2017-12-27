@@ -17,18 +17,19 @@
 
 package com.pingcap.tikv.types;
 
-import static com.pingcap.tikv.types.TimestampType.fromPackedLong;
-import static com.pingcap.tikv.types.TimestampType.toPackedLong;
-
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+
+import java.sql.Date;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.sql.Date;
 import java.time.format.DateTimeFormatter;
+
+import static com.pingcap.tikv.types.TimestampType.fromPackedLong;
+import static com.pingcap.tikv.types.TimestampType.toPackedLong;
 
 public class DateType extends DataType {
   static DateType of(int tp) {
@@ -40,6 +41,8 @@ public class DateType extends DataType {
   private DateType(int tp) {
     super(tp);
   }
+
+  public String simpleTypeName() { return "date"; }
 
   @Override
   public Object decodeNotNull(int flag, CodecDataInput cdi) {

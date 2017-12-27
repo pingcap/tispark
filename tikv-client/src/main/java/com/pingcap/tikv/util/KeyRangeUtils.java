@@ -30,6 +30,7 @@ import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class KeyRangeUtils {
@@ -142,6 +143,30 @@ public class KeyRangeUtils {
       return Range.atLeast(Comparables.wrap(startKey));
     }
     return Range.closedOpen(Comparables.wrap(startKey), Comparables.wrap(endKey));
+  }
+
+  @SuppressWarnings("unchecked")
+  public static List<KeyRange> mergeRanges(List<KeyRange> ranges) {
+    if (ranges == null || ranges.isEmpty() || ranges.size() == 1) {
+      return ranges;
+    }
+
+    Range merged = ranges
+        .stream()
+        .map(KeyRangeUtils::toRange)
+        .reduce(Range::span).get();
+
+    List<KeyRange> keyRanges = new ArrayList<>();
+    try {
+      Comparables.ComparableByteString lower =
+          (Comparables.ComparableByteString) merged.lowerEndpoint();
+      Comparables.ComparableByteString upper =
+          (Comparables.ComparableByteString) merged.upperEndpoint();
+
+      keyRanges.add(makeCoprocRange(lower.getByteString(), upper.getByteString()));
+    } catch (Exception ignored) {}
+
+    return keyRanges;
   }
 
   static Coprocessor.KeyRange makeCoprocRange(ByteString startKey, ByteString endKey) {

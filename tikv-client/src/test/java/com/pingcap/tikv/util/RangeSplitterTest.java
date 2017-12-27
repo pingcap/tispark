@@ -1,8 +1,5 @@
 package com.pingcap.tikv.util;
 
-import static com.pingcap.tikv.GrpcUtils.encodeKey;
-import static org.junit.Assert.assertEquals;
-
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -17,10 +14,14 @@ import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.types.IntegerType;
 import gnu.trove.list.array.TLongArrayList;
+import org.junit.Test;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.junit.Test;
+
+import static com.pingcap.tikv.GrpcUtils.encodeKey;
+import static org.junit.Assert.assertEquals;
 
 public class RangeSplitterTest {
   static class MockRegionManager extends RegionManager {
@@ -123,7 +124,12 @@ public class RangeSplitterTest {
     List<RangeSplitter.RegionTask> tasks =
         s.splitRangeByRegion(
             ImmutableList.of(
-                keyRange(null, 40L), keyRange(41L, 42L), keyRange(45L, 50L), keyRange(70L, 1000L)));
+                keyRange(null, 40L),
+                keyRange(41L, 42L),
+                keyRange(45L, 50L),
+                keyRange(70L, 1000L)
+            )
+        );
 
     assertEquals(tasks.get(0).getRegion().getId(), 0);
     assertEquals(tasks.get(0).getRanges().size(), 1);

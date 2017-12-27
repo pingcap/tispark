@@ -17,20 +17,28 @@
 
 package com.pingcap.tikv.types;
 
+import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.codec.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
-public class BitType extends IntegerType {
-  private BitType(int tp) {
+public class EnumType extends BytesType {
+  private EnumType(int tp) {
     super(tp);
   }
 
-  protected BitType(TiColumnInfo.InternalTypeHolder holder) {
+  protected EnumType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
 
-  static BitType of(int tp) {
-    return new BitType(tp);
+  static EnumType of(int tp) {
+    return new EnumType(tp);
   }
 
-  public String simpleTypeName() { return "bit"; }
+  public String simpleTypeName() { return "enum"; }
+
+  // Enum is not supported yet
+  @Override
+  public Object decodeNotNull(int flag, CodecDataInput cdi) {
+    throw new UnsupportedTypeException("Enum type is not supported yet");
+  }
 }

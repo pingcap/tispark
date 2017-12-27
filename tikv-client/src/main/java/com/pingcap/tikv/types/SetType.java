@@ -17,20 +17,28 @@
 
 package com.pingcap.tikv.types;
 
+import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.codec.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
-public class BitType extends IntegerType {
-  private BitType(int tp) {
+public class SetType extends BytesType {
+  private SetType(int tp) {
     super(tp);
   }
 
-  protected BitType(TiColumnInfo.InternalTypeHolder holder) {
+  protected SetType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
 
-  static BitType of(int tp) {
-    return new BitType(tp);
+  static SetType of(int tp) {
+    return new SetType(tp);
   }
 
-  public String simpleTypeName() { return "bit"; }
+  public String simpleTypeName() { return "set"; }
+
+  // Set is not supported yet
+  @Override
+  public Object decodeNotNull(int flag, CodecDataInput cdi) {
+    throw new UnsupportedTypeException("Set type is not supported yet");
+  }
 }

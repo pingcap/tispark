@@ -32,7 +32,7 @@ public class DateTimeType extends TimestampType {
     return DEFAULT_TIMEZONE;
   }
 
-  private DateTimeType(int tp) {
+  DateTimeType(int tp) {
     super(tp);
   }
 
@@ -40,4 +40,5 @@ public class DateTimeType extends TimestampType {
     super(holder);
   }
 
+  public String simpleTypeName() { return "datetime"; }
 }

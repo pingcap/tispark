@@ -26,6 +26,8 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 
 public class TiColumnRef implements TiExpr {
+  private long offset = -1;
+
   public static TiColumnInfo getColumnWithName(String name, TiTableInfo table) {
     TiColumnInfo columnInfo = null;
     for (TiColumnInfo col : table.getColumns()) {
@@ -74,7 +76,10 @@ public class TiColumnRef implements TiExpr {
     // After switching to DAG request mode, expression value
     // should be the index of table columns we provided in
     // the first executor of a DAG request.
-    IntegerType.writeLong(cdo, columnInfo.getOffset());
+    //
+    // If offset < 0, it's not a valid offset specified by
+    // user, use columnInfo instead
+    IntegerType.writeLong(cdo, offset < 0 ? columnInfo.getOffset() : offset);
     builder.setVal(cdo.toByteString());
     return builder.build();
   }
@@ -114,6 +119,14 @@ public class TiColumnRef implements TiExpr {
       throw new TiClientInternalException("ColumnRef is unbound");
     }
     return columnInfo;
+  }
+
+  public void setOffset(long offset) {
+    this.offset = offset;
+  }
+
+  public long getOffset() {
+    return offset;
   }
 
   @Override

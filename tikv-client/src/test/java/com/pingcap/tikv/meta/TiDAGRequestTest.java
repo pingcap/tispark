@@ -59,7 +59,7 @@ public class TiDAGRequestTest {
         .addRequiredColumn(TiColumnRef.create("c2", table))
         .addAggregate(new Sum(TiColumnRef.create("c1", table)))
         .addAggregate(new Min(TiColumnRef.create("c1", table)))
-        .addWhere(new Plus(TiConstant.create(1L), TiConstant.create(2L)))
+        .addFilter(new Plus(TiConstant.create(1L), TiConstant.create(2L)))
         .addGroupByItem(
             TiByItem.create(TiColumnRef.create("c2", table), true))
         .addOrderByItem(
@@ -124,10 +124,10 @@ public class TiDAGRequestTest {
       if (!lhsItem.equals(rhsItem)) return false;
     }
 
-    assertEquals(lhs.getWhere().size(), rhs.getWhere().size());
-    for (int i = 0; i < lhs.getWhere().size(); i++) {
-      TiExpr lhsItem = lhs.getWhere().get(i);
-      TiExpr rhsItem = rhs.getWhere().get(i);
+    assertEquals(lhs.getFilter().size(), rhs.getFilter().size());
+    for (int i = 0; i < lhs.getFilter().size(); i++) {
+      TiExpr lhsItem = lhs.getFilter().get(i);
+      TiExpr rhsItem = rhs.getFilter().get(i);
       if (!lhsItem.toProto().equals(rhsItem.toProto())) return false;
     }
 

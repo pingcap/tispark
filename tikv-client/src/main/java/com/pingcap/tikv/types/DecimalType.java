@@ -23,6 +23,7 @@ import com.pingcap.tikv.codec.InvalidCodecFormatException;
 import com.pingcap.tikv.codec.MyDecimal;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import gnu.trove.list.array.TIntArrayList;
+
 import java.math.BigDecimal;
 
 public class DecimalType extends DataType {
@@ -37,6 +38,8 @@ public class DecimalType extends DataType {
   DecimalType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
+
+  public String simpleTypeName() { return "decimal"; }
 
   /**
    * decode a decimal value from Cdi and return it.

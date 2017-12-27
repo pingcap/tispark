@@ -40,6 +40,8 @@ public class RawBytesType extends BytesType {
     super(holder);
   }
 
+  public String simpleTypeName() { return "binary"; }
+
   @Override
   public Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag == COMPACT_BYTES_FLAG) {

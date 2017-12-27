@@ -15,9 +15,6 @@
 
 package com.pingcap.tikv.util;
 
-import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.ByteString;
@@ -30,11 +27,15 @@ import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import gnu.trove.list.array.TLongArrayList;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
+import static java.util.Objects.requireNonNull;
 
 public class RangeSplitter {
   public static class RegionTask implements Serializable {
@@ -42,6 +43,10 @@ public class RangeSplitter {
     private final Metapb.Store store;
     private final List<KeyRange> ranges;
     private final String host;
+
+    public static RegionTask newInstance(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
+      return new RegionTask(region, store, ranges);
+    }
 
     RegionTask(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
       this.region = region;
@@ -193,7 +198,7 @@ public class RangeSplitter {
       }
     }
     newKeyRanges.add(KeyRangeUtils.makeCoprocRangeWithHandle(tableId, startHandle, endHandle + 1));
-    regionTasks.add(new RegionTask(regionStorePair.first, regionStorePair.second, newKeyRanges));
+    regionTasks.add(new RegionTask(region, store, newKeyRanges));
   }
 
   public List<RegionTask> splitRangeByRegion(List<KeyRange> keyRanges, int splitFactor) {

@@ -15,22 +15,15 @@
  *
  */
 
-package com.pingcap.tikv.types;
+package com.pingcap.tikv.expression;
 
-import com.pingcap.tikv.meta.TiColumnInfo;
+public class TypeBlacklist extends Blacklist {
 
-public class BitType extends IntegerType {
-  private BitType(int tp) {
-    super(tp);
+  public TypeBlacklist(String typesString) {
+    super(typesString);
   }
 
-  protected BitType(TiColumnInfo.InternalTypeHolder holder) {
-    super(holder);
+  public boolean isUnsupportedType(String typeName) {
+    return isUnsupported(typeName);
   }
-
-  static BitType of(int tp) {
-    return new BitType(tp);
-  }
-
-  public String simpleTypeName() { return "bit"; }
 }

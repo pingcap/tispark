@@ -15,17 +15,6 @@
 
 package com.pingcap.tikv.types;
 
-import static com.pingcap.tikv.types.Types.AutoIncrementFlag;
-import static com.pingcap.tikv.types.Types.MultipleKeyFlag;
-import static com.pingcap.tikv.types.Types.NoDefaultValueFlag;
-import static com.pingcap.tikv.types.Types.NotNullFlag;
-import static com.pingcap.tikv.types.Types.OnUpdateNowFlag;
-import static com.pingcap.tikv.types.Types.PriKeyFlag;
-import static com.pingcap.tikv.types.Types.TimestampFlag;
-import static com.pingcap.tikv.types.Types.UniqueKeyFlag;
-import static com.pingcap.tikv.types.Types.UnsignedFlag;
-import static com.pingcap.tikv.types.Types.ZerofillFlag;
-
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataInput;
@@ -33,8 +22,11 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.row.Row;
+
 import java.io.Serializable;
 import java.util.List;
+
+import static com.pingcap.tikv.types.Types.*;
 
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {
@@ -280,6 +272,8 @@ public abstract class DataType implements Serializable {
   public String toString() {
     return this.getClass().getSimpleName();
   }
+
+  abstract public String simpleTypeName();
 
   @Override
   public boolean equals(Object other) {

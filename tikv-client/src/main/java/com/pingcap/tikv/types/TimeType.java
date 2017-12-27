@@ -17,20 +17,32 @@
 
 package com.pingcap.tikv.types;
 
+import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.codec.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
-public class BitType extends IntegerType {
-  private BitType(int tp) {
+/**
+ * Type TimeType
+ * refers to mysql time
+ */
+public class TimeType extends DateTimeType {
+  private TimeType(int tp) {
     super(tp);
   }
 
-  protected BitType(TiColumnInfo.InternalTypeHolder holder) {
+  protected TimeType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
 
-  static BitType of(int tp) {
-    return new BitType(tp);
+  static TimeType of(int tp) {
+    return new TimeType(tp);
   }
 
-  public String simpleTypeName() { return "bit"; }
+  public String simpleTypeName() { return "time"; }
+
+  // Time is not supported yet
+  @Override
+  public Object decodeNotNull(int flag, CodecDataInput cdi) {
+    throw new UnsupportedTypeException("Time type is not supported yet");
+  }
 }

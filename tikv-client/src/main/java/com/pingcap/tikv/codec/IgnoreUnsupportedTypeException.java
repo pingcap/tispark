@@ -15,22 +15,10 @@
  *
  */
 
-package com.pingcap.tikv.types;
+package com.pingcap.tikv.codec;
 
-import com.pingcap.tikv.meta.TiColumnInfo;
-
-public class BitType extends IntegerType {
-  private BitType(int tp) {
-    super(tp);
+public class IgnoreUnsupportedTypeException extends RuntimeException {
+  public IgnoreUnsupportedTypeException(String msg) {
+    super(msg);
   }
-
-  protected BitType(TiColumnInfo.InternalTypeHolder holder) {
-    super(holder);
-  }
-
-  static BitType of(int tp) {
-    return new BitType(tp);
-  }
-
-  public String simpleTypeName() { return "bit"; }
 }

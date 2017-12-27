@@ -33,6 +33,8 @@ public class RealType extends DataType {
     super(tp);
   }
 
+  public String simpleTypeName() { return "real"; }
+
   @Override
   public Object decodeNotNull(int flag, CodecDataInput cdi) {
     // check flag first and then read.

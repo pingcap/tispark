@@ -70,8 +70,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
   private final val SparkIgnore = Set[String](
     "type mismatch",
     "only support precision",
-    "Invalid Flag type for TimestampType: 8",
-    "Invalid Flag type for DateTimeType: 8",
+    "Unsupported type",
+    "not supported",
     "Decimal scale (18) cannot be greater than precision ",
     "0E-11", // unresolvable precision fault
     "overflows",

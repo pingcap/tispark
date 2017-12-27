@@ -23,10 +23,6 @@ import com.pingcap.tikv.codec.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -54,6 +50,8 @@ public class TimestampType extends DataType {
   TimestampType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
+
+  public String simpleTypeName() { return "timestamp"; }
 
   @Override
   public Object decodeNotNull(int flag, CodecDataInput cdi) {
