@@ -15,10 +15,13 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tikv.tools.RegionUtils
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
+
+import scala.collection.JavaConverters._
 
 class TiContext(val session: SparkSession) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
@@ -26,9 +29,18 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+
+  val debug: DebugTool = new DebugTool
+
   TiUtils.sessionInitialize(session, tiSession)
 
   final val version: String = TiSparkVersion.version
+
+  class DebugTool {
+    def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] = {
+      RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
+    }
+  }
 
   def tidbTable(dbName: String, tableName: String): DataFrame = {
     val tiRelation = new TiDBRelation(

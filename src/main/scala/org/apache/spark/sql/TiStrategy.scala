@@ -16,6 +16,8 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.expression.scalar.TiScalarFunction
+import java.time.ZonedDateTime
+
 import com.pingcap.tikv.expression.{ExpressionBlacklist, TiByItem, TiColumnRef, TiExpr}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
@@ -62,6 +64,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toBoolean
   }
 
+  def timeZoneOffset(): Int = {
+    sqlConf
+      .getConfString(
+        TiConfigConst.KV_TIMEZONE_OFFSET,
+        String.valueOf(ZonedDateTime.now.getOffset.getTotalSeconds)
+      )
+      .toInt
+  }
+
   def pushDownType(): PushDownType = {
     if (useStreamingProcess()) {
       PushDownType.STREAMING
@@ -97,7 +108,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     groupByList: Seq[NamedExpression],
     aggregates: Seq[AggregateExpression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
     aggregates.foreach {
       case AggregateExpression(_: Average, _, _, _) =>
@@ -144,7 +155,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def filterToDAGRequest(
     filters: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
@@ -182,7 +193,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     sortOrder: Seq[SortOrder] = null
   ): SparkPlan = {
-    val request = new TiDAGRequest(pushDownType())
+    val request = new TiDAGRequest(pushDownType(), timeZoneOffset())
     request.setLimit(limit)
     addSortOrder(request, sortOrder)
     pruneFilterProject(projectList, filterPredicates, source, request)
@@ -223,7 +234,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType())
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))

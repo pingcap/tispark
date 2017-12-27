@@ -64,6 +64,7 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.request.command.priority |  "Low" | "Low", "Normal", "High" which impacts resource to get in TiKV. Low is recommended for not disturbing OLTP workload |
 | spark.tispark.coprocess.streaming |  false | Whether to use streaming for response fetching |
 | spark.tispark.plan.unsupported_pushdown_exprs |  "" | A comma separated list of expressions. In case you have very old version of TiKV, you might disable some of the expression push-down if not supported |
+| spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
 
 
 ## Quick start
