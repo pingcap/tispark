@@ -42,28 +42,6 @@ class IssueTestCase(prop: Properties) extends TestCase(prop) {
     logger.warn(s"\n*************** Issue Client#0198 Tests result: $result\n\n\n")
   }
 
-  private def TestSpark0160(dbName: String): Unit = {
-    var result = false
-    jdbc.execTiDB(s"use $dbName")
-    jdbc.execTiDB("drop table if exists t")
-    jdbc.execTiDB("create table t(c1 int not null, c2 int not null)")
-    jdbc.execTiDB("insert into t values(4, 2)")
-    jdbc.execTiDB("insert into t values(1, 4)")
-    jdbc.execTiDB("insert into t values(3, 3)")
-    jdbc.execTiDB("insert into t values(3, 4)")
-    refresh() // refresh since we need to load data again
-    result |= execAllAndJudge("select * from t order by c1, c2")
-    result |= execAllAndJudge("select * from t order by c1 asc, c2 asc")
-    result |= execAllAndJudge("select * from t order by c1 asc, c2 desc")
-    result |= execAllAndJudge("select * from t order by c1 desc, c2 asc")
-    result |= execAllAndJudge("select * from t order by c1 desc, c2 desc")
-    result |= execAllAndJudge("select * from t order by (c1, c2)")
-    result |= execAllAndJudge("select * from t order by (c1, c2) asc")
-    result |= execAllAndJudge("select * from t order by (c1, c2) desc")
-    result = !result
-    logger.warn(s"\n*************** Issue Spark#0162 Tests result: $result\n\n\n")
-  }
-
   private def TestSpark0162(dbName: String): Unit = {
     var result = false
     jdbc.execTiDB(s"use $dbName")
@@ -95,7 +73,6 @@ class IssueTestCase(prop: Properties) extends TestCase(prop) {
   override def run(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     databaseName = dbName
     TestClient0198(dbName)
-    TestSpark0160(dbName)
     TestSpark0162(dbName)
   }
 
