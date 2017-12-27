@@ -17,7 +17,7 @@ package org.apache.spark.sql
 
 import java.time.ZonedDateTime
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 import com.pingcap.tikv.codec.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.scalar.TiScalarFunction
@@ -110,7 +110,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     // Need to resolve column info after add aggregation push downs
     dagRequest.resolve()
 
-    val notAllowPushDown = dagRequest.getFields
+    val notAllowPushDown = dagRequest.getFields.asScala
       .map { _.getColumnInfo.getType.simpleTypeName }
       .exists { typeBlackList.isUnsupportedType }
 
@@ -163,7 +163,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   def referencedTiColumns(expression: TiExpr): Seq[TiColumnRef] = expression match {
-    case f: TiScalarFunction => f.getArgs.flatMap { referencedTiColumns }
+    case f: TiScalarFunction => f.getArgs.asScala.flatMap { referencedTiColumns }
     case ref: TiColumnRef    => Seq(ref)
     case _                   => Nil
   }
@@ -173,8 +173,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    import scala.collection.JavaConverters._
-
     val tiFilters = filters.collect { case BasicExpression(expr) => expr }.asJava
     val scanBuilder: ScanBuilder = new ScanBuilder
     val scanPlan = if (allowIndexDoubleRead()) {
