@@ -39,7 +39,7 @@ class IssueTestCase(prop: Properties) extends TestCase(prop) {
     refresh()
     result |= execBothAndJudge("select * from t")
     result = !result
-    logger.warn(s"\n*************** Issue Test Client#0198 result: $result\n\n\n")
+    logger.warn(s"\n*************** Issue Client#0198 Tests result: $result\n\n\n")
   }
 
   private def TestSpark0160(dbName: String): Unit = {
@@ -61,7 +61,7 @@ class IssueTestCase(prop: Properties) extends TestCase(prop) {
     result |= execAllAndJudge("select * from t order by (c1, c2) asc")
     result |= execAllAndJudge("select * from t order by (c1, c2) desc")
     result = !result
-    logger.warn(s"\n*************** Issue Test Spark#0162 result: $result\n\n\n")
+    logger.warn(s"\n*************** Issue Spark#0162 Tests result: $result\n\n\n")
   }
 
   private def TestSpark0162(dbName: String): Unit = {
@@ -83,7 +83,7 @@ class IssueTestCase(prop: Properties) extends TestCase(prop) {
     refresh()
     result |= execBothAndJudge("select count(c1 + c2) from t")
     result = !result
-    logger.warn(s"\n*************** Issue Test Spark#0162 result: $result\n\n\n")
+    logger.warn(s"\n*************** Issue Spark#0162 Tests result: $result\n\n\n")
   }
 
   private def refresh(): Unit = {
