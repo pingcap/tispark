@@ -56,11 +56,17 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   private val eps = 1.0e-2
 
-  protected var testsFailed = 0
-  protected var testsExecuted = 0
-  protected var testsSkipped = 0
-  protected var inlineSQLNumber = 0
-  protected var ignoredTest = 0
+  @volatile protected var testsFailed = 0
+  @volatile protected var testsExecuted = 0
+  @volatile protected var testsSkipped = 0
+  @volatile protected var inlineSQLNumber = 0
+  @volatile protected var ignoredTest = 0
+
+  class SQLProcessorRunnable(sql: String, sqlNumber: Integer) extends Runnable {
+    override def run(): Unit = {
+      execAllAndJudge(sql, sqlNumber)
+    }
+  }
 
   private val tidbExceptionOutput = "TiDB execution failed with exception caught"
   private val sparkExceptionOutput = "Spark execution failed with exception caught"
@@ -512,17 +518,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
     isFalse
   }
 
-  def execAllAndJudge(str: String, skipped: Boolean = false): Boolean = {
+  def execAllAndJudge(str: String, sqlNumber: Integer, skipped: Boolean = false): (List[List[Any]], List[List[Any]], List[List[Any]], Boolean) = {
     var tidb: List[List[Any]] = List.empty
     var spark_jdbc: List[List[Any]] = List.empty
     var spark: List[List[Any]] = List.empty
-
-    testsExecuted += 1
-    if (skipped) {
-      testsSkipped += 1
-    } else {
-      inlineSQLNumber += 1
-    }
 
     var tidbRunTimeError = false
     var sparkRunTimeError = false
@@ -566,7 +565,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
     if (isFalse) {
       if (skipped) {
-        logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
+        logger.warn(s"Test SKIPPED. #$sqlNumber\n")
       }
       if (isTiDBvsSparkFalse) {
         logger.warn(s"TiDB output: $tidb")
@@ -578,24 +577,24 @@ class TestCase(val prop: Properties) extends LazyLogging {
       if (!skipped) {
         if (checkTiDBIgnore(tidb) || checkSparkIgnore(spark) || checkSparkJDBCIgnore(spark_jdbc)) {
           testsSkipped += 1
-          logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
+          logger.warn(s"Test SKIPPED. #$sqlNumber\n")
         } else {
           testsFailed += 1
-          printDiffSparkJDBC(s"inlineTest$inlineSQLNumber", str, spark_jdbc, spark)
-          printDiff(s"inlineTest$inlineSQLNumber", str, tidb, spark)
-          logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
+          printDiffSparkJDBC(s"inlineTest$sqlNumber", str, spark_jdbc, spark)
+          printDiff(s"inlineTest$sqlNumber", str, tidb, spark)
+          logger.warn(s"Test FAILED. #$sqlNumber\n")
         }
       } else {
-        return false
+        return (List.empty, List.empty, List.empty, false)
       }
     } else {
       if (skipped) {
-        logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
+        logger.warn(s"Test SKIPPED. #$sqlNumber\n")
       } else {
-        logger.info(s"Test PASSED. #$inlineSQLNumber\n")
+        logger.info(s"Test PASSED. #$sqlNumber\n")
       }
     }
-    isFalse
+    (tidb, spark, spark_jdbc, isFalse)
   }
 
   def run(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {}

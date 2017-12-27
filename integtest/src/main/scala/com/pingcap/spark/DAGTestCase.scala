@@ -1,6 +1,7 @@
 package com.pingcap.spark
 
 import java.util.Properties
+import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
 
 import com.google.common.collect.ImmutableSet
 
@@ -59,6 +60,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
 
   private val colSet: mutable.Set[String] = mutable.Set()
 
+  val pool: ExecutorService = Executors.newFixedThreadPool(10) // 10 threads in pool
+
   override def run(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     spark_jdbc.init(dbName)
     spark.init(dbName)
@@ -68,15 +71,15 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     testBundle(
       //      createSelfJoinTypeTest ++
       //      createSymmetryTypeTestCases ++
-      createCartesianTypeTestCases ++
-      createArithmeticTest ++
-      createPlaceHolderTest ++
-      createCount ++
-      createInTest ++
-      createDistinct ++
-      createBetween ++
-      createArithmeticAgg ++
-      createFirstLast ++
+//      createCartesianTypeTestCases ++
+//      createArithmeticTest ++
+//      createPlaceHolderTest ++
+//      createCount ++
+//      createInTest ++
+//      createDistinct ++
+//      createBetween ++
+//      createArithmeticAgg ++
+//      createFirstLast ++
       createUnion ++
       createAggregate ++
       createHaving
@@ -106,21 +109,23 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       )).toList
   }
 
-
   def testBundle(list: List[String]): Unit = {
-    var result = false
-    val startTime = System.currentTimeMillis()
     var count = 0
     for (sql <- list) {
       try {
         count += 1
-        execAllAndJudge(sql)
-        logger.info("Running num: " + count + " sql took " + (System.currentTimeMillis() - startTime) / 1000 + "s")
+        testsExecuted += 1
+        inlineSQLNumber += 1
+        pool.submit(new SQLProcessorRunnable(sql, inlineSQLNumber))
+        logger.info("Running num: " + count + " sql")
       } catch {
         case _: Throwable => logger.error("result: Run SQL " + sql + " Failed!")
       }
     }
-    result = !result
+    pool.shutdown()
+    while(!pool.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+      ;
+    }
     logger.warn(s"Result: Total DAG test run: ${list.size - testsSkipped} of ${list.size}")
     logger.warn(s"Result: Test ignored count:$testsSkipped, failed count:$testsFailed")
   }

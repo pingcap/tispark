@@ -17,6 +17,7 @@
 package com.pingcap.spark
 
 import java.util.Properties
+import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
 
 import com.google.common.collect.ImmutableSet
 
@@ -76,6 +77,8 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
 
   private val colSet: mutable.Set[String] = mutable.Set()
 
+  val pool: ExecutorService = Executors.newFixedThreadPool(10) // 10 threads in pool
+
   private def testIndex(): Unit = {
     var result = false
     result |= execBothAndJudge("select * from test_index where a < 30")
@@ -117,13 +120,18 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     for (sql <- list) {
       try {
         count += 1
-        execAllAndJudge(sql)
+        testsExecuted += 1
+        inlineSQLNumber += 1
+        pool.submit(new SQLProcessorRunnable(sql, inlineSQLNumber))
         logger.info("Running num: " + count + " sql took " + (System.currentTimeMillis() - startTime) / 1000 + "s")
       } catch {
         case _: Throwable => logger.error("result: Run SQL " + sql + " Failed!")
       }
     }
-
+    pool.shutdown()
+    while(!pool.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+      ;
+    }
     logger.warn(s"Result: Total Index test run: ${list.size - testsSkipped} of ${list.size}")
     logger.warn(s"Result: Test ignored count:$testsSkipped, failed count:$testsFailed")
   }
