@@ -97,12 +97,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
                                dagRequest: TiDAGRequest): SparkPlan = {
     val table = source.table
     dagRequest.setTableInfo(table)
-    // Need to resolve column info after add aggregation push downs
-    dagRequest.resolve()
+
     if (dagRequest.getFields.isEmpty) {
       dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
     dagRequest.resolve()
+
     val notAllowPushDown = dagRequest.getFields
       .map { _.getColumnInfo.getType.simpleTypeName }
       .exists { typeBlackList.isUnsupportedType }
@@ -110,9 +110,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     if (notAllowPushDown) {
       throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
     } else {
-      val tiRdd = source.logicalPlanToRDD(dagRequest)
-
-      CoprocessorRDD(output, tiRdd)
+      if (dagRequest.isIndexScan) {
+        source.dagRequestToRegionTaskExec(dagRequest, output)
+      } else {
+        val tiRdd = source.logicalPlanToRDD(dagRequest)
+        CoprocessorRDD(output, tiRdd)
+      }
     }
   }
 
@@ -171,14 +174,18 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
+    val tableScanPlan =
+      scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
     val scanPlan = if (allowIndexDoubleRead()) {
+      // We need to prepare downgrade information in case of index scan downgrade happens.
+      tableScanPlan.getFilters.foreach(dagRequest.addDowngradeFilter)
       scanBuilder.buildScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
     } else {
-      scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
+      tableScanPlan
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
-    scanPlan.getFilters.toList.map(dagRequest.addWhere)
+    scanPlan.getFilters.foreach(dagRequest.addFilter)
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
     }
