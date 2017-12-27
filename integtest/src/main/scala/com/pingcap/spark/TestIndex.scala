@@ -77,7 +77,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
 
   private val colSet: mutable.Set[String] = mutable.Set()
 
-  val pool: ExecutorService = Executors.newFixedThreadPool(10) // 10 threads in pool
+  val pool: ExecutorService = Executors.newFixedThreadPool(4) // 4 threads in pool
 
   private def testIndex(): Unit = {
     var result = false
@@ -114,7 +114,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     logger.warn(s"\n*************** Index Tests result: $result\n\n\n")
   }
 
-  def testFullDataTable(list: List[String]): Unit = {
+  def testFullDataTable(dbName: String, list: List[String]): Unit = {
     val startTime = System.currentTimeMillis()
     var count = 0
     for (sql <- list) {
@@ -122,7 +122,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
         count += 1
         testsExecuted += 1
         inlineSQLNumber += 1
-        pool.submit(new SQLProcessorRunnable(sql, inlineSQLNumber))
+        pool.submit(new SQLProcessorRunnable(sql, inlineSQLNumber, dbName))
         logger.info("Running num: " + count + " sql took " + (System.currentTimeMillis() - startTime) / 1000 + "s")
       } catch {
         case _: Throwable => logger.error("result: Run SQL " + sql + " Failed!")
@@ -143,7 +143,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     colList = jdbc.getTableColumnNames("full_data_type_table")
     prepareTestCol()
     testIndex()
-    testFullDataTable(
+    testFullDataTable(dbName,
         createPlaceHolderTest
 //        ++ createDoublePlaceHolderTest // data set too large for double placeHolder
         ++ createJoin

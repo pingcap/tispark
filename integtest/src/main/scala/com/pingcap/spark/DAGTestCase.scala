@@ -60,7 +60,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
 
   private val colSet: mutable.Set[String] = mutable.Set()
 
-  val pool: ExecutorService = Executors.newFixedThreadPool(10) // 10 threads in pool
+  val pool: ExecutorService = Executors.newFixedThreadPool(4) // 4 threads in pool
 
   override def run(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     spark_jdbc.init(dbName)
@@ -68,7 +68,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     jdbc.init(dbName)
     colList = jdbc.getTableColumnNames("full_data_type_table")
     prepareTestCol()
-    testBundle(
+    testBundle(dbName,
       //      createSelfJoinTypeTest ++
       //      createSymmetryTypeTestCases ++
       createCartesianTypeTestCases ++
@@ -109,14 +109,14 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       )).toList
   }
 
-  def testBundle(list: List[String]): Unit = {
+  def testBundle(dbName: String, list: List[String]): Unit = {
     var count = 0
     for (sql <- list) {
       try {
         count += 1
         testsExecuted += 1
         inlineSQLNumber += 1
-        pool.submit(new SQLProcessorRunnable(sql, inlineSQLNumber))
+        pool.submit(new SQLProcessorRunnable(sql, inlineSQLNumber, dbName))
         logger.info("Running num: " + count + " sql")
       } catch {
         case _: Throwable => logger.error("result: Run SQL " + sql + " Failed!")
