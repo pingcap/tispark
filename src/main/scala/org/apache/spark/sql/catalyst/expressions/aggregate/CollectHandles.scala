@@ -23,14 +23,14 @@ import org.apache.spark.sql.execution.RegionTaskExec
 import org.apache.spark.sql.types._
 
 /**
-  * An aggregation function that are expressed in terms of imperative initialize(), update(),
-  * and merge() functions which operate on Row-based aggregation buffers.
-  *
-  * This [[CollectHandles]] is used for collecting handles from TiKV to a list and serves as an
-  * aggregation function used in [[RegionTaskExec]]
-  *
-  * @see [[ImperativeAggregate]]
-  */
+ * An aggregation function that are expressed in terms of imperative initialize(), update(),
+ * and merge() functions which operate on Row-based aggregation buffers.
+ *
+ * This [[CollectHandles]] is used for collecting handles from TiKV to a list and serves as an
+ * aggregation function used in [[RegionTaskExec]]
+ *
+ * @see [[ImperativeAggregate]]
+ */
 case class CollectHandles(child: Expression,
                           mutableAggBufferOffset: Int = 0,
                           inputAggBufferOffset: Int = 0)

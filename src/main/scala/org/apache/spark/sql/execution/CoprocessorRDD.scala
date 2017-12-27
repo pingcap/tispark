@@ -75,11 +75,11 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
 }
 
 /**
-  * HandleRDDExec is used for scanning handles from TiKV as a LeafExecNode in index plan.
-  * Providing handle scan via a TiHandleRDD.
-  *
-  * @param tiHandleRDD handle source
-  */
+ * HandleRDDExec is used for scanning handles from TiKV as a LeafExecNode in index plan.
+ * Providing handle scan via a TiHandleRDD.
+ *
+ * @param tiHandleRDD handle source
+ */
 case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   override val nodeName: String = "HandleRDD"
 
@@ -125,16 +125,16 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 }
 
 /**
-  * RegionTaskExec is used for issuing requests which are generated based on handles retrieved from
-  * [[HandleRDDExec]] aggregated by a [[org.apache.spark.sql.execution.aggregate.SortAggregateExec]]
-  * with [[org.apache.spark.sql.catalyst.expressions.aggregate.CollectHandles]] as aggregate function.
-  *
-  * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
-  * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
-  *
-  * Refer to code in [[TiDBRelation]] and [[CoprocessorRDD]] for further details.
-  *
-  */
+ * RegionTaskExec is used for issuing requests which are generated based on handles retrieved from
+ * [[HandleRDDExec]] aggregated by a [[org.apache.spark.sql.execution.aggregate.SortAggregateExec]]
+ * with [[org.apache.spark.sql.catalyst.expressions.aggregate.CollectHandles]] as aggregate function.
+ *
+ * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
+ * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
+ *
+ * Refer to code in [[TiDBRelation]] and [[CoprocessorRDD]] for further details.
+ *
+ */
 case class RegionTaskExec(child: SparkPlan,
                           output: Seq[Attribute],
                           dagRequest: TiDAGRequest,

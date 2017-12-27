@@ -34,14 +34,14 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /**
-  * RDD used for retrieving handles from TiKV. Result is arranged as
-  * {{{
-  *   RegionId(long):[handle1, handle2, handle3...](long[])
-  * }}}
-  * K-V pair, the key is regionId which stands for the id of a region in TiKV, value
-  * is a list of primitive long which represents the handles lie in that region.
-  *
-  */
+ * RDD used for retrieving handles from TiKV. Result is arranged as
+ * {{{
+ *   RegionId(long):[handle1, handle2, handle3...](long[])
+ * }}}
+ * K-V pair, the key is regionId which stands for the id of a region in TiKV, value
+ * is a list of primitive long which represents the handles lie in that region.
+ *
+ */
 class TiHandleRDD(val dagRequest: TiDAGRequest,
                   val tiConf: TiConfiguration,
                   val tableRef: TiTableReference,
@@ -58,7 +58,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
       private val snapshot = session.createSnapshot(ts)
       private val handleIter =
-        snapshot.handleRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+        snapshot.indexHandleRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
       private val tableId = dagRequest.getTableInfo.getId
       private val regionManager = session.getRegionManager
       private val regionHandleMap = new TLongObjectHashMap[TLongLinkedList]()
