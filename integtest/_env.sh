@@ -2,7 +2,6 @@
 set -ue
 
 BASEDIR=$(cd `dirname $0`; pwd)
-PATH_TO_JDBC="~/Downloads/mysql-connector-java-5.1.44/mysql-connector-java-5.1.44-bin.jar"
 PATH_TO_CONF="$BASEDIR/conf"
 
 if [ -z "${SPARK_HOME}" ]; then
