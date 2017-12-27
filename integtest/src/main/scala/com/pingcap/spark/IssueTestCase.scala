@@ -39,17 +39,64 @@ class IssueTestCase(prop: Properties) extends TestCase(prop) {
     refresh()
     result |= execBothAndJudge("select * from t")
     result = !result
-    logger.warn(s"\n*************** Index Tests result: $result\n\n\n")
+    logger.warn(s"\n*************** Issue Test Client#0198 result: $result\n\n\n")
+  }
+
+  private def TestSpark0160(dbName: String): Unit = {
+    var result = false
+    jdbc.execTiDB(s"use $dbName")
+    jdbc.execTiDB("drop table if exists t")
+    jdbc.execTiDB("create table t(c1 int not null, c2 int not null)")
+    jdbc.execTiDB("insert into t values(4, 2)")
+    jdbc.execTiDB("insert into t values(1, 4)")
+    jdbc.execTiDB("insert into t values(3, 3)")
+    jdbc.execTiDB("insert into t values(3, 4)")
+    refresh() // refresh since we need to load data again
+    result |= execAllAndJudge("select * from t order by c1, c2")
+    result |= execAllAndJudge("select * from t order by c1 asc, c2 asc")
+    result |= execAllAndJudge("select * from t order by c1 asc, c2 desc")
+    result |= execAllAndJudge("select * from t order by c1 desc, c2 asc")
+    result |= execAllAndJudge("select * from t order by c1 desc, c2 desc")
+    result |= execAllAndJudge("select * from t order by (c1, c2)")
+    result |= execAllAndJudge("select * from t order by (c1, c2) asc")
+    result |= execAllAndJudge("select * from t order by (c1, c2) desc")
+    result = !result
+    logger.warn(s"\n*************** Issue Test Spark#0162 result: $result\n\n\n")
+  }
+
+  private def TestSpark0162(dbName: String): Unit = {
+    var result = false
+    jdbc.execTiDB(s"use $dbName")
+    jdbc.execTiDB("drop table if exists t")
+    jdbc.execTiDB("create table t(c1 int not null)")
+    jdbc.execTiDB("insert into t values(1)")
+    jdbc.execTiDB("insert into t values(2)")
+    jdbc.execTiDB("insert into t values(4)")
+    refresh() // refresh since we need to load data again
+    result |= execBothAndJudge("select count(c1) from t")
+    result |= execBothAndJudge("select count(c1 + 1) from t")
+    result |= execBothAndJudge("select count(1 + c1) from t")
+    jdbc.execTiDB("drop table if exists t")
+    jdbc.execTiDB("create table t(c1 int not null, c2 int not null)")
+    jdbc.execTiDB("insert into t values(1, 4)")
+    jdbc.execTiDB("insert into t values(2, 2)")
+    refresh()
+    result |= execBothAndJudge("select count(c1 + c2) from t")
+    result = !result
+    logger.warn(s"\n*************** Issue Test Spark#0162 result: $result\n\n\n")
   }
 
   private def refresh(): Unit = {
     spark.init(databaseName)
+    spark_jdbc.init(databaseName)
     jdbc.init(databaseName)
   }
 
   override def run(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     databaseName = dbName
     TestClient0198(dbName)
+    TestSpark0160(dbName)
+    TestSpark0162(dbName)
   }
 
 }
