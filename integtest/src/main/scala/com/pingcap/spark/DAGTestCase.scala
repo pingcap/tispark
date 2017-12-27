@@ -53,6 +53,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       //      .add("tp_time") // Time format is not the same in TiDB and spark
       .add("tp_enum") // TODO: enum and set are ignored because we are not supporting them yet
       .add("tp_set")
+      .add("tp_time")
 //      .add("tp_binary")
 //      .add("tp_blob")
       .build()
