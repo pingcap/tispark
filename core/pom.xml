@@ -10,20 +10,10 @@
     </parent>
 
     <artifactId>tispark-core</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>TiSpark Project Core</name>
     <url>http://github.copm/pingcap/tispark</url>
-    <licenses>
-      <license>
-        <name>Apache 2.0 License</name>
-        <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
-        <distribution>repo</distribution>
-      </license>
-    </licenses>
-    <organization>
-        <name>PingCAP</name>
-    </organization>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>

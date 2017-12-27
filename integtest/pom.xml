@@ -9,16 +9,9 @@
       <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>integtest</artifactId>
-    <name> TiSpark Project integtest</name>
-    <version>0.1.0-SNAPSHOT</version>
+    <artifactId>tispark-integtest</artifactId>
     <packaging>jar</packaging>
-
-    <description>TiSpark integration test Project</description>
-
-    <organization>
-        <name>PingCAP</name>
-    </organization>
+    <name> TiSpark Integration Test Project</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -35,10 +28,9 @@
     <dependencies>
         <dependency>
             <groupId>com.pingcap.tispark</groupId>
-            <artifactId>tispark</artifactId>
+            <artifactId>tispark-core</artifactId>
             <version>${tispark.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.version}</artifactId>
