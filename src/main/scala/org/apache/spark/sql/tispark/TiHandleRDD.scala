@@ -33,6 +33,15 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
+/**
+  * RDD used for retrieving handles from TiKV. Result is arranged as
+  * {{{
+  *   RegionId(long):[handle1, handle2, handle3...](long[])
+  * }}}
+  * K-V pair, the key is regionId which stands for the id of a region in TiKV, value
+  * is a list of primitive long which represents the handles lie in that region.
+  *
+  */
 class TiHandleRDD(val dagRequest: TiDAGRequest,
                   val tiConf: TiConfiguration,
                   val tableRef: TiTableReference,
@@ -77,7 +86,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
         val regionId = iterator.key
         val handleList = iterator.value
 
-        // Returns Region:[handle1, handle2, handle3...] K-V pair
+        // Returns RegionId:[handle1, handle2, handle3...] K-V pair
         Row.apply(regionId, handleList.toArray())
       }
     }
