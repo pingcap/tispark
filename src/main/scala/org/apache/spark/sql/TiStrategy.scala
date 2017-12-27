@@ -17,16 +17,17 @@ package org.apache.spark.sql
 
 import java.time.ZonedDateTime
 
-import com.pingcap.tikv.expression.{ExpressionBlacklist, TiByItem, TiColumnRef}
+import com.pingcap.tikv.expression.scalar.TiScalarFunction
+import com.pingcap.tikv.expression.{ExpressionBlacklist, TiByItem, TiColumnRef, TiExpr}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanBuilder
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
 import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Cast, Divide, Expression, IntegerLiteral, NamedExpression, SortOrder}
-import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -35,6 +36,8 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
+import scala.collection.JavaConversions._
+import scala.collection.mutable.ArrayBuffer
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
 // We cannot pass context around during planning so
@@ -95,6 +98,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   ): SparkPlan = {
     val table = source.table
     dagRequest.setTableInfo(table)
+    // Need to resolve column info after add aggregation push downs
+    dagRequest.resolve()
     if (dagRequest.getFields.isEmpty) {
       dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
     }
@@ -142,6 +147,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
+  def extractColumnFromFilter(tiFilter: TiExpr, result: ArrayBuffer[TiColumnRef]): Unit =
+    tiFilter match {
+      case fun: TiScalarFunction =>
+        fun.getArgs.foreach(extractColumnFromFilter(_, result))
+      case col: TiColumnRef =>
+        result.add(col)
+      case _ =>
+    }
+
   private def filterToDAGRequest(
     filters: Seq[Expression],
     source: TiDBRelation,
@@ -158,7 +172,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
-    scanPlan.getFilters.asScala.foreach(dagRequest.addWhere)
+    scanPlan.getFilters.asScala.foreach(dagRequest.addFilter)
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
     }
@@ -264,6 +278,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def groupAggregateProjection(
+    filters: Seq[Expression],
     groupingExpressions: Seq[NamedExpression],
     aggregateExpressions: Seq[AggregateExpression],
     resultExpressions: Seq[NamedExpression],
@@ -272,7 +287,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
     val deterministicAggAliases = aggregateExpressions.collect {
-      case e if e.deterministic => (e: Expression) -> Alias(e.canonicalized, e.toString())()
+      case e if e.deterministic => e.canonicalized -> Alias(e, e.toString())()
     }.toMap
 
     def aliasPushedPartialResult(e: AggregateExpression): Alias = {
@@ -314,6 +329,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val output = (aggregateExpressions.map(aliasPushedPartialResult) ++ groupingExpressions).map {
       _.toAttribute
     }
+
+    val requiredCols = ArrayBuffer[TiColumnRef]()
+
+    filters
+      .collect { case BasicExpression(expr) => expr }
+      .foreach(extractColumnFromFilter(_, requiredCols))
+
+    requiredCols
+      .foreach { dagReq.addRequiredColumn }
 
     aggregate.AggUtils.planAggregateWithoutDistinct(
       groupingExpressions,
@@ -387,6 +411,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
         val dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
         groupAggregateProjection(
+          filters,
           groupingExpressions,
           aggregateExpressions,
           resultExpressions,
