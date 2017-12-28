@@ -19,8 +19,12 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
+import org.apache.spark.sql.execution._
+import org.apache.spark.sql.execution.aggregate.AggUtils
 import org.apache.spark.sql.sources.BaseRelation
-import org.apache.spark.sql.tispark.TiRDD
+import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
 
 class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaManager)(
@@ -37,5 +41,43 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     dagRequest.setStartTs(ts.getVersion)
 
     new TiRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
+  }
+
+  def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
+    val ts: TiTimestamp = session.getTimestamp
+    dagRequest.setStartTs(ts.getVersion)
+    dagRequest.resolve()
+
+    val tiHandleRDD =
+      new TiHandleRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
+    val handlePlan = HandleRDDExec(tiHandleRDD)
+    // collect handles as a list
+    val aggFunc = CollectHandles(handlePlan.attributeRef.last)
+
+    val aggExpr = AggregateExpression(
+      aggFunc,
+      Complete,
+      isDistinct = true,
+      NamedExpression.newExprId
+    )
+
+    val sortAgg = AggUtils
+      .planAggregateWithoutPartial(
+        Seq(handlePlan.attributeRef.head), // group by region id
+        Seq(aggExpr),
+        Seq(handlePlan.output.head, aggExpr.resultAttribute), // output <region, handleList>
+        handlePlan
+      )
+      .head
+
+    RegionTaskExec(
+      sortAgg,
+      output,
+      dagRequest,
+      session.getConf,
+      session.getTimestamp,
+      session,
+      sqlContext.sparkSession
+    )
   }
 }

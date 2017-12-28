@@ -15,8 +15,6 @@
 
 package org.apache.spark.sql.tispark
 
-import java.util
-
 import com.pingcap.tikv._
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
@@ -25,13 +23,15 @@ import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
+import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
-import scala.collection.mutable.{HashMap, ListBuffer, MultiMap, Set}
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 class TiRDD(val dagRequest: TiDAGRequest,
             val tiConf: TiConfiguration,
@@ -43,8 +43,8 @@ class TiRDD(val dagRequest: TiDAGRequest,
 
   type TiRow = com.pingcap.tikv.row.Row
 
-  @transient lazy val (fieldsType: List[DataType], rowTransformer: RowTransformer) =
-    initializeSchema
+  @transient lazy val (_: List[DataType], rowTransformer: RowTransformer) =
+    initializeSchema()
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
     val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
@@ -56,12 +56,13 @@ class TiRDD(val dagRequest: TiDAGRequest,
     dagRequest.resolve()
 
     // bypass, sum return a long type
-    val tiPartition = split.asInstanceOf[TiPartition]
-    val session: TiSession = TiSessionCache.getSession(tiPartition.appId, tiConf)
-    val snapshot: Snapshot = session.createSnapshot(ts)
+    private val tiPartition = split.asInstanceOf[TiPartition]
+    private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
+    private val snapshot = session.createSnapshot(ts)
 
-    val iterator = snapshot.tableRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
-    val finalTypes = rowTransformer.getTypes.toList
+    private val iterator =
+      snapshot.tableRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+    private val finalTypes = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {
       val transRow = rowTransformer.transform(row)
@@ -80,7 +81,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
   }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =
-    split.asInstanceOf[TiPartition].tasks(0).getHost :: Nil
+    split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
 
   override protected def getPartitions: Array[Partition] = {
     val conf = sparkSession.conf
@@ -92,22 +93,23 @@ class TiRDD(val dagRequest: TiDAGRequest,
       )
 
     val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
-    val taskMap = new HashMap[String, Set[RegionTask]] with MultiMap[String, RegionTask]
+    val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
+    with mutable.MultiMap[String, RegionTask]
 
     var index = 0
     val result = new ListBuffer[TiPartition]
     for (task <- keyWithRegionTasks) {
-      taskMap.addBinding(task.getHost, task)
-      val tasks = taskMap.get(task.getHost).get
+      hostTasksMap.addBinding(task.getHost, task)
+      val tasks = hostTasksMap(task.getHost)
       if (tasks.size >= taskPerSplit) {
         result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
         index += 1
-        taskMap.remove(task.getHost)
+        hostTasksMap.remove(task.getHost)
 
       }
     }
     // add rest
-    for (tasks <- taskMap.values) {
+    for (tasks <- hostTasksMap.values) {
       result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
       index += 1
     }

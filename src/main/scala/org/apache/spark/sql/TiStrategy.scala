@@ -117,9 +117,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     if (notAllowPushDown) {
       throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
     } else {
-      val tiRdd = source.logicalPlanToRDD(dagRequest)
-
-      CoprocessorRDD(output, tiRdd)
+      if (dagRequest.isIndexScan) {
+        source.dagRequestToRegionTaskExec(dagRequest, output)
+      } else {
+        val tiRdd = source.logicalPlanToRDD(dagRequest)
+        CoprocessorRDD(output, tiRdd)
+      }
     }
   }
 
@@ -175,14 +178,18 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   ): TiDAGRequest = {
     val tiFilters = filters.collect { case BasicExpression(expr) => expr }.asJava
     val scanBuilder: ScanBuilder = new ScanBuilder
+    val tableScanPlan =
+      scanBuilder.buildTableScan(tiFilters, source.table)
     val scanPlan = if (allowIndexDoubleRead()) {
+      // We need to prepare downgrade information in case of index scan downgrade happens.
+      tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
       scanBuilder.buildScan(tiFilters, source.table)
     } else {
-      scanBuilder.buildTableScan(tiFilters, source.table)
+      tableScanPlan
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
-    scanPlan.getFilters.asScala.foreach(dagRequest.addFilter)
+    scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
     }
