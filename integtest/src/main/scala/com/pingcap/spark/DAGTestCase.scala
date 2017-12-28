@@ -68,18 +68,18 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     testBundle(
       //      createSelfJoinTypeTest ++
       //      createSymmetryTypeTestCases ++
-      createCartesianTypeTestCases ++
-      createArithmeticTest ++
-      createPlaceHolderTest ++
-      createCount ++
-      createInTest ++
-      createDistinct ++
-      createBetween ++
-      createArithmeticAgg ++
       createFirstLast ++
-      createUnion ++
-      createAggregate ++
-      createHaving
+        createUnion ++
+        createAggregate ++
+        createHaving ++
+        createArithmeticAgg ++
+        createCartesianTypeTestCases ++
+        createArithmeticTest ++
+        createPlaceHolderTest ++
+        createCount ++
+        createInTest ++
+        createDistinct ++
+        createBetween
     )
   }
 
