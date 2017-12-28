@@ -94,7 +94,7 @@ create_conf() {
 create_conf_no_tpch() {
     echo "create conf for custom tests..."
     create_conf_db_options
-    echo "test.mode=TestIndex"    >> ${BASE_CONF}
+    echo "test.mode=TestAlone"    >> ${BASE_CONF}
     echo "test.ignore=tpch,tpch_test,tispark_test" >> ${BASE_CONF}
 
     cp ${BASE_CONF} ${TISPARK_CONF}

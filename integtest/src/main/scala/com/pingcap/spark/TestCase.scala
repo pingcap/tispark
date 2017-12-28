@@ -31,7 +31,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
   object RunMode extends Enumeration {
     type RunMode = Value
-    val Test, Load, LoadNTest, Dump, TestIndex, TestDAG, SqlOnly = Value
+    val Test, Load, LoadNTest, Dump, TestAlone, TestDAG, SqlOnly = Value
   }
 
   protected val KeyDumpDBList = "test.dumpDB.databases"
@@ -121,7 +121,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
 
       case RunMode.LoadNTest => work(basePath, run = true, load = true, compareNeeded = true)
 
-      case RunMode.TestIndex => work(basePath, run = true, load = false, compareNeeded = false)
+      case RunMode.TestAlone => work(basePath, run = true, load = false, compareNeeded = false)
 
       case RunMode.TestDAG => work(basePath, run = true, load = false, compareNeeded = false)
 
@@ -129,7 +129,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
 
     mode match {
-      case RunMode.Test | RunMode.TestIndex | RunMode.TestDAG =>
+      case RunMode.Test | RunMode.TestAlone | RunMode.TestDAG =>
         logger.warn("Result: All tests done.")
         logger.warn(
           "Result: Tests run: " + testsExecuted
