@@ -4,6 +4,7 @@ source _env.sh
 
 echo "Usage: <bin> [-a | -s | -i | -d | -h]"
 
+build_init_properties
 isDebug=false
 
 while getopts ":shida" arg

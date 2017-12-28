@@ -19,6 +19,7 @@ spark_test_opt=""
 
 TISPARK_CONF="${SPARK_HOME}/conf/tispark_config.properties"
 BASE_CONF="${BASEDIR}/conf/tispark_config.properties"
+INIT_CONF="${BASEDIR}/conf/tidb_config.properties"
 
 mysql_addr="localhost"
 mysql_user="root"
@@ -28,6 +29,22 @@ use_raw_mysql=false
 tidb_addr=
 tidb_port=
 tidb_user=
+
+build_init_properties() {
+    file=${BASE_CONF}
+    init=${INIT_CONF}
+
+    if ! [ -f "$file" ]
+    then
+        echo "$file not found. "
+        echo "Building initial config file."
+        if ! [ -f "$init" ]; then
+            echo "$init not found. Please set this file manually according to README."
+            exit -1
+        fi
+        cp ${init} ${file}
+    fi
+}
 
 read_properties() {
     file=${BASE_CONF}
