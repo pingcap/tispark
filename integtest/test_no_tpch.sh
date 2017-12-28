@@ -32,7 +32,7 @@ do
 		    showFailedOnly=true
 		    ;;
         a)
-            cd ../tikv-client-lib-java/
+            cd ../tikv-client/
             mvn clean install
             cd ../
             mvn clean install
