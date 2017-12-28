@@ -72,7 +72,6 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 Read the [Quick Start](./docs/userguide.md).
 
 ## How to build
-```
 To build all TiSpark modules :
 ```
 mvn clean package
