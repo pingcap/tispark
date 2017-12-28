@@ -3,13 +3,11 @@ set -ue
 
 source _env.sh
 
-echo "Base directory in: $BASEDIR"
 echo "Usage: <bin> [-h | -g | -a | -d | -s | -i | -r | -t <sql> | -b <db>]"
 echo "Note: <sql> must be quoted. e.g., \"select * from t\""
 echo "You may use sql-only like this:"
 echo "./test_no_tpch.sh -t \"select * from t\" -b \"test\""
 
-build_init_properties
 clear_last_diff_files
 
 isDebug=false

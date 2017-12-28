@@ -2,6 +2,7 @@
 set -ue
 
 BASEDIR=$(cd `dirname $0`; pwd)
+echo "Base directory in: $BASEDIR"
 PATH_TO_CONF="$BASEDIR/conf"
 
 if [ -z "${SPARK_HOME}" ]; then
@@ -30,7 +31,7 @@ tidb_addr=
 tidb_port=
 tidb_user=
 
-build_init_properties() {
+build_if_not_exists_init_properties() {
     file=${BASE_CONF}
     init=${INIT_CONF}
 
@@ -69,6 +70,7 @@ read_properties() {
     fi
 }
 
+build_if_not_exists_init_properties
 read_properties
 
 create_conf_db_options() {

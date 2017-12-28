@@ -6,7 +6,6 @@ source _env.sh
 echo ${BASEDIR}
 echo "usage: <bin> [-d | --debug]"
 
-build_init_properties
 clear_last_diff_files
 check_tpch_dir_is_present
 check_tpch_data_is_loaded
