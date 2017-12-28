@@ -45,7 +45,7 @@ do
             ;;
         h)
             echo "Options"
-            echo "  -a        make all projects"
+            echo "  -a        build all projects"
             echo "  -r        show result stats (SQL, outputs, time consumed, etc.)"
             echo "  -g        show failed only"
             echo "  -t <sql>  run sql statement <sql> (with quotes) only on TiSpark with debug mode (must assign a database)"
