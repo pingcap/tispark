@@ -53,6 +53,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     new ExpressionBlacklist(blacklistString)
   }
 
+  def typeBlackList: TypeBlacklist = {
+    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "")
+    new TypeBlacklist(blacklistString)
+  }
+
   def allowAggregationPushDown(): Boolean = {
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
   }
