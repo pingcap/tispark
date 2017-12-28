@@ -136,19 +136,6 @@ create_conf_dump() {
     cp ${BASE_CONF} ${TISPARK_CONF}
 }
 
-#add_MySQL_info() {
-#    use_raw_mysql=true
-#    echo "spark.use_raw_mysql=true" >> ${TISPARK_CONF}
-#    echo "mysql.addr=$mysql_addr" >> ${TISPARK_CONF}
-#    echo "mysql.user=$mysql_user" >> ${TISPARK_CONF}
-#    echo "mysql.password=$mysql_password" >> ${TISPARK_CONF}
-#
-#    echo "spark.use_raw_mysql=true" >> ${BASE_CONF}
-#    echo "mysql.addr=$mysql_addr" >> ${BASE_CONF}
-#    echo "mysql.user=$mysql_user" >> ${BASE_CONF}
-#    echo "mysql.password=$mysql_password" >> ${BASE_CONF}
-#}
-
 clear_all_diff_files() {
     for f in ./*.spark; do
         [ -e "$f" ] && rm *.spark
