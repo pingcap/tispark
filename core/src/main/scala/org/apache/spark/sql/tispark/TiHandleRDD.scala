@@ -15,15 +15,12 @@
 
 package org.apache.spark.sql.tispark
 
-import com.google.proto4pingcap.ByteString
-import com.pingcap.tikv.codec.TableCodec
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
-import gnu.trove.list.linked.TLongLinkedList
-import gnu.trove.map.hash.TLongObjectHashMap
+import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext}
@@ -61,21 +58,15 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
         snapshot.indexHandleRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
       private val tableId = dagRequest.getTableInfo.getId
       private val regionManager = session.getRegionManager
-      private val regionHandleMap = new TLongObjectHashMap[TLongLinkedList]()
-      // Fetch all handles
-      while (handleIter.hasNext) {
-        val handle = handleIter.next()
-        val key = TableCodec.encodeRowKeyWithHandleBytes(tableId, handle)
-        val regionId = regionManager
-          .getRegionByKey(ByteString.copyFrom(key))
-          .getId
-
-        if (!regionHandleMap.containsKey(regionId)) {
-          regionHandleMap.put(regionId, new TLongLinkedList())
-        }
-
-        regionHandleMap.get(regionId).add(handle)
+      private lazy val handleList = {
+        val lst = new TLongArrayList()
+        handleIter.asScala.foreach { lst.add(_) }
+        lst
       }
+      // Fetch all handles and group by region id
+      private val regionHandleMap = RangeSplitter
+        .newSplitter(regionManager)
+        .groupByHandlesByRegionId(tableId, handleList)
 
       private val iterator = regionHandleMap.iterator()
 

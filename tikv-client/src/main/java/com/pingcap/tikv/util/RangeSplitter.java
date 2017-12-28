@@ -27,6 +27,7 @@ import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.map.hash.TLongObjectHashMap;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -120,6 +121,75 @@ public class RangeSplitter {
     }
 
     return Comparables.wrap(lhs).compareTo(Comparables.wrap(rhs));
+  }
+
+  /**
+   * Group by a list of handles by the handles' region id
+   *
+   * @param tableId Table id used for the handle
+   * @param handles Handle list
+   * @return <RegionId, HandleList> map
+   */
+  public TLongObjectHashMap<TLongArrayList> groupByHandlesByRegionId(long tableId, TLongArrayList handles) {
+    TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
+    handles.sort();
+
+    int startPos = 0;
+    TableCodec.DecodeResult decodeResult = new TableCodec.DecodeResult();
+    while (startPos < handles.size()) {
+      long curHandle = handles.get(startPos);
+      byte[] key = TableCodec.encodeRowKeyWithHandleBytes(tableId, curHandle);
+      Pair<TiRegion, Metapb.Store> regionStorePair = regionManager.getRegionStorePairByKey(ByteString.copyFrom(key));
+      byte[] endKey = regionStorePair.first.getEndKey().toByteArray();
+      TableCodec.tryDecodeRowKey(tableId, endKey, decodeResult);
+      if (decodeResult.status == Status.MIN) {
+        throw new TiClientInternalException("EndKey is less than current rowKey");
+      } else if (decodeResult.status == Status.MAX || decodeResult.status == Status.UNKNOWN_INF) {
+        result.put(regionStorePair.first.getId(), createHandleList(startPos, handles.size(), handles));
+        break;
+      }
+
+      // Region range is a close-open range
+      // If region end key match exactly or slightly less than a handle,
+      // that handle should be excluded from current region
+      // If region end key is greater than the handle, that handle should be included
+      long regionEndHandle = decodeResult.handle;
+      int pos = handles.binarySearch(regionEndHandle, startPos, handles.size());
+
+      if (pos < 0) {
+        // not found in handles, pos is the next greater pos
+        // [startPos, pos) all included
+        pos = -(pos + 1);
+      } else if (decodeResult.status == Status.GREATER) {
+        // found handle and then further consider decode status
+        // End key decode to a value v: regionEndHandle < v < regionEndHandle + 1
+        // handle at pos included
+        pos ++;
+      }
+      result.put(regionStorePair.first.getId(), createHandleList(startPos, pos, handles));
+      // pos equals to start leads to an dead loop
+      // startPos and its handle is used for searching region in PD.
+      // The returning close-open range should at least include startPos's handle
+      // so only if PD error and startPos is not included in current region then startPos == pos
+      if (startPos >= pos) {
+        throw new TiClientInternalException("searchKey is not included in region returned by PD");
+      }
+      startPos = pos;
+    }
+
+    return result;
+  }
+
+  private TLongArrayList createHandleList(
+      int startPos,
+      int endPos,
+      TLongArrayList handles
+  ) {
+    TLongArrayList result = new TLongArrayList();
+    for (int i = startPos; i < endPos; i++) {
+      result.add(handles.get(i));
+    }
+    return result;
   }
 
   public List<RegionTask> splitHandlesByRegion(long tableId, TLongArrayList handles) {

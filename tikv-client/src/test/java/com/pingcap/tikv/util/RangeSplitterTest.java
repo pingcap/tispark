@@ -14,6 +14,7 @@ import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.types.IntegerType;
 import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.map.hash.TLongObjectHashMap;
 import org.junit.Test;
 
 import java.util.List;
@@ -204,5 +205,34 @@ public class RangeSplitterTest {
     assertEquals(tasks.get(5).getRegion().getId(), 6);
     assertEquals(tasks.get(5).getRanges().size(), 1);
     assertEquals(tasks.get(5).getRanges().get(0), keyRangeByHandle(tableId, 19999L, 20000L));
+  }
+
+  @Test
+  public void groupHandlesByRegionIdTest() {
+    final long tableId = 1;
+    TLongArrayList handles = new TLongArrayList();
+    handles.add(new long[] {
+        1, 5, 4, 3, 10, 11, 12, 2, 100, 101, 99, 88, -1, -255, -100, -99, -98, Long.MIN_VALUE, 8960, 8959, 19999, 15001, 99999999999L, Long.MAX_VALUE
+    });
+
+    MockRegionManager mgr = new MockRegionManager(ImmutableList.of(
+        keyRangeByHandle(tableId, null, Status.EQUAL, -100L, Status.EQUAL),
+        keyRangeByHandle(tableId, -100L, Status.EQUAL, 10L, Status.GREATER),
+        keyRangeByHandle(tableId, 10L, Status.GREATER, 50L, Status.EQUAL),
+        keyRangeByHandle(tableId, 50L, Status.EQUAL, 100L, Status.GREATER),
+        keyRangeByHandle(tableId, 100L, Status.GREATER, 9000L, Status.LESS),
+        keyRangeByHandle(tableId, 0x2300L /*8960*/, Status.LESS, 16000L, Status.EQUAL),
+        keyRangeByHandle(tableId, 16000L, Status.EQUAL, null, Status.EQUAL)
+    ));
+
+    TLongObjectHashMap<TLongArrayList> result =
+        RangeSplitter.newSplitter(mgr).groupByHandlesByRegionId(tableId, handles);
+    assertEquals(2, result.get(0).size());
+    assertEquals(10, result.get(1).size());
+    assertEquals(2, result.get(2).size());
+    assertEquals(3, result.get(3).size());
+    assertEquals(2, result.get(4).size());
+    assertEquals(2, result.get(5).size());
+    assertEquals(3, result.get(6).size());
   }
 }
