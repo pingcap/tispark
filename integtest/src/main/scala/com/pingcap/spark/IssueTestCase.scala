@@ -5,20 +5,20 @@ import java.util.Properties
 import scala.collection.mutable.ArrayBuffer
 
 /**
-  * Created by birdstorm on 2017/12/15.
-  */
+ * Created by birdstorm on 2017/12/15.
+ */
 class IssueTestCase(prop: Properties) extends TestCase(prop) {
   private var databaseName: String = ""
 
   /**
-    * An example of Tests for issues
-    * Use "Test"+"Client"/"Spark"+<IssueNumber> for test name.
-    * Common test includes building test table from TiDB
-    * and retrieving result from TiSpark.
-    * Remember to call refresh() after test data is built or renewed.
-    *
-    * @param dbName Name of database, the default is issue_test
-    */
+   * An example of Tests for issues
+   * Use "Test"+"Client"/"Spark"+<IssueNumber> for test name.
+   * Common test includes building test table from TiDB
+   * and retrieving result from TiSpark.
+   * Remember to call refresh() after test data is built or renewed.
+   *
+   * @param dbName Name of database, the default is issue_test
+   */
   private def TestClient0198(dbName: String): Unit = {
     var result = false
     jdbc.execTiDB(s"use $dbName")
