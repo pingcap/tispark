@@ -2,6 +2,7 @@
 set -ue
 
 BASEDIR=$(cd `dirname $0`; pwd)
+echo "Base directory in: $BASEDIR"
 PATH_TO_CONF="$BASEDIR/conf"
 
 if [ -z "${SPARK_HOME}" ]; then
@@ -19,6 +20,7 @@ spark_test_opt=""
 
 TISPARK_CONF="${SPARK_HOME}/conf/tispark_config.properties"
 BASE_CONF="${BASEDIR}/conf/tispark_config.properties"
+INIT_CONF="${BASEDIR}/conf/tidb_config.properties"
 
 mysql_addr="localhost"
 mysql_user="root"
@@ -28,6 +30,22 @@ use_raw_mysql=false
 tidb_addr=
 tidb_port=
 tidb_user=
+
+build_if_not_exists_init_properties() {
+    file=${BASE_CONF}
+    init=${INIT_CONF}
+
+    if ! [ -f "$file" ]
+    then
+        echo "$file not found. "
+        echo "Building initial config file."
+        if ! [ -f "$init" ]; then
+            echo "$init not found. Please set this file manually according to README."
+            exit -1
+        fi
+        cp ${init} ${file}
+    fi
+}
 
 read_properties() {
     file=${BASE_CONF}
@@ -52,6 +70,7 @@ read_properties() {
     fi
 }
 
+build_if_not_exists_init_properties
 read_properties
 
 create_conf_db_options() {
@@ -75,7 +94,7 @@ create_conf() {
 create_conf_no_tpch() {
     echo "create conf for custom tests..."
     create_conf_db_options
-    echo "test.mode=TestIndex"    >> ${BASE_CONF}
+    echo "test.mode=TestAlone"    >> ${BASE_CONF}
     echo "test.ignore=tpch,tpch_test,tispark_test" >> ${BASE_CONF}
 
     cp ${BASE_CONF} ${TISPARK_CONF}
@@ -116,19 +135,6 @@ create_conf_dump() {
 
     cp ${BASE_CONF} ${TISPARK_CONF}
 }
-
-#add_MySQL_info() {
-#    use_raw_mysql=true
-#    echo "spark.use_raw_mysql=true" >> ${TISPARK_CONF}
-#    echo "mysql.addr=$mysql_addr" >> ${TISPARK_CONF}
-#    echo "mysql.user=$mysql_user" >> ${TISPARK_CONF}
-#    echo "mysql.password=$mysql_password" >> ${TISPARK_CONF}
-#
-#    echo "spark.use_raw_mysql=true" >> ${BASE_CONF}
-#    echo "mysql.addr=$mysql_addr" >> ${BASE_CONF}
-#    echo "mysql.user=$mysql_user" >> ${BASE_CONF}
-#    echo "mysql.password=$mysql_password" >> ${BASE_CONF}
-#}
 
 clear_all_diff_files() {
     for f in ./*.spark; do
