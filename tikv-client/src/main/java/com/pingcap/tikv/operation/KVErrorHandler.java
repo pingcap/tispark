@@ -147,6 +147,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       String otherError = getOtherError.apply(resp);
       if (otherError != null &&
           !otherError.trim().isEmpty()) {
+        logger.warn(String.format("Other error occurred for region [%s]", ctxRegion));
         // Just throw to upper layer to handle
         throw new RuntimeException("Received other error from TiKV:" + otherError);
       }
