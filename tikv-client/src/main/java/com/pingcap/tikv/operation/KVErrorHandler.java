@@ -31,13 +31,25 @@ import org.apache.log4j.Logger;
 
 import java.util.function.Function;
 
+// TODO: consider refactor to Builder mode
 public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private static final Logger logger = Logger.getLogger(KVErrorHandler.class);
   private Function<RespT, Errorpb.Error> getRegionError;
+  private Function<RespT, String> getOtherError;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
   private RegionManager regionManager;
   private RegionErrorReceiver recv;
   private TiRegion ctxRegion;
+
+  public KVErrorHandler(
+      RegionManager regionManager,
+      RegionErrorReceiver recv,
+      TiRegion ctxRegion,
+      Function<RespT, Errorpb.Error> getRegionError,
+      Function<RespT, String> getOtherError) {
+    this(regionManager, recv, ctxRegion, getRegionError);
+    this.getOtherError = getOtherError;
+  }
 
   public KVErrorHandler(
       RegionManager regionManager,
@@ -50,7 +62,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     this.getRegionError = getRegionError;
     this.cacheInvalidateCallBack =
         regionManager != null && regionManager.getSession() != null ?
-        regionManager.getSession().getCacheInvalidateCallback() : null;
+            regionManager.getSession().getCacheInvalidateCallback() : null;
   }
 
   public void handle(RespT resp) {
@@ -66,6 +78,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       return;
     }
 
+    // Region error handling logic
     Errorpb.Error error = getRegionError.apply(resp);
     if (error != null) {
       if (error.hasNotLeader()) {
@@ -125,6 +138,17 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
             CacheInvalidateEvent.CacheType.REGION_STORE
         );
         throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
+      }
+    }
+
+    // Other error handling logic
+    // Currently we need to handle potential other errors from coprocessor responses.
+    if (getOtherError != null) {
+      String otherError = getOtherError.apply(resp);
+      if (otherError != null &&
+          !otherError.trim().isEmpty()) {
+        // Just throw to upper layer to handle
+        throw new RuntimeException("Received other error from TiKV:" + otherError);
       }
     }
   }
