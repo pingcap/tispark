@@ -17,7 +17,7 @@ package com.pingcap.tispark
 
 import java.sql.{Date, Timestamp}
 
-import com.google.proto4pingcap.ByteString
+//import com.google.proto4pingcap.ByteString
 import com.pingcap.tikv.expression.TiConstant.DateWrapper
 import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
 import com.pingcap.tikv.types.RequestTypes
@@ -27,7 +27,7 @@ import org.apache.spark.sql.types._
 import scala.language.implicitConversions
 
 object BasicExpression {
-  implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
+//  implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
 
   type TiPlus = com.pingcap.tikv.expression.scalar.Plus
   type TiMinus = com.pingcap.tikv.expression.scalar.Minus
