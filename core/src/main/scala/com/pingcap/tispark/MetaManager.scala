@@ -15,7 +15,6 @@
 
 package com.pingcap.tispark
 
-import com.google.guava4pingcap.collect.ImmutableList
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
 
@@ -29,7 +28,7 @@ class MetaManager(catalog: Catalog) {
   }
 
   def getTables(db: TiDBInfo): List[TiTableInfo] = {
-    Option(catalog.listTables(db)).getOrElse(ImmutableList.of()).toList
+    catalog.listTables(db).toList
   }
 
   def getTable(dbName: String, tableName: String): Option[TiTableInfo] = {

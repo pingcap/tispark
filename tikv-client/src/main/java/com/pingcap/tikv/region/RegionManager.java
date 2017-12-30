@@ -171,6 +171,10 @@ public class RegionManager {
     return cache.getRegionByKey(key);
   }
 
+  public TiRegion getRegionByKey(byte[] key) {
+    return cache.getRegionByKey(ByteString.copyFrom(key));
+  }
+
   public TiRegion getRegionById(long regionId) {
     return cache.getRegionById(regionId);
   }
