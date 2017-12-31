@@ -59,9 +59,9 @@ class TiRDD(val dagRequest: TiDAGRequest,
     private val tiPartition = split.asInstanceOf[TiPartition]
     private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
     private val snapshot = session.createSnapshot(ts)
+    private[this] val tasks = tiPartition.tasks
 
-    private val iterator =
-      snapshot.tableRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+    private val iterator = snapshot.tableRead(dagRequest, tasks)
     private val finalTypes = rowTransformer.getTypes.toList
 
     def toSparkRow(row: TiRow): Row = {

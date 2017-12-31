@@ -57,8 +57,9 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
       private val snapshot = session.createSnapshot(ts)
-      private val handleIter =
-        snapshot.indexHandleRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+      private[this] val tasks = tiPartition.tasks
+
+      private val handleIter = snapshot.indexHandleRead(dagRequest, tasks)
       private val tableId = dagRequest.getTableInfo.getId
       private val regionManager = session.getRegionManager
       private val regionHandleMap = new TLongObjectHashMap[TLongLinkedList]()
