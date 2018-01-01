@@ -3,13 +3,12 @@ set -ue
 
 source _env.sh
 
-echo "Base directory in: $BASEDIR"
 echo "Usage: <bin> [-h | -g | -a | -d | -s | -i | -r | -t <sql> | -b <db>]"
 echo "Note: <sql> must be quoted. e.g., \"select * from t\""
 echo "You may use sql-only like this:"
 echo "./test_dag.sh -t \"select * from t\" -b \"test\""
 
-clear_last_diff_files
+clear_last_diff_files_DAG
 
 isDebug=false
 showResultStats=false
@@ -18,7 +17,7 @@ mode="Integration"
 sql=
 db=
 
-while getopts "t:b:dishrag" arg
+while getopts "t:b:dhrag" arg
 do
     case ${arg} in
         d)
@@ -31,21 +30,9 @@ do
 		    showFailedOnly=true
 		    ;;
         a)
-            cd ../tikv-client-lib-java/
-            mvn clean install
             cd ../
             mvn clean install
             cd integtest/
-            mvn clean install
-            ;;
-        s)
-            cd ../
-            mvn clean install
-            cd integtest/
-            mvn clean install
-            ;;
-        i)
-            mvn clean install
             ;;
         t)
             sql=$OPTARG
@@ -58,9 +45,7 @@ do
             ;;
         h)
             echo "Options"
-            echo "  -a        make all projects"
-            echo "  -s        make tiSpark and integration test projects"
-            echo "  -i        make integration test only"
+            echo "  -a        build all projects"
             echo "  -r        show result stats (SQL, outputs, time consumed, etc.)"
             echo "  -g        show failed only"
             echo "  -t <sql>  run sql statement <sql> (with quotes) only on TiSpark with debug mode (must assign a database)"
@@ -81,8 +66,7 @@ load_DAG_Table
 
 if [ "${mode}" == "Integration" ]; then
     filter=""
-    cp ${PATH_TO_CONF}/tispark_config_dag.properties.template ${TISPARK_CONF}
-    cp ${PATH_TO_CONF}/tispark_config_dag.properties.template ${BASE_CONF}
+    create_conf_dag
     if ! [ -z "${db}" ]; then
         echo "test.db=$db" >> ${TISPARK_CONF}
         echo "test.db=$db" >> ${BASE_CONF}
@@ -108,8 +92,7 @@ if [ "${mode}" == "Integration" ]; then
         ${spark_cmd} ${spark_test_opt} 2>&1 | grep "${filter}"
     fi
 elif [ "${mode}" == "QueryOnly" ]; then
-    cp ${PATH_TO_CONF}/tispark_config.properties.template ${TISPARK_CONF}
-    cp ${PATH_TO_CONF}/tispark_config.properties.template ${BASE_CONF}
+    create_conf
     if [ -z "${sql}" ]; then
         echo "sql can not be empty. Aborting..."
         exit -1

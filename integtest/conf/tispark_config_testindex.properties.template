@@ -1,5 +1,0 @@
-tidb.addr=127.0.0.1
-tidb.port=4000
-tidb.user=root
-test.mode=TestIndex
-test.ignore=tpch,tpch_TEST,tispark_test

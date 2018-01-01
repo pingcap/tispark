@@ -1,0 +1,1 @@
+rule io.netty.** io.netty.netty4pingcap.@1

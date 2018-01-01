@@ -1,8 +1,13 @@
 #ignore idea configuration
 .idea
 *.iml
+
+# ignore compiled classes
 target
-src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
+
+# ignore version info
+core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
+tikv-client/src/main/java/com/pingcap/tikv/TiVersion.java
 
 # ignore eclipse configuration 
 .project
@@ -48,3 +53,12 @@ metastore_db/
 tpch
 .java-version
 /integtest/conf/tispark_config.properties
+
+# ignore tikv-client proto files
+tikv-client/kvproto
+tikv-client/tipb
+tikv-client/proto
+
+# ignore tikv-client bazel build
+tikv-client/bazel-*
+

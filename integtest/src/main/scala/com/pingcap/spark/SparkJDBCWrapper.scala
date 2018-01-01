@@ -42,7 +42,8 @@ class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
 
   override def init(databaseName: String): Unit = {
     try {
-      val tableDF = spark_jdbc.read.format("jdbc")
+      val tableDF = spark_jdbc.read
+        .format("jdbc")
         .option("url", jdbcUrl)
         .option("dbtable", "information_schema.tables")
         .option("user", jdbcUsername)
@@ -54,18 +55,19 @@ class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
       tableNames.foreach(createTempView(databaseName, _))
       dbName = databaseName
     } catch {
-      case e: Exception => logger.error(s"Error when fetching jdbc data using $jdbcUrl: " + e.getMessage)
+      case e: Exception =>
+        logger.error(s"Error when fetching jdbc data using $jdbcUrl: " + e.getMessage)
     }
   }
 
   def createTempView(dbName: String, viewName: String): Unit = {
-    spark_jdbc.read.format("jdbc")
+    spark_jdbc.read
+      .format("jdbc")
       .option("url", jdbcUrl)
       .option("dbtable", s"$dbName.$viewName")
       .option("user", jdbcUsername)
       .option("driver", "com.mysql.jdbc.Driver")
       .load()
-      .cache()
       .createOrReplaceTempView(viewName)
   }
 
@@ -75,5 +77,9 @@ class SparkJDBCWrapper(prop: Properties) extends SparkWrapper {
     val schema = df.schema.fields
 
     dfData(df, schema)
+  }
+
+  override def close(): Unit = {
+    spark_jdbc.close()
   }
 }
