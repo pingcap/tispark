@@ -98,7 +98,7 @@ public class SchemaInfer {
   private void extractFieldTypes(TiDAGRequest dagRequest) {
 
     if (dagRequest.hasAggregate()) {
-      dagRequest.getAggregates().forEach(expr -> types.add(expr.getType()));
+      dagRequest.getAggregatePairs().forEach(pair -> types.add(pair.second));
       // In DAG mode, if there is any group by statement in a request, all the columns specified
       // in group by expression will be returned, so when we decode a result row, we need to pay
       // extra attention to decoding.
