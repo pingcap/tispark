@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
-package org.apache.spark
+package org.apache.spark.sql.catalyst.plans
 
+import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, And, AttributeReference, EqualNullSafe, EqualTo, Exists, ExprId, Expression, ListQuery, PredicateHelper, PredicateSubquery, ScalarSubquery}
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -28,7 +29,7 @@ abstract class PlanTest extends SparkFunSuite with PredicateHelper {
     * Since attribute references are given globally unique ids during analysis,
     * we must normalize them to check if two different queries are identical.
     */
-  protected def normalizeExprIds(plan: LogicalPlan) = {
+  protected def normalizeExprIds(plan: LogicalPlan): plan.type = {
     plan transformAllExpressions {
       case s: ScalarSubquery =>
         s.copy(exprId = ExprId(0))
