@@ -21,10 +21,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.util.AccumulatorContext
 import org.scalatest._
 
-abstract class SparkFunSuite
-  extends FunSuite
-    with BeforeAndAfterAll
-    with Logging {
+abstract class SparkFunSuite extends FunSuite with BeforeAndAfterAll with Logging {
   protected override def afterAll(): Unit = {
     try {
       // Avoid leaking map entries in tests that use accumulators without SparkContext
@@ -44,12 +41,12 @@ abstract class SparkFunSuite
   }
 
   /**
-    * Log the suite name and the test name before and after each test.
-    *
-    * Subclasses should never override this method. If they wish to run
-    * custom code before and after each test, they should mix in the
-    * {{org.scalatest.BeforeAndAfter}} trait instead.
-    */
+   * Log the suite name and the test name before and after each test.
+   *
+   * Subclasses should never override this method. If they wish to run
+   * custom code before and after each test, they should mix in the
+   * {{org.scalatest.BeforeAndAfter}} trait instead.
+   */
   final protected override def withFixture(test: NoArgTest): Outcome = {
     val testName = test.text
     val suiteName = this.getClass.getName

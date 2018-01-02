@@ -28,7 +28,8 @@ object ProcessTestUtils {
     override def run(): Unit = {
       try {
         BasicIO.processFully(capture)(stream)
-      } catch { case _: IOException =>
+      } catch {
+        case _: IOException =>
         // Ignores the IOException thrown when the process termination, which closes the input
         // stream abruptly.
       }

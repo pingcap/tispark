@@ -1,16 +1,14 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2017 PingCAP, Inc.
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -18,16 +16,17 @@
 package org.apache.spark.sql.test
 
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.internal.{SessionState, SQLConf}
+import org.apache.spark.sql.{SparkSession, TiSparkSession}
+import org.apache.spark.sql.internal.{SQLConf, SessionState}
 
 /**
  * A special [[SparkSession]] prepared for testing.
  */
 private[sql] class TestSparkSession(sc: SparkContext) extends SparkSession(sc) { self =>
   def this(sparkConf: SparkConf) {
-    this(new SparkContext("local[2]", "test-sql-context",
-      sparkConf.set("spark.sql.testkey", "true")))
+    this(
+      new SparkContext("local[2]", "test-sql-context", sparkConf.set("spark.sql.testkey", "true"))
+    )
   }
 
   def this() {
@@ -58,7 +57,6 @@ private[sql] class TestSparkSession(sc: SparkContext) extends SparkSession(sc) {
   }
 }
 
-
 private[sql] object TestSQLContext {
 
   /**
@@ -67,5 +65,6 @@ private[sql] object TestSQLContext {
   val overrideConfs: Map[String, String] =
     Map(
       // Fewer shuffle partitions to speed up testing.
-      SQLConf.SHUFFLE_PARTITIONS.key -> "5")
+      SQLConf.SHUFFLE_PARTITIONS.key -> "5"
+    )
 }
