@@ -19,9 +19,9 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiConstant;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Constant;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.scalar.Equal;
 import com.pingcap.tikv.expression.scalar.LessEqual;
 import com.pingcap.tikv.key.RowKey;
@@ -80,13 +80,13 @@ public class ScanBuilderTest {
     TiTableInfo table = createTable();
     TiIndexInfo index = table.getIndices().get(0);
 
-    TiExpr eq1 = new Equal(TiColumnRef.create("c1", table), TiConstant.create(0));
-    TiExpr eq2 = new Equal(TiColumnRef.create("c2", table), TiConstant.create("test"));
-    TiExpr le1 = new LessEqual(TiColumnRef.create("c3", table), TiConstant.create("fxxx"));
+    Expression eq1 = new Equal(ColumnRef.create("c1", table), Constant.create(0));
+    Expression eq2 = new Equal(ColumnRef.create("c2", table), Constant.create("test"));
+    Expression le1 = new LessEqual(ColumnRef.create("c3", table), Constant.create("fxxx"));
     // Last one should be pushed back
-    TiExpr eq3 = new Equal(TiColumnRef.create("c4", table), TiConstant.create("fxxx"));
+    Expression eq3 = new Equal(ColumnRef.create("c4", table), Constant.create("fxxx"));
 
-    List<TiExpr> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
+    List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 
     ScanBuilder.IndexMatchingResult result = ScanBuilder.extractConditions(exprs, table, index);
     assertEquals(1, result.residualConditions.size());
@@ -105,13 +105,13 @@ public class ScanBuilderTest {
     TiTableInfo table = createTableWithPrefix();
     TiIndexInfo index = table.getIndices().get(0);
 
-    TiExpr eq1 = new Equal(TiColumnRef.create("c1", table), TiConstant.create(0));
-    TiExpr eq2 = new Equal(TiColumnRef.create("c2", table), TiConstant.create("test"));
-    TiExpr le1 = new LessEqual(TiColumnRef.create("c3", table), TiConstant.create("fxxx"));
+    Expression eq1 = new Equal(ColumnRef.create("c1", table), Constant.create(0));
+    Expression eq2 = new Equal(ColumnRef.create("c2", table), Constant.create("test"));
+    Expression le1 = new LessEqual(ColumnRef.create("c3", table), Constant.create("fxxx"));
     // Last one should be pushed back
-    TiExpr eq3 = new Equal(TiColumnRef.create("c4", table), TiConstant.create("fxxx"));
+    Expression eq3 = new Equal(ColumnRef.create("c4", table), Constant.create("fxxx"));
 
-    List<TiExpr> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
+    List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 
     ScanBuilder.IndexMatchingResult result = ScanBuilder.extractConditions(exprs, table, index);
     // 3 remains since c2 condition pushed back as well
@@ -134,13 +134,13 @@ public class ScanBuilderTest {
     assertEquals(1, index.getIndexColumns().size());
     assertEquals("c1", index.getIndexColumns().get(0).getName());
 
-    TiExpr eq1 = new Equal(TiColumnRef.create("c1", table), TiConstant.create(0));
-    TiExpr eq2 = new Equal(TiColumnRef.create("c2", table), TiConstant.create("test"));
-    TiExpr le1 = new LessEqual(TiColumnRef.create("c3", table), TiConstant.create("fxxx"));
+    Expression eq1 = new Equal(ColumnRef.create("c1", table), Constant.create(0));
+    Expression eq2 = new Equal(ColumnRef.create("c2", table), Constant.create("test"));
+    Expression le1 = new LessEqual(ColumnRef.create("c3", table), Constant.create("fxxx"));
     // Last one should be pushed back
-    TiExpr eq3 = new Equal(TiColumnRef.create("c4", table), TiConstant.create("fxxx"));
+    Expression eq3 = new Equal(ColumnRef.create("c4", table), Constant.create("fxxx"));
 
-    List<TiExpr> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
+    List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 
     ScanBuilder.IndexMatchingResult result = ScanBuilder.extractConditions(exprs, table, index);
 

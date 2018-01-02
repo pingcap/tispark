@@ -19,8 +19,8 @@ import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.catalog.Catalog;
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.meta.TiDBInfo;
@@ -45,7 +45,7 @@ public class IndexScanExample {
     table = cat.getTable(db, "full_data_type_table");
   }
 
-  public void run(String indexName, List<TiColumnRef> columns, List<TiExpr> filters) {
+  public void run(String indexName, List<ColumnRef> columns, List<Expression> filters) {
     Snapshot snapshot = session.createSnapshot();
 
     TiDAGRequest dagRequest = new TiDAGRequest(PushDownType.NORMAL);

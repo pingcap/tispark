@@ -16,8 +16,8 @@
 package com.pingcap.tikv.predicates;
 
 
-import com.pingcap.tikv.expression.ComparisonExpression;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression;
+import com.pingcap.tikv.expression.Expression;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,14 +28,14 @@ public class SelectivityCalculator {
   public static final double LESS_RATE = 0.1;
 
   public static double calcPseudoSelectivity(ScanSpec spec) {
-    List<TiExpr> exprs = new ArrayList<>();
+    List<Expression> exprs = new ArrayList<>();
     exprs.addAll(spec.getPointPredicates());
-    Optional<TiExpr> rangePred = spec.getRangePredicate();
+    Optional<Expression> rangePred = spec.getRangePredicate();
     rangePred.map(x -> exprs.add(x));
     double minFactor = SELECTION_FACTOR;
-    for (TiExpr expr : exprs) {
-      if (expr instanceof ComparisonExpression) {
-        ComparisonExpression compExpression = (ComparisonExpression) expr;
+    for (Expression expr : exprs) {
+      if (expr instanceof ComparisonBinaryExpression) {
+        ComparisonBinaryExpression compExpression = (ComparisonBinaryExpression) expr;
         switch (compExpression.getComparisonType()) {
           case EQUAL:
             minFactor *= EQUAL_RATE;

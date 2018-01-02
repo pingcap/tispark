@@ -24,12 +24,12 @@ import com.pingcap.tikv.expression.scalar.Not;
 import com.pingcap.tikv.expression.scalar.Or;
 import org.junit.Test;
 
-public class TiExprTest {
+public class ExpressionTest {
   @Test
   public void isSupportedExprTest() {
     ExpressionBlacklist blackList = new ExpressionBlacklist("And, , Test");
-    Or or = new Or(TiConstant.create(1), TiConstant.create(1));
-    And and = new And(TiConstant.create(1), or);
+    Or or = new Or(Constant.create(1), Constant.create(1));
+    And and = new And(Constant.create(1), or);
     Not not = new Not(or);
     Not notFail = new Not(and);
 

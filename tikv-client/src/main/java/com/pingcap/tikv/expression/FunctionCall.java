@@ -15,16 +15,17 @@
 
 package com.pingcap.tikv.expression;
 
-import com.pingcap.tikv.types.DataType;
-import java.io.Serializable;
 import java.util.List;
 
-public interface TiExpr extends Serializable {
-  List<TiExpr> getChildren();
+public class FunctionCall implements Expression {
 
-  <R, C> R accept(Visitor<R, C> visitor, C context);
+  @Override
+  public List<Expression> getChildren() {
+    return null;
+  }
 
-  default DataType getType() {
+  @Override
+  public <R, C> R accept(Visitor<R, C> visitor, C context) {
     return null;
   }
 }

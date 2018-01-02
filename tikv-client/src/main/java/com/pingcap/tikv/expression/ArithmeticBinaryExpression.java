@@ -19,14 +19,13 @@ package com.pingcap.tikv.expression;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.types.DataType;
+import com.pingcap.tidb.tipb.ExprType;
 import java.util.List;
 import java.util.Objects;
 
-public class ArithmeticExpression extends ScalarExpression {
-
+public class ArithmeticBinaryExpression implements Expression {
   @Override
-  public List<TiExpr> getChildren() {
+  public List<Expression> getChildren() {
     return ImmutableList.of(left, right);
   }
 
@@ -36,35 +35,49 @@ public class ArithmeticExpression extends ScalarExpression {
   }
 
   public enum Type {
-    PLUS,
-    MINUS,
-    MULTIPLY,
-    DIVIDE,
-    BIT_AND,
-    BIT_OR,
-    BIT_XOR
+    PLUS(ExprType.Plus),
+    MINUS(ExprType.Minus),
+    MULTIPLY(ExprType.Mul),
+    DIVIDE(ExprType.Div),
+    BIT_AND(ExprType.BitAnd),
+    BIT_OR(ExprType.BitOr),
+    BIT_XOR(ExprType.BitXor);
+
+    Type(ExprType type) {
+      this.type = type;
+    }
+
+    private final ExprType type;
+    ExprType getExprType() {
+      return type;
+    }
   }
 
-  private TiExpr left;
-  private TiExpr right;
-  private Type compType;
+  private final Expression left;
+  private final Expression right;
+  private final Type compType;
 
-  public ArithmeticExpression(Type type, TiExpr left, TiExpr right) {
+  public ArithmeticBinaryExpression(Type type, Expression left, Expression right) {
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
     this.compType = requireNonNull(type, "type is null");
   }
 
-  public TiExpr getLeft() {
+  public Expression getLeft() {
     return left;
   }
 
-  public TiExpr getRight() {
+  public Expression getRight() {
     return right;
   }
 
   public Type getCompType() {
     return compType;
+  }
+
+  @Override
+  public ExprType getExprType() {
+    return getCompType().getExprType();
   }
 
   @Override
@@ -76,7 +89,7 @@ public class ArithmeticExpression extends ScalarExpression {
       return false;
     }
 
-    ArithmeticExpression that = (ArithmeticExpression) other;
+    ArithmeticBinaryExpression that = (ArithmeticBinaryExpression) other;
     return (compType == that.compType) &&
         left.equals(that.left) &&
         right.equals(that.right);

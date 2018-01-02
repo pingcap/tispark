@@ -17,33 +17,32 @@ package com.pingcap.tikv.expression;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.pingcap.tidb.tipb.ByItem;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import java.io.Serializable;
 
-public class TiByItem implements Serializable {
-  private TiExpr expr;
+public class ByItem implements Serializable {
+  private Expression expr;
   private boolean desc;
 
-  public static TiByItem create(TiExpr expr, boolean desc) {
-    return new TiByItem(expr, desc);
+  public static ByItem create(Expression expr, boolean desc) {
+    return new ByItem(expr, desc);
   }
 
-  private TiByItem(TiExpr expr, boolean desc) {
+  private ByItem(Expression expr, boolean desc) {
     checkNotNull(expr, "Expr cannot be null for ByItem");
 
     this.expr = expr;
     this.desc = desc;
   }
 
-  public ByItem toProto() {
-    ByItem.Builder builder = ByItem.newBuilder();
+  public com.pingcap.tidb.tipb.ByItem toProto() {
+    com.pingcap.tidb.tipb.ByItem.Builder builder = com.pingcap.tidb.tipb.ByItem.newBuilder();
     return builder.setExpr(ProtoConverter.toProto(expr))
                   .setDesc(desc)
                   .build();
   }
 
-  public TiExpr getExpr() {
+  public Expression getExpr() {
     return expr;
   }
 

@@ -18,8 +18,8 @@ package com.pingcap.tispark
 import java.sql.{Date, Timestamp}
 
 //import com.google.proto4pingcap.ByteString
-import com.pingcap.tikv.expression.TiConstant.DateWrapper
-import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
+import com.pingcap.tikv.expression.Constant.DateWrapper
+import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression}
 import com.pingcap.tikv.types.RequestTypes
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
 import org.apache.spark.sql.types._
@@ -78,10 +78,10 @@ object BasicExpression {
       case _ => true
     }
 
-  def convertToTiExpr(expr: Expression): Option[TiExpr] =
+  def convertToTiExpr(expr: Expression): Option[Expression] =
     expr match {
       case Literal(value, dataType) =>
-        Some(TiConstant.create(convertLiteral(value, dataType)))
+        Some(Constant.create(convertLiteral(value, dataType)))
 
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(new TiPlus(lhs, rhs))
@@ -126,11 +126,11 @@ object BasicExpression {
       case attr: AttributeReference =>
         // Do we need add ValToType in TiExpr?
         // Some(TiExpr.create().setValue(attr.name).toProto)
-        Some(TiColumnRef.create(attr.name))
+        Some(ColumnRef.create(attr.name))
 
       // TODO: Remove it and let it fail once done all translation
-      case _ => Option.empty[TiExpr]
+      case _ => Option.empty[Expression]
     }
 
-  def unapply(expr: Expression): Option[TiExpr] = convertToTiExpr(expr)
+  def unapply(expr: Expression): Option[Expression] = convertToTiExpr(expr)
 }

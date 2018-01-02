@@ -24,7 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.ColumnRefResolver;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.key.IndexKey;
@@ -43,7 +43,7 @@ import java.util.Set;
 // TODO: Rethink value binding part since we abstract away datum of TiDB
 public class ScanAnalyzer {
   public static class ScanPlan {
-    public ScanPlan(List<KeyRange> keyRanges, Set<TiExpr> filters, TiIndexInfo index, double cost) {
+    public ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost) {
       this.filters = filters;
       this.keyRanges = keyRanges;
       this.cost = cost;
@@ -51,7 +51,7 @@ public class ScanAnalyzer {
     }
 
     private final List<KeyRange> keyRanges;
-    private final Set<TiExpr> filters;
+    private final Set<Expression> filters;
     private final double cost;
     private TiIndexInfo index;
 
@@ -59,7 +59,7 @@ public class ScanAnalyzer {
       return keyRanges;
     }
 
-    public Set<TiExpr> getFilters() {
+    public Set<Expression> getFilters() {
       return filters;
     }
 
@@ -77,7 +77,7 @@ public class ScanAnalyzer {
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildScan(List<TiExpr> conditions, TiTableInfo table) {
+  public ScanPlan buildScan(List<Expression> conditions, TiTableInfo table) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanPlan minPlan = buildScan(conditions, pkIndex, table);
     double minCost = minPlan.getCost();
@@ -91,13 +91,13 @@ public class ScanAnalyzer {
     return minPlan;
   }
 
-  public ScanPlan buildTableScan(List<TiExpr> conditions, TiTableInfo table) {
+  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanPlan plan = buildScan(conditions, pkIndex, table);
     return plan;
   }
 
-  public ScanPlan buildScan(List<TiExpr> conditions, TiIndexInfo index, TiTableInfo table) {
+  public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
@@ -235,7 +235,7 @@ public class ScanAnalyzer {
 
   @VisibleForTesting
   static ScanSpec extractConditions(
-      List<TiExpr> conditions, TiTableInfo table, TiIndexInfo index) {
+      List<Expression> conditions, TiTableInfo table, TiIndexInfo index) {
     // 0. Different than TiDB implementation, here logic has been unified for TableScan and IndexScan by
     // adding fake index on clustered table's pk
     // 1. Generate access point based on equal conditions
@@ -248,7 +248,7 @@ public class ScanAnalyzer {
     // When index is null, no access condition can be applied
     ScanSpec.Builder specBuilder = new ScanSpec.Builder(table, index);
     if (index != null) {
-      Set<TiExpr> visited = new HashSet<>();
+      Set<Expression> visited = new HashSet<>();
       IndexMatchingLoop:
       for (int i = 0; i < index.getIndexColumns().size(); i++) {
         // for each index column try matches an equal condition
@@ -261,7 +261,7 @@ public class ScanAnalyzer {
         boolean found = false;
         // For first prefix index encountered, it equals to a range
         // and we cannot push equal conditions further
-        for (TiExpr cond : conditions) {
+        for (Expression cond : conditions) {
           if (visited.contains(cond)) {
             continue;
           }
@@ -280,7 +280,7 @@ public class ScanAnalyzer {
           // For first "broken index chain piece"
           // search for a matching range condition
           IndexMatcher matcher = IndexMatcher.matcher(col);
-          for (TiExpr cond : conditions) {
+          for (Expression cond : conditions) {
             if (visited.contains(cond)) {
               continue;
             }

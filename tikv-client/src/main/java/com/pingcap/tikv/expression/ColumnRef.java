@@ -23,13 +23,13 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 import java.util.List;
 
-public class TiColumnRef implements TiExpr {
-  public static TiColumnRef create(TiColumnInfo columnInfo, TiTableInfo table) {
-    return new TiColumnRef(columnInfo.getName(), columnInfo, table);
+public class ColumnRef implements Expression {
+  public static ColumnRef create(TiColumnInfo columnInfo, TiTableInfo table) {
+    return new ColumnRef(columnInfo.getName(), columnInfo, table);
   }
 
-  public static TiColumnRef create(String name) {
-    return new TiColumnRef(name);
+  public static ColumnRef create(String name) {
+    return new ColumnRef(name);
   }
 
   private final String name;
@@ -37,11 +37,11 @@ public class TiColumnRef implements TiExpr {
   private TiColumnInfo columnInfo;
   private TiTableInfo tableInfo;
 
-  public TiColumnRef(String name) {
+  public ColumnRef(String name) {
     this.name = name;
   }
 
-  public TiColumnRef(String name, TiColumnInfo columnInfo, TiTableInfo tableInfo) {
+  public ColumnRef(String name, TiColumnInfo columnInfo, TiTableInfo tableInfo) {
     this.name = name;
     this.columnInfo = columnInfo;
     this.tableInfo = tableInfo;
@@ -92,11 +92,11 @@ public class TiColumnRef implements TiExpr {
       return true;
     }
 
-    if (another instanceof TiColumnRef) {
-      TiColumnRef tiColumnRef = (TiColumnRef) another;
-      return tiColumnRef.columnInfo.getId() == this.columnInfo.getId()
-          && tiColumnRef.getName().equalsIgnoreCase(this.columnInfo.getName())
-          && tiColumnRef.tableInfo.getId() == this.tableInfo.getId();
+    if (another instanceof ColumnRef) {
+      ColumnRef columnRef = (ColumnRef) another;
+      return columnRef.columnInfo.getId() == this.columnInfo.getId()
+          && columnRef.getName().equalsIgnoreCase(this.columnInfo.getName())
+          && columnRef.tableInfo.getId() == this.tableInfo.getId();
     } else {
       return false;
     }
@@ -119,7 +119,7 @@ public class TiColumnRef implements TiExpr {
   }
 
   @Override
-  public List<TiExpr> getChildren() {
+  public List<Expression> getChildren() {
     return ImmutableList.of();
   }
 

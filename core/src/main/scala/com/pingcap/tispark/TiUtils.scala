@@ -18,7 +18,7 @@ package com.pingcap.tispark
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
-import com.pingcap.tikv.expression.{ExpressionBlacklist, TiExpr}
+import com.pingcap.tikv.expression.{ExpressionBlacklist, Expression}
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
 import com.pingcap.tikv.types._
@@ -62,7 +62,7 @@ object TiUtils {
                                  blacklist: ExpressionBlacklist): Boolean = {
     if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
 
-    BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpr =>
+    BasicExpression.convertToTiExpr(expr).fold(false) { expr: Expression =>
       expr.resolve(tiDBRelation.table)
       return expr.isSupportedExpr(blacklist)
     }

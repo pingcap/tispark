@@ -20,10 +20,10 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.expression.TiByItem;
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiConstant;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ByItem;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Constant;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.aggregate.Min;
 import com.pingcap.tikv.expression.aggregate.Sum;
 import com.pingcap.tikv.expression.scalar.LessEqual;
@@ -54,21 +54,21 @@ public class TiDAGRequestTest {
     TiTableInfo table = createTable();
     TiDAGRequest selReq = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
     selReq
-        .addRequiredColumn(TiColumnRef.create("c1", table))
-        .addRequiredColumn(TiColumnRef.create("c2", table))
-        .addAggregate(new Sum(TiColumnRef.create("c1", table)))
-        .addAggregate(new Min(TiColumnRef.create("c1", table)))
-        .addWhere(new Plus(TiConstant.create(1L), TiConstant.create(2L)))
+        .addRequiredColumn(ColumnRef.create("c1", table))
+        .addRequiredColumn(ColumnRef.create("c2", table))
+        .addAggregate(new Sum(ColumnRef.create("c1", table)))
+        .addAggregate(new Min(ColumnRef.create("c1", table)))
+        .addWhere(new Plus(Constant.create(1L), Constant.create(2L)))
         .addGroupByItem(
-            TiByItem.create(TiColumnRef.create("c2", table), true))
+            ByItem.create(ColumnRef.create("c2", table), true))
         .addOrderByItem(
-            TiByItem.create(TiColumnRef.create("c3", table), false))
+            ByItem.create(ColumnRef.create("c3", table), false))
         .setTableInfo(table)
         .setStartTs(666)
         .setTruncateMode(TiDAGRequest.TruncateMode.IgnoreTruncation)
         .setDistinct(true)
         .setIndexInfo(table.getIndices().get(0))
-        .setHaving(new LessEqual(TiColumnRef.create("c3", table), TiConstant.create(2L)))
+        .setHaving(new LessEqual(ColumnRef.create("c3", table), Constant.create(2L)))
         .setLimit(100)
         .addRanges(
             ImmutableList.of(
@@ -90,29 +90,29 @@ public class TiDAGRequestTest {
   public static boolean selectRequestEquals(TiDAGRequest lhs, TiDAGRequest rhs) {
     assertEquals(lhs.getFields().size(), rhs.getFields().size());
     for (int i = 0; i < lhs.getFields().size(); i++) {
-      TiExpr lhsExpr = lhs.getFields().get(i);
-      TiExpr rhsExpr = rhs.getFields().get(i);
+      Expression lhsExpr = lhs.getFields().get(i);
+      Expression rhsExpr = rhs.getFields().get(i);
       if (!lhsExpr.toProto().equals(rhsExpr.toProto())) return false;
     }
 
     assertEquals(lhs.getAggregates().size(), rhs.getAggregates().size());
     for (int i = 0; i < lhs.getAggregates().size(); i++) {
-      TiExpr lhsExpr = lhs.getAggregates().get(i);
-      TiExpr rhsExpr = rhs.getAggregates().get(i);
+      Expression lhsExpr = lhs.getAggregates().get(i);
+      Expression rhsExpr = rhs.getAggregates().get(i);
       if (!lhsExpr.toProto().equals(rhsExpr.toProto())) return false;
     }
 
     assertEquals(lhs.getGroupByItems().size(), rhs.getGroupByItems().size());
     for (int i = 0; i < lhs.getGroupByItems().size(); i++) {
-      TiByItem lhsItem = lhs.getGroupByItems().get(i);
-      TiByItem rhsItem = rhs.getGroupByItems().get(i);
+      ByItem lhsItem = lhs.getGroupByItems().get(i);
+      ByItem rhsItem = rhs.getGroupByItems().get(i);
       if (!lhsItem.toProto().equals(rhsItem.toProto())) return false;
     }
 
     assertEquals(lhs.getOrderByItems().size(), rhs.getOrderByItems().size());
     for (int i = 0; i < lhs.getOrderByItems().size(); i++) {
-      TiByItem lhsItem = lhs.getOrderByItems().get(i);
-      TiByItem rhsItem = rhs.getOrderByItems().get(i);
+      ByItem lhsItem = lhs.getOrderByItems().get(i);
+      ByItem rhsItem = rhs.getOrderByItems().get(i);
       if (!lhsItem.toProto().equals(rhsItem.toProto())) return false;
     }
 
@@ -125,8 +125,8 @@ public class TiDAGRequestTest {
 
     assertEquals(lhs.getWhere().size(), rhs.getWhere().size());
     for (int i = 0; i < lhs.getWhere().size(); i++) {
-      TiExpr lhsItem = lhs.getWhere().get(i);
-      TiExpr rhsItem = rhs.getWhere().get(i);
+      Expression lhsItem = lhs.getWhere().get(i);
+      Expression rhsItem = rhs.getWhere().get(i);
       if (!lhsItem.toProto().equals(rhsItem.toProto())) return false;
     }
 

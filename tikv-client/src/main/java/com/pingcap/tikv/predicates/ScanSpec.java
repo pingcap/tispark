@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
@@ -36,41 +36,41 @@ import java.util.Set;
 
 public class ScanSpec {
   public static class Builder {
-    private final IdentityHashMap<TiIndexColumn, List<TiExpr>> pointPredicates = new IdentityHashMap();
+    private final IdentityHashMap<TiIndexColumn, List<Expression>> pointPredicates = new IdentityHashMap();
     private TiIndexColumn rangeColumn;
     private final TiTableInfo table;
     private final TiIndexInfo index;
-    private final List<TiExpr> rangePredicates = new ArrayList<>();
-    private final List<TiExpr> residualPredicates = new ArrayList<>();
-    private Set<TiExpr> residualCandidates = new HashSet<>();
+    private final List<Expression> rangePredicates = new ArrayList<>();
+    private final List<Expression> residualPredicates = new ArrayList<>();
+    private Set<Expression> residualCandidates = new HashSet<>();
 
     public Builder(TiTableInfo table, TiIndexInfo index) {
       this.table = table;
       this.index = index;
     }
 
-    public void addResidualPredicate(TiExpr predicate) {
+    public void addResidualPredicate(Expression predicate) {
       residualPredicates.add(predicate);
     }
 
-    public void addAllPredicates(List<TiExpr> predicates) {
+    public void addAllPredicates(List<Expression> predicates) {
       residualCandidates.addAll(predicates);
     }
 
-    public void addPointPredicate(TiIndexColumn col, TiExpr predicate) {
+    public void addPointPredicate(TiIndexColumn col, Expression predicate) {
       requireNonNull(col, "index column is null");
       requireNonNull(predicate, "predicate is null");
       if (pointPredicates.containsKey(col)) {
-        List<TiExpr> predicates = pointPredicates.get(col);
+        List<Expression> predicates = pointPredicates.get(col);
         predicates.add(predicate);
       } else {
-        List<TiExpr> predicates = new ArrayList<>();
+        List<Expression> predicates = new ArrayList<>();
         predicates.add(predicate);
         pointPredicates.put(col, predicates);
       }
     }
 
-    public void addRangePredicate(TiIndexColumn col, TiExpr predicate) {
+    public void addRangePredicate(TiIndexColumn col, Expression predicate) {
       requireNonNull(col, "col is null");
       if (!col.equals(rangeColumn)) {
         throw new TiClientInternalException("Cannot reset range predicates");
@@ -80,23 +80,23 @@ public class ScanSpec {
     }
 
     public ScanSpec build() {
-      List<TiExpr> points = new ArrayList<>();
+      List<Expression> points = new ArrayList<>();
       List<DataType> pointTypes = new ArrayList<>();
-      Set<TiExpr> pushedPredicates = new HashSet<>();
+      Set<Expression> pushedPredicates = new HashSet<>();
       for (TiIndexColumn indexColumn : index.getIndexColumns()) {
-        List<TiExpr> predicates = pointPredicates.get(indexColumn);
+        List<Expression> predicates = pointPredicates.get(indexColumn);
         pushedPredicates.addAll(predicates);
         TiColumnInfo tiColumnInfo = table.getColumn(indexColumn.getOffset());
         DataType type = tiColumnInfo.getType();
         points.add(mergeCNFExpressions(predicates));
         pointTypes.add(type);
       }
-      Optional<TiExpr> newRangePred = rangePredicates.isEmpty() ?
+      Optional<Expression> newRangePred = rangePredicates.isEmpty() ?
           Optional.empty() : Optional.of(mergeCNFExpressions(rangePredicates));
       pushedPredicates.addAll(rangePredicates);
 
-      Set<TiExpr> newResidualPredicates = new HashSet<>(residualPredicates);
-      for (TiExpr pred : residualCandidates) {
+      Set<Expression> newResidualPredicates = new HashSet<>(residualPredicates);
+      for (Expression pred : residualCandidates) {
         if (!pushedPredicates.contains(pred)) {
           newResidualPredicates.add(pred);
         }
@@ -117,28 +117,28 @@ public class ScanSpec {
     }
   }
 
-  private final List<TiExpr> pointPredicates;
-  private final Optional<TiExpr> rangePredicate;
-  private final Set<TiExpr> residualPredicates;
+  private final List<Expression> pointPredicates;
+  private final Optional<Expression> rangePredicate;
+  private final Set<Expression> residualPredicates;
 
   private ScanSpec(
-      List<TiExpr> pointPredicates,
-      Optional<TiExpr> rangePredicate,
-      Set<TiExpr> residualPredicates) {
+      List<Expression> pointPredicates,
+      Optional<Expression> rangePredicate,
+      Set<Expression> residualPredicates) {
     this.pointPredicates = pointPredicates;
     this.rangePredicate = rangePredicate;
     this.residualPredicates = residualPredicates;
   }
 
-  public List<TiExpr> getPointPredicates() {
+  public List<Expression> getPointPredicates() {
     return pointPredicates;
   }
 
-  public Optional<TiExpr> getRangePredicate() {
+  public Optional<Expression> getRangePredicate() {
     return rangePredicate;
   }
 
-  public Set<TiExpr> getResidualPredicates() {
+  public Set<Expression> getResidualPredicates() {
     return residualPredicates;
   }
 }

@@ -21,9 +21,9 @@ import static org.junit.Assert.assertEquals;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiConstant;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Constant;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.scalar.Equal;
 import com.pingcap.tikv.expression.scalar.GreaterEqual;
 import com.pingcap.tikv.expression.scalar.GreaterThan;
@@ -76,10 +76,10 @@ public class RangeBuilderTest {
   @Test
   public void expressionToPointsTest() throws Exception {
     TiTableInfo table = createTable();
-    List<TiExpr> conds =
+    List<Expression> conds =
         ImmutableList.of(
-            new Equal(TiColumnRef.create("c1", table), TiConstant.create(0)),
-            new Equal(TiConstant.create("v1"), TiColumnRef.create("c2", table))
+            new Equal(ColumnRef.create("c1", table), Constant.create(0)),
+            new Equal(Constant.create("v1"), ColumnRef.create("c2", table))
         );
     List<DataType> types = ImmutableList.of(IntegerType.INT, StringType.VARCHAR);
     RangeBuilder builder = new RangeBuilder();
@@ -96,13 +96,13 @@ public class RangeBuilderTest {
     conds =
         ImmutableList.of(
             new In(
-                TiColumnRef.create("c1", table),
-                TiConstant.create(0),
-                TiConstant.create(1),
-                TiConstant.create(3)),
-            new Equal(TiConstant.create("v1"), TiColumnRef.create("c2", table)),
+                ColumnRef.create("c1", table),
+                Constant.create(0),
+                Constant.create(1),
+                Constant.create(3)),
+            new Equal(Constant.create("v1"), ColumnRef.create("c2", table)),
             new In(
-                TiColumnRef.create("c3", table), TiConstant.create("2"), TiConstant.create("4")));
+                ColumnRef.create("c3", table), Constant.create("2"), Constant.create("4")));
     types = ImmutableList.of(IntegerType.INT, StringType.VARCHAR, StringType.VARCHAR);
 
     keys = builder.expressionToPoints(conds, types);
@@ -123,12 +123,12 @@ public class RangeBuilderTest {
   @Test
   public void exprToRanges() throws Exception {
     TiTableInfo table = createTable();
-    List<TiExpr> conds =
+    List<Expression> conds =
         ImmutableList.of(
-            new GreaterEqual(TiColumnRef.create("c1", table), TiConstant.create(0L)), // c1 >= 0
+            new GreaterEqual(ColumnRef.create("c1", table), Constant.create(0L)), // c1 >= 0
             new GreaterThan(
-                TiConstant.create(100L), TiColumnRef.create("c1", table)), // 100 > c1 -> c1 < 100
-            new NotEqual(TiColumnRef.create("c1", table), TiConstant.create(50L)) // c1 != 50
+                Constant.create(100L), ColumnRef.create("c1", table)), // 100 > c1 -> c1 < 100
+            new NotEqual(ColumnRef.create("c1", table), Constant.create(50L)) // c1 != 50
             );
     DataType type = IntegerType.BIGINT;
     RangeBuilder builder = new RangeBuilder();
@@ -140,10 +140,10 @@ public class RangeBuilderTest {
                             TypedKey.toTypedKey(100L, IntegerType.BIGINT)), ranges.get(1));
 
     // Test points and string range
-    List<TiExpr> ac =
+    List<Expression> ac =
         ImmutableList.of(
-            new In(TiColumnRef.create("c1", table), TiConstant.create(0L), TiConstant.create(1L)),
-            new Equal(TiConstant.create("v1"), TiColumnRef.create("c2", table)));
+            new In(ColumnRef.create("c1", table), Constant.create(0L), Constant.create(1L)),
+            new Equal(Constant.create("v1"), ColumnRef.create("c2", table)));
     List<DataType> types = ImmutableList.of(IntegerType.BIGINT, StringType.VARCHAR);
     List<Key> keys = builder.expressionToPoints(ac, types);
     assertTrue(
@@ -153,10 +153,10 @@ public class RangeBuilderTest {
 
     conds =
         ImmutableList.of(
-            new GreaterEqual(TiColumnRef.create("c3", table), TiConstant.create("a")), // c3 >= a
+            new GreaterEqual(ColumnRef.create("c3", table), Constant.create("a")), // c3 >= a
             new GreaterThan(
-                TiConstant.create("z"), TiColumnRef.create("c3", table)), // z > c3 -> c3 < z
-            new NotEqual(TiColumnRef.create("c3", table), TiConstant.create("g")) // c3 != g
+                Constant.create("z"), ColumnRef.create("c3", table)), // z > c3 -> c3 < z
+            new NotEqual(ColumnRef.create("c3", table), Constant.create("g")) // c3 != g
             );
     type = StringType.VARCHAR;
     ranges = RangeBuilder.expressionToRanges(conds, type);

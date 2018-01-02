@@ -19,34 +19,15 @@ package com.pingcap.tikv.expression;
 
 
 public abstract class Visitor<R, C> {
-  protected R process(TiExpr node, C context) {
-    for (TiExpr expr : node.getChildren()) {
-      expr.accept(this, context);
-    }
-    return visit(node, context);
-  }
+  abstract protected R visit(ColumnRef node, C context);
 
-  protected R visit(TiExpr node, C context) {
-    return null;
-  }
+  abstract protected R visit(ComparisonBinaryExpression node, C context);
 
-  protected R visit(TiColumnRef node, C context) {
-    return process(node, context);
-  }
+  abstract protected R visit(ArithmeticBinaryExpression node, C context);
 
-  protected R visit(ComparisonExpression node, C context) {
-    return process(node, context);
-  }
+  abstract protected R visit(LogicalBinaryExpression node, C context);
 
-  protected R visit(ArithmeticExpression node, C context) {
-    return process(node, context);
-  }
+  abstract protected R visit(Constant node, C context);
 
-  protected R visit(LogicalBinaryExpression node, C context) {
-    return process(node, context);
-  }
-
-  protected R visit(TiConstant node, C context) {
-    return process(node, context);
-  }
+  abstract protected R visit(FunctionCall node, C context);
 }

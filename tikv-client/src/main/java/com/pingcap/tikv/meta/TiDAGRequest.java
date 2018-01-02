@@ -19,9 +19,9 @@ import com.pingcap.tidb.tipb.TableScan;
 import com.pingcap.tidb.tipb.TopN;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.expression.TiByItem;
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ByItem;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.ColumnRefResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
@@ -87,20 +87,20 @@ public class TiDAGRequest implements Serializable {
 
   private TiTableInfo tableInfo;
   private TiIndexInfo indexInfo;
-  private final List<TiColumnRef> fields = new ArrayList<>();
-  private final List<TiExpr> where = new ArrayList<>();
-  private final List<TiByItem> groupByItems = new ArrayList<>();
-  private final List<TiByItem> orderByItems = new ArrayList<>();
+  private final List<ColumnRef> fields = new ArrayList<>();
+  private final List<Expression> where = new ArrayList<>();
+  private final List<ByItem> groupByItems = new ArrayList<>();
+  private final List<ByItem> orderByItems = new ArrayList<>();
   // System like Spark has different type promotion rules
   // we need a cast to target when given
-  private final List<Pair<TiExpr, DataType>> aggregates = new ArrayList<>();
+  private final List<Pair<Expression, DataType>> aggregates = new ArrayList<>();
   private final List<Coprocessor.KeyRange> keyRanges = new ArrayList<>();
 
   private int limit;
   private int timeZoneOffset;
   private long flags;
   private long startTs;
-  private TiExpr having;
+  private Expression having;
   private boolean distinct;
   private boolean handleNeeded;
   private final PushDownType pushDownType;
@@ -222,7 +222,7 @@ public class TiDAGRequest implements Serializable {
     // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
     // Or make sure the construction order is below:
     // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
-    TiExpr whereExpr = mergeCNFExpressions(getWhere());
+    Expression whereExpr = mergeCNFExpressions(getWhere());
     if (whereExpr != null) {
       executorBuilder.setTp(ExecType.TypeSelection);
       dagRequestBuilder.addExecutors(
@@ -404,7 +404,7 @@ public class TiDAGRequest implements Serializable {
    * @param having is a expression represents Having
    * @return a TiDAGRequest
    */
-  public TiDAGRequest setHaving(TiExpr having) {
+  public TiDAGRequest setHaving(Expression having) {
     this.having = requireNonNull(having, "having is null");
     return this;
   }
@@ -424,23 +424,23 @@ public class TiDAGRequest implements Serializable {
    * @param expr is a TiUnaryFunction expression.
    * @return a SelectBuilder
    */
-  public TiDAGRequest addAggregate(TiExpr expr) {
+  public TiDAGRequest addAggregate(Expression expr) {
     requireNonNull(expr, "aggregation expr is null");
     aggregates.add(Pair.create(expr, expr.getType()));
     return this;
   }
 
-  public TiDAGRequest addAggregate(TiExpr expr, DataType targetType) {
+  public TiDAGRequest addAggregate(Expression expr, DataType targetType) {
     requireNonNull(expr, "aggregation expr is null");
     aggregates.add(Pair.create(expr, targetType));
     return this;
   }
 
-  public List<TiExpr> getAggregates() {
+  public List<Expression> getAggregates() {
     return aggregates.stream().map(p -> p.first).collect(Collectors.toList());
   }
 
-  public List<Pair<TiExpr, DataType>> getAggregatePairs() {
+  public List<Pair<Expression, DataType>> getAggregatePairs() {
     return aggregates;
   }
 
@@ -450,12 +450,12 @@ public class TiDAGRequest implements Serializable {
    * @param byItem is a TiByItem.
    * @return a SelectBuilder
    */
-  public TiDAGRequest addOrderByItem(TiByItem byItem) {
+  public TiDAGRequest addOrderByItem(ByItem byItem) {
     orderByItems.add(requireNonNull(byItem, "byItem is null"));
     return this;
   }
 
-  List<TiByItem> getOrderByItems() {
+  List<ByItem> getOrderByItems() {
     return orderByItems;
   }
 
@@ -465,12 +465,12 @@ public class TiDAGRequest implements Serializable {
    * @param byItem is a TiByItem
    * @return a SelectBuilder
    */
-  public TiDAGRequest addGroupByItem(TiByItem byItem) {
+  public TiDAGRequest addGroupByItem(ByItem byItem) {
     groupByItems.add(requireNonNull(byItem, "byItem is null"));
     return this;
   }
 
-  public List<TiByItem> getGroupByItems() {
+  public List<ByItem> getGroupByItems() {
     return groupByItems;
   }
 
@@ -483,12 +483,12 @@ public class TiDAGRequest implements Serializable {
    *
    * @param column is column referred during selectReq
    */
-  public TiDAGRequest addRequiredColumn(TiColumnRef column) {
+  public TiDAGRequest addRequiredColumn(ColumnRef column) {
     fields.add(requireNonNull(column, "columnRef is null"));
     return this;
   }
 
-  public List<TiColumnRef> getFields() {
+  public List<ColumnRef> getFields() {
     return fields;
   }
 
@@ -511,7 +511,7 @@ public class TiDAGRequest implements Serializable {
     return keyRanges;
   }
 
-  public TiDAGRequest addWhere(TiExpr where) {
+  public TiDAGRequest addWhere(Expression where) {
     this.where.add(requireNonNull(where, "where expr is null"));
     return this;
   }
@@ -536,12 +536,12 @@ public class TiDAGRequest implements Serializable {
     return !getGroupByItems().isEmpty();
   }
 
-  public List<TiExpr> getWhere() {
+  public List<Expression> getWhere() {
     return where;
   }
 
   public List<TiColumnInfo> getColInfoList() {
-    return getFields().stream().map(TiColumnRef::getColumnInfo).collect(Collectors.toList());
+    return getFields().stream().map(ColumnRef::getColumnInfo).collect(Collectors.toList());
   }
 
   /**
@@ -552,8 +552,8 @@ public class TiDAGRequest implements Serializable {
   public List<DataType> getGroupByDTList() {
     return getGroupByItems()
         .stream()
-        .map(TiByItem::getExpr)
-        .map(TiExpr::getType)
+        .map(ByItem::getExpr)
+        .map(Expression::getType)
         .collect(Collectors.toList());
   }
 

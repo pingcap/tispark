@@ -18,8 +18,8 @@ package com.pingcap.tikv.predicates;
 import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.expression.TiConstant;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.Constant;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.scalar.And;
 import java.util.List;
 import org.junit.Test;
@@ -27,21 +27,21 @@ import org.junit.Test;
 public class PredicateUtilsTest {
   @Test
   public void mergeCNFExpressions() throws Exception {
-    List<TiExpr> exprs =
+    List<Expression> exprs =
         ImmutableList.of(
-            TiConstant.create(1),
-            TiConstant.create(2),
-            TiConstant.create(3),
-            TiConstant.create(4),
-            TiConstant.create(5));
+            Constant.create(1),
+            Constant.create(2),
+            Constant.create(3),
+            Constant.create(4),
+            Constant.create(5));
 
-    TiExpr res =
+    Expression res =
         new And(
-            TiConstant.create(1),
+            Constant.create(1),
             new And(
-                TiConstant.create(2),
+                Constant.create(2),
                 new And(
-                    TiConstant.create(3), new And(TiConstant.create(4), TiConstant.create(5)))));
+                    Constant.create(3), new And(Constant.create(4), Constant.create(5)))));
 
     assertEquals(res, PredicateUtils.mergeCNFExpressions(exprs));
   }

@@ -21,10 +21,10 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.expression.ComparisonExpression;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.expression.visitor.IndexRangeBuilder;
 import com.pingcap.tikv.key.CompoundKey;
@@ -37,7 +37,7 @@ import java.util.Optional;
 import java.util.Set;
 
 public class PredicateUtils {
-  public static TiExpr mergeCNFExpressions(List<TiExpr> exprs) {
+  public static Expression mergeCNFExpressions(List<Expression> exprs) {
     requireNonNull(exprs, "Expression list is null");
     if (exprs.size() == 0) return null;
     if (exprs.size() == 1) return exprs.get(0);
@@ -45,11 +45,11 @@ public class PredicateUtils {
     return and(exprs.get(0), mergeCNFExpressions(exprs.subList(1, exprs.size())));
   }
 
-  public static Set<TiColumnRef> extractColumnRefFromExpr(TiExpr expr) {
-    Set<TiColumnRef> columnRefs = new HashSet<>();
-    Visitor<Void, Set<TiColumnRef>> visitor = new Visitor<Void, Set<TiColumnRef>>() {
+  public static Set<ColumnRef> extractColumnRefFromExpr(Expression expr) {
+    Set<ColumnRef> columnRefs = new HashSet<>();
+    Visitor<Void, Set<ColumnRef>> visitor = new Visitor<Void, Set<ColumnRef>>() {
       @Override
-      protected Void visit(TiColumnRef node, Set<TiColumnRef> context) {
+      protected Void visit(ColumnRef node, Set<ColumnRef> context) {
         context.add(node);
         return null;
       }
@@ -59,7 +59,7 @@ public class PredicateUtils {
     return columnRefs;
   }
 
-  public static boolean isBinaryLogicalOp(TiExpr expression, LogicalBinaryExpression.Type type) {
+  public static boolean isBinaryLogicalOp(Expression expression, LogicalBinaryExpression.Type type) {
     if (expression instanceof LogicalBinaryExpression) {
       return ((LogicalBinaryExpression) expression).getCompType() == type;
     } else {
@@ -67,9 +67,9 @@ public class PredicateUtils {
     }
   }
 
-  public static boolean isComparisonOp(TiExpr expression, ComparisonExpression.Type type) {
-    if (expression instanceof ComparisonExpression) {
-      return ((ComparisonExpression) expression).getComparisonType() == type;
+  public static boolean isComparisonOp(Expression expression, ComparisonBinaryExpression.Type type) {
+    if (expression instanceof ComparisonBinaryExpression) {
+      return ((ComparisonBinaryExpression) expression).getComparisonType() == type;
     } else {
       return false;
     }
@@ -83,8 +83,8 @@ public class PredicateUtils {
    * @return Index Range for scan
    */
   public static List<IndexRange> expressionToIndexRanges(
-      List<TiExpr> pointExprs,
-      Optional<TiExpr> rangeExpr) {
+      List<Expression> pointExprs,
+      Optional<Expression> rangeExpr) {
     requireNonNull(pointExprs, "pointExprs is null");
     requireNonNull(rangeExpr, "rangeExpr is null");
     ImmutableList.Builder<IndexRange> builder = ImmutableList.builder();
@@ -109,12 +109,12 @@ public class PredicateUtils {
    * @param pointPredicates expressions that convertible to access points
    * @return access points for each index
    */
-  private static List<Key> expressionToPoints(List<TiExpr> pointPredicates) {
+  private static List<Key> expressionToPoints(List<Expression> pointPredicates) {
     requireNonNull(pointPredicates, "pointPredicates cannot be null");
 
     List<Key> resultKeys = new ArrayList<>();
     for (int i = 0; i < pointPredicates.size(); i++) {
-      TiExpr predicate = pointPredicates.get(i);
+      Expression predicate = pointPredicates.get(i);
       try {
         // each expr will be expand to one or more points
         Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(predicate);

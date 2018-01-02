@@ -28,12 +28,12 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.meta.TiTableInfoTest;
 import org.junit.Test;
 
-public class TiConstantTest {
+public class ConstantTest {
   @Test
   public void greaterThanTest() throws Exception {
     ObjectMapper mapper = new ObjectMapper();
     TiTableInfo tableInfo = mapper.readValue(TiTableInfoTest.tableJson, TiTableInfo.class);
-    GreaterThan g = new GreaterThan(TiColumnRef.create("c1", tableInfo), TiConstant.create(1.12));
+    GreaterThan g = new GreaterThan(ColumnRef.create("c1", tableInfo), Constant.create(1.12));
     Expr ge = g.toProto();
     assertEquals(2, ge.getChildrenCount());
     double expected = RealCodec.readDouble(new CodecDataInput(ge.getChildren(1).getVal()));

@@ -6,30 +6,51 @@ package com.pingcap.tikv.expression;
 
 import static java.util.Objects.requireNonNull;
 
+import com.pingcap.tidb.tipb.ExprType;
 import java.util.List;
+import java.util.Objects;
 
-public class LogicalBinaryExpression implements TiExpr {
+public class LogicalBinaryExpression implements Expression {
+  public enum Type {
+    AND(ExprType.And),
+    OR(ExprType.Or),
+    XOR(ExprType.Xor);
 
-  public static LogicalBinaryExpression and(TiExpr left, TiExpr right) {
+    private final ExprType type;
+    Type(ExprType type) {
+      this.type = type;
+    }
+
+    public ExprType getExprType() {
+      return type;
+    }
+  }
+
+  public static LogicalBinaryExpression and(Expression left, Expression right) {
     return new LogicalBinaryExpression(Type.AND, left, right);
   }
 
-  public static LogicalBinaryExpression or(TiExpr left, TiExpr right) {
+  public static LogicalBinaryExpression or(Expression left, Expression right) {
     return new LogicalBinaryExpression(Type.OR, left, right);
   }
 
-  public static LogicalBinaryExpression xor(TiExpr left, TiExpr right) {
+  public static LogicalBinaryExpression xor(Expression left, Expression right) {
     return new LogicalBinaryExpression(Type.XOR, left, right);
   }
 
-  public LogicalBinaryExpression(Type type, TiExpr left, TiExpr right) {
+  public LogicalBinaryExpression(Type type, Expression left, Expression right) {
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
     this.compType = requireNonNull(type, "type is null");
   }
 
   @Override
-  public List<TiExpr> getChildren() {
+  public ExprType getExprType() {
+    return getCompType().getExprType();
+  }
+
+  @Override
+  public List<Expression> getChildren() {
     return null;
   }
 
@@ -38,11 +59,11 @@ public class LogicalBinaryExpression implements TiExpr {
     return null;
   }
 
-  public TiExpr getLeft() {
+  public Expression getLeft() {
     return left;
   }
 
-  public TiExpr getRight() {
+  public Expression getRight() {
     return right;
   }
 
@@ -50,13 +71,27 @@ public class LogicalBinaryExpression implements TiExpr {
     return compType;
   }
 
-  public enum Type {
-    AND,
-    OR,
-    XOR
+  private final Expression left;
+  private final Expression right;
+  private final Type compType;
+
+  @Override
+  public boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    }
+    if (other == null || getClass() != other.getClass()) {
+      return false;
+    }
+
+    LogicalBinaryExpression that = (LogicalBinaryExpression) other;
+    return (compType == that.getCompType()) &&
+        left.equals(that.left) &&
+        right.equals(that.right);
   }
 
-  private final TiExpr left;
-  private final TiExpr right;
-  private final Type compType;
+  @Override
+  public int hashCode() {
+    return Objects.hash(compType, left, right);
+  }
 }

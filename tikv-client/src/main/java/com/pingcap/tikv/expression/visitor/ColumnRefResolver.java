@@ -16,20 +16,19 @@
 package com.pingcap.tikv.expression.visitor;
 
 
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiExpr;
-import com.pingcap.tikv.expression.Visitor;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiTableInfo;
 import java.util.List;
 import java.util.Objects;
 
-public class ColumnRefResolver extends Visitor<Void, Void> {
-  public static void resolve(TiExpr expression, TiTableInfo table) {
+public class ColumnRefResolver extends DefaultVisitor<Void, Void> {
+  public static void resolve(Expression expression, TiTableInfo table) {
     ColumnRefResolver resolver = new ColumnRefResolver(table);
     resolver.resolve(expression);
   }
 
-  public static void resolve(List<? extends TiExpr> expressions, TiTableInfo table) {
+  public static void resolve(List<? extends Expression> expressions, TiTableInfo table) {
     ColumnRefResolver resolver = new ColumnRefResolver(table);
     resolver.resolve(expressions);
   }
@@ -40,17 +39,17 @@ public class ColumnRefResolver extends Visitor<Void, Void> {
     this.table = table;
   }
 
-  public void resolve(List<? extends TiExpr> expressions) {
+  public void resolve(List<? extends Expression> expressions) {
     expressions.forEach(expression -> expression.accept(this, null));
   }
 
-  public void resolve(TiExpr expression) {
+  public void resolve(Expression expression) {
     Objects.requireNonNull(expression, "expression is null");
     expression.accept(this, null);
   }
 
   @Override
-  protected Void visit(TiColumnRef node, Void context) {
+  protected Void visit(ColumnRef node, Void context) {
     node.resolve(table);
     return null;
   }

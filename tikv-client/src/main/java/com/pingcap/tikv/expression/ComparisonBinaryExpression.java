@@ -29,32 +29,41 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-public class ComparisonExpression extends ScalarExpression {
+public class ComparisonBinaryExpression implements Expression {
   public enum Type {
-    EQUAL,
-    NOT_EQUAL,
-    LESS_THAN,
-    LESS_EQUAL,
-    GREATER_THAN,
-    GREATER_EQUAL
+    EQUAL(ExprType.EQ),
+    NOT_EQUAL(ExprType.NE),
+    LESS_THAN(ExprType.LT),
+    LESS_EQUAL(ExprType.LE),
+    GREATER_THAN(ExprType.GT),
+    GREATER_EQUAL(ExprType.GE);
+
+    Type(ExprType type) {
+      this.type = type;
+    }
+
+    private final ExprType type;
+    ExprType getExprType() {
+      return type;
+    }
   }
 
   public static class NormalizedPredicate {
-    private final ComparisonExpression pred;
+    private final ComparisonBinaryExpression pred;
     private TypedKey key;
 
-    NormalizedPredicate(ComparisonExpression pred) {
-      checkArgument(pred.getLeft() instanceof TiColumnRef);
-      checkArgument(pred.getRight() instanceof TiConstant);
+    NormalizedPredicate(ComparisonBinaryExpression pred) {
+      checkArgument(pred.getLeft() instanceof ColumnRef);
+      checkArgument(pred.getRight() instanceof Constant);
       this.pred = pred;
     }
 
-    public TiColumnRef getColumnRef() {
-      return (TiColumnRef) pred.getLeft();
+    public ColumnRef getColumnRef() {
+      return (ColumnRef) pred.getLeft();
     }
 
-    public TiConstant getValue() {
-      return (TiConstant) pred.getRight();
+    public Constant getValue() {
+      return (Constant) pred.getRight();
     }
 
     public Type getType() {
@@ -78,19 +87,24 @@ public class ComparisonExpression extends ScalarExpression {
       .put(Type.GREATER_EQUAL, ExprType.GE)
       .build();
 
-  private final TiExpr left;
-  private final TiExpr right;
+  private final Expression left;
+  private final Expression right;
   private final Type compType;
   private Optional<NormalizedPredicate> normalizedPredicate;
 
-  public ComparisonExpression(Type type, TiExpr left, TiExpr right) {
+  public ComparisonBinaryExpression(Type type, Expression left, Expression right) {
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
     this.compType = requireNonNull(type, "type is null");
   }
 
   @Override
-  public List<TiExpr> getChildren() {
+  public ExprType getExprType() {
+    return getComparisonType().getExprType();
+  }
+
+  @Override
+  public List<Expression> getChildren() {
     return ImmutableList.of(left, right);
   }
 
@@ -99,11 +113,11 @@ public class ComparisonExpression extends ScalarExpression {
     return visitor.visit(this, context);
   }
 
-  public TiExpr getLeft() {
+  public Expression getLeft() {
     return left;
   }
 
-  public TiExpr getRight() {
+  public Expression getRight() {
     return right;
   }
 
@@ -115,9 +129,9 @@ public class ComparisonExpression extends ScalarExpression {
     if (normalizedPredicate != null) {
       return normalizedPredicate.orElseGet(() -> null);
     }
-    if (getLeft() instanceof TiConstant && getRight() instanceof TiColumnRef) {
-      TiConstant left = (TiConstant) getLeft();
-      TiColumnRef right = (TiColumnRef) getRight();
+    if (getLeft() instanceof Constant && getRight() instanceof ColumnRef) {
+      Constant left = (Constant) getLeft();
+      ColumnRef right = (ColumnRef) getRight();
       Type newType;
       switch (getComparisonType()) {
         case EQUAL:
@@ -140,7 +154,7 @@ public class ComparisonExpression extends ScalarExpression {
               String.format("PredicateNormalizer is not able to process type %s", getComparisonType())
           );
       }
-      ComparisonExpression newExpression = new ComparisonExpression(newType, right, left);
+      ComparisonBinaryExpression newExpression = new ComparisonBinaryExpression(newType, right, left);
       normalizedPredicate = Optional.of(new NormalizedPredicate(newExpression));
       return normalizedPredicate.get();
     } else {
@@ -162,7 +176,7 @@ public class ComparisonExpression extends ScalarExpression {
       return false;
     }
 
-    ComparisonExpression that = (ComparisonExpression) other;
+    ComparisonBinaryExpression that = (ComparisonBinaryExpression) other;
     return (compType == that.compType) &&
         left.equals(that.left) &&
         right.equals(that.right);

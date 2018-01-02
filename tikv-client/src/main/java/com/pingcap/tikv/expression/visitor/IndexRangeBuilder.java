@@ -20,29 +20,28 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.expression.ComparisonExpression;
-import com.pingcap.tikv.expression.ComparisonExpression.NormalizedPredicate;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.TiExpr;
-import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.key.TypedKey;
 import java.util.Objects;
 import java.util.Set;
 
 
-public class IndexRangeBuilder extends Visitor<RangeSet<TypedKey>, Void> {
-  public static Set<Range<TypedKey>> buildRange(TiExpr predicate) {
+public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> {
+  public static Set<Range<TypedKey>> buildRange(Expression predicate) {
     Objects.requireNonNull(predicate, "predicate is null");
     IndexRangeBuilder visitor = new IndexRangeBuilder();
     return predicate.accept(visitor, null).asRanges();
   }
 
-  private static void throwOnError(TiExpr node) {
+  private static void throwOnError(Expression node) {
     final String errorFormat = "Unsupported conversion to Range: %s";
     throw new TiClientInternalException(String.format(errorFormat, node));
   }
 
-  protected RangeSet<TypedKey> process(TiExpr node, Void context) {
+  protected RangeSet<TypedKey> process(Expression node, Void context) {
     throwOnError(node);
     return null;
   }
@@ -77,7 +76,7 @@ public class IndexRangeBuilder extends Visitor<RangeSet<TypedKey>, Void> {
   }
 
   @Override
-  protected RangeSet<TypedKey> visit(ComparisonExpression node, Void context) {
+  protected RangeSet<TypedKey> visit(ComparisonBinaryExpression node, Void context) {
     NormalizedPredicate predicate = node.normalize();
     if (predicate == null) {
       throwOnError(node);

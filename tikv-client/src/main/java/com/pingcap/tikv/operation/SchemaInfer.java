@@ -15,8 +15,8 @@
 
 package com.pingcap.tikv.operation;
 
-import com.pingcap.tikv.expression.TiByItem;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ByItem;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.transformer.Cast;
 import com.pingcap.tikv.operation.transformer.NoOp;
@@ -70,16 +70,16 @@ public class SchemaInfer {
 
     // append aggregates if present
     if (dagRequest.hasAggregate()) {
-      for (Pair<TiExpr, DataType> pair : dagRequest.getAggregatePairs()) {
+      for (Pair<Expression, DataType> pair : dagRequest.getAggregatePairs()) {
         rowTrans.addProjection(new Cast(pair.second));
       }
       if (dagRequest.hasGroupBy()) {
-        for (TiByItem byItem : dagRequest.getGroupByItems()) {
+        for (ByItem byItem : dagRequest.getGroupByItems()) {
           rowTrans.addProjection(new NoOp(byItem.getExpr().getType()));
         }
       }
     } else {
-      for (TiExpr field : dagRequest.getFields()) {
+      for (Expression field : dagRequest.getFields()) {
         rowTrans.addProjection(new NoOp(field.getType()));
       }
     }

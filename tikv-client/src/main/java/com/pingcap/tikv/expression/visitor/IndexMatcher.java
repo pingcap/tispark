@@ -17,12 +17,11 @@ package com.pingcap.tikv.expression.visitor;
 
 import static java.util.Objects.requireNonNull;
 
-import com.pingcap.tikv.expression.ComparisonExpression;
-import com.pingcap.tikv.expression.ComparisonExpression.NormalizedPredicate;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiExpr;
-import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.meta.TiIndexColumn;
 
 /**
@@ -30,7 +29,7 @@ import com.pingcap.tikv.meta.TiIndexColumn;
  * index related ranges
  * If a predicate matches only partially, it returns false
  */
-public class IndexMatcher extends Visitor<Boolean, Void> {
+public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
   private final boolean matchEqualTestOnly;
   private final TiIndexColumn indexColumn;
 
@@ -49,23 +48,23 @@ public class IndexMatcher extends Visitor<Boolean, Void> {
     return new IndexMatcher(indexColumn, false);
   }
 
-  public boolean match(TiExpr expression) {
+  public boolean match(Expression expression) {
     return expression.accept(this, null);
   }
 
   @Override
-  protected Boolean process(TiExpr node, Void context) {
+  protected Boolean process(Expression node, Void context) {
     return false;
   }
 
   @Override
-  protected Boolean visit(TiColumnRef node, Void context) {
+  protected Boolean visit(ColumnRef node, Void context) {
     String indexColumnName = indexColumn.getName();
     return node.getColumnInfo().matchName(indexColumnName);
   }
 
   @Override
-  protected Boolean visit(ComparisonExpression node, Void context) {
+  protected Boolean visit(ComparisonBinaryExpression node, Void context) {
     switch (node.getComparisonType()) {
       case LESS_THAN:
       case LESS_EQUAL:

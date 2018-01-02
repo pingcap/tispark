@@ -18,10 +18,10 @@ package com.pingcap.tikv.expression;
 
 import java.util.List;
 
-public class In implements TiExpr {
+public class In implements Expression {
 
   @Override
-  public List<TiExpr> getChildren() {
+  public List<Expression> getChildren() {
     return null;
   }
 

@@ -36,19 +36,19 @@ import org.joda.time.LocalDateTime;
 // Refactor needed.
 // Refer to https://github.com/pingcap/tipb/blob/master/go-tipb/expression.pb.go
 // TODO: This might need a refactor to accept an DataType?
-public class TiConstant implements TiExpr {
+public class Constant implements Expression {
   private Object value;
   private DataType type;
 
-  public static TiConstant create(Object value, DataType type) {
-    return new TiConstant(value, type);
+  public static Constant create(Object value, DataType type) {
+    return new Constant(value, type);
   }
 
-  public static TiConstant create(Object value) {
-    return new TiConstant(value, null);
+  public static Constant create(Object value) {
+    return new Constant(value, null);
   }
 
-  public TiConstant(Object value, DataType type) {
+  public Constant(Object value, DataType type) {
     this.value = value;
     this.type = type == null ? getDefaultType(value) : type;
   }
@@ -105,8 +105,8 @@ public class TiConstant implements TiExpr {
 
   @Override
   public boolean equals(Object other) {
-    if (other instanceof TiConstant) {
-      return Objects.equals(value, ((TiConstant) other).value);
+    if (other instanceof Constant) {
+      return Objects.equals(value, ((Constant) other).value);
     }
     return false;
   }
@@ -117,7 +117,7 @@ public class TiConstant implements TiExpr {
   }
 
   @Override
-  public List<TiExpr> getChildren() {
+  public List<Expression> getChildren() {
     return ImmutableList.of();
   }
 

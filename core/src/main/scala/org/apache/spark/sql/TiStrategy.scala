@@ -19,6 +19,7 @@ import com.pingcap.tikv.expression.scalar.TiScalarFunction
 import java.time.ZonedDateTime
 
 import com.pingcap.tikv.codec.IgnoreUnsupportedTypeException
+import com.pingcap.tikv.expression
 import com.pingcap.tikv.expression.{aggregate => _, _}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
@@ -104,7 +105,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest.setTableInfo(table)
 
     if (dagRequest.getFields.isEmpty) {
-      dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
+      dagRequest.addRequiredColumn(ColumnRef.create(table.getColumns.get(0).getName))
     }
     dagRequest.resolve()
 
@@ -155,7 +156,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     groupByList.foreach {
       case BasicExpression(keyExpr) =>
-        dagRequest.addGroupByItem(TiByItem.create(keyExpr, false))
+        dagRequest.addGroupByItem(ByItem.create(keyExpr, false))
 
       case _ =>
     }
@@ -163,11 +164,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def extractColumnFromFilter(tiFilter: TiExpr, result: ArrayBuffer[TiColumnRef]): Unit =
+  def extractColumnFromFilter(tiFilter: expression.Expression, result: ArrayBuffer[ColumnRef]): Unit =
     tiFilter match {
       case fun: TiScalarFunction =>
         fun.getArgs.foreach(extractColumnFromFilter(_, result))
-      case col: TiColumnRef =>
+      case col: ColumnRef =>
         result.add(col)
       case _ =>
     }
@@ -177,7 +178,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
+    val tiFilters: Seq[expression.Expression] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val tableScanPlan =
       scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
@@ -202,7 +203,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       sortOrder.foreach(
         (order: SortOrder) =>
           request.addOrderByItem(
-            TiByItem.create(
+            ByItem.create(
               BasicExpression.convertToTiExpr(order.child).get,
               order.direction.sql.equalsIgnoreCase("DESC")
             )
@@ -285,14 +286,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
-      projectSeq.foreach(attr => dagRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic
       val projectSeq: Seq[Attribute] = (projectSet ++ filterSet).toSeq
-      projectSeq.foreach(attr => dagRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
     }
@@ -408,9 +409,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       .map(_.toAttribute)
 
     val projectSeq: Seq[Attribute] = projects.asInstanceOf[Seq[Attribute]]
-    projectSeq.foreach(attr => dagReq.addRequiredColumn(TiColumnRef.create(attr.name)))
-    val pushDownCols = ArrayBuffer[TiColumnRef]()
-    val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
+    projectSeq.foreach(attr => dagReq.addRequiredColumn(ColumnRef.create(attr.name)))
+    val pushDownCols = ArrayBuffer[ColumnRef]()
+    val tiFilters: Seq[expression.Expression] = filters.collect { case BasicExpression(expr) => expr }
     tiFilters.foreach(extractColumnFromFilter(_, pushDownCols))
     pushDownCols.foreach(dagReq.addRequiredColumn)
 

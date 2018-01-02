@@ -21,10 +21,10 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.CatalogTransaction;
-import com.pingcap.tikv.expression.TiByItem;
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiConstant;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ByItem;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Constant;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.aggregate.Sum;
 import com.pingcap.tikv.expression.scalar.Plus;
 import com.pingcap.tikv.meta.TiDAGRequest;
@@ -41,11 +41,11 @@ public class SchemaInferTest {
   private final ByteString table29Bs = ByteString.copyFromUtf8(table29);
 
   private TiTableInfo table = CatalogTransaction.parseFromJson(table29Bs, TiTableInfo.class);
-  private TiExpr number = TiColumnRef.create("number", table);
-  private TiColumnRef name = TiColumnRef.create("name", table);
-  private TiExpr sum = new Sum(number);
-  private TiByItem simpleGroupBy = TiByItem.create(name, false);
-  private TiByItem complexGroupBy = TiByItem.create(new Plus(name, TiConstant.create("1")), false);
+  private Expression number = ColumnRef.create("number", table);
+  private ColumnRef name = ColumnRef.create("name", table);
+  private Expression sum = new Sum(number);
+  private ByItem simpleGroupBy = ByItem.create(name, false);
+  private ByItem complexGroupBy = ByItem.create(new Plus(name, Constant.create("1")), false);
 
   @Test
   public void simpleSelectSchemaInferTest() throws Exception {
