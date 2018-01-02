@@ -22,7 +22,7 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.visitor.ColumnRefResolver;
+import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.DataType;
@@ -106,7 +106,7 @@ public class TiDAGRequest implements Serializable {
   private final PushDownType pushDownType;
 
   public void resolve() {
-    ColumnRefResolver resolver = new ColumnRefResolver(tableInfo);
+    MetaResolver resolver = new MetaResolver(tableInfo);
     resolver.resolve(getFields());
     resolver.resolve(getWhere());
     resolver.resolve(getWhere());

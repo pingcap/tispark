@@ -15,19 +15,11 @@
 
 package com.pingcap.tikv.expression;
 
-import com.pingcap.tidb.tipb.ExprType;
-import com.pingcap.tikv.types.DataType;
 import java.io.Serializable;
 import java.util.List;
 
 public interface Expression extends Serializable {
-  ExprType getExprType();
-
   List<Expression> getChildren();
 
   <R, C> R accept(Visitor<R, C> visitor, C context);
-
-  default DataType getType() {
-    return null;
-  }
 }

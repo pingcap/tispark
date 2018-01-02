@@ -89,6 +89,9 @@ public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
   protected Boolean visit(LogicalBinaryExpression node, Void context) {
     switch (node.getCompType()) {
       case AND:
+        if (matchEqualTestOnly) {
+          return false;
+        }
       case OR:
       case XOR:
         return node.getLeft().accept(this, context) &&

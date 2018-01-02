@@ -15,34 +15,27 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
 import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.scalar.And;
+import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 import org.junit.Test;
 
 public class PredicateUtilsTest {
   @Test
-  public void mergeCNFExpressions() throws Exception {
-    List<Expression> exprs =
-        ImmutableList.of(
-            Constant.create(1),
-            Constant.create(2),
-            Constant.create(3),
-            Constant.create(4),
-            Constant.create(5));
+  public void mergeCNFExpressionsTest() throws Exception {
+    Constant c1 = Constant.create(1, IntegerType.INT);
+    Constant c2 = Constant.create(2, IntegerType.INT);
+    Constant c3 = Constant.create(3, IntegerType.INT);
+    Constant c4 = Constant.create(4, IntegerType.INT);
+    Constant c5 = Constant.create(5, IntegerType.INT);
+    List<Expression> exprs = ImmutableList.of(c1, c2, c3, c4, c5);
 
-    Expression res =
-        new And(
-            Constant.create(1),
-            new And(
-                Constant.create(2),
-                new And(
-                    Constant.create(3), new And(Constant.create(4), Constant.create(5)))));
-
+    Expression res = and(c1, and(c2, and(c3, and(c4, c5))));
     assertEquals(res, PredicateUtils.mergeCNFExpressions(exprs));
   }
 }

@@ -17,6 +17,7 @@ package com.pingcap.tikv.expression;
 
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.*;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -31,21 +32,36 @@ import java.util.Optional;
 
 public class ComparisonBinaryExpression implements Expression {
   public enum Type {
-    EQUAL(ExprType.EQ),
-    NOT_EQUAL(ExprType.NE),
-    LESS_THAN(ExprType.LT),
-    LESS_EQUAL(ExprType.LE),
-    GREATER_THAN(ExprType.GT),
-    GREATER_EQUAL(ExprType.GE);
+    EQUAL,
+    NOT_EQUAL,
+    LESS_THAN,
+    LESS_EQUAL,
+    GREATER_THAN,
+    GREATER_EQUAL
+  }
 
-    Type(ExprType type) {
-      this.type = type;
-    }
+  public static ComparisonBinaryExpression equal(Expression left, Expression right) {
+    return new ComparisonBinaryExpression(EQUAL, left, right);
+  }
 
-    private final ExprType type;
-    ExprType getExprType() {
-      return type;
-    }
+  public static ComparisonBinaryExpression notEqual(Expression left, Expression right) {
+    return new ComparisonBinaryExpression(NOT_EQUAL, left, right);
+  }
+
+  public static ComparisonBinaryExpression lessThan(Expression left, Expression right) {
+    return new ComparisonBinaryExpression(LESS_THAN, left, right);
+  }
+
+  public static ComparisonBinaryExpression lessEqual(Expression left, Expression right) {
+    return new ComparisonBinaryExpression(LESS_EQUAL, left, right);
+  }
+
+  public static ComparisonBinaryExpression greaterThan(Expression left, Expression right) {
+    return new ComparisonBinaryExpression(GREATER_THAN, left, right);
+  }
+
+  public static ComparisonBinaryExpression greaterEqual(Expression left, Expression right) {
+    return new ComparisonBinaryExpression(GREATER_EQUAL, left, right);
   }
 
   public static class NormalizedPredicate {
@@ -79,7 +95,7 @@ public class ComparisonBinaryExpression implements Expression {
   }
 
   private static final Map<Type, ExprType> typeMap = ImmutableMap.<Type, ExprType>builder()
-      .put(Type.EQUAL, ExprType.EQ)
+      .put(EQUAL, ExprType.EQ)
       .put(Type.NOT_EQUAL, ExprType.NE)
       .put(Type.LESS_THAN, ExprType.LT)
       .put(Type.LESS_EQUAL, ExprType.LE)
@@ -96,11 +112,6 @@ public class ComparisonBinaryExpression implements Expression {
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
     this.compType = requireNonNull(type, "type is null");
-  }
-
-  @Override
-  public ExprType getExprType() {
-    return getComparisonType().getExprType();
   }
 
   @Override
@@ -135,7 +146,7 @@ public class ComparisonBinaryExpression implements Expression {
       Type newType;
       switch (getComparisonType()) {
         case EQUAL:
-          newType = Type.EQUAL;
+          newType = EQUAL;
           break;
         case LESS_EQUAL:
           newType = Type.GREATER_EQUAL;
@@ -156,6 +167,9 @@ public class ComparisonBinaryExpression implements Expression {
       }
       ComparisonBinaryExpression newExpression = new ComparisonBinaryExpression(newType, right, left);
       normalizedPredicate = Optional.of(new NormalizedPredicate(newExpression));
+      return normalizedPredicate.get();
+    } else if (getRight() instanceof Constant && getLeft() instanceof ColumnRef) {
+      normalizedPredicate = Optional.of(new NormalizedPredicate(this));
       return normalizedPredicate.get();
     } else {
       return null;

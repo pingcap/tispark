@@ -15,6 +15,12 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterEqual;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -22,19 +28,13 @@ import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.scalar.And;
-import com.pingcap.tikv.expression.scalar.Equal;
-import com.pingcap.tikv.expression.scalar.GreaterEqual;
-import com.pingcap.tikv.expression.scalar.In;
-import com.pingcap.tikv.expression.scalar.LessEqual;
-import com.pingcap.tikv.expression.scalar.LessThan;
-import com.pingcap.tikv.expression.scalar.Or;
+import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.StringType;
 import org.junit.Test;
 
 public class IndexMatcherTest {
@@ -55,43 +55,32 @@ public class IndexMatcherTest {
     TiIndexInfo index = table.getIndices().get(0);
     TiIndexColumn col = index.getIndexColumns().get(0);
     IndexMatcher matcher = IndexMatcher.equalOnlyMatcher(col);
+    Constant c0 = Constant.create(0, IntegerType.INT);
+    Constant c1 = Constant.create(1, IntegerType.INT);
+    Constant c2 = Constant.create(2, IntegerType.INT);
+    ColumnRef col1 = ColumnRef.create("c1", table);
+    ColumnRef col2 = ColumnRef.create("c2", table);
 
     // index col = c1, long
-    Expression cond = new Equal(ColumnRef.create("c1", table), Constant.create(1));
+    Expression cond = equal(col1, c1);
     assertTrue(matcher.match(cond));
 
-    cond = new Equal(Constant.create(1), ColumnRef.create("c1", table));
+    cond = equal(c1, col1);
     assertTrue(matcher.match(cond));
 
-    cond = new Equal(ColumnRef.create("c2", table), ColumnRef.create("c1", table));
+    cond = equal(col2, col1);
     assertFalse(matcher.match(cond));
 
-    cond = new Equal(Constant.create(1), Constant.create(1));
+    cond = equal(c1, c1);
     assertFalse(matcher.match(cond));
 
-    cond =
-        new And(
-            new Equal(Constant.create(1), ColumnRef.create("c1", table)),
-            new Equal(ColumnRef.create("c1", table), Constant.create(2)));
+    cond = and(equal(c1, col1), equal(col1, c2));
     assertFalse(matcher.match(cond));
 
-    cond =
-        new Or(
-            new Equal(Constant.create(1), ColumnRef.create("c1", table)),
-            new Equal(ColumnRef.create("c1", table), Constant.create(2)));
+    cond = or(equal(c1, col1), equal(col1, c2));
     assertTrue(matcher.match(cond));
 
-    cond = new In(ColumnRef.create("c1", table), Constant.create(1), Constant.create(2));
-    assertTrue(matcher.match(cond));
-
-    cond =
-        new In(
-            new Equal(ColumnRef.create("c1", table), Constant.create(2)),
-            Constant.create(1),
-            Constant.create(2));
-    assertFalse(matcher.match(cond));
-
-    cond = new LessEqual(Constant.create(0), ColumnRef.create("c1", table));
+    cond = lessEqual(c0, col1);
     assertFalse(matcher.match(cond));
   }
 
@@ -101,40 +90,29 @@ public class IndexMatcherTest {
     TiIndexInfo index = table.getIndices().get(0);
     TiIndexColumn col = index.getIndexColumns().get(0);
     IndexMatcher matcher = IndexMatcher.matcher(col);
+    Constant c0 = Constant.create(0, IntegerType.INT);
+    Constant c1 = Constant.create(1, IntegerType.INT);
+    Constant c2 = Constant.create(2, IntegerType.INT);
+    ColumnRef col1 = ColumnRef.create("c1", table);
+    ColumnRef col2 = ColumnRef.create("c2", table);
 
     // index col = c1, long
-    Expression cond = new LessEqual(ColumnRef.create("c1", table), Constant.create(1));
+    Expression cond = lessEqual(col1, c1);
     assertTrue(matcher.match(cond));
 
-    cond = new GreaterEqual(Constant.create(1), ColumnRef.create("c1", table));
+    cond = greaterEqual(c1, col1);
     assertTrue(matcher.match(cond));
 
-    cond = new LessThan(ColumnRef.create("c2", table), ColumnRef.create("c1", table));
+    cond = lessThan(ColumnRef.create("c2", table), ColumnRef.create("c1", table));
     assertFalse(matcher.match(cond));
 
-    cond = new LessThan(Constant.create(1), Constant.create(1));
+    cond = lessThan(c1, c1);
     assertFalse(matcher.match(cond));
 
-    cond =
-        new And(
-            new LessThan(Constant.create(1), ColumnRef.create("c1", table)),
-            new LessThan(ColumnRef.create("c1", table), Constant.create(2)));
+    cond = and(lessThan(c1, col1), lessThan(col1, c2));
     assertTrue(matcher.match(cond));
 
-    cond =
-        new Or(
-            new LessThan(Constant.create(1), ColumnRef.create("c1", table)),
-            new LessThan(ColumnRef.create("c1", table), Constant.create(2)));
+    cond = or(lessThan(c1, col1), lessThan(col1, c2));
     assertTrue(matcher.match(cond));
-
-    cond = new In(ColumnRef.create("c1", table), Constant.create(1), Constant.create(2));
-    assertTrue(matcher.match(cond));
-
-    cond =
-        new In(
-            new Equal(ColumnRef.create("c1", table), Constant.create(2)),
-            Constant.create(1),
-            Constant.create(2));
-    assertFalse(matcher.match(cond));
   }
 }

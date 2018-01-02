@@ -37,15 +37,11 @@ import org.joda.time.LocalDateTime;
 // Refer to https://github.com/pingcap/tipb/blob/master/go-tipb/expression.pb.go
 // TODO: This might need a refactor to accept an DataType?
 public class Constant implements Expression {
-  private Object value;
-  private DataType type;
+  private final Object value;
+  private final DataType type;
 
   public static Constant create(Object value, DataType type) {
     return new Constant(value, type);
-  }
-
-  public static Constant create(Object value) {
-    return new Constant(value, null);
   }
 
   public Constant(Object value, DataType type) {
@@ -59,6 +55,8 @@ public class Constant implements Expression {
         || value instanceof Short
         || value instanceof Byte;
   }
+
+
 
   private static DataType getDefaultType(Object value) {
     if (value == null) {

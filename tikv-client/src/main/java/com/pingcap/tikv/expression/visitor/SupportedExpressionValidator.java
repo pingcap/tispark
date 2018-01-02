@@ -19,46 +19,39 @@ import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FunctionCall;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.Visitor;
 
-public class DefaultVisitor<R, C> extends Visitor<R,C> {
-  protected R process(Expression node, C context) {
-    for (Expression expr : node.getChildren()) {
-      expr.accept(this, context);
-    }
+public class SupportedExpressionValidator extends Visitor<Boolean, Void> {
+
+  @Override
+  protected Boolean visit(ColumnRef node, Void context) {
     return null;
   }
 
   @Override
-  protected R visit(ColumnRef node, C context) {
-    return process(node, context);
+  protected Boolean visit(ComparisonBinaryExpression node, Void context) {
+    return null;
   }
 
   @Override
-  protected R visit(ComparisonBinaryExpression node, C context) {
-    return process(node, context);
+  protected Boolean visit(ArithmeticBinaryExpression node, Void context) {
+    return null;
   }
 
   @Override
-  protected R visit(ArithmeticBinaryExpression node, C context) {
-    return process(node, context);
+  protected Boolean visit(LogicalBinaryExpression node, Void context) {
+    return null;
   }
 
   @Override
-  protected R visit(LogicalBinaryExpression node, C context) {
-    return process(node, context);
+  protected Boolean visit(Constant node, Void context) {
+    return null;
   }
 
   @Override
-  protected R visit(Constant node, C context) {
-    return process(node, context);
-  }
-
-  @Override
-  protected R visit(FunctionCall node, C context) {
-    return process(node, context);
+  protected Boolean visit(FunctionCall node, Void context) {
+    return null;
   }
 }

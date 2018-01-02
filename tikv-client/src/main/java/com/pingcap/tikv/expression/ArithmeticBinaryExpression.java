@@ -16,41 +16,50 @@
 package com.pingcap.tikv.expression;
 
 
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.*;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tidb.tipb.ExprType;
 import java.util.List;
 import java.util.Objects;
 
 public class ArithmeticBinaryExpression implements Expression {
-  @Override
-  public List<Expression> getChildren() {
-    return ImmutableList.of(left, right);
-  }
-
-  @Override
-  public <R, C> R accept(Visitor<R, C> visitor, C context) {
-    return visitor.visit(this, context);
-  }
-
   public enum Type {
-    PLUS(ExprType.Plus),
-    MINUS(ExprType.Minus),
-    MULTIPLY(ExprType.Mul),
-    DIVIDE(ExprType.Div),
-    BIT_AND(ExprType.BitAnd),
-    BIT_OR(ExprType.BitOr),
-    BIT_XOR(ExprType.BitXor);
+    PLUS,
+    MINUS,
+    MULTIPLY,
+    DIVIDE,
+    BIT_AND,
+    BIT_OR,
+    BIT_XOR
+  }
 
-    Type(ExprType type) {
-      this.type = type;
-    }
+  public static ArithmeticBinaryExpression plus(Expression left, Expression right) {
+    return new ArithmeticBinaryExpression(PLUS, left, right);
+  }
 
-    private final ExprType type;
-    ExprType getExprType() {
-      return type;
-    }
+  public static ArithmeticBinaryExpression minus(Expression left, Expression right) {
+    return new ArithmeticBinaryExpression(MINUS, left, right);
+  }
+
+  public static ArithmeticBinaryExpression multiply(Expression left, Expression right) {
+    return new ArithmeticBinaryExpression(MULTIPLY, left, right);
+  }
+
+  public static ArithmeticBinaryExpression divide(Expression left, Expression right) {
+    return new ArithmeticBinaryExpression(DIVIDE, left, right);
+  }
+
+  public static ArithmeticBinaryExpression bitAnd(Expression left, Expression right) {
+    return new ArithmeticBinaryExpression(BIT_AND, left, right);
+  }
+
+  public static ArithmeticBinaryExpression bitOr(Expression left, Expression right) {
+    return new ArithmeticBinaryExpression(BIT_OR, left, right);
+  }
+
+  public static ArithmeticBinaryExpression bitXor(Expression left, Expression right) {
+    return new ArithmeticBinaryExpression(BIT_XOR, left, right);
   }
 
   private final Expression left;
@@ -75,10 +84,17 @@ public class ArithmeticBinaryExpression implements Expression {
     return compType;
   }
 
+
   @Override
-  public ExprType getExprType() {
-    return getCompType().getExprType();
+  public List<Expression> getChildren() {
+    return ImmutableList.of(left, right);
   }
+
+  @Override
+  public <R, C> R accept(Visitor<R, C> visitor, C context) {
+    return visitor.visit(this, context);
+  }
+
 
   @Override
   public boolean equals(Object other) {

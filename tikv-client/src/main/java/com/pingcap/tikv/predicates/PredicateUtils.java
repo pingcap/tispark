@@ -26,6 +26,7 @@ import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.Visitor;
+import com.pingcap.tikv.expression.visitor.DefaultVisitor;
 import com.pingcap.tikv.expression.visitor.IndexRangeBuilder;
 import com.pingcap.tikv.key.CompoundKey;
 import com.pingcap.tikv.key.Key;
@@ -47,7 +48,7 @@ public class PredicateUtils {
 
   public static Set<ColumnRef> extractColumnRefFromExpr(Expression expr) {
     Set<ColumnRef> columnRefs = new HashSet<>();
-    Visitor<Void, Set<ColumnRef>> visitor = new Visitor<Void, Set<ColumnRef>>() {
+    Visitor<Void, Set<ColumnRef>> visitor = new DefaultVisitor<Void, Set<ColumnRef>>() {
       @Override
       protected Void visit(ColumnRef node, Set<ColumnRef> context) {
         context.add(node);

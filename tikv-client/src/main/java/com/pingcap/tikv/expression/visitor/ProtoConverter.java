@@ -28,10 +28,15 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataType.EncodeType;
 
 public class ProtoConverter extends DefaultVisitor<Expr, Void> {
+  public static Expr toProto(Expression expression) {
+    ProtoConverter converter = new ProtoConverter();
+    return expression.accept(converter, null);
+  }
 
+  @Override
   protected Expr process(Expression node, Void context) {
     Expr.Builder builder = Expr.newBuilder();
-    builder.setTp(node.getExprType());
+    builder.setTp(ExprType.ScalarFunc);
 
     for (Expression child : node.getChildren()) {
       Expr exprProto = child.accept(this, context);

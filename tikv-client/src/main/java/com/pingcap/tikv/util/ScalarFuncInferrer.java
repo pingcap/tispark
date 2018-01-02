@@ -139,7 +139,7 @@ import java.util.Map;
  * <p>
  * Used to infer a target signature for the given DataType and ExprType
  */
-public class ScalarFuncInfer {
+public class ScalarFuncInferrer {
   private static final Map<ExprType, ScalarFuncSig> INTEGER_SCALAR_SIG_MAP =
       ImmutableMap.<ExprType, ScalarFuncSig>builder()
           .put(Case, CaseWhenInt)
@@ -290,15 +290,15 @@ public class ScalarFuncInfer {
   /**
    * Scalar func sig inferrer.
    *
-   * @param tp       the data type code
+   * @param argumentType       the data type code
    * @param exprType the expression type
    * @return the scalar func sig
    */
-  public static ScalarFuncSig of(MySQLType tp, ExprType exprType) {
+  public static ScalarFuncSig of(MySQLType argumentType, ExprType exprType) {
     return requireNonNull(
         requireNonNull(
-            SCALAR_SIG_MAP.get(tp),
-            "DataType " + DataTypeFactory.of(tp) + " not supported yet."
+            SCALAR_SIG_MAP.get(argumentType),
+            "DataType " + DataTypeFactory.of(argumentType) + " not supported yet."
         ).get(exprType),
         "ExprType " + exprType + " not supported yet."
     );

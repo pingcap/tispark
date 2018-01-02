@@ -22,20 +22,20 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import java.util.List;
 import java.util.Objects;
 
-public class ColumnRefResolver extends DefaultVisitor<Void, Void> {
+public class MetaResolver extends DefaultVisitor<Void, Expression> {
   public static void resolve(Expression expression, TiTableInfo table) {
-    ColumnRefResolver resolver = new ColumnRefResolver(table);
+    MetaResolver resolver = new MetaResolver(table);
     resolver.resolve(expression);
   }
 
   public static void resolve(List<? extends Expression> expressions, TiTableInfo table) {
-    ColumnRefResolver resolver = new ColumnRefResolver(table);
+    MetaResolver resolver = new MetaResolver(table);
     resolver.resolve(expressions);
   }
 
   private final TiTableInfo table;
 
-  public ColumnRefResolver(TiTableInfo table) {
+  public MetaResolver(TiTableInfo table) {
     this.table = table;
   }
 
@@ -49,7 +49,7 @@ public class ColumnRefResolver extends DefaultVisitor<Void, Void> {
   }
 
   @Override
-  protected Void visit(ColumnRef node, Void context) {
+  protected Void visit(ColumnRef node, Expression parent) {
     node.resolve(table);
     return null;
   }

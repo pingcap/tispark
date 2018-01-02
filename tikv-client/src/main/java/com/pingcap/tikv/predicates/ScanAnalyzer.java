@@ -25,7 +25,7 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.visitor.ColumnRefResolver;
+import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.key.IndexKey;
 import com.pingcap.tikv.key.Key;
@@ -40,7 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-// TODO: Rethink value binding part since we abstract away datum of TiDB
+
 public class ScanAnalyzer {
   public static class ScanPlan {
     public ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost) {
@@ -101,7 +101,7 @@ public class ScanAnalyzer {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
-    ColumnRefResolver.resolve(conditions, table);
+    MetaResolver.resolve(conditions, table);
 
     ScanSpec result = extractConditions(conditions, table, index);
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);

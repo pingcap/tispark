@@ -24,8 +24,13 @@ import com.pingcap.tikv.types.DataType;
 import java.util.List;
 
 public class ColumnRef implements Expression {
-  public static ColumnRef create(TiColumnInfo columnInfo, TiTableInfo table) {
-    return new ColumnRef(columnInfo.getName(), columnInfo, table);
+  public static ColumnRef create(String name, TiTableInfo table) {
+    for (TiColumnInfo columnInfo : table.getColumns()) {
+      if (columnInfo.matchName(name)) {
+        return new ColumnRef(columnInfo.getName(), columnInfo, table);
+      }
+    }
+    throw new TiExpressionException(String.format("Column name %s not found in table %s", name, table));
   }
 
   public static ColumnRef create(String name) {

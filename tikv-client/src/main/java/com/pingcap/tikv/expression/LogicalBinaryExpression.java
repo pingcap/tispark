@@ -6,24 +6,14 @@ package com.pingcap.tikv.expression;
 
 import static java.util.Objects.requireNonNull;
 
-import com.pingcap.tidb.tipb.ExprType;
 import java.util.List;
 import java.util.Objects;
 
 public class LogicalBinaryExpression implements Expression {
   public enum Type {
-    AND(ExprType.And),
-    OR(ExprType.Or),
-    XOR(ExprType.Xor);
-
-    private final ExprType type;
-    Type(ExprType type) {
-      this.type = type;
-    }
-
-    public ExprType getExprType() {
-      return type;
-    }
+    AND,
+    OR,
+    XOR
   }
 
   public static LogicalBinaryExpression and(Expression left, Expression right) {
@@ -45,18 +35,13 @@ public class LogicalBinaryExpression implements Expression {
   }
 
   @Override
-  public ExprType getExprType() {
-    return getCompType().getExprType();
-  }
-
-  @Override
   public List<Expression> getChildren() {
     return null;
   }
 
   @Override
   public <R, C> R accept(Visitor<R, C> visitor, C context) {
-    return null;
+    return visitor.visit(this, context);
   }
 
   public Expression getLeft() {
@@ -93,5 +78,10 @@ public class LogicalBinaryExpression implements Expression {
   @Override
   public int hashCode() {
     return Objects.hash(compType, left, right);
+  }
+
+  @Override
+  public String toString() {
+    return String.format("%s %s %s", getLeft(), getCompType(), getRight());
   }
 }
