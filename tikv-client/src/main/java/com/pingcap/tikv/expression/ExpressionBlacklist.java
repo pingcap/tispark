@@ -15,13 +15,29 @@
 
 package com.pingcap.tikv.expression;
 
-public class ExpressionBlacklist extends Blacklist {
+
+import static java.util.Objects.requireNonNull;
+
+import java.util.HashSet;
+import java.util.Set;
+
+public class ExpressionBlacklist {
+  private final Set<String> unsupportedPushdownExprs = new HashSet<>();
 
   public ExpressionBlacklist(String exprsString) {
-    super(exprsString);
+    if (exprsString != null) {
+      String [] exprs = exprsString.split(",");
+      for (String expr : exprs) {
+        String trimmedExprName = expr.trim();
+        if (!trimmedExprName.isEmpty()) {
+          unsupportedPushdownExprs.add(expr.trim());
+        }
+      }
+    }
   }
 
   public boolean isUnsupportedPushdownExpr(Class<?> cls) {
-    return isUnsupported(cls);
+    String simpleClassName = requireNonNull(cls).getSimpleName();
+    return unsupportedPushdownExprs.contains(simpleClassName);
   }
 }

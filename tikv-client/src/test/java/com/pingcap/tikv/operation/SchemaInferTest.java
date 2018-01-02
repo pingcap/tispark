@@ -17,6 +17,8 @@
 
 package com.pingcap.tikv.operation;
 
+import static org.junit.Assert.assertEquals;
+
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.CatalogTransaction;
 import com.pingcap.tikv.expression.TiByItem;
@@ -28,14 +30,10 @@ import com.pingcap.tikv.expression.scalar.Plus;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DataTypeFactory;
-import org.junit.Test;
-
+import com.pingcap.tikv.types.DecimalType;
+import com.pingcap.tikv.types.StringType;
 import java.util.List;
-
-import static com.pingcap.tikv.types.Types.TYPE_NEW_DECIMAL;
-import static com.pingcap.tikv.types.Types.TYPE_VARCHAR;
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
 
 public class SchemaInferTest {
   private final String table29 =
@@ -56,7 +54,7 @@ public class SchemaInferTest {
     tiDAGRequest.getFields().add(name);
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
-    assertEquals(DataTypeFactory.of(TYPE_VARCHAR), dataTypes.get(0));
+    assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(0).getClass());
   }
 
   @Test
@@ -66,7 +64,7 @@ public class SchemaInferTest {
     tiDAGRequest.addAggregate(sum);
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
-    assertEquals(DataTypeFactory.of(TYPE_NEW_DECIMAL), dataTypes.get(0));
+    assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
   }
 
   @Test
@@ -78,8 +76,8 @@ public class SchemaInferTest {
     dagRequest.getGroupByItems().add(simpleGroupBy);
     List<DataType> dataTypes = SchemaInfer.create(dagRequest).getTypes();
     assertEquals(2, dataTypes.size());
-    assertEquals(DataTypeFactory.of(TYPE_NEW_DECIMAL), dataTypes.get(0));
-    assertEquals(DataTypeFactory.of(TYPE_VARCHAR), dataTypes.get(1));
+    assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
+    assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(1).getClass());
   }
 
   @Test
@@ -91,7 +89,7 @@ public class SchemaInferTest {
     dagRequest.getGroupByItems().add(complexGroupBy);
     List<DataType> dataTypes = SchemaInfer.create(dagRequest).getTypes();
     assertEquals(2, dataTypes.size());
-    assertEquals(DataTypeFactory.of(TYPE_NEW_DECIMAL), dataTypes.get(0));
-    assertEquals(DataTypeFactory.of(TYPE_VARCHAR), dataTypes.get(1));
+    assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
+    assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(1).getClass());
   }
 }

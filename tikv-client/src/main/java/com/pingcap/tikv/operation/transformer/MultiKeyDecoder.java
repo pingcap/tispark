@@ -38,7 +38,12 @@ public class MultiKeyDecoder implements Projection {
     CodecDataInput cdi = new CodecDataInput(rowData);
 
     for (int i = 0; i < resultTypes.length; i++) {
-      resultTypes[i].decodeValueToRow(cdi, row, i + pos);
+      DataType type = resultTypes[i];
+      if (type.isNextNull(cdi)) {
+        row.setNull(i + pos);
+      } else {
+        row.set(i + pos, type, type.decode(cdi));
+      }
     }
   }
 
