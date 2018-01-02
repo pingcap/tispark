@@ -75,7 +75,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private String getOtherError(RespT resp) {
     if (getOtherError != null) {
       String otherError = getOtherError.apply(resp);
-      return (otherError == null || otherError.trim().equals("")) ? null : otherError;
+      return (otherError == null || otherError.trim().isEmpty()) ? null : otherError;
     }
     return null;
   }
