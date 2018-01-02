@@ -53,13 +53,22 @@ public class StreamingResponse implements Iterable {
     return false;
   }
 
-  public Errorpb.Error getFirstError() {
+  public Errorpb.Error getFirstRegionError() {
     for (Coprocessor.Response response : responseList) {
       if (response.hasRegionError()) {
         return response.getRegionError();
       }
     }
 
+    return null;
+  }
+
+  public String getFirstOtherError() {
+    for (Coprocessor.Response response : responseList) {
+      if (!response.getOtherError().isEmpty()) {
+        return response.getOtherError();
+      }
+    }
     return null;
   }
 
