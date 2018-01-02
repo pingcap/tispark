@@ -61,20 +61,20 @@ public class PredicateUtils {
   /**
    * Build index ranges from access points and access conditions
    *
-   * @param pointExprs conditions converting to a single point access
-   * @param rangeExpr conditions converting to a range
+   * @param pointPredicates conditions converting to a single point access
+   * @param rangePredicate conditions converting to a range
    * @return Index Range for scan
    */
   public static List<IndexRange> expressionToIndexRanges(
-      List<Expression> pointExprs,
-      Optional<Expression> rangeExpr) {
-    requireNonNull(pointExprs, "pointExprs is null");
-    requireNonNull(rangeExpr, "rangeExpr is null");
+      List<Expression> pointPredicates,
+      Optional<Expression> rangePredicate) {
+    requireNonNull(pointPredicates, "pointPredicates is null");
+    requireNonNull(rangePredicate, "rangePredicate is null");
     ImmutableList.Builder<IndexRange> builder = ImmutableList.builder();
-    List<Key> pointKeys = expressionToPoints(pointExprs);
+    List<Key> pointKeys = expressionToPoints(pointPredicates);
     for (Key key : pointKeys) {
-      if (rangeExpr.isPresent()) {
-        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangeExpr.get());
+      if (rangePredicate.isPresent()) {
+        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
         for (Range<TypedKey> range : ranges) {
           builder.add(new IndexRange(key, range));
         }

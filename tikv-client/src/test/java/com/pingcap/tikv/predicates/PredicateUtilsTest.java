@@ -18,19 +18,28 @@ package com.pingcap.tikv.predicates;
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.divide;
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.minus;
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
 import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Range;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.key.CompoundKey;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.Test;
 
@@ -75,5 +84,42 @@ public class PredicateUtilsTest {
     Expression expression = and(c1, and(c2, and(col1, and(divide(col4, and(plus(col1, c1), minus(col2, col5))), col3))));
     Set<ColumnRef> columns = PredicateUtils.extractColumnRefFromExpression(expression);
     assertEquals(baseline, columns);
+  }
+
+  @Test
+  public void expressionToIndexRangesTest() {
+    TiTableInfo table = createTable();
+    ColumnRef col1 = ColumnRef.create("c1", table);
+    ColumnRef col4 = ColumnRef.create("c4", table);
+    ColumnRef col5 = ColumnRef.create("c5", table);
+    Constant c1 = Constant.create(1, IntegerType.INT);
+    Constant c2 = Constant.create(2, IntegerType.INT);
+    Constant c3 = Constant.create(3, IntegerType.INT);
+    Constant c4 = Constant.create(4, IntegerType.INT);
+    TypedKey key1 = TypedKey.toTypedKey(1, IntegerType.INT);
+    TypedKey key2 = TypedKey.toTypedKey(2, IntegerType.INT);
+    TypedKey key3 = TypedKey.toTypedKey(3, IntegerType.INT);
+    TypedKey key4 = TypedKey.toTypedKey(4, IntegerType.INT);
+
+    Expression predicate1 = or(or(equal(c1, col1), equal(col1, c2)), equal(col1, c1));
+    Expression predicate2 = or(equal(c3, col4), equal(c4, col4));
+    Expression rangePredicate = notEqual(col5, c1);
+    List<IndexRange> indexRanges =
+        PredicateUtils.expressionToIndexRanges(ImmutableList.of(predicate1, predicate2), Optional.of(rangePredicate));
+    assertEquals(8, indexRanges.size());
+    Key indexKey1 = CompoundKey.concat(key1, key3);
+    Key indexKey2 = CompoundKey.concat(key1, key4);
+    Key indexKey3 = CompoundKey.concat(key2, key3);
+    Key indexKey4 = CompoundKey.concat(key2, key4);
+
+    Range<TypedKey> baselineRange1 = Range.lessThan(key1);
+    Range<TypedKey> baselineRange2 = Range.greaterThan(key1);
+
+    Set<Key> baselineKeys = ImmutableSet.of(indexKey1, indexKey2, indexKey3, indexKey4);
+    Set<Range<TypedKey>> baselineRanges = ImmutableSet.of(baselineRange1, baselineRange2);
+    for (IndexRange range : indexRanges) {
+      assertTrue(baselineKeys.contains(range.getAccessKey()));
+      assertTrue(baselineRanges.contains(range.getRange()));
+    }
   }
 }
