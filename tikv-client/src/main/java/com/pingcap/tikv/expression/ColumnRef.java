@@ -99,9 +99,9 @@ public class ColumnRef implements Expression {
 
     if (another instanceof ColumnRef) {
       ColumnRef columnRef = (ColumnRef) another;
-      return columnRef.columnInfo.getId() == this.columnInfo.getId()
-          && columnRef.getName().equalsIgnoreCase(this.columnInfo.getName())
-          && columnRef.tableInfo.getId() == this.tableInfo.getId();
+      return columnRef.getColumnInfo().getId() == this.getColumnInfo().getId()
+          && columnRef.getName().equalsIgnoreCase(this.getColumnInfo().getName())
+          && columnRef.getTableInfo().getId() == this.getTableInfo().getId();
     } else {
       return false;
     }
@@ -111,10 +111,10 @@ public class ColumnRef implements Expression {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = result * prime + Long.hashCode(columnInfo.getId());
-    result = result * prime + tableInfo.getName().hashCode();
-    result = result * prime + columnInfo.getName().hashCode();
-    result = result * prime + Long.hashCode(tableInfo.getId());
+    result = result * prime + Long.hashCode(getColumnInfo().getId());
+    result = result * prime + getTableInfo().getName().hashCode();
+    result = result * prime + getColumnInfo().getName().hashCode();
+    result = result * prime + Long.hashCode(getTableInfo().getId());
     return result;
   }
 

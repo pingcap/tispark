@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.Visitor;
@@ -46,7 +44,7 @@ public class PredicateUtils {
     return and(exprs.get(0), mergeCNFExpressions(exprs.subList(1, exprs.size())));
   }
 
-  public static Set<ColumnRef> extractColumnRefFromExpr(Expression expr) {
+  public static Set<ColumnRef> extractColumnRefFromExpression(Expression expr) {
     Set<ColumnRef> columnRefs = new HashSet<>();
     Visitor<Void, Set<ColumnRef>> visitor = new DefaultVisitor<Void, Set<ColumnRef>>() {
       @Override
@@ -58,22 +56,6 @@ public class PredicateUtils {
 
     expr.accept(visitor, columnRefs);
     return columnRefs;
-  }
-
-  public static boolean isBinaryLogicalOp(Expression expression, LogicalBinaryExpression.Type type) {
-    if (expression instanceof LogicalBinaryExpression) {
-      return ((LogicalBinaryExpression) expression).getCompType() == type;
-    } else {
-      return false;
-    }
-  }
-
-  public static boolean isComparisonOp(Expression expression, ComparisonBinaryExpression.Type type) {
-    if (expression instanceof ComparisonBinaryExpression) {
-      return ((ComparisonBinaryExpression) expression).getComparisonType() == type;
-    } else {
-      return false;
-    }
   }
 
   /**

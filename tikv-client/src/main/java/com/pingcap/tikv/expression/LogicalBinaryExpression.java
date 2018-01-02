@@ -6,6 +6,7 @@ package com.pingcap.tikv.expression;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Objects;
 
@@ -36,7 +37,7 @@ public class LogicalBinaryExpression implements Expression {
 
   @Override
   public List<Expression> getChildren() {
-    return null;
+    return ImmutableList.of(getLeft(), getRight());
   }
 
   @Override
