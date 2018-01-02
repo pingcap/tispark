@@ -176,14 +176,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiFilters = filters.collect { case BasicExpression(expr) => expr }.asJava
+    val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val tableScanPlan =
-      scanBuilder.buildTableScan(tiFilters, source.table)
+      scanBuilder.buildTableScan(tiFilters.asJava, source.table)
     val scanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
-      scanBuilder.buildScan(tiFilters, source.table)
+      scanBuilder.buildScan(tiFilters.asJava, source.table)
     } else {
       tableScanPlan
     }
