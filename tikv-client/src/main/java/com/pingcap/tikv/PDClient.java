@@ -19,6 +19,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -31,7 +32,6 @@ import com.pingcap.tikv.kvproto.Pdpb.*;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.util.FutureObserver;
 import io.grpc.ManagedChannel;
 
@@ -68,7 +68,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   @Override
   public TiRegion getRegionByKey(ByteString key) {
     CodecDataOutput cdo = new CodecDataOutput();
-    BytesType.writeBytes(cdo, key.toByteArray());
+    BytesCodec.writeBytes(cdo, key.toByteArray());
     ByteString encodedKey = cdo.toByteString();
 
     Supplier<GetRegionRequest> request = () ->
@@ -235,7 +235,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         return true;
       }
 
-      // create new Leader
+      // toIndexKey new Leader
       ManagedChannel clientChannel = session.getChannel(leaderUrlStr);
       leaderWrapper =
         new LeaderWrapper(

@@ -17,18 +17,8 @@ package com.pingcap.tikv.codec;
 
 import com.google.common.primitives.UnsignedBytes;
 import com.google.protobuf.ByteString;
-import java.util.Arrays;
 
 public class KeyUtils {
-  private static final ByteString ZERO_BYTE = ByteString.copyFrom(new byte[] {0});
-
-  public static ByteString getNextKeyInByteOrder(ByteString key) {
-    return key.concat(ZERO_BYTE);
-  }
-
-  public static byte[] getNextKeyInByteOrder(byte[] key) {
-    return Arrays.copyOf(key, key.length + 1);
-  }
 
   public static String formatBytes(byte[] bytes) {
     if (bytes == null) return "null";
@@ -46,27 +36,6 @@ public class KeyUtils {
   public static String formatBytes(ByteString bytes) {
     if (bytes == null) return "null";
     return formatBytes(bytes.toByteArray());
-  }
-
-  /**
-   * The next key for bytes domain It first plus one at LSB and if LSB overflows, a zero byte is
-   * appended at the end Original bytes will be reused if possible
-   *
-   * @param key key to encode
-   * @return encoded results
-   */
-  public static byte[] prefixNext(byte[] key) {
-    int i;
-    for (i = key.length - 1; i >= 0; i--) {
-      if (key[i] != UnsignedBytes.MAX_VALUE) {
-        key[i]++;
-        break;
-      }
-    }
-    if (i == -1) {
-      return getNextKeyInByteOrder(key);
-    }
-    return key;
   }
 
   public static boolean hasPrefix(ByteString str, ByteString prefix) {
