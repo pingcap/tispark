@@ -16,6 +16,8 @@
 package com.pingcap.tikv.expression.visitor;
 
 
+import static java.util.Objects.requireNonNull;
+
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
@@ -28,6 +30,7 @@ import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import java.util.IdentityHashMap;
+import java.util.List;
 
 /**
  * Validate and infer expression type
@@ -41,7 +44,13 @@ public class ExpressionTypeInferrer extends Visitor<DataType, Void> {
   }
 
   public DataType infer(Expression expression) {
+    requireNonNull(expression, "expression is null");
     return expression.accept(this, null);
+  }
+
+  public void infer(List<? extends Expression> expressions) {
+    requireNonNull(expressions, "expressions is null");
+    expressions.forEach(expr -> expr.accept(this, null));
   }
 
   @Override

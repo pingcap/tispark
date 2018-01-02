@@ -75,12 +75,12 @@ public class SchemaInfer {
       }
       if (dagRequest.hasGroupBy()) {
         for (ByItem byItem : dagRequest.getGroupByItems()) {
-          rowTrans.addProjection(new NoOp(byItem.getExpr().getType()));
+          rowTrans.addProjection(new NoOp(dagRequest.getExpressionType(byItem.getExpr())));
         }
       }
     } else {
       for (Expression field : dagRequest.getFields()) {
-        rowTrans.addProjection(new NoOp(field.getType()));
+        rowTrans.addProjection(new NoOp(dagRequest.getExpressionType(field)));
       }
     }
     rowTrans.addSourceFieldTypes(types);
@@ -95,12 +95,14 @@ public class SchemaInfer {
   private void extractFieldTypes(TiDAGRequest dagRequest) {
 
     if (dagRequest.hasAggregate()) {
-      dagRequest.getAggregates().forEach(expr -> types.add(expr.getType()));
+      dagRequest.getAggregates().forEach(expr -> types.add(dagRequest.getExpressionType(expr)));
       // In DAG mode, if there is any group by statement in a request, all the columns specified
       // in group by expression will be returned, so when we decode a result row, we need to pay
       // extra attention to decoding.
       if (dagRequest.hasGroupBy()) {
-        types.addAll(dagRequest.getGroupByDTList());
+        for (ByItem item : dagRequest.getGroupByItems()) {
+          types.add(dagRequest.getExpressionType(item.getExpr()));
+        }
       }
     } else {
       // Extract all column type information from TiExpr

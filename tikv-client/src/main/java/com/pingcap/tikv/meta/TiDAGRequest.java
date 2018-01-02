@@ -6,6 +6,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.Aggregation;
 import com.pingcap.tidb.tipb.ColumnInfo;
@@ -22,6 +23,7 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.visitor.ExpressionTypeInferrer;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
@@ -30,6 +32,7 @@ import com.pingcap.tikv.util.KeyRangeUtils;
 import com.pingcap.tikv.util.Pair;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -104,18 +107,32 @@ public class TiDAGRequest implements Serializable {
   private boolean distinct;
   private boolean handleNeeded;
   private final PushDownType pushDownType;
+  private IdentityHashMap<Expression, DataType> typeMap;
+
+  private List<Expression> getAllExpressions() {
+    ImmutableList.Builder<Expression> builder = ImmutableList.builder();
+    builder.addAll(getFields());
+    builder.addAll(getWhere());
+    builder.addAll(getAggregates());
+    getGroupByItems().forEach(item -> builder.add(item.getExpr()));
+    getOrderByItems().forEach(item -> builder.add(item.getExpr()));
+    if (having != null) {
+      builder.add(having);
+    }
+    return builder.build();
+  }
+
+  public DataType getExpressionType(Expression expression) {
+    requireNonNull(typeMap, "request is not resolved");
+    return typeMap.get(expression);
+  }
 
   public void resolve() {
     MetaResolver resolver = new MetaResolver(tableInfo);
-    resolver.resolve(getFields());
-    resolver.resolve(getWhere());
-    resolver.resolve(getWhere());
-    resolver.resolve(getAggregates());
-    getGroupByItems().forEach(item -> resolver.resolve(item.getExpr()));
-    getOrderByItems().forEach(item -> resolver.resolve(item.getExpr()));
-    if (having != null) {
-      resolver.resolve(having);
-    }
+    ExpressionTypeInferrer inferrer = new ExpressionTypeInferrer();
+    resolver.resolve(getAllExpressions());
+    inferrer.infer(getAllExpressions());
+    typeMap = inferrer.getTypeMap();
   }
 
   public DAGRequest buildScan(boolean idxScan) {
@@ -418,18 +435,6 @@ public class TiDAGRequest implements Serializable {
     return distinct;
   }
 
-  /**
-   * add aggregate function to select query
-   *
-   * @param expr is a TiUnaryFunction expression.
-   * @return a SelectBuilder
-   */
-  public TiDAGRequest addAggregate(Expression expr) {
-    requireNonNull(expr, "aggregation expr is null");
-    aggregates.add(Pair.create(expr, expr.getType()));
-    return this;
-  }
-
   public TiDAGRequest addAggregate(Expression expr, DataType targetType) {
     requireNonNull(expr, "aggregation expr is null");
     aggregates.add(Pair.create(expr, targetType));
@@ -542,19 +547,6 @@ public class TiDAGRequest implements Serializable {
 
   public List<TiColumnInfo> getColInfoList() {
     return getFields().stream().map(ColumnRef::getColumnInfo).collect(Collectors.toList());
-  }
-
-  /**
-   * Gets group by dt list.
-   *
-   * @return the group by dt list
-   */
-  public List<DataType> getGroupByDTList() {
-    return getGroupByItems()
-        .stream()
-        .map(ByItem::getExpr)
-        .map(Expression::getType)
-        .collect(Collectors.toList());
   }
 
   /**
