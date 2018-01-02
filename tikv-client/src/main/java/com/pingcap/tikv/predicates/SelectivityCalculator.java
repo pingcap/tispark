@@ -16,30 +16,33 @@
 package com.pingcap.tikv.predicates;
 
 
+import com.pingcap.tikv.expression.ComparisonExpression;
 import com.pingcap.tikv.expression.TiExpr;
-import com.pingcap.tikv.expression.scalar.Equal;
-import com.pingcap.tikv.expression.scalar.GreaterEqual;
-import com.pingcap.tikv.expression.scalar.GreaterThan;
-import com.pingcap.tikv.expression.scalar.LessEqual;
-import com.pingcap.tikv.expression.scalar.LessThan;
-import com.pingcap.tikv.expression.scalar.NullEqual;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class SelectivityCalculator {
   public static final double SELECTION_FACTOR = 100;
   public static final double EQUAL_RATE = 0.01;
   public static final double LESS_RATE = 0.1;
 
-  public static double calcPseudoSelectivity(Iterable<TiExpr> exprs) {
+  public static double calcPseudoSelectivity(ScanSpec spec) {
+    List<TiExpr> exprs = new ArrayList<>();
+    exprs.addAll(spec.getPointPredicates());
+    Optional<TiExpr> rangePred = spec.getRangePredicate();
+    rangePred.map(x -> exprs.add(x));
     double minFactor = SELECTION_FACTOR;
     for (TiExpr expr : exprs) {
-      if (expr instanceof Equal || expr instanceof NullEqual) {
-        minFactor *= EQUAL_RATE;
-      } else if (
-          expr instanceof GreaterEqual ||
-          expr instanceof GreaterThan ||
-          expr instanceof LessEqual ||
-          expr instanceof LessThan) {
-        minFactor *= LESS_RATE;
+      if (expr instanceof ComparisonExpression) {
+        ComparisonExpression compExpression = (ComparisonExpression) expr;
+        switch (compExpression.getComparisonType()) {
+          case EQUAL:
+            minFactor *= EQUAL_RATE;
+            break;
+          default:
+            minFactor *= LESS_RATE;
+        }
       }
     }
     return minFactor;

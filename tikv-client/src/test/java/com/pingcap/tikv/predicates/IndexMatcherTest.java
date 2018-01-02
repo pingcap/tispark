@@ -22,23 +22,29 @@ import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.expression.TiColumnRef;
 import com.pingcap.tikv.expression.TiConstant;
 import com.pingcap.tikv.expression.TiExpr;
-import com.pingcap.tikv.expression.scalar.*;
+import com.pingcap.tikv.expression.scalar.And;
+import com.pingcap.tikv.expression.scalar.Equal;
+import com.pingcap.tikv.expression.scalar.GreaterEqual;
+import com.pingcap.tikv.expression.scalar.In;
+import com.pingcap.tikv.expression.scalar.LessEqual;
+import com.pingcap.tikv.expression.scalar.LessThan;
+import com.pingcap.tikv.expression.scalar.Or;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.DataTypeFactory;
-import com.pingcap.tikv.types.Types;
+import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.types.IntegerType;
 import org.junit.Test;
 
 public class IndexMatcherTest {
   private static TiTableInfo createTable() {
     return new MetaUtils.TableBuilder()
         .name("testTable")
-        .addColumn("c1", DataTypeFactory.of(Types.TYPE_LONG), true)
-        .addColumn("c2", DataTypeFactory.of(Types.TYPE_STRING))
-        .addColumn("c3", DataTypeFactory.of(Types.TYPE_STRING))
-        .addColumn("c4", DataTypeFactory.of(Types.TYPE_TINY))
+        .addColumn("c1", IntegerType.INT, true)
+        .addColumn("c2", StringType.VARCHAR)
+        .addColumn("c3", StringType.VARCHAR)
+        .addColumn("c4", IntegerType.INT)
         .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
         .build();
   }
@@ -48,7 +54,7 @@ public class IndexMatcherTest {
     TiTableInfo table = createTable();
     TiIndexInfo index = table.getIndices().get(0);
     TiIndexColumn col = index.getIndexColumns().get(0);
-    IndexMatcher matcher = new IndexMatcher(col, true);
+    IndexMatcher matcher = IndexMatcher.equalOnlyMatcher(col);
 
     // index col = c1, long
     TiExpr cond = new Equal(TiColumnRef.create("c1", table), TiConstant.create(1));
@@ -94,7 +100,7 @@ public class IndexMatcherTest {
     TiTableInfo table = createTable();
     TiIndexInfo index = table.getIndices().get(0);
     TiIndexColumn col = index.getIndexColumns().get(0);
-    IndexMatcher matcher = new IndexMatcher(col, false);
+    IndexMatcher matcher = IndexMatcher.matcher(col);
 
     // index col = c1, long
     TiExpr cond = new LessEqual(TiColumnRef.create("c1", table), TiConstant.create(1));

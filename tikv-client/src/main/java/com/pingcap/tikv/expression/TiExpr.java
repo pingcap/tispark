@@ -15,28 +15,16 @@
 
 package com.pingcap.tikv.expression;
 
-import com.pingcap.tidb.tipb.Expr;
-import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 import java.io.Serializable;
+import java.util.List;
 
 public interface TiExpr extends Serializable {
-  Expr toProto();
+  List<TiExpr> getChildren();
 
-  default boolean isSupportedExpr(ExpressionBlacklist blackList) {
-    if (blackList != null && blackList.isUnsupportedPushdownExpr(getClass())) {
-      return false;
-    }
-    try {
-      Expr expr = toProto();
-      return expr != null;
-    } catch (Exception e) {
-      return false;
-    }
+  <R, C> R accept(Visitor<R, C> visitor, C context);
+
+  default DataType getType() {
+    return null;
   }
-
-  DataType getType();
-
-  // TODO: Make it visitor
-  TiExpr resolve(TiTableInfo table);
 }

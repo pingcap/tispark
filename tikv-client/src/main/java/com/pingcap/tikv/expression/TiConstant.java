@@ -15,148 +15,81 @@
 
 package com.pingcap.tikv.expression;
 
-import com.pingcap.tidb.tipb.Expr;
-import com.pingcap.tidb.tipb.ExprType;
-import com.pingcap.tikv.codec.CodecDataOutput;
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.*;
-import org.joda.time.DateTimeZone;
-import org.joda.time.LocalDate;
-
-import java.io.Serializable;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DateTimeType;
+import com.pingcap.tikv.types.DateType;
+import com.pingcap.tikv.types.DecimalType;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.RealType;
+import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.types.TimestampType;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Objects;
+import org.joda.time.LocalDate;
+import org.joda.time.LocalDateTime;
 
-import static com.pingcap.tikv.types.Types.*;
 
 // Refactor needed.
 // Refer to https://github.com/pingcap/tipb/blob/master/go-tipb/expression.pb.go
 // TODO: This might need a refactor to accept an DataType?
 public class TiConstant implements TiExpr {
-  public static class DateWrapper implements Serializable {
-    private Long value;
-
-    public DateWrapper(Long value) {
-      this.value = value;
-    }
-
-    @Override
-    public String toString() {
-      return value == null ? "" : value.toString();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (obj == this) {
-        return true;
-      } else if (obj instanceof DateWrapper) {
-        return ((DateWrapper) obj).value.equals(value);
-      }
-      return false;
-    }
-
-    @Override
-    public int hashCode() {
-      return (int) (7 * (31 * value));
-    }
-  }
-
   private Object value;
+  private DataType type;
+
+  public static TiConstant create(Object value, DataType type) {
+    return new TiConstant(value, type);
+  }
 
   public static TiConstant create(Object value) {
-    return new TiConstant(value);
+    return new TiConstant(value, null);
   }
 
-  private TiConstant(Object value) {
+  public TiConstant(Object value, DataType type) {
     this.value = value;
+    this.type = type == null ? getDefaultType(value) : type;
   }
 
-  protected boolean isIntegerType() {
+  protected static boolean isIntegerType(Object value) {
     return value instanceof Long
         || value instanceof Integer
         || value instanceof Short
         || value instanceof Byte;
   }
 
+  private static DataType getDefaultType(Object value) {
+    if (value == null) {
+      throw new TiExpressionException("NULL constant has no type");
+    } else if (isIntegerType(value)) {
+      return IntegerType.BIGINT;
+    } else if (value instanceof String) {
+      return StringType.VARCHAR;
+    } else if (value instanceof Float) {
+      return RealType.FLOAT;
+    } else if (value instanceof Double) {
+      return RealType.DOUBLE;
+    } else if (value instanceof BigDecimal) {
+      return DecimalType.DECIMAL;
+    } else if (value instanceof LocalDateTime) {
+      return DateTimeType.DATETIME;
+    } else if (value instanceof LocalDate) {
+      return DateType.DATE;
+    } else if (value instanceof Timestamp) {
+      return TimestampType.TIMESTAMP;
+    } else {
+      throw new TiExpressionException("Constant type not supported:" + value.getClass().getSimpleName());
+    }
+  }
+
   public Object getValue() {
     return value;
   }
 
-  // refer to expr_to_pb.go:datumToPBExpr
-  // But since it's a java client, we ignored
-  // unsigned types for now
-  // TODO: Add unsigned constant types support
-  @Override
-  public Expr toProto() {
-    Expr.Builder builder = Expr.newBuilder();
-    CodecDataOutput cdo = new CodecDataOutput();
-    // We don't allow build a unsigned long constant for now
-    if (value == null) {
-      builder.setTp(ExprType.Null);
-    } else if (isIntegerType()) {
-      builder.setTp(ExprType.Int64);
-      IntegerType.writeLong(cdo, ((Number) value).longValue());
-    } else if (value instanceof String) {
-      builder.setTp(ExprType.String);
-      // Instead of using BytesType codec, coprocessor reads
-      // raw string as bytes
-      cdo.write(((String) value).getBytes());
-    } else if (value instanceof Float) {
-      builder.setTp(ExprType.Float32);
-      RealType.writeFloat(cdo, (Float) value);
-    } else if (value instanceof Double) {
-      builder.setTp(ExprType.Float64);
-      RealType.writeDouble(cdo, (Double) value);
-    } else if (value instanceof BigDecimal) {
-      builder.setTp(ExprType.MysqlDecimal);
-      DecimalType.writeDecimal(cdo, (BigDecimal) value);
-    } else if (value instanceof DateWrapper) {
-      builder.setTp(ExprType.MysqlTime);
-      IntegerType.writeULong(cdo, calcTimestampFromTime(((DateWrapper) value).value));
-    } else if (value instanceof Timestamp) {
-      builder.setTp(ExprType.MysqlTime);
-      IntegerType.writeULong(cdo, TimestampType.toPackedLong(((Timestamp) value).toLocalDateTime()));
-    } else {
-      throw new TiExpressionException("Constant type not supported.");
-    }
-    builder.setVal(cdo.toByteString());
-
-    return builder.build();
-  }
-
-  @Override
   public DataType getType() {
-    if (value == null) {
-      throw new TiExpressionException("NULL constant has no type");
-    } else if (isIntegerType()) {
-      return DataTypeFactory.of(TYPE_LONG);
-    } else if (value instanceof String) {
-      return DataTypeFactory.of(TYPE_VARCHAR);
-    } else if (value instanceof Float) {
-      return DataTypeFactory.of(TYPE_FLOAT);
-    } else if (value instanceof Double) {
-      return DataTypeFactory.of(TYPE_DOUBLE);
-    } else {
-      throw new TiExpressionException("Constant type not supported.");
-    }
-  }
-
-  private static long calcTimestampFromTime(Long time) {
-    LocalDate jodaDate = new LocalDate(time, DateTimeZone.UTC);
-    return TimestampType.toPackedLong(
-        jodaDate.getYear(),
-        jodaDate.getMonthOfYear(),
-        jodaDate.getDayOfMonth(),
-        0, 0, 0, 0
-        // java.sql.Date does not provide these precision conceptually, need to set them 0
-    );
-  }
-
-  @Override
-  public TiConstant resolve(TiTableInfo table) {
-    return this;
+    return type;
   }
 
   @Override
@@ -181,5 +114,15 @@ public class TiConstant implements TiExpr {
   @Override
   public int hashCode() {
     return value == null ? 0 : value.hashCode();
+  }
+
+  @Override
+  public List<TiExpr> getChildren() {
+    return ImmutableList.of();
+  }
+
+  @Override
+  public <R, C> R accept(Visitor<R, C> visitor, C context) {
+    return visitor.visit(this, context);
   }
 }

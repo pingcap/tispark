@@ -15,17 +15,124 @@
 
 package com.pingcap.tikv.util;
 
+import static com.pingcap.tidb.tipb.ExprType.Case;
+import static com.pingcap.tidb.tipb.ExprType.Coalesce;
+import static com.pingcap.tidb.tipb.ExprType.Div;
+import static com.pingcap.tidb.tipb.ExprType.EQ;
+import static com.pingcap.tidb.tipb.ExprType.GE;
+import static com.pingcap.tidb.tipb.ExprType.GT;
+import static com.pingcap.tidb.tipb.ExprType.If;
+import static com.pingcap.tidb.tipb.ExprType.IfNull;
+import static com.pingcap.tidb.tipb.ExprType.In;
+import static com.pingcap.tidb.tipb.ExprType.IsNull;
+import static com.pingcap.tidb.tipb.ExprType.IsTruth;
+import static com.pingcap.tidb.tipb.ExprType.LE;
+import static com.pingcap.tidb.tipb.ExprType.LT;
+import static com.pingcap.tidb.tipb.ExprType.Minus;
+import static com.pingcap.tidb.tipb.ExprType.Mul;
+import static com.pingcap.tidb.tipb.ExprType.NE;
+import static com.pingcap.tidb.tipb.ExprType.NullEQ;
+import static com.pingcap.tidb.tipb.ExprType.Plus;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CaseWhenDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CaseWhenDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CaseWhenInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CaseWhenReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CaseWhenString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CaseWhenTime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CoalesceDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CoalesceDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CoalesceInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CoalesceReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CoalesceString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.CoalesceTime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.DecimalIsNull;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.DecimalIsTrue;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.DivideDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.DivideReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.DurationIsNull;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.EQDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.EQDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.EQInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.EQReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.EQString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.EQTime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GEDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GEDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GEInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GEReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GEString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GETime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GTDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GTDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GTInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GTReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GTString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.GTTime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfNullDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfNullDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfNullInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfNullReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfNullString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfNullTime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IfTime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.InDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.InDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.InInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.InReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.InString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.InTime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IntIsNull;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.IntIsTrue;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LEDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LEDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LEInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LEReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LEString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LETime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LTDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LTDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LTInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LTReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LTString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.LTTime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.MinusDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.MinusInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.MinusReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.MultiplyDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.MultiplyInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.MultiplyReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NEDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NEDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NEInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NEReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NEString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NETime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NullEQDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NullEQDuration;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NullEQInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NullEQReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NullEQString;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.NullEQTime;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.PlusDecimal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.PlusInt;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.PlusReal;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.RealIsNull;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.RealIsTrue;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.StringIsNull;
+import static com.pingcap.tidb.tipb.ScalarFuncSig.TimeIsNull;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tidb.tipb.ScalarFuncSig;
 import com.pingcap.tikv.types.DataTypeFactory;
-
+import com.pingcap.tikv.types.MySQLType;
 import java.util.Map;
-
-import static com.pingcap.tidb.tipb.ExprType.*;
-import static com.pingcap.tidb.tipb.ScalarFuncSig.*;
-import static com.pingcap.tikv.types.Types.*;
-import static java.util.Objects.requireNonNull;
 
 /**
  * The ScalarFunction Signature inferrer.
@@ -150,34 +257,34 @@ public class ScalarFuncInfer {
           .build();
 
 
-  private static final Map<Integer, Map<ExprType, ScalarFuncSig>> SCALAR_SIG_MAP =
-      ImmutableMap.<Integer, Map<ExprType, ScalarFuncSig>>builder()
-          .put(TYPE_TINY, INTEGER_SCALAR_SIG_MAP)
-          .put(TYPE_SHORT, INTEGER_SCALAR_SIG_MAP)
-          .put(TYPE_LONG, INTEGER_SCALAR_SIG_MAP)
-          .put(TYPE_INT24, INTEGER_SCALAR_SIG_MAP)
-          .put(TYPE_LONG_LONG, INTEGER_SCALAR_SIG_MAP)
-          .put(TYPE_YEAR, INTEGER_SCALAR_SIG_MAP)
-          .put(TYPE_BIT, INTEGER_SCALAR_SIG_MAP)
-          .put(TYPE_NEW_DECIMAL, DECIMAL_SCALAR_SIG_MAP)
-          .put(TYPE_FLOAT, REAL_SCALAR_SIG_MAP)
-          .put(TYPE_DOUBLE, REAL_SCALAR_SIG_MAP)
-          .put(TYPE_DURATION, DURATION_SCALAR_SIG_MAP)
-          .put(TYPE_DATETIME, TIME_SCALAR_SIG_MAP)
-          .put(TYPE_TIMESTAMP, TIME_SCALAR_SIG_MAP)
-          .put(TYPE_NEW_DATE, TIME_SCALAR_SIG_MAP)
-          .put(TYPE_DATE, TIME_SCALAR_SIG_MAP)
-          .put(TYPE_VARCHAR, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_JSON, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_ENUM, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_SET, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_TINY_BLOB, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_MEDIUM_BLOB, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_LONG_BLOB, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_BLOB, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_VAR_STRING, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_STRING, STRING_SCALAR_SIG_MAP)
-          .put(TYPE_GEOMETRY, STRING_SCALAR_SIG_MAP)
+  private static final Map<MySQLType, Map<ExprType, ScalarFuncSig>> SCALAR_SIG_MAP =
+      ImmutableMap.<MySQLType, Map<ExprType, ScalarFuncSig>>builder()
+          .put(MySQLType.TypeTiny, INTEGER_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeShort, INTEGER_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeLong, INTEGER_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeInt24, INTEGER_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeLonglong, INTEGER_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeYear, INTEGER_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeBit, INTEGER_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeNewDecimal, DECIMAL_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeFloat, REAL_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeDouble, REAL_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeDuration, DURATION_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeDatetime, TIME_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeTimestamp, TIME_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeNewDate, TIME_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeDate, TIME_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeVarchar, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeJSON, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeEnum, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeSet, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeTinyBlob, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeMediumBlob, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeLongBlob, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeBlob, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeVarString, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeString, STRING_SCALAR_SIG_MAP)
+          .put(MySQLType.TypeGeometry, STRING_SCALAR_SIG_MAP)
           .build();
 
   /**
@@ -187,7 +294,7 @@ public class ScalarFuncInfer {
    * @param exprType the expression type
    * @return the scalar func sig
    */
-  public static ScalarFuncSig of(int tp, ExprType exprType) {
+  public static ScalarFuncSig of(MySQLType tp, ExprType exprType) {
     return requireNonNull(
         requireNonNull(
             SCALAR_SIG_MAP.get(tp),

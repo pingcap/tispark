@@ -18,6 +18,7 @@
 package com.pingcap.tikv.region;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -26,7 +27,6 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Region;
-import com.pingcap.tikv.types.BytesType;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -67,14 +67,14 @@ public class TiRegion implements Serializable {
     if (region.getStartKey().isEmpty()) {
       builder.setStartKey(region.getStartKey());
     } else {
-      byte[] decodecStartKey = BytesType.readBytes(new CodecDataInput(region.getStartKey()));
+      byte[] decodecStartKey = BytesCodec.readBytes(new CodecDataInput(region.getStartKey()));
       builder.setStartKey(ByteString.copyFrom(decodecStartKey));
     }
 
     if (region.getEndKey().isEmpty()) {
       builder.setEndKey(region.getEndKey());
     } else {
-      byte[] decodecEndKey = BytesType.readBytes(new CodecDataInput(region.getEndKey()));
+      byte[] decodecEndKey = BytesCodec.readBytes(new CodecDataInput(region.getEndKey()));
       builder.setEndKey(ByteString.copyFrom(decodecEndKey));
     }
 
