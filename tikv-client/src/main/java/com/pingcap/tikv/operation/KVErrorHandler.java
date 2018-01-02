@@ -65,6 +65,21 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     this(regionManager, recv, ctxRegion, getRegionError, null);
   }
 
+  private Errorpb.Error getRegionError(RespT resp) {
+    if (getRegionError != null) {
+      return getRegionError.apply(resp);
+    }
+    return null;
+  }
+
+  private String getOtherError(RespT resp) {
+    if (getOtherError != null) {
+      String otherError = getOtherError.apply(resp);
+      return (otherError == null || otherError.trim().equals("")) ? null : otherError;
+    }
+    return null;
+  }
+
   public void handle(RespT resp) {
     // if resp is null, then region maybe out of dated. we need handle this on RegionManager.
     if (resp == null) {
@@ -79,7 +94,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     }
 
     // Region error handling logic
-    Errorpb.Error error = getRegionError.apply(resp);
+    Errorpb.Error error = getRegionError(resp);
     if (error != null) {
       if (error.hasNotLeader()) {
         // update Leader here
@@ -143,14 +158,11 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
     // Other error handling logic
     // Currently we need to handle potential other errors from coprocessor responses.
-    if (getOtherError != null) {
-      String otherError = getOtherError.apply(resp);
-      if (otherError != null &&
-          !otherError.trim().isEmpty()) {
-        logger.warn(String.format("Other error occurred for region [%s]", ctxRegion));
-        // Just throw to upper layer to handle
-        throw new IllegalStateException("Received other error from TiKV:" + otherError);
-      }
+    String otherError = getOtherError(resp);
+    if (otherError != null) {
+      logger.warn(String.format("Other error occurred for region [%s]", ctxRegion));
+      // Just throw to upper layer to handle
+      throw new IllegalStateException("Received other error from TiKV:" + otherError);
     }
   }
 
