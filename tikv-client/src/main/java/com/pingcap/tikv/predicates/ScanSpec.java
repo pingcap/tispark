@@ -72,7 +72,7 @@ public class ScanSpec {
 
     public void addRangePredicate(TiIndexColumn col, Expression predicate) {
       requireNonNull(col, "col is null");
-      if (!col.equals(rangeColumn)) {
+      if (col.equals(rangeColumn)) {
         throw new TiClientInternalException("Cannot reset range predicates");
       }
       this.rangeColumn = col;
@@ -85,6 +85,9 @@ public class ScanSpec {
       Set<Expression> pushedPredicates = new HashSet<>();
       for (TiIndexColumn indexColumn : index.getIndexColumns()) {
         List<Expression> predicates = pointPredicates.get(indexColumn);
+        if (predicates == null) {
+          break;
+        }
         pushedPredicates.addAll(predicates);
         TiColumnInfo tiColumnInfo = table.getColumn(indexColumn.getOffset());
         DataType type = tiColumnInfo.getType();

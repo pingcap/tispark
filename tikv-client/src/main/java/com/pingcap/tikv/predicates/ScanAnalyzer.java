@@ -286,9 +286,10 @@ public class ScanAnalyzer {
             }
             if (matcher.match(cond)) {
               specBuilder.addRangePredicate(col, cond);
-            }
-            if (col.isPrefixIndex()) {
-              specBuilder.addResidualPredicate(cond);
+              if (col.isPrefixIndex()) {
+                specBuilder.addResidualPredicate(cond);
+              }
+              break;
             }
           }
           break;
