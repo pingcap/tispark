@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv.operation.iterator;
 
+import static java.util.Objects.requireNonNull;
+
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tikv.TiSession;
@@ -25,22 +27,17 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DataTypeFactory;
-import com.pingcap.tikv.types.Types;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-
-import static java.util.Objects.requireNonNull;
 
 public abstract class CoprocessIterator<T> implements Iterator<T> {
   protected final TiSession session;
   protected final List<RegionTask> regionTasks;
   protected DAGRequest dagRequest;
-  protected static final DataType[] handleTypes =
-      new DataType[]{DataTypeFactory.of(Types.TYPE_LONG)};
+  protected static final DataType[] handleTypes = new DataType[]{IntegerType.INT};
   //  protected final ExecutorCompletionService<Iterator<SelectResponse>> completionService;
   protected RowReader rowReader;
   protected CodecDataInput dataInput;

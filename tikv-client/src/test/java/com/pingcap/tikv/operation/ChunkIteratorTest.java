@@ -17,8 +17,6 @@
 
 package com.pingcap.tikv.operation;
 
-import static com.pingcap.tikv.types.Types.TYPE_LONG;
-import static com.pingcap.tikv.types.Types.TYPE_VARCHAR;
 import static org.junit.Assert.assertEquals;
 
 import com.google.protobuf.ByteString;
@@ -28,8 +26,9 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.operation.iterator.ChunkIterator;
 import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DataTypeFactory;
+import com.pingcap.tikv.types.IntegerType;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Before;
@@ -51,21 +50,29 @@ public class ChunkIteratorTest {
     chunks.add(chunk);
   }
 
+  private static void setValueToRow(CodecDataInput cdi, DataType type, int pos, Row row) {
+    if (type.isNextNull(cdi)) {
+      row.setNull(pos);
+    } else {
+      row.set(pos, type, type.decode(cdi));
+    }
+  }
+
   @Test
   public void chunkTest() {
     ChunkIterator<ByteString> chunkIterator = ChunkIterator.getRawBytesChunkIterator(chunks);
-    DataType bytes = DataTypeFactory.of(TYPE_VARCHAR);
-    DataType ints = DataTypeFactory.of(TYPE_LONG);
+    DataType bytes = StringType.VARCHAR;
+    DataType ints = IntegerType.INT;
     Row row = ObjectRowImpl.create(6);
     CodecDataInput cdi = new CodecDataInput(chunkIterator.next());
-    ints.decodeValueToRow(cdi, row, 0);
-    bytes.decodeValueToRow(cdi, row, 1);
+    setValueToRow(cdi, ints, 0, row);
+    setValueToRow(cdi, bytes, 1, row);
     cdi = new CodecDataInput(chunkIterator.next());
-    ints.decodeValueToRow(cdi, row, 2);
-    bytes.decodeValueToRow(cdi, row, 3);
+    setValueToRow(cdi, ints, 2, row);
+    setValueToRow(cdi, bytes, 3, row);
     cdi = new CodecDataInput(chunkIterator.next());
-    ints.decodeValueToRow(cdi, row, 4);
-    bytes.decodeValueToRow(cdi, row, 5);
+    setValueToRow(cdi, ints, 4, row);
+    setValueToRow(cdi, bytes, 5, row);
     assertEquals(row.getLong(0), 1);
     assertEquals(row.getString(1), "a");
     assertEquals(row.getLong(2), 2);

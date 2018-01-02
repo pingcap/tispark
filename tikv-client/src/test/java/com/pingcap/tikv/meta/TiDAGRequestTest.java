@@ -15,6 +15,9 @@
 
 package com.pingcap.tikv.meta;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.expression.TiByItem;
@@ -26,26 +29,22 @@ import com.pingcap.tikv.expression.aggregate.Sum;
 import com.pingcap.tikv.expression.scalar.LessEqual;
 import com.pingcap.tikv.expression.scalar.Plus;
 import com.pingcap.tikv.kvproto.Coprocessor;
-import com.pingcap.tikv.types.DataTypeFactory;
-import com.pingcap.tikv.types.Types;
-import org.junit.Test;
-
+import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.types.IntegerType;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
 
 public class TiDAGRequestTest {
   private static TiTableInfo createTable() {
     return new MetaUtils.TableBuilder()
         .name("testTable")
-        .addColumn("c1", DataTypeFactory.of(Types.TYPE_LONG), true)
-        .addColumn("c2", DataTypeFactory.of(Types.TYPE_STRING))
-        .addColumn("c3", DataTypeFactory.of(Types.TYPE_STRING))
-        .addColumn("c4", DataTypeFactory.of(Types.TYPE_TINY))
+        .addColumn("c1", IntegerType.INT, true)
+        .addColumn("c2", StringType.VARCHAR)
+        .addColumn("c3", StringType.VARCHAR)
+        .addColumn("c4", IntegerType.INT)
         .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
         .build();
   }
@@ -59,7 +58,7 @@ public class TiDAGRequestTest {
         .addRequiredColumn(TiColumnRef.create("c2", table))
         .addAggregate(new Sum(TiColumnRef.create("c1", table)))
         .addAggregate(new Min(TiColumnRef.create("c1", table)))
-        .addFilter(new Plus(TiConstant.create(1L), TiConstant.create(2L)))
+        .addWhere(new Plus(TiConstant.create(1L), TiConstant.create(2L)))
         .addGroupByItem(
             TiByItem.create(TiColumnRef.create("c2", table), true))
         .addOrderByItem(
@@ -124,10 +123,10 @@ public class TiDAGRequestTest {
       if (!lhsItem.equals(rhsItem)) return false;
     }
 
-    assertEquals(lhs.getFilter().size(), rhs.getFilter().size());
-    for (int i = 0; i < lhs.getFilter().size(); i++) {
-      TiExpr lhsItem = lhs.getFilter().get(i);
-      TiExpr rhsItem = rhs.getFilter().get(i);
+    assertEquals(lhs.getWhere().size(), rhs.getWhere().size());
+    for (int i = 0; i < lhs.getWhere().size(); i++) {
+      TiExpr lhsItem = lhs.getWhere().get(i);
+      TiExpr rhsItem = rhs.getWhere().get(i);
       if (!lhsItem.toProto().equals(rhsItem.toProto())) return false;
     }
 

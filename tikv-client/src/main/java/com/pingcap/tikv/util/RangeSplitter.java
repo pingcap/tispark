@@ -15,27 +15,27 @@
 
 package com.pingcap.tikv.util;
 
+import static com.pingcap.tikv.key.Key.toRawKey;
+import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.codec.TableCodec;
-import com.pingcap.tikv.codec.TableCodec.DecodeResult.Status;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.key.RowKey;
+import com.pingcap.tikv.key.RowKey.DecodeResult;
+import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.kvproto.Metapb;
-import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import gnu.trove.list.array.TLongArrayList;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
-import static java.util.Objects.requireNonNull;
 
 public class RangeSplitter {
   public static class RegionTask implements Serializable {
@@ -43,10 +43,6 @@ public class RangeSplitter {
     private final Metapb.Store store;
     private final List<KeyRange> ranges;
     private final String host;
-
-    public static RegionTask newInstance(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
-      return new RegionTask(region, store, ranges);
-    }
 
     RegionTask(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
       this.region = region;
@@ -100,27 +96,7 @@ public class RangeSplitter {
     this.regionManager = regionManager;
   }
 
-  protected final RegionManager regionManager;
-
-  // both arguments represent right side of end points
-  // so that empty is +INF
-  private static int rightCompareTo(ByteString lhs, ByteString rhs) {
-    requireNonNull(lhs, "lhs is null");
-    requireNonNull(rhs, "rhs is null");
-
-    // both infinite
-    if (lhs.isEmpty() && rhs.isEmpty()) {
-      return 0;
-    }
-    if (lhs.isEmpty()) {
-      return 1;
-    }
-    if (rhs.isEmpty()) {
-      return -1;
-    }
-
-    return Comparables.wrap(lhs).compareTo(Comparables.wrap(rhs));
-  }
+  private final RegionManager regionManager;
 
   public List<RegionTask> splitHandlesByRegion(long tableId, TLongArrayList handles) {
     // Max value for current index handle range
@@ -128,13 +104,13 @@ public class RangeSplitter {
     handles.sort();
 
     int startPos = 0;
-    TableCodec.DecodeResult decodeResult = new TableCodec.DecodeResult();
+    DecodeResult decodeResult = new DecodeResult();
     while (startPos < handles.size()) {
       long curHandle = handles.get(startPos);
-      byte[] key = TableCodec.encodeRowKeyWithHandleBytes(tableId, curHandle);
-      Pair<TiRegion, Metapb.Store> regionStorePair = regionManager.getRegionStorePairByKey(ByteString.copyFrom(key));
+      RowKey key = RowKey.toRowKey(tableId, curHandle);
+      Pair<TiRegion, Metapb.Store> regionStorePair = regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes()));
       byte[] endKey = regionStorePair.first.getEndKey().toByteArray();
-      TableCodec.tryDecodeRowKey(tableId, endKey, decodeResult);
+      RowKey.tryDecodeRowKey(tableId, endKey, decodeResult);
       if (decodeResult.status == Status.MIN) {
         throw new TiClientInternalException("EndKey is less than current rowKey");
       } else if (decodeResult.status == Status.MAX || decodeResult.status == Status.UNKNOWN_INF) {
@@ -179,8 +155,6 @@ public class RangeSplitter {
       TLongArrayList handles,
       Pair<TiRegion, Metapb.Store> regionStorePair,
       ImmutableList.Builder<RegionTask> regionTasks) {
-    TiRegion region = regionStorePair.first;
-    Store store = regionStorePair.second;
     List<KeyRange> newKeyRanges = new ArrayList<>(endPos - startPos + 1);
     long startHandle = handles.get(startPos);
     long endHandle = startHandle;
@@ -189,16 +163,19 @@ public class RangeSplitter {
       if (endHandle + 1 == curHandle) {
         endHandle = curHandle;
       } else {
-        newKeyRanges.add(KeyRangeUtils.makeCoprocRangeWithHandle(
-            tableId,
-            startHandle,
-            endHandle + 1));
+        newKeyRanges.add(makeCoprocRange(
+            RowKey.toRowKey(tableId, startHandle).toByteString(),
+            RowKey.toRowKey(tableId, endHandle + 1).toByteString())
+        );
         startHandle = curHandle;
         endHandle = startHandle;
       }
     }
-    newKeyRanges.add(KeyRangeUtils.makeCoprocRangeWithHandle(tableId, startHandle, endHandle + 1));
-    regionTasks.add(new RegionTask(region, store, newKeyRanges));
+    newKeyRanges.add(makeCoprocRange(
+        RowKey.toRowKey(tableId, startHandle).toByteString(),
+        RowKey.toRowKey(tableId, endHandle + 1).toByteString())
+    );
+    regionTasks.add(new RegionTask(regionStorePair.first, regionStorePair.second, newKeyRanges));
   }
 
   public List<RegionTask> splitRangeByRegion(List<KeyRange> keyRanges, int splitFactor) {
@@ -236,13 +213,16 @@ public class RangeSplitter {
       Pair<TiRegion, Metapb.Store> regionStorePair =
           regionManager.getRegionStorePairByKey(range.getStart());
 
-      requireNonNull(regionStorePair, "fail to get region/store pair by key" + range.getStart());
+      if (regionStorePair == null) {
+        throw new NullPointerException("fail to get region/store pair by key " + formatByteString(range.getStart()));
+      }
       TiRegion region = regionStorePair.first;
       idToRegion.putIfAbsent(region.getId(), regionStorePair);
 
       // both key range is close-opened
-      // initial range inside pd is guaranteed to be -INF to +INF
-      if (rightCompareTo(range.getEnd(), region.getEndKey()) > 0) {
+      // initial range inside PD is guaranteed to be -INF to +INF
+      // Both keys are at right hand side and then always not -INF
+      if (toRawKey(range.getEnd()).compareTo(toRawKey(region.getEndKey())) > 0) {
         // current region does not cover current end key
         KeyRange cutRange =
             KeyRange.newBuilder().setStart(range.getStart()).setEnd(region.getEndKey()).build();

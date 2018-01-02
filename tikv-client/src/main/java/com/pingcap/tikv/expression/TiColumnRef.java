@@ -15,36 +15,15 @@
 
 package com.pingcap.tikv.expression;
 
-import com.pingcap.tidb.tipb.Expr;
-import com.pingcap.tidb.tipb.ExprType;
-import com.pingcap.tikv.codec.CodecDataOutput;
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
+import java.util.List;
 
 public class TiColumnRef implements TiExpr {
-  private long offset = -1;
-
-  public static TiColumnInfo getColumnWithName(String name, TiTableInfo table) {
-    TiColumnInfo columnInfo = null;
-    for (TiColumnInfo col : table.getColumns()) {
-      if (col.matchName(name)) {
-        columnInfo = col;
-        break;
-      }
-    }
-    return columnInfo;
-  }
-
-  public static TiColumnRef create(String name, TiTableInfo table) {
-    TiColumnRef ref = new TiColumnRef(name);
-    ref.resolve(table);
-    return ref;
-  }
-
   public static TiColumnRef create(TiColumnInfo columnInfo, TiTableInfo table) {
     return new TiColumnRef(columnInfo.getName(), columnInfo, table);
   }
@@ -58,60 +37,38 @@ public class TiColumnRef implements TiExpr {
   private TiColumnInfo columnInfo;
   private TiTableInfo tableInfo;
 
-  private TiColumnRef(String name) {
+  public TiColumnRef(String name) {
     this.name = name;
   }
 
-  private TiColumnRef(String name, TiColumnInfo columnInfo, TiTableInfo tableInfo) {
+  public TiColumnRef(String name, TiColumnInfo columnInfo, TiTableInfo tableInfo) {
     this.name = name;
     this.columnInfo = columnInfo;
     this.tableInfo = tableInfo;
   }
 
-  @Override
-  public Expr toProto() {
-    Expr.Builder builder = Expr.newBuilder();
-    builder.setTp(ExprType.ColumnRef);
-    CodecDataOutput cdo = new CodecDataOutput();
-    // After switching to DAG request mode, expression value
-    // should be the index of table columns we provided in
-    // the first executor of a DAG request.
-    //
-    // If offset < 0, it's not a valid offset specified by
-    // user, use columnInfo instead
-    IntegerType.writeLong(cdo, offset < 0 ? columnInfo.getOffset() : offset);
-    builder.setVal(cdo.toByteString());
-    return builder.build();
+  public String getName() {
+    return name;
   }
 
-  @Override
-  public DataType getType() {
-    return columnInfo.getType();
-  }
-
-  @Override
-  public TiColumnRef resolve(TiTableInfo table) {
-    TiColumnInfo columnInfo = getColumnWithName(name, table);
+  public void resolve(TiTableInfo table) {
+    TiColumnInfo columnInfo = null;
+    for (TiColumnInfo col : table.getColumns()) {
+      if (col.matchName(name)) {
+        columnInfo = col;
+        break;
+      }
+    }
     if (columnInfo == null) {
       throw new TiExpressionException("No Matching columns from " + table.getName());
     }
 
-    // TODO: After type system finished, do a type check
-    //switch column.GetType().Tp {
-    //    case mysql.TypeBit, mysql.TypeSet, mysql.TypeEnum, mysql.TypeGeometry, mysql.TypeUnspecified:
-    //        return nil
-    //}
-
     if (columnInfo.getId() == 0) {
       throw new TiExpressionException("Zero Id is not a referable column id");
     }
+
     this.tableInfo = table;
     this.columnInfo = columnInfo;
-    return this;
-  }
-
-  public String getName() {
-    return name;
   }
 
   public TiColumnInfo getColumnInfo() {
@@ -121,12 +78,12 @@ public class TiColumnRef implements TiExpr {
     return columnInfo;
   }
 
-  public void setOffset(long offset) {
-    this.offset = offset;
+  public DataType getType() {
+    return getColumnInfo().getType();
   }
 
-  public long getOffset() {
-    return offset;
+  public TiTableInfo getTableInfo() {
+    return tableInfo;
   }
 
   @Override
@@ -159,5 +116,15 @@ public class TiColumnRef implements TiExpr {
   @Override
   public String toString() {
     return String.format("[%s]", getName());
+  }
+
+  @Override
+  public List<TiExpr> getChildren() {
+    return ImmutableList.of();
+  }
+
+  @Override
+  public <R, C> R accept(Visitor<R, C> visitor, C context) {
+    return visitor.visit(this, context);
   }
 }
