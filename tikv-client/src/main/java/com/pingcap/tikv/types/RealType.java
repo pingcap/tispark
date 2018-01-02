@@ -29,7 +29,7 @@ public class RealType extends DataType {
     return new RealType(tp);
   }
 
-  private RealType(int tp) {
+  RealType(int tp) {
     super(tp);
   }
 
