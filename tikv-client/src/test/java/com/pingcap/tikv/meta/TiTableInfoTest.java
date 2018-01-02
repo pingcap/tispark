@@ -19,7 +19,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pingcap.tikv.types.BytesType;
+import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.IntegerType;
 import java.io.*;
 import org.junit.Test;
@@ -183,7 +183,7 @@ public class TiTableInfoTest {
     assertEquals("c1", tableInfo.getColumns().get(0).getName());
     assertEquals(IntegerType.class, tableInfo.getColumns().get(0).getType().getClass());
     assertEquals("c2", tableInfo.getColumns().get(1).getName());
-    assertEquals(BytesType.class, tableInfo.getColumns().get(1).getType().getClass());
+    assertEquals(StringType.class, tableInfo.getColumns().get(1).getType().getClass());
     assertTrue(tableInfo.isPkHandle());
   }
 

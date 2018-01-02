@@ -15,38 +15,150 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
+import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.expression.ComparisonExpression;
+import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.TiColumnRef;
 import com.pingcap.tikv.expression.TiExpr;
-import com.pingcap.tikv.expression.TiFunctionExpression;
-import com.pingcap.tikv.expression.scalar.And;
+import com.pingcap.tikv.expression.Visitor;
+import com.pingcap.tikv.expression.visitor.IndexRangeBuilder;
+import com.pingcap.tikv.key.CompoundKey;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.key.TypedKey;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public class PredicateUtils {
   public static TiExpr mergeCNFExpressions(List<TiExpr> exprs) {
-    requireNonNull(exprs);
+    requireNonNull(exprs, "Expression list is null");
     if (exprs.size() == 0) return null;
     if (exprs.size() == 1) return exprs.get(0);
 
-    return new And(exprs.get(0), mergeCNFExpressions(exprs.subList(1, exprs.size())));
+    return and(exprs.get(0), mergeCNFExpressions(exprs.subList(1, exprs.size())));
   }
 
   public static Set<TiColumnRef> extractColumnRefFromExpr(TiExpr expr) {
     Set<TiColumnRef> columnRefs = new HashSet<>();
-    if (expr instanceof TiFunctionExpression) {
-      TiFunctionExpression tiF = (TiFunctionExpression) expr;
-      for (TiExpr arg : tiF.getArgs()) {
-        if (arg instanceof TiColumnRef) {
-          TiColumnRef tiCR = (TiColumnRef) arg;
-          columnRefs.add(tiCR);
-        }
+    Visitor<Void, Set<TiColumnRef>> visitor = new Visitor<Void, Set<TiColumnRef>>() {
+      @Override
+      protected Void visit(TiColumnRef node, Set<TiColumnRef> context) {
+        context.add(node);
+        return null;
       }
-    } else if (expr instanceof TiColumnRef) {
-      columnRefs.add(((TiColumnRef) expr));
-    }
+    };
+
+    expr.accept(visitor, columnRefs);
     return columnRefs;
+  }
+
+  public static boolean isBinaryLogicalOp(TiExpr expression, LogicalBinaryExpression.Type type) {
+    if (expression instanceof LogicalBinaryExpression) {
+      return ((LogicalBinaryExpression) expression).getCompType() == type;
+    } else {
+      return false;
+    }
+  }
+
+  public static boolean isComparisonOp(TiExpr expression, ComparisonExpression.Type type) {
+    if (expression instanceof ComparisonExpression) {
+      return ((ComparisonExpression) expression).getComparisonType() == type;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Build index ranges from access points and access conditions
+   *
+   * @param pointExprs conditions converting to a single point access
+   * @param rangeExpr conditions converting to a range
+   * @return Index Range for scan
+   */
+  public static List<IndexRange> expressionToIndexRanges(
+      List<TiExpr> pointExprs,
+      Optional<TiExpr> rangeExpr) {
+    requireNonNull(pointExprs, "pointExprs is null");
+    requireNonNull(rangeExpr, "rangeExpr is null");
+    ImmutableList.Builder<IndexRange> builder = ImmutableList.builder();
+    List<Key> pointKeys = expressionToPoints(pointExprs);
+    for (Key key : pointKeys) {
+      if (rangeExpr.isPresent()) {
+        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangeExpr.get());
+        for (Range<TypedKey> range : ranges) {
+          builder.add(new IndexRange(key, range));
+        }
+      } else {
+        builder.add(new IndexRange(key));
+      }
+    }
+    return builder.build();
+  }
+
+  /**
+   * Turn access conditions into list of points Each condition is bound to single key We pick up
+   * single condition for each index key and disregard if multiple EQ conditions in DNF
+   *
+   * @param pointPredicates expressions that convertible to access points
+   * @return access points for each index
+   */
+  private static List<Key> expressionToPoints(List<TiExpr> pointPredicates) {
+    requireNonNull(pointPredicates, "pointPredicates cannot be null");
+
+    List<Key> resultKeys = new ArrayList<>();
+    for (int i = 0; i < pointPredicates.size(); i++) {
+      TiExpr predicate = pointPredicates.get(i);
+      try {
+        // each expr will be expand to one or more points
+        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(predicate);
+        List<Key> points = rangesToPoint(ranges);
+        resultKeys = joinKeys(resultKeys, points);
+      } catch (Exception e) {
+        throw new TiClientInternalException(String.format("Error converting access points %s", predicate), e);
+      }
+    }
+    return resultKeys;
+  }
+
+  // Convert ranges of equal condition points to List of TypedKeys
+  private static List<Key> rangesToPoint(Set<Range<TypedKey>> ranges) {
+    requireNonNull(ranges, "ranges is null");
+    ImmutableList.Builder<Key> builder = ImmutableList.builder();
+    for (Range<TypedKey> range : ranges) {
+      // test if range is a point
+      if (range.hasLowerBound() &&
+          range.hasUpperBound() &&
+          range.lowerEndpoint().equals(range.upperEndpoint())) {
+        builder.add(range.lowerEndpoint());
+      } else {
+        throw new TiClientInternalException("Cannot convert range to point");
+      }
+    }
+    return builder.build();
+  }
+
+  private static List<Key> joinKeys(List<Key> lhsKeys, List<Key> rhsKeys) {
+    requireNonNull(lhsKeys, "lhsKeys is null");
+    requireNonNull(rhsKeys, "rhsKeys is null");
+    if (lhsKeys.isEmpty()) {
+      return rhsKeys;
+    }
+    if (rhsKeys.isEmpty()) {
+      return lhsKeys;
+    }
+    ImmutableList.Builder<Key> builder = ImmutableList.builder();
+    for (Key lKey : lhsKeys) {
+      for (Key rKey : rhsKeys) {
+        builder.add(CompoundKey.concat(lKey, rKey));
+      }
+    }
+    return builder.build();
   }
 }

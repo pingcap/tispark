@@ -21,19 +21,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.TableInfo;
-import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.kvproto.Pdpb.Timestamp;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DataType.EncodeType;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.TimestampType;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import java.io.Serializable;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -98,6 +88,13 @@ public class TiTableInfo implements Serializable {
 
   public List<TiColumnInfo> getColumns() {
     return columns;
+  }
+
+  public TiColumnInfo getColumn(int offset) {
+    if (offset < 0 || offset >= columns.size()) {
+      throw new TiClientInternalException(String.format("Column offset %d out of bound", offset));
+    }
+    return columns.get(offset);
   }
 
   public boolean isPkHandle() {
