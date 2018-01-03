@@ -51,9 +51,9 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       .add("tp_bit") // TODO: bit type is ignored due to false decoding
       //      .add("tp_datetime") // time zone shift
       //      .add("tp_year") // year in spark shows extra month and day
-      //      .add("tp_time") // Time format is not the same in TiDB and spark
-      .add("tp_enum") // TODO: enum and set are ignored because we are not supporting them yet
+      .add("tp_enum") // TODO: enum, set and time are ignored because we are not supporting them yet
       .add("tp_set")
+      .add("tp_time")
 //      .add("tp_binary")
 //      .add("tp_blob")
       .build()
@@ -71,18 +71,18 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     testBundle(dbName,
       //      createSelfJoinTypeTest ++
       //      createSymmetryTypeTestCases ++
-      createCartesianTypeTestCases ++
-      createArithmeticTest ++
-      createPlaceHolderTest ++
-      createCount ++
-      createInTest ++
-      createDistinct ++
-      createBetween ++
-      createArithmeticAgg ++
       createFirstLast ++
-      createUnion ++
-      createAggregate ++
-      createHaving
+        createUnion ++
+        createAggregate ++
+        createHaving ++
+        createArithmeticAgg ++
+        createCartesianTypeTestCases ++
+        createArithmeticTest ++
+        createPlaceHolderTest ++
+        createCount ++
+        createInTest ++
+        createDistinct ++
+        createBetween
     )
   }
 

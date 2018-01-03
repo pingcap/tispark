@@ -2,38 +2,24 @@
 
 source _env.sh
 
-echo "Usage: <bin> [-a | -s | -i | -d | -h]"
+echo "Usage: <bin> [-a | -d | -h]"
 
 isDebug=false
 
-while getopts ":shida" arg
+while getopts ":hda" arg
 do
     case ${arg} in
         d)
             isDebug=true
             ;;
         a)
-            cd ../tikv-client-lib-java/
-            mvn clean install
             cd ../
             mvn clean install
             cd integtest/
-            mvn clean install
-            ;;
-        s)
-            cd ../
-            mvn clean install
-            cd integtest/
-            mvn clean install
-            ;;
-        i)
-            mvn clean install
             ;;
         h)
             echo "Options"
-            echo "  -a        make all projects"
-            echo "  -s        make tiSpark and integration test projects"
-            echo "  -i        make integration test only"
+            echo "  -a        build all projects"
             echo "  -d        debug mode"
             echo "  -h        show help"
             exit 1
