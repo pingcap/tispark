@@ -43,6 +43,11 @@ public class ExpressionTypeInferrer extends Visitor<DataType, Void> {
     return typeMap;
   }
 
+  public static DataType inferType(Expression expression) {
+    ExpressionTypeInferrer inf = new ExpressionTypeInferrer();
+    return inf.infer(expression);
+  }
+
   public DataType infer(Expression expression) {
     requireNonNull(expression, "expression is null");
     return expression.accept(this, null);

@@ -15,22 +15,24 @@
 
 package com.pingcap.tikv.meta;
 
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+import com.pingcap.tidb.tipb.Expr;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.aggregate.Min;
-import com.pingcap.tikv.expression.aggregate.Sum;
-import com.pingcap.tikv.expression.scalar.LessEqual;
-import com.pingcap.tikv.expression.scalar.Plus;
+import com.pingcap.tikv.expression.FunctionCall;
+import com.pingcap.tikv.expression.visitor.ExpressionTypeInferrer;
+import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
-import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.StringType;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
@@ -53,12 +55,21 @@ public class TiDAGRequestTest {
   public void testSerializable() throws Exception {
     TiTableInfo table = createTable();
     TiDAGRequest selReq = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
+    Constant c1 = Constant.create(1L, IntegerType.BIGINT);
+    Constant c2 = Constant.create(2L, IntegerType.BIGINT);
+    ColumnRef col1 = ColumnRef.create("c1", table);
+    ColumnRef col2 = ColumnRef.create("c2", table);
+    ColumnRef col3 = ColumnRef.create("c3", table);
+
+    FunctionCall sum = FunctionCall.newCall("sum", col1);
+    FunctionCall min = FunctionCall.newCall("min", col1);
+
     selReq
-        .addRequiredColumn(ColumnRef.create("c1", table))
-        .addRequiredColumn(ColumnRef.create("c2", table))
-        .addAggregate(new Sum(ColumnRef.create("c1", table)))
-        .addAggregate(new Min(ColumnRef.create("c1", table)))
-        .addWhere(new Plus(Constant.create(1L), Constant.create(2L)))
+        .addRequiredColumn(col1)
+        .addRequiredColumn(col2)
+        .addAggregate(sum, ExpressionTypeInferrer.inferType(sum))
+        .addAggregate(min, ExpressionTypeInferrer.inferType(min))
+        .addWhere(plus(c1, c2))
         .addGroupByItem(
             ByItem.create(ColumnRef.create("c2", table), true))
         .addOrderByItem(
@@ -68,7 +79,7 @@ public class TiDAGRequestTest {
         .setTruncateMode(TiDAGRequest.TruncateMode.IgnoreTruncation)
         .setDistinct(true)
         .setIndexInfo(table.getIndices().get(0))
-        .setHaving(new LessEqual(ColumnRef.create("c3", table), Constant.create(2L)))
+        .setHaving(lessEqual(col3, c2))
         .setLimit(100)
         .addRanges(
             ImmutableList.of(
@@ -92,14 +103,21 @@ public class TiDAGRequestTest {
     for (int i = 0; i < lhs.getFields().size(); i++) {
       Expression lhsExpr = lhs.getFields().get(i);
       Expression rhsExpr = rhs.getFields().get(i);
-      if (!lhsExpr.toProto().equals(rhsExpr.toProto())) return false;
+      Expr lhsExprProto = ProtoConverter.toProto(lhsExpr);
+      Expr rhsExprProto = ProtoConverter.toProto(rhsExpr);
+
+      if (!lhsExprProto.equals(rhsExprProto)) return false;
     }
 
     assertEquals(lhs.getAggregates().size(), rhs.getAggregates().size());
     for (int i = 0; i < lhs.getAggregates().size(); i++) {
       Expression lhsExpr = lhs.getAggregates().get(i);
       Expression rhsExpr = rhs.getAggregates().get(i);
-      if (!lhsExpr.toProto().equals(rhsExpr.toProto())) return false;
+
+      Expr lhsExprProto = ProtoConverter.toProto(lhsExpr);
+      Expr rhsExprProto = ProtoConverter.toProto(rhsExpr);
+
+      if (!lhsExprProto.equals(rhsExprProto)) return false;
     }
 
     assertEquals(lhs.getGroupByItems().size(), rhs.getGroupByItems().size());
@@ -127,7 +145,11 @@ public class TiDAGRequestTest {
     for (int i = 0; i < lhs.getWhere().size(); i++) {
       Expression lhsItem = lhs.getWhere().get(i);
       Expression rhsItem = rhs.getWhere().get(i);
-      if (!lhsItem.toProto().equals(rhsItem.toProto())) return false;
+
+      Expr lhsExprProto = ProtoConverter.toProto(lhsItem);
+      Expr rhsExprProto = ProtoConverter.toProto(rhsItem);
+
+      if (!lhsExprProto.equals(rhsExprProto)) return false;
     }
 
     assertEquals(lhs.getTableInfo().toProto(), rhs.getTableInfo().toProto());

@@ -15,17 +15,35 @@
 
 package com.pingcap.tikv.expression;
 
+import static java.util.Objects.requireNonNull;
+
+import com.google.common.collect.ImmutableList;
 import java.util.List;
 
 public class FunctionCall implements Expression {
+  private final String name;
+  private final List<Expression> arguments;
+
+  public static FunctionCall newCall(String name, Expression...args) {
+    return new FunctionCall(name, args);
+  }
+
+  private FunctionCall(String name, Expression[] arguments) {
+    this.name = requireNonNull(name, "function name is null").toLowerCase();
+    this.arguments = ImmutableList.copyOf(requireNonNull(arguments, "function argument is null"));
+  }
+
+  public String getName() {
+    return name;
+  }
 
   @Override
   public List<Expression> getChildren() {
-    return null;
+    return arguments;
   }
 
   @Override
   public <R, C> R accept(Visitor<R, C> visitor, C context) {
-    return null;
+    return visitor.visit(this, context);
   }
 }
