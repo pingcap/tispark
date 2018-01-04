@@ -223,11 +223,11 @@ case class RegionTaskExec(child: SparkPlan,
           }
 
           /**
-           * Checks whether a request should be downgraded according to some restrictions
+           * Checks whether the number of handles retrieved from TiKV exceeds the `downgradeThreshold`.
            *
-           * @return true, the request should be downgraded, false otherwise.
+           * @return true, the number of handles retrieved exceeds the `downgradeThreshold`, false otherwise.
            */
-          def satisfyDowngradeThreashold: Boolean = {
+          def satisfyDowngradeThreshold: Boolean = {
             handles.length > downgradeThreshold
           }
 
@@ -275,7 +275,7 @@ case class RegionTaskExec(child: SparkPlan,
             task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
           }
 
-          def submitTasks(tasks: util.List[RegionTask]): Unit = {
+          def submitTasks(tasks: List[RegionTask]): Unit = {
             taskCount += 1
             val task = new Callable[util.Iterator[TiRow]] {
               override def call(): util.Iterator[TiRow] = {
@@ -285,7 +285,7 @@ case class RegionTaskExec(child: SparkPlan,
             completionService.submit(task)
           }
 
-          def doIndexScan():Unit = {
+          def doIndexScan(): Unit = {
             while (handleIterator.hasNext) {
               val handleList = feedBatch()
               numHandles += handleList.size()
@@ -310,13 +310,21 @@ case class RegionTaskExec(child: SparkPlan,
                 )
               })
 
-              submitTasks(tasks)
+              submitTasks(tasks.toList)
             }
           }
 
-          def doDowngradeScan(taskRanges: List[KeyRange]):Unit = {
-            // We merge potential separate index ranges from `taskRanges` into one large range
-            // and create a new RegionTask
+          /**
+           * We merge potentially discrete index ranges from `taskRanges` into one large range
+           * and create a new [[RegionTask]] for the downgraded plan to execute. Should add
+           * filters for DAG request.
+           *
+           * @param taskRanges the index scan ranges
+           */
+          def doDowngradeScan(taskRanges: List[KeyRange]): Unit = {
+            // Restore original filters to perform downgraded table scan logic
+            dagRequest.resetFilters(dagRequest.getDowngradeFilters)
+
             val tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
               .splitRangeByRegion(KeyRangeUtils.mergeRanges(taskRanges))
@@ -335,16 +343,16 @@ case class RegionTaskExec(child: SparkPlan,
             )
             numDowngradedTasks += 1
 
-            submitTasks(tasks)
+            submitTasks(tasks.toList)
           }
 
           def checkIsUnaryRange(regionTask: RegionTask): Boolean = {
             regionTask.getRanges.size() == 1
           }
 
-          if (satisfyDowngradeThreashold) {
+          if (satisfyDowngradeThreshold) {
             val handleList = new TLongArrayList()
-            handles.foreach{ handleList.add }
+            handles.foreach { handleList.add }
             // After `splitHandlesByRegion`, ranges in the task are arranged in order
             val tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
@@ -354,14 +362,13 @@ case class RegionTaskExec(child: SparkPlan,
               )
             proceedTasksOrThrow(tasks)
 
-            // if the original index scan task contains only one KeyRange, we don't need to downgrade that since downgrading
-            // will result in more filters and may slow down the data processing of TiVK.
+            // if the original index scan task contains only one KeyRange, we don't need to downgrade that since downgraded
+            // plan will result in more filters and may be slower than the original index scan plan.
             if (checkIsUnaryRange(tasks.head)) {
+              logger.info(s"Unary index scan range found, performing index scan.")
               doIndexScan()
             } else {
               // Should downgrade to full table scan for one region
-              // Restore original filters to perform table scan logic
-              dagRequest.resetFilters(dagRequest.getDowngradeFilters)
               val taskRanges = tasks.head.getRanges
               logger.warn(
                 s"Index scan handle size:${handles.length} exceed downgrade threshold:$downgradeThreshold" +
