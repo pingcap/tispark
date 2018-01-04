@@ -23,7 +23,7 @@ import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableR
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.{Partition, TaskContext}
+import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -50,17 +50,25 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
   override def compute(split: Partition, context: TaskContext): Iterator[Row] =
     new Iterator[Row] {
       dagRequest.resolve()
-      // bypass, sum return a long type
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
       private val snapshot = session.createSnapshot(ts)
-      private val handleIter =
-        snapshot.indexHandleRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+      private[this] val tasks = tiPartition.tasks
+
+      private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
       private val tableId = dagRequest.getTableInfo.getId
       private val regionManager = session.getRegionManager
       private lazy val handleList = {
         val lst = new TLongArrayList()
-        handleIter.asScala.foreach { lst.add(_) }
+        handleIterator.asScala.foreach {
+          // Kill the task in case it has been marked as killed. This logic is from
+          // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
+          // to avoid performance overhead.
+          if (context.isInterrupted()) {
+            throw new TaskKilledException
+          }
+          lst.add(_)
+        }
         lst
       }
       // Fetch all handles and group by region id
@@ -70,7 +78,13 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
 
       private val iterator = regionHandleMap.iterator()
 
-      override def hasNext: Boolean = iterator.hasNext
+      override def hasNext: Boolean = {
+        // Kill the task in case it has been marked as killed.
+        if (context.isInterrupted()) {
+          throw new TaskKilledException
+        }
+        iterator.hasNext
+      }
 
       override def next(): Row = {
         iterator.advance()

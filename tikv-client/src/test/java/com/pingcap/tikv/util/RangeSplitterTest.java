@@ -17,6 +17,7 @@ import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,6 +35,17 @@ public class RangeSplitterTest {
           ranges
               .stream()
               .collect(Collectors.toMap(kr -> kr, kr -> region(ranges.indexOf(kr), kr)));
+    }
+
+    @Override
+    public TiRegion getRegionById(long regionId) {
+      return mockRegionMap.entrySet().stream().filter(e -> e.getValue().getId() == regionId).findFirst().get().getValue();
+    }
+
+    @Override
+    public Pair<TiRegion, Metapb.Store> getRegionStorePairByRegionId(long id) {
+      Map.Entry<KeyRange, TiRegion> entry = mockRegionMap.entrySet().stream().filter(e -> e.getValue().getId() == id).findFirst().get();
+      return Pair.create(entry.getValue(), Metapb.Store.newBuilder().setId(entry.getValue().getId()).build());
     }
 
     @Override
@@ -166,7 +178,12 @@ public class RangeSplitterTest {
     ));
 
     RangeSplitter s = RangeSplitter.newSplitter(mgr);
-    List<RangeSplitter.RegionTask> tasks = s.splitHandlesByRegion(tableId, handles);
+    List<RangeSplitter.RegionTask> tasks = new ArrayList<>(s.splitHandlesByRegion(tableId, handles));
+    tasks.sort((l, r) -> {
+      Long regionIdLeft = l.getRegion().getId();
+      Long regionIdRight = r.getRegion().getId();
+      return regionIdLeft.compareTo(regionIdRight);
+    });
 
     // [-INF, -100): [Long.MIN_VALUE, Long.MIN_VALUE + 1), [-255, -254)
     assertEquals(tasks.get(0).getRegion().getId(), 0);
