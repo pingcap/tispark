@@ -42,7 +42,7 @@ public class Cast extends NoOp {
     } else if (targetDataType instanceof RealType) {
       casted = castToDouble(value);
     } else {
-      throw new UnsupportedOperationException("only support cast to Long, Double and String");
+      casted = value;
     }
     row.set(pos, targetDataType, casted);
   }
