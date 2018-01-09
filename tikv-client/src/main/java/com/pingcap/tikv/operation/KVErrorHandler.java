@@ -31,26 +31,53 @@ import org.apache.log4j.Logger;
 
 import java.util.function.Function;
 
+// TODO: consider refactor to Builder mode
 public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private static final Logger logger = Logger.getLogger(KVErrorHandler.class);
-  private Function<RespT, Errorpb.Error> getRegionError;
-  private Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
-  private RegionManager regionManager;
-  private RegionErrorReceiver recv;
-  private TiRegion ctxRegion;
+  private final Function<RespT, Errorpb.Error> getRegionError;
+  private final Function<RespT, String> getOtherError;
+  private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
+  private final RegionManager regionManager;
+  private final RegionErrorReceiver recv;
+  private final TiRegion ctxRegion;
+
+  public KVErrorHandler(
+      RegionManager regionManager,
+      RegionErrorReceiver recv,
+      TiRegion ctxRegion,
+      Function<RespT, Errorpb.Error> getRegionError,
+      Function<RespT, String> getOtherError) {
+    this.ctxRegion = ctxRegion;
+    this.recv = recv;
+    this.regionManager = regionManager;
+    this.getRegionError = getRegionError;
+    this.getOtherError = getOtherError;
+    this.cacheInvalidateCallBack =
+        regionManager != null && regionManager.getSession() != null ?
+            regionManager.getSession().getCacheInvalidateCallback() : null;
+  }
 
   public KVErrorHandler(
       RegionManager regionManager,
       RegionErrorReceiver recv,
       TiRegion ctxRegion,
       Function<RespT, Errorpb.Error> getRegionError) {
-    this.ctxRegion = ctxRegion;
-    this.recv = recv;
-    this.regionManager = regionManager;
-    this.getRegionError = getRegionError;
-    this.cacheInvalidateCallBack =
-        regionManager != null && regionManager.getSession() != null ?
-        regionManager.getSession().getCacheInvalidateCallback() : null;
+    this(regionManager, recv, ctxRegion, getRegionError, null);
+  }
+
+  private Errorpb.Error getRegionError(RespT resp) {
+    if (getRegionError != null) {
+      return getRegionError.apply(resp);
+    }
+    return null;
+  }
+
+  private String getOtherError(RespT resp) {
+    if (getOtherError != null) {
+      String otherError = getOtherError.apply(resp);
+      return (otherError == null || otherError.trim().isEmpty()) ? null : otherError;
+    }
+    return null;
   }
 
   public void handle(RespT resp) {
@@ -66,7 +93,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       return;
     }
 
-    Errorpb.Error error = getRegionError.apply(resp);
+    // Region error handling logic
+    Errorpb.Error error = getRegionError(resp);
     if (error != null) {
       if (error.hasNotLeader()) {
         // update Leader here
@@ -81,12 +109,12 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
             CacheInvalidateEvent.CacheType.LEADER
         );
         recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
-                         this.regionManager.getStoreById(newStoreId));
+            this.regionManager.getStoreById(newStoreId));
         throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasStoreNotMatch()) {
         logger.warn(String.format("Store Not Match happened with region id %d, store id %d",
-                                  ctxRegion.getId(),
-                                  ctxRegion.getLeader().getStoreId()));
+            ctxRegion.getId(),
+            ctxRegion.getLeader().getStoreId()));
 
         regionManager.invalidateRegion(ctxRegion.getId());
         regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
@@ -126,6 +154,15 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         );
         throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       }
+    }
+
+    // Other error handling logic
+    // Currently we need to handle potential other errors from coprocessor responses.
+    String otherError = getOtherError(resp);
+    if (otherError != null) {
+      logger.warn(String.format("Other error occurred for region [%s]", ctxRegion));
+      // Just throw to upper layer to handle
+      throw new IllegalStateException("Received other error from TiKV:" + otherError);
     }
   }
 
