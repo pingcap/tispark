@@ -15,18 +15,13 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
+import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.key.IndexKey;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
@@ -35,10 +30,16 @@ import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static java.util.Objects.requireNonNull;
 
 
 public class ScanAnalyzer {
@@ -118,7 +119,8 @@ public class ScanAnalyzer {
     return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost);
   }
 
-  private List<KeyRange> buildTableScanKeyRange(TiTableInfo table, List<IndexRange> indexRanges) {
+  @VisibleForTesting
+  List<KeyRange> buildTableScanKeyRange(TiTableInfo table, List<IndexRange> indexRanges) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
 
@@ -174,7 +176,8 @@ public class ScanAnalyzer {
     return ranges;
   }
 
-  private List<KeyRange> buildIndexScanKeyRange(
+  @VisibleForTesting
+  List<KeyRange> buildIndexScanKeyRange(
       TiTableInfo table, TiIndexInfo index, List<IndexRange> indexRanges) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(index, "Index cannot be null to encoding keyRange");

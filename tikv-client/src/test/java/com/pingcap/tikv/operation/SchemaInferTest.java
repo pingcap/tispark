@@ -17,24 +17,23 @@
 
 package com.pingcap.tikv.operation;
 
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
-import static com.pingcap.tikv.expression.visitor.ExpressionTypeInferrer.inferType;
-import static org.junit.Assert.assertEquals;
-
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.CatalogTransaction;
-import com.pingcap.tikv.expression.ByItem;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.FunctionCall;
+import com.pingcap.tikv.expression.*;
+import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DecimalType;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
-import java.util.List;
 import org.junit.Test;
+
+import java.util.List;
+
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
+import static com.pingcap.tikv.expression.visitor.ExpressionTypeInferrer.inferType;
+import static org.junit.Assert.assertEquals;
 
 public class SchemaInferTest {
   private final String table29 =
@@ -47,6 +46,13 @@ public class SchemaInferTest {
   private Expression sum = FunctionCall.newCall("sum", number);
   private ByItem simpleGroupBy = ByItem.create(name, false);
   private ByItem complexGroupBy = ByItem.create(plus(name, Constant.create("1", StringType.VARCHAR)), false);
+
+  private static TiTableInfo createTable() {
+    return new MetaUtils.TableBuilder()
+        .name("testTable")
+        .addColumn("name", IntegerType.INT, true)
+        .build();
+  }
 
   @Test
   public void simpleSelectSchemaInferTest() throws Exception {
@@ -72,9 +78,11 @@ public class SchemaInferTest {
   public void selectAggWithGroupBySchemaInferTest() throws Exception {
     // select sum(number) from t1 group by name;
     TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
+    dagRequest.setTableInfo(createTable());
     dagRequest.getFields().add(name);
     dagRequest.addAggregate(sum, inferType(sum));
     dagRequest.getGroupByItems().add(simpleGroupBy);
+    dagRequest.resolve();
     List<DataType> dataTypes = SchemaInfer.create(dagRequest).getTypes();
     assertEquals(2, dataTypes.size());
     assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
@@ -85,9 +93,11 @@ public class SchemaInferTest {
   public void complexGroupBySelectTest() throws Exception {
     // select sum(number) from t1 group by name + "1";
     TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
+    dagRequest.setTableInfo(createTable());
     dagRequest.getFields().add(name);
     dagRequest.addAggregate(sum, inferType(sum));
     dagRequest.getGroupByItems().add(complexGroupBy);
+    dagRequest.resolve();
     List<DataType> dataTypes = SchemaInfer.create(dagRequest).getTypes();
     assertEquals(2, dataTypes.size());
     assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
