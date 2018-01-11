@@ -17,6 +17,7 @@ package com.pingcap.tikv.expression;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 
@@ -53,5 +54,10 @@ public class FunctionCall implements Expression {
   @Override
   public <R, C> R accept(Visitor<R, C> visitor, C context) {
     return visitor.visit(this, context);
+  }
+
+  @Override
+  public String toString() {
+    return String.format("%s(%s)", getType(), Joiner.on(",").useForNull("NULL").join(getChildren()));
   }
 }
