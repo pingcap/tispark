@@ -15,6 +15,11 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
@@ -30,16 +35,10 @@ import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
-import static java.util.Objects.requireNonNull;
 
 
 public class ScanAnalyzer {
@@ -188,38 +187,38 @@ public class ScanAnalyzer {
     for (IndexRange ir : indexRanges) {
       Key pointKey = ir.getAccessKey();
 
-      Range<TypedKey> r = ir.getRange();
+      Range<TypedKey> range = ir.getRange();
       Key lPointKey;
       Key uPointKey;
 
       Key lKey;
       Key uKey;
-      if (r == null) {
+      if (range == null) {
         lPointKey = pointKey;
         uPointKey = pointKey.next();
 
-        lKey = Key.NULL;
-        uKey = Key.NULL;
+        lKey = Key.EMPTY;
+        uKey = Key.EMPTY;
       } else {
         lPointKey = pointKey;
         uPointKey = pointKey;
 
-        if (!r.hasLowerBound()) {
+        if (!range.hasLowerBound()) {
           // -INF
           lKey = Key.MIN;
         } else {
-          lKey = r.lowerEndpoint();
-          if (r.lowerBoundType().equals(BoundType.OPEN)) {
+          lKey = range.lowerEndpoint();
+          if (range.lowerBoundType().equals(BoundType.OPEN)) {
             lKey = lKey.next();
           }
         }
 
-        if (!r.hasUpperBound()) {
+        if (!range.hasUpperBound()) {
           // INF
           uKey = Key.MAX;
         } else {
-          uKey = r.upperEndpoint();
-          if (r.upperBoundType().equals(BoundType.CLOSED)) {
+          uKey = range.upperEndpoint();
+          if (range.upperBoundType().equals(BoundType.CLOSED)) {
             uKey = uKey.next();
           }
         }

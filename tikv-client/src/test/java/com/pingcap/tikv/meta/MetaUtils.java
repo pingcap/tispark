@@ -47,11 +47,17 @@ public class MetaUtils {
     private String name;
     private List<TiColumnInfo> columns = new ArrayList<>();
     private List<TiIndexInfo> indices = new ArrayList<>();
+    private Long tid = null;
 
     public TableBuilder() {}
 
     public TableBuilder name(String name) {
       this.name = name;
+      return this;
+    }
+
+    public TableBuilder tableId(long id) {
+      this.tid = id;
       return this;
     }
 
@@ -71,7 +77,7 @@ public class MetaUtils {
       return this;
     }
 
-    public TableBuilder appendIndex(String indexName, List<String> colNames, boolean isPk) {
+    public TableBuilder appendIndex(long iid, String indexName, List<String> colNames, boolean isPk) {
       List<TiIndexColumn> indexCols =
           colNames
               .stream()
@@ -82,7 +88,7 @@ public class MetaUtils {
 
       TiIndexInfo index =
           new TiIndexInfo(
-              newId(),
+              iid,
               CIStr.newCIStr(indexName),
               CIStr.newCIStr(name),
               ImmutableList.copyOf(indexCols),
@@ -96,13 +102,19 @@ public class MetaUtils {
       return this;
     }
 
+    public TableBuilder appendIndex(String indexName, List<String> colNames, boolean isPk) {
+      return appendIndex(newId(), indexName, colNames, isPk);
+    }
+
     public TableBuilder setPkHandle(boolean pkHandle) {
       this.pkHandle = pkHandle;
       return this;
     }
 
     public TiTableInfo build() {
-      long tid = newId();
+      if (tid == null) {
+        tid = newId();
+      }
       if (name == null) {
         name = "Table" + tid;
       }

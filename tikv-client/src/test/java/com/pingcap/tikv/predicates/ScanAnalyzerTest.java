@@ -15,6 +15,14 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static java.util.Objects.requireNonNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
@@ -27,28 +35,30 @@ import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.*;
-import org.junit.Test;
-
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DataTypeFactory;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.MySQLType;
+import com.pingcap.tikv.types.StringType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import org.junit.Test;
 
 public class ScanAnalyzerTest {
   private static TiTableInfo createTable() {
+    return createTable(1, 1);
+  }
+
+  private static TiTableInfo createTable(long tableId, long indexId) {
     return new MetaUtils.TableBuilder()
         .name("testTable")
         .addColumn("c1", IntegerType.INT, true)
         .addColumn("c2", StringType.VARCHAR)
         .addColumn("c3", StringType.VARCHAR)
         .addColumn("c4", IntegerType.TINYINT)
-        .appendIndex("testIndex", ImmutableList.of("c1", "c2", "c3"), false)
+        .tableId(tableId)
+        .appendIndex(indexId, "testIndex", ImmutableList.of("c1", "c2", "c3"), false)
         .build();
   }
 
@@ -101,14 +111,13 @@ public class ScanAnalyzerTest {
 //    assertEquals(keyRange.getEnd(), ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,1}));
   }
 
-  // TODO: fix buildIndexScanKeyRange() when <null> range is encountered.
   @Test
   public void buildIndexScanKeyRangeTest() throws Exception {
-    TiTableInfo table = createTable();
+    TiTableInfo table = createTable(6, 5);
     TiIndexInfo index = table.getIndices().get(0);
 
-    Expression eq1 = equal(ColumnRef.create("c1", table), Constant.create(0, IntegerType.INT));
-    Expression eq2 = lessEqual(ColumnRef.create("c2", table), Constant.create("wtf", StringType.VARCHAR));
+    Expression eq1 = equal(ColumnRef.create("c1", table), Constant.create(0));
+    Expression eq2 = lessEqual(ColumnRef.create("c2", table), Constant.create("wtf"));
 
     List<Expression> exprs = ImmutableList.of(eq1);
 
@@ -123,8 +132,8 @@ public class ScanAnalyzerTest {
 
     Coprocessor.KeyRange keyRange = keyRanges.get(0);
 
-    assertEquals(keyRange.getStart(), ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0}));
-    assertEquals(keyRange.getEnd(), ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,1}));
+    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0}), keyRange.getStart());
+    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,1}), keyRange.getEnd());
 
     exprs = ImmutableList.of(eq1, eq2);
     result = ScanAnalyzer.extractConditions(exprs, table, index);
@@ -137,8 +146,8 @@ public class ScanAnalyzerTest {
 
     keyRange = keyRanges.get(0);
 
-    assertEquals(keyRange.getStart(), ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,1}));
-    assertEquals(keyRange.getEnd(), ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,1,119,116,102,0,0,0,0,0,-5}));
+    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,1}), keyRange.getStart());
+    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,1,119,116,102,0,0,0,0,0,-5}), keyRange.getEnd());
   }
 
   @Test

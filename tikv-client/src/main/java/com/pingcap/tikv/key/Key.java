@@ -31,6 +31,7 @@ public class Key implements Comparable<Key> {
   protected final byte[] value;
   protected final int infFlag;
 
+  public final static Key EMPTY = createEmpty();
   public final static Key NULL = createNull();
   public final static Key MIN = createTypelessMin();
   public final static Key MAX = createTypelessMax();
@@ -69,6 +70,10 @@ public class Key implements Comparable<Key> {
         return "null";
       }
     };
+  }
+
+  private static Key createEmpty() {
+    return new Key(new byte[0]);
   }
 
   private static Key createTypelessMin() {
