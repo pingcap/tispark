@@ -1,9 +1,11 @@
+
 /*
  *
  * Copyright 2017 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
+ *
  * You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
@@ -26,7 +28,7 @@ import gnu.trove.list.array.TIntArrayList;
 
 import java.math.BigDecimal;
 
-public class DecimalType extends RealType {
+public class DecimalType extends DataType {
   static DecimalType of(int tp) {
     return new DecimalType(tp);
   }
