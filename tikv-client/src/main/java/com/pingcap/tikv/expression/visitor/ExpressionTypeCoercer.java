@@ -24,8 +24,8 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.FunctionCall;
-import com.pingcap.tikv.expression.FunctionCall.FunctionType;
+import com.pingcap.tikv.expression.AggregateFunction;
+import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.types.DataType;
@@ -152,7 +152,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   }
 
   @Override
-  protected Pair<DataType, Double> visit(FunctionCall node, DataType targetType) {
+  protected Pair<DataType, Double> visit(AggregateFunction node, DataType targetType) {
     FunctionType fType = node.getType();
     switch (fType) {
       case Count:
@@ -166,7 +166,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
       case First:
       case Max:
       case Min: {
-        Pair<DataType, Double> result = coerceType(targetType, node.getChildren().get(0));
+        Pair<DataType, Double> result = coerceType(targetType, node.getArgument());
         typeMap.put(node, result.first);
         return result;
       }

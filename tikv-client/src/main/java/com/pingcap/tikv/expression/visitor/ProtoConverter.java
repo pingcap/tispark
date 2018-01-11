@@ -29,8 +29,8 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.FunctionCall;
-import com.pingcap.tikv.expression.FunctionCall.FunctionType;
+import com.pingcap.tikv.expression.AggregateFunction;
+import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.types.BitType;
 import com.pingcap.tikv.types.BytesType;
@@ -226,7 +226,7 @@ public class ProtoConverter extends DefaultVisitor<Expr, Void> {
     return builder.build();
   }
 
-  protected Expr visit(FunctionCall node, Void context) {
+  protected Expr visit(AggregateFunction node, Void context) {
     Expr.Builder builder = Expr.newBuilder();
 
     FunctionType type = node.getType();

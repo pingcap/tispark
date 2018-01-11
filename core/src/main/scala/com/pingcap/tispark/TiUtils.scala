@@ -114,8 +114,8 @@ object TiUtils {
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
     tp match {
-      case _: BytesType   => sql.types.BinaryType
       case _: StringType  => sql.types.StringType
+      case _: BytesType   => sql.types.BinaryType
       case _: IntegerType => sql.types.LongType
       case _: RealType    => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.

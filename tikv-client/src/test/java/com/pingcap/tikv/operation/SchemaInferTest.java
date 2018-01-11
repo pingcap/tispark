@@ -27,14 +27,12 @@ import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.FunctionCall;
-import com.pingcap.tikv.expression.FunctionCall.FunctionType;
-import com.pingcap.tikv.meta.MetaUtils;
+import com.pingcap.tikv.expression.AggregateFunction;
+import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DecimalType;
-import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import java.util.List;
 import org.junit.Test;
@@ -47,16 +45,9 @@ public class SchemaInferTest {
   private TiTableInfo table = CatalogTransaction.parseFromJson(table29Bs, TiTableInfo.class);
   private Expression number = ColumnRef.create("number", table);
   private ColumnRef name = ColumnRef.create("name", table);
-  private Expression sum = FunctionCall.newCall(FunctionType.Sum, number);
+  private Expression sum = AggregateFunction.newCall(FunctionType.Sum, number);
   private ByItem simpleGroupBy = ByItem.create(name, false);
   private ByItem complexGroupBy = ByItem.create(plus(name, Constant.create("1", StringType.VARCHAR)), false);
-
-  private static TiTableInfo createTable() {
-    return new MetaUtils.TableBuilder()
-        .name("testTable")
-        .addColumn("name", IntegerType.INT, true)
-        .build();
-  }
 
   @Test
   public void simpleSelectSchemaInferTest() throws Exception {

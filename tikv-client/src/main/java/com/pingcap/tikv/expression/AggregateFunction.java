@@ -21,7 +21,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 
-public class FunctionCall implements Expression {
+public class AggregateFunction implements Expression {
   public enum FunctionType {
     Sum,
     Count,
@@ -31,24 +31,28 @@ public class FunctionCall implements Expression {
   }
 
   private final FunctionType type;
-  private final List<Expression> arguments;
+  private final Expression argument;
 
-  public static FunctionCall newCall(FunctionType type, Expression...args) {
-    return new FunctionCall(type, args);
+  public static AggregateFunction newCall(FunctionType type, Expression argument) {
+    return new AggregateFunction(type, argument);
   }
 
-  private FunctionCall(FunctionType type, Expression[] arguments) {
+  private AggregateFunction(FunctionType type, Expression argument) {
     this.type = requireNonNull(type, "function type is null");
-    this.arguments = ImmutableList.copyOf(requireNonNull(arguments, "function argument is null"));
+    this.argument = requireNonNull(argument, "function argument is null");
   }
 
   public FunctionType getType() {
     return type;
   }
 
+  public Expression getArgument() {
+    return argument;
+  }
+
   @Override
   public List<Expression> getChildren() {
-    return arguments;
+    return ImmutableList.of(argument);
   }
 
   @Override

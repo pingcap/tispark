@@ -29,5 +29,5 @@ public abstract class Visitor<R, C> {
 
   abstract protected R visit(Constant node, C context);
 
-  abstract protected R visit(FunctionCall node, C context);
+  abstract protected R visit(AggregateFunction node, C context);
 }

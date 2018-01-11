@@ -18,9 +18,10 @@ package org.apache.spark.sql
 import java.time.ZonedDateTime
 
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
+import com.pingcap.tikv.expression
 
 import scala.collection.JavaConverters._
-import com.pingcap.tikv.expression.FunctionCall.FunctionType
+import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
@@ -138,26 +139,29 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         throw new IllegalArgumentException("Should never be here")
 
       case f @ Sum(BasicExpression(arg)) =>
-        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.Sum), fromSparkType(f.dataType))
+        dagRequest.addAggregate(null, fromSparkType(f.dataType))
 
-      case f @ Count(args) =>
+      case f @ Count(args) if args.length == 1 =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
         dagRequest.addAggregate(
-          FunctionCall.newCall(FunctionType.Count, tiArgs: _*),
+          AggregateFunction.newCall(FunctionType.Count, tiArgs(0)),
           fromSparkType(f.dataType)
         )
 
       case f @ Min(BasicExpression(arg)) =>
         dagRequest
-          .addAggregate(FunctionCall.newCall(FunctionType.Min, arg), fromSparkType(f.dataType))
+          .addAggregate(AggregateFunction.newCall(FunctionType.Min, arg), fromSparkType(f.dataType))
 
       case f @ Max(BasicExpression(arg)) =>
         dagRequest
-          .addAggregate(FunctionCall.newCall(FunctionType.Max, arg), fromSparkType(f.dataType))
+          .addAggregate(AggregateFunction.newCall(FunctionType.Max, arg), fromSparkType(f.dataType))
 
       case f @ First(BasicExpression(arg), _) =>
         dagRequest
-          .addAggregate(FunctionCall.newCall(FunctionType.First, arg), fromSparkType(f.dataType))
+          .addAggregate(
+            AggregateFunction.newCall(FunctionType.First, arg),
+            fromSparkType(f.dataType)
+          )
 
       case _ =>
     }
