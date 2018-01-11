@@ -65,7 +65,7 @@ public class ColumnRef implements Expression {
       }
     }
     if (columnInfo == null) {
-      throw new TiExpressionException("No Matching columns from " + table.getName());
+      throw new TiExpressionException(String.format("No Matching column %s from table %s", name, table.getName()));
     }
 
     if (columnInfo.getId() == 0) {

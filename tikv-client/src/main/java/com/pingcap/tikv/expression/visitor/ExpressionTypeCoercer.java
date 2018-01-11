@@ -25,9 +25,11 @@ import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FunctionCall;
+import com.pingcap.tikv.expression.FunctionCall.FunctionType;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DecimalType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.Pair;
 import java.util.IdentityHashMap;
@@ -46,6 +48,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   private final static double CONSTANT_CRED = MIN_CREDIBILITY;
   private final static double LOGICAL_OP_CRED = MAX_CREDIBILITY;
   private final static double COMPARISON_OP_CRED = MAX_CREDIBILITY;
+  private final static double FUNCTION_CRED = MAX_CREDIBILITY;
 
   public IdentityHashMap<Expression, DataType> getTypeMap() {
     return typeMap;
@@ -150,6 +153,25 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
 
   @Override
   protected Pair<DataType, Double> visit(FunctionCall node, DataType targetType) {
-    return null;
+    FunctionType fType = node.getType();
+    switch (fType) {
+      case Count:
+      case Sum: {
+        if (targetType != null && targetType.equals(DecimalType.DECIMAL)) {
+          throw new TiExpressionException(String.format("Count cannot be %s", targetType));
+        }
+        typeMap.put(node, DecimalType.DECIMAL);
+        return Pair.create(targetType, FUNCTION_CRED);
+      }
+      case First:
+      case Max:
+      case Min: {
+        Pair<DataType, Double> result = coerceType(targetType, node.getChildren().get(0));
+        typeMap.put(node, result.first);
+        return result;
+      }
+      default:
+        throw new TiExpressionException(String.format("Unknown function %s", fType));
+    }
   }
 }

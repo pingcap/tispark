@@ -63,6 +63,8 @@ public class SchemaInferTest {
     // select name from t1;
     TiDAGRequest tiDAGRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
     tiDAGRequest.getFields().add(name);
+    tiDAGRequest.setTableInfo(table);
+    tiDAGRequest.resolve();
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
     assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(0).getClass());
@@ -73,6 +75,8 @@ public class SchemaInferTest {
     // select sum(number) from t1;
     TiDAGRequest tiDAGRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
     tiDAGRequest.addAggregate(sum, inferType(sum));
+    tiDAGRequest.setTableInfo(table);
+    tiDAGRequest.resolve();
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
     assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
@@ -82,7 +86,7 @@ public class SchemaInferTest {
   public void selectAggWithGroupBySchemaInferTest() throws Exception {
     // select sum(number) from t1 group by name;
     TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
-    dagRequest.setTableInfo(createTable());
+    dagRequest.setTableInfo(table);
     dagRequest.getFields().add(name);
     dagRequest.addAggregate(sum, inferType(sum));
     dagRequest.getGroupByItems().add(simpleGroupBy);
@@ -97,7 +101,7 @@ public class SchemaInferTest {
   public void complexGroupBySelectTest() throws Exception {
     // select sum(number) from t1 group by name + "1";
     TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
-    dagRequest.setTableInfo(createTable());
+    dagRequest.setTableInfo(table);
     dagRequest.getFields().add(name);
     dagRequest.addAggregate(sum, inferType(sum));
     dagRequest.getGroupByItems().add(complexGroupBy);
