@@ -18,12 +18,11 @@ package org.apache.spark.sql
 import java.time.ZonedDateTime
 
 import scala.collection.JavaConverters._
-
-import com.pingcap.tikv.exception.TiExpressionException
+import com.pingcap.tikv.expression.FunctionCall.FunctionType
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.predicates.ScanAnalyzer
+import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
@@ -46,6 +45,7 @@ import org.apache.spark.sql.types._
 // have multiple plan to pushdown
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf: SQLConf = context.conf
+  type TiExpression = com.pingcap.tikv.expression.Expression
 
   private def blacklist: ExpressionBlacklist = {
     val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
@@ -104,7 +104,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val table = source.table
     dagRequest.setTableInfo(table)
     if (dagRequest.getFields.isEmpty) {
-      dagRequest.addRequiredColumn(TiColumnRef.create(table.getColumns.get(0).getName))
+      dagRequest.addRequiredColumn(ColumnRef.create(table.getColumns.get(0).getName))
     }
     // Need to resolve column info after add aggregation push downs
     dagRequest.resolve()
@@ -136,27 +136,27 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         throw new IllegalArgumentException("Should never be here")
 
       case f @ Sum(BasicExpression(arg)) =>
-        dagRequest.addAggregate(new TiSum(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.Sum), fromSparkType(f.dataType))
 
       case f @ Count(args) =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
-        dagRequest.addAggregate(new TiCount(tiArgs: _*), fromSparkType(f.dataType))
+        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.Count, tiArgs: _*), fromSparkType(f.dataType))
 
       case f @ Min(BasicExpression(arg)) =>
-        dagRequest.addAggregate(new TiMin(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.Min, arg), fromSparkType(f.dataType))
 
       case f @ Max(BasicExpression(arg)) =>
-        dagRequest.addAggregate(new TiMax(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.Max, arg), fromSparkType(f.dataType))
 
       case f @ First(BasicExpression(arg), _) =>
-        dagRequest.addAggregate(new TiFirst(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.First, arg), fromSparkType(f.dataType))
 
       case _ =>
     }
 
     groupByList.foreach {
       case BasicExpression(keyExpr) =>
-        dagRequest.addGroupByItem(TiByItem.create(keyExpr, false))
+        dagRequest.addGroupByItem(ByItem.create(keyExpr, false))
 
       case _ =>
     }
@@ -164,19 +164,16 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def referencedTiColumns(expression: TiExpr): Seq[TiColumnRef] = expression match {
-    case f: TiScalarFunction => f.getArgs.asScala.flatMap { referencedTiColumns }
-    case ref: TiColumnRef    => Seq(ref)
-    case _                   => Nil
-  }
+  def referencedTiColumns(expression: TiExpression): Seq[ColumnRef] =
+    PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
   private def filterToDAGRequest(
     filters: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiFilters: Seq[TiExpr] = filters.collect { case BasicExpression(expr) => expr }
-    val scanBuilder: ScanBuilder = new ScanBuilder
+    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
+    val scanBuilder: ScanAnalyzer = new ScanAnalyzer
     val tableScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table)
     val scanPlan = if (allowIndexDoubleRead()) {
@@ -198,7 +195,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   private def addSortOrder(request: TiDAGRequest, sortOrder: Seq[SortOrder]): Unit =
     sortOrder.foreach { order: SortOrder =>
       request.addOrderByItem(
-        TiByItem.create(
+        ByItem.create(
           BasicExpression.convertToTiExpr(order.child).get,
           order.direction.sql.equalsIgnoreCase("DESC")
         )
@@ -280,14 +277,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
-      projectSeq.foreach(attr => dagRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic
       val projectSeq: Seq[Attribute] = (projectSet ++ filterSet).toSeq
-      projectSeq.foreach(attr => dagRequest.addRequiredColumn(TiColumnRef.create(attr.name)))
+      projectSeq.foreach(attr => dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
     }
@@ -339,7 +336,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     val projectionTiRefs = projects
       .map { _.toAttribute.name }
-      .map { TiColumnRef.create }
+      .map { ColumnRef.create }
 
     val filterTiRefs = filters
       .collect { case BasicExpression(tiExpr) => tiExpr }

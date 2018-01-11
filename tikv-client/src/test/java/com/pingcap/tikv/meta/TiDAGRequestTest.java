@@ -28,6 +28,7 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FunctionCall;
+import com.pingcap.tikv.expression.FunctionCall.FunctionType;
 import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
@@ -61,8 +62,8 @@ public class TiDAGRequestTest {
     ColumnRef col2 = ColumnRef.create("c2", table);
     ColumnRef col3 = ColumnRef.create("c3", table);
 
-    FunctionCall sum = FunctionCall.newCall("sum", col1);
-    FunctionCall min = FunctionCall.newCall("min", col1);
+    FunctionCall sum = FunctionCall.newCall(FunctionType.Sum, col1);
+    FunctionCall min = FunctionCall.newCall(FunctionType.Min, col1);
 
     selReq
         .addRequiredColumn(col1)

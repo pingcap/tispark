@@ -21,20 +21,28 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 
 public class FunctionCall implements Expression {
-  private final String name;
-  private final List<Expression> arguments;
-
-  public static FunctionCall newCall(String name, Expression...args) {
-    return new FunctionCall(name, args);
+  public enum FunctionType {
+    Sum,
+    Count,
+    Min,
+    Max,
+    First
   }
 
-  private FunctionCall(String name, Expression[] arguments) {
-    this.name = requireNonNull(name, "function name is null").toLowerCase();
+  private final FunctionType type;
+  private final List<Expression> arguments;
+
+  public static FunctionCall newCall(FunctionType type, Expression...args) {
+    return new FunctionCall(type, args);
+  }
+
+  private FunctionCall(FunctionType type, Expression[] arguments) {
+    this.type = requireNonNull(type, "function type is null");
     this.arguments = ImmutableList.copyOf(requireNonNull(arguments, "function argument is null"));
   }
 
-  public String getName() {
-    return name;
+  public FunctionType getType() {
+    return type;
   }
 
   @Override

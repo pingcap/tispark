@@ -17,9 +17,18 @@
 
 package com.pingcap.tikv.operation;
 
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
+import static com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer.inferType;
+import static org.junit.Assert.assertEquals;
+
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.CatalogTransaction;
-import com.pingcap.tikv.expression.*;
+import com.pingcap.tikv.expression.ByItem;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Constant;
+import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.FunctionCall;
+import com.pingcap.tikv.expression.FunctionCall.FunctionType;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -27,13 +36,8 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DecimalType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
-import org.junit.Test;
-
 import java.util.List;
-
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
-import static com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer.inferType;
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
 
 public class SchemaInferTest {
   private final String table29 =
@@ -43,7 +47,7 @@ public class SchemaInferTest {
   private TiTableInfo table = CatalogTransaction.parseFromJson(table29Bs, TiTableInfo.class);
   private Expression number = ColumnRef.create("number", table);
   private ColumnRef name = ColumnRef.create("name", table);
-  private Expression sum = FunctionCall.newCall("sum", number);
+  private Expression sum = FunctionCall.newCall(FunctionType.Sum, number);
   private ByItem simpleGroupBy = ByItem.create(name, false);
   private ByItem complexGroupBy = ByItem.create(plus(name, Constant.create("1", StringType.VARCHAR)), false);
 
