@@ -212,7 +212,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             .build();
     KVErrorHandler<Coprocessor.Response> handler =
         new KVErrorHandler<>(
-            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null,
+            Coprocessor.Response::getOtherError);
     Coprocessor.Response resp = callWithRetry(TikvGrpc.METHOD_COPROCESSOR, reqToSend, handler);
     return coprocessorHelper(resp);
   }
@@ -232,7 +233,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             regionManager,
             this,
             region,
-            StreamingResponse::getFirstError
+            StreamingResponse::getFirstRegionError,//TODO: handle all errors in streaming respinse
+            StreamingResponse::getFirstOtherError
         );
 
     StreamingResponse responseIterator = callServerStreamingWithRetry(

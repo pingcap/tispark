@@ -26,7 +26,7 @@ import gnu.trove.list.linked.TLongLinkedList
 import gnu.trove.map.hash.TLongObjectHashMap
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.{Partition, TaskContext}
+import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -57,13 +57,20 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
       private val snapshot = session.createSnapshot(ts)
-      private val handleIter =
-        snapshot.indexHandleRead(dagRequest, split.asInstanceOf[TiPartition].tasks.asJava)
+      private[this] val tasks = tiPartition.tasks
+
+      private val handleIter = snapshot.indexHandleRead(dagRequest, tasks)
       private val tableId = dagRequest.getTableInfo.getId
       private val regionManager = session.getRegionManager
       private val regionHandleMap = new TLongObjectHashMap[TLongLinkedList]()
       // Fetch all handles
       while (handleIter.hasNext) {
+        // Kill the task in case it has been marked as killed. This logic is from
+        // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
+        // to avoid performance overhead.
+        if (context.isInterrupted()) {
+          throw new TaskKilledException
+        }
         val handle = handleIter.next()
         val key = RowKey.toRowKey(tableId, handle)
         val regionId = regionManager
@@ -79,7 +86,13 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
 
       private val iterator = regionHandleMap.iterator()
 
-      override def hasNext: Boolean = iterator.hasNext
+      override def hasNext: Boolean = {
+        // Kill the task in case it has been marked as killed.
+        if (context.isInterrupted()) {
+          throw new TaskKilledException
+        }
+        iterator.hasNext
+      }
 
       override def next(): Row = {
         iterator.advance()
