@@ -30,6 +30,7 @@ import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FunctionCall;
+import com.pingcap.tikv.expression.FunctionCall.FunctionType;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.types.BitType;
 import com.pingcap.tikv.types.BytesType;
@@ -60,7 +61,11 @@ public class ProtoConverter extends DefaultVisitor<Expr, Void> {
           .put(StringType.class, "String")
           .build();
 
-  private final IdentityHashMap<Expression, DataType> typeMap = new IdentityHashMap<>();
+  private final IdentityHashMap<Expression, DataType> typeMap;
+
+  public ProtoConverter(IdentityHashMap<Expression, DataType> typeMap) {
+    this.typeMap = typeMap;
+  }
 
   private DataType getType(Expression expression) {
     DataType type = typeMap.get(expression);
@@ -72,7 +77,7 @@ public class ProtoConverter extends DefaultVisitor<Expr, Void> {
 
   private String getTypeSignature(Expression expression) {
     DataType type = getType(expression);
-    String typeSignature = SCALAR_SIG_MAP.get(type);
+    String typeSignature = SCALAR_SIG_MAP.get(type.getClass());
     if (typeSignature == null) {
       throw new TiExpressionException(String.format("Type %s signature unknown", type));
     }
@@ -80,7 +85,9 @@ public class ProtoConverter extends DefaultVisitor<Expr, Void> {
   }
 
   public static Expr toProto(Expression expression) {
-    ProtoConverter converter = new ProtoConverter();
+    ExpressionTypeCoercer coercer = new ExpressionTypeCoercer();
+    coercer.infer(expression);
+    ProtoConverter converter = new ProtoConverter(coercer.getTypeMap());
     return expression.accept(converter, null);
   }
 
@@ -220,6 +227,32 @@ public class ProtoConverter extends DefaultVisitor<Expr, Void> {
   }
 
   protected Expr visit(FunctionCall node, Void context) {
-    return process(node, context);
+    Expr.Builder builder = Expr.newBuilder();
+
+    FunctionType type = node.getType();
+    switch (type) {
+      case Max:
+        builder.setTp(ExprType.Max);
+        break;
+      case Sum:
+        builder.setTp(ExprType.Sum);
+        break;
+      case Min:
+        builder.setTp(ExprType.Min);
+        break;
+      case First:
+        builder.setTp(ExprType.First);
+        break;
+      case Count:
+        builder.setTp(ExprType.Count);
+        break;
+    }
+
+    for (Expression arg : node.getChildren()) {
+      Expr exprProto = arg.accept(this, context);
+      builder.addChildren(exprProto);
+    }
+
+    return builder.build();
   }
 }
