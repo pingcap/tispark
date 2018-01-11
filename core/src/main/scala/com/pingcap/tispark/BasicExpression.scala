@@ -15,35 +15,21 @@
 
 package com.pingcap.tispark
 
-import java.sql.{Date, Timestamp}
+import java.sql.Timestamp
 
-//import com.google.proto4pingcap.ByteString
-import com.pingcap.tikv.expression.Constant.DateWrapper
+import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
+import org.joda.time.DateTime
+
 import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression}
-import com.pingcap.tikv.types.RequestTypes
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
 import org.apache.spark.sql.types._
 
 import scala.language.implicitConversions
 
 object BasicExpression {
-//  implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
+  private final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
 
-  type TiPlus = com.pingcap.tikv.expression.scalar.Plus
-  type TiMinus = com.pingcap.tikv.expression.scalar.Minus
-  type TiMultiply = com.pingcap.tikv.expression.scalar.Multiply
-  type TiDivide = com.pingcap.tikv.expression.scalar.Divide
-  type TiIsNull = com.pingcap.tikv.expression.scalar.IsNull
-  type TiGreaterEqual = com.pingcap.tikv.expression.scalar.GreaterEqual
-  type TiGreaterThan = com.pingcap.tikv.expression.scalar.GreaterThan
-  type TiLessEqual = com.pingcap.tikv.expression.scalar.LessEqual
-  type TiLessThan = com.pingcap.tikv.expression.scalar.LessThan
-  type TiEqual = com.pingcap.tikv.expression.scalar.Equal
-  type TiNotEqual = com.pingcap.tikv.expression.scalar.NotEqual
-  type TiNot = com.pingcap.tikv.expression.scalar.Not
-  type TiLike = com.pingcap.tikv.expression.scalar.Like
-
-  final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
+  type TiExpression = com.pingcap.tikv.expression.Expression
 
   def convertLiteral(value: Any, dataType: DataType): Any =
     // all types from literals are passed according to DataType's InternalType definition
@@ -55,7 +41,7 @@ object BasicExpression {
         // and sql.Date is constructed as milliseconds after 1970-01-01
         // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd,
         // but seems change in DAG mode
-        case DateType       => new DateWrapper(MILLISEC_PER_DAY * value.asInstanceOf[Int])
+        case DateType       => new DateTime(MILLISEC_PER_DAY * value.asInstanceOf[Int])
         case TimestampType  => new Timestamp(value.asInstanceOf[Long] / 1000)
         case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
@@ -78,7 +64,7 @@ object BasicExpression {
       case _ => true
     }
 
-  def convertToTiExpr(expr: Expression): Option[Expression] =
+  def convertToTiExpr(expr: Expression): Option[TiExpression] =
     expr match {
       case Literal(value, dataType) =>
         Some(Constant.create(convertLiteral(value, dataType)))

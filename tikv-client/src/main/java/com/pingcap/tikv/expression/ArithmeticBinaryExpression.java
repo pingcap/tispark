@@ -115,4 +115,9 @@ public class ArithmeticBinaryExpression implements Expression {
   public int hashCode() {
     return Objects.hash(compType, left, right);
   }
+
+  @Override
+  public String toString() {
+    return String.format("[%s %s %s]", getLeft(), getCompType(), getRight());
+  }
 }

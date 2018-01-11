@@ -32,7 +32,7 @@ import org.junit.Test;
 import java.util.List;
 
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
-import static com.pingcap.tikv.expression.visitor.ExpressionTypeInferrer.inferType;
+import static com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer.inferType;
 import static org.junit.Assert.assertEquals;
 
 public class SchemaInferTest {

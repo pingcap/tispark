@@ -15,43 +15,39 @@
 
 package com.pingcap.tikv.expression.visitor;
 
-import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.FunctionCall;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.Visitor;
+import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.ExpressionBlacklist;
 
-public class SupportedExpressionValidator extends Visitor<Boolean, Void> {
+public class SupportedExpressionValidator extends DefaultVisitor<Boolean, ExpressionBlacklist> {
+  private static final ProtoConverter protoConverter = new ProtoConverter();
+  private static final SupportedExpressionValidator validator = new SupportedExpressionValidator();
 
-  @Override
-  protected Boolean visit(ColumnRef node, Void context) {
-    return null;
+  public static boolean isSupportedExpression(Expression node, ExpressionBlacklist blacklist) {
+    if (!node.accept(validator, blacklist)) {
+      return false;
+    }
+    try {
+      if (node.accept(protoConverter, null) != null) {
+        return false;
+      }
+    } catch (Exception e) {
+      return false;
+    }
+    return true;
   }
 
   @Override
-  protected Boolean visit(ComparisonBinaryExpression node, Void context) {
-    return null;
+  protected Boolean process(Expression node, ExpressionBlacklist blacklist) {
+    if (blacklist != null && blacklist.isUnsupportedPushdownExpr(getClass())) {
+      return false;
+    }
+    for (Expression expr : node.getChildren()) {
+      if (!expr.accept(this, blacklist)) {
+        return false;
+      }
+    }
+    return true;
   }
 
-  @Override
-  protected Boolean visit(ArithmeticBinaryExpression node, Void context) {
-    return null;
-  }
 
-  @Override
-  protected Boolean visit(LogicalBinaryExpression node, Void context) {
-    return null;
-  }
-
-  @Override
-  protected Boolean visit(Constant node, Void context) {
-    return null;
-  }
-
-  @Override
-  protected Boolean visit(FunctionCall node, Void context) {
-    return null;
-  }
 }

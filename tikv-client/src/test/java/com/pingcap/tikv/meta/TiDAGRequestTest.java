@@ -28,7 +28,7 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FunctionCall;
-import com.pingcap.tikv.expression.visitor.ExpressionTypeInferrer;
+import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.IntegerType;
@@ -67,8 +67,8 @@ public class TiDAGRequestTest {
     selReq
         .addRequiredColumn(col1)
         .addRequiredColumn(col2)
-        .addAggregate(sum, ExpressionTypeInferrer.inferType(sum))
-        .addAggregate(min, ExpressionTypeInferrer.inferType(min))
+        .addAggregate(sum, ExpressionTypeCoercer.inferType(sum))
+        .addAggregate(min, ExpressionTypeCoercer.inferType(min))
         .addWhere(plus(c1, c2))
         .addGroupByItem(
             ByItem.create(ColumnRef.create("c2", table), true))

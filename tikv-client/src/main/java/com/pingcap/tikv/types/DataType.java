@@ -257,7 +257,7 @@ public abstract class DataType implements Serializable {
 
   @Override
   public String toString() {
-    return this.getClass().getSimpleName();
+    return String.format("%s:%s", this.getClass().getSimpleName(), getType());
   }
 
   @Override

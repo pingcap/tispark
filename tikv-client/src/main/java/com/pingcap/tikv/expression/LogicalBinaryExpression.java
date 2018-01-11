@@ -83,6 +83,6 @@ public class LogicalBinaryExpression implements Expression {
 
   @Override
   public String toString() {
-    return String.format("%s %s %s", getLeft(), getCompType(), getRight());
+    return String.format("[%s %s %s]", getLeft(), getCompType(), getRight());
   }
 }

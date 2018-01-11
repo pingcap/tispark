@@ -164,7 +164,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def extractColumnFromFilter(tiFilter: expression.Expression, result: ArrayBuffer[ColumnRef]): Unit =
+  def extractColumnFromFilter(tiFilter: expression.Expression,
+                              result: ArrayBuffer[ColumnRef]): Unit =
     tiFilter match {
       case fun: TiScalarFunction =>
         fun.getArgs.foreach(extractColumnFromFilter(_, result))
@@ -178,7 +179,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiFilters: Seq[expression.Expression] = filters.collect { case BasicExpression(expr) => expr }
+    val tiFilters: Seq[expression.Expression] = filters.collect {
+      case BasicExpression(expr) => expr
+    }
     val scanBuilder: ScanBuilder = new ScanBuilder
     val tableScanPlan =
       scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
@@ -411,7 +414,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val projectSeq: Seq[Attribute] = projects.asInstanceOf[Seq[Attribute]]
     projectSeq.foreach(attr => dagReq.addRequiredColumn(ColumnRef.create(attr.name)))
     val pushDownCols = ArrayBuffer[ColumnRef]()
-    val tiFilters: Seq[expression.Expression] = filters.collect { case BasicExpression(expr) => expr }
+    val tiFilters: Seq[expression.Expression] = filters.collect {
+      case BasicExpression(expr) => expr
+    }
     tiFilters.foreach(extractColumnFromFilter(_, pushDownCols))
     pushDownCols.foreach(dagReq.addRequiredColumn)
 

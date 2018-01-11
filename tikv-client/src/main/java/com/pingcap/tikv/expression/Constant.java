@@ -38,10 +38,14 @@ import org.joda.time.LocalDateTime;
 // TODO: This might need a refactor to accept an DataType?
 public class Constant implements Expression {
   private final Object value;
-  private final DataType type;
+  private DataType type;
 
   public static Constant create(Object value, DataType type) {
     return new Constant(value, type);
+  }
+
+  public static Constant create(Object value) {
+    return new Constant(value, null);
   }
 
   public Constant(Object value, DataType type) {
@@ -80,6 +84,10 @@ public class Constant implements Expression {
     } else {
       throw new TiExpressionException("Constant type not supported:" + value.getClass().getSimpleName());
     }
+  }
+
+  public void setType(DataType type) {
+    this.type = type;
   }
 
   public Object getValue() {

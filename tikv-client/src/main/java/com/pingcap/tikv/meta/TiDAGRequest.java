@@ -23,7 +23,7 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.visitor.ExpressionTypeInferrer;
+import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
@@ -129,7 +129,7 @@ public class TiDAGRequest implements Serializable {
 
   public void resolve() {
     MetaResolver resolver = new MetaResolver(tableInfo);
-    ExpressionTypeInferrer inferrer = new ExpressionTypeInferrer();
+    ExpressionTypeCoercer inferrer = new ExpressionTypeCoercer();
     resolver.resolve(getAllExpressions());
     inferrer.infer(getAllExpressions());
     typeMap = inferrer.getTypeMap();
