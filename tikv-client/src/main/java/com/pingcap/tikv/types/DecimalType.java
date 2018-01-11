@@ -50,7 +50,6 @@ public class DecimalType extends DataType {
    */
   @Override
   public Object decodeNotNull(int flag, CodecDataInput cdi) {
-    super.decodeNotNull(flag, cdi);
     if (flag != DECIMAL_FLAG) {
       throw new InvalidCodecFormatException("Invalid Flag type for decimal type: " + flag);
     }
