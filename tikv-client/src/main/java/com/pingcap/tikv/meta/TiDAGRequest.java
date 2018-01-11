@@ -91,13 +91,17 @@ public class TiDAGRequest implements Serializable {
   private TiTableInfo tableInfo;
   private TiIndexInfo indexInfo;
   private final List<ColumnRef> fields = new ArrayList<>();
-  private final List<Expression> where = new ArrayList<>();
+  private final List<Expression> filters = new ArrayList<>();
   private final List<ByItem> groupByItems = new ArrayList<>();
   private final List<ByItem> orderByItems = new ArrayList<>();
   // System like Spark has different type promotion rules
   // we need a cast to target when given
   private final List<Pair<Expression, DataType>> aggregates = new ArrayList<>();
   private final List<Coprocessor.KeyRange> keyRanges = new ArrayList<>();
+  // If index scanning of this request is not possible in some scenario, we downgrade it to a table scan and use
+  // downGradeRanges instead of index scan ranges stored in keyRanges along with downgradeFilters to perform a
+  // table scan.
+  private List<Expression> downgradeFilters = new ArrayList<>();
 
   private int limit;
   private int timeZoneOffset;
@@ -112,7 +116,7 @@ public class TiDAGRequest implements Serializable {
   private List<Expression> getAllExpressions() {
     ImmutableList.Builder<Expression> builder = ImmutableList.builder();
     builder.addAll(getFields());
-    builder.addAll(getWhere());
+    builder.addAll(getFilters());
     builder.addAll(getAggregates());
     getGroupByItems().forEach(item -> builder.add(item.getExpr()));
     getOrderByItems().forEach(item -> builder.add(item.getExpr()));
@@ -207,7 +211,7 @@ public class TiDAGRequest implements Serializable {
   }
 
   /**
-   * @return
+   * @return DAGRequest built
    */
   private DAGRequest buildTableScan() {
     checkArgument(startTs != 0, "timestamp is 0");
@@ -239,7 +243,7 @@ public class TiDAGRequest implements Serializable {
     // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
     // Or make sure the construction order is below:
     // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
-    Expression whereExpr = mergeCNFExpressions(getWhere());
+    Expression whereExpr = mergeCNFExpressions(getFilters());
     if (whereExpr != null) {
       executorBuilder.setTp(ExecType.TypeSelection);
       dagRequestBuilder.addExecutors(
@@ -352,6 +356,10 @@ public class TiDAGRequest implements Serializable {
 
   TiIndexInfo getIndexInfo() {
     return indexInfo;
+  }
+
+  public void clearIndexInfo() {
+    indexInfo = null;
   }
 
   public int getLimit() {
@@ -512,12 +520,26 @@ public class TiDAGRequest implements Serializable {
     keyRanges.addAll(ranges);
   }
 
+  public void resetFilters(List<Expression> filters) {
+    filters.clear();
+    filters.addAll(filters);
+  }
+
   public List<Coprocessor.KeyRange> getRanges() {
     return keyRanges;
   }
 
-  public TiDAGRequest addWhere(Expression where) {
-    this.where.add(requireNonNull(where, "where expr is null"));
+  public TiDAGRequest addFilter(Expression filter) {
+    this.filters.add(requireNonNull(filter, "filters expr is null"));
+    return this;
+  }
+
+  public List<Expression> getDowngradeFilters() {
+    return downgradeFilters;
+  }
+
+  public TiDAGRequest addDowngradeFilter(Expression filter) {
+    this.downgradeFilters.add(requireNonNull(filter, "downgrade filter is null"));
     return this;
   }
 
@@ -541,8 +563,8 @@ public class TiDAGRequest implements Serializable {
     return !getGroupByItems().isEmpty();
   }
 
-  public List<Expression> getWhere() {
-    return where;
+  public List<Expression> getFilters() {
+    return filters;
   }
 
   public List<TiColumnInfo> getColInfoList() {
@@ -600,9 +622,9 @@ public class TiDAGRequest implements Serializable {
       sb.append(Joiner.on(", ").skipNulls().join(getFields()));
     }
 
-    if (getWhere().size() != 0) {
+    if (getFilters().size() != 0) {
       sb.append(", Filter: ");
-      sb.append(Joiner.on(", ").skipNulls().join(getWhere()));
+      sb.append(Joiner.on(", ").skipNulls().join(getFilters()));
     }
 
     if (getAggregates().size() != 0) {

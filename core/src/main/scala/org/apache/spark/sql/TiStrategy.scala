@@ -17,6 +17,8 @@ package org.apache.spark.sql
 
 import java.time.ZonedDateTime
 
+import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
+
 import scala.collection.JavaConverters._
 import com.pingcap.tikv.expression.FunctionCall.FunctionType
 import com.pingcap.tikv.expression._
@@ -110,7 +112,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest.resolve()
 
     val notAllowPushDown = dagRequest.getFields.asScala
-      .map { _.getColumnInfo.getType.simpleTypeName }
+      .map { _.getColumnInfo.getType.toString }
       .exists { typeBlackList.isUnsupportedType }
 
     if (notAllowPushDown) {
@@ -140,16 +142,22 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
       case f @ Count(args) =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
-        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.Count, tiArgs: _*), fromSparkType(f.dataType))
+        dagRequest.addAggregate(
+          FunctionCall.newCall(FunctionType.Count, tiArgs: _*),
+          fromSparkType(f.dataType)
+        )
 
       case f @ Min(BasicExpression(arg)) =>
-        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.Min, arg), fromSparkType(f.dataType))
+        dagRequest
+          .addAggregate(FunctionCall.newCall(FunctionType.Min, arg), fromSparkType(f.dataType))
 
       case f @ Max(BasicExpression(arg)) =>
-        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.Max, arg), fromSparkType(f.dataType))
+        dagRequest
+          .addAggregate(FunctionCall.newCall(FunctionType.Max, arg), fromSparkType(f.dataType))
 
       case f @ First(BasicExpression(arg), _) =>
-        dagRequest.addAggregate(FunctionCall.newCall(FunctionType.First, arg), fromSparkType(f.dataType))
+        dagRequest
+          .addAggregate(FunctionCall.newCall(FunctionType.First, arg), fromSparkType(f.dataType))
 
       case _ =>
     }

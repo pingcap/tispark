@@ -70,7 +70,7 @@ public class TiDAGRequestTest {
         .addRequiredColumn(col2)
         .addAggregate(sum, ExpressionTypeCoercer.inferType(sum))
         .addAggregate(min, ExpressionTypeCoercer.inferType(min))
-        .addWhere(plus(c1, c2))
+        .addFilter(plus(c1, c2))
         .addGroupByItem(
             ByItem.create(ColumnRef.create("c2", table), true))
         .addOrderByItem(
@@ -142,10 +142,10 @@ public class TiDAGRequestTest {
       if (!lhsItem.equals(rhsItem)) return false;
     }
 
-    assertEquals(lhs.getWhere().size(), rhs.getWhere().size());
-    for (int i = 0; i < lhs.getWhere().size(); i++) {
-      Expression lhsItem = lhs.getWhere().get(i);
-      Expression rhsItem = rhs.getWhere().get(i);
+    assertEquals(lhs.getFilters().size(), rhs.getFilters().size());
+    for (int i = 0; i < lhs.getFilters().size(); i++) {
+      Expression lhsItem = lhs.getFilters().get(i);
+      Expression rhsItem = rhs.getFilters().get(i);
 
       Expr lhsExprProto = ProtoConverter.toProto(lhsItem);
       Expr rhsExprProto = ProtoConverter.toProto(rhsItem);

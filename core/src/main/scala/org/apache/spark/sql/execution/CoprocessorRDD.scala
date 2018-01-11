@@ -404,7 +404,7 @@ case class RegionTaskExec(child: SparkPlan,
   }
 
   override def verboseString: String = {
-    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilter}"
+    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
   }
 
   override def simpleString: String = verboseString

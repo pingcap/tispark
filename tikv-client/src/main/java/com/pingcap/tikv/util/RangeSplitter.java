@@ -44,6 +44,10 @@ public class RangeSplitter {
     private final List<KeyRange> ranges;
     private final String host;
 
+    public static RegionTask newInstance(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
+      return new RegionTask(region, store, ranges);
+    }
+
     RegionTask(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
       this.region = region;
       this.store = store;

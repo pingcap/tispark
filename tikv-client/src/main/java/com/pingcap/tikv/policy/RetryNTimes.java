@@ -32,7 +32,7 @@ public class RetryNTimes<T> extends RetryPolicy<T> {
       try {
         this.backOff = backoffClass.getConstructor(int.class).newInstance(n);
       } catch (Exception e) {
-        throw new TiClientInternalException("failed to toIndexKey backoff object", e);
+        throw new TiClientInternalException("failed to create backoff object", e);
       }
     }
 

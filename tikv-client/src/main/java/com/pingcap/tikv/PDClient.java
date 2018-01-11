@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -28,20 +30,30 @@ import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.PDGrpc;
 import com.pingcap.tikv.kvproto.PDGrpc.PDBlockingStub;
 import com.pingcap.tikv.kvproto.PDGrpc.PDStub;
-import com.pingcap.tikv.kvproto.Pdpb.*;
+import com.pingcap.tikv.kvproto.Pdpb.GetMembersRequest;
+import com.pingcap.tikv.kvproto.Pdpb.GetMembersResponse;
+import com.pingcap.tikv.kvproto.Pdpb.GetRegionByIDRequest;
+import com.pingcap.tikv.kvproto.Pdpb.GetRegionRequest;
+import com.pingcap.tikv.kvproto.Pdpb.GetRegionResponse;
+import com.pingcap.tikv.kvproto.Pdpb.GetStoreRequest;
+import com.pingcap.tikv.kvproto.Pdpb.GetStoreResponse;
+import com.pingcap.tikv.kvproto.Pdpb.RequestHeader;
+import com.pingcap.tikv.kvproto.Pdpb.Timestamp;
+import com.pingcap.tikv.kvproto.Pdpb.TsoRequest;
+import com.pingcap.tikv.kvproto.Pdpb.TsoResponse;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.FutureObserver;
 import io.grpc.ManagedChannel;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
@@ -235,7 +247,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         return true;
       }
 
-      // toIndexKey new Leader
+      // create new Leader
       ManagedChannel clientChannel = session.getChannel(leaderUrlStr);
       leaderWrapper =
         new LeaderWrapper(

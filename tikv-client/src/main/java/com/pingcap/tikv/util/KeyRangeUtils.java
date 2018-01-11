@@ -20,6 +20,8 @@ import static com.pingcap.tikv.key.Key.toRawKey;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -28,6 +30,7 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import java.util.List;
+import java.util.Set;
 
 public class KeyRangeUtils {
   public static List<Coprocessor.KeyRange> split(Coprocessor.KeyRange range, int splitFactor) {
@@ -102,8 +105,36 @@ public class KeyRangeUtils {
     return Range.closedOpen(toRawKey(startKey, true), toRawKey(endKey));
   }
 
-  public static Coprocessor.KeyRange makeCoprocRange(ByteString startKey, ByteString endKey) {
+  public static KeyRange makeCoprocRange(ByteString startKey, ByteString endKey) {
     return KeyRange.newBuilder().setStart(startKey).setEnd(endKey).build();
+  }
+
+  public static KeyRange makeCoprocRange(Range<Key> range) {
+    if (!range.hasLowerBound() || !range.hasUpperBound()) {
+      throw new TiClientInternalException("range is not closed");
+    }
+    return makeCoprocRange(range.lowerEndpoint().toByteString(),
+                           range.upperEndpoint().toByteString());
+  }
+
+  public static List<KeyRange> mergeRanges(List<KeyRange> ranges) {
+    if (ranges == null || ranges.isEmpty() || ranges.size() == 1) {
+      return ranges;
+    }
+
+    RangeSet<Key> rangeSet = TreeRangeSet.create();
+    for (KeyRange keyRange : ranges) {
+      Range<Key> range = makeRange(keyRange.getStart(), keyRange.getEnd());
+      rangeSet.add(range);
+    }
+
+    Set<Range<Key>> mergedRanges = rangeSet.asRanges();
+    ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
+    for (Range<Key> range : mergedRanges) {
+      rangeBuilder.add(makeCoprocRange(range));
+    }
+
+    return rangeBuilder.build();
   }
 
   static String formatByteString(ByteString key) {

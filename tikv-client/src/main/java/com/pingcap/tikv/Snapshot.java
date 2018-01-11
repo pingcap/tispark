@@ -79,7 +79,7 @@ public class Snapshot {
   /**
    * Issue a table read request
    *
-   * @param dagRequest select request for coprocessor
+   * @param dagRequest DAG request for coprocessor
    * @return a Iterator that contains all result from this select request.
    */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest) {
@@ -101,7 +101,7 @@ public class Snapshot {
    * Below is lower level API for env like Spark which already did key range split Perform table
    * scan
    *
-   * @param dagRequest SelectRequest for coprocessor
+   * @param dagRequest DAGRequest for coprocessor
    * @param task RegionTask of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
@@ -118,6 +118,22 @@ public class Snapshot {
           task,
           session);
     }
+  }
+
+  /**
+   * Below is lower level API for env like Spark which already did key range split Perform handle
+   * scan
+   *
+   * @param dagRequest DAGRequest for coprocessor
+   * @param tasks      RegionTask of the coprocessor request to send
+   * @return Row iterator to iterate over resulting rows
+   */
+  public Iterator<Long> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
+    return getHandleIterator(
+        dagRequest,
+        tasks,
+        session
+    );
   }
 
   public Iterator<KvPair> scan(ByteString startKey) {
