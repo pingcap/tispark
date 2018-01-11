@@ -56,8 +56,6 @@ public class ExpressionTypeCoercerTest {
   public void typeVerifyWithColumnRefTest() throws Exception {
     TiTableInfo table = createTable();
     ColumnRef col1 = ColumnRef.create("c1", table); // INT
-    ColumnRef col2 = ColumnRef.create("c2", table); // VARCHAR
-    ColumnRef col3 = ColumnRef.create("c3", table); // TIMESTAMP
     ColumnRef col4 = ColumnRef.create("c4", table); // DOUBLE
     Constant c1 = Constant.create(1);
     Constant c2 = Constant.create(11.1);
