@@ -19,8 +19,7 @@ import java.sql.Timestamp
 
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import org.joda.time.DateTime
-
-import com.pingcap.tikv.expression.{ColumnRef, Constant, Expression}
+import com.pingcap.tikv.expression.{ArithmeticBinaryExpression, ColumnRef, ComparisonBinaryExpression, Constant}
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
 import org.apache.spark.sql.types._
 
@@ -70,43 +69,43 @@ object BasicExpression {
         Some(Constant.create(convertLiteral(value, dataType)))
 
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiPlus(lhs, rhs))
+        Some(ArithmeticBinaryExpression.plus(lhs, rhs))
 
       case Subtract(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiMinus(lhs, rhs))
+        Some(ArithmeticBinaryExpression.minus(lhs, rhs))
 
       case Multiply(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiMultiply(lhs, rhs))
+        Some(ArithmeticBinaryExpression.multiply(lhs, rhs))
 
       case Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiDivide(lhs, rhs))
+        Some(ArithmeticBinaryExpression.divide(lhs, rhs))
 
       case Alias(BasicExpression(child), _) =>
         Some(child)
 
-      case IsNotNull(BasicExpression(child)) =>
-        Some(new TiNot(new TiIsNull(child)))
+      //case IsNotNull(BasicExpression(child)) =>
+      //  Some(new TiNot(new TiIsNull(child)))
 
       case GreaterThan(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiGreaterThan(lhs, rhs))
+        Some(ComparisonBinaryExpression.greaterThan(lhs, rhs))
 
       case GreaterThanOrEqual(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiGreaterEqual(lhs, rhs))
+        Some(ComparisonBinaryExpression.greaterEqual(lhs, rhs))
 
       case LessThan(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiLessThan(lhs, rhs))
+        Some(ComparisonBinaryExpression.lessThan(lhs, rhs))
 
       case LessThanOrEqual(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiLessEqual(lhs, rhs))
+        Some(ComparisonBinaryExpression.lessEqual(lhs, rhs))
 
       case EqualTo(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiEqual(lhs, rhs))
+        Some(ComparisonBinaryExpression.equal(lhs, rhs))
 
       case Not(EqualTo(BasicExpression(lhs), BasicExpression(rhs))) =>
-        Some(new TiNotEqual(lhs, rhs))
+        Some(ComparisonBinaryExpression.notEqual(lhs, rhs))
 
-      case Not(BasicExpression(child)) =>
-        Some(new TiNot(child))
+      //case Not(BasicExpression(child)) =>
+      //  Some(new TiNot(child))
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>
@@ -115,8 +114,8 @@ object BasicExpression {
         Some(ColumnRef.create(attr.name))
 
       // TODO: Remove it and let it fail once done all translation
-      case _ => Option.empty[Expression]
+      case _ => Option.empty[TiExpression]
     }
 
-  def unapply(expr: Expression): Option[Expression] = convertToTiExpr(expr)
+  def unapply(expr: Expression): Option[TiExpression] = convertToTiExpr(expr)
 }

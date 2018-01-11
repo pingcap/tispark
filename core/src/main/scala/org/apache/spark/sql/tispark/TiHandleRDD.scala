@@ -16,6 +16,7 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv.codec.TableCodec
+import com.pingcap.tikv.key.{IndexKey, RowKey, TypedKey}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
@@ -64,9 +65,9 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       // Fetch all handles
       while (handleIter.hasNext) {
         val handle = handleIter.next()
-        val key = TableCodec.encodeRowKeyWithHandleBytes(tableId, handle)
+        val key = RowKey.toRowKey(tableId, handle)
         val regionId = regionManager
-          .getRegionByKey(key)
+          .getRegionByKey(key.toByteString)
           .getId
 
         if (!regionHandleMap.containsKey(regionId)) {

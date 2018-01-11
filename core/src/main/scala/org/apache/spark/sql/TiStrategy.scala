@@ -15,15 +15,14 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.expression.scalar.TiScalarFunction
 import java.time.ZonedDateTime
 
-import com.pingcap.tikv.codec.IgnoreUnsupportedTypeException
+import com.pingcap.tikv.exception.TiExpressionException
 import com.pingcap.tikv.expression
-import com.pingcap.tikv.expression.{aggregate => _, _}
+import com.pingcap.tikv.expression._
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.predicates.ScanBuilder
+import com.pingcap.tikv.predicates.ScanAnalyzer
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
@@ -114,7 +113,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       .exists { typeBlackList.isUnsupportedType }
 
     if (notAllowPushDown) {
-      throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
+      throw new TiExpressionException("Unsupported type found in fields: " + typeBlackList)
     } else {
       if (dagRequest.isIndexScan) {
         source.dagRequestToRegionTaskExec(dagRequest, output)
@@ -136,20 +135,23 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         throw new IllegalArgumentException("Should never be here")
 
       case AggregateExpression(f @ Sum(BasicExpression(arg)), _, _, _) =>
-        dagRequest.addAggregate(new TiSum(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(FunctionCall.newCall("sum", arg), fromSparkType(f.dataType))
 
       case AggregateExpression(f @ Count(args), _, _, _) =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
-        dagRequest.addAggregate(new TiCount(tiArgs: _*), fromSparkType(f.dataType))
+        dagRequest.addAggregate(
+          FunctionCall.newCall("count", tiArgs: _*),
+          fromSparkType(f.dataType)
+        )
 
       case AggregateExpression(f @ Min(BasicExpression(arg)), _, _, _) =>
-        dagRequest.addAggregate(new TiMin(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(FunctionCall.newCall("min", arg), fromSparkType(f.dataType))
 
       case AggregateExpression(f @ Max(BasicExpression(arg)), _, _, _) =>
-        dagRequest.addAggregate(new TiMax(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(FunctionCall.newCall("max", arg), fromSparkType(f.dataType))
 
       case AggregateExpression(f @ First(BasicExpression(arg), _), _, _, _) =>
-        dagRequest.addAggregate(new TiFirst(arg), fromSparkType(f.dataType))
+        dagRequest.addAggregate(FunctionCall.newCall("first", arg), fromSparkType(f.dataType))
 
       case _ =>
     }
@@ -166,13 +168,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
   def extractColumnFromFilter(tiFilter: expression.Expression,
                               result: ArrayBuffer[ColumnRef]): Unit =
-    tiFilter match {
-      case fun: TiScalarFunction =>
-        fun.getArgs.foreach(extractColumnFromFilter(_, result))
-      case col: ColumnRef =>
-        result.add(col)
-      case _ =>
-    }
+    extractColumnFromFilter(tiFilter, result)
 
   def filterToDAGRequest(
     filters: Seq[Expression],
@@ -182,7 +178,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val tiFilters: Seq[expression.Expression] = filters.collect {
       case BasicExpression(expr) => expr
     }
-    val scanBuilder: ScanBuilder = new ScanBuilder
+    val scanBuilder: ScanAnalyzer = new ScanAnalyzer
     val tableScanPlan =
       scanBuilder.buildTableScan(JavaConversions.seqAsJavaList(tiFilters), source.table)
     val scanPlan = if (allowIndexDoubleRead()) {
