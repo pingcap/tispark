@@ -77,11 +77,12 @@ To build all TiSpark modules :
 mvn clean package
 ```
 
-If you want to build single moudle, change directory to the one you want to: 
+## How to test
+We use docker to provide tidb cluster service which allow you can test across different platform. You have to install docker in order to test locally. CI is still under inverstigating and developing. A lot of work need to be done in our current integration test.
 
-```
-mvn clean package
-```
+Suppose you alrady install docker, you can use `docker-compose up -d` to launch tidb cluster service. If you want to see tidb cluster's log you can launch via `docker-compose up`. You can use `docker-compose down` to shutdown entire tidb cluster service. All data are stored in `data` directory at the root level of this project. Feel free to change it, but I suggest you keep it as same becuase that is the default value.
+
+Before you do test, you need load data first. Last step is run `test_all.sh` under intergtest directory.
 
 ## Follow us
 
