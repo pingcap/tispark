@@ -199,11 +199,11 @@ public abstract class DataType implements Serializable {
     return charset;
   }
 
-  public static boolean isPrimaryKey(int flag) {
+  public boolean isPrimaryKey() {
     return (flag & PriKeyFlag) > 0;
   }
 
-  public static boolean hasNotNullFlag(int flag) {
+  public boolean isNotNull() {
     return (flag & NotNullFlag) > 0;
   }
 

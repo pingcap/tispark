@@ -85,6 +85,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
 
   // Try to coerceType if needed
   // A column reference is source of coerce and constant is the subject to coerce
+  // targetType null means no coerce needed from parent and choose the highest credibility result
   protected Pair<DataType, Double> coerceType(DataType targetType, Expression...nodes) {
     if (nodes.length == 0) {
       throw new TiExpressionException("failed to verify empty node list");
@@ -158,11 +159,18 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   @Override
   protected Pair<DataType, Double> visit(AggregateFunction node, DataType targetType) {
     FunctionType fType = node.getType();
+    coerceType(null, node.getArgument());
     switch (fType) {
-      case Count:
+      case Count: {
+        if (targetType != null && targetType.equals(IntegerType.BIGINT)) {
+          throw new TiExpressionException(String.format("Count cannot be %s", targetType));
+        }
+        typeMap.put(node, IntegerType.BIGINT);
+        return Pair.create(targetType, FUNCTION_CRED);
+      }
       case Sum: {
         if (targetType != null && targetType.equals(DecimalType.DECIMAL)) {
-          throw new TiExpressionException(String.format("Count cannot be %s", targetType));
+          throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
         }
         typeMap.put(node, DecimalType.DECIMAL);
         return Pair.create(targetType, FUNCTION_CRED);

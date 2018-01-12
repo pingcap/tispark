@@ -146,11 +146,16 @@ object TiUtils {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {
       val col = table.getColumns.get(i)
+      val notNull = col.getType.isNotNull
       val metadata = new MetadataBuilder()
         .putString("name", col.getName)
         .build()
-      fields(i) =
-        StructField(col.getName, TiUtils.toSparkDataType(col.getType), nullable = true, metadata)
+      fields(i) = StructField(
+        col.getName,
+        TiUtils.toSparkDataType(col.getType),
+        nullable = !notNull,
+        metadata
+      )
     }
     new StructType(fields)
   }
