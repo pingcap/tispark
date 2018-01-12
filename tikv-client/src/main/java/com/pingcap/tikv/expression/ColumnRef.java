@@ -22,6 +22,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 import java.util.List;
+import java.util.Objects;
 
 public class ColumnRef implements Expression {
   public static ColumnRef create(String name, TiTableInfo table) {
@@ -91,6 +92,10 @@ public class ColumnRef implements Expression {
     return tableInfo;
   }
 
+  public boolean isResolved() {
+    return tableInfo != null && columnInfo != null;
+  }
+
   @Override
   public boolean equals(Object another) {
     if (this == another) {
@@ -98,10 +103,13 @@ public class ColumnRef implements Expression {
     }
 
     if (another instanceof ColumnRef) {
-      ColumnRef columnRef = (ColumnRef) another;
-      return columnRef.getColumnInfo().getId() == this.getColumnInfo().getId()
-          && columnRef.getName().equalsIgnoreCase(this.getColumnInfo().getName())
-          && columnRef.getTableInfo().getId() == this.getTableInfo().getId();
+      ColumnRef that = (ColumnRef) another;
+      if (isResolved() && that.isResolved()) {
+        return Objects.equals(columnInfo, that.columnInfo) &&
+            Objects.equals(tableInfo, that.tableInfo);
+      } else {
+        return name.equalsIgnoreCase(that.name);
+      }
     } else {
       return false;
     }
@@ -109,13 +117,11 @@ public class ColumnRef implements Expression {
 
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = result * prime + Long.hashCode(getColumnInfo().getId());
-    result = result * prime + getTableInfo().getName().hashCode();
-    result = result * prime + getColumnInfo().getName().hashCode();
-    result = result * prime + Long.hashCode(getTableInfo().getId());
-    return result;
+    if (isResolved()) {
+      return Objects.hash(tableInfo, columnInfo);
+    } else {
+      return Objects.hashCode(name);
+    }
   }
 
   @Override
