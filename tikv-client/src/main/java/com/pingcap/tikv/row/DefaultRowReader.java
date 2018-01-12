@@ -37,6 +37,7 @@ public class DefaultRowReader implements RowReader {
     for (int i = 0; i < length; i++) {
       DataType type = dataTypes[i];
       if (type.isNextNull(cdi)) {
+        cdi.readUnsignedByte();
         row.setNull(i);
       } else {
         row.set(i, type, type.decode(cdi));

@@ -17,8 +17,6 @@
 
 package com.pingcap.tikv.operation;
 
-import static org.junit.Assert.assertEquals;
-
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.RowMeta;
@@ -26,13 +24,16 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.operation.iterator.ChunkIterator;
 import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
-import java.util.ArrayList;
-import java.util.List;
+import com.pingcap.tikv.types.StringType;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 public class ChunkIteratorTest {
   private List<Chunk> chunks = new ArrayList<>();
@@ -52,6 +53,7 @@ public class ChunkIteratorTest {
 
   private static void setValueToRow(CodecDataInput cdi, DataType type, int pos, Row row) {
     if (type.isNextNull(cdi)) {
+      cdi.readUnsignedByte();
       row.setNull(pos);
     } else {
       row.set(pos, type, type.decode(cdi));
