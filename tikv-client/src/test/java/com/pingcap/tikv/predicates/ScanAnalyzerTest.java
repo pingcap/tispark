@@ -15,14 +15,6 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
@@ -35,15 +27,18 @@ import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DataTypeFactory;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.MySQLType;
-import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.types.*;
+import org.junit.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import org.junit.Test;
+
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static java.util.Objects.requireNonNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class ScanAnalyzerTest {
   private static TiTableInfo createTable() {
@@ -89,7 +84,7 @@ public class ScanAnalyzerTest {
 
   @Test
   public void buildTableScanKeyRangeTest() throws Exception {
-    TiTableInfo table = createTable();
+    TiTableInfo table = createTable(6, 5);
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
 
     Expression eq1 = lessThan(ColumnRef.create("c1", table), Constant.create(3, IntegerType.INT));
@@ -107,8 +102,8 @@ public class ScanAnalyzerTest {
 
     Coprocessor.KeyRange keyRange = keyRanges.get(0);
 
-//    assertEquals(keyRange.getStart(), ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0}));
-//    assertEquals(keyRange.getEnd(), ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,1}));
+    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,114,0,0,0,0,0,0,0,0}), keyRange.getStart());
+    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,114,-1,-1,-1,-1,-1,-1,-1,-1}), keyRange.getEnd());
   }
 
   @Test
