@@ -28,7 +28,6 @@ import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.util.KeyRangeUtils;
 import com.pingcap.tikv.util.Pair;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -515,11 +514,6 @@ public class TiDAGRequest implements Serializable {
     return this;
   }
 
-  public void resetRanges(List<Coprocessor.KeyRange> ranges) {
-    keyRanges.clear();
-    keyRanges.addAll(ranges);
-  }
-
   public void resetFilters(List<Expression> filters) {
     filters.clear();
     filters.addAll(filters);
@@ -606,15 +600,6 @@ public class TiDAGRequest implements Serializable {
 
     if (indexInfo != null) {
       sb.append(String.format("[Index: %s] ", indexInfo.getName()));
-    }
-
-    if (getRanges().size() != 0) {
-      sb.append(", Ranges: ");
-      List<String> rangeStrings = getRanges()
-          .stream()
-          .map(KeyRangeUtils::toString)
-          .collect(Collectors.toList());
-      sb.append(Joiner.on(", ").skipNulls().join(rangeStrings));
     }
 
     if (getFields().size() != 0) {

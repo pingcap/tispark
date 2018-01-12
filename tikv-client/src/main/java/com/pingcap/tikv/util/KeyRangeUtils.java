@@ -92,15 +92,6 @@ public class KeyRangeUtils {
     return resultList.build();
   }
 
-  public static String toString(Coprocessor.KeyRange range) {
-    /*
-    return String.format("Start:[%s], End: [%s]",
-        TableCodec.decodeRowKey(range.getStart()),
-        TableCodec.decodeRowKey(range.getEnd()));
-        */
-    return null;
-  }
-
   public static Range<Key> makeRange(ByteString startKey, ByteString endKey) {
     return Range.closedOpen(toRawKey(startKey, true), toRawKey(endKey));
   }
