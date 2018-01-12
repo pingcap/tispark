@@ -1,6 +1,7 @@
 #ignore idea configuration
 .idea
 *.iml
+pub.sh
 
 # ignore compiled classes
 target

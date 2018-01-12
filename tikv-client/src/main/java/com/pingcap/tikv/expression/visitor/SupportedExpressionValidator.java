@@ -29,7 +29,7 @@ public class SupportedExpressionValidator extends DefaultVisitor<Boolean, Expres
       ExpressionTypeCoercer coercer = new ExpressionTypeCoercer();
       coercer.infer(node);
       ProtoConverter protoConverter = new ProtoConverter(coercer.getTypeMap());
-      if (node.accept(protoConverter, null) != null) {
+      if (node.accept(protoConverter, null) == null) {
         return false;
       }
     } catch (Exception e) {
