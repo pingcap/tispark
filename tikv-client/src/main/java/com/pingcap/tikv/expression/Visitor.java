@@ -32,4 +32,6 @@ public abstract class Visitor<R, C> {
   abstract protected R visit(AggregateFunction node, C context);
 
   abstract protected R visit(IsNull node, C context);
+
+  abstract protected R visit(Not node, C context);
 }

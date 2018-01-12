@@ -23,6 +23,7 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.IsNull;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.expression.Not;
 import com.pingcap.tikv.expression.Visitor;
 
 public class DefaultVisitor<R, C> extends Visitor<R,C> {
@@ -65,6 +66,11 @@ public class DefaultVisitor<R, C> extends Visitor<R,C> {
 
   @Override
   protected R visit(IsNull node, C context) {
+    return process(node, context);
+  }
+
+  @Override
+  protected R visit(Not node, C context) {
     return process(node, context);
   }
 }

@@ -28,6 +28,7 @@ import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.IsNull;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.expression.Not;
 import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DecimalType;
@@ -51,6 +52,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   private final static double COMPARISON_OP_CRED = MAX_CREDIBILITY;
   private final static double FUNCTION_CRED = MAX_CREDIBILITY;
   private final static double ISNULL_CRED = MAX_CREDIBILITY;
+  private final static double NOT_CRED = MAX_CREDIBILITY;
 
   public IdentityHashMap<Expression, DataType> getTypeMap() {
     return typeMap;
@@ -187,5 +189,17 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
       typeMap.put(node, IntegerType.BOOLEAN);
     }
     return Pair.create(IntegerType.BOOLEAN, ISNULL_CRED);
+  }
+
+  @Override
+  protected Pair<DataType, Double> visit(Not node, DataType targetType) {
+    if (targetType != null && !targetType.equals(IntegerType.BOOLEAN)) {
+      throw new TiExpressionException(String.format("Not result cannot be %s", targetType));
+    }
+    if (!typeMap.containsKey(node)) {
+      coerceType(null, node.getExpression());
+      typeMap.put(node, IntegerType.BOOLEAN);
+    }
+    return Pair.create(IntegerType.BOOLEAN, NOT_CRED);
   }
 }

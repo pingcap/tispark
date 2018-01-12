@@ -29,6 +29,8 @@ object BasicExpression {
   private final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
 
   type TiExpression = com.pingcap.tikv.expression.Expression
+  type TiNot = com.pingcap.tikv.expression.Not
+  type TiIsNull = com.pingcap.tikv.expression.IsNull
 
   def convertLiteral(value: Any, dataType: DataType): Any =
     // all types from literals are passed according to DataType's InternalType definition
@@ -83,8 +85,8 @@ object BasicExpression {
       case Alias(BasicExpression(child), _) =>
         Some(child)
 
-      //case IsNotNull(BasicExpression(child)) =>
-      //  Some(new TiNot(new TiIsNull(child)))
+      case IsNotNull(BasicExpression(child)) =>
+        Some(new TiNot(new TiIsNull(child)))
 
       case GreaterThan(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ComparisonBinaryExpression.greaterThan(lhs, rhs))
@@ -104,8 +106,8 @@ object BasicExpression {
       case Not(EqualTo(BasicExpression(lhs), BasicExpression(rhs))) =>
         Some(ComparisonBinaryExpression.notEqual(lhs, rhs))
 
-      //case Not(BasicExpression(child)) =>
-      //  Some(new TiNot(child))
+      case Not(BasicExpression(child)) =>
+        Some(new TiNot(child))
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>

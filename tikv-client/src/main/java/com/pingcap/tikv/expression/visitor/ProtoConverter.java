@@ -33,6 +33,7 @@ import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.IsNull;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.expression.Not;
 import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.types.BitType;
 import com.pingcap.tikv.types.BytesType;
@@ -258,10 +259,9 @@ public class ProtoConverter extends Visitor<Expr, Void> {
     return builder.build();
   }
 
-  @Override
-  protected Expr visit(IsNull node, Void context) {
+  private Expr nonScalarToProto(Expression node, ExprType type, Void context) {
     Expr.Builder builder = Expr.newBuilder();
-    builder.setTp(ExprType.IsNull);
+    builder.setTp(type);
 
     for (Expression arg : node.getChildren()) {
       Expr exprProto = arg.accept(this, context);
@@ -269,5 +269,15 @@ public class ProtoConverter extends Visitor<Expr, Void> {
     }
 
     return builder.build();
+  }
+
+  @Override
+  protected Expr visit(IsNull node, Void context) {
+    return nonScalarToProto(node, ExprType.IsNull, context);
+  }
+
+  @Override
+  protected Expr visit(Not node, Void context) {
+    return nonScalarToProto(node, ExprType.Not, context);
   }
 }
