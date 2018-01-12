@@ -20,7 +20,7 @@ import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
@@ -73,7 +73,7 @@ public class ScanSpec {
     public void addRangePredicate(TiIndexColumn col, Expression predicate) {
       requireNonNull(col, "col is null");
       if (col.equals(rangeColumn)) {
-        throw new TiClientInternalException("Cannot reset range predicates");
+        throw new TiExpressionException("Cannot reset range predicates");
       }
       this.rangeColumn = col;
       rangePredicates.add(predicate);

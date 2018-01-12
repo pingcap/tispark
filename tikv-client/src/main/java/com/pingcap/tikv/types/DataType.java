@@ -23,7 +23,7 @@ import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.io.Serializable;
@@ -144,7 +144,7 @@ public abstract class DataType implements Serializable {
           encodeProto(cdo, value);
           return;
         default:
-          throw new TiClientInternalException("Unknown encoding type " + encodeType);
+          throw new TypeException("Unknown encoding type " + encodeType);
       }
     }
   }

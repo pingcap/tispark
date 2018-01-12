@@ -22,7 +22,7 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 public class IntegerType extends DataType {
@@ -57,7 +57,7 @@ public class IntegerType extends DataType {
       case Codec.INT_FLAG:
         return IntegerCodec.readLong(cdi);
       default:
-        throw new TiClientInternalException("Invalid IntegerType flag: " + flag);
+        throw new TypeException("Invalid IntegerType flag: " + flag);
     }
   }
 

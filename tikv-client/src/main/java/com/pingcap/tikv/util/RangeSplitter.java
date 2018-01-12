@@ -22,7 +22,7 @@ import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.RowKey.DecodeResult;
 import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
@@ -116,7 +116,7 @@ public class RangeSplitter {
       byte[] endKey = regionStorePair.first.getEndKey().toByteArray();
       RowKey.tryDecodeRowKey(tableId, endKey, decodeResult);
       if (decodeResult.status == Status.MIN) {
-        throw new TiClientInternalException("EndKey is less than current rowKey");
+        throw new TiExpressionException("EndKey is less than current rowKey");
       } else if (decodeResult.status == Status.MAX || decodeResult.status == Status.UNKNOWN_INF) {
         createTask(startPos, handles.size(), tableId, handles, regionStorePair, regionTasks);
         break;
@@ -145,7 +145,7 @@ public class RangeSplitter {
       // The returning close-open range should at least include startPos's handle
       // so only if PD error and startPos is not included in current region then startPos == pos
       if (startPos >= pos) {
-        throw new TiClientInternalException("searchKey is not included in region returned by PD");
+        throw new TiExpressionException("searchKey is not included in region returned by PD");
       }
       startPos = pos;
     }

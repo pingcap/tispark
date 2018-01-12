@@ -23,7 +23,7 @@ import com.pingcap.tikv.codec.Codec.RealCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.InvalidCodecFormatException;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 public class RealType extends DataType {
@@ -81,7 +81,7 @@ public class RealType extends DataType {
     } else if (tp == MySQLType.TypeFloat) {
       return ExprType.Float32;
     }
-    throw new TiClientInternalException("Unknown Type encoding proto " + tp);
+    throw new TypeException("Unknown Type encoding proto " + tp);
   }
 
   /**

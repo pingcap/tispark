@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.Visitor;
@@ -104,7 +104,7 @@ public class PredicateUtils {
         List<Key> points = rangesToPoint(ranges);
         resultKeys = joinKeys(resultKeys, points);
       } catch (Exception e) {
-        throw new TiClientInternalException(String.format("Error converting access points %s", predicate), e);
+        throw new TiExpressionException(String.format("Error converting access points %s", predicate), e);
       }
     }
     return resultKeys;
@@ -121,7 +121,7 @@ public class PredicateUtils {
           range.lowerEndpoint().equals(range.upperEndpoint())) {
         builder.add(range.lowerEndpoint());
       } else {
-        throw new TiClientInternalException("Cannot convert range to point");
+        throw new TiExpressionException("Cannot convert range to point");
       }
     }
     return builder.build();

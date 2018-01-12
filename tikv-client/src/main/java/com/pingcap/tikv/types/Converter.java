@@ -20,7 +20,7 @@ package com.pingcap.tikv.types;
 
 import static java.util.Objects.requireNonNull;
 
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TypeException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Date;
@@ -39,7 +39,7 @@ public class Converter {
     } else if (val instanceof String) {
       return Long.parseLong(val.toString());
     }
-    throw new TiClientInternalException(String.format("Cannot cast %s to long", val.getClass().getSimpleName()));
+    throw new TypeException(String.format("Cannot cast %s to long", val.getClass().getSimpleName()));
   }
 
   public static double convertToDouble(Object val) {
@@ -49,7 +49,7 @@ public class Converter {
     } else if (val instanceof String) {
       return Double.parseDouble(val.toString());
     }
-    throw new TiClientInternalException(String.format("Cannot cast %s to double", val.getClass().getSimpleName()));
+    throw new TypeException(String.format("Cannot cast %s to double", val.getClass().getSimpleName()));
   }
 
   public static String convertToString(Object val) {
@@ -64,7 +64,7 @@ public class Converter {
     } else if (val instanceof String) {
       return ((String) val).getBytes();
     }
-    throw new TiClientInternalException(String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
+    throw new TypeException(String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
   }
 
   private static final DateTimeZone localTimeZone = DateTimeZone.getDefault();
@@ -91,7 +91,7 @@ public class Converter {
       try {
         return DateTime.parse((String) val, localTimeZoneFormatter);
       } catch (Exception e) {
-        throw new TiClientInternalException(String.format("Error parsing string to datetime", (String)val), e);
+        throw new TypeException(String.format("Error parsing string to datetime", (String)val), e);
       }
     } else if (val instanceof Long) {
       return new DateTime((long)val);
@@ -100,7 +100,7 @@ public class Converter {
     } else if (val instanceof Date) {
       return new DateTime(((Date) val).getTime());
     } else {
-      throw new UnsupportedOperationException("Can not cast Object to LocalDateTime ");
+      throw new TypeException("Can not cast Object to LocalDateTime ");
     }
   }
 
@@ -117,7 +117,7 @@ public class Converter {
     } else if (val instanceof String) {
       return new BigDecimal((String)val);
     } else {
-      throw new UnsupportedOperationException("can not cast non Number type to Double");
+      throw new TypeException("can not cast non Number type to Double");
     }
   }
 }

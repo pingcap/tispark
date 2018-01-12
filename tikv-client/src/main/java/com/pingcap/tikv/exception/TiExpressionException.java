@@ -19,4 +19,8 @@ public class TiExpressionException extends RuntimeException {
   public TiExpressionException(String msg) {
     super(msg);
   }
+
+  public TiExpressionException(String msg, Throwable t) {
+    super(msg, t);
+  }
 }

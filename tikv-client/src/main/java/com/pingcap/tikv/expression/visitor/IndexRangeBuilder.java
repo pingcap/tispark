@@ -19,7 +19,7 @@ package com.pingcap.tikv.expression.visitor;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.Expression;
@@ -38,7 +38,7 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
 
   private static void throwOnError(Expression node) {
     final String errorFormat = "Unsupported conversion to Range: %s";
-    throw new TiClientInternalException(String.format(errorFormat, node));
+    throw new TiExpressionException(String.format(errorFormat, node));
   }
 
   protected RangeSet<TypedKey> process(Expression node, Void context) {

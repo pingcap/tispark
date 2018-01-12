@@ -18,7 +18,7 @@
 package com.pingcap.tikv.types;
 
 import com.google.common.collect.ImmutableMap;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.lang.reflect.Constructor;
 import java.util.Map;
@@ -57,7 +57,7 @@ public class DataTypeFactory {
         holderBuilder.put(type, ctorByHolder);
         instuilder.put(type, (DataType)ctorByType.newInstance(type));
       } catch (Exception e) {
-        throw new TiClientInternalException(String.format("Type %s does not have a proper constructor", cls.getName()), e);
+        throw new TypeException(String.format("Type %s does not have a proper constructor", cls.getName()), e);
       }
     }
   }
@@ -65,7 +65,7 @@ public class DataTypeFactory {
   public static DataType of(MySQLType type) {
     DataType dataType = dataTypeInstanceMap.get(type);
     if (dataType == null) {
-      throw new TiClientInternalException("Type not found for " + type);
+      throw new TypeException("Type not found for " + type);
     }
     return dataType;
   }
@@ -80,7 +80,7 @@ public class DataTypeFactory {
     try {
       return ctor.newInstance(holder);
     } catch (Exception e) {
-      throw new TiClientInternalException("Cannot create type from " + holder.getTp(), e);
+      throw new TypeException("Cannot create type from " + holder.getTp(), e);
     }
   }
 }
