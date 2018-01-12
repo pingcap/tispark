@@ -24,14 +24,16 @@ import com.pingcap.tidb.tipb.ScalarFuncSig;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiExpressionException;
+import com.pingcap.tikv.expression.AggregateFunction;
+import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.AggregateFunction;
-import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
+import com.pingcap.tikv.expression.IsNull;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.types.BitType;
 import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DataType;
@@ -46,7 +48,7 @@ import com.pingcap.tikv.types.TimestampType;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-public class ProtoConverter extends DefaultVisitor<Expr, Void> {
+public class ProtoConverter extends Visitor<Expr, Void> {
   // All concrete data type should be hooked to a type name
   private static final Map<Class<? extends DataType>, String> SCALAR_SIG_MAP =
       ImmutableMap.<Class<? extends DataType>, String>builder()
@@ -247,6 +249,19 @@ public class ProtoConverter extends DefaultVisitor<Expr, Void> {
         builder.setTp(ExprType.Count);
         break;
     }
+
+    for (Expression arg : node.getChildren()) {
+      Expr exprProto = arg.accept(this, context);
+      builder.addChildren(exprProto);
+    }
+
+    return builder.build();
+  }
+
+  @Override
+  protected Expr visit(IsNull node, Void context) {
+    Expr.Builder builder = Expr.newBuilder();
+    builder.setTp(ExprType.IsNull);
 
     for (Expression arg : node.getChildren()) {
       Expr exprProto = arg.accept(this, context);

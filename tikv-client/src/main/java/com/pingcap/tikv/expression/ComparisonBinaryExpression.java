@@ -26,12 +26,9 @@ import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.NOT_EQ
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.TypedKey;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -98,15 +95,6 @@ public class ComparisonBinaryExpression implements Expression {
       return key;
     }
   }
-
-  private static final Map<Type, ExprType> typeMap = ImmutableMap.<Type, ExprType>builder()
-      .put(EQUAL, ExprType.EQ)
-      .put(Type.NOT_EQUAL, ExprType.NE)
-      .put(Type.LESS_THAN, ExprType.LT)
-      .put(Type.LESS_EQUAL, ExprType.LE)
-      .put(Type.GREATER_THAN, ExprType.LT)
-      .put(Type.GREATER_EQUAL, ExprType.GE)
-      .build();
 
   private final Expression left;
   private final Expression right;
@@ -194,14 +182,14 @@ public class ComparisonBinaryExpression implements Expression {
     if (this == other) {
       return true;
     }
-    if (other == null || getClass() != other.getClass()) {
+    if (!(other instanceof ComparisonBinaryExpression)) {
       return false;
     }
 
     ComparisonBinaryExpression that = (ComparisonBinaryExpression) other;
     return (compType == that.compType) &&
-        left.equals(that.left) &&
-        right.equals(that.right);
+        Objects.equals(left, that.left) &&
+        Objects.equals(right, that.right);
   }
 
   @Override

@@ -101,14 +101,14 @@ public class ArithmeticBinaryExpression implements Expression {
     if (this == other) {
       return true;
     }
-    if (other == null || getClass() != other.getClass()) {
+    if (!(other instanceof ArithmeticBinaryExpression)) {
       return false;
     }
 
     ArithmeticBinaryExpression that = (ArithmeticBinaryExpression) other;
     return (compType == that.compType) &&
-        left.equals(that.left) &&
-        right.equals(that.right);
+        Objects.equals(left, that.left) &&
+        Objects.equals(right, that.right);
   }
 
   @Override

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
+import java.util.Objects;
 
 public class AggregateFunction implements Expression {
   public enum FunctionType {
@@ -58,6 +59,25 @@ public class AggregateFunction implements Expression {
   @Override
   public <R, C> R accept(Visitor<R, C> visitor, C context) {
     return visitor.visit(this, context);
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (this == other) {
+      return true;
+    }
+    if (!(other instanceof AggregateFunction)) {
+      return false;
+    }
+
+    AggregateFunction that = (AggregateFunction) other;
+    return type == that.type &&
+           Objects.equals(argument, that.argument);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(type, argument);
   }
 
   @Override
