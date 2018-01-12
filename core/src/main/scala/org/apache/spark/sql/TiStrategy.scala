@@ -139,7 +139,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         throw new IllegalArgumentException("Should never be here")
 
       case f @ Sum(BasicExpression(arg)) =>
-        dagRequest.addAggregate(null, fromSparkType(f.dataType))
+        dagRequest
+          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
 
       case f @ Count(args) if args.length == 1 =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
