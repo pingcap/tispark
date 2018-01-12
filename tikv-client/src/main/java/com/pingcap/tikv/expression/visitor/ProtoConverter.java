@@ -137,7 +137,9 @@ public class ProtoConverter extends Visitor<Expr, Void> {
   }
 
   protected Expr visit(ArithmeticBinaryExpression node, Void context) {
-    String typeSignature = getTypeSignature(node);
+    // assume after type coerce, children should be compatible
+    Expression child = node.getLeft();
+    String typeSignature = getTypeSignature(child);
     ScalarFuncSig protoSig;
     switch (node.getCompType()) {
       // TODO: Add test for bitwise push down
@@ -172,7 +174,9 @@ public class ProtoConverter extends Visitor<Expr, Void> {
 
   @Override
   protected Expr visit(ComparisonBinaryExpression node, Void context) {
-    String typeSignature = getTypeSignature(node);
+    // assume after type coerce, children should be compatible
+    Expression child = node.getLeft();
+    String typeSignature = getTypeSignature(child);
     ScalarFuncSig protoSig;
     switch (node.getComparisonType()) {
       case EQUAL:
@@ -259,25 +263,20 @@ public class ProtoConverter extends Visitor<Expr, Void> {
     return builder.build();
   }
 
-  private Expr nonScalarToProto(Expression node, ExprType type, Void context) {
-    Expr.Builder builder = Expr.newBuilder();
-    builder.setTp(type);
-
-    for (Expression arg : node.getChildren()) {
-      Expr exprProto = arg.accept(this, context);
-      builder.addChildren(exprProto);
-    }
-
+  @Override
+  protected Expr visit(IsNull node, Void context) {
+    String typeSignature = getTypeSignature(node.getExpression());
+    ScalarFuncSig protoSig = ScalarFuncSig.valueOf(typeSignature + "IsNull");
+    Expr.Builder builder = scalaToPartialProto(node, context);
+    builder.setSig(protoSig);
     return builder.build();
   }
 
   @Override
-  protected Expr visit(IsNull node, Void context) {
-    return nonScalarToProto(node, ExprType.IsNull, context);
-  }
-
-  @Override
   protected Expr visit(Not node, Void context) {
-    return nonScalarToProto(node, ExprType.Not, context);
+    ScalarFuncSig protoSig = ScalarFuncSig.UnaryNot;
+    Expr.Builder builder = scalaToPartialProto(node, context);
+    builder.setSig(protoSig);
+    return builder.build();
   }
 }

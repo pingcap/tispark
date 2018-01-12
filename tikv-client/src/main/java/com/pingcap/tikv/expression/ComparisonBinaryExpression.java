@@ -99,7 +99,7 @@ public class ComparisonBinaryExpression implements Expression {
   private final Expression left;
   private final Expression right;
   private final Type compType;
-  private Optional<NormalizedPredicate> normalizedPredicate;
+  transient private Optional<NormalizedPredicate> normalizedPredicate;
 
   public ComparisonBinaryExpression(Type type, Expression left, Expression right) {
     this.left = requireNonNull(left, "left expression is null");
