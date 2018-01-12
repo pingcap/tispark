@@ -29,7 +29,7 @@ public class Not implements Expression {
 
   private Expression expression;
 
-  private Not(Expression expression) {
+  public Not(Expression expression) {
     this.expression = requireNonNull(expression, "expression is null");
   }
 

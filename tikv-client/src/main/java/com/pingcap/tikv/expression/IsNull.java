@@ -24,7 +24,7 @@ import java.util.Objects;
 public class IsNull implements Expression {
   private Expression expression;
 
-  private IsNull(Expression expression) {
+  public IsNull(Expression expression) {
     this.expression = requireNonNull(expression, "expression is null");
   }
 
