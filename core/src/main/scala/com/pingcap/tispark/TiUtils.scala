@@ -82,7 +82,7 @@ object TiUtils {
           val head = nameTypeMap.get(attr.name).head
           return !head.isInstanceOf[BitType] && head.getType != MySQLType.TypeDuration
         // TODO:Currently we do not support literal null type push down
-        // when TiConstant is ready to support literal null or we have other
+        // when Constant is ready to support literal null or we have other
         // options, remove this.
         case constant: Literal =>
           return constant.value != null
