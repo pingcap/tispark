@@ -18,6 +18,7 @@ package com.pingcap.tikv.codec;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import gnu.trove.list.array.TIntArrayList;
 import java.math.BigDecimal;
 import java.util.Arrays;

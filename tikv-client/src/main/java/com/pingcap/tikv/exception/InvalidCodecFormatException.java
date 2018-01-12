@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.codec;
+package com.pingcap.tikv.exception;
 
 public class InvalidCodecFormatException extends RuntimeException {
   public InvalidCodecFormatException(String msg) {

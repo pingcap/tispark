@@ -26,11 +26,11 @@ import com.pingcap.tikv.types.RealType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.TimestampType;
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
-import org.joda.time.LocalDate;
-import org.joda.time.LocalDateTime;
+import org.joda.time.DateTime;
 
 
 // Refactor needed.
@@ -75,9 +75,9 @@ public class Constant implements Expression {
       return RealType.DOUBLE;
     } else if (value instanceof BigDecimal) {
       return DecimalType.DECIMAL;
-    } else if (value instanceof LocalDateTime) {
+    } else if (value instanceof DateTime) {
       return DateTimeType.DATETIME;
-    } else if (value instanceof LocalDate) {
+    } else if (value instanceof Date) {
       return DateType.DATE;
     } else if (value instanceof Timestamp) {
       return TimestampType.TIMESTAMP;
