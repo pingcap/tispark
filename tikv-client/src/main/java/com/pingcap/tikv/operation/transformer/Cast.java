@@ -39,7 +39,7 @@ public class Cast extends NoOp {
     } else if (targetDataType instanceof StringType) {
       casted = castToString(value);
     } else if (targetDataType instanceof BytesType) {
-      casted = castToByteArray(value);
+      casted = castToBinary(value);
     } else if (targetDataType instanceof DecimalType) {
       casted = castToDecimal(value);
     } else if (targetDataType instanceof RealType) {
@@ -76,13 +76,22 @@ public class Cast extends NoOp {
   }
 
   private String castToString(Object obj) {
-    return obj.toString();
+    String result;
+    if (obj instanceof byte[]) {
+      result = new String((byte[]) obj);
+    } else if (obj instanceof char[]) {
+      result = new String((char[]) obj);
+    } else {
+      result = String.valueOf(obj);
+    }
+    return result;
   }
 
-  private byte[] castToByteArray(Object obj) {
+  private byte[] castToBinary(Object obj) {
     if (obj instanceof byte[]) {
-      return ((byte[]) obj);
+      return (byte[]) obj;
+    } else {
+      return obj.toString().getBytes();
     }
-    throw new UnsupportedOperationException("Cannot cast to byte array: " + (obj == null ? "null" : obj.getClass().getSimpleName()));
   }
 }
