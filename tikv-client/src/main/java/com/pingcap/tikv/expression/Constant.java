@@ -75,6 +75,8 @@ public class Constant implements Expression {
       return DateType.DATE;
     } else if (value instanceof Timestamp) {
       return TimestampType.TIMESTAMP;
+    } else if (value instanceof byte[]) {
+      return BytesType.TEXT;
     } else {
       throw new TiExpressionException("Constant type not supported:" + value.getClass().getSimpleName());
     }
