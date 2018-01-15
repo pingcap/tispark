@@ -47,7 +47,7 @@ public class Cast extends NoOp {
     row.set(pos, targetDataType, casted);
   }
 
-  public Double castToDouble(Object obj) {
+  private Double castToDouble(Object obj) {
     if (obj instanceof Number) {
       Number num = (Number) obj;
       return num.doubleValue();
@@ -55,18 +55,16 @@ public class Cast extends NoOp {
     throw new UnsupportedOperationException("can not cast un-number to double ");
   }
 
-  public BigDecimal castToDecimal(Object obj) {
+  private BigDecimal castToDecimal(Object obj) {
     if (obj instanceof Number) {
       Number num = (Number) obj;
       return new BigDecimal(num.doubleValue());
-    } else if (obj instanceof BigDecimal) {
-      return (BigDecimal) obj;
     }
     throw new UnsupportedOperationException(
-        "can not cast to BigDecimal: " + obj == null ? "null" : obj.getClass().getSimpleName());
+        "Cannot cast to BigDecimal: " + (obj == null ? "null" : obj.getClass().getSimpleName()));
   }
 
-  public Long castToLong(Object obj) {
+  private Long castToLong(Object obj) {
     if (obj instanceof Number) {
       Number num = (Number) obj;
       return num.longValue();
@@ -74,7 +72,7 @@ public class Cast extends NoOp {
     throw new UnsupportedOperationException("can not cast un-number to long ");
   }
 
-  public String castToString(Object obj) {
+  private String castToString(Object obj) {
     return obj.toString();
   }
 }
