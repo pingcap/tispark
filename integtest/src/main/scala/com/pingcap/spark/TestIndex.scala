@@ -24,9 +24,6 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-/**
- * Created by birdstorm on 2017/11/5.
- */
 class TestIndex(prop: Properties) extends TestCase(prop) {
 
   private var colList: List[String] = _
@@ -245,9 +242,9 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
         ID_COL
       )
     ),
-    select("tp_year") + where(
-      binaryOpWithName("tp_year", "1993 and 2017", "between") + orderBy(ID_COL)
-    ),
+//    select("tp_year") + where(
+//      binaryOpWithName("tp_year", "1993 and 2017", "between") + orderBy(ID_COL)
+//    ),
     select("tp_real") + where(
       binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between") + orderBy(ID_COL)
     )
@@ -311,7 +308,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     select("tp_timestamp") + where(
       binaryOpWithName("tp_timestamp", "('2017-11-02 16:48:01')", "in") + orderBy(ID_COL)
     ),
-    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in") + orderBy(ID_COL)),
+//    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in") + orderBy(ID_COL)),
     select("tp_real") + where(
       binaryOpWithName("tp_real", "(4.44,0.5194052764001038)", "in") + orderBy(ID_COL)
     )
