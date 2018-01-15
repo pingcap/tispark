@@ -321,7 +321,6 @@ case class RegionTaskExec(child: SparkPlan,
               s"Unary task downgraded, task info:Host={${task.getHost}}, " +
                 s"RegionId={${task.getRegion.getId}}, " +
                 s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
-                s"Range={${KeyRangeUtils.toString(task.getRanges.head)}}, " +
                 s"RangesListSize=${task.getRanges.size()}}"
             )
             numDowngradedTasks += 1

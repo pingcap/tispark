@@ -561,10 +561,6 @@ public class TiDAGRequest implements Serializable {
     return filters;
   }
 
-  public List<TiColumnInfo> getColInfoList() {
-    return getFields().stream().map(ColumnRef::getColumnInfo).collect(Collectors.toList());
-  }
-
   /**
    * Returns whether handle is needed.
    *
