@@ -17,20 +17,14 @@ package com.pingcap.tikv.expression;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DateTimeType;
-import com.pingcap.tikv.types.DateType;
-import com.pingcap.tikv.types.DecimalType;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.RealType;
-import com.pingcap.tikv.types.StringType;
-import com.pingcap.tikv.types.TimestampType;
+import com.pingcap.tikv.types.*;
+import org.joda.time.DateTime;
+
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
-import org.joda.time.DateTime;
 
 
 // Refactor needed.
@@ -81,6 +75,8 @@ public class Constant implements Expression {
       return DateType.DATE;
     } else if (value instanceof Timestamp) {
       return TimestampType.TIMESTAMP;
+    } else if (value instanceof byte[]) {
+      return BytesType.TEXT;
     } else {
       throw new TiExpressionException("Constant type not supported:" + value.getClass().getSimpleName());
     }

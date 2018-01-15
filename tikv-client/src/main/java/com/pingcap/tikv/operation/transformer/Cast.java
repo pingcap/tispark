@@ -19,6 +19,7 @@ package com.pingcap.tikv.operation.transformer;
 
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.*;
+
 import java.math.BigDecimal;
 
 public class Cast extends NoOp {
@@ -37,6 +38,8 @@ public class Cast extends NoOp {
       casted = castToLong(value);
     } else if (targetDataType instanceof StringType) {
       casted = castToString(value);
+    } else if (targetDataType instanceof BytesType) {
+      casted = castToByteArray(value);
     } else if (targetDataType instanceof DecimalType) {
       casted = castToDecimal(value);
     } else if (targetDataType instanceof RealType) {
@@ -74,5 +77,12 @@ public class Cast extends NoOp {
 
   private String castToString(Object obj) {
     return obj.toString();
+  }
+
+  private byte[] castToByteArray(Object obj) {
+    if (obj instanceof byte[]) {
+      return ((byte[]) obj);
+    }
+    throw new UnsupportedOperationException("Cannot cast to byte array: " + (obj == null ? "null" : obj.getClass().getSimpleName()));
   }
 }
