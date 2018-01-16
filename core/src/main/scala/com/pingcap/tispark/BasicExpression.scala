@@ -21,13 +21,12 @@ import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import org.joda.time.DateTime
 import com.pingcap.tikv.expression.{ArithmeticBinaryExpression, ColumnRef, ComparisonBinaryExpression, Constant}
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
+import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
 
 import scala.language.implicitConversions
 
 object BasicExpression {
-  private final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
-
   type TiExpression = com.pingcap.tikv.expression.Expression
   type TiNot = com.pingcap.tikv.expression.Not
   type TiIsNull = com.pingcap.tikv.expression.IsNull
@@ -38,11 +37,11 @@ object BasicExpression {
       null
     } else {
       dataType match {
-        // In Spark Date is encoded as integer of days after 1970-01-01
-        // and sql.Date is constructed as milliseconds after 1970-01-01
-        // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd,
-        // but seems change in DAG mode
-        case DateType       => new DateTime(MILLISEC_PER_DAY * value.asInstanceOf[Int])
+        // In Spark Date is encoded as integer of days after 1970-01-01 UTC
+        // and this number of date has compensate of timezone
+        // and must be restored by DateTimeUtils.daysToMillis
+        case DateType =>
+          new DateTime(DateTimeUtils.daysToMillis(value.asInstanceOf[DateTimeUtils.SQLDate]))
         case TimestampType  => new Timestamp(value.asInstanceOf[Long] / 1000)
         case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal

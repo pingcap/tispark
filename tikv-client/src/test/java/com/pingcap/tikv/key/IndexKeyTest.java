@@ -17,6 +17,7 @@ package com.pingcap.tikv.key;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.pingcap.tikv.types.IntegerType;
 import org.junit.Test;
@@ -39,9 +40,10 @@ public class IndexKeyTest {
     assertEquals(k1, ik1.getDataKeys()[0]);
     assertEquals(k2, ik1.getDataKeys()[1]);
 
-    IndexKey ik4 = IndexKey.toIndexKey(0, 0, k1, null, k2);
-    IndexKey ik5 = IndexKey.toIndexKey(0, 0, k1, Key.NULL, k2);
-    assertEquals(ik4, ik5);
+    try {
+      IndexKey.toIndexKey(0, 0, k1, null, k2);
+      fail();
+    } catch (Exception e) {}
   }
 
   @Test
