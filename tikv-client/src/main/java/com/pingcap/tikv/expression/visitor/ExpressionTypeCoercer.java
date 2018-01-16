@@ -16,26 +16,19 @@
 package com.pingcap.tikv.expression.visitor;
 
 
-import static java.util.Objects.requireNonNull;
-
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.AggregateFunction;
+import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
-import com.pingcap.tikv.expression.IsNull;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.Not;
-import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DecimalType;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.RealType;
 import com.pingcap.tikv.util.Pair;
+
 import java.util.IdentityHashMap;
 import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Validate and infer expression type
@@ -172,7 +165,12 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
         if (targetType != null && targetType.equals(DecimalType.DECIMAL)) {
           throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
         }
-        typeMap.put(node, DecimalType.DECIMAL);
+        DataType colType = node.getArgument().accept(this, null).first;
+        if (colType instanceof RealType) {
+          typeMap.put(node, RealType.DOUBLE);
+        } else {
+          typeMap.put(node, DecimalType.DECIMAL);
+        }
         return Pair.create(targetType, FUNCTION_CRED);
       }
       case First:
