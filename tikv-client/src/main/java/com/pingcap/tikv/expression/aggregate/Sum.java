@@ -7,6 +7,7 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataTypeFactory;
 import com.pingcap.tikv.types.DecimalType;
 import com.pingcap.tikv.types.Types;
+import org.apache.spark.sql.types.IntegerType;
 
 public class Sum extends TiUnaryFunctionExpression {
 
@@ -20,10 +21,11 @@ public class Sum extends TiUnaryFunctionExpression {
   }
 
   @Override
-  public DataType getType() {
+  public D
+  ataType getType() {
     // get column type from Column Reference
     DataType colType = args.get(0).getType();
-    if(colType instanceof DecimalType) {
+    if(colType instanceof DecimalType || colType instanceof IntegerType) {
       return DataTypeFactory.of(Types.TYPE_NEW_DECIMAL);
     }
     // both Real and Double are decoded using RealType
