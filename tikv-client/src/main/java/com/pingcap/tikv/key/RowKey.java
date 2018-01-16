@@ -16,27 +16,42 @@
 package com.pingcap.tikv.key;
 
 
-import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
-
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.util.FastByteComparisons;
 import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
+import com.pingcap.tikv.util.FastByteComparisons;
+
 import java.util.Objects;
+
+import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
 
 public class RowKey extends Key {
   private static final byte[] REC_PREFIX_SEP = new byte[] {'_', 'r'};
 
   private final long tableId;
   private final long handle;
+  private final boolean maxHandleFlag;
 
   private RowKey(long tableId, long handle) {
     super(encode(tableId, handle));
     this.tableId = tableId;
     this.handle = handle;
+    this.maxHandleFlag = false;
+  }
+
+  /**
+   * The RowKey indicating maximum handle (its value exceeds Long.Max_Value)
+   *
+   * Initializes an imaginary globally MAXIMUM rowKey with tableId.
+   */
+  private RowKey(long tableId) {
+    super(encodeMaxHandle(tableId));
+    this.tableId = tableId;
+    this.handle = Long.MAX_VALUE;
+    this.maxHandleFlag = true;
   }
 
   public static RowKey toRowKey(long tableId, long handle) {
@@ -51,12 +66,16 @@ public class RowKey extends Key {
     throw new TiExpressionException("Cannot encode row key with non-long type");
   }
 
+  public static RowKey toMaxRowKey(long tableId) {
+    return new RowKey(tableId);
+  }
+
   public static RowKey createMin(long tableId) {
     return toRowKey(tableId, Long.MIN_VALUE);
   }
 
   public static RowKey createMax(long tableId) {
-    return toRowKey(tableId, Long.MAX_VALUE);
+    return toMaxRowKey(tableId);
   }
 
   private static byte[] encode(long tableId, long handle) {
@@ -66,11 +85,19 @@ public class RowKey extends Key {
     return cdo.toBytes();
   }
 
+  private static byte[] encodeMaxHandle(long tableId) {
+    return nextValue(encode(tableId, Long.MAX_VALUE));
+  }
+
   @Override
   public RowKey next() {
     long handle = getHandle();
-    if (handle == Long.MAX_VALUE) {
+    boolean maxHandleFlag = getMaxHandleFlag();
+    if (maxHandleFlag) {
       throw new TiClientInternalException("Handle overflow for Long MAX");
+    }
+    if (handle == Long.MAX_VALUE) {
+      return toMaxRowKey(tableId);
     }
     return new RowKey(tableId, handle + 1);
   }
@@ -81,6 +108,10 @@ public class RowKey extends Key {
 
   public long getHandle() {
     return handle;
+  }
+
+  public boolean getMaxHandleFlag() {
+    return maxHandleFlag;
   }
 
   @Override
