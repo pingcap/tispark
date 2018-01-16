@@ -212,8 +212,14 @@ public class TiColumnInfo implements Serializable {
     }
   }
 
+  TiIndexColumn toFakeIndexColumn() {
+    // we don't use original length of column since for a clustered index column
+    // it always full index instead of prefix index
+    return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), DataType.UNSPECIFIED_LEN);
+  }
+
   TiIndexColumn toIndexColumn() {
-    return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), type.getLength());
+    return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), getType().getLength());
   }
 
   public ColumnInfo toProto(TiTableInfo table) {

@@ -18,9 +18,6 @@ package org.apache.spark.sql
 import java.time.ZonedDateTime
 
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
-import com.pingcap.tikv.expression
-
-import scala.collection.JavaConverters._
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.meta.TiDAGRequest
@@ -39,6 +36,8 @@ import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
+
+import scala.collection.JavaConverters._
 
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage

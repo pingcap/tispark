@@ -290,8 +290,8 @@ public class ScanAnalyzer {
               specBuilder.addRangePredicate(col, cond);
               if (col.isPrefixIndex()) {
                 specBuilder.addResidualPredicate(cond);
+                break;
               }
-              break;
             }
           }
           break;

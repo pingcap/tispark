@@ -49,7 +49,7 @@ public class Not implements Expression {
 
   @Override
   public String toString() {
-    return String.format("IsNull(%s)", getExpression());
+    return String.format("Not(%s)", getExpression());
   }
 
   @Override

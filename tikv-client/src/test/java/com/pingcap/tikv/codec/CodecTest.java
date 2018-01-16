@@ -152,6 +152,29 @@ public class CodecTest {
     }
   }
 
+  private static byte[] toBytes(int[] arr) {
+    byte[] bytes = new byte[arr.length];
+    for (int i = 0; i < arr.length; i++) {
+      bytes[i] = (byte)(arr[i] & 0xFF);
+    }
+    return bytes;
+  }
+
+  @Test
+  public void writeBytesTest() throws Exception {
+    CodecDataOutput cdo = new CodecDataOutput();
+    Codec.BytesCodec.writeBytes(cdo, "abcdefghijk".getBytes());
+    byte[] result = cdo.toBytes();
+    byte[] expected = toBytes(new int[]{97,98,99,100,101,102,103,104,255,105,106,107,0,0,0,0,0,250});
+    assertArrayEquals(expected, result);
+
+    cdo.reset();
+    Codec.BytesCodec.writeBytes(cdo, "fYfSp".getBytes());
+    result = cdo.toBytes();
+    expected = toBytes(new int[]{102,89,102,83,112,0,0,0,252});
+    assertArrayEquals(expected, result);
+  }
+
   @Test
   public void writeFloatTest() throws Exception {
     CodecDataOutput cdo = new CodecDataOutput();
