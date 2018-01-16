@@ -26,7 +26,7 @@ import gnu.trove.list.array.TIntArrayList;
 
 import java.math.BigDecimal;
 
-public class DecimalType extends RealType {
+public class DecimalType extends DataType {
   static DecimalType of(int tp) {
     return new DecimalType(tp);
   }
@@ -48,7 +48,6 @@ public class DecimalType extends RealType {
    */
   @Override
   public Object decodeNotNull(int flag, CodecDataInput cdi) {
-    super.decodeNotNull(flag, cdi);
     if (flag != DECIMAL_FLAG) {
       throw new InvalidCodecFormatException("Invalid Flag type for decimal type: " + flag);
     }
