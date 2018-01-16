@@ -19,6 +19,7 @@ package com.pingcap.tikv.operation.transformer;
 
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.*;
+
 import java.math.BigDecimal;
 
 public class Cast extends NoOp {
@@ -35,6 +36,8 @@ public class Cast extends NoOp {
     }
     if (targetDataType instanceof IntegerType) {
       casted = castToLong(value);
+    } else if (targetDataType instanceof RawBytesType) {
+      casted = castToBinary(value);
     } else if (targetDataType instanceof BytesType) {
       casted = castToString(value);
     } else if (targetDataType instanceof DecimalType) {
@@ -42,12 +45,12 @@ public class Cast extends NoOp {
     } else if (targetDataType instanceof RealType) {
       casted = castToDouble(value);
     } else {
-      throw new UnsupportedOperationException("only support cast to Long, Double and String");
+      casted = value;
     }
     row.set(pos, targetDataType, casted);
   }
 
-  public Double castToDouble(Object obj) {
+  private Double castToDouble(Object obj) {
     if (obj instanceof Number) {
       Number num = (Number) obj;
       return num.doubleValue();
@@ -55,18 +58,16 @@ public class Cast extends NoOp {
     throw new UnsupportedOperationException("can not cast un-number to double ");
   }
 
-  public BigDecimal castToDecimal(Object obj) {
+  private BigDecimal castToDecimal(Object obj) {
     if (obj instanceof Number) {
       Number num = (Number) obj;
       return new BigDecimal(num.doubleValue());
-    } else if (obj instanceof BigDecimal) {
-      return (BigDecimal) obj;
     }
     throw new UnsupportedOperationException(
-        "can not cast to BigDecimal: " + obj == null ? "null" : obj.getClass().getSimpleName());
+        "Cannot cast to BigDecimal: " + (obj == null ? "null" : obj.getClass().getSimpleName()));
   }
 
-  public Long castToLong(Object obj) {
+  private Long castToLong(Object obj) {
     if (obj instanceof Number) {
       Number num = (Number) obj;
       return num.longValue();
@@ -74,7 +75,23 @@ public class Cast extends NoOp {
     throw new UnsupportedOperationException("can not cast un-number to long ");
   }
 
-  public String castToString(Object obj) {
-    return obj.toString();
+  private String castToString(Object obj) {
+    String result;
+    if (obj instanceof byte[]) {
+      result = new String((byte[]) obj);
+    } else if (obj instanceof char[]) {
+      result = new String((char[]) obj);
+    } else {
+      result = String.valueOf(obj);
+    }
+    return result;
+  }
+
+  private byte[] castToBinary(Object obj) {
+    if (obj instanceof byte[]) {
+      return (byte[]) obj;
+    } else {
+      return obj.toString().getBytes();
+    }
   }
 }
