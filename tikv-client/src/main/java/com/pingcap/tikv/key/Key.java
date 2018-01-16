@@ -73,7 +73,17 @@ public class Key implements Comparable<Key> {
   }
 
   private static Key createEmpty() {
-    return new Key(new byte[0]);
+    return new Key(new byte[0]) {
+      @Override
+      public Key next() {
+        return this;
+      }
+
+      @Override
+      public String toString() {
+        return "EMPTY";
+      }
+    };
   }
 
   private static Key createTypelessMin() {

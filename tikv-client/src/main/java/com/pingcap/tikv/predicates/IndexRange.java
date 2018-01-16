@@ -29,17 +29,12 @@ public class IndexRange {
     this.range = range;
   }
 
-  public IndexRange(Key accessKey) {
-    this.accessKey = accessKey;
-    this.range = null;
-  }
-
   Key getAccessKey() {
     return accessKey;
   }
 
-  boolean hasAccessKeys() {
-    return accessKey != null && accessKey != null;
+  boolean hasAccessKey() {
+    return accessKey != null;
   }
 
   boolean hasRange() {

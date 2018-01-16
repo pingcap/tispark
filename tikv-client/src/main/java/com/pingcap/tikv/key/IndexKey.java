@@ -19,6 +19,7 @@ package com.pingcap.tikv.key;
 import com.google.common.base.Joiner;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.TypeException;
 
 public class IndexKey extends Key {
   private static final byte[] IDX_PREFIX_SEP = new byte[] {'_', 'i'};
@@ -46,7 +47,7 @@ public class IndexKey extends Key {
     IntegerCodec.writeLong(cdo, indexId);
     for (Key key : dataKeys) {
       if (key == null) {
-        key = Key.NULL;
+        throw new TypeException("key cannot be null");
       }
       cdo.write(key.getBytes());
     }

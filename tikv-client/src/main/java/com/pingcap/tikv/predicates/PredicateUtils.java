@@ -71,17 +71,28 @@ public class PredicateUtils {
     requireNonNull(pointPredicates, "pointPredicates is null");
     requireNonNull(rangePredicate, "rangePredicate is null");
     ImmutableList.Builder<IndexRange> builder = ImmutableList.builder();
-    List<Key> pointKeys = expressionToPoints(pointPredicates);
-    for (Key key : pointKeys) {
+
+    if (pointPredicates.size() != 0) {
+      List<Key> pointKeys = expressionToPoints(pointPredicates);
+      for (Key key : pointKeys) {
+        if (rangePredicate.isPresent()) {
+          Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
+          for (Range<TypedKey> range : ranges) {
+            builder.add(new IndexRange(key, range));
+          }
+        } else {
+          builder.add(new IndexRange(key, null));
+        }
+      }
+    } else {
       if (rangePredicate.isPresent()) {
         Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
         for (Range<TypedKey> range : ranges) {
-          builder.add(new IndexRange(key, range));
+          builder.add(new IndexRange(null, range));
         }
-      } else {
-        builder.add(new IndexRange(key));
       }
     }
+
     return builder.build();
   }
 

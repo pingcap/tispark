@@ -72,10 +72,11 @@ public class ScanSpec {
 
     public void addRangePredicate(TiIndexColumn col, Expression predicate) {
       requireNonNull(col, "col is null");
-      if (col.equals(rangeColumn)) {
+      if (rangeColumn == null) {
+        rangeColumn = col;
+      } else if (!rangeColumn.equals(col)) {
         throw new TiExpressionException("Cannot reset range predicates");
       }
-      this.rangeColumn = col;
       rangePredicates.add(predicate);
     }
 
