@@ -21,8 +21,7 @@ public class Sum extends TiUnaryFunctionExpression {
   }
 
   @Override
-  public D
-  ataType getType() {
+  public DataType getType() {
     // get column type from Column Reference
     DataType colType = args.get(0).getType();
     if(colType instanceof DecimalType || colType instanceof IntegerType) {
