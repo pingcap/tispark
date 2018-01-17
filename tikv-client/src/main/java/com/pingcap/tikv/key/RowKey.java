@@ -48,7 +48,7 @@ public class RowKey extends Key {
    * Initializes an imaginary globally MAXIMUM rowKey with tableId.
    */
   private RowKey(long tableId) {
-    super(encodeMaxHandle(tableId));
+    super(encodeBeyondMaxHandle(tableId));
     this.tableId = tableId;
     this.handle = Long.MAX_VALUE;
     this.maxHandleFlag = true;
@@ -66,16 +66,12 @@ public class RowKey extends Key {
     throw new TiExpressionException("Cannot encode row key with non-long type");
   }
 
-  public static RowKey toMaxRowKey(long tableId) {
-    return new RowKey(tableId);
-  }
-
   public static RowKey createMin(long tableId) {
     return toRowKey(tableId, Long.MIN_VALUE);
   }
 
-  public static RowKey createMax(long tableId) {
-    return toMaxRowKey(tableId);
+  public static RowKey createBeyondMax(long tableId) {
+    return new RowKey(tableId);
   }
 
   private static byte[] encode(long tableId, long handle) {
@@ -85,7 +81,7 @@ public class RowKey extends Key {
     return cdo.toBytes();
   }
 
-  private static byte[] encodeMaxHandle(long tableId) {
+  private static byte[] encodeBeyondMaxHandle(long tableId) {
     return nextValue(encode(tableId, Long.MAX_VALUE));
   }
 
@@ -97,7 +93,7 @@ public class RowKey extends Key {
       throw new TiClientInternalException("Handle overflow for Long MAX");
     }
     if (handle == Long.MAX_VALUE) {
-      return toMaxRowKey(tableId);
+      return createBeyondMax(tableId);
     }
     return new RowKey(tableId, handle + 1);
   }
@@ -110,7 +106,7 @@ public class RowKey extends Key {
     return handle;
   }
 
-  public boolean getMaxHandleFlag() {
+  private boolean getMaxHandleFlag() {
     return maxHandleFlag;
   }
 

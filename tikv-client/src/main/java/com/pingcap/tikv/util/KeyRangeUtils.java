@@ -16,10 +16,7 @@
 package com.pingcap.tikv.util;
 
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeSet;
-import com.google.common.collect.TreeRangeSet;
+import com.google.common.collect.*;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -116,7 +113,11 @@ public class KeyRangeUtils {
    */
   public static KeyRange makeCoprocRange(Range<Key> range) {
     if (!range.hasLowerBound() || !range.hasUpperBound()) {
-      throw new TiClientInternalException("range is not closed");
+      throw new TiClientInternalException("range is not bounded");
+    }
+    if (range.lowerBoundType().equals(BoundType.OPEN) ||
+        range.upperBoundType().equals(BoundType.CLOSED)) {
+      throw new TiClientInternalException("range must be CLOSED_OPEN");
     }
     return makeCoprocRange(range.lowerEndpoint().toByteString(),
                            range.upperEndpoint().toByteString());
