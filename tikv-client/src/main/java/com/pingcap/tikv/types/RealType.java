@@ -50,11 +50,10 @@ public class RealType extends DataType {
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     // check flag first and then read.
-    if (flag == Codec.FLOATING_FLAG) {
-      return RealCodec.readDouble(cdi);
-    } else {
+    if (flag != Codec.FLOATING_FLAG) {
       throw new InvalidCodecFormatException("Invalid Flag type for float type: " + flag);
     }
+    return RealCodec.readDouble(cdi);
   }
 
   @Override
