@@ -224,9 +224,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
                                  sql: String,
                                  sparkJDBC: List[List[Any]],
                                  tiSpark: List[List[Any]]): Unit = {
-    if (compResult(sparkJDBC, tiSpark)) {
-      return
-    }
+//    if (compResult(sparkJDBC, tiSpark, sql.contains(" order by "))) {
+//      return
+//    }
 
     try {
       logger.info(s"Dump diff for JDBC Spark $sqlName \n")
@@ -242,9 +242,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
                         sql: String,
                         tiDb: List[List[Any]],
                         tiSpark: List[List[Any]]): Unit = {
-    if (compResult(tiDb, tiSpark)) {
-      return
-    }
+//    if (compResult(tiDb, tiSpark, sql.contains(" order by "))) {
+//      return
+//    }
 
     try {
       logger.info(s"Dump diff for TiSpark $sqlName \n")
@@ -442,6 +442,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
     var spark_jdbc: List[List[Any]] = List.empty
     var spark: List[List[Any]] = List.empty
 
+    // if sql does not contain order by, TiSpark does not guarantee the result be ordered
+    val requestOrder = str.contains(" order by ")
+
     testsExecuted += 1
     if (skipped) {
       testsSkipped += 1
@@ -467,7 +470,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
         spark = List.apply(List.apply[String](e.getMessage))
         sparkRunTimeError = true
     }
-    val isFalse = sparkJDBCRunTimeError || sparkRunTimeError || !compResult(spark_jdbc, spark)
+    val isFalse = sparkJDBCRunTimeError || sparkRunTimeError || !compResult(spark_jdbc, spark, requestOrder)
     if (isFalse) {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
@@ -496,6 +499,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
     var tidb: List[List[Any]] = List.empty
     var spark: List[List[Any]] = List.empty
 
+    // if sql does not contain order by, TiSpark does not guarantee the result be ordered
+    val requestOrder = str.contains(" order by ")
+
     testsExecuted += 1
     if (skipped) {
       testsSkipped += 1
@@ -523,7 +529,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
         sparkRunTimeError = true
     }
 
-    val isFalse = tidbRunTimeError || sparkRunTimeError || !compResult(tidb, spark)
+    val isFalse = tidbRunTimeError || sparkRunTimeError || !compResult(tidb, spark, requestOrder)
     if (isFalse) {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
@@ -551,6 +557,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
     var tidb: List[List[Any]] = List.empty
     var spark_jdbc: List[List[Any]] = List.empty
     var spark: List[List[Any]] = List.empty
+
+    // if sql does not contain order by, TiSpark does not guarantee the result be ordered
+    val requestOrder = str.contains(" order by ")
 
     testsExecuted += 1
     if (skipped) {
@@ -580,10 +589,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
         sparkRunTimeError = true
     }
 
-    val isSparkJDBCvsSparkFalse = sparkRunTimeError || sparkJDBCRunTimeError || !compResult(
-      spark_jdbc,
-      spark
-    )
+    val isSparkJDBCvsSparkFalse = sparkRunTimeError || sparkJDBCRunTimeError || !compResult(spark_jdbc, spark, requestOrder)
 
     var isTiDBvsSparkFalse = false
 
@@ -598,7 +604,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
           tidb = List.apply(List.apply[String](e.getMessage))
           tidbRunTimeError = true
       }
-      isTiDBvsSparkFalse = sparkRunTimeError || tidbRunTimeError || !compResult(tidb, spark)
+      isTiDBvsSparkFalse = sparkRunTimeError || tidbRunTimeError || !compResult(tidb, spark, requestOrder)
       isFalse = isTiDBvsSparkFalse && isSparkJDBCvsSparkFalse
     }
 
@@ -663,7 +669,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   private def testSql(dbName: String, sql: String): Unit = {
     spark.init(dbName)
     spark_jdbc.init(dbName)
-    logger.info(if (execSparkBothAndJudge(sql)) "TEST FAILED." else "TEST PASSED.")
+    logger.info("Result: " + (if (execSparkBothAndJudge(sql)) "TEST FAILED." else "TEST PASSED."))
   }
 
   private def test(dbName: String,
@@ -685,7 +691,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     }
   }
 
-  private def compResult(lhs: List[List[Any]], rhs: List[List[Any]]): Boolean = {
+  private def compResult(lhs: List[List[Any]], rhs: List[List[Any]], requestOrder: Boolean = true): Boolean = {
     def toDouble(x: Any): Double = x match {
       case d: Double               => d
       case d: Float                => d.toDouble
@@ -734,9 +740,20 @@ class TestCase(val prop: Properties) extends LazyLogging {
       }
     }
 
-    try {
+    def comp(lhs: List[List[Any]], rhs: List[List[Any]]): Boolean = {
       !lhs.zipWithIndex.exists {
         case (row, i) => !compRow(row, rhs(i))
+      }
+    }
+
+    try {
+      if (!requestOrder) {
+        comp(
+          lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
+          rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
+        )
+      } else {
+        comp(lhs, rhs)
       }
     } catch {
       // TODO:Remove this temporary exception handling

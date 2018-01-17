@@ -54,14 +54,14 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
   ) ++ ARITHMETIC_CONSTANT
 
   protected val DATE_DATA: List[String] = List[String](
-    "'2017-10-30'",
-    "'2017-11-02'"
+    "date '2017-10-30'",
+    "date '2017-11-02'"
   )
 
   protected val DATETIME_DATA: List[String] = List[String](
-    "'2017-11-02 00:00:00'",
-    "'2017-11-02 08:47:43'",
-    "'2017-09-07 11:11:11'"
+    "timestamp '2017-11-02 00:00:00'",
+    "timestamp '2017-11-02 08:47:43'",
+    "timestamp '2017-09-07 11:11:11'"
   )
 
   // TODO: Eliminate these bugs
@@ -118,11 +118,11 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
   }
 
   def testFullDataTable(list: List[String]): Unit = {
-    val startTime = System.currentTimeMillis()
     var count = 0
     for (sql <- list) {
       try {
         count += 1
+        val startTime = System.currentTimeMillis()
         execAllAndJudge(sql)
         logger.info(
           "Running num: " + count + " sql took " + (System
