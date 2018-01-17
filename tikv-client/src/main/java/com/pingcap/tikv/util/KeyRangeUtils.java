@@ -98,28 +98,28 @@ public class KeyRangeUtils {
   }
 
   /**
-   * Build a Coprocessor Range with OPEN or CLOSED endpoints
+   * Build a Coprocessor Range with CLOSED_OPEN endpoints
    *
    * @param startKey startKey
    * @param endKey endKey
-   * @return an CLOSED_OPEN range for coprocessor
+   * @return a CLOSED_OPEN range for coprocessor
    */
   public static KeyRange makeCoprocRange(ByteString startKey, ByteString endKey) {
     return KeyRange.newBuilder().setStart(startKey).setEnd(endKey).build();
   }
 
   /**
-   * Build a Coprocessor Range with CLOSED endpoints
+   * Build a Coprocessor Range
    *
    * @param range Range with Comparable endpoints
-   * @return and CLOSED_OPEN range for coprocessor
+   * @return a CLOSED_OPEN range for coprocessor
    */
   public static KeyRange makeCoprocRange(Range<Key> range) {
     if (!range.hasLowerBound() || !range.hasUpperBound()) {
       throw new TiClientInternalException("range is not closed");
     }
     return makeCoprocRange(range.lowerEndpoint().toByteString(),
-                           range.upperEndpoint().next().toByteString());
+                           range.upperEndpoint().toByteString());
   }
 
   public static List<KeyRange> mergeRanges(List<KeyRange> ranges) {
