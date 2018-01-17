@@ -224,10 +224,6 @@ class TestCase(val prop: Properties) extends LazyLogging {
                                  sql: String,
                                  sparkJDBC: List[List[Any]],
                                  tiSpark: List[List[Any]]): Unit = {
-//    if (compResult(sparkJDBC, tiSpark, sql.contains(" order by "))) {
-//      return
-//    }
-
     try {
       logger.info(s"Dump diff for JDBC Spark $sqlName \n")
       writeResult(sql, sparkJDBC, sqlName + ".result.jdbc")
@@ -242,10 +238,6 @@ class TestCase(val prop: Properties) extends LazyLogging {
                         sql: String,
                         tiDb: List[List[Any]],
                         tiSpark: List[List[Any]]): Unit = {
-//    if (compResult(tiDb, tiSpark, sql.contains(" order by "))) {
-//      return
-//    }
-
     try {
       logger.info(s"Dump diff for TiSpark $sqlName \n")
       writeResult(sql, tiDb, sqlName + ".result.tidb")
