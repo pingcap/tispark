@@ -20,7 +20,7 @@ import java.sql.Timestamp
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import org.joda.time.DateTime
 import com.pingcap.tikv.expression.{ArithmeticBinaryExpression, ColumnRef, ComparisonBinaryExpression, Constant}
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
 
@@ -83,6 +83,9 @@ object BasicExpression {
 
       case Alias(BasicExpression(child), _) =>
         Some(child)
+
+      case IsNull(BasicExpression(child)) =>
+        Some(new TiIsNull(child))
 
       case IsNotNull(BasicExpression(child)) =>
         Some(new TiNot(new TiIsNull(child)))
