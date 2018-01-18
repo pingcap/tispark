@@ -26,6 +26,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
  * YearType class is set now only to indicate this type exists,
  * so that we could throw UnsupportedTypeException when encountered.
  * Its logic is not yet implemented.
+ *
  * Since year type acts differently in Spark and MySQL --
  *  for instance, in MySQL, year is an unsigned integer(2017),
  *  whereas in Spark, year is treated as Date(2017-01-01).
@@ -82,7 +83,7 @@ public class YearType extends DataType {
 
   @Override
   public ExprType getProtoExprType() {
-    return ExprType.MysqlEnum;
+    return ExprType.Year;
   }
 
   /**

@@ -78,7 +78,7 @@ public class SetType extends DataType {
 
   @Override
   public ExprType getProtoExprType() {
-    return ExprType.MysqlEnum;
+    return ExprType.MysqlSet;
   }
 
   /**
