@@ -17,13 +17,33 @@
 
 package com.pingcap.tikv.expression;
 
+import java.util.HashMap;
+
 public class TypeBlacklist extends Blacklist {
+  private static final HashMap<String, String> typeToMySQLMap = initialTypeMap();
+
+  private static HashMap<String, String> initialTypeMap() {
+    HashMap<String, String> map = new HashMap<>();
+    map.put("BitType", "bit");
+    map.put("BytesType", "byte");
+    map.put("DateTimeType", "datetime");
+    map.put("TimestampType", "timestamp");
+    map.put("DurationType", "time");
+    map.put("DateTimeType", "datetime");
+    map.put("DecimalType", "decimal");
+    map.put("RealType", "double");
+    map.put("IntegerType", "long");
+    map.put("StringType", "string");
+    map.put("EnumType", "enum");
+    map.put("SetType", "set");
+    return map;
+  }
 
   public TypeBlacklist(String typesString) {
     super(typesString);
   }
 
   public boolean isUnsupportedType(String typeName) {
-    return isUnsupported(typeName);
+    return isUnsupported(typeToMySQLMap.getOrDefault(typeName, ""));
   }
 }

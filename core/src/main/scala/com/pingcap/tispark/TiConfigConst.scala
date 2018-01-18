@@ -35,5 +35,5 @@ object TiConfigConst {
   val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"
   val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String = "spark.tispark.plan.downgrade.index_threshold"
   val KV_TIMEZONE_OFFSET: String = "spark.tispark.request.timezone.offset"
-  val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported"
+  val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported_mysql_types"
 }

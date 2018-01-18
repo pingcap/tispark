@@ -20,6 +20,7 @@ package com.pingcap.tikv.types;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
+
 import java.lang.reflect.Constructor;
 import java.util.Map;
 
@@ -39,6 +40,8 @@ public class DataTypeFactory {
     extractTypeMap(BytesType.subTypes, BytesType.class, builder, instBuilder);
     extractTypeMap(RealType.subTypes, RealType.class, builder, instBuilder);
     extractTypeMap(TimestampType.subTypes, TimestampType.class, builder, instBuilder);
+    extractTypeMap(EnumType.subTypes, EnumType.class, builder, instBuilder);
+    extractTypeMap(SetType.subTypes, SetType.class, builder, instBuilder);
     dataTypeCreatorMap = builder.build();
     dataTypeInstanceMap = instBuilder.build();
   }
@@ -47,7 +50,7 @@ public class DataTypeFactory {
       MySQLType[] types,
       Class<? extends DataType> cls,
       ImmutableMap.Builder<MySQLType, Constructor<? extends DataType>> holderBuilder,
-      ImmutableMap.Builder<MySQLType, DataType> instuilder) {
+      ImmutableMap.Builder<MySQLType, DataType> instBuilder) {
     for (MySQLType type : types) {
       try {
         Constructor ctorByHolder = cls.getDeclaredConstructor(InternalTypeHolder.class);
@@ -55,7 +58,7 @@ public class DataTypeFactory {
         ctorByHolder.setAccessible(true);
         ctorByType.setAccessible(true);
         holderBuilder.put(type, ctorByHolder);
-        instuilder.put(type, (DataType)ctorByType.newInstance(type));
+        instBuilder.put(type, (DataType)ctorByType.newInstance(type));
       } catch (Exception e) {
         throw new TypeException(String.format("Type %s does not have a proper constructor", cls.getName()), e);
       }
