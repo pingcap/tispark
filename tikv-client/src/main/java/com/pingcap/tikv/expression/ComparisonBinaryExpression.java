@@ -142,16 +142,16 @@ public class ComparisonBinaryExpression implements Expression {
           newType = EQUAL;
           break;
         case LESS_EQUAL:
-          newType = Type.GREATER_EQUAL;
+          newType = GREATER_EQUAL;
           break;
         case LESS_THAN:
-          newType = Type.GREATER_THAN;
+          newType = GREATER_THAN;
           break;
         case GREATER_EQUAL:
-          newType = Type.LESS_EQUAL;
+          newType = LESS_EQUAL;
           break;
         case GREATER_THAN:
-          newType = Type.LESS_THAN;
+          newType = LESS_THAN;
           break;
         case NOT_EQUAL:
           newType = NOT_EQUAL;
