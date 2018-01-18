@@ -24,18 +24,32 @@ public class TypeBlacklist extends Blacklist {
 
   private static HashMap<String, String> initialTypeMap() {
     HashMap<String, String> map = new HashMap<>();
-    map.put("BitType", "bit");
-    map.put("BytesType", "byte");
-    map.put("DateTimeType", "datetime");
-    map.put("TimestampType", "timestamp");
-    map.put("DurationType", "time");
-    map.put("DateTimeType", "datetime");
-    map.put("DecimalType", "decimal");
-    map.put("RealType", "double");
-    map.put("IntegerType", "long");
-    map.put("StringType", "string");
-    map.put("EnumType", "enum");
-    map.put("SetType", "set");
+    map.put("TypeDecimal", "decimal");
+    map.put("TypeTiny", "tinyint");
+    map.put("TypeShort", "smallint");
+    map.put("TypeLong", "int");
+    map.put("TypeFloat", "float");
+    map.put("TypeDouble", "double");
+    map.put("TypeNull", "null");
+    map.put("TypeTimestamp", "timestamp");
+    map.put("TypeLonglong", "bigint");
+    map.put("TypeInt24", "mediumint");
+    map.put("TypeDate", "date");
+    map.put("TypeDuration", "time");
+    map.put("TypeDatetime", "datetime");
+    map.put("TypeYear", "year");
+    map.put("TypeNewDate", "date");
+    map.put("TypeVarchar", "varchar");
+    map.put("TypeJSON", "json");
+    map.put("TypeNewDecimal", "decimal");
+    map.put("TypeEnum", "enum");
+    map.put("TypeSet", "set");
+    map.put("TypeTinyBlob", "tinytext");
+    map.put("TypeMediumBlob", "mediumtext");
+    map.put("TypeLongBlob", "longtext");
+    map.put("TypeBlob", "text");
+    map.put("TypeVarString", "varstring");
+    map.put("TypeString", "string");
     return map;
   }
 

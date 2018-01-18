@@ -55,7 +55,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   def typeBlackList: TypeBlacklist = {
-    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "")
+    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "time,enum,set")
     new TypeBlacklist(blacklistString)
   }
 
@@ -112,7 +112,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest.resolve()
 
     val notAllowPushDown = dagRequest.getFields.asScala
-      .map { _.getColumnInfo.getType.toString }
+      .map { _.getColumnInfo.getType.getType.name() }
       .exists { typeBlackList.isUnsupportedType }
 
     if (notAllowPushDown) {
