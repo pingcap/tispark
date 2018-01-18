@@ -16,30 +16,35 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tidb.tipb.ExprType;
-import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 /**
- * TODO: Support Enum Type
- * EnumType class is set now only to indicate this type exists,
+ * TODO: Support Year Type
+ * YearType class is set now only to indicate this type exists,
  * so that we could throw UnsupportedTypeException when encountered.
  * Its logic is not yet implemented.
+ * Since year type acts differently in Spark and MySQL --
+ *  for instance, in MySQL, year is an unsigned integer(2017),
+ *  whereas in Spark, year is treated as Date(2017-01-01).
+ * -- it is not decided which logic should inherit.
+ *
+ * Year is encoded as unsigned int64.
  */
-public class EnumType extends DataType {
-  public static final EnumType ENUM = new EnumType(MySQLType.TypeEnum);
+public class YearType extends DataType {
+  public static final YearType YEAR = new YearType(MySQLType.TypeYear);
 
   public static final MySQLType[] subTypes = new MySQLType[] {
-      MySQLType.TypeEnum
+      MySQLType.TypeYear
   };
 
-  private EnumType(MySQLType tp) {
+  private YearType(MySQLType tp) {
     super(tp);
   }
 
-  protected EnumType(TiColumnInfo.InternalTypeHolder holder) {
+  protected YearType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
 
@@ -48,27 +53,23 @@ public class EnumType extends DataType {
    */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    throw new UnsupportedTypeException("Enum type not supported");
+    throw new UnsupportedTypeException("Year type not supported");
   }
 
   /**
    * {@inheritDoc}
-   * Enum is encoded as unsigned int64 with its 0-based value.
    */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    Enum e = Converter.convertToEnum(value);
-    Codec.IntegerCodec.writeULongFully(cdo, e.getValue(), true);
+    throw new UnsupportedTypeException("Year type not supported");
   }
 
   /**
    * {@inheritDoc}
-   * Enum is encoded as unsigned int64 with its 0-based value.
    */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    Enum e = Converter.convertToEnum(value);
-    Codec.IntegerCodec.writeULongFully(cdo, e.getValue(), true);
+    throw new UnsupportedTypeException("Year type not supported");
   }
 
   /**
@@ -76,7 +77,7 @@ public class EnumType extends DataType {
    */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type not supported");
+    throw new UnsupportedTypeException("Year type not supported");
   }
 
   @Override

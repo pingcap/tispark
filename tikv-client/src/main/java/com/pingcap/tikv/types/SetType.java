@@ -29,7 +29,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
  *
  * Set is encoded as unsigned int64 with its 0-based value.
  */
-public class SetType extends DataType{
+public class SetType extends DataType {
   public static final SetType SET = new SetType(MySQLType.TypeSet);
 
   public static final MySQLType[] subTypes = new MySQLType[] {
