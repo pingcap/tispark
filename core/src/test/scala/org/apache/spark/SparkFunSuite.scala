@@ -20,8 +20,11 @@ import java.io.File
 import org.apache.spark.internal.Logging
 import org.apache.spark.util.AccumulatorContext
 import org.scalatest._
+import org.slf4j.Logger
 
 abstract class SparkFunSuite extends FunSuite with BeforeAndAfterAll with Logging {
+  protected val logger: Logger = log
+
   protected override def afterAll(): Unit = {
     try {
       // Avoid leaking map entries in tests that use accumulators without SparkContext
