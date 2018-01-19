@@ -96,7 +96,6 @@ public class SchemaInfer {
    * @param dagRequest is SelectRequest
    */
   private void extractFieldTypes(TiDAGRequest dagRequest) {
-
     if (dagRequest.hasAggregate()) {
       dagRequest.getAggregates().forEach(expr -> types.add(expr.getType()));
       // In DAG mode, if there is any group by statement in a request, all the columns specified

@@ -9,12 +9,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 class DAGTestCase(prop: Properties) extends TestCase(prop) {
-  private val SPARK_DEFAULT_TO_IGNORE = Set[String](
-    "select tp_datetime,tp_date from full_data_type_table  where tp_datetime = tp_date order by id_dt  limit 20", // we cannot get anything from spark, but can get some data from TiDB
-    "select tp_date,tp_datetime from full_data_type_table  where tp_date = tp_datetime order by id_dt  limit 20",
-    "select tp_date,tp_datetime from full_data_type_table  where tp_date < tp_datetime order by id_dt  limit 20"
-  )
-
   protected val ARITHMETIC_CONSTANT: List[String] = List[String](
     java.lang.Long.MAX_VALUE.toString,
     java.lang.Long.MIN_VALUE.toString,
@@ -53,8 +47,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
       .add("tp_enum") // TODO: enum, set and time are ignored because we are not supporting them yet
       .add("tp_set")
       .add("tp_time")
-//      .add("tp_binary")
-//      .add("tp_blob")
+      //      .add("tp_binary")
+      //      .add("tp_blob")
       .build()
 
   private val colSet: mutable.Set[String] = mutable.Set()
@@ -68,7 +62,8 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     testBundle(
       //      createSelfJoinTypeTest ++
       //      createSymmetryTypeTestCases ++
-      createFirstLast ++
+      createSimpleSelect ++
+        createFirstLast ++
         createUnion ++
         createAggregate ++
         createHaving ++
@@ -145,9 +140,20 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     s"select tp_bigint%1000 a, count(*) from $TABLE_NAME group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a"
   )
 
-  def createArithmeticAgg(): List[String] = colSet.map((col: String) => s"select sum($col),avg($col),min($col),max($col) from $TABLE_NAME group by $col ${orderBy(col)}").toList
+  def createSimpleSelect(): List[String] = colSet.map((col: String) => select(col) + orderBy(col) + limit()).toList
 
-  def createFirstLast(): List[String] = colSet.map((col: String) => s"select first($col), last($col) from $TABLE_NAME group by $col order by $col").toList
+  def createArithmeticAgg(): List[String] = colSet.flatMap((col: String) =>
+    Seq(s"select sum($col) from $TABLE_NAME",
+      s"select avg($col) from $TABLE_NAME",
+      s"select min($col) from $TABLE_NAME",
+      s"select abs($col) from $TABLE_NAME",
+      s"select max($col) from $TABLE_NAME"))
+    .toList
+
+  def createFirstLast(): List[String] = colSet.flatMap((col: String) =>
+    Seq(s"select first($col) from $TABLE_NAME ${groupBy("tp_nvarchar")} ${orderBy("tp_nvarchar")}",
+      s"select last($col) from $TABLE_NAME ${groupBy("tp_nvarchar")} ${orderBy("tp_nvarchar")}"))
+    .toList
 
   def createBetween(): List[String] = List(
     select("tp_int") + where(binaryOpWithName("tp_int", "-1202333 and 601508558", "between", withTbName = false)),
@@ -164,7 +170,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
 
   def createCount(): List[String] = {
     colSet.map((col: String) =>
-      select(s"count($col)")) .toList
+      select(s"count($col)")).toList
   }
 
   def issueList(): List[String] = List(
