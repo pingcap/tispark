@@ -24,32 +24,17 @@ import com.pingcap.tidb.tipb.ScalarFuncSig;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.expression.AggregateFunction;
+import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
-import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.IsNull;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.Not;
-import com.pingcap.tikv.expression.Visitor;
-import com.pingcap.tikv.types.BitType;
-import com.pingcap.tikv.types.BytesType;
-import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.*;
 import com.pingcap.tikv.types.DataType.EncodeType;
-import com.pingcap.tikv.types.DateTimeType;
-import com.pingcap.tikv.types.DateType;
-import com.pingcap.tikv.types.DecimalType;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.RealType;
-import com.pingcap.tikv.types.StringType;
-import com.pingcap.tikv.types.TimestampType;
+
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-public class ProtoConverter extends Visitor<Expr, Void> {
+import static java.util.Objects.requireNonNull;
+
+public class ProtoConverter extends Visitor<Expr, Object> {
   // All concrete data type should be hooked to a type name
   private static final Map<Class<? extends DataType>, String> SCALAR_SIG_MAP =
       ImmutableMap.<Class<? extends DataType>, String>builder()
@@ -88,15 +73,19 @@ public class ProtoConverter extends Visitor<Expr, Void> {
   }
 
   public static Expr toProto(Expression expression) {
+    return toProto(expression, null);
+  }
+
+  public static Expr toProto(Expression expression, Map<ColumnRef, Integer> colIdOffsetMap) {
     ExpressionTypeCoercer coercer = new ExpressionTypeCoercer();
     coercer.infer(expression);
     ProtoConverter converter = new ProtoConverter(coercer.getTypeMap());
-    return expression.accept(converter, null);
+    return expression.accept(converter, colIdOffsetMap);
   }
 
   // Generate protobuf builder with partial data encoded.
   // Scala Signature is left alone
-  private Expr.Builder scalaToPartialProto(Expression node, Void context) {
+  private Expr.Builder scalaToPartialProto(Expression node, Object context) {
     Expr.Builder builder = Expr.newBuilder();
     // Scalar function type
     builder.setTp(ExprType.ScalarFunc);
@@ -116,7 +105,7 @@ public class ProtoConverter extends Visitor<Expr, Void> {
   }
 
   @Override
-  protected Expr visit(LogicalBinaryExpression node, Void context) {
+  protected Expr visit(LogicalBinaryExpression node, Object context) {
     ScalarFuncSig protoSig;
     switch (node.getCompType()) {
       case AND:
@@ -136,7 +125,8 @@ public class ProtoConverter extends Visitor<Expr, Void> {
     return builder.build();
   }
 
-  protected Expr visit(ArithmeticBinaryExpression node, Void context) {
+  @Override
+  protected Expr visit(ArithmeticBinaryExpression node, Object context) {
     // assume after type coerce, children should be compatible
     Expression child = node.getLeft();
     String typeSignature = getTypeSignature(child);
@@ -173,7 +163,7 @@ public class ProtoConverter extends Visitor<Expr, Void> {
   }
 
   @Override
-  protected Expr visit(ComparisonBinaryExpression node, Void context) {
+  protected Expr visit(ComparisonBinaryExpression node, Object context) {
     // assume after type coerce, children should be compatible
     Expression child = node.getLeft();
     String typeSignature = getTypeSignature(child);
@@ -206,19 +196,26 @@ public class ProtoConverter extends Visitor<Expr, Void> {
   }
 
   @Override
-  protected Expr visit(ColumnRef node, Void context) {
+  @SuppressWarnings("unchecked")
+  protected Expr visit(ColumnRef node, Object context) {
+    requireNonNull(context, "Context of a ColumnRef should not be null");
+    Map<Long, Integer> colIdOffsetMap = (Map<Long, Integer>) context;
     Expr.Builder builder = Expr.newBuilder();
     builder.setTp(ExprType.ColumnRef);
     CodecDataOutput cdo = new CodecDataOutput();
     // After switching to DAG request mode, expression value
     // should be the index of table columns we provided in
     // the first executor of a DAG request.
-    IntegerCodec.writeLong(cdo, node.getColumnInfo().getOffset());
+    IntegerCodec.writeLong(cdo, colIdOffsetMap.getOrDefault(
+        node.getColumnInfo().getId(),
+        0)
+    );
     builder.setVal(cdo.toByteString());
     return builder.build();
   }
 
-  protected Expr visit(Constant node, Void context) {
+  @Override
+  protected Expr visit(Constant node, Object context) {
     Expr.Builder builder = Expr.newBuilder();
     if (node.getValue() == null) {
       builder.setTp(ExprType.Null);
@@ -233,7 +230,8 @@ public class ProtoConverter extends Visitor<Expr, Void> {
     return builder.build();
   }
 
-  protected Expr visit(AggregateFunction node, Void context) {
+  @Override
+  protected Expr visit(AggregateFunction node, Object context) {
     Expr.Builder builder = Expr.newBuilder();
 
     FunctionType type = node.getType();
@@ -264,7 +262,7 @@ public class ProtoConverter extends Visitor<Expr, Void> {
   }
 
   @Override
-  protected Expr visit(IsNull node, Void context) {
+  protected Expr visit(IsNull node, Object context) {
     String typeSignature = getTypeSignature(node.getExpression());
     ScalarFuncSig protoSig = ScalarFuncSig.valueOf(typeSignature + "IsNull");
     Expr.Builder builder = scalaToPartialProto(node, context);
@@ -273,7 +271,7 @@ public class ProtoConverter extends Visitor<Expr, Void> {
   }
 
   @Override
-  protected Expr visit(Not node, Void context) {
+  protected Expr visit(Not node, Object context) {
     ScalarFuncSig protoSig = ScalarFuncSig.UnaryNot;
     Expr.Builder builder = scalaToPartialProto(node, context);
     builder.setSig(protoSig);

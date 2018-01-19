@@ -15,10 +15,11 @@
 
 package com.pingcap.tikv.expression;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
+
 import java.io.Serializable;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ByItem implements Serializable {
   private Expression expr;
@@ -44,6 +45,10 @@ public class ByItem implements Serializable {
 
   public Expression getExpr() {
     return expr;
+  }
+
+  public boolean isDesc() {
+    return desc;
   }
 
   @Override
