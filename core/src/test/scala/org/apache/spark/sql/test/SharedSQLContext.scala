@@ -115,7 +115,7 @@ trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
   }
 
   /**
-    * Stop the underlying [[org.apache.spark.SparkContext]], if any.
+    * Stop the underlying resources, if any.
     */
   protected override def afterAll(): Unit = {
     super.afterAll()
@@ -123,6 +123,16 @@ trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
       _spark.sessionState.catalog.reset()
       _spark.stop()
       _spark = null
+    }
+
+    if (_sparkJDBC != null) {
+      _sparkJDBC.sessionState.catalog.reset()
+      _sparkJDBC.stop()
+      _sparkJDBC = null
+    }
+
+    if (_tidbConnection != null) {
+      _tidbConnection.close()
     }
   }
 }
