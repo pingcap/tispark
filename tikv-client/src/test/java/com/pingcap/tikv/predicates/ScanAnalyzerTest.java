@@ -230,7 +230,7 @@ public class ScanAnalyzerTest {
     ScanAnalyzer.ScanPlan scanPlan = scanBuilder.buildScan(new ArrayList<>(), index, table);
 
     ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
-    ByteString endKey = RowKey.toBeyondMaxRowKey(table.getId()).toByteString();
+    ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();
 
     assertEquals(1, scanPlan.getKeyRanges().size());
     assertEquals(startKey, scanPlan.getKeyRanges().get(0).getStart());
