@@ -18,9 +18,10 @@
 package com.pingcap.tikv.expression;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class TypeBlacklist extends Blacklist {
-  private static final HashMap<String, String> typeToMySQLMap = initialTypeMap();
+  private static final Map<String, String> typeToMySQLMap = initialTypeMap();
 
   private static HashMap<String, String> initialTypeMap() {
     HashMap<String, String> map = new HashMap<>();
