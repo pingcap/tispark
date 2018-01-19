@@ -62,7 +62,7 @@ abstract class PlanTest extends SparkFunSuite with PredicateHelper {
       case filter @ Filter(condition: Expression, child: LogicalPlan) =>
         Filter(
           splitConjunctivePredicates(condition)
-            .map(rewriteEqual(_))
+            .map(rewriteEqual)
             .sortBy(_.hashCode())
             .reduce(And),
           child
@@ -72,7 +72,7 @@ abstract class PlanTest extends SparkFunSuite with PredicateHelper {
       case join @ Join(left, right, joinType, condition) if condition.isDefined =>
         val newCondition =
           splitConjunctivePredicates(condition.get)
-            .map(rewriteEqual(_))
+            .map(rewriteEqual)
             .sortBy(_.hashCode())
             .reduce(And)
         Join(left, right, joinType, Some(newCondition))
