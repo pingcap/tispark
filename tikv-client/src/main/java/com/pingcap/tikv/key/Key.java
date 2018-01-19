@@ -16,14 +16,15 @@
 package com.pingcap.tikv.key;
 
 
-import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
-import static java.util.Objects.requireNonNull;
-
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.FastByteComparisons;
+
 import java.util.Arrays;
+
+import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
+import static java.util.Objects.requireNonNull;
 
 public class Key implements Comparable<Key> {
   protected static final byte[] TBL_PREFIX = new byte[] {'t'};
@@ -115,6 +116,10 @@ public class Key implements Comparable<Key> {
    * @return encoded results
    */
   public Key next() {
+    return toRawKey(nextValue(value));
+  }
+
+  static byte[] nextValue(byte[] value) {
     int i;
     byte[] newVal = Arrays.copyOf(value, value.length);
     for (i = newVal.length - 1; i >= 0; i--) {
@@ -124,9 +129,9 @@ public class Key implements Comparable<Key> {
       }
     }
     if (i == -1) {
-      return toRawKey(Arrays.copyOf(value, value.length + 1));
+      return Arrays.copyOf(value, value.length + 1);
     } else {
-      return toRawKey(newVal);
+      return newVal;
     }
   }
 
