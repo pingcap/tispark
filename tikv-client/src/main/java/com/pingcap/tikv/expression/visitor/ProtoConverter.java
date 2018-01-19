@@ -76,11 +76,11 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     return toProto(expression, null);
   }
 
-  public static Expr toProto(Expression expression, Map<ColumnRef, Integer> colIdOffsetMap) {
+  public static Expr toProto(Expression expression, Object context) {
     ExpressionTypeCoercer coercer = new ExpressionTypeCoercer();
     coercer.infer(expression);
     ProtoConverter converter = new ProtoConverter(coercer.getTypeMap());
-    return expression.accept(converter, colIdOffsetMap);
+    return expression.accept(converter, context);
   }
 
   // Generate protobuf builder with partial data encoded.
@@ -199,17 +199,14 @@ public class ProtoConverter extends Visitor<Expr, Object> {
   @SuppressWarnings("unchecked")
   protected Expr visit(ColumnRef node, Object context) {
     requireNonNull(context, "Context of a ColumnRef should not be null");
-    Map<Long, Integer> colIdOffsetMap = (Map<Long, Integer>) context;
+    Map<ColumnRef, Integer> colIdOffsetMap = (Map<ColumnRef, Integer>) context;
     Expr.Builder builder = Expr.newBuilder();
     builder.setTp(ExprType.ColumnRef);
     CodecDataOutput cdo = new CodecDataOutput();
     // After switching to DAG request mode, expression value
     // should be the index of table columns we provided in
     // the first executor of a DAG request.
-    IntegerCodec.writeLong(cdo, colIdOffsetMap.getOrDefault(
-        node.getColumnInfo().getId(),
-        0)
-    );
+    IntegerCodec.writeLong(cdo, requireNonNull(colIdOffsetMap.get(node)));
     builder.setVal(cdo.toByteString());
     return builder.build();
   }

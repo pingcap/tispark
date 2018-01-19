@@ -15,30 +15,29 @@
 
 package com.pingcap.tikv.meta;
 
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Expr;
-import com.pingcap.tikv.expression.ByItem;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.AggregateFunction;
+import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
+import org.junit.Test;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import org.junit.Test;
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TiDAGRequestTest {
   private static TiTableInfo createTable() {
@@ -68,6 +67,7 @@ public class TiDAGRequestTest {
     selReq
         .addRequiredColumn(col1)
         .addRequiredColumn(col2)
+        .addRequiredColumn(col3)
         .addAggregate(sum, ExpressionTypeCoercer.inferType(sum))
         .addAggregate(min, ExpressionTypeCoercer.inferType(min))
         .addFilter(plus(c1, c2))
@@ -99,13 +99,21 @@ public class TiDAGRequestTest {
     assertTrue(selectRequestEquals(selReq, derselReq));
   }
 
-  public static boolean selectRequestEquals(TiDAGRequest lhs, TiDAGRequest rhs) {
+  private static boolean selectRequestEquals(TiDAGRequest lhs, TiDAGRequest rhs) {
     assertEquals(lhs.getFields().size(), rhs.getFields().size());
+    Map<ColumnRef, Integer> lhsMap = new HashMap<>();
+    Map<ColumnRef, Integer> rhsMap = new HashMap<>();
+    for (int i = 0; i < lhs.getFields().size(); i++) {
+      ColumnRef lCol = lhs.getFields().get(i);
+      ColumnRef rCol = rhs.getFields().get(i);
+      lhsMap.put(lCol, i);
+      rhsMap.put(rCol, i);
+    }
     for (int i = 0; i < lhs.getFields().size(); i++) {
       Expression lhsExpr = lhs.getFields().get(i);
       Expression rhsExpr = rhs.getFields().get(i);
-      Expr lhsExprProto = ProtoConverter.toProto(lhsExpr);
-      Expr rhsExprProto = ProtoConverter.toProto(rhsExpr);
+      Expr lhsExprProto = ProtoConverter.toProto(lhsExpr, lhsMap);
+      Expr rhsExprProto = ProtoConverter.toProto(rhsExpr, rhsMap);
 
       if (!lhsExprProto.equals(rhsExprProto)) return false;
     }
@@ -115,8 +123,8 @@ public class TiDAGRequestTest {
       Expression lhsExpr = lhs.getAggregates().get(i);
       Expression rhsExpr = rhs.getAggregates().get(i);
 
-      Expr lhsExprProto = ProtoConverter.toProto(lhsExpr);
-      Expr rhsExprProto = ProtoConverter.toProto(rhsExpr);
+      Expr lhsExprProto = ProtoConverter.toProto(lhsExpr, lhsMap);
+      Expr rhsExprProto = ProtoConverter.toProto(rhsExpr, rhsMap);
 
       if (!lhsExprProto.equals(rhsExprProto)) return false;
     }
@@ -125,14 +133,14 @@ public class TiDAGRequestTest {
     for (int i = 0; i < lhs.getGroupByItems().size(); i++) {
       ByItem lhsItem = lhs.getGroupByItems().get(i);
       ByItem rhsItem = rhs.getGroupByItems().get(i);
-      if (!lhsItem.toProto().equals(rhsItem.toProto())) return false;
+      if (!lhsItem.toProto(lhsMap).equals(rhsItem.toProto(rhsMap))) return false;
     }
 
     assertEquals(lhs.getOrderByItems().size(), rhs.getOrderByItems().size());
     for (int i = 0; i < lhs.getOrderByItems().size(); i++) {
       ByItem lhsItem = lhs.getOrderByItems().get(i);
       ByItem rhsItem = rhs.getOrderByItems().get(i);
-      if (!lhsItem.toProto().equals(rhsItem.toProto())) return false;
+      if (!lhsItem.toProto(lhsMap).equals(rhsItem.toProto(rhsMap))) return false;
     }
 
     assertEquals(lhs.getRanges().size(), rhs.getRanges().size());

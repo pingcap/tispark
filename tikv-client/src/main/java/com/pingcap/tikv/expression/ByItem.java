@@ -36,11 +36,11 @@ public class ByItem implements Serializable {
     this.desc = desc;
   }
 
-  public com.pingcap.tidb.tipb.ByItem toProto() {
+  public com.pingcap.tidb.tipb.ByItem toProto(Object context) {
     com.pingcap.tidb.tipb.ByItem.Builder builder = com.pingcap.tidb.tipb.ByItem.newBuilder();
-    return builder.setExpr(ProtoConverter.toProto(expr))
-                  .setDesc(desc)
-                  .build();
+    return builder.setExpr(ProtoConverter.toProto(expr, context))
+        .setDesc(desc)
+        .build();
   }
 
   public Expression getExpr() {
