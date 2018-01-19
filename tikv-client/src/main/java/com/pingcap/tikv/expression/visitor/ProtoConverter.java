@@ -50,9 +50,23 @@ public class ProtoConverter extends Visitor<Expr, Object> {
           .build();
 
   private final IdentityHashMap<Expression, DataType> typeMap;
+  private final boolean validateColPosition;
 
   public ProtoConverter(IdentityHashMap<Expression, DataType> typeMap) {
+    this(typeMap, true);
+  }
+
+  /**
+   * Instantiate a {{@code ProtoConverter}} using a typeMap.
+   *
+   * @param typeMap             the type map
+   * @param validateColPosition whether to consider column position in this converter. By default, a {{@code TiDAGRequest}}
+   *                            should check whether a {{@code ColumnRef}}'s position is correct in it's executors. Can ignore
+   *                            this validation if `validateColPosition` is set to false.
+   */
+  public ProtoConverter(IdentityHashMap<Expression, DataType> typeMap, boolean validateColPosition) {
     this.typeMap = typeMap;
+    this.validateColPosition = validateColPosition;
   }
 
   private DataType getType(Expression expression) {
@@ -198,15 +212,19 @@ public class ProtoConverter extends Visitor<Expr, Object> {
   @Override
   @SuppressWarnings("unchecked")
   protected Expr visit(ColumnRef node, Object context) {
-    requireNonNull(context, "Context of a ColumnRef should not be null");
-    Map<ColumnRef, Integer> colIdOffsetMap = (Map<ColumnRef, Integer>) context;
+    long position = 0;
+    if (validateColPosition) {
+      requireNonNull(context, "Context of a ColumnRef should not be null");
+      Map<ColumnRef, Integer> colIdOffsetMap = (Map<ColumnRef, Integer>) context;
+      position = requireNonNull(colIdOffsetMap.get(node), "Required column position info is not in a valid context.");
+    }
     Expr.Builder builder = Expr.newBuilder();
     builder.setTp(ExprType.ColumnRef);
     CodecDataOutput cdo = new CodecDataOutput();
     // After switching to DAG request mode, expression value
     // should be the index of table columns we provided in
     // the first executor of a DAG request.
-    IntegerCodec.writeLong(cdo, requireNonNull(colIdOffsetMap.get(node)));
+    IntegerCodec.writeLong(cdo, position);
     builder.setVal(cdo.toByteString());
     return builder.build();
   }
