@@ -5,6 +5,8 @@ import java.util.Properties
 
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{SQLContext, SparkSession, TiContext}
+import Utils._
+import TestConstants._
 
 trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
   protected val sparkConf = new SparkConf()
@@ -12,20 +14,14 @@ trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
   private var _ti: TiContext = _
   private var _tidbConf: Properties = _
   private var _tidbConnection: Connection = _
+  private var _sparkJDBC: SparkSession = _
 
-  /**
-    * The [[TestSparkSession]] to use for all tests in this suite.
-    */
   protected implicit def spark: SparkSession = _spark
 
-  /**
-    * The [[TiContext]] to use for all tests in this suite.
-    */
   protected implicit def ti: TiContext = _ti
 
-  /**
-    * The [[Connection]] to use for all tests in this suite.
-    */
+  protected implicit def jdbc: SparkSession = _sparkJDBC
+
   protected implicit def tidbConn: Connection = _tidbConnection
 
   /**
@@ -52,6 +48,12 @@ trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
     }
   }
 
+  private def initializeJDBC(): Unit = {
+    if (_sparkJDBC == null) {
+      _sparkJDBC = createSparkSession
+    }
+  }
+
   protected def initializeTiContext(): Unit = {
     if (_spark != null) {
       _ti = new TiContext(_spark)
@@ -59,6 +61,36 @@ trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
   }
 
   private def initializeTiDB(): Unit = {
+    if (_tidbConnection == null) {
+      val useRawSparkMySql: Boolean = Utils.getFlag(_tidbConf, KeyUseRawSparkMySql)
+
+      val jdbcUsername =
+        if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlUser)
+        else getOrThrow(_tidbConf, KeyTiDBUser)
+
+      val jdbcHostname =
+        if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlAddress)
+        else getOrThrow(_tidbConf, KeyTiDBAddress)
+
+      val jdbcPort =
+        if (useRawSparkMySql) 0
+        else Integer.parseInt(getOrThrow(_tidbConf, KeyTiDBPort))
+
+      val jdbcPassword =
+        if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlPassword)
+        else ""
+
+      val jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
+        (if (useRawSparkMySql) "" else s":$jdbcPort") +
+        s"/?user=$jdbcUsername&password=$jdbcPassword"
+
+      logger.info("jdbcUrl: " + jdbcUrl)
+
+      _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+    }
+  }
+
+  private def initializeConf(): Unit = {
     val confStream = Thread.currentThread()
       .getContextClassLoader
       .getResourceAsStream("tidb_config.properties")
@@ -66,43 +98,16 @@ trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
     val prop = new Properties()
     prop.load(confStream)
     _tidbConf = prop
-
-    import Utils._
-    import TestConstants._
-
-    val useRawSparkMySql: Boolean = Utils.getFlag(prop, KeyUseRawSparkMySql)
-
-    val jdbcUsername =
-      if (useRawSparkMySql) getOrThrow(prop, KeyMysqlUser)
-      else                  getOrThrow(prop, KeyTiDBUser)
-
-    val jdbcHostname =
-      if (useRawSparkMySql) getOrThrow(prop, KeyMysqlAddress)
-      else                  getOrThrow(prop, KeyTiDBAddress)
-
-    val jdbcPort =
-      if (useRawSparkMySql) 0
-      else                  Integer.parseInt(getOrThrow(prop, KeyTiDBPort))
-
-    val jdbcPassword =
-      if (useRawSparkMySql) getOrThrow(prop, KeyMysqlPassword)
-      else                  ""
-
-    val jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
-      (if (useRawSparkMySql) "" else s":$jdbcPort") +
-      s"/?user=$jdbcUsername&password=$jdbcPassword"
-
-    logger.info("jdbcUrl: " + jdbcUrl)
-
-    _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
   }
 
   /**
     * Make sure the [[TestSparkSession]] is initialized before any tests are run.
     */
   protected override def beforeAll(): Unit = {
+    initializeConf()
     initializeSession()
     initializeTiDB()
+    initializeJDBC()
     initializeTiContext()
 
     // Ensure we have initialized the context before calling parent code
