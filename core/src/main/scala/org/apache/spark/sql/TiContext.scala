@@ -55,6 +55,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       val regionsReadflowPrefix = "pd/api/v1/regions/readflow"
       val regionIDPrefix = "pd/api/v1/region/id"
       val regionKeyPrefix = "pd/api/v1/region/key"
+      val operatorsPrefix = "pd/api/v1/operators"
       val storeRegionId = RegionUtils.getStoreRegionIdDistribution(tiSession, dbName, tableName)
       val storeRegionCount = mutable.Map[Long, Long]()
 
@@ -62,6 +63,11 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
         storeRegionCount(tuple._1) = tuple._2.size()
       })
 
+      val avgRegionCount = storeRegionCount.values.sum / storeRegionCount.size
+      println(s"Avg region count:$avgRegionCount")
+
+      var maxTrans = 5
+      var transCount = 0
       storeRegionId.asScala
         .flatMap(_._2)
         .foreach((regionId: lang.Long) => {
@@ -76,13 +82,25 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
             .filterNot { _ == leaderStoreId }
             .filter { id =>
               storeRegionCount.contains(id) &&
-              storeRegionCount(id) + 10 < storeRegionCount(leaderStoreId)
+              storeRegionCount(id) < storeRegionCount(leaderStoreId) &&
+              storeRegionCount(id) < avgRegionCount
             }
 
-          if (targetLeaders.nonEmpty) {
-            println(
-              s"Transfer $regionId leader :Store $leaderStoreId to Store ${targetLeaders.head}"
-            )
+          if (targetLeaders.nonEmpty && transCount < maxTrans) {
+            val toStore = targetLeaders.minBy(storeRegionCount(_))
+            val req = Json.obj("name"->"transfer-leader", "region_id" -> JsNumber(BigDecimal(regionId)), "to_store_id" -> JsNumber(BigDecimal(toStore)))
+            println(req.toString())
+            val resp = Http(s"$pdAddr/$operatorsPrefix").postData(req.toString()).header("content-type", "application/json").asString
+            println(s"Resp: code=${resp.code},body=${resp.body}")
+            if (resp.is2xx) {
+              println(
+                s"Transfer $regionId leader :Store $leaderStoreId to Store $toStore successfully"
+              )
+              storeRegionCount(leaderStoreId) -= 1
+              storeRegionCount(toStore) += 1
+              println(storeRegionCount)
+            }
+            transCount += 1
           }
         })
       getRegionDistribution(dbName, tableName)
