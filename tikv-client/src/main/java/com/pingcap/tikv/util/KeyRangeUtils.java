@@ -15,38 +15,22 @@
 
 package com.pingcap.tikv.util;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
+
+import com.google.common.collect.*;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.codec.TableCodec;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
-import com.pingcap.tikv.meta.TiColumnInfo;
-import com.pingcap.tikv.meta.TiIndexColumn;
-import com.pingcap.tikv.meta.TiIndexInfo;
-import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.DataType;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import static com.pingcap.tikv.key.Key.toRawKey;
 
 public class KeyRangeUtils {
-  public static Range toRange(Coprocessor.KeyRange range) {
-    if (range == null || (range.getStart().isEmpty() && range.getEnd().isEmpty())) {
-      return Range.all();
-    }
-    if (range.getStart().isEmpty()) {
-      return Range.lessThan(Comparables.wrap(range.getEnd()));
-    }
-    if (range.getEnd().isEmpty()) {
-      return Range.atLeast(Comparables.wrap(range.getStart()));
-    }
-    return Range.closedOpen(Comparables.wrap(range.getStart()), Comparables.wrap(range.getEnd()));
-  }
-
   public static List<Coprocessor.KeyRange> split(Coprocessor.KeyRange range, int splitFactor) {
     if (splitFactor > 32 || splitFactor <= 0 || (splitFactor & (splitFactor - 1)) != 0) {
       throw new TiClientInternalException(
@@ -106,77 +90,57 @@ public class KeyRangeUtils {
     return resultList.build();
   }
 
-  public static String toString(Coprocessor.KeyRange range) {
-    return String.format("Start:[%s], End: [%s]",
-        TableCodec.decodeRowKey(range.getStart()),
-        TableCodec.decodeRowKey(range.getEnd()));
+  public static Range<Key> makeRange(ByteString startKey, ByteString endKey) {
+    return Range.closedOpen(toRawKey(startKey, true), toRawKey(endKey));
   }
 
-  public static String toString(Coprocessor.KeyRange range, List<DataType> types) {
-    if (range == null || types == null) {
-      return "";
-    }
-    try {
-      return String.format("{[%s], [%s]}",
-          TableCodec.decodeIndexSeekKeyToString(range.getStart(), types),
-          TableCodec.decodeIndexSeekKeyToString(range.getEnd(), types));
-    } catch (Exception ignore) {}
-    return range.toString();
+  /**
+   * Build a Coprocessor Range with CLOSED_OPEN endpoints
+   *
+   * @param startKey startKey
+   * @param endKey endKey
+   * @return a CLOSED_OPEN range for coprocessor
+   */
+  public static KeyRange makeCoprocRange(ByteString startKey, ByteString endKey) {
+    return KeyRange.newBuilder().setStart(startKey).setEnd(endKey).build();
   }
 
-  public static List<DataType> getIndexColumnTypes(TiTableInfo table, TiIndexInfo index) {
-    ImmutableList.Builder<DataType> types = ImmutableList.builder();
-    for (TiIndexColumn indexColumn : index.getIndexColumns()) {
-      TiColumnInfo tableColumn = table.getColumns().get(indexColumn.getOffset());
-      types.add(tableColumn.getType());
+  /**
+   * Build a Coprocessor Range
+   *
+   * @param range Range with Comparable endpoints
+   * @return a CLOSED_OPEN range for coprocessor
+   */
+  public static KeyRange makeCoprocRange(Range<Key> range) {
+    if (!range.hasLowerBound() || !range.hasUpperBound()) {
+      throw new TiClientInternalException("range is not bounded");
     }
-    return types.build();
+    if (range.lowerBoundType().equals(BoundType.OPEN) ||
+        range.upperBoundType().equals(BoundType.CLOSED)) {
+      throw new TiClientInternalException("range must be CLOSED_OPEN");
+    }
+    return makeCoprocRange(range.lowerEndpoint().toByteString(),
+                           range.upperEndpoint().toByteString());
   }
 
-  public static Range makeRange(ByteString startKey, ByteString endKey) {
-    if (startKey.isEmpty() && endKey.isEmpty()) {
-      return Range.all();
-    }
-    if (startKey.isEmpty()) {
-      return Range.lessThan(Comparables.wrap(endKey));
-    } else if (endKey.isEmpty()) {
-      return Range.atLeast(Comparables.wrap(startKey));
-    }
-    return Range.closedOpen(Comparables.wrap(startKey), Comparables.wrap(endKey));
-  }
-
-  @SuppressWarnings("unchecked")
   public static List<KeyRange> mergeRanges(List<KeyRange> ranges) {
     if (ranges == null || ranges.isEmpty() || ranges.size() == 1) {
       return ranges;
     }
 
-    Range merged = ranges
-        .stream()
-        .map(KeyRangeUtils::toRange)
-        .reduce(Range::span).get();
+    RangeSet<Key> rangeSet = TreeRangeSet.create();
+    for (KeyRange keyRange : ranges) {
+      Range<Key> range = makeRange(keyRange.getStart(), keyRange.getEnd());
+      rangeSet.add(range);
+    }
 
-    List<KeyRange> keyRanges = new ArrayList<>();
-    try {
-      Comparables.ComparableByteString lower =
-          (Comparables.ComparableByteString) merged.lowerEndpoint();
-      Comparables.ComparableByteString upper =
-          (Comparables.ComparableByteString) merged.upperEndpoint();
+    Set<Range<Key>> mergedRanges = rangeSet.asRanges();
+    ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
+    for (Range<Key> range : mergedRanges) {
+      rangeBuilder.add(makeCoprocRange(range));
+    }
 
-      keyRanges.add(makeCoprocRange(lower.getByteString(), upper.getByteString()));
-    } catch (Exception ignored) {}
-
-    return keyRanges;
-  }
-
-  static Coprocessor.KeyRange makeCoprocRange(ByteString startKey, ByteString endKey) {
-    return KeyRange.newBuilder().setStart(startKey).setEnd(endKey).build();
-  }
-
-  static Coprocessor.KeyRange makeCoprocRangeWithHandle(long tableId, long startHandle, long endHandle) {
-    ByteString startKey = TableCodec.encodeRowKeyWithHandle(tableId, startHandle);
-    ByteString endKey = TableCodec.encodeRowKeyWithHandle(tableId, endHandle);
-    return KeyRange.newBuilder().setStart(startKey).setEnd(endKey).build();
+    return rangeBuilder.build();
   }
 
   static String formatByteString(ByteString key) {

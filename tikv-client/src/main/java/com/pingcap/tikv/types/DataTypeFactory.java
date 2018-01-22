@@ -18,90 +18,69 @@
 package com.pingcap.tikv.types;
 
 import com.google.common.collect.ImmutableMap;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
-
+import java.lang.reflect.Constructor;
 import java.util.Map;
-import java.util.function.Function;
 
-import static com.pingcap.tikv.types.Types.*;
-
-/** Create DataType according to Type Flag. */
 public class DataTypeFactory {
-  // TODO: the type system still needs another overhaul
-  private static final Map<Integer, DataType> dataTypeMap =
-      ImmutableMap.<Integer, DataType>builder()
-          .put(TYPE_TINY, IntegerType.of(TYPE_TINY))
-          .put(TYPE_SHORT, IntegerType.of(TYPE_SHORT))
-          .put(TYPE_LONG, IntegerType.of(TYPE_LONG))
-          .put(TYPE_INT24, IntegerType.of(TYPE_INT24))
-          .put(TYPE_LONG_LONG, IntegerType.of(TYPE_LONG_LONG))
-          .put(TYPE_YEAR, IntegerType.of(TYPE_YEAR))
-          .put(TYPE_BIT, BitType.of(TYPE_BIT))
-          .put(TYPE_NEW_DECIMAL, DecimalType.of(TYPE_NEW_DECIMAL))
-          .put(TYPE_FLOAT, RealType.of(TYPE_FLOAT))
-          .put(TYPE_DOUBLE, RealType.of(TYPE_DOUBLE))
-          .put(TYPE_DURATION, TimeType.of(TYPE_DURATION))
-          .put(TYPE_DATETIME, DateTimeType.of(TYPE_DATETIME))
-          .put(TYPE_TIMESTAMP, TimestampType.of(TYPE_TIMESTAMP))
-          .put(TYPE_NEW_DATE, DateType.of(TYPE_NEW_DATE))
-          .put(TYPE_DATE, DateType.of(TYPE_DATE))
-          .put(TYPE_VARCHAR, BytesType.of(TYPE_VARCHAR))
-          .put(TYPE_JSON, BytesType.of(TYPE_JSON))
-          .put(TYPE_ENUM, EnumType.of(TYPE_ENUM))
-          .put(TYPE_SET, SetType.of(TYPE_SET))
-          .put(TYPE_TINY_BLOB, RawBytesType.of(TYPE_TINY_BLOB))
-          .put(TYPE_MEDIUM_BLOB, RawBytesType.ofRaw(TYPE_MEDIUM_BLOB))
-          .put(TYPE_LONG_BLOB, RawBytesType.ofRaw(TYPE_LONG_BLOB))
-          .put(TYPE_BLOB, RawBytesType.ofRaw(TYPE_BLOB))
-          .put(TYPE_VAR_STRING, BytesType.of(TYPE_VAR_STRING))
-          .put(TYPE_STRING, BytesType.of(TYPE_STRING))
-          .put(TYPE_GEOMETRY, BytesType.of(TYPE_GEOMETRY))
-          .build();
+  private static final Map<MySQLType, Constructor<? extends DataType>> dataTypeCreatorMap;
+  private static final Map<MySQLType, DataType> dataTypeInstanceMap;
 
-  private static final Map<Integer, Function<InternalTypeHolder, DataType>> dataTypeCreatorMap =
-      ImmutableMap.<Integer, Function<InternalTypeHolder, DataType>>builder()
-          .put(TYPE_TINY, IntegerType::new)
-          .put(TYPE_SHORT, IntegerType::new)
-          .put(TYPE_LONG, IntegerType::new)
-          .put(TYPE_INT24, IntegerType::new)
-          .put(TYPE_LONG_LONG, IntegerType::new)
-          .put(TYPE_YEAR, IntegerType::new)
-          .put(TYPE_BIT, BitType::new)
-          .put(TYPE_NEW_DECIMAL, DecimalType::new)
-          .put(TYPE_FLOAT, RealType::new)
-          .put(TYPE_DOUBLE, RealType::new)
-          .put(TYPE_DURATION, TimeType::new)
-          .put(TYPE_DATETIME, DateTimeType::new)
-          .put(TYPE_TIMESTAMP, TimestampType::new)
-          .put(TYPE_NEW_DATE, TimestampType::new)
-          .put(TYPE_DATE, DateType::new)
-          .put(TYPE_VARCHAR, BytesType::new)
-          .put(TYPE_JSON, BytesType::new)
-          .put(TYPE_ENUM, EnumType::new)
-          .put(TYPE_SET, SetType::new)
-          .put(TYPE_TINY_BLOB, RawBytesType::new)
-          .put(TYPE_MEDIUM_BLOB, RawBytesType::new)
-          .put(TYPE_LONG_BLOB, RawBytesType::new)
-          .put(TYPE_BLOB, RawBytesType::new)
-          .put(TYPE_VAR_STRING, BytesType::new)
-          .put(TYPE_STRING, BytesType::new)
-          .put(TYPE_GEOMETRY, BytesType::new)
-          .build();
+  static {
+    ImmutableMap.Builder<MySQLType, Constructor<? extends DataType>> builder = ImmutableMap.builder();
+    ImmutableMap.Builder<MySQLType, DataType> instBuilder = ImmutableMap.builder();
+    extractTypeMap(BitType.subTypes, BitType.class, builder, instBuilder);
+    extractTypeMap(StringType.subTypes, StringType.class, builder, instBuilder);
+    extractTypeMap(DateTimeType.subTypes, DateTimeType.class, builder, instBuilder);
+    extractTypeMap(DateType.subTypes, DateType.class, builder, instBuilder);
+    extractTypeMap(DecimalType.subTypes, DecimalType.class, builder, instBuilder);
+    extractTypeMap(IntegerType.subTypes, IntegerType.class, builder, instBuilder);
+    extractTypeMap(BytesType.subTypes, BytesType.class, builder, instBuilder);
+    extractTypeMap(RealType.subTypes, RealType.class, builder, instBuilder);
+    extractTypeMap(TimestampType.subTypes, TimestampType.class, builder, instBuilder);
+    dataTypeCreatorMap = builder.build();
+    dataTypeInstanceMap = instBuilder.build();
+  }
 
-  public static DataType of(int tp) {
-    DataType dataType = dataTypeMap.get(tp);
+  private static void extractTypeMap(
+      MySQLType[] types,
+      Class<? extends DataType> cls,
+      ImmutableMap.Builder<MySQLType, Constructor<? extends DataType>> holderBuilder,
+      ImmutableMap.Builder<MySQLType, DataType> instuilder) {
+    for (MySQLType type : types) {
+      try {
+        Constructor ctorByHolder = cls.getDeclaredConstructor(InternalTypeHolder.class);
+        Constructor ctorByType = cls.getDeclaredConstructor(MySQLType.class);
+        ctorByHolder.setAccessible(true);
+        ctorByType.setAccessible(true);
+        holderBuilder.put(type, ctorByHolder);
+        instuilder.put(type, (DataType)ctorByType.newInstance(type));
+      } catch (Exception e) {
+        throw new TypeException(String.format("Type %s does not have a proper constructor", cls.getName()), e);
+      }
+    }
+  }
+
+  public static DataType of(MySQLType type) {
+    DataType dataType = dataTypeInstanceMap.get(type);
     if (dataType == null) {
-      throw new NullPointerException("tp " + tp + " passed in can not retrieved DataType info.");
+      throw new TypeException("Type not found for " + type);
     }
     return dataType;
   }
 
   public static DataType of(InternalTypeHolder holder) {
-    Function<InternalTypeHolder, DataType> ctor = dataTypeCreatorMap.get(holder.getTp());
+    MySQLType type = MySQLType.fromTypeCode(holder.getTp());
+    Constructor<? extends DataType> ctor = dataTypeCreatorMap.get(type);
     if (ctor == null) {
       throw new NullPointerException(
           "tp " + holder.getTp() + " passed in can not retrieved DataType info.");
     }
-    return ctor.apply(holder);
+    try {
+      return ctor.newInstance(holder);
+    } catch (Exception e) {
+      throw new TypeException("Cannot create type from " + holder.getTp(), e);
+    }
   }
 }

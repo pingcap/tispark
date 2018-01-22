@@ -17,11 +17,11 @@
 
 package com.pingcap.tikv.expression;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static java.util.Objects.requireNonNull;
 
 public class Blacklist {
   private final Set<String> unsupported = new HashSet<>();

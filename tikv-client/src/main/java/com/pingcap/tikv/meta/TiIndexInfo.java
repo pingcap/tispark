@@ -72,7 +72,7 @@ public class TiIndexInfo implements Serializable {
           -1,
           CIStr.newCIStr("fake_pk_" + table.getId()),
           CIStr.newCIStr(table.getName()),
-          ImmutableList.of(pkColumn.toIndexColumn()),
+          ImmutableList.of(pkColumn.toFakeIndexColumn()),
           true,
           true,
           SchemaState.StatePublic.getStateCode(),

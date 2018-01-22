@@ -15,38 +15,144 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
 import static java.util.Objects.requireNonNull;
 
-import com.pingcap.tikv.expression.TiColumnRef;
-import com.pingcap.tikv.expression.TiExpr;
-import com.pingcap.tikv.expression.TiFunctionExpression;
-import com.pingcap.tikv.expression.scalar.And;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
+import com.pingcap.tikv.exception.TiExpressionException;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.Visitor;
+import com.pingcap.tikv.expression.visitor.DefaultVisitor;
+import com.pingcap.tikv.expression.visitor.IndexRangeBuilder;
+import com.pingcap.tikv.key.CompoundKey;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.key.TypedKey;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public class PredicateUtils {
-  public static TiExpr mergeCNFExpressions(List<TiExpr> exprs) {
-    requireNonNull(exprs);
+  public static Expression mergeCNFExpressions(List<Expression> exprs) {
+    requireNonNull(exprs, "Expression list is null");
     if (exprs.size() == 0) return null;
     if (exprs.size() == 1) return exprs.get(0);
 
-    return new And(exprs.get(0), mergeCNFExpressions(exprs.subList(1, exprs.size())));
+    return and(exprs.get(0), mergeCNFExpressions(exprs.subList(1, exprs.size())));
   }
 
-  public static Set<TiColumnRef> extractColumnRefFromExpr(TiExpr expr) {
-    Set<TiColumnRef> columnRefs = new HashSet<>();
-    if (expr instanceof TiFunctionExpression) {
-      TiFunctionExpression tiF = (TiFunctionExpression) expr;
-      for (TiExpr arg : tiF.getArgs()) {
-        if (arg instanceof TiColumnRef) {
-          TiColumnRef tiCR = (TiColumnRef) arg;
-          columnRefs.add(tiCR);
+  public static Set<ColumnRef> extractColumnRefFromExpression(Expression expr) {
+    Set<ColumnRef> columnRefs = new HashSet<>();
+    Visitor<Void, Set<ColumnRef>> visitor = new DefaultVisitor<Void, Set<ColumnRef>>() {
+      @Override
+      protected Void visit(ColumnRef node, Set<ColumnRef> context) {
+        context.add(node);
+        return null;
+      }
+    };
+
+    expr.accept(visitor, columnRefs);
+    return columnRefs;
+  }
+
+  /**
+   * Build index ranges from access points and access conditions
+   *
+   * @param pointPredicates conditions converting to a single point access
+   * @param rangePredicate conditions converting to a range
+   * @return Index Range for scan
+   */
+  public static List<IndexRange> expressionToIndexRanges(
+      List<Expression> pointPredicates,
+      Optional<Expression> rangePredicate) {
+    requireNonNull(pointPredicates, "pointPredicates is null");
+    requireNonNull(rangePredicate, "rangePredicate is null");
+    ImmutableList.Builder<IndexRange> builder = ImmutableList.builder();
+
+    if (pointPredicates.size() != 0) {
+      List<Key> pointKeys = expressionToPoints(pointPredicates);
+      for (Key key : pointKeys) {
+        if (rangePredicate.isPresent()) {
+          Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
+          for (Range<TypedKey> range : ranges) {
+            builder.add(new IndexRange(key, range));
+          }
+        } else {
+          builder.add(new IndexRange(key, null));
         }
       }
-    } else if (expr instanceof TiColumnRef) {
-      columnRefs.add(((TiColumnRef) expr));
+    } else {
+      if (rangePredicate.isPresent()) {
+        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
+        for (Range<TypedKey> range : ranges) {
+          builder.add(new IndexRange(null, range));
+        }
+      }
     }
-    return columnRefs;
+
+    return builder.build();
+  }
+
+  /**
+   * Turn access conditions into list of points Each condition is bound to single key We pick up
+   * single condition for each index key and disregard if multiple EQ conditions in DNF
+   *
+   * @param pointPredicates expressions that convertible to access points
+   * @return access points for each index
+   */
+  private static List<Key> expressionToPoints(List<Expression> pointPredicates) {
+    requireNonNull(pointPredicates, "pointPredicates cannot be null");
+
+    List<Key> resultKeys = new ArrayList<>();
+    for (int i = 0; i < pointPredicates.size(); i++) {
+      Expression predicate = pointPredicates.get(i);
+      try {
+        // each expr will be expand to one or more points
+        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(predicate);
+        List<Key> points = rangesToPoint(ranges);
+        resultKeys = joinKeys(resultKeys, points);
+      } catch (Exception e) {
+        throw new TiExpressionException(String.format("Error converting access points %s", predicate), e);
+      }
+    }
+    return resultKeys;
+  }
+
+  // Convert ranges of equal condition points to List of TypedKeys
+  private static List<Key> rangesToPoint(Set<Range<TypedKey>> ranges) {
+    requireNonNull(ranges, "ranges is null");
+    ImmutableList.Builder<Key> builder = ImmutableList.builder();
+    for (Range<TypedKey> range : ranges) {
+      // test if range is a point
+      if (range.hasLowerBound() &&
+          range.hasUpperBound() &&
+          range.lowerEndpoint().equals(range.upperEndpoint())) {
+        builder.add(range.lowerEndpoint());
+      } else {
+        throw new TiExpressionException("Cannot convert range to point");
+      }
+    }
+    return builder.build();
+  }
+
+  private static List<Key> joinKeys(List<Key> lhsKeys, List<Key> rhsKeys) {
+    requireNonNull(lhsKeys, "lhsKeys is null");
+    requireNonNull(rhsKeys, "rhsKeys is null");
+    if (lhsKeys.isEmpty()) {
+      return rhsKeys;
+    }
+    if (rhsKeys.isEmpty()) {
+      return lhsKeys;
+    }
+    ImmutableList.Builder<Key> builder = ImmutableList.builder();
+    for (Key lKey : lhsKeys) {
+      for (Key rKey : rhsKeys) {
+        builder.add(CompoundKey.concat(lKey, rKey));
+      }
+    }
+    return builder.build();
   }
 }

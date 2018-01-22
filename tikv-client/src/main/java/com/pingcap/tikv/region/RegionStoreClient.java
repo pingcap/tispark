@@ -17,6 +17,10 @@
 
 package com.pingcap.tikv.region;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
+
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
@@ -29,7 +33,20 @@ import com.pingcap.tikv.exception.SelectException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
-import com.pingcap.tikv.kvproto.Kvrpcpb.*;
+import com.pingcap.tikv.kvproto.Kvrpcpb.BatchGetRequest;
+import com.pingcap.tikv.kvproto.Kvrpcpb.BatchGetResponse;
+import com.pingcap.tikv.kvproto.Kvrpcpb.Context;
+import com.pingcap.tikv.kvproto.Kvrpcpb.GetRequest;
+import com.pingcap.tikv.kvproto.Kvrpcpb.GetResponse;
+import com.pingcap.tikv.kvproto.Kvrpcpb.KvPair;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteRequest;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteResponse;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawGetRequest;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawGetResponse;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawPutRequest;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawPutResponse;
+import com.pingcap.tikv.kvproto.Kvrpcpb.ScanRequest;
+import com.pingcap.tikv.kvproto.Kvrpcpb.ScanResponse;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.TikvGrpc;
 import com.pingcap.tikv.kvproto.TikvGrpc.TikvBlockingStub;
@@ -38,18 +55,31 @@ import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.util.Pair;
 import io.grpc.ManagedChannel;
-import org.apache.log4j.Logger;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Supplier;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.pingcap.tikv.types.RequestTypes.REQ_TYPE_DAG;
+import org.apache.log4j.Logger;
 
 // RegionStore itself is not thread-safe
 public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, TikvStub> implements RegionErrorReceiver {
+  public enum RequestTypes {
+    REQ_TYPE_SELECT(101),
+    REQ_TYPE_INDEX(102),
+    REQ_TYPE_DAG(103),
+    REQ_TYPE_ANALYZE(104),
+    BATCH_ROW_COUNT(64);
+
+    private final int value;
+
+    RequestTypes(int value) {
+      this.value = value;
+    }
+
+    public int getValue() {
+      return value;
+    }
+  }
+
   private static final Logger logger = Logger.getLogger(RegionStoreClient.class);
   private TiRegion region;
   private TikvBlockingStub blockingStub;
