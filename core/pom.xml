@@ -14,16 +14,6 @@
     <name>TiSpark Project Core</name>
     <url>http://github.copm/pingcap/tispark</url>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <protobuf.version>3.1.0</protobuf.version>
-        <junit.version>4.12</junit.version>
-        <spark.version>2.1.1</spark.version>
-        <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11</scala.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.pingcap.tikv</groupId>

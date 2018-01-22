@@ -17,31 +17,28 @@
 
 package com.pingcap.tikv.types;
 
+import com.pingcap.tidb.tipb.ExprType;
+import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.Codec.DecimalCodec;
+import com.pingcap.tikv.codec.Codec.RealCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.codec.InvalidCodecFormatException;
+import com.pingcap.tikv.exception.InvalidCodecFormatException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 public class RealType extends DataType {
-  private static final long signMask = 0x8000000000000000L;
+  public static final RealType DOUBLE = new RealType(MySQLType.TypeDouble);
+  public static final RealType FLOAT = new RealType(MySQLType.TypeFloat);
+  public static final RealType REAL = DOUBLE;
 
-  static RealType of(int tp) {
-    return new RealType(tp);
-  }
+  public static final MySQLType[] subTypes = new MySQLType[] {
+      MySQLType.TypeDouble,
+      MySQLType.TypeFloat
+  };
 
-  private RealType(int tp) {
+  private RealType(MySQLType tp) {
     super(tp);
-  }
-
-  public String simpleTypeName() { return "real"; }
-
-  @Override
-  public Object decodeNotNull(int flag, CodecDataInput cdi) {
-    // check flag first and then read.
-    if (flag != FLOATING_FLAG) {
-      throw new InvalidCodecFormatException("Invalid Flag type for float type: " + flag);
-    }
-    return readDouble(cdi);
   }
 
   RealType(TiColumnInfo.InternalTypeHolder holder) {
@@ -49,77 +46,51 @@ public class RealType extends DataType {
   }
 
   /**
-   * encode a value to cdo.
-   *
-   * @param cdo destination of data.
-   * @param encodeType Key or Value.
-   * @param value need to be encoded.
+   * {@inheritDoc}
    */
   @Override
-  public void encodeNotNull(CodecDataOutput cdo, EncodeType encodeType, Object value) {
-    double val;
-    if (value instanceof Double) {
-      val = (Double) value;
-    } else {
-      throw new UnsupportedOperationException("Can not cast Un-number to Float");
+  protected Object decodeNotNull(int flag, CodecDataInput cdi) {
+    if (flag == Codec.DECIMAL_FLAG) {
+      return DecimalCodec.readDecimal(cdi).doubleValue();
+    } else if (flag == Codec.FLOATING_FLAG) {
+      return RealCodec.readDouble(cdi);
     }
+    throw new InvalidCodecFormatException("Invalid Flag type for float type: " + flag);
+  }
 
-    IntegerType.writeULong(cdo, encodeDoubleToCmpLong(val));
+  @Override
+  protected void encodeKey(CodecDataOutput cdo, Object value) {
+    double val = Converter.convertToDouble(value);
+    RealCodec.writeDoubleFully(cdo, val);
+  }
+
+  @Override
+  protected void encodeValue(CodecDataOutput cdo, Object value) {
+    double val = Converter.convertToDouble(value);
+    RealCodec.writeDoubleFully(cdo, val);
+  }
+
+  @Override
+  protected void encodeProto(CodecDataOutput cdo, Object value) {
+    double val = Converter.convertToDouble(value);
+    RealCodec.writeDouble(cdo, val);
+  }
+
+  @Override
+  public ExprType getProtoExprType() {
+    if (tp == MySQLType.TypeDouble) {
+      return ExprType.Float64;
+    } else if (tp == MySQLType.TypeFloat) {
+      return ExprType.Float32;
+    }
+    throw new TypeException("Unknown Type encoding proto " + tp);
   }
 
   /**
-   * get origin default value
-   * @param value a float value represents in string
-   * @return a {@link Float} Object
+   * {@inheritDoc}
    */
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
-    return Float.parseFloat(value);
-  }
-
-  /**
-   * Decode as float
-   *
-   * @param cdi source of data
-   * @return decoded unsigned long value
-   */
-  public static double readDouble(CodecDataInput cdi) {
-    long u = IntegerType.readULong(cdi);
-    if (u < 0) {
-      u &= Long.MAX_VALUE;
-    } else {
-      u = ~u;
-    }
-    return Double.longBitsToDouble(u);
-  }
-
-  private static long encodeDoubleToCmpLong(double val) {
-    long u = Double.doubleToRawLongBits(val);
-    if (val >= 0) {
-      u |= signMask;
-    } else {
-      u = ~u;
-    }
-    return u;
-  }
-
-  /**
-   * Encoding a double value to byte buffer
-   *
-   * @param cdo For outputting data in bytes array
-   * @param val The data to encode
-   */
-  public static void writeDouble(CodecDataOutput cdo, double val) {
-    IntegerType.writeULong(cdo, encodeDoubleToCmpLong(val));
-  }
-
-  /**
-   * Encoding a float value to byte buffer
-   *
-   * @param cdo For outputting data in bytes array
-   * @param val The data to encode
-   */
-  public static void writeFloat(CodecDataOutput cdo, float val) {
-    writeDouble(cdo, val);
+    return Double.parseDouble(value);
   }
 }

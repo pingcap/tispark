@@ -1,10 +1,15 @@
 package com.pingcap.tikv.util;
 
+import static com.pingcap.tikv.GrpcUtils.encodeKey;
+import static org.junit.Assert.assertEquals;
+
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.codec.TableCodec;
-import com.pingcap.tikv.codec.TableCodec.DecodeResult.Status;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.key.RowKey;
+import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
@@ -12,16 +17,11 @@ import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.types.IntegerType;
 import gnu.trove.list.array.TLongArrayList;
-import org.junit.Test;
-
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import static com.pingcap.tikv.GrpcUtils.encodeKey;
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
 
 public class RangeSplitterTest {
   static class MockRegionManager extends RegionManager {
@@ -38,7 +38,8 @@ public class RangeSplitterTest {
     @Override
     public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(ByteString key) {
       for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
-        if (KeyRangeUtils.toRange(entry.getKey()).contains(Comparables.wrap(key))) {
+        KeyRange range = entry.getKey();
+        if (KeyRangeUtils.makeRange(range.getStart(), range.getEnd()).contains(Key.toRawKey(key))) {
           TiRegion region = entry.getValue();
           return Pair.create(region, Metapb.Store.newBuilder().setId(region.getId()).build());
         }
@@ -52,13 +53,13 @@ public class RangeSplitterTest {
     ByteString eKey = ByteString.EMPTY;
     if (s != null) {
       CodecDataOutput cdo = new CodecDataOutput();
-      IntegerType.writeLongFull(cdo, s, true);
+      IntegerCodec.writeLongFully(cdo, s, true);
       sKey = cdo.toByteString();
     }
 
     if (e != null) {
       CodecDataOutput cdo = new CodecDataOutput();
-      IntegerType.writeLongFull(cdo, e, true);
+      IntegerCodec.writeLongFully(cdo, e, true);
       eKey = cdo.toByteString();
     }
 
@@ -87,21 +88,13 @@ public class RangeSplitterTest {
 
   private static ByteString handleToByteString(long tableId, Long k) {
     if (k != null) {
-      return TableCodec.encodeRowKeyWithHandle(tableId, k);
+      return RowKey.toRowKey(tableId, k).toByteString();
     }
     return ByteString.EMPTY;
   }
 
   private static KeyRange keyRangeByHandle(long tableId, Long s, Long e) {
     return keyRangeByHandle(tableId, s, Status.EQUAL, e, Status.EQUAL);
-  }
-
-  private static KeyRange keyRangeByHandle(long tableId, Long s, ByteString regionEndKey) {
-    return KeyRange
-        .newBuilder()
-        .setStart(handleToByteString(tableId, s))
-        .setEnd(regionEndKey)
-        .build();
   }
 
   private static TiRegion region(long id, KeyRange range) {
@@ -124,16 +117,11 @@ public class RangeSplitterTest {
     List<RangeSplitter.RegionTask> tasks =
         s.splitRangeByRegion(
             ImmutableList.of(
-                keyRange(null, 40L),
-                keyRange(41L, 42L),
-                keyRange(45L, 50L),
-                keyRange(70L, 1000L)
-            )
-        );
+                keyRange(0L, 40L), keyRange(41L, 42L), keyRange(45L, 50L), keyRange(70L, 1000L)));
 
     assertEquals(tasks.get(0).getRegion().getId(), 0);
     assertEquals(tasks.get(0).getRanges().size(), 1);
-    assertEquals(tasks.get(0).getRanges().get(0), keyRange(null, 30L));
+    assertEquals(tasks.get(0).getRanges().get(0), keyRange(0L, 30L));
 
     assertEquals(tasks.get(1).getRegion().getId(), 1);
     assertEquals(tasks.get(1).getRanges().get(0), keyRange(30L, 40L));

@@ -1,6 +1,7 @@
 #ignore idea configuration
 .idea
 *.iml
+pub.sh
 
 # ignore compiled classes
 target
@@ -61,4 +62,6 @@ tikv-client/proto
 
 # ignore tikv-client bazel build
 tikv-client/bazel-*
+
+integtest/logs
 data

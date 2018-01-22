@@ -21,26 +21,27 @@ import static org.junit.Assert.assertEquals;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.types.DataType.EncodeType;
 import java.math.BigDecimal;
 import org.junit.Test;
 
 public class DecimalTypeTest {
   @Test
-  public void writeDoubleAndReadDoubleTest() {
-    // issue scientific notation in toBin
+  public void encodeTest() throws Exception {
+    DataType type = DecimalType.DECIMAL;
+    BigDecimal originalVal = BigDecimal.valueOf(6.66);
+    byte[] encodedKey = encode(originalVal, EncodeType.KEY, type);
+    Object val = decode(encodedKey, type);
+    assertEquals(originalVal, val);
+  }
+
+  private static byte[] encode(Object val, EncodeType encodeType, DataType type) {
     CodecDataOutput cdo = new CodecDataOutput();
-    DecimalType.writeDouble(cdo, 0.01);
-    double u = DecimalType.readDouble(new CodecDataInput(cdo.toBytes()));
-    assertEquals(0.01, u, 0.0001);
+    type.encode(cdo, encodeType, val);
+    return cdo.toBytes();
+  }
 
-    cdo.reset();
-    DecimalType.writeDouble(cdo, 206.0);
-    u = DecimalType.readDouble(new CodecDataInput(cdo.toBytes()));
-    assertEquals(206.0, u, 0.0001);
-
-    cdo.reset();
-    DecimalType.writeDecimal(cdo, BigDecimal.valueOf(206.0));
-    u = DecimalType.readDouble(new CodecDataInput(cdo.toBytes()));
-    assertEquals(206.0, u, 0.0001);
+  private static Object decode(byte[] val, DataType type) {
+    return type.decode(new CodecDataInput(val));
   }
 }

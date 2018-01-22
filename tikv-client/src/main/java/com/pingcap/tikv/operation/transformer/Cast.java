@@ -36,10 +36,10 @@ public class Cast extends NoOp {
     }
     if (targetDataType instanceof IntegerType) {
       casted = castToLong(value);
-    } else if (targetDataType instanceof RawBytesType) {
-      casted = castToBinary(value);
-    } else if (targetDataType instanceof BytesType) {
+    } else if (targetDataType instanceof StringType) {
       casted = castToString(value);
+    } else if (targetDataType instanceof BytesType) {
+      casted = castToBinary(value);
     } else if (targetDataType instanceof DecimalType) {
       casted = castToDecimal(value);
     } else if (targetDataType instanceof RealType) {
