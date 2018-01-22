@@ -113,7 +113,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest.resolve()
 
     val notAllowPushDown = dagRequest.getFields.asScala
-      .map { _.getColumnInfo.getType.getType.name() }
+      .map { _.getColumnInfo.getType.getType }
       .exists { typeBlackList.isUnsupportedType }
 
     if (notAllowPushDown) {
