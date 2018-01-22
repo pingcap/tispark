@@ -47,14 +47,25 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
     }
 
+    /**
+     * Balance region leaders of a single table.
+     *
+     * e.g.
+     * `balanceRegionByTable("http://172.16.20.3:2379", "tpch_idx", "lineitem", 20)`
+     * This method call will try to balance table `lineitem`'s leader distribution by
+     * transforming those leaders reside in a single heavily used TiKV to other TiKVs.
+     *
+     * @param pdAddr    The PD address
+     * @param dbName    Database name
+     * @param tableName Table name
+     * @param maxTrans  Maximum number of transformations this function can perform
+     * @return The re-distributed information of original table
+     */
     def balanceRegionByTable(pdAddr: String,
                              dbName: String,
-                             tableName: String): Map[String, Integer] = {
-      val regionsPrefix = "pd/api/v1/regions"
-      val regionsWriteflowPrefix = "pd/api/v1/regions/writeflow"
-      val regionsReadflowPrefix = "pd/api/v1/regions/readflow"
+                             tableName: String,
+                             maxTrans: Int = 50): Map[String, Integer] = {
       val regionIDPrefix = "pd/api/v1/region/id"
-      val regionKeyPrefix = "pd/api/v1/region/key"
       val operatorsPrefix = "pd/api/v1/operators"
       val storeRegionId = RegionUtils.getStoreRegionIdDistribution(tiSession, dbName, tableName)
       val storeRegionCount = mutable.Map[Long, Long]()
@@ -64,9 +75,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       })
 
       val avgRegionCount = storeRegionCount.values.sum / storeRegionCount.size
-      println(s"Avg region count:$avgRegionCount")
 
-      var maxTrans = 5
       var transCount = 0
       storeRegionId.asScala
         .flatMap(_._2)
@@ -78,27 +87,35 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
           val leaderStoreId = leader("store_id").as[JsNumber].value.toLong
 
           val targetLeaders = peers
-            .map { _("store_id").as[JsNumber].value.toLong }
-            .filterNot { _ == leaderStoreId }
-            .filter { id =>
+            .map(_("store_id").as[JsNumber].value.toLong)
+            .filterNot(_ == leaderStoreId)
+            .filter( id =>
               storeRegionCount.contains(id) &&
               storeRegionCount(id) < storeRegionCount(leaderStoreId) &&
               storeRegionCount(id) < avgRegionCount
-            }
+            )
 
           if (targetLeaders.nonEmpty && transCount < maxTrans) {
             val toStore = targetLeaders.minBy(storeRegionCount(_))
-            val req = Json.obj("name"->"transfer-leader", "region_id" -> JsNumber(BigDecimal(regionId)), "to_store_id" -> JsNumber(BigDecimal(toStore)))
-            println(req.toString())
-            val resp = Http(s"$pdAddr/$operatorsPrefix").postData(req.toString()).header("content-type", "application/json").asString
-            println(s"Resp: code=${resp.code},body=${resp.body}")
-            if (resp.is2xx) {
-              println(
+            val req = Json.obj(
+              "name" -> "transfer-leader",
+              "region_id" -> JsNumber(BigDecimal(regionId)),
+              "to_store_id" -> JsNumber(BigDecimal(toStore))
+            )
+            val resp = Http(s"$pdAddr/$operatorsPrefix")
+              .postData(req.toString())
+              .header("content-type", "application/json")
+              .asString
+            if (resp.isSuccess) {
+              logInfo(
                 s"Transfer $regionId leader :Store $leaderStoreId to Store $toStore successfully"
               )
               storeRegionCount(leaderStoreId) -= 1
               storeRegionCount(toStore) += 1
-              println(storeRegionCount)
+            } else {
+              logError(
+                s"Transfer $regionId leader :Store $leaderStoreId to Store $toStore failed -- ${resp.body}"
+              )
             }
             transCount += 1
           }
