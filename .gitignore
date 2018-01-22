@@ -64,3 +64,4 @@ tikv-client/proto
 tikv-client/bazel-*
 
 integtest/logs
+data
