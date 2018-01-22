@@ -16,7 +16,6 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tidb.tipb.ExprType;
-import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
@@ -57,8 +56,7 @@ public class EnumType extends DataType {
    */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    Enum e = Converter.convertToEnum(value);
-    Codec.IntegerCodec.writeULongFully(cdo, e.getValue(), true);
+    throw new UnsupportedTypeException("Enum type not supported");
   }
 
   /**
@@ -67,8 +65,7 @@ public class EnumType extends DataType {
    */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    Enum e = Converter.convertToEnum(value);
-    Codec.IntegerCodec.writeULongFully(cdo, e.getValue(), true);
+    throw new UnsupportedTypeException("Enum type not supported");
   }
 
   /**

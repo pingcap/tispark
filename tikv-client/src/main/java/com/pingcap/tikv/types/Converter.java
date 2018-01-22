@@ -66,14 +66,6 @@ public class Converter {
     throw new TypeException(String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
   }
 
-  public static Enum convertToEnum(Object val) {
-    requireNonNull(val, "val is null");
-    if (val instanceof Enum) {
-      return ((Enum) val);
-    }
-    throw new TypeException(String.format("Cannot cast %s to enum", val.getClass().getSimpleName()));
-  }
-
   private static final DateTimeZone localTimeZone = DateTimeZone.getDefault();
   private static final DateTimeFormatter localTimeZoneFormatter =
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(localTimeZone);
