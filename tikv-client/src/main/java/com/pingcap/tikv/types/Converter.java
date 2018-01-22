@@ -30,7 +30,6 @@ import java.sql.Timestamp;
 
 import static java.util.Objects.requireNonNull;
 
-
 public class Converter {
   public static long convertToLong(Object val) {
     requireNonNull(val, "val is null");

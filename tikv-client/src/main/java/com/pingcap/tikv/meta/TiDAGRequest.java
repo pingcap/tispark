@@ -277,7 +277,10 @@ public class TiDAGRequest implements Serializable {
       executorBuilder.clear();
     }
 
-    getFields().forEach(tiColumnInfo -> dagRequestBuilder.addOutputOffsets(tiColumnInfo.getColumnInfo().getOffset()));
+    // column offset should be in accordance with the
+    for (int i = 0; i < getFields().size(); i++) {
+      dagRequestBuilder.addOutputOffsets(i);
+    }
     // if handle is needed, we should append one output offset
     if (isHandleNeeded()) {
       dagRequestBuilder.addOutputOffsets(tableInfo.getColumns().size());
