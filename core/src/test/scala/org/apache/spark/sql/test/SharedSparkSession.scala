@@ -1,5 +1,3 @@
 package org.apache.spark.sql.test
 
-trait SharedSparkSession {
-
-}
+trait SharedSparkSession {}

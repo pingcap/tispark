@@ -17,27 +17,23 @@
 
 package org.apache.spark.sql.test
 
-import java.io.File
 import java.util.UUID
-
-import scala.concurrent.duration._
-import scala.language.implicitConversions
-import scala.util.Try
-import scala.util.control.NonFatal
-
-import org.apache.hadoop.conf.Configuration
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.concurrent.Eventually
 
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.catalog.SessionCatalog.DEFAULT_DATABASE
-import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.FilterExec
-import org.apache.spark.util.{UninterruptibleThread, Utils}
+import org.apache.spark.util.UninterruptibleThread
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.concurrent.Eventually
+
+import scala.concurrent.duration._
+import scala.language.implicitConversions
+import scala.util.control.NonFatal
 
 /**
  * Helper trait that should be extended by all SQL test suites.
@@ -115,40 +111,11 @@ private[sql] trait SQLTestUtils
   }
 
   /**
-   * Generates a temporary path without creating the actual file/directory, then pass it to `f`. If
-   * a file/directory is created there by `f`, it will be delete after `f` returns.
-   *
-   * @todo Probably this method should be moved to a more general place
-   */
-  protected def withTempPath(f: File => Unit): Unit = {
-    val path = Utils.createTempDir()
-    path.delete()
-    try f(path)
-    finally Utils.deleteRecursively(path)
-  }
-
-  /**
    * Waits for all tasks on all executors to be finished.
    */
   protected def waitForTasksToFinish(): Unit = {
     eventually(timeout(10.seconds)) {
       assert(spark.sparkContext.statusTracker.getExecutorInfos.map(_.numRunningTasks()).sum == 0)
-    }
-  }
-
-  /**
-   * Creates a temporary directory, which is then passed to `f` and will be deleted after `f`
-   * returns.
-   *
-   * @todo Probably this method should be moved to a more general place
-   */
-  protected def withTempDir(f: File => Unit): Unit = {
-    val dir = Utils.createTempDir().getCanonicalFile
-    try f(dir)
-    finally {
-      // wait for all tasks to finish before deleting files
-      waitForTasksToFinish()
-      Utils.deleteRecursively(dir)
     }
   }
 

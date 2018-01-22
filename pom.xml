@@ -90,18 +90,5 @@
             <version>${spark.version}</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- for test -->
-        <!--<dependency>-->
-            <!--<groupId>org.scalactic</groupId>-->
-            <!--<artifactId>scalactic_${scala.version}</artifactId>-->
-            <!--<version>${scalatest.version}</version>-->
-        <!--</dependency>-->
-        <dependency>
-            <groupId>org.scalatest</groupId>
-            <artifactId>scalatest_${scala.version}</artifactId>
-            <version>${scalatest.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 </project>
