@@ -16,35 +16,23 @@
 package com.pingcap.tikv.predicates;
 
 
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Expression;
-import java.util.ArrayList;
-import java.util.List;
+import com.pingcap.tikv.expression.visitor.PseudoCostCalculator;
+
 import java.util.Optional;
 
 public class SelectivityCalculator {
-  public static final double SELECTION_FACTOR = 100;
-  public static final double EQUAL_RATE = 0.01;
-  public static final double LESS_RATE = 0.1;
-
   public static double calcPseudoSelectivity(ScanSpec spec) {
-    List<Expression> exprs = new ArrayList<>();
-    exprs.addAll(spec.getPointPredicates());
     Optional<Expression> rangePred = spec.getRangePredicate();
-    rangePred.map(x -> exprs.add(x));
-    double minFactor = SELECTION_FACTOR;
-    for (Expression expr : exprs) {
-      if (expr instanceof ComparisonBinaryExpression) {
-        ComparisonBinaryExpression compExpression = (ComparisonBinaryExpression) expr;
-        switch (compExpression.getComparisonType()) {
-          case EQUAL:
-            minFactor *= EQUAL_RATE;
-            break;
-          default:
-            minFactor *= LESS_RATE;
-        }
+    double cost = 100.0;
+    if (spec.getPointPredicates() != null) {
+      for (Expression expr : spec.getPointPredicates()) {
+        cost *= PseudoCostCalculator.calculateCost(expr);
       }
     }
-    return minFactor;
+    if (rangePred.isPresent()) {
+      return PseudoCostCalculator.calculateCost(rangePred.get());
+    }
+    return cost;
   }
 }

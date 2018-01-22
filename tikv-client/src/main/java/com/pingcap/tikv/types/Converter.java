@@ -17,7 +17,6 @@
 
 package com.pingcap.tikv.types;
 
-
 import com.pingcap.tikv.exception.TypeException;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -30,7 +29,6 @@ import java.sql.Date;
 import java.sql.Timestamp;
 
 import static java.util.Objects.requireNonNull;
-
 
 public class Converter {
   public static long convertToLong(Object val) {

@@ -103,7 +103,7 @@ public class ScanAnalyzerTest {
     Coprocessor.KeyRange keyRange = keyRanges.get(0);
 
     assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,114,0,0,0,0,0,0,0,0}), keyRange.getStart());
-    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,114,-1,-1,-1,-1,-1,-1,-1,-1}), keyRange.getEnd());
+    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,115,0,0,0,0,0,0,0,0}), keyRange.getEnd());
   }
 
   @Test
@@ -230,7 +230,7 @@ public class ScanAnalyzerTest {
     ScanAnalyzer.ScanPlan scanPlan = scanBuilder.buildScan(new ArrayList<>(), index, table);
 
     ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
-    ByteString endKey = RowKey.toRowKey(table.getId(), Long.MAX_VALUE).toByteString();
+    ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();
 
     assertEquals(1, scanPlan.getKeyRanges().size());
     assertEquals(startKey, scanPlan.getKeyRanges().get(0).getStart());

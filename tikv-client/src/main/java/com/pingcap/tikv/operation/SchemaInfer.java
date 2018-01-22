@@ -24,6 +24,7 @@ import com.pingcap.tikv.operation.transformer.RowTransformer;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.Pair;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -93,7 +94,6 @@ public class SchemaInfer {
    * @param dagRequest is SelectRequest
    */
   private void extractFieldTypes(TiDAGRequest dagRequest) {
-
     if (dagRequest.hasAggregate()) {
       dagRequest.getAggregates().forEach(expr -> types.add(dagRequest.getExpressionType(expr)));
       // In DAG mode, if there is any group by statement in a request, all the columns specified

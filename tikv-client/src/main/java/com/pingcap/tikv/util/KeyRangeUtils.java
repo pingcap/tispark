@@ -15,13 +15,7 @@
 
 package com.pingcap.tikv.util;
 
-
-import static com.pingcap.tikv.key.Key.toRawKey;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
-import com.google.common.collect.RangeSet;
-import com.google.common.collect.TreeRangeSet;
+import com.google.common.collect.*;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -29,8 +23,11 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
+
 import java.util.List;
 import java.util.Set;
+
+import static com.pingcap.tikv.key.Key.toRawKey;
 
 public class KeyRangeUtils {
   public static List<Coprocessor.KeyRange> split(Coprocessor.KeyRange range, int splitFactor) {
@@ -96,13 +93,30 @@ public class KeyRangeUtils {
     return Range.closedOpen(toRawKey(startKey, true), toRawKey(endKey));
   }
 
+  /**
+   * Build a Coprocessor Range with CLOSED_OPEN endpoints
+   *
+   * @param startKey startKey
+   * @param endKey endKey
+   * @return a CLOSED_OPEN range for coprocessor
+   */
   public static KeyRange makeCoprocRange(ByteString startKey, ByteString endKey) {
     return KeyRange.newBuilder().setStart(startKey).setEnd(endKey).build();
   }
 
+  /**
+   * Build a Coprocessor Range
+   *
+   * @param range Range with Comparable endpoints
+   * @return a CLOSED_OPEN range for coprocessor
+   */
   public static KeyRange makeCoprocRange(Range<Key> range) {
     if (!range.hasLowerBound() || !range.hasUpperBound()) {
-      throw new TiClientInternalException("range is not closed");
+      throw new TiClientInternalException("range is not bounded");
+    }
+    if (range.lowerBoundType().equals(BoundType.OPEN) ||
+        range.upperBoundType().equals(BoundType.CLOSED)) {
+      throw new TiClientInternalException("range must be CLOSED_OPEN");
     }
     return makeCoprocRange(range.lowerEndpoint().toByteString(),
                            range.upperEndpoint().toByteString());

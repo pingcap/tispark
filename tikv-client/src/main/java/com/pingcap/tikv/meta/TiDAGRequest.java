@@ -1,23 +1,10 @@
 package com.pingcap.tikv.meta;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.pingcap.tidb.tipb.Aggregation;
-import com.pingcap.tidb.tipb.ColumnInfo;
-import com.pingcap.tidb.tipb.DAGRequest;
-import com.pingcap.tidb.tipb.ExecType;
-import com.pingcap.tidb.tipb.Executor;
-import com.pingcap.tidb.tipb.IndexScan;
-import com.pingcap.tidb.tipb.Limit;
-import com.pingcap.tidb.tipb.Selection;
-import com.pingcap.tidb.tipb.TableScan;
-import com.pingcap.tidb.tipb.TopN;
+import com.pingcap.tidb.tipb.*;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
@@ -29,12 +16,14 @@ import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.Pair;
+
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Type TiDAGRequest.
@@ -218,8 +207,13 @@ public class TiDAGRequest implements Serializable {
     Executor.Builder executorBuilder = Executor.newBuilder();
     TableScan.Builder tblScanBuilder = TableScan.newBuilder();
 
+    Map<ColumnRef, Integer> colOffsetMap = new HashMap<>();
     // Step1. Add columns to first executor
-    tableInfo.getColumns().forEach(tiColumnInfo -> tblScanBuilder.addColumns(tiColumnInfo.toProto(tableInfo)));
+    for (int i = 0; i < getFields().size(); i++) {
+      ColumnRef col = getFields().get(i);
+      tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
+      colOffsetMap.put(col, i);
+    }
     executorBuilder.setTp(ExecType.TypeTableScan);
     tblScanBuilder.setTableId(tableInfo.getId());
     // Currently, according to TiKV's implementation, if handle
@@ -247,7 +241,7 @@ public class TiDAGRequest implements Serializable {
       executorBuilder.setTp(ExecType.TypeSelection);
       dagRequestBuilder.addExecutors(
           executorBuilder.setSelection(
-              Selection.newBuilder().addConditions(ProtoConverter.toProto(whereExpr))
+              Selection.newBuilder().addConditions(ProtoConverter.toProto(whereExpr, colOffsetMap))
           )
       );
       executorBuilder.clear();
@@ -255,8 +249,8 @@ public class TiDAGRequest implements Serializable {
 
     if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
       Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
-      getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr())));
-      getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr)));
+      getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap)));
+      getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetMap)));
       executorBuilder.setTp(ExecType.TypeAggregation);
       dagRequestBuilder.addExecutors(
           executorBuilder.setAggregation(aggregationBuilder)
@@ -266,7 +260,11 @@ public class TiDAGRequest implements Serializable {
 
     if (!getOrderByItems().isEmpty()) {
       TopN.Builder topNBuilder = TopN.newBuilder();
-      getOrderByItems().forEach(tiByItem -> topNBuilder.addOrderBy(tiByItem.toProto()));
+      getOrderByItems().forEach(tiByItem -> topNBuilder
+          .addOrderBy(com.pingcap.tidb.tipb.ByItem.newBuilder()
+          .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap))
+          .setDesc(tiByItem.isDesc())
+      ));
       executorBuilder.setTp(ExecType.TypeTopN);
       topNBuilder.setLimit(getLimit());
       dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));

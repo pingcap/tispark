@@ -15,19 +15,18 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.key.RowKey
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
-import gnu.trove.list.linked.TLongLinkedList
-import gnu.trove.map.hash.TLongObjectHashMap
+import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
@@ -51,36 +50,31 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
   override def compute(split: Partition, context: TaskContext): Iterator[Row] =
     new Iterator[Row] {
       dagRequest.resolve()
-      // bypass, sum return a long type
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
       private val snapshot = session.createSnapshot(ts)
       private[this] val tasks = tiPartition.tasks
 
-      private val handleIter = snapshot.indexHandleRead(dagRequest, tasks)
+      private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
       private val tableId = dagRequest.getTableInfo.getId
       private val regionManager = session.getRegionManager
-      private val regionHandleMap = new TLongObjectHashMap[TLongLinkedList]()
-      // Fetch all handles
-      while (handleIter.hasNext) {
-        // Kill the task in case it has been marked as killed. This logic is from
-        // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
-        // to avoid performance overhead.
-        if (context.isInterrupted()) {
-          throw new TaskKilledException
+      private lazy val handleList = {
+        val lst = new TLongArrayList()
+        handleIterator.asScala.foreach {
+          // Kill the task in case it has been marked as killed. This logic is from
+          // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
+          // to avoid performance overhead.
+          if (context.isInterrupted()) {
+            throw new TaskKilledException
+          }
+          lst.add(_)
         }
-        val handle = handleIter.next()
-        val key = RowKey.toRowKey(tableId, handle)
-        val regionId = regionManager
-          .getRegionByKey(key.toByteString)
-          .getId
-
-        if (!regionHandleMap.containsKey(regionId)) {
-          regionHandleMap.put(regionId, new TLongLinkedList())
-        }
-
-        regionHandleMap.get(regionId).add(handle)
+        lst
       }
+      // Fetch all handles and group by region id
+      private val regionHandleMap = RangeSplitter
+        .newSplitter(regionManager)
+        .groupByHandlesByRegionId(tableId, handleList)
 
       private val iterator = regionHandleMap.iterator()
 
