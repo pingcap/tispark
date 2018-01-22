@@ -15,10 +15,6 @@
 
 package com.pingcap.tikv.util;
 
-import static com.pingcap.tikv.key.Key.toRawKey;
-import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.ByteString;
@@ -31,11 +27,17 @@ import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.map.hash.TLongObjectHashMap;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.pingcap.tikv.key.Key.toRawKey;
+import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 
 public class RangeSplitter {
   public static class RegionTask implements Serializable {
@@ -102,9 +104,15 @@ public class RangeSplitter {
 
   private final RegionManager regionManager;
 
-  public List<RegionTask> splitHandlesByRegion(long tableId, TLongArrayList handles) {
-    // Max value for current index handle range
-    ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
+  /**
+   * Group by a list of handles by the handles' region id
+   *
+   * @param tableId Table id used for the handle
+   * @param handles Handle list
+   * @return <RegionId, HandleList> map
+   */
+  public TLongObjectHashMap<TLongArrayList> groupByHandlesByRegionId(long tableId, TLongArrayList handles) {
+    TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
     handles.sort();
 
     int startPos = 0;
@@ -118,7 +126,7 @@ public class RangeSplitter {
       if (decodeResult.status == Status.MIN) {
         throw new TiExpressionException("EndKey is less than current rowKey");
       } else if (decodeResult.status == Status.MAX || decodeResult.status == Status.UNKNOWN_INF) {
-        createTask(startPos, handles.size(), tableId, handles, regionStorePair, regionTasks);
+        result.put(regionStorePair.first.getId(), createHandleList(startPos, handles.size(), handles));
         break;
       }
 
@@ -139,7 +147,7 @@ public class RangeSplitter {
         // handle at pos included
         pos ++;
       }
-      createTask(startPos, pos, tableId, handles, regionStorePair, regionTasks);
+      result.put(regionStorePair.first.getId(), createHandleList(startPos, pos, handles));
       // pos equals to start leads to an dead loop
       // startPos and its handle is used for searching region in PD.
       // The returning close-open range should at least include startPos's handle
@@ -149,6 +157,34 @@ public class RangeSplitter {
       }
       startPos = pos;
     }
+
+    return result;
+  }
+
+  private TLongArrayList createHandleList(
+      int startPos,
+      int endPos,
+      TLongArrayList handles
+  ) {
+    TLongArrayList result = new TLongArrayList();
+    for (int i = startPos; i < endPos; i++) {
+      result.add(handles.get(i));
+    }
+    return result;
+  }
+
+  public List<RegionTask> splitHandlesByRegion(long tableId, TLongArrayList handles) {
+    // Max value for current index handle range
+    ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
+
+    TLongObjectHashMap<TLongArrayList> regionHandlesMap = groupByHandlesByRegionId(tableId, handles);
+
+    regionHandlesMap.forEachEntry((k, v) -> {
+      Pair<TiRegion, Metapb.Store> regionStorePair = regionManager.getRegionStorePairByRegionId(k);
+      createTask(0, v.size(), tableId, v, regionStorePair, regionTasks);
+      return true;
+    });
+
     return regionTasks.build();
   }
 

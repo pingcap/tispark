@@ -1,8 +1,5 @@
 package com.pingcap.tikv.util;
 
-import static com.pingcap.tikv.GrpcUtils.encodeKey;
-import static org.junit.Assert.assertEquals;
-
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
@@ -18,10 +15,16 @@ import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import gnu.trove.list.array.TLongArrayList;
+import gnu.trove.map.hash.TLongObjectHashMap;
+import org.junit.Test;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.junit.Test;
+
+import static com.pingcap.tikv.GrpcUtils.encodeKey;
+import static org.junit.Assert.assertEquals;
 
 public class RangeSplitterTest {
   static class MockRegionManager extends RegionManager {
@@ -33,6 +36,17 @@ public class RangeSplitterTest {
           ranges
               .stream()
               .collect(Collectors.toMap(kr -> kr, kr -> region(ranges.indexOf(kr), kr)));
+    }
+
+    @Override
+    public TiRegion getRegionById(long regionId) {
+      return mockRegionMap.entrySet().stream().filter(e -> e.getValue().getId() == regionId).findFirst().get().getValue();
+    }
+
+    @Override
+    public Pair<TiRegion, Metapb.Store> getRegionStorePairByRegionId(long id) {
+      Map.Entry<KeyRange, TiRegion> entry = mockRegionMap.entrySet().stream().filter(e -> e.getValue().getId() == id).findFirst().get();
+      return Pair.create(entry.getValue(), Metapb.Store.newBuilder().setId(entry.getValue().getId()).build());
     }
 
     @Override
@@ -153,7 +167,12 @@ public class RangeSplitterTest {
     ));
 
     RangeSplitter s = RangeSplitter.newSplitter(mgr);
-    List<RangeSplitter.RegionTask> tasks = s.splitHandlesByRegion(tableId, handles);
+    List<RangeSplitter.RegionTask> tasks = new ArrayList<>(s.splitHandlesByRegion(tableId, handles));
+    tasks.sort((l, r) -> {
+      Long regionIdLeft = l.getRegion().getId();
+      Long regionIdRight = r.getRegion().getId();
+      return regionIdLeft.compareTo(regionIdRight);
+    });
 
     // [-INF, -100): [Long.MIN_VALUE, Long.MIN_VALUE + 1), [-255, -254)
     assertEquals(tasks.get(0).getRegion().getId(), 0);
@@ -192,5 +211,34 @@ public class RangeSplitterTest {
     assertEquals(tasks.get(5).getRegion().getId(), 6);
     assertEquals(tasks.get(5).getRanges().size(), 1);
     assertEquals(tasks.get(5).getRanges().get(0), keyRangeByHandle(tableId, 19999L, 20000L));
+  }
+
+  @Test
+  public void groupHandlesByRegionIdTest() {
+    final long tableId = 1;
+    TLongArrayList handles = new TLongArrayList();
+    handles.add(new long[] {
+        1, 5, 4, 3, 10, 11, 12, 2, 100, 101, 99, 88, -1, -255, -100, -99, -98, Long.MIN_VALUE, 8960, 8959, 19999, 15001, 99999999999L, Long.MAX_VALUE
+    });
+
+    MockRegionManager mgr = new MockRegionManager(ImmutableList.of(
+        keyRangeByHandle(tableId, null, Status.EQUAL, -100L, Status.EQUAL),
+        keyRangeByHandle(tableId, -100L, Status.EQUAL, 10L, Status.GREATER),
+        keyRangeByHandle(tableId, 10L, Status.GREATER, 50L, Status.EQUAL),
+        keyRangeByHandle(tableId, 50L, Status.EQUAL, 100L, Status.GREATER),
+        keyRangeByHandle(tableId, 100L, Status.GREATER, 9000L, Status.LESS),
+        keyRangeByHandle(tableId, 0x2300L /*8960*/, Status.LESS, 16000L, Status.EQUAL),
+        keyRangeByHandle(tableId, 16000L, Status.EQUAL, null, Status.EQUAL)
+    ));
+
+    TLongObjectHashMap<TLongArrayList> result =
+        RangeSplitter.newSplitter(mgr).groupByHandlesByRegionId(tableId, handles);
+    assertEquals(2, result.get(0).size());
+    assertEquals(10, result.get(1).size());
+    assertEquals(2, result.get(2).size());
+    assertEquals(3, result.get(3).size());
+    assertEquals(2, result.get(4).size());
+    assertEquals(2, result.get(5).size());
+    assertEquals(3, result.get(6).size());
   }
 }
