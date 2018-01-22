@@ -78,15 +78,15 @@ if [ "${mode}" == "Integration" ]; then
         echo "testing...."
         if [ ${showResultStats} = true ]; then
             if [ ${showFailedOnly} = true ]; then
-                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED.\|file error"
+                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED.\|file error\|Exception caught"
             else
-                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED.\|PASSED.\|SKIPPED.\|exception caught"
+                filter="hint:\|output:\|Result:\|Elapsed time:\|query on\|FAILED.\|PASSED.\|SKIPPED.\|exception caught\|Exception caught"
             fi
         else
             if [ ${showFailedOnly} = true ]; then
-                filter="Tests result:\|Result:\|exception caught.\|FAILED.\|file error"
+                filter="Tests result:\|Result:\|exception caught.\|FAILED.\|file error\|Exception caught"
             else
-                filter="Tests result:\|Result:\|FAILED.\|PASSED.\|SKIPPED."
+                filter="Tests result:\|Result:\|FAILED.\|PASSED.\|SKIPPED.\|Exception caught"
             fi
         fi
         ${spark_cmd} ${spark_test_opt} 2>&1 | grep "${filter}"

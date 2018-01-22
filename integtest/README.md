@@ -77,6 +77,8 @@ Now you can load your data by executing
 ./load.sh
 ```
 
+Note that `load.sh` will ignore directories listed in attribute `test.ignore` in `tispark_config.properties`. You may want to configure it in `create_conf_load()` function in `_env.sh`.
+
 Write your own sql statement in `.sql` file and put them in the same directory with local data. Statement format should be accepted by both spark and tidb in order it works. See `./testcase/test_index/t1.sql` for example.
 
 Run `./test.sh` and start integration test containing your own test cases.

@@ -16,14 +16,91 @@
 package com.pingcap.tikv.codec;
 
 import com.google.protobuf.ByteString;
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.IOException;
+
+import java.io.*;
 
 public class CodecDataInput implements DataInput {
+  /**
+   * An copy of ByteArrayInputStream without synchronization for faster decode.
+   *
+   * @see ByteArrayInputStream
+   */
+  private class UnSyncByteArrayInputStream extends InputStream {
+    protected byte buf[];
+    protected int pos;
+    protected int mark = 0;
+    protected int count;
+
+    UnSyncByteArrayInputStream(byte buf[]) {
+      this.buf = buf;
+      this.pos = 0;
+      this.count = buf.length;
+    }
+
+    public UnSyncByteArrayInputStream(byte buf[], int offset, int length) {
+      this.buf = buf;
+      this.pos = offset;
+      this.count = Math.min(offset + length, buf.length);
+      this.mark = offset;
+    }
+
+    public int read() {
+      return (pos < count) ? (buf[pos++] & 0xff) : -1;
+    }
+
+    public int read(byte b[], int off, int len) {
+      if (b == null) {
+        throw new NullPointerException();
+      } else if (off < 0 || len < 0 || len > b.length - off) {
+        throw new IndexOutOfBoundsException();
+      }
+
+      if (pos >= count) {
+        return -1;
+      }
+
+      int avail = count - pos;
+      if (len > avail) {
+        len = avail;
+      }
+      if (len <= 0) {
+        return 0;
+      }
+      System.arraycopy(buf, pos, b, off, len);
+      pos += len;
+      return len;
+    }
+
+    public long skip(long n) {
+      long k = count - pos;
+      if (n < k) {
+        k = n < 0 ? 0 : n;
+      }
+
+      pos += k;
+      return k;
+    }
+
+    public int available() {
+      return count - pos;
+    }
+    public boolean markSupported() {
+      return true;
+    }
+
+    public void mark(int readAheadLimit) {
+      mark = pos;
+    }
+
+    public void reset() {
+      pos = mark;
+    }
+
+    public void close() throws IOException {
+    }
+  }
   private final DataInputStream inputStream;
-  private final ByteArrayInputStream backingStream;
+  private final UnSyncByteArrayInputStream backingStream;
   private final byte[] backingBuffer;
 
   public CodecDataInput(ByteString data) {
@@ -36,7 +113,7 @@ public class CodecDataInput implements DataInput {
     // we need have a mechanism to reset backingStream.
     // User mark first and then reset it later can do the trick.
     backingStream =
-        new ByteArrayInputStream(buf) {
+        new UnSyncByteArrayInputStream(buf) {
           @Override
           public void mark(int givenPos) {
             mark = givenPos;

@@ -15,35 +15,21 @@
 
 package com.pingcap.tispark
 
-import java.sql.{Date, Timestamp}
+import java.sql.Timestamp
 
-//import com.google.proto4pingcap.ByteString
-import com.pingcap.tikv.expression.TiConstant.DateWrapper
-import com.pingcap.tikv.expression.{TiColumnRef, TiConstant, TiExpr}
-import com.pingcap.tikv.types.RequestTypes
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
+import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
+import org.joda.time.DateTime
+import com.pingcap.tikv.expression.{ArithmeticBinaryExpression, ColumnRef, ComparisonBinaryExpression, Constant}
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
+import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
 
 import scala.language.implicitConversions
 
 object BasicExpression {
-//  implicit def stringToByteString(str: String): ByteString = ByteString.copyFromUtf8(str)
-
-  type TiPlus = com.pingcap.tikv.expression.scalar.Plus
-  type TiMinus = com.pingcap.tikv.expression.scalar.Minus
-  type TiMultiply = com.pingcap.tikv.expression.scalar.Multiply
-  type TiDivide = com.pingcap.tikv.expression.scalar.Divide
-  type TiIsNull = com.pingcap.tikv.expression.scalar.IsNull
-  type TiGreaterEqual = com.pingcap.tikv.expression.scalar.GreaterEqual
-  type TiGreaterThan = com.pingcap.tikv.expression.scalar.GreaterThan
-  type TiLessEqual = com.pingcap.tikv.expression.scalar.LessEqual
-  type TiLessThan = com.pingcap.tikv.expression.scalar.LessThan
-  type TiEqual = com.pingcap.tikv.expression.scalar.Equal
-  type TiNotEqual = com.pingcap.tikv.expression.scalar.NotEqual
-  type TiNot = com.pingcap.tikv.expression.scalar.Not
-  type TiLike = com.pingcap.tikv.expression.scalar.Like
-
-  final val MILLISEC_PER_DAY: Long = 60 * 60 * 24 * 1000
+  type TiExpression = com.pingcap.tikv.expression.Expression
+  type TiNot = com.pingcap.tikv.expression.Not
+  type TiIsNull = com.pingcap.tikv.expression.IsNull
 
   def convertLiteral(value: Any, dataType: DataType): Any =
     // all types from literals are passed according to DataType's InternalType definition
@@ -51,11 +37,11 @@ object BasicExpression {
       null
     } else {
       dataType match {
-        // In Spark Date is encoded as integer of days after 1970-01-01
-        // and sql.Date is constructed as milliseconds after 1970-01-01
-        // It seems Date in TiKV coprocessor is encoded as String yyyy-mm-dd,
-        // but seems change in DAG mode
-        case DateType       => new DateWrapper(MILLISEC_PER_DAY * value.asInstanceOf[Int])
+        // In Spark Date is encoded as integer of days after 1970-01-01 UTC
+        // and this number of date has compensate of timezone
+        // and must be restored by DateTimeUtils.daysToMillis
+        case DateType =>
+          new DateTime(DateTimeUtils.daysToMillis(value.asInstanceOf[DateTimeUtils.SQLDate]))
         case TimestampType  => new Timestamp(value.asInstanceOf[Long] / 1000)
         case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
@@ -78,46 +64,49 @@ object BasicExpression {
       case _ => true
     }
 
-  def convertToTiExpr(expr: Expression): Option[TiExpr] =
+  def convertToTiExpr(expr: Expression): Option[TiExpression] =
     expr match {
       case Literal(value, dataType) =>
-        Some(TiConstant.create(convertLiteral(value, dataType)))
+        Some(Constant.create(convertLiteral(value, dataType)))
 
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiPlus(lhs, rhs))
+        Some(ArithmeticBinaryExpression.plus(lhs, rhs))
 
       case Subtract(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiMinus(lhs, rhs))
+        Some(ArithmeticBinaryExpression.minus(lhs, rhs))
 
       case Multiply(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiMultiply(lhs, rhs))
+        Some(ArithmeticBinaryExpression.multiply(lhs, rhs))
 
       case Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiDivide(lhs, rhs))
+        Some(ArithmeticBinaryExpression.divide(lhs, rhs))
 
       case Alias(BasicExpression(child), _) =>
         Some(child)
+
+      case IsNull(BasicExpression(child)) =>
+        Some(new TiIsNull(child))
 
       case IsNotNull(BasicExpression(child)) =>
         Some(new TiNot(new TiIsNull(child)))
 
       case GreaterThan(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiGreaterThan(lhs, rhs))
+        Some(ComparisonBinaryExpression.greaterThan(lhs, rhs))
 
       case GreaterThanOrEqual(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiGreaterEqual(lhs, rhs))
+        Some(ComparisonBinaryExpression.greaterEqual(lhs, rhs))
 
       case LessThan(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiLessThan(lhs, rhs))
+        Some(ComparisonBinaryExpression.lessThan(lhs, rhs))
 
       case LessThanOrEqual(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiLessEqual(lhs, rhs))
+        Some(ComparisonBinaryExpression.lessEqual(lhs, rhs))
 
       case EqualTo(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(new TiEqual(lhs, rhs))
+        Some(ComparisonBinaryExpression.equal(lhs, rhs))
 
       case Not(EqualTo(BasicExpression(lhs), BasicExpression(rhs))) =>
-        Some(new TiNotEqual(lhs, rhs))
+        Some(ComparisonBinaryExpression.notEqual(lhs, rhs))
 
       case Not(BasicExpression(child)) =>
         Some(new TiNot(child))
@@ -126,11 +115,11 @@ object BasicExpression {
       case attr: AttributeReference =>
         // Do we need add ValToType in TiExpr?
         // Some(TiExpr.create().setValue(attr.name).toProto)
-        Some(TiColumnRef.create(attr.name))
+        Some(ColumnRef.create(attr.name))
 
       // TODO: Remove it and let it fail once done all translation
-      case _ => Option.empty[TiExpr]
+      case _ => Option.empty[TiExpression]
     }
 
-  def unapply(expr: Expression): Option[TiExpr] = convertToTiExpr(expr)
+  def unapply(expr: Expression): Option[TiExpression] = convertToTiExpr(expr)
 }

@@ -16,32 +16,22 @@
 package com.pingcap.tikv.predicates;
 
 
-import com.pingcap.tikv.expression.TiExpr;
-import com.pingcap.tikv.expression.scalar.Equal;
-import com.pingcap.tikv.expression.scalar.GreaterEqual;
-import com.pingcap.tikv.expression.scalar.GreaterThan;
-import com.pingcap.tikv.expression.scalar.LessEqual;
-import com.pingcap.tikv.expression.scalar.LessThan;
-import com.pingcap.tikv.expression.scalar.NullEqual;
+import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.visitor.PseudoCostCalculator;
+import java.util.Optional;
 
 public class SelectivityCalculator {
-  public static final double SELECTION_FACTOR = 100;
-  public static final double EQUAL_RATE = 0.01;
-  public static final double LESS_RATE = 0.1;
-
-  public static double calcPseudoSelectivity(Iterable<TiExpr> exprs) {
-    double minFactor = SELECTION_FACTOR;
-    for (TiExpr expr : exprs) {
-      if (expr instanceof Equal || expr instanceof NullEqual) {
-        minFactor *= EQUAL_RATE;
-      } else if (
-          expr instanceof GreaterEqual ||
-          expr instanceof GreaterThan ||
-          expr instanceof LessEqual ||
-          expr instanceof LessThan) {
-        minFactor *= LESS_RATE;
+  public static double calcPseudoSelectivity(ScanSpec spec) {
+    Optional<Expression> rangePred = spec.getRangePredicate();
+    double cost = 100.0;
+    if (spec.getPointPredicates() != null) {
+      for (Expression expr : spec.getPointPredicates()) {
+        cost *= PseudoCostCalculator.calculateCost(expr);
       }
     }
-    return minFactor;
+    if (rangePred.isPresent()) {
+      return PseudoCostCalculator.calculateCost(rangePred.get());
+    }
+    return cost;
   }
 }

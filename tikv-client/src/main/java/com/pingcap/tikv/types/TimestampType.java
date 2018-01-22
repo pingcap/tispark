@@ -17,33 +17,39 @@
 
 package com.pingcap.tikv.types;
 
+import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.codec.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo;
-
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
-public class TimestampType extends DataType {
-  private static final ZoneId UTC_TIMEZONE = ZoneId.of("UTC");
-  static TimestampType of(int tp) {
-    return new TimestampType(tp);
-  }
+/**
+ * Timestamp in TiDB is represented as packed long including year/month and etc.
+ * When stored, it is converted into UTC and when read it should be interpreted as UTC and convert to local
+ * When encoded as coprocessor request
+ * 1. all date time in key should be converted to UTC
+ * 2. all date time in proto should be converted into local timezone
+ * 3. all incoming data should be regarded as local timezone if no timezone indicated
+ *
+ * For example,
+ * Encoding:
+ * If incoming literal is a string '2000-01-01 00:00:00' which has no timezone,
+ * it interpreted as text in local timezone and encoded with UTC;
+ * If incoming literal is a epoch millisec,
+ * it interpreted as UTC epoch and encode with UTC if index / key or local timezone if proto
+ *
+ */
+public class TimestampType extends AbstractDateTimeType {
+  public static final TimestampType TIMESTAMP = new TimestampType(MySQLType.TypeTimestamp);
+  public static final TimestampType TIME = new TimestampType(MySQLType.TypeDuration);
 
-  protected ZoneId getDefaultTimezone() {
-    return UTC_TIMEZONE;
-  }
+  public static final MySQLType[] subTypes = new MySQLType[] {
+      MySQLType.TypeTimestamp, MySQLType.TypeDuration
+  };
 
-  private String getClassName() {
-    return getClass().getSimpleName();
-  }
-
-  TimestampType(int tp) {
+  TimestampType(MySQLType tp) {
     super(tp);
   }
 
@@ -51,125 +57,26 @@ public class TimestampType extends DataType {
     super(holder);
   }
 
-  public String simpleTypeName() { return "timestamp"; }
-
-  @Override
-  public Object decodeNotNull(int flag, CodecDataInput cdi) {
-    if (flag == UVARINT_FLAG) {
-      // read packedUInt
-      LocalDateTime localDateTime = fromPackedLong(IntegerType.readUVarLong(cdi));
-      if (localDateTime == null) {
-        return null;
-      }
-      return Timestamp.from(ZonedDateTime.of(localDateTime, getDefaultTimezone()).toInstant());
-    } else if (flag == UINT_FLAG) {
-      // read UInt
-      LocalDateTime localDateTime = fromPackedLong(IntegerType.readULong(cdi));
-      if (localDateTime == null) {
-        return null;
-      }
-      return Timestamp.from(ZonedDateTime.of(localDateTime, getDefaultTimezone()).toInstant());
-    } else {
-      throw new InvalidCodecFormatException("Invalid Flag type for " + getClassName() + ": " + flag);
-    }
+  protected DateTimeZone getTimezone() {
+    return DateTimeZone.UTC;
   }
 
   /**
-   * encode a value to cdo per type.
-   *
-   * @param cdo destination of data.
-   * @param encodeType Key or Value.
-   * @param value need to be encoded.
+   * Decode timestamp from packed long value
+   * In TiDB / MySQL, timestamp type is converted to UTC and stored
    */
   @Override
-  public void encodeNotNull(CodecDataOutput cdo, EncodeType encodeType, Object value) {
-    LocalDateTime localDateTime;
-    if (value instanceof LocalDateTime) {
-      localDateTime = (LocalDateTime) value;
-    } else {
-      throw new UnsupportedOperationException("Can not cast Object to LocalDateTime ");
-    }
-    long val = toPackedLong(localDateTime);
-    IntegerType.writeULongFull(cdo, val, false);
+  protected Timestamp decodeNotNull(int flag, CodecDataInput cdi) {
+    DateTime dateTime = decodeDateTime(flag, cdi);
+    return new Timestamp(dateTime.getMillis());
   }
 
   /**
-   * get origin value from string
-   * @param value a timestamp value in string in format "yyyy-MM-dd HH:mm:ss"
-   * @return a {@link LocalDateTime} Object
-   * TODO: need decode time with time zone info.
+   * {@inheritDoc}
    */
   @Override
-  public Object getOriginDefaultValueNonNull(String value) {
-    DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    return LocalDateTime.parse(value, dateTimeFormatter);
-  }
-
-  /**
-   * Encode a LocalDateTime to a packed long.
-   *
-   * @param time localDateTime that need to be encoded.
-   * @return a packed long.
-   */
-  public static long toPackedLong(LocalDateTime time) {
-    return toPackedLong(time.getYear(),
-        time.getMonthValue(),
-        time.getDayOfMonth(),
-        time.getHour(),
-        time.getMinute(),
-        time.getSecond(),
-        time.getNano() / 1000);
-  }
-
-  /**
-   * Encode a date/time parts to a packed long.
-   *
-   * @return a packed long.
-   */
-  public static long toPackedLong(int year, int month, int day, int hour, int minute, int second, int micro) {
-    long ymd = (year * 13 + month) << 5 | day;
-    long hms = hour << 12 | minute << 6 | second;
-    return ((ymd << 17 | hms) << 24) | micro;
-  }
-
-  /**
-   * Encode a Date to a packed long with all time fields zero.
-   *
-   * @param date Date object that need to be encoded.
-   * @return a packed long.
-   */
-  public static long toPackedLong(Date date) {
-    return toPackedLong(
-        date.getYear() + 1900,
-        date.getMonth() + 1,
-        date.getDate(),
-        0, 0, 0, 0);
-  }
-
-  /**
-   * Decode a packed long to LocalDateTime.
-   *
-   * @param packed a long value
-   * @return a decoded LocalDateTime.
-   */
-  public static LocalDateTime fromPackedLong(long packed) {
-    // TODO: As for JDBC behavior, it can be configured to "round" or "toNull"
-    // for now we didn't pass in session so we do a toNull behavior
-    if (packed == 0) {
-      return null;
-    }
-    long ymdhms = packed >> 24;
-    long ymd = ymdhms >> 17;
-    int day = (int) (ymd & ((1 << 5) - 1));
-    long ym = ymd >> 5;
-    int month = (int) (ym % 13);
-    int year = (int) (ym / 13);
-
-    int hms = (int) (ymdhms & ((1 << 17) - 1));
-    int second = hms & ((1 << 6) - 1);
-    int minute = (hms >> 6) & ((1 << 6) - 1);
-    int hour = hms >> 12;
-    int microsec = (int) (packed % (1 << 24));
-    return LocalDateTime.of(year, month, day, hour, minute, second, microsec * 1000);
+  protected void encodeProto(CodecDataOutput cdo, Object value) {
+    DateTime dt = Converter.convertToDateTime(value);
+    DateTimeCodec.writeDateTimeProto(cdo, dt, Converter.getLocalTimezone());
   }
 }

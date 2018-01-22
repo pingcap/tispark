@@ -164,7 +164,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     select("tp_datetime") + where(binaryOpWithName("tp_datetime", "'2043-11-28 00:00:00' and '2017-09-07 11:11:11'", "between", withTbName = false)),
     select("tp_date") + where(binaryOpWithName("tp_date", "'2017-11-02' and '2043-11-28'", "between", withTbName = false)),
     select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "815587200000 and 1511862599000", "between", withTbName = false)),
-    select("tp_year") + where(binaryOpWithName("tp_year", "1993 and 2017", "between", withTbName = false)),
+//    select("tp_year") + where(binaryOpWithName("tp_year", "1993 and 2017", "between", withTbName = false)),
     select("tp_real") + where(binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between", withTbName = false))
   )
 
@@ -190,7 +190,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     select("tp_datetime") + where(binaryOpWithName("tp_datetime", "('2043-11-28 00:00:00','2017-09-07 11:11:11','1986-02-03 00:00:00')", "in", withTbName = false)),
     select("tp_date") + where(binaryOpWithName("tp_date", "('2017-11-02', '2043-11-28 00:00:00')", "in", withTbName = false)),
     select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "('2017-11-02 16:48:01')", "in", withTbName = false)),
-    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in", withTbName = false)),
+//    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in", withTbName = false)),
     select("tp_real") + where(binaryOpWithName("tp_real", "(4.44,0.5194052764001038)", "in", withTbName = false)),
     select("tp_longtext") + where(binaryOpWithName("tp_longtext", "('很长的一段文字', 'OntPHB22qwSxriGUQ9RLfoiRkEMfEYFZdnAkL7SdpfD59MfmUXpKUAXiJpegn6dcMyfRyBhNw9efQfrl2yMmtM0zJx3ScAgTIA8djNnmCnMVzHgPWVYfHRnl8zENOD5SbrI4HAazss9xBVpikAgxdXKvlxmhfNoYIK0YYnO84MXKkMUinjPQ7zWHbh5lImp7g9HpIXgtkFFTXVvCaTr8mQXXOl957dxePeUvPv28GUdnzXTzk7thTbsWAtqU7YaK4QC4z9qHpbt5ex9ck8uHz2RoptFw71RIoKGiPsBD9YwXAS19goDM2H0yzVtDNJ6ls6jzXrGlJ6gIRG73Er0tVyourPdM42a5oDihfVP6XxjOjS0cmVIIppDSZIofkRfRhQWAunheFbEEPSHx3eybQ6pSIFd34Natgr2erFjyxFIRr7J535HT9aIReYIlocKK2ZI9sfcwhX0PeDNohY2tvHbsrHE0MlKCyVSTjPxszvFjCPlyqwQy')", "in", withTbName = false)),
     select("tp_text") + where(binaryOpWithName("tp_text", "('一般的文字', 'dQWD3XwSTevpbP5hADFdNO0dQvaueFhnGcJAm045mGv5fXttso')", "in", withTbName = false))
@@ -287,7 +287,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     skipLocalSet.add("tp_nvarchar")
     skipLocalSet.add("tp_varchar")
     skipLocalSet.add("tp_char")
-    skipLocalSet.add("tp_year")
+//    skipLocalSet.add("tp_year")
 
     val arithmeticSkipSet = mutable.Set[String]()
     arithmeticSkipSet.add("tp_int")

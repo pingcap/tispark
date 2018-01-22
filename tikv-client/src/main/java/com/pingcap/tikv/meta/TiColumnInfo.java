@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv.meta;
 
+import static java.util.Objects.requireNonNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,6 +29,7 @@ import com.pingcap.tikv.types.DataType.EncodeType;
 import com.pingcap.tikv.types.DataTypeFactory;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiColumnInfo implements Serializable {
@@ -54,9 +57,9 @@ public class TiColumnInfo implements Serializable {
       @JsonProperty("default") String defaultValue,
       @JsonProperty("comment") String comment) {
     this.id = id;
-    this.name = name.getL();
+    this.name = requireNonNull(name, "column name is null").getL();
     this.offset = offset;
-    this.type = DataTypeFactory.of(type);
+    this.type = DataTypeFactory.of(requireNonNull(type, "type is null"));
     this.schemaState = SchemaState.fromValue(schemaState);
     this.comment = comment;
     this.defaultValue = defaultValue;
@@ -69,9 +72,9 @@ public class TiColumnInfo implements Serializable {
   @VisibleForTesting
   public TiColumnInfo(long id, String name, int offset, DataType type, boolean isPrimaryKey) {
     this.id = id;
-    this.name = name;
+    this.name = requireNonNull(name, "column name is null").toLowerCase();
     this.offset = offset;
-    this.type = type;
+    this.type = requireNonNull(type, "data type is null");
     this.schemaState = SchemaState.StatePublic;
     this.comment = "";
     this.isPrimaryKey = isPrimaryKey;
@@ -209,8 +212,14 @@ public class TiColumnInfo implements Serializable {
     }
   }
 
+  TiIndexColumn toFakeIndexColumn() {
+    // we don't use original length of column since for a clustered index column
+    // it always full index instead of prefix index
+    return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), DataType.UNSPECIFIED_LEN);
+  }
+
   TiIndexColumn toIndexColumn() {
-    return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), type.getLength());
+    return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), getType().getLength());
   }
 
   public ColumnInfo toProto(TiTableInfo table) {
@@ -228,5 +237,33 @@ public class TiColumnInfo implements Serializable {
         .setDefaultVal(getOriginDefaultValue())
         .setPkHandle(table.isPkHandle() && isPrimaryKey())
         .addAllElems(type.getElems());
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    if (other == this) {
+      return true;
+    }
+
+    if (!(other instanceof TiColumnInfo)) {
+      return false;
+    }
+
+    TiColumnInfo col = (TiColumnInfo)other;
+    return Objects.equals(id, col.id) &&
+        Objects.equals(name, col.name) &&
+        Objects.equals(type, col.type) &&
+        Objects.equals(schemaState, col.schemaState) &&
+        isPrimaryKey == col.isPrimaryKey &&
+        Objects.equals(defaultValue, col.defaultValue) &&
+        Objects.equals(originDefaultValue, col.originDefaultValue);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+        id, name, type,
+        schemaState, isPrimaryKey,
+        defaultValue, originDefaultValue);
   }
 }

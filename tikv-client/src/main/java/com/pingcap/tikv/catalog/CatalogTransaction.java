@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
+import com.pingcap.tikv.codec.Codec.BytesCodec;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
@@ -30,8 +32,6 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.BytesType;
-import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.Pair;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -63,19 +63,19 @@ public class CatalogTransaction {
 
   private void encodeStringDataKey(CodecDataOutput cdo, byte[] key) {
     cdo.write(prefix);
-    BytesType.writeBytes(cdo, key);
-    IntegerType.writeULong(cdo, STR_DATA_FLAG);
+    BytesCodec.writeBytes(cdo, key);
+    IntegerCodec.writeULong(cdo, STR_DATA_FLAG);
   }
 
   private void encodeHashDataKey(CodecDataOutput cdo, byte[] key, byte[] field) {
     encodeHashDataKeyPrefix(cdo, key);
-    BytesType.writeBytes(cdo, field);
+    BytesCodec.writeBytes(cdo, field);
   }
 
   private void encodeHashDataKeyPrefix(CodecDataOutput cdo, byte[] key) {
     cdo.write(prefix);
-    BytesType.writeBytes(cdo, key);
-    IntegerType.writeULong(cdo, HASH_DATA_FLAG);
+    BytesCodec.writeBytes(cdo, key);
+    IntegerCodec.writeULong(cdo, HASH_DATA_FLAG);
   }
 
   private Pair<ByteString, ByteString> decodeHashDataKey(ByteString rawKey) {
@@ -84,12 +84,12 @@ public class CatalogTransaction {
         "invalid encoded hash data key prefix: " + new String(prefix));
     CodecDataInput cdi = new CodecDataInput(rawKey.toByteArray());
     cdi.skipBytes(prefix.length);
-    byte[] key = BytesType.readBytes(cdi);
-    long typeFlag = IntegerType.readULong(cdi);
+    byte[] key = BytesCodec.readBytes(cdi);
+    long typeFlag = IntegerCodec.readULong(cdi);
     if (typeFlag != HASH_DATA_FLAG) {
       throw new TiClientInternalException("Invalid hash data flag: " + typeFlag);
     }
-    byte[] field = BytesType.readBytes(cdi);
+    byte[] field = BytesCodec.readBytes(cdi);
     return Pair.create(ByteString.copyFrom(key), ByteString.copyFrom(field));
   }
 

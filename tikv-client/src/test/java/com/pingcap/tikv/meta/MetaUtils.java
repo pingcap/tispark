@@ -20,12 +20,12 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.GrpcUtils;
 import com.pingcap.tikv.KVMockServer;
 import com.pingcap.tikv.PDMockServer;
+import com.pingcap.tikv.codec.Codec.BytesCodec;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.kvproto.Metapb;
-import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,11 +47,17 @@ public class MetaUtils {
     private String name;
     private List<TiColumnInfo> columns = new ArrayList<>();
     private List<TiIndexInfo> indices = new ArrayList<>();
+    private Long tid = null;
 
     public TableBuilder() {}
 
     public TableBuilder name(String name) {
       this.name = name;
+      return this;
+    }
+
+    public TableBuilder tableId(long id) {
+      this.tid = id;
       return this;
     }
 
@@ -71,7 +77,7 @@ public class MetaUtils {
       return this;
     }
 
-    public TableBuilder appendIndex(String indexName, List<String> colNames, boolean isPk) {
+    public TableBuilder appendIndex(long iid, String indexName, List<String> colNames, boolean isPk) {
       List<TiIndexColumn> indexCols =
           colNames
               .stream()
@@ -82,7 +88,7 @@ public class MetaUtils {
 
       TiIndexInfo index =
           new TiIndexInfo(
-              newId(),
+              iid,
               CIStr.newCIStr(indexName),
               CIStr.newCIStr(name),
               ImmutableList.copyOf(indexCols),
@@ -96,13 +102,19 @@ public class MetaUtils {
       return this;
     }
 
+    public TableBuilder appendIndex(String indexName, List<String> colNames, boolean isPk) {
+      return appendIndex(newId(), indexName, colNames, isPk);
+    }
+
     public TableBuilder setPkHandle(boolean pkHandle) {
       this.pkHandle = pkHandle;
       return this;
     }
 
     public TiTableInfo build() {
-      long tid = newId();
+      if (tid == null) {
+        tid = newId();
+      }
       if (name == null) {
         name = "Table" + tid;
       }
@@ -155,9 +167,9 @@ public class MetaUtils {
     private ByteString getDBKey(long id) {
       CodecDataOutput cdo = new CodecDataOutput();
       cdo.write(new byte[] {'m'});
-      BytesType.writeBytes(cdo, "DBs".getBytes());
-      IntegerType.writeULong(cdo, 'h');
-      BytesType.writeBytes(cdo, String.format("DB:%d", id).getBytes());
+      BytesCodec.writeBytes(cdo, "DBs".getBytes());
+      IntegerCodec.writeULong(cdo, 'h');
+      BytesCodec.writeBytes(cdo, String.format("DB:%d", id).getBytes());
       return cdo.toByteString();
     }
 
@@ -181,25 +193,25 @@ public class MetaUtils {
 
       CodecDataOutput cdo = new CodecDataOutput();
       cdo.write(new byte[] {'m'});
-      BytesType.writeBytes(cdo, dbKey.toByteArray());
-      IntegerType.writeULong(cdo, 'h');
-      BytesType.writeBytes(cdo, tableKey.toByteArray());
+      BytesCodec.writeBytes(cdo, dbKey.toByteArray());
+      IntegerCodec.writeULong(cdo, 'h');
+      BytesCodec.writeBytes(cdo, tableKey.toByteArray());
       return cdo.toByteString();
     }
 
     private ByteString getSchemaVersionKey() {
       CodecDataOutput cdo = new CodecDataOutput();
       cdo.write(new byte[] {'m'});
-      BytesType.writeBytes(cdo, "SchemaVersionKey".getBytes());
-      IntegerType.writeULong(cdo, 's');
+      BytesCodec.writeBytes(cdo, "SchemaVersionKey".getBytes());
+      IntegerCodec.writeULong(cdo, 's');
       return cdo.toByteString();
     }
 
     public void setSchemaVersion(long version) {
       CodecDataOutput cdo = new CodecDataOutput();
       cdo.write(new byte[] {'m'});
-      BytesType.writeBytes(cdo, "SchemaVersionKey".getBytes());
-      IntegerType.writeULong(cdo, 's');
+      BytesCodec.writeBytes(cdo, "SchemaVersionKey".getBytes());
+      IntegerCodec.writeULong(cdo, 's');
       kvServer.put(getSchemaVersionKey(), ByteString.copyFromUtf8(String.format("%d", version)));
     }
 

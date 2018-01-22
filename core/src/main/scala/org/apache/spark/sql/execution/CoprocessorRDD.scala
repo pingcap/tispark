@@ -18,6 +18,7 @@ package org.apache.spark.sql.execution
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 
+import com.pingcap.tikv.kvproto.Coprocessor.KeyRange
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.iterator.CoprocessIterator
@@ -41,6 +42,7 @@ import org.apache.spark.sql.{Row, SparkSession}
 import com.pingcap.tispark.TiDBRelation
 
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
@@ -221,11 +223,11 @@ case class RegionTaskExec(child: SparkPlan,
           }
 
           /**
-           * Checks whether a request should be downgraded according to some restrictions
+           * Checks whether the number of handles retrieved from TiKV exceeds the `downgradeThreshold`.
            *
-           * @return true, the request should be downgraded, false otherwise.
+           * @return true, the number of handles retrieved exceeds the `downgradeThreshold`, false otherwise.
            */
-          def shouldDowngrade: Boolean = {
+          def satisfyDowngradeThreshold: Boolean = {
             handles.length > downgradeThreshold
           }
 
@@ -273,7 +275,7 @@ case class RegionTaskExec(child: SparkPlan,
             task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
           }
 
-          def submitTasks(tasks: util.List[RegionTask]): Unit = {
+          def submitTasks(tasks: List[RegionTask]): Unit = {
             taskCount += 1
             val task = new Callable[util.Iterator[TiRow]] {
               override def call(): util.Iterator[TiRow] = {
@@ -283,52 +285,7 @@ case class RegionTaskExec(child: SparkPlan,
             completionService.submit(task)
           }
 
-          if (shouldDowngrade) {
-            // Should downgrade to full table scan for a region
-            val handleList = new TLongArrayList()
-            handles.foreach(handleList.add)
-            // Restore original filters to perform table scan logic
-            dagRequest.resetFilters(dagRequest.getDowngradeFilters)
-
-            // After `splitHandlesByRegion`, ranges in the task are arranged in order
-            var tasks = RangeSplitter
-              .newSplitter(session.getRegionManager)
-              .splitHandlesByRegion(
-                dagRequest.getTableInfo.getId,
-                handleList
-              )
-            proceedTasksOrThrow(tasks)
-
-            val taskRanges = tasks.head.getRanges
-            logger.warn(
-              s"Index scan handle size:${handles.length} exceed downgrade threshold:$downgradeThreshold" +
-                s", downgrade to table scan with ${tasks.size()} region tasks, " +
-                s"original index scan task has ${taskRanges.size()} ranges, will try to merge."
-            )
-
-            // We merge potential separate index ranges from `taskRanges` into one large range
-            // and create a new RegionTask
-            tasks = RangeSplitter
-              .newSplitter(session.getRegionManager)
-              .splitRangeByRegion(KeyRangeUtils.mergeRanges(taskRanges))
-            proceedTasksOrThrow(tasks)
-
-            val task = tasks.head
-            logger.info(
-              s"Merged ${taskRanges.size()} index ranges to ${task.getRanges.size()} ranges."
-            )
-            logger.info(
-              s"Unary task downgraded, task info:Host={${task.getHost}}, " +
-                s"RegionId={${task.getRegion.getId}}, " +
-                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
-                s"Range={${KeyRangeUtils.toString(task.getRanges.head)}}, " +
-                s"RangesListSize=${task.getRanges.size()}}"
-            )
-            numDowngradedTasks += 1
-
-            submitTasks(tasks)
-          } else {
-            // Request doesn't need to be downgraded
+          def doIndexScan(): Unit = {
             while (handleIterator.hasNext) {
               val handleList = feedBatch()
               numHandles += handleList.size()
@@ -353,8 +310,75 @@ case class RegionTaskExec(child: SparkPlan,
                 )
               })
 
-              submitTasks(tasks)
+              submitTasks(tasks.toList)
             }
+          }
+
+          /**
+           * We merge potentially discrete index ranges from `taskRanges` into one large range
+           * and create a new [[RegionTask]] for the downgraded plan to execute. Should add
+           * filters for DAG request.
+           *
+           * @param taskRanges the index scan ranges
+           */
+          def doDowngradeScan(taskRanges: List[KeyRange]): Unit = {
+            // Restore original filters to perform downgraded table scan logic
+            dagRequest.resetFilters(dagRequest.getDowngradeFilters)
+
+            val tasks = RangeSplitter
+              .newSplitter(session.getRegionManager)
+              .splitRangeByRegion(KeyRangeUtils.mergeRanges(taskRanges))
+            proceedTasksOrThrow(tasks)
+
+            val task = tasks.head
+            logger.info(
+              s"Merged ${taskRanges.size()} index ranges to ${task.getRanges.size()} ranges."
+            )
+            logger.info(
+              s"Unary task downgraded, task info:Host={${task.getHost}}, " +
+                s"RegionId={${task.getRegion.getId}}, " +
+                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
+                s"RangesListSize=${task.getRanges.size()}}"
+            )
+            numDowngradedTasks += 1
+
+            submitTasks(tasks.toList)
+          }
+
+          def checkIsUnaryRange(regionTask: RegionTask): Boolean = {
+            regionTask.getRanges.size() == 1
+          }
+
+          if (satisfyDowngradeThreshold) {
+            val handleList = new TLongArrayList()
+            handles.foreach { handleList.add }
+            // After `splitHandlesByRegion`, ranges in the task are arranged in order
+            val tasks = RangeSplitter
+              .newSplitter(session.getRegionManager)
+              .splitHandlesByRegion(
+                dagRequest.getTableInfo.getId,
+                handleList
+              )
+            proceedTasksOrThrow(tasks)
+
+            // if the original index scan task contains only one KeyRange, we don't need to downgrade that since downgraded
+            // plan will result in more filters and may be slower than the original index scan plan.
+            if (checkIsUnaryRange(tasks.head)) {
+              logger.info(s"Unary index scan range found, performing index scan.")
+              doIndexScan()
+            } else {
+              // Should downgrade to full table scan for one region
+              val taskRanges = tasks.head.getRanges
+              logger.warn(
+                s"Index scan handle size:${handles.length} exceed downgrade threshold:$downgradeThreshold" +
+                  s", downgrade to table scan with ${tasks.size()} region tasks, " +
+                  s"original index scan task has ${taskRanges.size()} ranges, will try to merge."
+              )
+              doDowngradeScan(taskRanges.toList)
+            }
+          } else {
+            // Request doesn't need to be downgraded
+            doIndexScan()
           }
 
           // The result iterator serves as an wrapper to the final result we fetched from region tasks
@@ -404,7 +428,7 @@ case class RegionTaskExec(child: SparkPlan,
   }
 
   override def verboseString: String = {
-    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilter}"
+    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
   }
 
   override def simpleString: String = verboseString

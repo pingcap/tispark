@@ -18,9 +18,11 @@ package com.pingcap.tispark
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
-import com.pingcap.tikv.expression.{ExpressionBlacklist, TiExpr}
+import com.pingcap.tikv.expression.ExpressionBlacklist
+import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
+import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheListenerManager
@@ -34,14 +36,8 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 object TiUtils {
-  val CommitVersion = "test"
-  type TiSum = com.pingcap.tikv.expression.aggregate.Sum
-  type TiCount = com.pingcap.tikv.expression.aggregate.Count
-  type TiMin = com.pingcap.tikv.expression.aggregate.Min
-  type TiMax = com.pingcap.tikv.expression.aggregate.Max
-  type TiFirst = com.pingcap.tikv.expression.aggregate.First
   type TiDataType = com.pingcap.tikv.types.DataType
-  type TiTypes = com.pingcap.tikv.types.Types
+  type TiExpression = com.pingcap.tikv.expression.Expression
 
   private final val logger = Logger.getLogger(getClass.getName)
 
@@ -62,9 +58,9 @@ object TiUtils {
                                  blacklist: ExpressionBlacklist): Boolean = {
     if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
 
-    BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpr =>
-      expr.resolve(tiDBRelation.table)
-      return expr.isSupportedExpr(blacklist)
+    BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpression =>
+      MetaResolver.resolve(expr, tiDBRelation.table)
+      return SupportedExpressionValidator.isSupportedExpression(expr, blacklist)
     }
   }
 
@@ -84,9 +80,9 @@ object TiUtils {
         // bit/duration type is not allowed to be pushed down
         case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
           val head = nameTypeMap.get(attr.name).head
-          return !head.isInstanceOf[BitType] && head.getTypeCode != Types.TYPE_DURATION
+          return !head.isInstanceOf[BitType] && head.getType != MySQLType.TypeDuration
         // TODO:Currently we do not support literal null type push down
-        // when TiConstant is ready to support literal null or we have other
+        // when Constant is ready to support literal null or we have other
         // options, remove this.
         case constant: Literal =>
           return constant.value != null
@@ -118,10 +114,10 @@ object TiUtils {
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
     tp match {
-      case _: RawBytesType => sql.types.BinaryType
-      case _: BytesType    => sql.types.StringType
-      case _: IntegerType  => sql.types.LongType
-      case _: RealType     => sql.types.DoubleType
+      case _: StringType  => sql.types.StringType
+      case _: BytesType   => sql.types.BinaryType
+      case _: IntegerType => sql.types.LongType
+      case _: RealType    => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
       case _: DecimalType =>
         DataTypes.createDecimalType(
@@ -136,13 +132,13 @@ object TiUtils {
 
   def fromSparkType(tp: DataType): TiDataType = {
     tp match {
-      case _: sql.types.BinaryType    => DataTypeFactory.of(Types.TYPE_BLOB)
-      case _: sql.types.StringType    => DataTypeFactory.of(Types.TYPE_VARCHAR)
-      case _: sql.types.LongType      => DataTypeFactory.of(Types.TYPE_LONG)
-      case _: sql.types.DoubleType    => DataTypeFactory.of(Types.TYPE_DOUBLE)
-      case _: sql.types.DecimalType   => DataTypeFactory.of(Types.TYPE_NEW_DECIMAL)
-      case _: sql.types.TimestampType => DataTypeFactory.of(Types.TYPE_TIMESTAMP)
-      case _: sql.types.DateType      => DataTypeFactory.of(Types.TYPE_DATE)
+      case _: sql.types.BinaryType    => BytesType.BLOB
+      case _: sql.types.StringType    => StringType.VARCHAR
+      case _: sql.types.LongType      => IntegerType.BIGINT
+      case _: sql.types.DoubleType    => RealType.DOUBLE
+      case _: sql.types.DecimalType   => DecimalType.DECIMAL
+      case _: sql.types.TimestampType => TimestampType.TIMESTAMP
+      case _: sql.types.DateType      => DateType.DATE
     }
   }
 
@@ -150,11 +146,16 @@ object TiUtils {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {
       val col = table.getColumns.get(i)
+      val notNull = col.getType.isNotNull
       val metadata = new MetadataBuilder()
         .putString("name", col.getName)
         .build()
-      fields(i) =
-        StructField(col.getName, TiUtils.toSparkDataType(col.getType), nullable = true, metadata)
+      fields(i) = StructField(
+        col.getName,
+        TiUtils.toSparkDataType(col.getType),
+        nullable = !notNull,
+        metadata
+      )
     }
     new StructType(fields)
   }
