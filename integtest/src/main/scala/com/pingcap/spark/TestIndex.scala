@@ -24,9 +24,6 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-/**
- * Created by birdstorm on 2017/11/5.
- */
 class TestIndex(prop: Properties) extends TestCase(prop) {
 
   private var colList: List[String] = _
@@ -57,14 +54,14 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
   ) ++ ARITHMETIC_CONSTANT
 
   protected val DATE_DATA: List[String] = List[String](
-    "'2017-10-30'",
-    "'2017-11-02'"
+    "date '2017-10-30'",
+    "date '2017-11-02'"
   )
 
   protected val DATETIME_DATA: List[String] = List[String](
-    "'2017-11-02 00:00:00'",
-    "'2017-11-02 08:47:43'",
-    "'2017-09-07 11:11:11'"
+    "timestamp '2017-11-02 00:00:00'",
+    "timestamp '2017-11-02 08:47:43'",
+    "timestamp '2017-09-07 11:11:11'"
   )
 
   // TODO: Eliminate these bugs
@@ -121,11 +118,11 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
   }
 
   def testFullDataTable(list: List[String]): Unit = {
-    val startTime = System.currentTimeMillis()
     var count = 0
     for (sql <- list) {
       try {
         count += 1
+        val startTime = System.currentTimeMillis()
         execAllAndJudge(sql)
         logger.info(
           "Running num: " + count + " sql took " + (System
@@ -245,9 +242,9 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
         ID_COL
       )
     ),
-    select("tp_year") + where(
-      binaryOpWithName("tp_year", "1993 and 2017", "between") + orderBy(ID_COL)
-    ),
+//    select("tp_year") + where(
+//      binaryOpWithName("tp_year", "1993 and 2017", "between") + orderBy(ID_COL)
+//    ),
     select("tp_real") + where(
       binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between") + orderBy(ID_COL)
     )
@@ -311,7 +308,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
     select("tp_timestamp") + where(
       binaryOpWithName("tp_timestamp", "('2017-11-02 16:48:01')", "in") + orderBy(ID_COL)
     ),
-    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in") + orderBy(ID_COL)),
+//    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in") + orderBy(ID_COL)),
     select("tp_real") + where(
       binaryOpWithName("tp_real", "(4.44,0.5194052764001038)", "in") + orderBy(ID_COL)
     )

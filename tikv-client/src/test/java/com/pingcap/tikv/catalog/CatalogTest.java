@@ -7,7 +7,6 @@ import com.pingcap.tikv.KVMockServer;
 import com.pingcap.tikv.PDMockServer;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
@@ -39,7 +38,7 @@ public class CatalogTest {
   }
 
   @Test
-  public void listDatabases() throws Exception {
+  public void listDatabasesTest() throws Exception {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
     helper.setSchemaVersion(666);
@@ -73,7 +72,7 @@ public class CatalogTest {
   }
 
   @Test
-  public void listTables() throws Exception {
+  public void listTablesTest() throws Exception {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
     helper.setSchemaVersion(666);

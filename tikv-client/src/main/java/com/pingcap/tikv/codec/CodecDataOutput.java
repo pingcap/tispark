@@ -31,6 +31,11 @@ public class CodecDataOutput implements DataOutput {
     s = new DataOutputStream(byteArray);
   }
 
+  public CodecDataOutput(int size) {
+    byteArray = new ByteArrayOutputStream(size);
+    s = new DataOutputStream(byteArray);
+  }
+
   @Override
   public void write(int b) {
     try {

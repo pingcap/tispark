@@ -19,12 +19,10 @@ package com.pingcap.tikv.tools;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.predicates.ScanBuilder;
-import com.pingcap.tikv.predicates.ScanBuilder.ScanPlan;
+import com.pingcap.tikv.predicates.ScanAnalyzer;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,8 +59,8 @@ public class RegionUtils {
     requireNonNull(tableName, "tableName is null");
     TiTableInfo table = session.getCatalog().getTable(databaseName, tableName);
     requireNonNull(table, String.format("Table not found %s.%s", databaseName, tableName));
-    ScanBuilder builder = new ScanBuilder();
-    ScanPlan scanPlan = builder.buildScan(ImmutableList.of(), table);
+    ScanAnalyzer builder = new ScanAnalyzer();
+    ScanAnalyzer.ScanPlan scanPlan = builder.buildScan(ImmutableList.of(), table);
     return RangeSplitter
         .newSplitter(session.getRegionManager())
         .splitRangeByRegion(scanPlan.getKeyRanges());

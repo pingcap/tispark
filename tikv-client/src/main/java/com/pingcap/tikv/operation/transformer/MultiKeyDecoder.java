@@ -17,13 +17,14 @@
 
 package com.pingcap.tikv.operation.transformer;
 
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
+
 import java.util.List;
+
+import static java.util.Objects.requireNonNull;
 
 public class MultiKeyDecoder implements Projection {
   public MultiKeyDecoder(List<DataType> dataTypes) {
@@ -38,7 +39,13 @@ public class MultiKeyDecoder implements Projection {
     CodecDataInput cdi = new CodecDataInput(rowData);
 
     for (int i = 0; i < resultTypes.length; i++) {
-      resultTypes[i].decodeValueToRow(cdi, row, i + pos);
+      DataType type = resultTypes[i];
+      if (type.isNextNull(cdi)) {
+        cdi.readUnsignedByte();
+        row.setNull(i + pos);
+      } else {
+        row.set(i + pos, type, type.decode(cdi));
+      }
     }
   }
 

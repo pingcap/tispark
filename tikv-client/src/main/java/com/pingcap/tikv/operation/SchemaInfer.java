@@ -15,20 +15,17 @@
 
 package com.pingcap.tikv.operation;
 
-import com.pingcap.tikv.expression.TiByItem;
-import com.pingcap.tikv.expression.TiExpr;
+import com.pingcap.tikv.expression.ByItem;
+import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.transformer.Cast;
 import com.pingcap.tikv.operation.transformer.NoOp;
 import com.pingcap.tikv.operation.transformer.RowTransformer;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DataTypeFactory;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.Pair;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.pingcap.tikv.types.Types.TYPE_LONG;
 
 /**
  * SchemaInfer extract row's type after query is executed. It is pretty rough version. Optimization
@@ -56,7 +53,7 @@ public class SchemaInfer {
   private void extractHandleType(TiDAGRequest dagRequest) {
     if (dagRequest.isHandleNeeded()) {
       // DataType of handle is long
-      types.add(DataTypeFactory.of(TYPE_LONG));
+      types.add(IntegerType.INT);
     }
   }
 
@@ -73,17 +70,17 @@ public class SchemaInfer {
 
     // append aggregates if present
     if (dagRequest.hasAggregate()) {
-      for (Pair<TiExpr, DataType> pair : dagRequest.getAggregatePairs()) {
+      for (Pair<Expression, DataType> pair : dagRequest.getAggregatePairs()) {
         rowTrans.addProjection(new Cast(pair.second));
       }
       if (dagRequest.hasGroupBy()) {
-        for (TiByItem byItem : dagRequest.getGroupByItems()) {
-          rowTrans.addProjection(new NoOp(byItem.getExpr().getType()));
+        for (ByItem byItem : dagRequest.getGroupByItems()) {
+          rowTrans.addProjection(new NoOp(dagRequest.getExpressionType(byItem.getExpr())));
         }
       }
     } else {
-      for (TiExpr field : dagRequest.getFields()) {
-        rowTrans.addProjection(new NoOp(field.getType()));
+      for (Expression field : dagRequest.getFields()) {
+        rowTrans.addProjection(new NoOp(dagRequest.getExpressionType(field)));
       }
     }
     rowTrans.addSourceFieldTypes(types);
@@ -97,12 +94,14 @@ public class SchemaInfer {
    */
   private void extractFieldTypes(TiDAGRequest dagRequest) {
     if (dagRequest.hasAggregate()) {
-      dagRequest.getAggregates().forEach(expr -> types.add(expr.getType()));
+      dagRequest.getAggregates().forEach(expr -> types.add(dagRequest.getExpressionType(expr)));
       // In DAG mode, if there is any group by statement in a request, all the columns specified
       // in group by expression will be returned, so when we decode a result row, we need to pay
       // extra attention to decoding.
       if (dagRequest.hasGroupBy()) {
-        types.addAll(dagRequest.getGroupByDTList());
+        for (ByItem item : dagRequest.getGroupByItems()) {
+          types.add(dagRequest.getExpressionType(item.getExpr()));
+        }
       }
     } else {
       // Extract all column type information from TiExpr
