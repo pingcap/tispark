@@ -139,7 +139,11 @@ class TestCase(val prop: Properties) extends LazyLogging {
             + "  Tests failed: " + testsFailed
             + "  Tests skipped: " + testsSkipped
         )
-        resultList.toList.foreach(f => {
+        val failResult: List[(String, String)] = resultList.toList
+        if (failResult.isEmpty) {
+          logger.warn("Result: All Tests Passed")
+        }
+        failResult.foreach(f => {
           logger.warn(s"Result: Test failed on ${f._1}")
           logger.warn(s"Result: Failed sql is ${f._2}")
         })
@@ -641,7 +645,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
           val sqlName = s"inlineTest$inlineSQLNumber"
           fail(sqlName, str)
           printDiffSparkJDBC(sqlName, str, spark_jdbc, spark)
-          printDiff(s"inlineTest$inlineSQLNumber", str, tidb, spark)
+          printDiff(sqlName, str, tidb, spark)
         }
       } else {
         return false
@@ -667,6 +671,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     testsSkipped += myTest.testsSkipped
     testsFailed += myTest.testsFailed
     inlineSQLNumber = myTest.inlineSQLNumber
+    resultList ++= myTest.resultList
   }
 
   private def testInline(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
