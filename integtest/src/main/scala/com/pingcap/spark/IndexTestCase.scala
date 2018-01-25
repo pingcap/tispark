@@ -24,7 +24,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-class TestIndex(prop: Properties) extends TestCase(prop) {
+class IndexTestCase(prop: Properties) extends TestCase(prop) {
 
   private var colList: List[String] = _
 
@@ -246,7 +246,7 @@ class TestIndex(prop: Properties) extends TestCase(prop) {
 //      binaryOpWithName("tp_year", "1993 and 2017", "between") + orderBy(ID_COL)
 //    ),
     select("tp_real") + where(
-      binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between") + orderBy(ID_COL)
+      binaryOpWithName("tp_real", "0.5194052764001038 and 4.44", "between") + orderBy(ID_COL)
     )
   )
 

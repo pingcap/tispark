@@ -650,7 +650,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
   private def testInline(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     if (dbName.equalsIgnoreCase("test_index")) {
       testAndCalc(new IssueTestCase(prop), dbName, testCases)
-      testAndCalc(new TestIndex(prop), dbName, testCases)
+      testAndCalc(new IndexTestCase(prop), dbName, testCases)
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
       testAndCalc(new DAGTestCase(prop), dbName, testCases)
     } else {

@@ -165,7 +165,7 @@ class DAGTestCase(prop: Properties) extends TestCase(prop) {
     select("tp_date") + where(binaryOpWithName("tp_date", "'2017-11-02' and '2043-11-28'", "between", withTbName = false)),
     select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "815587200000 and 1511862599000", "between", withTbName = false)),
 //    select("tp_year") + where(binaryOpWithName("tp_year", "1993 and 2017", "between", withTbName = false)),
-    select("tp_real") + where(binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between", withTbName = false))
+    select("tp_real") + where(binaryOpWithName("tp_real", "0.5194052764001038 and 4.44", "between", withTbName = false))
   )
 
   def createCount(): List[String] = {
