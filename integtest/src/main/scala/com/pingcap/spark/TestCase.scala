@@ -139,10 +139,10 @@ class TestCase(val prop: Properties) extends LazyLogging {
             + "  Tests failed: " + testsFailed
             + "  Tests skipped: " + testsSkipped
         )
-        for (i <- resultList.toList) {
-          logger.warn(s"Result: Test failed on ${i._1}")
-          logger.warn(s"Result: Failed sql is ${i._2}")
-        }
+        resultList.toList.foreach(f => {
+          logger.warn(s"Result: Test failed on ${f._1}")
+          logger.warn(s"Result: Failed sql is ${f._2}")
+        })
         jdbc.close()
         spark.close()
         spark_jdbc.close()
@@ -222,7 +222,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
         }
       }
     } catch {
-      case e: Exception => logger.error("Unexpected error occured: " + e.getMessage)
+      case e: Exception => logger.error("Unexpected error occurred: " + e.getMessage)
     }
   }
 
@@ -344,7 +344,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
         val tidb = execTiDB(sql)
         val result = compResult(tidb, spark)
         if (!result) {
-          printDiff(s"$dbName.$file", sql, tidb, spark)
+          val sqlName = s"$dbName.$file"
+          fail(sqlName, sql)
+          printDiff(sqlName, sql, tidb, spark)
         }
         testsExecuted += 1
 
