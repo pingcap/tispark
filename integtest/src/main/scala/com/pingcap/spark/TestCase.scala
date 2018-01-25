@@ -103,7 +103,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     logger.info("Databases to dump: " + dbNames.mkString(","))
     logger.info("Run Mode: " + mode)
     logger.info("basePath: " + basePath)
-    logger.info("use these DataBases only: " + (if (dbAssigned) useDatabase.head else "None"))
+    logger.info("use these DataBases only: " + (if (dbAssigned) useDatabase.mkString(",") else "None"))
 
     mode match {
       case RunMode.Dump =>
@@ -142,11 +142,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
         val failResult: List[(String, String)] = resultList.toList
         if (failResult.isEmpty) {
           logger.warn("Result: All Tests Passed")
+        } else {
+          failResult.foreach(f => {
+            logger.warn(s"Result: Test failed on ${f._1}")
+            logger.warn(s"Result: SQL failed: ${f._2}")
+          })
         }
-        failResult.foreach(f => {
-          logger.warn(s"Result: Test failed on ${f._1}")
-          logger.warn(s"Result: Failed sql is ${f._2}")
-        })
         jdbc.close()
         spark.close()
         spark_jdbc.close()
