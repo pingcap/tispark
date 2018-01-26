@@ -3,7 +3,7 @@ package org.apache.spark.sql.benchmark
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation
-import org.apache.spark.sql.execution.{CoprocessorRDD, DataSourceScanExec, SparkPlan}
+import org.apache.spark.sql.execution.{CoprocessorRDD, DataSourceScanExec}
 
 import scala.collection.mutable
 
