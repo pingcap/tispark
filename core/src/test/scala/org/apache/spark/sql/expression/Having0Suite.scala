@@ -15,8 +15,9 @@
  *
  */
 
-package org.apache.spark.sql
+package org.apache.spark.sql.expression
 
+import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.test.SharedSQLContext
 
 class Having0Suite
@@ -25,22 +26,14 @@ class Having0Suite
            
 
   test("select tp_int%1000 a, count(*) from full_data_type_table group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a") {
-    val r1 = querySpark("select tp_int%1000 a, count(*) from full_data_type_table group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a")
-    val r2 = querySpark("select tp_int%1000 a, count(*) from full_data_type_table_j group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a")
-    val result = compResult(r1, r2)
-    if (!result) {
-      fail(s"Failed with \nTiSpark:\t\t$r1\nSpark With JDBC:$r2")
-    }
+    runTest("select tp_int%1000 a, count(*) from full_data_type_table group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a",
+            "select tp_int%1000 a, count(*) from full_data_type_table_j group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a")
   }
            
 
   test("select tp_bigint%1000 a, count(*) from full_data_type_table group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a") {
-    val r1 = querySpark("select tp_bigint%1000 a, count(*) from full_data_type_table group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a")
-    val r2 = querySpark("select tp_bigint%1000 a, count(*) from full_data_type_table_j group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a")
-    val result = compResult(r1, r2)
-    if (!result) {
-      fail(s"Failed with \nTiSpark:\t\t$r1\nSpark With JDBC:$r2")
-    }
+    runTest("select tp_bigint%1000 a, count(*) from full_data_type_table group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a",
+            "select tp_bigint%1000 a, count(*) from full_data_type_table_j group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a")
   }
            
 }

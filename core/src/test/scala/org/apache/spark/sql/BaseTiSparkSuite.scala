@@ -10,9 +10,7 @@ import org.apache.spark.sql.types.{BinaryType, StructField}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-class BaseTiSparkSuite
-  extends QueryTest
-    with SharedSQLContext {
+class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   private val eps = 1.0e-2
 
@@ -31,7 +29,8 @@ class BaseTiSparkSuite
       default
   }
 
-  private def dfData(df: DataFrame, schema: scala.Array[StructField]): List[List[Any]] = df.collect()
+  private def dfData(df: DataFrame, schema: scala.Array[StructField]): List[List[Any]] =
+    df.collect()
       .map(row => {
         val rowRes = ArrayBuffer.empty[Any]
         for (i <- 0 until row.length) {
@@ -54,14 +53,37 @@ class BaseTiSparkSuite
     dfData(df, schema)
   }
 
+  def queryTiDB(query: String): List[List[Any]] = {
+    logger.info("Running query on TiDB: " + query)
+    val statement = tidbConn.createStatement()
+    val resultSet = statement.executeQuery(query)
+    val rsMetaData = resultSet.getMetaData
+    val retSet = ArrayBuffer.empty[List[Any]]
+    val retSchema = ArrayBuffer.empty[String]
+    for (i <- 1 to rsMetaData.getColumnCount) {
+      retSchema += rsMetaData.getColumnTypeName(i)
+    }
+    while (resultSet.next()) {
+      val row = ArrayBuffer.empty[Any]
+
+      for (i <- 1 to rsMetaData.getColumnCount) {
+        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
+      }
+      retSet += row.toList
+    }
+    retSet.toList
+  }
+
   /**
     *
     * @param lhs
     * @param rhs
-    * @param requestOrder
+    * @param isOrdered
     * @return true if results are the same
     */
-  protected def compResult(lhs: List[List[Any]], rhs: List[List[Any]], requestOrder: Boolean = true): Boolean = {
+  protected def compResult(lhs: List[List[Any]],
+                           rhs: List[List[Any]],
+                           isOrdered: Boolean = true): Boolean = {
     def toDouble(x: Any): Double = x match {
       case d: Double => d
       case d: Float => d.toDouble
@@ -117,7 +139,7 @@ class BaseTiSparkSuite
     }
 
     try {
-      if (!requestOrder) {
+      if (!isOrdered) {
         comp(
           lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
           rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
@@ -133,7 +155,9 @@ class BaseTiSparkSuite
   }
 
   def getTableColumnNames(tableName: String): List[String] = {
-    val rs = tidbConn.createStatement().executeQuery("select * from tispark_test." + tableName + " limit 1")
+    val rs = tidbConn
+      .createStatement()
+      .executeQuery("select * from tispark_test." + tableName + " limit 1")
     val metaData = rs.getMetaData
     var resList = ArrayBuffer.empty[String]
     for (i <- 1 to metaData.getColumnCount) {
@@ -207,9 +231,12 @@ class BaseTiSparkSuite
     val res = mutable.ListBuffer[(String, List[String])]()
     tmp.foreach((tuple: (String, List[String])) => {
       val name = tuple._1
-      tuple._2.grouped(1000).zipWithIndex.foreach((tuple: (List[String], Int)) => {
-        res += Tuple2(name + tuple._2, tuple._1)
-      })
+      tuple._2
+        .grouped(1000)
+        .zipWithIndex
+        .foreach((tuple: (List[String], Int)) => {
+          res += Tuple2(name + tuple._2, tuple._1)
+        })
     })
     res.toList
   }
@@ -219,22 +246,27 @@ class BaseTiSparkSuite
     colSkipSet.foreach(colSet.remove)
   }
 
-
   def createLogicalAndOr(): List[String] = {
     createLogical("and") ::: createLogical("or")
   }
 
   private def createLogical(op: String): List[String] = {
-    colSet.flatMap((lCol: String) =>
-      colSet.map((rCol: String) =>
-        select(lCol, rCol) + where(
-          binaryOpWithName(
-            binaryOpWithName(lCol, rCol, "=", withTbName = false),
-            binaryOpWithName(lCol, "0", ">", withTbName = false),
-            op,
-            withTbName = false
-          ))
-      )).toList
+    colSet
+      .flatMap(
+        (lCol: String) =>
+          colSet.map(
+            (rCol: String) =>
+              select(lCol, rCol) + where(
+                binaryOpWithName(
+                  binaryOpWithName(lCol, rCol, "=", withTbName = false),
+                  binaryOpWithName(lCol, "0", ">", withTbName = false),
+                  op,
+                  withTbName = false
+                )
+              )
+          )
+      )
+      .toList
   }
 
   private final val SparkIgnore = Set[String](
@@ -282,8 +314,13 @@ class BaseTiSparkSuite
     skipLocalSet.add("tp_mediumtext")
     skipLocalSet.add("tp_longtext")
 
-    colSet.diff(skipLocalSet).map((col: String) =>
-      s"(select $col from $TABLE_NAME where $col < 0) union (select $col from $TABLE_NAME where $col > 0) order by $col").toList
+    colSet
+      .diff(skipLocalSet)
+      .map(
+        (col: String) =>
+          s"(select $col from $TABLE_NAME where $col < 0) union (select $col from $TABLE_NAME where $col > 0) order by $col"
+      )
+      .toList
   }
 
   def createHaving(): List[String] = List(
@@ -291,37 +328,82 @@ class BaseTiSparkSuite
     s"select tp_bigint%1000 a, count(*) from $TABLE_NAME group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a"
   )
 
-  def createSimpleSelect(): List[String] = colSet.map((col: String) => select(col) + orderBy(col) + limit()).toList
+  def createSimpleSelect(): List[String] =
+    colSet.map((col: String) => select(col) + orderBy(col) + limit()).toList
 
-  def createArithmeticAgg(): List[String] = colSet.flatMap((col: String) =>
-    Seq(s"select sum($col) from $TABLE_NAME",
-      s"select avg($col) from $TABLE_NAME",
-      s"select min($col) from $TABLE_NAME",
-      s"select abs($col) from $TABLE_NAME",
-      s"select max($col) from $TABLE_NAME"))
-    .toList
+  def createArithmeticAgg(): List[String] =
+    colSet
+      .flatMap(
+        (col: String) =>
+          Seq(
+            s"select sum($col) from $TABLE_NAME",
+            s"select avg($col) from $TABLE_NAME",
+            s"select min($col) from $TABLE_NAME",
+            s"select abs($col) from $TABLE_NAME",
+            s"select max($col) from $TABLE_NAME"
+          )
+      )
+      .toList
 
-  def createFirstLast(): List[String] = colSet.flatMap((col: String) =>
-    Seq(s"select first($col) from $TABLE_NAME ${groupBy("tp_nvarchar")} ${orderBy("tp_nvarchar")}",
-      s"select last($col) from $TABLE_NAME ${groupBy("tp_nvarchar")} ${orderBy("tp_nvarchar")}"))
-    .toList
+  def createFirstLast(): List[String] =
+    colSet
+      .flatMap(
+        (col: String) =>
+          Seq(
+            s"select first($col) from $TABLE_NAME ${groupBy("tp_nvarchar")} ${orderBy("tp_nvarchar")}",
+            s"select last($col) from $TABLE_NAME ${groupBy("tp_nvarchar")} ${orderBy("tp_nvarchar")}"
+          )
+      )
+      .toList
 
   def createBetween(): List[String] = List(
-    select("tp_int") + where(binaryOpWithName("tp_int", "-1202333 and 601508558", "between", withTbName = false)),
-    select("tp_bigint") + where(binaryOpWithName("tp_bigint", "-2902580959275580308 and 9223372036854775807", "between", withTbName = false)),
-    select("tp_decimal") + where(binaryOpWithName("tp_decimal", "2 and 200", "between", withTbName = false)),
-    select("tp_double") + where(binaryOpWithName("tp_double", "0.2054466 and 3.1415926", "between", withTbName = false)),
-    select("tp_float") + where(binaryOpWithName("tp_double", "-313.1415926 and 30.9412022", "between", withTbName = false)),
-    select("tp_datetime") + where(binaryOpWithName("tp_datetime", "'2043-11-28 00:00:00' and '2017-09-07 11:11:11'", "between", withTbName = false)),
-    select("tp_date") + where(binaryOpWithName("tp_date", "'2017-11-02' and '2043-11-28'", "between", withTbName = false)),
-    select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "815587200000 and 1511862599000", "between", withTbName = false)),
+    select("tp_int") + where(
+      binaryOpWithName("tp_int", "-1202333 and 601508558", "between", withTbName = false)
+    ),
+    select("tp_bigint") + where(
+      binaryOpWithName(
+        "tp_bigint",
+        "-2902580959275580308 and 9223372036854775807",
+        "between",
+        withTbName = false
+      )
+    ),
+    select("tp_decimal") + where(
+      binaryOpWithName("tp_decimal", "2 and 200", "between", withTbName = false)
+    ),
+    select("tp_double") + where(
+      binaryOpWithName("tp_double", "0.2054466 and 3.1415926", "between", withTbName = false)
+    ),
+    select("tp_float") + where(
+      binaryOpWithName("tp_double", "-313.1415926 and 30.9412022", "between", withTbName = false)
+    ),
+    select("tp_datetime") + where(
+      binaryOpWithName(
+        "tp_datetime",
+        "'2043-11-28 00:00:00' and '2017-09-07 11:11:11'",
+        "between",
+        withTbName = false
+      )
+    ),
+    select("tp_date") + where(
+      binaryOpWithName("tp_date", "'2017-11-02' and '2043-11-28'", "between", withTbName = false)
+    ),
+    select("tp_timestamp") + where(
+      binaryOpWithName(
+        "tp_timestamp",
+        "815587200000 and 1511862599000",
+        "between",
+        withTbName = false
+      )
+    ),
     //    select("tp_year") + where(binaryOpWithName("tp_year", "1993 and 2017", "between", withTbName = false)),
-    select("tp_real") + where(binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between", withTbName = false))
+    select("tp_real") + where(
+      binaryOpWithName("tp_real", "4.44 and 0.5194052764001038", "between", withTbName = false)
+    )
   )
 
   def createCount(): List[String] = {
-    colSet.map((col: String) =>
-      select(s"count($col)")).toList
+    colSet.map((col: String) => select(s"count($col)")).toList
   }
 
   def issueList(): List[String] = List(
@@ -329,22 +411,77 @@ class BaseTiSparkSuite
     "select a.id_dt from full_data_type_table a left outer join (select id_dt from full_data_type_table  where tp_decimal <> 1E10) b on a.id_dt = b.id_dt where b.id_dt is null"
   )
 
-  def createAggregate(): List[String] = colSet.map((str: String) => select(str) + groupBy(str) + orderBy(str)).toList
+  def createAggregate(): List[String] =
+    colSet.map((str: String) => select(str) + groupBy(str) + orderBy(str)).toList
 
   def createInTest(): List[String] = List(
-    select("tp_int") + where(binaryOpWithName("tp_int", "(2333, 601508558, 4294967296, 4294967295)", "in", withTbName = false)),
-    select("tp_bigint") + where(binaryOpWithName("tp_bigint", "(122222, -2902580959275580308, 9223372036854775807, 9223372036854775808)", "in", withTbName = false)),
-    select("tp_varchar") + where(binaryOpWithName("tp_varchar", "('nova', 'a948ddcf-9053-4700-916c-983d4af895ef')", "in", withTbName = false)),
-    select("tp_decimal") + where(binaryOpWithName("tp_decimal", "(2, 3, 4)", "in", withTbName = false)),
-    select("tp_double") + where(binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in", withTbName = false)),
-    select("tp_float") + where(binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in", withTbName = false)),
-    select("tp_datetime") + where(binaryOpWithName("tp_datetime", "('2043-11-28 00:00:00','2017-09-07 11:11:11','1986-02-03 00:00:00')", "in", withTbName = false)),
-    select("tp_date") + where(binaryOpWithName("tp_date", "('2017-11-02', '2043-11-28 00:00:00')", "in", withTbName = false)),
-    select("tp_timestamp") + where(binaryOpWithName("tp_timestamp", "('2017-11-02 16:48:01')", "in", withTbName = false)),
+    select("tp_int") + where(
+      binaryOpWithName(
+        "tp_int",
+        "(2333, 601508558, 4294967296, 4294967295)",
+        "in",
+        withTbName = false
+      )
+    ),
+    select("tp_bigint") + where(
+      binaryOpWithName(
+        "tp_bigint",
+        "(122222, -2902580959275580308, 9223372036854775807, 9223372036854775808)",
+        "in",
+        withTbName = false
+      )
+    ),
+    select("tp_varchar") + where(
+      binaryOpWithName(
+        "tp_varchar",
+        "('nova', 'a948ddcf-9053-4700-916c-983d4af895ef')",
+        "in",
+        withTbName = false
+      )
+    ),
+    select("tp_decimal") + where(
+      binaryOpWithName("tp_decimal", "(2, 3, 4)", "in", withTbName = false)
+    ),
+    select("tp_double") + where(
+      binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in", withTbName = false)
+    ),
+    select("tp_float") + where(
+      binaryOpWithName("tp_double", "(0.2054466,3.1415926,0.9412022)", "in", withTbName = false)
+    ),
+    select("tp_datetime") + where(
+      binaryOpWithName(
+        "tp_datetime",
+        "('2043-11-28 00:00:00','2017-09-07 11:11:11','1986-02-03 00:00:00')",
+        "in",
+        withTbName = false
+      )
+    ),
+    select("tp_date") + where(
+      binaryOpWithName("tp_date", "('2017-11-02', '2043-11-28 00:00:00')", "in", withTbName = false)
+    ),
+    select("tp_timestamp") + where(
+      binaryOpWithName("tp_timestamp", "('2017-11-02 16:48:01')", "in", withTbName = false)
+    ),
     //    select("tp_year") + where(binaryOpWithName("tp_year", "('2017')", "in", withTbName = false)),
-    select("tp_real") + where(binaryOpWithName("tp_real", "(4.44,0.5194052764001038)", "in", withTbName = false)),
-    select("tp_longtext") + where(binaryOpWithName("tp_longtext", "('很长的一段文字', 'OntPHB22qwSxriGUQ9RLfoiRkEMfEYFZdnAkL7SdpfD59MfmUXpKUAXiJpegn6dcMyfRyBhNw9efQfrl2yMmtM0zJx3ScAgTIA8djNnmCnMVzHgPWVYfHRnl8zENOD5SbrI4HAazss9xBVpikAgxdXKvlxmhfNoYIK0YYnO84MXKkMUinjPQ7zWHbh5lImp7g9HpIXgtkFFTXVvCaTr8mQXXOl957dxePeUvPv28GUdnzXTzk7thTbsWAtqU7YaK4QC4z9qHpbt5ex9ck8uHz2RoptFw71RIoKGiPsBD9YwXAS19goDM2H0yzVtDNJ6ls6jzXrGlJ6gIRG73Er0tVyourPdM42a5oDihfVP6XxjOjS0cmVIIppDSZIofkRfRhQWAunheFbEEPSHx3eybQ6pSIFd34Natgr2erFjyxFIRr7J535HT9aIReYIlocKK2ZI9sfcwhX0PeDNohY2tvHbsrHE0MlKCyVSTjPxszvFjCPlyqwQy')", "in", withTbName = false)),
-    select("tp_text") + where(binaryOpWithName("tp_text", "('一般的文字', 'dQWD3XwSTevpbP5hADFdNO0dQvaueFhnGcJAm045mGv5fXttso')", "in", withTbName = false))
+    select("tp_real") + where(
+      binaryOpWithName("tp_real", "(4.44,0.5194052764001038)", "in", withTbName = false)
+    ),
+    select("tp_longtext") + where(
+      binaryOpWithName(
+        "tp_longtext",
+        "('很长的一段文字', 'OntPHB22qwSxriGUQ9RLfoiRkEMfEYFZdnAkL7SdpfD59MfmUXpKUAXiJpegn6dcMyfRyBhNw9efQfrl2yMmtM0zJx3ScAgTIA8djNnmCnMVzHgPWVYfHRnl8zENOD5SbrI4HAazss9xBVpikAgxdXKvlxmhfNoYIK0YYnO84MXKkMUinjPQ7zWHbh5lImp7g9HpIXgtkFFTXVvCaTr8mQXXOl957dxePeUvPv28GUdnzXTzk7thTbsWAtqU7YaK4QC4z9qHpbt5ex9ck8uHz2RoptFw71RIoKGiPsBD9YwXAS19goDM2H0yzVtDNJ6ls6jzXrGlJ6gIRG73Er0tVyourPdM42a5oDihfVP6XxjOjS0cmVIIppDSZIofkRfRhQWAunheFbEEPSHx3eybQ6pSIFd34Natgr2erFjyxFIRr7J535HT9aIReYIlocKK2ZI9sfcwhX0PeDNohY2tvHbsrHE0MlKCyVSTjPxszvFjCPlyqwQy')",
+        "in",
+        withTbName = false
+      )
+    ),
+    select("tp_text") + where(
+      binaryOpWithName(
+        "tp_text",
+        "('一般的文字', 'dQWD3XwSTevpbP5hADFdNO0dQvaueFhnGcJAm045mGv5fXttso')",
+        "in",
+        withTbName = false
+      )
+    )
     //    select("tp_bit") + where(binaryOpWithName("tp_bit", "(1)", "in", withTbName = false))
     //    select("tp_enum") + where(binaryOpWithName("tp_enum", "(1)", "in", withTbName = false)),
     //    select("tp_set") + where(binaryOpWithName("tp_set", "('a,b')", "in", withTbName = false))
@@ -357,9 +494,7 @@ class BaseTiSparkSuite
     skipLocalSet.add("tp_tinytext")
     skipLocalSet.add("tp_text")
 
-    colSet.diff(skipLocalSet).map((str: String) =>
-      select(distinct(str)) + orderBy(str)
-    ).toList
+    colSet.diff(skipLocalSet).map((str: String) => select(distinct(str)) + orderBy(str)).toList
   }
 
   /**
@@ -369,8 +504,11 @@ class BaseTiSparkSuite
     */
   def createSymmetryTypeTestCases: List[String] = {
     compareOpList.flatMap((op: String) => {
-      colSet.map((tp: String) =>
-        select(tp, tp) + where(binaryOpWithName(tp, tp, op, withTbName = false)) + limit())
+      colSet
+        .map(
+          (tp: String) =>
+            select(tp, tp) + where(binaryOpWithName(tp, tp, op, withTbName = false)) + limit()
+        )
         .toList
     })
   }
@@ -383,12 +521,16 @@ class BaseTiSparkSuite
     skipLocalSet.add("tp_mediumtext")
     skipLocalSet.add("tp_longtext")
 
-    compareOpList.flatMap((op: String) =>
-      colSet.diff(skipLocalSet).flatMap((lCol: String) =>
-        colSet.diff(skipLocalSet).map((rCol: String) =>
-          buildBinarySelfJoinQuery(lCol, rCol, op)
-        )
-      )
+    compareOpList.flatMap(
+      (op: String) =>
+        colSet
+          .diff(skipLocalSet)
+          .flatMap(
+            (lCol: String) =>
+              colSet
+                .diff(skipLocalSet)
+                .map((rCol: String) => buildBinarySelfJoinQuery(lCol, rCol, op))
+          )
     )
   }
 
@@ -400,14 +542,22 @@ class BaseTiSparkSuite
     skipLocalSet.add("tp_mediumtext")
     skipLocalSet.add("tp_longtext")
 
-    compareOpList.flatMap((op: String) =>
-      colSet.flatMap((lCol: String) =>
-        colSet.filter((rCol: String) =>
-          lCol.eq(rCol) || (!skipLocalSet.contains(lCol) && !skipLocalSet.contains(rCol)))
-          .map((rCol: String) =>
-            select(lCol, rCol) + where(binaryOpWithName(lCol, rCol, op, withTbName = false)) + orderBy(ID_COL) + limit()
-          )
-      )
+    compareOpList.flatMap(
+      (op: String) =>
+        colSet.flatMap(
+          (lCol: String) =>
+            colSet
+              .filter(
+                (rCol: String) =>
+                  lCol.eq(rCol) || (!skipLocalSet.contains(lCol) && !skipLocalSet.contains(rCol))
+              )
+              .map(
+                (rCol: String) =>
+                  select(lCol, rCol) + where(binaryOpWithName(lCol, rCol, op, withTbName = false)) + orderBy(
+                    ID_COL
+                  ) + limit()
+              )
+        )
     )
   }
 
@@ -451,12 +601,14 @@ class BaseTiSparkSuite
         if (!skipLocalSet.contains(col))
           for (placeHolder <- PLACE_HOLDER) {
             if (!placeHolder.eq("'PingCAP'") || !arithmeticSkipSet.exists(col.contains(_))) {
-              res += select(countId()) + where(binaryOpWithName(
-                col,
-                placeHolder,
-                op,
-                withTbName = false
-              ))
+              res += select(countId()) + where(
+                binaryOpWithName(
+                  col,
+                  placeHolder,
+                  op,
+                  withTbName = false
+                )
+              )
             }
           }
       }
@@ -538,7 +690,10 @@ class BaseTiSparkSuite
     " where " + condition
   }
 
-  def binaryOpWithName(leftCol: String, rightCol: String, op: String, withTbName: Boolean = true): String = {
+  def binaryOpWithName(leftCol: String,
+                       rightCol: String,
+                       op: String,
+                       withTbName: Boolean = true): String = {
     if (withTbName) {
       tableColDot(LEFT_TB_NAME, leftCol) + " " + op + " " + tableColDot(RIGHT_TB_NAME, rightCol)
     } else {
@@ -560,19 +715,18 @@ class BaseTiSparkSuite
     " limit " + num
   }
 
-  def createTempView(dbName: String, viewName: String): Unit =
-    spark
-      .read
+  def createOrReplaceTempView(dbName: String, viewName: String, postfix: String = "_j"): Unit =
+    spark.read
       .format("jdbc")
       .option("url", jdbcUrl)
       .option("dbtable", s"$dbName.$viewName")
       .option("driver", "com.mysql.jdbc.Driver")
       .load()
-      .createOrReplaceTempView(s"${viewName}_j")
+      .createOrReplaceTempView(s"$viewName$postfix")
 
-  override def loadTestData(): Unit = {
+  def loadTestData(): Unit = {
     ti.tidbMapDatabase("tispark_test")
-    createTempView("tispark_test", "full_data_type_table")
+    createOrReplaceTempView("tispark_test", "full_data_type_table")
     colList = getTableColumnNames("full_data_type_table")
   }
 
@@ -581,74 +735,95 @@ class BaseTiSparkSuite
     loadTestData()
   }
 
-    test("select tp_int from full_data_type_table") {
-      spark.sparkContext.setLogLevel("WARN")
-      val r1 = querySpark("select tp_int from full_data_type_table")
-      val r2 = querySpark("select tp_int from full_data_type_table_j")
-      val result = compResult(r1, r2)
-      if (!result) {
-        fail(s"Failed with \nTiSpark:$r1\nSpark With JDBC:$r2")
-      }
-      assertResult(r1){r2}
-      val sqls = run()
-      var analyseFailed: Int = 0
-      var analyseSucceed = 0
-      val res = mutable.ArrayBuffer[String]()
-      sqls.foreach((tuple: (String, List[String])) => {
-        val clzName = tuple._1.replace("create", "") + "Suite"
-        val writer = new PrintWriter(new File(s"/home/novemser/testCases/$clzName.scala"))
-        writer.write(
-          s"""/*
-             | *
-             | * Copyright 2017 PingCAP, Inc.
-             | *
-             | * Licensed under the Apache License, Version 2.0 (the "License");
-             | * you may not use this file except in compliance with the License.
-             | * You may obtain a copy of the License at
-             | *
-             | *      http://www.apache.org/licenses/LICENSE-2.0
-             | *
-             | * Unless required by applicable law or agreed to in writing, software
-             | * distributed under the License is distributed on an "AS IS" BASIS,
-             | * See the License for the specific language governing permissions and
-             | * limitations under the License.
-             | *
-             | */
-             |
-             |package org.apache.spark.sql
-             |
-             |import org.apache.spark.sql.test.SharedSQLContext
-             |
-             |class $clzName
-             |  extends BaseTiSparkSuite
-             |  with SharedSQLContext {
-           """.stripMargin)
-        tuple._2.foreach((str: String) => {
-          try {
-            val jdbcQuery = str.replace("full_data_type_table", "full_data_type_table_j")
-            sql(jdbcQuery).show(1)
-            analyseSucceed += 1
-            writer.write("\n")
-            writer.write(
-              s"""
-                 |  test("$str") {
-                 |    val r1 = querySpark("$str")
-                 |    val r2 = querySpark("$jdbcQuery")
-                 |    val result = compResult(r1, r2)
-                 |    if (!result) {
-                 |      fail(s"Failed with \\nTiSpark:\\t\\t$$r1\\nSpark With JDBC:$$r2")
-                 |    }
-                 |  }
-           """.stripMargin)
-          } catch {
-            case _:AnalysisException =>
-              analyseFailed += 1
-          }
-        })
-        writer.write("\n}")
-        writer.close()
-      })
+  def runTest(qSpark: String, qJDBC: String): Unit = {
+    var r1: List[List[Any]] = null
+    var r2: List[List[Any]] = null
+    var r3: List[List[Any]] = null
 
-      println("Succeed:" + analyseSucceed + ", Failed:" + analyseFailed)
+    try {
+      r1 = querySpark(qSpark)
+    } catch {
+      case e: Throwable => fail(e)
     }
+
+    try {
+      r2 = querySpark(qJDBC)
+    } catch {
+      case _: Throwable => // JDBC failed
+    }
+
+    val isOrdered = qSpark.contains(" order by ")
+
+    if (!compResult(r1, r2, isOrdered)) {
+      r3 = queryTiDB(qSpark)
+      if (!compResult(r1, r3, isOrdered)) {
+        fail(s"Failed with \nTiSpark:\t\t$r1\nSpark With JDBC:$r2\nTiDB:\t\t$r3")
+      }
+    }
+  }
+
+  test("select tp_int from full_data_type_table") {
+//    val sqls = run()
+//    var analyseFailed: Int = 0
+//    var analyseSucceed = 0
+//    val res = mutable.ArrayBuffer[String]()
+//    sqls.foreach((tuple: (String, List[String])) => {
+//      val clzName = tuple._1.replace("create", "") + "Suite"
+//      val writer = new PrintWriter(new File(s"/home/novemser/testCases/$clzName.scala"))
+//      writer.write(
+//        s"""/*
+//           | *
+//           | * Copyright 2017 PingCAP, Inc.
+//           | *
+//           | * Licensed under the Apache License, Version 2.0 (the "License");
+//           | * you may not use this file except in compliance with the License.
+//           | * You may obtain a copy of the License at
+//           | *
+//           | *      http://www.apache.org/licenses/LICENSE-2.0
+//           | *
+//           | * Unless required by applicable law or agreed to in writing, software
+//           | * distributed under the License is distributed on an "AS IS" BASIS,
+//           | * See the License for the specific language governing permissions and
+//           | * limitations under the License.
+//           | *
+//           | */
+//           |
+//           |package org.apache.spark.sql.expression
+//           |
+//           |import org.apache.spark.sql.BaseTiSparkSuite
+//           |import org.apache.spark.sql.test.SharedSQLContext
+//           |
+//           |class $clzName
+//           |  extends BaseTiSparkSuite
+//           |  with SharedSQLContext {
+//           """.stripMargin)
+//      tuple._2.foreach((str: String) => {
+//        try {
+//          val jdbcQuery = str.replace("full_data_type_table", "full_data_type_table_j")
+//          sql(jdbcQuery).show(1)
+//          try {
+//            sql(str)
+//          } catch {
+//            case e: AnalysisException if e.message.contains("due to data type mismatch") => throw e
+//          }
+//          analyseSucceed += 1
+//          writer.write("\n")
+//          writer.write(
+//            s"""
+//               |  test("$str") {
+//               |    runTest("$str",
+//               |            "$jdbcQuery")
+//               |  }
+//           """.stripMargin)
+//        } catch {
+//          case _: AnalysisException =>
+//            analyseFailed += 1
+//        }
+//      })
+//      writer.write("\n}")
+//      writer.close()
+//    })
+//
+//    println("Succeed:" + analyseSucceed + ", Failed:" + analyseFailed)
+  }
 }

@@ -11,8 +11,6 @@ with revenue0 as
 		and l_shipdate < date '1996-01-01' + interval '3' month
 	group by
 		l_suppkey)
-
-
 select
 	s_suppkey,
 	s_name,
