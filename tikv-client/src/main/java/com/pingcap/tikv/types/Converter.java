@@ -17,19 +17,18 @@
 
 package com.pingcap.tikv.types;
 
-
-import static java.util.Objects.requireNonNull;
-
 import com.pingcap.tikv.exception.TypeException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.sql.Date;
-import java.sql.Timestamp;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.Timestamp;
+
+import static java.util.Objects.requireNonNull;
 
 public class Converter {
   public static long convertToLong(Object val) {
