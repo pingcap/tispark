@@ -65,7 +65,17 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.coprocess.streaming |  false | Whether to use streaming for response fetching |
 | spark.tispark.plan.unsupported_pushdown_exprs |  "" | A comma separated list of expressions. In case you have very old version of TiKV, you might disable some of the expression push-down if not supported |
 | spark.tispark.plan.downgrade.index_threshold | 100000 | If index scan handles for one region exceeds this limit in original request, downgrade the request to a full table scan rather than original planned index scan |
+| spark.tispark.type.unsupported_mysql_types |  "time,enum,set,year" | A comma separated list of mysql types TiSpark does not support currently, refer to `Unsupported MySQL Type List` below |
 | spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
+
+## Unsupported MySQL Type List
+
+| Mysql Type |
+| ----- |
+| time |
+| enum |
+| set  |
+| year |
 
 ## Quick start
 

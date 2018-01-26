@@ -18,6 +18,7 @@ package com.pingcap.tikv.predicates;
 
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.PseudoCostCalculator;
+
 import java.util.Optional;
 
 public class SelectivityCalculator {

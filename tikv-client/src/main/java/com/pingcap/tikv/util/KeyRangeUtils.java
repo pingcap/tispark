@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv.util;
 
-
 import com.google.common.collect.*;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataInput;
