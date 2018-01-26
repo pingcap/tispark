@@ -8,13 +8,14 @@ import org.apache.spark.sql.{SQLContext, SparkSession, TiContext}
 import Utils._
 import TestConstants._
 
-trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
+trait SharedSQLContext extends SQLTestUtils {
   protected val sparkConf = new SparkConf()
-  private var _spark: TestSparkSession = _
+  private var _spark: SparkSession = _
   private var _ti: TiContext = _
   private var _tidbConf: Properties = _
   private var _tidbConnection: Connection = _
   private var _sparkJDBC: SparkSession = _
+  protected var jdbcUrl: String = _
 
   protected implicit def spark: SparkSession = _spark
 
@@ -29,7 +30,7 @@ trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
    */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
-  protected def createSparkSession: TestSparkSession = {
+  protected lazy val createSparkSession: SparkSession = {
     new TestSparkSession(sparkConf)
   }
 
@@ -80,7 +81,7 @@ trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
         if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlPassword)
         else ""
 
-      val jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
+      jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
         (if (useRawSparkMySql) "" else s":$jdbcPort") +
         s"/?user=$jdbcUsername&password=$jdbcPassword"
 
@@ -99,6 +100,8 @@ trait SharedSQLContext extends SQLTestUtils with SharedSparkSession {
     val prop = new Properties()
     prop.load(confStream)
     _tidbConf = prop
+
+    sparkConf.set("spark.tispark.pd.addresses", "127.0.0.1:2379")
   }
 
   /**
