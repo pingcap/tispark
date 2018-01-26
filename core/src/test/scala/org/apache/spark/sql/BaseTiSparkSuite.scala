@@ -168,11 +168,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   protected val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
   protected val arithmeticOpList = List("+", "-", "*", "/", "%")
-  protected val LEFT_TB_NAME = "A"
-  protected val RIGHT_TB_NAME = "B"
-  protected val TABLE_NAME = "full_data_type_table"
+  protected val TABLE_NAME = "full_data_type_table_idx"
   protected val LITERAL_NULL = "null"
-  protected val SCALE_FACTOR: Integer = 4 * 4
   protected val ID_COL = "id_dt"
 
   protected val ARITHMETIC_CONSTANT: List[String] = List[String](
@@ -574,12 +571,12 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
            | *
            | */
            |
-               |package org.apache.spark.sql.expression
+           |package org.apache.spark.sql.expression.index
            |
-               |import org.apache.spark.sql.BaseTiSparkSuite
+           |import org.apache.spark.sql.BaseTiSparkSuite
            |import org.apache.spark.sql.test.SharedSQLContext
            |
-               |class $clzName
+           |class $clzName
            |  extends BaseTiSparkSuite
            |  with SharedSQLContext {
                """.stripMargin)
