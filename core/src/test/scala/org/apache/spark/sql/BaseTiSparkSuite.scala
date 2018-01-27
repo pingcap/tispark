@@ -4,6 +4,7 @@ import java.io.{File, PrintWriter}
 import java.sql.{Date, Timestamp}
 import java.text.SimpleDateFormat
 
+import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.{BinaryType, StructField}
 
@@ -75,22 +76,22 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   }
 
   /**
-    *
-    * @param lhs
-    * @param rhs
-    * @param isOrdered
-    * @return true if results are the same
-    */
+   *
+   * @param lhs
+   * @param rhs
+   * @param isOrdered
+   * @return true if results are the same
+   */
   protected def compResult(lhs: List[List[Any]],
                            rhs: List[List[Any]],
                            isOrdered: Boolean = true): Boolean = {
     def toDouble(x: Any): Double = x match {
-      case d: Double => d
-      case d: Float => d.toDouble
+      case d: Double               => d
+      case d: Float                => d.toDouble
       case d: java.math.BigDecimal => d.doubleValue()
-      case d: BigDecimal => d.bigDecimal.doubleValue()
-      case d: Number => d.doubleValue()
-      case _ => 0.0
+      case d: BigDecimal           => d.bigDecimal.doubleValue()
+      case d: Number               => d.doubleValue()
+      case _                       => 0.0
     }
 
     def toInteger(x: Any): Long = x match {
@@ -222,7 +223,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     tmp += Tuple2("createSpecial", createSpecial())
     tmp += Tuple2("createBetween", createBetween())
     tmp += Tuple2("createJoin", createJoin())
-    tmp += Tuple2("createGeneral", createGeneralTest())
+//    tmp += Tuple2("createGeneral", createGeneralTest())
 
     val res = mutable.ListBuffer[(String, List[String])]()
     tmp.foreach((tuple: (String, List[String])) => {
@@ -244,39 +245,32 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   private def createGeneralTest(): List[String] = {
     val result = mutable.ArrayBuffer[String]()
-    result += ("select * from test_index where a < 30")
-
-    result += ("select * from test_index where d > \'116.5\'")
-    result += ("select * from test_index where d < \'116.5\'")
-    result += ("select * from test_index where d > \'116.3\' and d < \'116.7\'")
-
-    result += ("select * from test_index where d = \'116.72873\'")
-    result += (
-      "select * from test_index where d = \'116.72874\' and e < \'40.0452\'"
-      )
-
-    result += ("select * from test_index where c > \'2008-02-06 14:03:58\'")
-    result += ("select * from test_index where c >= \'2008-02-06 14:03:58\'")
-    result += ("select * from test_index where c < \'2008-02-06 14:03:58\'")
-    result += ("select * from test_index where c <= \'2008-02-06 14:03:58\'")
-    result += ("select * from test_index where c = \'2008-02-06 14:03:58\'")
-
-    result += ("select * from test_index where c > date \'2008-02-05\'")
-    result += ("select * from test_index where c >= date \'2008-02-05\'")
-    result += ("select * from test_index where c < date \'2008-02-05\'")
-    result += ("select * from test_index where c <= date \'2008-02-05\'")
-    result += ("select * from test_index where DATE(c) = date \'2008-02-05\'")
-    result += ("select * from test_index where DATE(c) > date \'2008-02-05\'")
-    result += ("select * from test_index where DATE(c) >= date \'2008-02-05\'")
-    result += ("select * from test_index where DATE(c) < date \'2008-02-05\'")
-    result += ("select * from test_index where DATE(c) <= date \'2008-02-05\'")
-    result += ("select * from test_index where c <> date \'2008-02-05\'")
+    result += "select * from test_index where a < 30"
+    result += "select * from test_index where d > \'116.5\'"
+    result += "select * from test_index where d < \'116.5\'"
+    result += "select * from test_index where d > \'116.3\' and d < \'116.7\'"
+    result += "select * from test_index where d = \'116.72873\'"
+    result += "select * from test_index where d = \'116.72874\' and e < \'40.0452\'"
+    result += "select * from test_index where c > \'2008-02-06 14:03:58\'"
+    result += "select * from test_index where c >= \'2008-02-06 14:03:58\'"
+    result += "select * from test_index where c < \'2008-02-06 14:03:58\'"
+    result += "select * from test_index where c <= \'2008-02-06 14:03:58\'"
+    result += "select * from test_index where c = \'2008-02-06 14:03:58\'"
+    result += "select * from test_index where c > date \'2008-02-05\'"
+    result += "select * from test_index where c >= date \'2008-02-05\'"
+    result += "select * from test_index where c < date \'2008-02-05\'"
+    result += "select * from test_index where c <= date \'2008-02-05\'"
+    result += "select * from test_index where DATE(c) = date \'2008-02-05\'"
+    result += "select * from test_index where DATE(c) > date \'2008-02-05\'"
+    result += "select * from test_index where DATE(c) >= date \'2008-02-05\'"
+    result += "select * from test_index where DATE(c) < date \'2008-02-05\'"
+    result += "select * from test_index where DATE(c) <= date \'2008-02-05\'"
+    result += "select * from test_index where c <> date \'2008-02-05\'"
     result += "select * from test_index where c > \'2008-02-04 14:00:00\' and d > \'116.5\'"
     result += "select * from test_index where d = \'116.72873\' and c > \'2008-02-04 14:00:00\'"
     result += "select * from test_index where d = \'116.72873\' and c < \'2008-02-04 14:00:00\'"
     result.toList
   }
-
 
   private final val SparkIgnore = Set[String](
     "type mismatch",
@@ -508,14 +502,41 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       .createOrReplaceTempView(s"$viewName$postfix")
 
   def loadTestData(): Unit = {
+    loadTiSparkTestData()
     ti.tidbMapDatabase("tispark_test")
     createOrReplaceTempView("tispark_test", "full_data_type_table")
+    createOrReplaceTempView("tispark_test", "full_data_type_table_idx")
     colList = getTableColumnNames("full_data_type_table")
+  }
+
+  /**
+   * Make sure to load test befor running tests.
+   */
+  def loadTiSparkTestData(): Unit = {
+    // Load index test data
+    var queryString = resourceToString(
+      s"tispark-test/IndexTest.sql",
+      classLoader = Thread.currentThread().getContextClassLoader
+    )
+    tidbConn.createStatement().execute(queryString)
+    logger.info("Loading IndexTest.sql successfully.")
+    // Load expression test data
+    queryString = resourceToString(
+      s"tispark-test/TiSparkTest.sql",
+      classLoader = Thread.currentThread().getContextClassLoader
+    )
+    tidbConn.createStatement().execute(queryString)
+    logger.info("Loading TiSparkTest.sql successfully.")
   }
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     loadTestData()
+    setLogLevel("WARN")
+  }
+
+  def setLogLevel(level: String): Unit = {
+    spark.sparkContext.setLogLevel(level)
   }
 
   def runTest(qSpark: String, qJDBC: String): Unit = {
@@ -545,68 +566,71 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     }
   }
 
-  test("testGeneRation") {
-    val sqls = run()
-    var analyseFailed: Int = 0
-    var analyseSucceed = 0
-    val res = mutable.ArrayBuffer[String]()
-    sqls.foreach((tuple: (String, List[String])) => {
-      val clzName = tuple._1.replace("create", "") + "Suite"
-      val writer = new PrintWriter(new File(s"/home/novemser/testCases/index/$clzName.scala"))
-      writer.write(
-        s"""/*
-           | *
-           | * Copyright 2017 PingCAP, Inc.
-           | *
-           | * Licensed under the Apache License, Version 2.0 (the "License");
-           | * you may not use this file except in compliance with the License.
-           | * You may obtain a copy of the License at
-           | *
-           | *      http://www.apache.org/licenses/LICENSE-2.0
-           | *
-           | * Unless required by applicable law or agreed to in writing, software
-           | * distributed under the License is distributed on an "AS IS" BASIS,
-           | * See the License for the specific language governing permissions and
-           | * limitations under the License.
-           | *
-           | */
-           |
-           |package org.apache.spark.sql.expression.index
-           |
-           |import org.apache.spark.sql.BaseTiSparkSuite
-           |import org.apache.spark.sql.test.SharedSQLContext
-           |
-           |class $clzName
-           |  extends BaseTiSparkSuite
-           |  with SharedSQLContext {
-               """.stripMargin)
-      tuple._2.foreach((str: String) => {
-        try {
-          val jdbcQuery = str.replace("full_data_type_table", "full_data_type_table_j")
-          sql(jdbcQuery).show(1)
-          try {
-            sql(str)
-          } catch {
-            case e: AnalysisException if e.message.contains("due to data type mismatch") => throw e
-          }
-          analyseSucceed += 1
-          writer.write("\n")
-          writer.write(
-            s"""
-               |  test("$str") {
-               |    runTest("$str",
-               |            "$jdbcQuery")
-               |  }
-               """.stripMargin)
-        } catch {
-          case _: AnalysisException =>
-            analyseFailed += 1
-        }
-      })
-      writer.write("\n}")
-      writer.close()
-    })
-
-    println("Succeed:" + analyseSucceed + ", Failed:" + analyseFailed)
+  /**
+   * This is only a test generation tool, do not use it if you do not know what
+   * this code will do!
+   */
+  test("GenRelation") {
+//    cancel()
+//    val sqls = run()
+//    var analyseFailed: Int = 0
+//    var analyseSucceed = 0
+//    val res = mutable.ArrayBuffer[String]()
+//    sqls.foreach((tuple: (String, List[String])) => {
+//      val clzName = tuple._1.replace("create", "") + "Suite"
+//      val writer = new PrintWriter(new File(s"/home/novemser/testCases/index/$clzName.scala"))
+//      writer.write(s"""/*
+//                      | *
+//                      | * Copyright 2017 PingCAP, Inc.
+//                      | *
+//                      | * Licensed under the Apache License, Version 2.0 (the "License");
+//                      | * you may not use this file except in compliance with the License.
+//                      | * You may obtain a copy of the License at
+//                      | *
+//                      | *      http://www.apache.org/licenses/LICENSE-2.0
+//                      | *
+//                      | * Unless required by applicable law or agreed to in writing, software
+//                      | * distributed under the License is distributed on an "AS IS" BASIS,
+//                      | * See the License for the specific language governing permissions and
+//                      | * limitations under the License.
+//                      | *
+//                      | */
+//                      |
+//                      |package org.apache.spark.sql.expression.index
+//                      |
+//                      |import org.apache.spark.sql.BaseTiSparkSuite
+//                      |import org.apache.spark.sql.test.SharedSQLContext
+//                      |
+//                      |class $clzName
+//                      |  extends BaseTiSparkSuite
+//                      |  with SharedSQLContext {
+//               """.stripMargin)
+//      tuple._2.foreach((str: String) => {
+//        try {
+//          val jdbcQuery = str.replace(TABLE_NAME, s"${TABLE_NAME}_j")
+//          sql(jdbcQuery).show(1)
+//          try {
+//            sql(str)
+//          } catch {
+//            case e: AnalysisException if e.message.contains("due to data type mismatch") => throw e
+//          }
+//          analyseSucceed += 1
+//          writer.write("\n")
+//          writer.write(s"""
+//                          |  test("$str") {
+//                          |    runTest("$str",
+//                          |            "$jdbcQuery")
+//                          |  }
+//               """.stripMargin)
+//        } catch {
+//          case e: AnalysisException =>
+//            analyseFailed += 1
+//        }
+//      })
+//      writer.write("\n}")
+//      writer.close()
+//    })
+//
+//    println("Succeed:" + analyseSucceed + ", Failed:" + analyseFailed)
   }
 }

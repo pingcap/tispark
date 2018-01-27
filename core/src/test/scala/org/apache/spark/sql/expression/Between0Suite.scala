@@ -20,56 +20,74 @@ package org.apache.spark.sql.expression
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.test.SharedSQLContext
 
-class Between0Suite
-  extends BaseTiSparkSuite
-  with SharedSQLContext {
-           
+class Between0Suite extends BaseTiSparkSuite with SharedSQLContext {
 
   test("select tp_int from full_data_type_table  where tp_int between -1202333 and 601508558") {
-    runTest("select tp_int from full_data_type_table  where tp_int between -1202333 and 601508558",
-            "select tp_int from full_data_type_table_j  where tp_int between -1202333 and 601508558")
+    runTest(
+      "select tp_int from full_data_type_table  where tp_int between -1202333 and 601508558",
+      "select tp_int from full_data_type_table_j  where tp_int between -1202333 and 601508558"
+    )
   }
-           
 
-  test("select tp_bigint from full_data_type_table  where tp_bigint between -2902580959275580308 and 9223372036854775807") {
-    runTest("select tp_bigint from full_data_type_table  where tp_bigint between -2902580959275580308 and 9223372036854775807",
-            "select tp_bigint from full_data_type_table_j  where tp_bigint between -2902580959275580308 and 9223372036854775807")
+  test(
+    "select tp_bigint from full_data_type_table  where tp_bigint between -2902580959275580308 and 9223372036854775807"
+  ) {
+    runTest(
+      "select tp_bigint from full_data_type_table  where tp_bigint between -2902580959275580308 and 9223372036854775807",
+      "select tp_bigint from full_data_type_table_j  where tp_bigint between -2902580959275580308 and 9223372036854775807"
+    )
   }
-           
 
   test("select tp_decimal from full_data_type_table  where tp_decimal between 2 and 200") {
-    runTest("select tp_decimal from full_data_type_table  where tp_decimal between 2 and 200",
-            "select tp_decimal from full_data_type_table_j  where tp_decimal between 2 and 200")
+    runTest(
+      "select tp_decimal from full_data_type_table  where tp_decimal between 2 and 200",
+      "select tp_decimal from full_data_type_table_j  where tp_decimal between 2 and 200"
+    )
   }
-           
 
-  test("select tp_double from full_data_type_table  where tp_double between 0.2054466 and 3.1415926") {
-    runTest("select tp_double from full_data_type_table  where tp_double between 0.2054466 and 3.1415926",
-            "select tp_double from full_data_type_table_j  where tp_double between 0.2054466 and 3.1415926")
+  test(
+    "select tp_double from full_data_type_table  where tp_double between 0.2054466 and 3.1415926"
+  ) {
+    runTest(
+      "select tp_double from full_data_type_table  where tp_double between 0.2054466 and 3.1415926",
+      "select tp_double from full_data_type_table_j  where tp_double between 0.2054466 and 3.1415926"
+    )
   }
-           
 
-  test("select tp_float from full_data_type_table  where tp_double between -313.1415926 and 30.9412022") {
-    runTest("select tp_float from full_data_type_table  where tp_double between -313.1415926 and 30.9412022",
-            "select tp_float from full_data_type_table_j  where tp_double between -313.1415926 and 30.9412022")
+  test(
+    "select tp_float from full_data_type_table  where tp_double between -313.1415926 and 30.9412022"
+  ) {
+    runTest(
+      "select tp_float from full_data_type_table  where tp_double between -313.1415926 and 30.9412022",
+      "select tp_float from full_data_type_table_j  where tp_double between -313.1415926 and 30.9412022"
+    )
   }
-           
 
-  test("select tp_datetime from full_data_type_table  where tp_datetime between '2043-11-28 00:00:00' and '2017-09-07 11:11:11'") {
-    runTest("select tp_datetime from full_data_type_table  where tp_datetime between '2043-11-28 00:00:00' and '2017-09-07 11:11:11'",
-            "select tp_datetime from full_data_type_table_j  where tp_datetime between '2043-11-28 00:00:00' and '2017-09-07 11:11:11'")
+  test(
+    "select tp_datetime from full_data_type_table  where tp_datetime between '2043-11-28 00:00:00' and '2017-09-07 11:11:11'"
+  ) {
+    runTest(
+      "select tp_datetime from full_data_type_table  where tp_datetime between '2043-11-28 00:00:00' and '2017-09-07 11:11:11'",
+      "select tp_datetime from full_data_type_table_j  where tp_datetime between '2043-11-28 00:00:00' and '2017-09-07 11:11:11'"
+    )
   }
-           
 
-  test("select tp_date from full_data_type_table  where tp_date between '2017-11-02' and '2043-11-28'") {
-    runTest("select tp_date from full_data_type_table  where tp_date between '2017-11-02' and '2043-11-28'",
-            "select tp_date from full_data_type_table_j  where tp_date between '2017-11-02' and '2043-11-28'")
+  test(
+    "select tp_date from full_data_type_table  where tp_date between '2017-11-02' and '2043-11-28'"
+  ) {
+    runTest(
+      "select tp_date from full_data_type_table  where tp_date between '2017-11-02' and '2043-11-28'",
+      "select tp_date from full_data_type_table_j  where tp_date between '2017-11-02' and '2043-11-28'"
+    )
   }
-           
 
-  test("select tp_real from full_data_type_table  where tp_real between 4.44 and 0.5194052764001038") {
-    runTest("select tp_real from full_data_type_table  where tp_real between 4.44 and 0.5194052764001038",
-            "select tp_real from full_data_type_table_j  where tp_real between 4.44 and 0.5194052764001038")
+  test(
+    "select tp_real from full_data_type_table  where tp_real between 4.44 and 0.5194052764001038"
+  ) {
+    runTest(
+      "select tp_real from full_data_type_table  where tp_real between 4.44 and 0.5194052764001038",
+      "select tp_real from full_data_type_table_j  where tp_real between 4.44 and 0.5194052764001038"
+    )
   }
-           
+
 }

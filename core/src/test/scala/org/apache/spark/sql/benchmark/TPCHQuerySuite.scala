@@ -9,20 +9,45 @@ import scala.collection.mutable
 
 class TPCHQuerySuite extends BaseTiSparkSuite {
   val tpchQueries = Seq(
-    "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11",
-    "q12", "q13", "q14", "q15", "q16", "q17", "q18", "q19", "q20", "q21", "q22")
+    "q1",
+    "q2",
+    "q3",
+    "q4",
+    "q5",
+    "q6",
+    "q7",
+    "q8",
+    "q9",
+    "q10",
+    "q11",
+    "q12",
+    "q13",
+    "q14",
+    "q15",
+    "q16",
+    "q17",
+    "q18",
+    "q19",
+    "q20",
+    "q21", // May cause OOM if data set is large
+    "q22"
+  )
 
   private lazy val tiSparkRes = {
     val result = mutable.Map[String, List[List[Any]]]()
-    ti.tidbMapDatabase("tpch_test")
+    ti.tidbMapDatabase(tpchDBName)
     tpchQueries.foreach { name =>
-      val queryString = resourceToString(s"tpch-sql/$name.sql",
-        classLoader = Thread.currentThread().getContextClassLoader)
+      val queryString = resourceToString(
+        s"tpch-sql/$name.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
       sql(queryString).queryExecution.executedPlan.foreach {
-        case scan: DataSourceScanExec => scan.relation match {
-          case _: JDBCRelation => fail("Coprocessor plan should not use JDBC Scan as data source node!")
-          case _ =>
-        }
+        case scan: DataSourceScanExec =>
+          scan.relation match {
+            case _: JDBCRelation =>
+              fail("Coprocessor plan should not use JDBC Scan as data source node!")
+            case _ =>
+          }
         case _ =>
       }
       result(name) = querySpark(queryString)
@@ -33,21 +58,24 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
 
   private lazy val jdbcRes = {
     val result = mutable.Map[String, List[List[Any]]]()
-    createOrReplaceTempView("tpch_test", "lineitem", "")
-    createOrReplaceTempView("tpch_test", "orders", "")
-    createOrReplaceTempView("tpch_test", "customer", "")
-    createOrReplaceTempView("tpch_test", "nation", "")
-    createOrReplaceTempView("tpch_test", "customer", "")
-    createOrReplaceTempView("tpch_test", "part", "")
-    createOrReplaceTempView("tpch_test", "partsupp", "")
-    createOrReplaceTempView("tpch_test", "region", "")
-    createOrReplaceTempView("tpch_test", "supplier", "")
+    createOrReplaceTempView(tpchDBName, "lineitem", "")
+    createOrReplaceTempView(tpchDBName, "orders", "")
+    createOrReplaceTempView(tpchDBName, "customer", "")
+    createOrReplaceTempView(tpchDBName, "nation", "")
+    createOrReplaceTempView(tpchDBName, "customer", "")
+    createOrReplaceTempView(tpchDBName, "part", "")
+    createOrReplaceTempView(tpchDBName, "partsupp", "")
+    createOrReplaceTempView(tpchDBName, "region", "")
+    createOrReplaceTempView(tpchDBName, "supplier", "")
     tpchQueries.foreach { name =>
-      val queryString = resourceToString(s"tpch-sql/$name.sql",
-        classLoader = Thread.currentThread().getContextClassLoader)
+      val queryString = resourceToString(
+        s"tpch-sql/$name.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
       result(name) = querySpark(queryString)
       sql(queryString).queryExecution.executedPlan.foreach {
-        case _: CoprocessorRDD => fail("JDBC plan should not use CoprocessorRDD as data source node!")
+        case _: CoprocessorRDD =>
+          fail("JDBC plan should not use CoprocessorRDD as data source node!")
         case _ =>
       }
       println(s"Spark JDBC finished $name")

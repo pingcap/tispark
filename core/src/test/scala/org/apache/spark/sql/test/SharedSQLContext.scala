@@ -11,15 +11,12 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 
 /**
-  * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
-  * connection resource and relevant configurations.
-  *
-  * `tidb_config.properties` must be provided in test resources folder
-  */
-trait SharedSQLContext
-  extends SparkFunSuite
-    with Eventually
-    with BeforeAndAfterAll {
+ * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
+ * connection resource and relevant configurations.
+ *
+ * `tidb_config.properties` must be provided in test resources folder
+ */
+trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfterAll {
   protected val sparkConf = new SparkConf()
   private var _spark: SparkSession = _
   private var _ti: TiContext = _
@@ -39,8 +36,8 @@ trait SharedSQLContext
   protected implicit def tidbConn: Connection = _tidbConnection
 
   /**
-    * The [[TestSQLContext]] to use for all tests in this suite.
-    */
+   * The [[TestSQLContext]] to use for all tests in this suite.
+   */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
   protected lazy val createSparkSession: SparkSession = {
@@ -48,14 +45,14 @@ trait SharedSQLContext
   }
 
   /**
-    * Initialize the [[TestSparkSession]].  Generally, this is just called from
-    * beforeAll; however, in test using styles other than FunSuite, there is
-    * often code that relies on the session between test group constructs and
-    * the actual tests, which may need this session.  It is purely a semantic
-    * difference, but semantically, it makes more sense to call
-    * 'initializeSession' between a 'describe' and an 'it' call than it does to
-    * call 'beforeAll'.
-    */
+   * Initialize the [[TestSparkSession]].  Generally, this is just called from
+   * beforeAll; however, in test using styles other than FunSuite, there is
+   * often code that relies on the session between test group constructs and
+   * the actual tests, which may need this session.  It is purely a semantic
+   * difference, but semantically, it makes more sense to call
+   * 'initializeSession' between a 'describe' and an 'it' call than it does to
+   * call 'beforeAll'.
+   */
   protected def initializeSession(): Unit = {
     if (_spark == null) {
       _spark = createSparkSession
@@ -117,29 +114,28 @@ trait SharedSQLContext
     _tidbConf = prop
     tpchDBName = getOrThrow(prop, KeyTPCHDB)
 
-    sparkConf.set("spark.tispark.pd.addresses", "127.0.0.1:2379")
+    import com.pingcap.tispark.TiConfigConst._
+    sparkConf.set(PD_ADDRESSES, getOrThrow(prop, PD_ADDRESSES))
+    sparkConf.set(ALLOW_INDEX_DOUBLE_READ, getOrElse(prop, ALLOW_INDEX_DOUBLE_READ, "true"))
   }
 
   /**
-    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
-    */
+   * Make sure the [[TestSparkSession]] is initialized before any tests are run.
+   */
   protected override def beforeAll(): Unit = {
     initializeConf()
     initializeSession()
     initializeTiDB()
     initializeJDBC()
     initializeTiContext()
-    if (spark != null) {
-      spark.sparkContext.setLogLevel("WARN")
-    }
 
     // Ensure we have initialized the context before calling parent code
     super.beforeAll()
   }
 
   /**
-    * Stop the underlying resources, if any.
-    */
+   * Stop the underlying resources, if any.
+   */
   protected override def afterAll(): Unit = {
     super.afterAll()
     if (_spark != null) {
