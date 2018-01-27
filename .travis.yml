@@ -1,0 +1,7 @@
+dist: trusty
+sudo: false
+language: java
+os:
+  - linux
+
+script: mvn clean verify

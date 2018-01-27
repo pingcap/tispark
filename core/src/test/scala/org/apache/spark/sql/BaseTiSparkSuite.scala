@@ -92,21 +92,21 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   }
 
   /**
-    * Compare whether lhs equals to rhs
-    *
-    * @param isOrdered whether the input data `lhs` and `rhs` are sorted
-    * @return true if results are the same
-    */
+   * Compare whether lhs equals to rhs
+   *
+   * @param isOrdered whether the input data `lhs` and `rhs` are sorted
+   * @return true if results are the same
+   */
   protected def compResult(lhs: List[List[Any]],
                            rhs: List[List[Any]],
                            isOrdered: Boolean = true): Boolean = {
     def toDouble(x: Any): Double = x match {
-      case d: Double => d
-      case d: Float => d.toDouble
+      case d: Double               => d
+      case d: Float                => d.toDouble
       case d: java.math.BigDecimal => d.doubleValue()
-      case d: BigDecimal => d.bigDecimal.doubleValue()
-      case d: Number => d.doubleValue()
-      case _ => 0.0
+      case d: BigDecimal           => d.bigDecimal.doubleValue()
+      case d: Number               => d.doubleValue()
+      case _                       => 0.0
     }
 
     def toInteger(x: Any): Long = x match {
@@ -228,8 +228,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   }
 
   /**
-    * Make sure to load test before running tests.
-    */
+   * Make sure to load test before running tests.
+   */
   def loadTiSparkTestData(): Unit = {
     // Load index test data
     var queryString = resourceToString(
