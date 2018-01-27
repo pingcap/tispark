@@ -24,8 +24,11 @@ import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.apache.spark.sql.{SQLContext, SparkSession, TiContext}
 import Utils._
 import TestConstants._
+import org.apache.spark.internal.Logging
+import org.apache.spark.sql.catalyst.util.resourceToString
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
+import org.slf4j.Logger
 
 /**
  * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
@@ -34,6 +37,34 @@ import org.scalatest.concurrent.Eventually
  * `tidb_config.properties` must be provided in test resources folder
  */
 trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfterAll {
+  protected def spark: SparkSession = SharedSQLContext.spark
+
+  protected def ti: TiContext = SharedSQLContext.ti
+
+  protected def jdbc: SparkSession = SharedSQLContext.jdbc
+
+  protected def tidbConn: Connection = SharedSQLContext.tidbConn
+
+  protected def sql = spark.sql _
+
+  protected def jdbcUrl: String = SharedSQLContext.jdbcUrl
+
+  protected def tpchDBName: String = SharedSQLContext.tpchDBName
+
+  /**
+   * The [[TestSQLContext]] to use for all tests in this suite.
+   */
+  protected implicit def sqlContext: SQLContext = spark.sqlContext
+
+  override protected def beforeAll(): Unit = {
+    super.beforeAll()
+    SharedSQLContext.init()
+    spark.sparkContext.setLogLevel("WARN")
+  }
+}
+
+object SharedSQLContext extends Logging {
+  protected val logger: Logger = log
   protected val sparkConf = new SparkConf()
   private var _spark: SparkSession = _
   private var _ti: TiContext = _
@@ -42,6 +73,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   private var _sparkJDBC: SparkSession = _
   protected var jdbcUrl: String = _
   protected var tpchDBName: String = _
+
   protected lazy val sql = spark.sql _
 
   protected implicit def spark: SparkSession = _spark
@@ -53,8 +85,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected implicit def tidbConn: Connection = _tidbConnection
 
   /**
-   * The [[TestSQLContext]] to use for all tests in this suite.
-   */
+    * The [[TestSQLContext]] to use for all tests in this suite.
+    */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
   protected lazy val createSparkSession: SparkSession = {
@@ -62,14 +94,14 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   }
 
   /**
-   * Initialize the [[TestSparkSession]].  Generally, this is just called from
-   * beforeAll; however, in test using styles other than FunSuite, there is
-   * often code that relies on the session between test group constructs and
-   * the actual tests, which may need this session.  It is purely a semantic
-   * difference, but semantically, it makes more sense to call
-   * 'initializeSession' between a 'describe' and an 'it' call than it does to
-   * call 'beforeAll'.
-   */
+    * Initialize the [[TestSparkSession]].  Generally, this is just called from
+    * beforeAll; however, in test using styles other than FunSuite, there is
+    * often code that relies on the session between test group constructs and
+    * the actual tests, which may need this session.  It is purely a semantic
+    * difference, but semantically, it makes more sense to call
+    * 'initializeSession' between a 'describe' and an 'it' call than it does to
+    * call 'beforeAll'.
+    */
   protected def initializeSession(): Unit = {
     if (_spark == null) {
       _spark = createSparkSession
@@ -83,7 +115,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   }
 
   protected def initializeTiContext(): Unit = {
-    if (_spark != null) {
+    if (_spark != null && _ti == null) {
       _ti = new TiContext(_spark)
     }
   }
@@ -112,49 +144,61 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
       jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
         (if (useRawSparkMySql) "" else s":$jdbcPort") +
-        s"/$db?user=$jdbcUsername&password=$jdbcPassword"
-
-      logger.info("jdbcUrl: " + jdbcUrl)
+        s"/?user=$jdbcUsername&password=$jdbcPassword"
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+
+      logger.warn("Loading TiSparkTestData")
+      // Load index test data
+      var queryString = resourceToString(
+        s"tispark-test/IndexTest.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
+      tidbConn.createStatement().execute(queryString)
+      logger.warn("Loading IndexTest.sql successfully.")
+      // Load expression test data
+      queryString = resourceToString(
+        s"tispark-test/TiSparkTest.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
+      tidbConn.createStatement().execute(queryString)
+      logger.warn("Loading TiSparkTest.sql successfully.")
     }
   }
 
   private def initializeConf(): Unit = {
-    val confStream = Thread
-      .currentThread()
-      .getContextClassLoader
-      .getResourceAsStream("tidb_config.properties")
+    if (_tidbConf == null) {
+      val confStream = Thread
+        .currentThread()
+        .getContextClassLoader
+        .getResourceAsStream("tidb_config.properties")
 
-    val prop = new Properties()
-    prop.load(confStream)
-    _tidbConf = prop
-    tpchDBName = getOrThrow(prop, KeyTPCHDB)
+      val prop = new Properties()
+      prop.load(confStream)
+      tpchDBName = getOrThrow(prop, KeyTPCHDB)
 
-    import com.pingcap.tispark.TiConfigConst._
-    sparkConf.set(PD_ADDRESSES, getOrThrow(prop, PD_ADDRESSES))
-    sparkConf.set(ALLOW_INDEX_DOUBLE_READ, getOrElse(prop, ALLOW_INDEX_DOUBLE_READ, "true"))
+      import com.pingcap.tispark.TiConfigConst._
+      sparkConf.set(PD_ADDRESSES, getOrThrow(prop, PD_ADDRESSES))
+      sparkConf.set(ALLOW_INDEX_DOUBLE_READ, getOrElse(prop, ALLOW_INDEX_DOUBLE_READ, "true"))
+      _tidbConf = prop
+    }
   }
 
   /**
-   * Make sure the [[TestSparkSession]] is initialized before any tests are run.
-   */
-  protected override def beforeAll(): Unit = {
+    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
+    */
+  def init(): Unit = {
     initializeConf()
     initializeSession()
     initializeTiDB()
     initializeJDBC()
     initializeTiContext()
-
-    // Ensure we have initialized the context before calling parent code
-    super.beforeAll()
   }
 
   /**
-   * Stop the underlying resources, if any.
-   */
-  protected override def afterAll(): Unit = {
-    super.afterAll()
+    * Stop the underlying resources, if any.
+    */
+  def stop(): Unit = {
     if (_spark != null) {
       _spark.sessionState.catalog.reset()
       _spark.stop()

@@ -222,6 +222,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   def loadTestData(): Unit = {
     loadTiSparkTestData()
+    tidbConn.setCatalog("tispark_test")
     ti.tidbMapDatabase("tispark_test")
     createOrReplaceTempView("tispark_test", "full_data_type_table")
     createOrReplaceTempView("tispark_test", "full_data_type_table_idx")
@@ -231,26 +232,11 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
    * Make sure to load test before running tests.
    */
   def loadTiSparkTestData(): Unit = {
-    // Load index test data
-    var queryString = resourceToString(
-      s"tispark-test/IndexTest.sql",
-      classLoader = Thread.currentThread().getContextClassLoader
-    )
-    tidbConn.createStatement().execute(queryString)
-    logger.info("Loading IndexTest.sql successfully.")
-    // Load expression test data
-    queryString = resourceToString(
-      s"tispark-test/TiSparkTest.sql",
-      classLoader = Thread.currentThread().getContextClassLoader
-    )
-    tidbConn.createStatement().execute(queryString)
-    logger.info("Loading TiSparkTest.sql successfully.")
   }
 
   override def beforeAll(): Unit = {
     super.beforeAll()
     loadTestData()
-    setLogLevel("WARN")
   }
 
   def setLogLevel(level: String): Unit = {
