@@ -24,6 +24,7 @@ import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.apache.spark.sql.{SQLContext, SparkSession, TiContext}
 import Utils._
 import TestConstants._
+import com.mysql.jdbc.MySQLConnection
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.scalatest.BeforeAndAfterAll
@@ -147,7 +148,6 @@ object SharedSQLContext extends Logging {
         s"/?user=$jdbcUsername&password=$jdbcPassword"
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
-
       logger.warn("Loading TiSparkTestData")
       // Load index test data
       var queryString = resourceToString(

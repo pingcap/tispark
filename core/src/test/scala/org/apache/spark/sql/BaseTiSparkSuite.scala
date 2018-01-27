@@ -221,17 +221,10 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       .createOrReplaceTempView(s"$viewName$postfix")
 
   def loadTestData(): Unit = {
-    loadTiSparkTestData()
     tidbConn.setCatalog("tispark_test")
     ti.tidbMapDatabase("tispark_test")
     createOrReplaceTempView("tispark_test", "full_data_type_table")
     createOrReplaceTempView("tispark_test", "full_data_type_table_idx")
-  }
-
-  /**
-   * Make sure to load test before running tests.
-   */
-  def loadTiSparkTestData(): Unit = {
   }
 
   override def beforeAll(): Unit = {
