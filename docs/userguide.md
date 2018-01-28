@@ -245,7 +245,7 @@ Refer to [this document](../TiSparkR/README.md) for usage.
 
 ## Use TiSpark together with Hive
 TiSpark should be ok to use together with Hive. 
-You need to set environment variable HADOOP_CONF_DIR to your Hadoop's configuration folder before starting Spark and copy hive-site.xml to spark/conf folder.
+You need to set environment variable HADOOP_CONF_DIR to your Hadoop's configuration folder and copy hive-site.xml to spark/conf folder before starting Spark.
 ```
 val tisparkDF = spark.sql("select * from tispark_table").toDF
 tisparkDF.write.saveAsTable("hive_table") // save table to hive
