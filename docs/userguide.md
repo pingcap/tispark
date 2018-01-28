@@ -243,6 +243,15 @@ select count(*) from account;
 TiSparkR is a thin layer built for supporting R language with TiSpark
 Refer to [this document](../TiSparkR/README.md) for usage.
 
+## Use TiSpark together with Hive
+TiSpark should be ok to use together with Hive. 
+You need to set environment variable HADOOP_CONF_DIR to your Hadoop's configuration folder before starting Spark and copy hive-site.xml to spark/conf folder.
+```
+val tisparkDF = spark.sql("select * from tispark_table").toDF
+tisparkDF.write.saveAsTable("hive_table") // save table to hive
+spark.sql("select * from hive_table a, tispark_table b where a.col1 = b.col1").show // join table across Hive and Tispark
+```
+
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?
