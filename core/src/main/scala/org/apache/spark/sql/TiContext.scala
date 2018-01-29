@@ -89,10 +89,11 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
           val targetLeaders = peers
             .map(_("store_id").as[JsNumber].value.toLong)
             .filterNot(_ == leaderStoreId)
-            .filter( id =>
-              storeRegionCount.contains(id) &&
-              storeRegionCount(id) < storeRegionCount(leaderStoreId) &&
-              storeRegionCount(id) < avgRegionCount
+            .filter(
+              id =>
+                storeRegionCount.contains(id) &&
+                  storeRegionCount(id) < storeRegionCount(leaderStoreId) &&
+                  storeRegionCount(id) < avgRegionCount
             )
 
           if (targetLeaders.nonEmpty && transCount < maxTrans) {
