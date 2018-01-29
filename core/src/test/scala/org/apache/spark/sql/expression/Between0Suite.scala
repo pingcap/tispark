@@ -82,6 +82,15 @@ class Between0Suite extends BaseTiSparkSuite with SharedSQLContext {
   }
 
   test(
+    "select tp_real from full_data_type_table  where tp_real between 4.44 and 0.5194052764001038"
+  ) {
+    runTest(
+      "select tp_real from full_data_type_table  where tp_real between 4.44 and 0.5194052764001038",
+      "select tp_real from full_data_type_table_j  where tp_real between 4.44 and 0.5194052764001038"
+    )
+  }
+
+  test(
     "select tp_real from full_data_type_table  where tp_real between 0.5194052764001038 and 4.44"
   ) {
     runTest(
@@ -89,5 +98,4 @@ class Between0Suite extends BaseTiSparkSuite with SharedSQLContext {
       "select tp_real from full_data_type_table_j  where tp_real between 0.5194052764001038 and 4.44"
     )
   }
-
 }
