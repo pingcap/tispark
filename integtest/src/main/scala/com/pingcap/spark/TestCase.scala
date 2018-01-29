@@ -25,7 +25,7 @@ import java.util.Properties
 import com.pingcap.spark.Utils._
 import com.typesafe.scalalogging.slf4j.LazyLogging
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 class TestCase(val prop: Properties) extends LazyLogging {
 
@@ -87,6 +87,8 @@ class TestCase(val prop: Properties) extends LazyLogging {
 //    "line 1 column 13 near"
   )
 
+  private var resultList = new ListBuffer[(String, String)]()
+
   protected val compareOpList = List("=", "<", ">", "<=", ">=", "!=", "<>")
   protected val arithmeticOpList = List("+", "-", "*", "/", "%")
   protected val LEFT_TB_NAME = "A"
@@ -101,7 +103,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
     logger.info("Databases to dump: " + dbNames.mkString(","))
     logger.info("Run Mode: " + mode)
     logger.info("basePath: " + basePath)
-    logger.info("use these DataBases only: " + (if (dbAssigned) useDatabase.head else "None"))
+    logger.info("use these DataBases only: " + (if (dbAssigned) useDatabase.mkString(",") else "None"))
 
     mode match {
       case RunMode.Dump =>
@@ -137,6 +139,15 @@ class TestCase(val prop: Properties) extends LazyLogging {
             + "  Tests failed: " + testsFailed
             + "  Tests skipped: " + testsSkipped
         )
+        val failResult: List[(String, String)] = resultList.toList
+        if (failResult.isEmpty) {
+          logger.warn("Result: All Tests Passed")
+        } else {
+          failResult.foreach(f => {
+            logger.warn(s"Result: Test failed on ${f._1}")
+            logger.warn(s"Result: SQL failed: ${f._2}")
+          })
+        }
         jdbc.close()
         spark.close()
         spark_jdbc.close()
@@ -216,7 +227,7 @@ class TestCase(val prop: Properties) extends LazyLogging {
         }
       }
     } catch {
-      case e: Exception => logger.error("Unexpected error occured: " + e.getMessage)
+      case e: Exception => logger.error("Unexpected error occurred: " + e.getMessage)
     }
   }
 
@@ -239,9 +250,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
                         tiDb: List[List[Any]],
                         tiSpark: List[List[Any]]): Unit = {
     try {
-      logger.info(s"Dump diff for TiSpark $sqlName \n")
-      writeResult(sql, tiDb, sqlName + ".result.tidb")
       logger.info(s"Dump diff for TiDB $sqlName \n")
+      writeResult(sql, tiDb, sqlName + ".result.tidb")
+      logger.info(s"Dump diff for TiSpark $sqlName \n")
       writeResult(sql, tiSpark, sqlName + ".result.spark")
     } catch {
       case e: Exception => logger.error("Write file error:" + e.getMessage)
@@ -293,20 +304,32 @@ class TestCase(val prop: Properties) extends LazyLogging {
     )
   }
 
+  private def skip(): Unit = {
+    testsSkipped += 1
+    logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
+  }
+
+  private def fail(sqlName: String, sql: String): Unit = {
+    testsFailed += 1
+    resultList += ((sqlName, sql))
+    logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
+  }
+
   def testSparkAndSparkJDBC(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     spark_jdbc.init(dbName)
     spark.init(dbName)
 
     testCases.sortBy(_._1).foreach {
       case (file, sql) =>
-        logger.info(s"\nquery on Spark $file ")
+        logger.info(s"query on Spark JDBC $file ")
         val spark_jdbc = execSparkJDBC(sql)
         logger.info(s"query on TiSpark $file ")
         val spark = execSpark(sql)
         val result = compResult(spark_jdbc, spark)
         if (!result) {
-          testsFailed += 1
-          printDiffSparkJDBC(s"$dbName.$file", sql, spark_jdbc, spark)
+          val sqlName = s"$dbName.$file"
+          fail(sqlName, sql)
+          printDiffSparkJDBC(sqlName, sql, spark_jdbc, spark)
         }
         testsExecuted += 1
 
@@ -326,7 +349,9 @@ class TestCase(val prop: Properties) extends LazyLogging {
         val tidb = execTiDB(sql)
         val result = compResult(tidb, spark)
         if (!result) {
-          printDiff(s"$dbName.$file", sql, tidb, spark)
+          val sqlName = s"$dbName.$file"
+          fail(sqlName, sql)
+          printDiff(sqlName, sql, tidb, spark)
         }
         testsExecuted += 1
 
@@ -466,14 +491,17 @@ class TestCase(val prop: Properties) extends LazyLogging {
     if (isFalse) {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
-      } else {
-        logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
       }
       logger.warn(s"Spark-JDBC output: $spark_jdbc")
       logger.warn(s"Spark output: $spark")
       if (!skipped) {
-        if (checkSparkIgnore(spark) || checkSparkJDBCIgnore(spark_jdbc))
-          printDiffSparkJDBC(s"inlineTest$inlineSQLNumber", str, spark_jdbc, spark)
+        if (checkSparkIgnore(spark) || checkSparkJDBCIgnore(spark_jdbc)) {
+          skip()
+        } else {
+          val sqlName = s"inlineTest$inlineSQLNumber"
+          fail(sqlName, str)
+          printDiffSparkJDBC(sqlName, str, spark_jdbc, spark)
+        }
       } else {
         return false
       }
@@ -525,13 +553,13 @@ class TestCase(val prop: Properties) extends LazyLogging {
     if (isFalse) {
       if (skipped) {
         logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
-      } else {
-        logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
       }
       logger.warn(s"TiDB output: $tidb")
       logger.warn(s"Spark output: $spark")
       if (!skipped) {
-        printDiff(s"inlineTest$inlineSQLNumber", str, tidb, spark)
+        val sqlName = s"inlineTest$inlineSQLNumber"
+        fail(sqlName, str)
+        printDiff(sqlName, str, tidb, spark)
       } else {
         return false
       }
@@ -613,13 +641,12 @@ class TestCase(val prop: Properties) extends LazyLogging {
       logger.warn(s"Spark output: $spark")
       if (!skipped) {
         if (checkTiDBIgnore(tidb) || checkSparkIgnore(spark) || checkSparkJDBCIgnore(spark_jdbc)) {
-          testsSkipped += 1
-          logger.warn(s"Test SKIPPED. #$inlineSQLNumber\n")
+          skip()
         } else {
-          testsFailed += 1
-          printDiffSparkJDBC(s"inlineTest$inlineSQLNumber", str, spark_jdbc, spark)
-          printDiff(s"inlineTest$inlineSQLNumber", str, tidb, spark)
-          logger.warn(s"Test FAILED. #$inlineSQLNumber\n")
+          val sqlName = s"inlineTest$inlineSQLNumber"
+          fail(sqlName, str)
+          printDiffSparkJDBC(sqlName, str, spark_jdbc, spark)
+          printDiff(sqlName, str, tidb, spark)
         }
       } else {
         return false
@@ -645,12 +672,13 @@ class TestCase(val prop: Properties) extends LazyLogging {
     testsSkipped += myTest.testsSkipped
     testsFailed += myTest.testsFailed
     inlineSQLNumber = myTest.inlineSQLNumber
+    resultList ++= myTest.resultList
   }
 
   private def testInline(dbName: String, testCases: ArrayBuffer[(String, String)]): Unit = {
     if (dbName.equalsIgnoreCase("test_index")) {
       testAndCalc(new IssueTestCase(prop), dbName, testCases)
-      testAndCalc(new TestIndex(prop), dbName, testCases)
+      testAndCalc(new IndexTestCase(prop), dbName, testCases)
     } else if (dbName.equalsIgnoreCase("tispark_test")) {
       testAndCalc(new DAGTestCase(prop), dbName, testCases)
     } else {
