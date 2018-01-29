@@ -25,6 +25,7 @@ import org.apache.spark.internal.Logging
 import play.api.libs.json._
 
 import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scalaj.http.Http
 
