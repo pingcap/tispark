@@ -61,7 +61,10 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
     try {
       SharedSQLContext.init()
     } catch {
-      case _: Throwable => cancel("Initializing SQLContext failed, please check your TiDB cluster and Spark configuration")
+      case _: Throwable =>
+        cancel(
+          "Initializing SQLContext failed, please check your TiDB cluster and Spark configuration"
+        )
     }
     spark.sparkContext.setLogLevel("WARN")
   }

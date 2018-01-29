@@ -7,4 +7,4 @@ cache:
   directories:
   - $HOME/.m2
 
-script: mvn clean verify
+script: mvn clean install -Dmaven.test.skip=true
