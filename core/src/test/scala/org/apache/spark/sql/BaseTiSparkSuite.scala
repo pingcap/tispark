@@ -17,10 +17,10 @@
 
 package org.apache.spark.sql
 
-import java.sql.{Date, Timestamp}
+import java.sql.{Date, Statement, Timestamp}
 import java.text.SimpleDateFormat
 
-import org.apache.spark.sql.catalyst.util.resourceToString
+import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.{BinaryType, StructField}
 
@@ -30,6 +30,7 @@ import scala.collection.mutable.ArrayBuffer
 class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   private val eps = 1.0e-2
+  protected var tidbStmt: Statement = _
 
   private def toOutput(value: Any, colType: String): Any = value match {
     case _: Array[Byte] =>
@@ -71,9 +72,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   }
 
   def queryTiDB(query: String): List[List[Any]] = {
-    logger.info("Running query on TiDB: " + query)
-    val statement = tidbConn.createStatement()
-    val resultSet = statement.executeQuery(query)
+    val resultSet = tidbStmt.executeQuery(query)
     val rsMetaData = resultSet.getMetaData
     val retSet = ArrayBuffer.empty[List[Any]]
     val retSchema = ArrayBuffer.empty[String]
@@ -214,9 +213,9 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   def createOrReplaceTempView(dbName: String, viewName: String, postfix: String = "_j"): Unit =
     spark.read
       .format("jdbc")
-      .option("url", jdbcUrl)
-      .option("dbtable", s"$dbName.$viewName")
-      .option("driver", "com.mysql.jdbc.Driver")
+      .option(JDBCOptions.JDBC_URL, jdbcUrl)
+      .option(JDBCOptions.JDBC_TABLE_NAME, s"$dbName.$viewName")
+      .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
       .load()
       .createOrReplaceTempView(s"$viewName$postfix")
 
@@ -230,6 +229,13 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   override def beforeAll(): Unit = {
     super.beforeAll()
     loadTestData()
+    initializeTimeZone()
+  }
+
+  def initializeTimeZone(): Unit = {
+    tidbStmt = tidbConn.createStatement()
+    // Set default time zone to GMT+8
+    tidbStmt.execute("set time_zone = '+8:00'")
   }
 
   def setLogLevel(level: String): Unit = {
@@ -258,7 +264,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     if (!compResult(r1, r2, isOrdered)) {
       r3 = queryTiDB(qSpark)
       if (!compResult(r1, r3, isOrdered)) {
-        fail(s"Failed with \nTiSpark:\t\t$r1\nSpark With JDBC:$r2\nTiDB:\t\t$r3")
+        fail(s"Failed with \nTiSpark:\t\t$r1\nSpark With JDBC:$r2\nTiDB:\t\t\t$r3")
       }
     }
   }

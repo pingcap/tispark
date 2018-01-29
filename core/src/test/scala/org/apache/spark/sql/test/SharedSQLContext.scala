@@ -17,16 +17,15 @@
 
 package org.apache.spark.sql.test
 
-import java.sql.{Connection, DriverManager}
+import java.sql.{Connection, DriverManager, Statement}
 import java.util.Properties
 
-import org.apache.spark.{SparkConf, SparkFunSuite}
-import org.apache.spark.sql.{SQLContext, SparkSession, TiContext}
-import Utils._
-import TestConstants._
-import com.mysql.jdbc.MySQLConnection
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.resourceToString
+import org.apache.spark.sql.test.TestConstants._
+import org.apache.spark.sql.test.Utils._
+import org.apache.spark.sql.{SQLContext, SparkSession, TiContext}
+import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
@@ -71,6 +70,7 @@ object SharedSQLContext extends Logging {
   private var _ti: TiContext = _
   private var _tidbConf: Properties = _
   private var _tidbConnection: Connection = _
+  private var _statement: Statement = _
   private var _sparkJDBC: SparkSession = _
   protected var jdbcUrl: String = _
   protected var tpchDBName: String = _
@@ -85,9 +85,11 @@ object SharedSQLContext extends Logging {
 
   protected implicit def tidbConn: Connection = _tidbConnection
 
+  protected implicit def tidbStmt: Statement = _statement
+
   /**
-    * The [[TestSQLContext]] to use for all tests in this suite.
-    */
+   * The [[TestSQLContext]] to use for all tests in this suite.
+   */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
   protected lazy val createSparkSession: SparkSession = {
@@ -95,14 +97,14 @@ object SharedSQLContext extends Logging {
   }
 
   /**
-    * Initialize the [[TestSparkSession]].  Generally, this is just called from
-    * beforeAll; however, in test using styles other than FunSuite, there is
-    * often code that relies on the session between test group constructs and
-    * the actual tests, which may need this session.  It is purely a semantic
-    * difference, but semantically, it makes more sense to call
-    * 'initializeSession' between a 'describe' and an 'it' call than it does to
-    * call 'beforeAll'.
-    */
+   * Initialize the [[TestSparkSession]].  Generally, this is just called from
+   * beforeAll; however, in test using styles other than FunSuite, there is
+   * often code that relies on the session between test group constructs and
+   * the actual tests, which may need this session.  It is purely a semantic
+   * difference, but semantically, it makes more sense to call
+   * 'initializeSession' between a 'describe' and an 'it' call than it does to
+   * call 'beforeAll'.
+   */
   protected def initializeSession(): Unit = {
     if (_spark == null) {
       _spark = createSparkSession
@@ -148,20 +150,21 @@ object SharedSQLContext extends Logging {
         s"/?user=$jdbcUsername&password=$jdbcPassword"
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+      _statement = _tidbConnection.createStatement()
       logger.warn("Loading TiSparkTestData")
       // Load index test data
       var queryString = resourceToString(
         s"tispark-test/IndexTest.sql",
         classLoader = Thread.currentThread().getContextClassLoader
       )
-      tidbConn.createStatement().execute(queryString)
+      _statement.execute(queryString)
       logger.warn("Loading IndexTest.sql successfully.")
       // Load expression test data
       queryString = resourceToString(
         s"tispark-test/TiSparkTest.sql",
         classLoader = Thread.currentThread().getContextClassLoader
       )
-      tidbConn.createStatement().execute(queryString)
+      _statement.execute(queryString)
       logger.warn("Loading TiSparkTest.sql successfully.")
     }
   }
@@ -185,8 +188,8 @@ object SharedSQLContext extends Logging {
   }
 
   /**
-    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
-    */
+   * Make sure the [[TestSparkSession]] is initialized before any tests are run.
+   */
   def init(): Unit = {
     initializeConf()
     initializeSession()
@@ -196,8 +199,8 @@ object SharedSQLContext extends Logging {
   }
 
   /**
-    * Stop the underlying resources, if any.
-    */
+   * Stop the underlying resources, if any.
+   */
   def stop(): Unit = {
     if (_spark != null) {
       _spark.sessionState.catalog.reset()

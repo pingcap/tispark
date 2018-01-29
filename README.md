@@ -88,11 +88,11 @@ mvn clean package
 ```
 
 ## How to test
-We use docker to provide tidb cluster service which allow you can test across different platform. You have to install docker in order to test locally. CI is still under inverstigating and developing. A lot of work need to be done in our current integration test.
+We use [docker-compose](https://docs.docker.com/compose/) to provide tidb cluster service which allows you to run test across different platforms. It is recommended to install docker in order to test locally, or you can set up your own TiDB cluster locally as you wish.
 
-Suppose you already install docker, you can use `docker-compose up -d` to launch tidb cluster service. If you want to see tidb cluster's log you can launch via `docker-compose up`. You can use `docker-compose down` to shutdown entire tidb cluster service. All data are stored in `data` directory at the root level of this project. Feel free to change it, but I suggest you keep it as same becuase that is the default value.
+If you prefer the docker way, you can use `docker-compose up -d` to launch tidb cluster service under tispark home directory. If you want to see tidb cluster's log you can launch via `docker-compose up`. You can use `docker-compose down` to shutdown entire tidb cluster service. All data is stored in `data` directory at the root of this project. Feel free to change it.
 
-Before you do test, you need load data first. Last step is run `test_all.sh` under intergtest directory.
+Before you run tests, you need to load TPC-H data first. After that, run `mvn test` under tispark home directory.
 
 ## Follow us
 
