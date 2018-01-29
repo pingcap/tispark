@@ -23,7 +23,6 @@
             <artifactId>tikv-client</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
-<<<<<<< HEAD
         <!-- For tests -->
         <dependency>
             <groupId>org.scalatest</groupId>
@@ -31,12 +30,6 @@
             <version>${scalatest.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>5.1.18</version>
-            <scope>test</scope>
-=======
         <dependency>
             <groupId>org.scalaj</groupId>
             <artifactId>scalaj-http_${scala.version}</artifactId>
@@ -46,7 +39,12 @@
             <groupId>com.typesafe.play</groupId>
             <artifactId>play-json_${scala.version}</artifactId>
             <version>2.6.7</version>
->>>>>>> master
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.18</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
