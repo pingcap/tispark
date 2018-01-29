@@ -3,5 +3,8 @@ sudo: false
 language: java
 os:
   - linux
+cache:
+  directories:
+  - $HOME/.m2
 
 script: mvn clean verify
