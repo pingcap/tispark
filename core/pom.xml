@@ -22,12 +22,12 @@
         </dependency>
         <dependency>
             <groupId>org.scalaj</groupId>
-            <artifactId>scalaj-http_${scala.version}</artifactId>
+            <artifactId>scalaj-http_${scala.binary.version}</artifactId>
             <version>2.3.0</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.play</groupId>
-            <artifactId>play-json_${scala.version}</artifactId>
+            <artifactId>play-json_${scala.binary.version}</artifactId>
             <version>2.6.7</version>
         </dependency>
     </dependencies>
