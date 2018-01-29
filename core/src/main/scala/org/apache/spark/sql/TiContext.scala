@@ -15,13 +15,19 @@
 
 package org.apache.spark.sql
 
+import java.{lang, util}
+
 import com.pingcap.tikv.tools.RegionUtils
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
+import play.api.libs.json._
 
 import scala.collection.JavaConverters._
+import scala.collection.JavaConversions._
+import scala.collection.mutable
+import scalaj.http.Http
 
 class TiContext(val session: SparkSession) extends Serializable with Logging {
   val sqlContext: SQLContext = session.sqlContext
@@ -39,6 +45,82 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   class DebugTool {
     def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] = {
       RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
+    }
+
+    /**
+     * Balance region leaders of a single table.
+     *
+     * e.g.
+     * `balanceRegionByTable("http://172.16.20.3:2379", "tpch_idx", "lineitem", 20)`
+     * This method call will try to balance table `lineitem`'s leader distribution by
+     * transforming those leaders reside in a single heavily used TiKV to other TiKVs.
+     *
+     * @param pdAddr    The PD address
+     * @param dbName    Database name
+     * @param tableName Table name
+     * @param maxTrans  Maximum number of transformations this function can perform
+     * @return The re-distributed information of original table
+     */
+    def balanceRegionByTable(pdAddr: String,
+                             dbName: String,
+                             tableName: String,
+                             maxTrans: Int = 50): Map[String, Integer] = {
+      val regionIDPrefix = "pd/api/v1/region/id"
+      val operatorsPrefix = "pd/api/v1/operators"
+      val storeRegionId = RegionUtils.getStoreRegionIdDistribution(tiSession, dbName, tableName)
+      val storeRegionCount = mutable.Map[Long, Long]()
+
+      storeRegionId.asScala.foreach((tuple: (lang.Long, java.util.List[lang.Long])) => {
+        storeRegionCount(tuple._1) = tuple._2.size()
+      })
+
+      val avgRegionCount = storeRegionCount.values.sum / storeRegionCount.size
+
+      var transCount = 0
+      storeRegionId.asScala
+        .flatMap(_._2)
+        .foreach((regionId: lang.Long) => {
+          val resStr = Http(s"$pdAddr/$regionIDPrefix/$regionId").asString
+          val json: JsValue = Json.parse(resStr.body)
+          val leader = json("leader").as[JsObject]
+          val peers = json("peers").as[JsArray].value
+          val leaderStoreId = leader("store_id").as[JsNumber].value.toLong
+
+          val targetLeaders = peers
+            .map(_("store_id").as[JsNumber].value.toLong)
+            .filterNot(_ == leaderStoreId)
+            .filter( id =>
+              storeRegionCount.contains(id) &&
+              storeRegionCount(id) < storeRegionCount(leaderStoreId) &&
+              storeRegionCount(id) < avgRegionCount
+            )
+
+          if (targetLeaders.nonEmpty && transCount < maxTrans) {
+            val toStore = targetLeaders.minBy(storeRegionCount(_))
+            val req = Json.obj(
+              "name" -> "transfer-leader",
+              "region_id" -> JsNumber(BigDecimal(regionId)),
+              "to_store_id" -> JsNumber(BigDecimal(toStore))
+            )
+            val resp = Http(s"$pdAddr/$operatorsPrefix")
+              .postData(req.toString())
+              .header("content-type", "application/json")
+              .asString
+            if (resp.isSuccess) {
+              logInfo(
+                s"Transfer $regionId leader :Store $leaderStoreId to Store $toStore successfully"
+              )
+              storeRegionCount(leaderStoreId) -= 1
+              storeRegionCount(toStore) += 1
+            } else {
+              logError(
+                s"Transfer $regionId leader :Store $leaderStoreId to Store $toStore failed -- ${resp.body}"
+              )
+            }
+            transCount += 1
+          }
+        })
+      getRegionDistribution(dbName, tableName)
     }
   }
 

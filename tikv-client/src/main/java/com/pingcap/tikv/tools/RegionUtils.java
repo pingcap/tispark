@@ -16,21 +16,44 @@
 package com.pingcap.tikv.tools;
 
 
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.predicates.ScanAnalyzer;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Objects.requireNonNull;
+
 public class RegionUtils {
   static public Map<String, Integer>
   getRegionDistribution(TiSession session, String databaseName, String tableName) {
+    List<RegionTask> tasks = getRegionTasks(session, databaseName, tableName);
+    Map<String, Integer> regionMap = new HashMap<>();
+    for (RegionTask task : tasks) {
+      regionMap.merge(task.getHost() + "_" + task.getStore().getId(), 1, Integer::sum);
+    }
+    return regionMap;
+  }
+
+  static public Map<Long, List<Long>>
+  getStoreRegionIdDistribution(TiSession session, String databaseName, String tableName) {
+    List<RegionTask> tasks = getRegionTasks(session, databaseName, tableName);
+    Map<Long, List<Long>> storeMap = new HashMap<>();
+    for (RegionTask task : tasks) {
+      long regionId = task.getRegion().getId();
+      long storeId = task.getStore().getId();
+      storeMap.putIfAbsent(storeId, new ArrayList<>());
+      storeMap.get(storeId).add(regionId);
+    }
+    return storeMap;
+  }
+
+  private static List<RegionTask> getRegionTasks(TiSession session, String databaseName, String tableName) {
     requireNonNull(session, "session is null");
     requireNonNull(databaseName, "databaseName is null");
     requireNonNull(tableName, "tableName is null");
@@ -38,13 +61,8 @@ public class RegionUtils {
     requireNonNull(table, String.format("Table not found %s.%s", databaseName, tableName));
     ScanAnalyzer builder = new ScanAnalyzer();
     ScanAnalyzer.ScanPlan scanPlan = builder.buildScan(ImmutableList.of(), table);
-    List<RegionTask> tasks = RangeSplitter
+    return RangeSplitter
         .newSplitter(session.getRegionManager())
         .splitRangeByRegion(scanPlan.getKeyRanges());
-    Map<String, Integer> regionMap = new HashMap<>();
-    for (RegionTask task : tasks) {
-      regionMap.merge(task.getHost() + "_" + task.getStore().getId(), 1, Integer::sum);
-    }
-    return regionMap;
   }
 }
