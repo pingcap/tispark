@@ -45,15 +45,9 @@ hs_err_pid*
 
 # ignore gradle
 .gradle
-*.spark
-*.tidb
-*.jdbc
-*.testSql
 
 metastore_db/
-tpch
 .java-version
-/integtest/conf/tispark_config.properties
 
 # ignore tikv-client proto files
 tikv-client/kvproto
@@ -63,5 +57,8 @@ tikv-client/proto
 # ignore tikv-client bazel build
 tikv-client/bazel-*
 
-integtest/logs
+# ignore docker-TiDB cluster data
 data
+
+# ignore test properties
+core/src/test/resources/tidb_config.properties
