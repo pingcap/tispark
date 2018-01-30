@@ -61,9 +61,10 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
     try {
       SharedSQLContext.init()
     } catch {
-      case _: Throwable =>
-        cancel(
-          "Initializing SQLContext failed, please check your TiDB cluster and Spark configuration"
+      case e: Throwable =>
+        fail(
+          "Failed to initialize SQLContext, please check your TiDB cluster and Spark configuration",
+          e
         )
     }
     spark.sparkContext.setLogLevel("WARN")
@@ -136,21 +137,21 @@ object SharedSQLContext extends Logging {
 
       val jdbcUsername =
         if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlUser)
-        else getOrThrow(_tidbConf, KeyTiDBUser)
+        else getOrElse(_tidbConf, KeyTiDBUser, "root")
 
       val jdbcHostname =
         if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlAddress)
-        else getOrThrow(_tidbConf, KeyTiDBAddress)
+        else getOrElse(_tidbConf, KeyTiDBAddress, "127.0.0.1")
 
       val jdbcPort =
         if (useRawSparkMySql) 0
-        else Integer.parseInt(getOrThrow(_tidbConf, KeyTiDBPort))
+        else Integer.parseInt(getOrElse(_tidbConf, KeyTiDBPort, "4000"))
 
       val jdbcPassword =
         if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlPassword)
         else ""
 
-      val db = getOrThrow(_tidbConf, KeyTestDB)
+      val loadData = getOrElse(_tidbConf, KeyShouldLoadData, "true").toBoolean
 
       jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
         (if (useRawSparkMySql) "" else s":$jdbcPort") +
@@ -158,21 +159,30 @@ object SharedSQLContext extends Logging {
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
       _statement = _tidbConnection.createStatement()
-      logger.warn("Loading TiSparkTestData")
-      // Load index test data
-      var queryString = resourceToString(
-        s"tispark-test/IndexTest.sql",
-        classLoader = Thread.currentThread().getContextClassLoader
-      )
-      _statement.execute(queryString)
-      logger.warn("Loading IndexTest.sql successfully.")
-      // Load expression test data
-      queryString = resourceToString(
-        s"tispark-test/TiSparkTest.sql",
-        classLoader = Thread.currentThread().getContextClassLoader
-      )
-      _statement.execute(queryString)
-      logger.warn("Loading TiSparkTest.sql successfully.")
+
+      if (loadData) {
+        logger.warn("Loading TiSparkTestData")
+        // Load index test data
+        var queryString = resourceToString(
+          s"tispark-test/IndexTest.sql",
+          classLoader = Thread.currentThread().getContextClassLoader
+        )
+        _statement.execute(queryString)
+        logger.warn("Loading IndexTest.sql successfully.")
+        // Load expression test data
+        queryString = resourceToString(
+          s"tispark-test/TiSparkTest.sql",
+          classLoader = Thread.currentThread().getContextClassLoader
+        )
+        _statement.execute(queryString)
+        logger.warn("Loading TiSparkTest.sql successfully.")
+        // Load tpch test data
+        queryString = resourceToString(
+          s"tispark-test/TPCHData.sql",
+          classLoader = Thread.currentThread().getContextClassLoader
+        )
+        _statement.execute(queryString)
+      }
     }
   }
 
@@ -184,11 +194,13 @@ object SharedSQLContext extends Logging {
         .getResourceAsStream("tidb_config.properties")
 
       val prop = new Properties()
-      prop.load(confStream)
-      tpchDBName = getOrThrow(prop, KeyTPCHDB)
+      if (confStream != null) {
+        prop.load(confStream)
+      }
 
+      tpchDBName = getOrElse(prop, KeyTPCHDB, "tpch_test")
       import com.pingcap.tispark.TiConfigConst._
-      sparkConf.set(PD_ADDRESSES, getOrThrow(prop, PD_ADDRESSES))
+      sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_DOUBLE_READ, getOrElse(prop, ALLOW_INDEX_DOUBLE_READ, "true"))
       _tidbConf = prop
     }

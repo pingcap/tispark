@@ -27,4 +27,5 @@ object TestConstants {
   val KeyMysqlAddress = "mysql.addr"
   val KeyMysqlUser = "mysql.user"
   val KeyMysqlPassword = "mysql.password"
+  val KeyShouldLoadData = "test.data.load"
 }
