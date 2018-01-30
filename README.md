@@ -84,8 +84,9 @@ Read the [Quick Start](./docs/userguide.md).
 ## How to build
 To build all TiSpark modules :
 ```
-mvn clean package
+mvn clean install -Dmaven.test.skip=true
 ```
+Remember to skip integration tests if you don't have a suitable test environment.
 
 ## How to test
 We use [docker-compose](https://docs.docker.com/compose/) to provide tidb cluster service which allows you to run test across different platforms. It is recommended to install docker in order to test locally, or you can set up your own TiDB cluster locally as you wish.
