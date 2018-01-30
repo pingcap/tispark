@@ -15,7 +15,7 @@
 
 package org.apache.spark.sql
 
-import java.{lang, util}
+import java.lang
 
 import com.pingcap.tikv.tools.RegionUtils
 import com.pingcap.tikv.{TiConfiguration, TiSession}
