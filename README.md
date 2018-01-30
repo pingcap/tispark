@@ -92,7 +92,7 @@ We use [docker-compose](https://docs.docker.com/compose/) to provide tidb cluste
 
 If you prefer the docker way, you can use `docker-compose up -d` to launch tidb cluster service under tispark home directory. If you want to see tidb cluster's log you can launch via `docker-compose up`. You can use `docker-compose down` to shutdown entire tidb cluster service. All data is stored in `data` directory at the root of this project. Feel free to change it.
 
-Before you run tests, you need to load TPC-H data first. After that, run `mvn test` under tispark home directory.
+You can read more about test [here](./core/src/test/Readme.md).
 
 ## Follow us
 
