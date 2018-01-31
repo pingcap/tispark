@@ -174,7 +174,6 @@ object SharedSQLContext extends Logging {
       _statement = _tidbConnection.createStatement()
 
       if (loadData) {
-        _statement.execute("CREATE DATABASE  IF NOT EXISTS `tispark_test`")
         logger.warn("Loading TiSparkTestData")
         // Load index test data
         var queryString = resourceToString(
