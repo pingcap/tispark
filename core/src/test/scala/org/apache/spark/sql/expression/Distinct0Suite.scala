@@ -43,6 +43,13 @@ class Distinct0Suite extends BaseTiSparkSuite with SharedSQLContext {
     )
   }
 
+  test("select  count(distinct(tp_date))  from full_data_type_table") {
+    runTest(
+      "select  count(distinct(tp_date))  from full_data_type_table",
+      "select  count(distinct(tp_date))  from full_data_type_table_j"
+    )
+  }
+
   test("select  distinct(tp_tinyint)  from full_data_type_table  order by tp_tinyint ") {
     runTest(
       "select  distinct(tp_tinyint)  from full_data_type_table  order by tp_tinyint ",
@@ -82,6 +89,13 @@ class Distinct0Suite extends BaseTiSparkSuite with SharedSQLContext {
     runTest(
       "select  distinct(tp_datetime)  from full_data_type_table  order by tp_datetime ",
       "select  distinct(tp_datetime)  from full_data_type_table_j  order by tp_datetime "
+    )
+  }
+
+  test("select  count(distinct(tp_datetime))  from full_data_type_table") {
+    runTest(
+      "select  count(distinct(tp_datetime))  from full_data_type_table",
+      "select  count(distinct(tp_datetime))  from full_data_type_table_j"
     )
   }
 

@@ -100,7 +100,6 @@ class ArithmeticAgg0Suite extends BaseTiSparkSuite with SharedSQLContext {
   }
 
   test("select avg(tp_bigint) from full_data_type_table") {
-    cancel("This version of TiKV has some issue, skipping this test")
     runTest(
       "select avg(tp_bigint) from full_data_type_table",
       "select avg(tp_bigint) from full_data_type_table_j"
@@ -108,7 +107,6 @@ class ArithmeticAgg0Suite extends BaseTiSparkSuite with SharedSQLContext {
   }
 
   test("select sum(tp_bigint) from full_data_type_table") {
-    cancel("This version of TiKV has some issue, skipping this test")
     runTest(
       "select sum(tp_bigint) from full_data_type_table",
       "select sum(tp_bigint) from full_data_type_table_j"

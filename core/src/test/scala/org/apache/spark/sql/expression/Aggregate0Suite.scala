@@ -22,16 +22,6 @@ import org.apache.spark.sql.test.SharedSQLContext
 
 class Aggregate0Suite extends BaseTiSparkSuite with SharedSQLContext {
 
-  test(
-    "select tp_mediumtext from full_data_type_table  group by (tp_mediumtext)  order by tp_mediumtext "
-  ) {
-    cancel("Text decoding logic is not appropriate, skipping")
-    runTest(
-      "select tp_mediumtext from full_data_type_table  group by (tp_mediumtext)  order by tp_mediumtext ",
-      "select tp_mediumtext from full_data_type_table_j  group by (tp_mediumtext)  order by tp_mediumtext "
-    )
-  }
-
   test("select tp_double from full_data_type_table  group by (tp_double)  order by tp_double ") {
     runTest(
       "select tp_double from full_data_type_table  group by (tp_double)  order by tp_double ",
@@ -71,14 +61,6 @@ class Aggregate0Suite extends BaseTiSparkSuite with SharedSQLContext {
     )
   }
 
-  test("select tp_text from full_data_type_table  group by (tp_text)  order by tp_text ") {
-    cancel("Text decoding logic is not appropriate, skipping")
-    runTest(
-      "select tp_text from full_data_type_table  group by (tp_text)  order by tp_text ",
-      "select tp_text from full_data_type_table_j  group by (tp_text)  order by tp_text "
-    )
-  }
-
   test("select tp_blob from full_data_type_table  group by (tp_blob)  order by tp_blob ") {
     runTest(
       "select tp_blob from full_data_type_table  group by (tp_blob)  order by tp_blob ",
@@ -113,16 +95,6 @@ class Aggregate0Suite extends BaseTiSparkSuite with SharedSQLContext {
     runTest(
       "select tp_tinyint from full_data_type_table  group by (tp_tinyint)  order by tp_tinyint ",
       "select tp_tinyint from full_data_type_table_j  group by (tp_tinyint)  order by tp_tinyint "
-    )
-  }
-
-  test(
-    "select tp_tinytext from full_data_type_table  group by (tp_tinytext)  order by tp_tinytext "
-  ) {
-    cancel("Text decoding logic is not appropriate, skipping")
-    runTest(
-      "select tp_tinytext from full_data_type_table  group by (tp_tinytext)  order by tp_tinytext ",
-      "select tp_tinytext from full_data_type_table_j  group by (tp_tinytext)  order by tp_tinytext "
     )
   }
 
@@ -167,16 +139,6 @@ class Aggregate0Suite extends BaseTiSparkSuite with SharedSQLContext {
     runTest(
       "select tp_char from full_data_type_table  group by (tp_char)  order by tp_char ",
       "select tp_char from full_data_type_table_j  group by (tp_char)  order by tp_char "
-    )
-  }
-
-  test(
-    "select tp_longtext from full_data_type_table  group by (tp_longtext)  order by tp_longtext "
-  ) {
-    cancel("Text decoding logic is not appropriate, skipping")
-    runTest(
-      "select tp_longtext from full_data_type_table  group by (tp_longtext)  order by tp_longtext ",
-      "select tp_longtext from full_data_type_table_j  group by (tp_longtext)  order by tp_longtext "
     )
   }
 

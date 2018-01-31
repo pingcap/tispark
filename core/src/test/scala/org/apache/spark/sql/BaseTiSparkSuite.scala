@@ -235,7 +235,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   def initializeTimeZone(): Unit = {
     tidbStmt = tidbConn.createStatement()
     // Set default time zone to GMT+8
-    tidbStmt.execute("set time_zone = '+8:00'")
+    tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
   def setLogLevel(level: String): Unit = {
@@ -256,16 +256,26 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     try {
       r2 = querySpark(qJDBC)
     } catch {
-      case _: Throwable => // JDBC failed
+      case e: Throwable =>
+        logger.warn(s"Spark with JDBC failed when executing:$qJDBC", e) // JDBC failed
     }
 
     val isOrdered = qSpark.contains(" order by ")
 
     if (!compResult(r1, r2, isOrdered)) {
-      r3 = queryTiDB(qSpark)
+      try {
+        r3 = queryTiDB(qSpark)
+      } catch {
+        case e: Throwable => logger.warn(s"TiDB failed when executing:$qSpark", e) // TiDB failed
+      }
       if (!compResult(r1, r3, isOrdered)) {
-        fail(s"Failed with \nTiSpark:\t\t$r1\nSpark With JDBC:$r2\nTiDB:\t\t\t$r3")
+        fail(
+          s"Failed with \nTiSpark:\t\t${mkString(r1)}\nSpark With JDBC:${mkString(r2)}\nTiDB:\t\t\t${mkString(r3)}"
+        )
       }
     }
   }
+
+  private def mkString(result: List[List[Any]]): String =
+    if (result == null) "null" else result.mkString(",")
 }

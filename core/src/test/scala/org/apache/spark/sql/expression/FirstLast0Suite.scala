@@ -77,15 +77,6 @@ class FirstLast0Suite extends BaseTiSparkSuite with SharedSQLContext {
   }
 
   test(
-    "select last(tp_date) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar "
-  ) {
-    runTest(
-      "select last(tp_date) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
-      "select last(tp_date) from full_data_type_table_j  group by (tp_nvarchar)   order by tp_nvarchar "
-    )
-  }
-
-  test(
     "select last(tp_varchar) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar "
   ) {
     runTest(
@@ -370,15 +361,6 @@ class FirstLast0Suite extends BaseTiSparkSuite with SharedSQLContext {
     runTest(
       "select first(tp_timestamp) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
       "select first(tp_timestamp) from full_data_type_table_j  group by (tp_nvarchar)   order by tp_nvarchar "
-    )
-  }
-
-  test(
-    "select last(tp_timestamp) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar "
-  ) {
-    runTest(
-      "select last(tp_timestamp) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
-      "select last(tp_timestamp) from full_data_type_table_j  group by (tp_nvarchar)   order by tp_nvarchar "
     )
   }
 

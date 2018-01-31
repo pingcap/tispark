@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql.test
 
+import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.{SparkSession, TiSparkSession}
 import org.apache.spark.sql.internal.{SQLConf, SessionState}

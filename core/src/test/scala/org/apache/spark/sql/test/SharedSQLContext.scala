@@ -18,7 +18,7 @@
 package org.apache.spark.sql.test
 
 import java.sql.{Connection, DriverManager, Statement}
-import java.util.Properties
+import java.util.{Locale, Properties, TimeZone}
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.resourceToString
@@ -26,6 +26,7 @@ import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
 import org.apache.spark.sql.{SQLContext, SparkSession, TiContext}
 import org.apache.spark.{SparkConf, SparkFunSuite}
+import org.joda.time.DateTimeZone
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
@@ -51,6 +52,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def tpchDBName: String = SharedSQLContext.tpchDBName
 
+  protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
+
   /**
    * The [[TestSQLContext]] to use for all tests in this suite.
    */
@@ -72,6 +75,16 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 }
 
 object SharedSQLContext extends Logging {
+  private val timeZoneOffset = "+0:00"
+  // Timezone is fixed to Asia/Shanghai for those timezone sensitive tests (timestamp_*, date_*, etc)
+  private val timeZone = TimeZone.getTimeZone(s"GMT$timeZoneOffset")
+  // JDK time zone
+  TimeZone.setDefault(timeZone)
+  // Joda time zone
+  DateTimeZone.setDefault(DateTimeZone.forTimeZone(timeZone))
+  // Add Locale setting
+  Locale.setDefault(Locale.CHINA)
+
   protected val logger: Logger = log
   protected val sparkConf = new SparkConf()
   private var _spark: SparkSession = _
@@ -182,6 +195,7 @@ object SharedSQLContext extends Logging {
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
+        logger.warn("Loading TPCHData.sql successfully.")
       }
     }
   }

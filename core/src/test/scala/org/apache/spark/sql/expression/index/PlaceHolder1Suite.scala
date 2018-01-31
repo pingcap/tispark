@@ -1000,13 +1000,6 @@ class PlaceHolder1Suite extends BaseTiSparkSuite with SharedSQLContext {
     )
   }
 
-  test("select tp_timestamp from full_data_type_table_idx  where tp_timestamp <= 'PingCAP'") {
-    runTest(
-      "select tp_timestamp from full_data_type_table_idx  where tp_timestamp <= 'PingCAP'",
-      "select tp_timestamp from full_data_type_table_idx_j  where tp_timestamp <= 'PingCAP'"
-    )
-  }
-
   test("select tp_timestamp from full_data_type_table_idx  where tp_timestamp <= '2017-11-02'") {
     runTest(
       "select tp_timestamp from full_data_type_table_idx  where tp_timestamp <= '2017-11-02'",

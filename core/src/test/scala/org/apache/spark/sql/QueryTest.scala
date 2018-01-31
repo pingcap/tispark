@@ -29,11 +29,6 @@ abstract class QueryTest extends PlanTest {
 
   protected def spark: SparkSession
 
-  // Timezone is fixed to America/Los_Angeles for those timezone sensitive tests (timestamp_*)
-  TimeZone.setDefault(TimeZone.getTimeZone("Asia/Shanghai"))
-  // Add Locale setting
-  Locale.setDefault(Locale.CHINA)
-
   /**
    * Runs the plan and makes sure the answer contains all of the keywords.
    */
