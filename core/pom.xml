@@ -186,14 +186,6 @@
                     <locale>zh_CN</locale>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.12.4</version>
-                <configuration>
-                    <skipTests>true</skipTests>
-                </configuration>
-            </plugin>
             <!-- Assembly Plug-in -->
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
