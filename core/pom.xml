@@ -120,7 +120,7 @@
                     </execution>
                     <execution>
                         <id>test data fetch</id>
-                        <phase>initialize</phase>
+                        <phase>test-compile</phase>
                         <configuration>
                             <executable>${basedir}/scripts/fetch-test-data.sh</executable>
                         </configuration>
