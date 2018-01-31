@@ -356,15 +356,6 @@ class FirstLast0Suite extends BaseTiSparkSuite with SharedSQLContext {
   }
 
   test(
-    "select first(tp_timestamp) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar "
-  ) {
-    runTest(
-      "select first(tp_timestamp) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
-      "select first(tp_timestamp) from full_data_type_table_j  group by (tp_nvarchar)   order by tp_nvarchar "
-    )
-  }
-
-  test(
     "select first(tp_tinyint) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar "
   ) {
     runTest(
