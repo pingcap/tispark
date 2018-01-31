@@ -17,17 +17,134 @@
 
 package org.apache.spark.sql
 
-import java.util.{Locale, TimeZone}
+import java.sql.{Date, Timestamp}
+import java.text.SimpleDateFormat
+import java.util.TimeZone
 
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
+import org.apache.spark.sql.types.{BinaryType, StructField}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
 
 abstract class QueryTest extends PlanTest {
 
   protected def spark: SparkSession
+
+  private val eps = 1.0e-2
+
+  /**
+   * Compare whether lhs equals to rhs
+   *
+   * @param isOrdered whether the input data `lhs` and `rhs` are sorted
+   * @return true if results are the same
+   */
+  protected def compResult(lhs: List[List[Any]],
+                           rhs: List[List[Any]],
+                           isOrdered: Boolean = true): Boolean = {
+    def toDouble(x: Any): Double = x match {
+      case d: Double               => d
+      case d: Float                => d.toDouble
+      case d: java.math.BigDecimal => d.doubleValue()
+      case d: BigDecimal           => d.bigDecimal.doubleValue()
+      case d: Number               => d.doubleValue()
+      case _                       => 0.0
+    }
+
+    def toInteger(x: Any): Long = x match {
+      case d: BigInt => d.bigInteger.longValue()
+      case d: Number => d.longValue()
+    }
+
+    def toString(value: Any): String = {
+      new SimpleDateFormat("yy-MM-dd HH:mm:ss").format(value)
+    }
+
+    def compValue(lhs: Any, rhs: Any): Boolean = {
+      if (lhs == rhs || lhs.toString == rhs.toString) {
+        true
+      } else
+        lhs match {
+          case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
+            val l = toDouble(lhs)
+            val r = toDouble(rhs)
+            Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
+          case _: Number | _: BigInt | _: java.math.BigInteger =>
+            toInteger(lhs) == toInteger(rhs)
+          case _: Timestamp =>
+            toString(lhs) == toString(rhs)
+          case _ =>
+            false
+        }
+    }
+
+    def compRow(lhs: List[Any], rhs: List[Any]): Boolean = {
+      if (lhs == null && rhs == null) {
+        true
+      } else if (lhs == null || rhs == null) {
+        false
+      } else {
+        !lhs.zipWithIndex.exists {
+          case (value, i) => !compValue(value, rhs(i))
+        }
+      }
+    }
+
+    def comp(lhs: List[List[Any]], rhs: List[List[Any]]): Boolean = {
+      !lhs.zipWithIndex.exists {
+        case (row, i) => !compRow(row, rhs(i))
+      }
+    }
+
+    try {
+      if (!isOrdered) {
+        comp(
+          lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
+          rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
+        )
+      } else {
+        comp(lhs, rhs)
+      }
+    } catch {
+      // TODO:Remove this temporary exception handling
+      //      case _:RuntimeException => false
+      case _: Throwable => false
+    }
+  }
+
+  protected def toOutput(value: Any, colType: String): Any = value match {
+    case _: Array[Byte] =>
+      var str: String = new String
+      for (b <- value.asInstanceOf[Array[Byte]]) {
+        str = str.concat(b.toString)
+      }
+      str
+    case _: BigDecimal =>
+      value.asInstanceOf[BigDecimal].setScale(2, BigDecimal.RoundingMode.HALF_UP)
+    case _: Date if colType.equalsIgnoreCase("YEAR") =>
+      value.toString.split("-")(0)
+    case default =>
+      default
+  }
+
+  protected def dfData(df: DataFrame, schema: scala.Array[StructField]): List[List[Any]] =
+    df.collect()
+      .map(row => {
+        val rowRes = ArrayBuffer.empty[Any]
+        for (i <- 0 until row.length) {
+          if (row.get(i) == null) {
+            rowRes += null
+          } else if (schema(i).dataType.isInstanceOf[BinaryType]) {
+            rowRes += new String(row.get(i).asInstanceOf[Array[Byte]])
+          } else {
+            rowRes += toOutput(row.get(i), schema(i).dataType.typeName)
+          }
+        }
+        rowRes.toList
+      })
+      .toList
 
   /**
    * Runs the plan and makes sure the answer contains all of the keywords.

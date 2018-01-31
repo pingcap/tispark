@@ -42,9 +42,11 @@ class ArithmeticTest2Suite extends BaseTiSparkSuite {
   private val addCases = divideCases map { _.replace("/", "+") }
   private val allCases = addCases ++ minusCases ++ multiCases ++ divideCases
 
-  allCases foreach { query => {
-    test(query) {
-      runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+  allCases foreach { query =>
+    {
+      test(query) {
+        runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+      }
     }
-  }}
+  }
 }

@@ -20,24 +20,18 @@ package org.apache.spark.sql.expression
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.test.SharedSQLContext
 
-class Having0Suite extends BaseTiSparkSuite with SharedSQLContext {
-
-  test(
-    "select tp_int%1000 a, count(*) from full_data_type_table group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a"
-  ) {
-    runTest(
-      "select tp_int%1000 a, count(*) from full_data_type_table group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a",
-      "select tp_int%1000 a, count(*) from full_data_type_table_j group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a"
-    )
-  }
-
-  test(
+class Having0Suite extends BaseTiSparkSuite {
+  private val allCases = Seq[String](
+    "select tp_int%1000 a, count(*) from full_data_type_table group by (tp_int%1000) having sum(tp_int%1000) > 100 order by a",
     "select tp_bigint%1000 a, count(*) from full_data_type_table group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a"
-  ) {
-    runTest(
-      "select tp_bigint%1000 a, count(*) from full_data_type_table group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a",
-      "select tp_bigint%1000 a, count(*) from full_data_type_table_j group by (tp_bigint%1000) having sum(tp_bigint%1000) < 100 order by a"
-    )
+  )
+
+  allCases foreach { query =>
+    {
+      test(query) {
+        runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+      }
+    }
   }
 
 }

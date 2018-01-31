@@ -25,9 +25,11 @@ class OtherTestSuite extends BaseTiSparkSuite {
     "select id_dt from full_data_type_table where tp_date is not null"
   )
 
-  cases foreach { query => {
-    test(query) {
-      runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+  cases foreach { query =>
+    {
+      test(query) {
+        runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+      }
     }
-  }}
+  }
 }

@@ -148,29 +148,19 @@ object SharedSQLContext extends Logging {
     if (_tidbConnection == null) {
       val useRawSparkMySql: Boolean = Utils.getFlag(_tidbConf, KeyUseRawSparkMySql)
 
-      val jdbcUsername =
-        if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlUser)
-        else getOrElse(_tidbConf, KeyTiDBUser, "root")
+      val jdbcUsername = getOrElse(_tidbConf, KeyTiDBUser, "root")
 
-      val jdbcHostname =
-        if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlAddress)
-        else getOrElse(_tidbConf, KeyTiDBAddress, "127.0.0.1")
+      val jdbcHostname = getOrElse(_tidbConf, KeyTiDBAddress, "127.0.0.1")
 
-      val jdbcPort =
-        if (useRawSparkMySql) 0
-        else Integer.parseInt(getOrElse(_tidbConf, KeyTiDBPort, "4000"))
-
-      val jdbcPassword =
-        if (useRawSparkMySql) getOrThrow(_tidbConf, KeyMysqlPassword)
-        else ""
+      val jdbcPort = Integer.parseInt(getOrElse(_tidbConf, KeyTiDBPort, "4000"))
 
       val loadData = getOrElse(_tidbConf, KeyShouldLoadData, "true").toBoolean
 
       jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
         (if (useRawSparkMySql) "" else s":$jdbcPort") +
-        s"/?user=$jdbcUsername&password=$jdbcPassword"
+        s"/?user=$jdbcUsername"
 
-      _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+      _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, "")
       _statement = _tidbConnection.createStatement()
 
       if (loadData) {
