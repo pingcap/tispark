@@ -23,6 +23,5 @@ object TestConstants {
   val KeyTiDBUser = "tidb.user"
   val KeyTestDB = "test.db"
   val KeyTPCHDB = "tpch.db"
-  val KeyUseRawSparkMySql = "spark.use_raw_mysql"
   val KeyShouldLoadData = "test.data.load"
 }
