@@ -18,6 +18,7 @@
 package org.apache.spark.sql.expression
 
 import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.test.SharedSQLContext
 
 class FirstLast0Suite extends BaseTiSparkSuite {
   private val allCases = Seq[String](
@@ -59,8 +60,6 @@ class FirstLast0Suite extends BaseTiSparkSuite {
     "select first(tp_decimal) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
     "select first(tp_varchar) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
     "select last(tp_nvarchar) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
-    "select first(tp_timestamp) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
-    "select last(tp_timestamp) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
     "select first(tp_tinyint) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
     "select first(tp_int) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
     "select first(tp_real) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
