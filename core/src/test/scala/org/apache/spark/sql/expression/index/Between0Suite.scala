@@ -35,7 +35,9 @@ class Between0Suite extends BaseTiSparkSuite {
   allCases foreach { query =>
     {
       test(query) {
-        if (query.equals("select tp_real from full_data_type_table_idx  where tp_real between 4.44 and 0.5194052764001038 order by id_dt")) cancel("This case is pending to be solved in other PRs")
+        if (query.equals(
+              "select tp_real from full_data_type_table_idx  where tp_real between 4.44 and 0.5194052764001038 order by id_dt"
+            )) cancel("This case is pending to be solved in other PRs")
         runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
       }
     }

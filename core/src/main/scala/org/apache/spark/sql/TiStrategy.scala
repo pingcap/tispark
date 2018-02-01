@@ -142,6 +142,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         dagRequest
           .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
 
+      case f @ RewriteSum(BasicExpression(arg)) =>
+        dagRequest
+          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
+
       case f @ Count(args) if args.length == 1 =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
         dagRequest.addAggregate(
@@ -450,9 +454,23 @@ object TiAggregation {
   type ReturnType = PhysicalAggregation.ReturnType
 
   def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
-    case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
+    case PhysicalAggregation(
+        groupingExpressions,
+        originAggregateExpressions,
+        resultExpressions,
+        child
+        ) =>
       // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
       // converted `Sum`s and `Count`s down to TiKV.
+      val sumRewriteMap = originAggregateExpressions.map {
+        case a @ AggregateExpression(Sum(ref), mode, isDistinct, _) =>
+          a.resultAttribute -> AggregateExpression(RewriteSum(ref), mode, isDistinct)
+      }.toMap
+
+      val aggregateExpressions = originAggregateExpressions.map {
+        case a @ AggregateExpression(_, _, _, _) => sumRewriteMap.getOrElse(a.resultAttribute, a)
+      }
+
       val (averages, averagesEliminated) = aggregateExpressions.partition {
         case AggregateExpression(_: Average, _, _, _) => true
         case _                                        => false
@@ -460,7 +478,7 @@ object TiAggregation {
 
       // An auxiliary map that maps result attribute IDs of all detected `Average`s to corresponding
       // converted `Sum`s and `Count`s.
-      val rewriteMap = averages.map {
+      val avgRewriteMap = averages.map {
         case a @ AggregateExpression(Average(ref), _, _, _) =>
           a.resultAttribute -> Seq(
             a.copy(aggregateFunction = Sum(ref), resultId = newExprId),
@@ -468,7 +486,11 @@ object TiAggregation {
           )
       }.toMap
 
-      val rewrite: PartialFunction[Expression, Expression] = rewriteMap.map {
+      val sumRewrite: PartialFunction[Expression, Expression] = sumRewriteMap.map {
+        case (ref, sum) => (ref: Expression) -> sum
+      }
+
+      val avgRewrite: PartialFunction[Expression, Expression] = avgRewriteMap.map {
         case (ref, Seq(sum, count)) =>
           val castedSum = Cast(sum.resultAttribute, DoubleType)
           val castedCount = Cast(count.resultAttribute, DoubleType)
@@ -477,11 +499,12 @@ object TiAggregation {
       }
 
       val rewrittenResultExpressions = resultExpressions
-        .map { _ transform rewrite }
+        .map { _ transform avgRewrite }
+        .map { _ transform sumRewrite }
         .map { case e: NamedExpression => e }
 
       val rewrittenAggregateExpressions = {
-        val extraSumsAndCounts = rewriteMap.values.reduceOption { _ ++ _ } getOrElse Nil
+        val extraSumsAndCounts = avgRewriteMap.values.reduceOption { _ ++ _ } getOrElse Nil
         (averagesEliminated ++ extraSumsAndCounts).distinct
       }
 

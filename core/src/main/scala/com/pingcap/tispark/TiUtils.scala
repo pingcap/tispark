@@ -45,7 +45,7 @@ object TiUtils {
                            tiDBRelation: TiDBRelation,
                            blacklist: ExpressionBlacklist): Boolean = {
     aggExpr.aggregateFunction match {
-      case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
+      case Average(_) | Sum(_) | RewriteSum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blacklist))
