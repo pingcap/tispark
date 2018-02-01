@@ -18,7 +18,6 @@
 package org.apache.spark.sql.expression
 
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.test.SharedSQLContext
 
 class ArithmeticAgg0Suite extends BaseTiSparkSuite {
   private val allCases = Seq[String](
@@ -111,7 +110,8 @@ class ArithmeticAgg0Suite extends BaseTiSparkSuite {
   allCases foreach { query =>
     {
       test(query) {
-        if (query.equals("select avg(tp_bigint) from full_data_type_table")) cancel("Average on bigint is pending to be fixed")
+        if (query.equals("select avg(tp_bigint) from full_data_type_table"))
+          cancel("Average on bigint is pending to be fixed")
         runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
       }
     }

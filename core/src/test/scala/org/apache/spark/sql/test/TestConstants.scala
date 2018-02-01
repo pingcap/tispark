@@ -18,10 +18,10 @@
 package org.apache.spark.sql.test
 
 object TestConstants {
-  val KeyTiDBAddress = "tidb.addr"
-  val KeyTiDBPort = "tidb.port"
-  val KeyTiDBUser = "tidb.user"
-  val KeyTestDB = "test.db"
-  val KeyTPCHDB = "tpch.db"
-  val KeyShouldLoadData = "test.data.load"
+  val TiDB_ADDRESS = "tidb.addr"
+  val TiDB_PORT = "tidb.port"
+  val TiDB_USER = "tidb.user"
+  val TPCH_DB_NAME = "tpch.db"
+  val SHOULD_LOAD_DATA = "test.data.load"
+  val SHOULD_SKIP_TEST = "test.skip"
 }

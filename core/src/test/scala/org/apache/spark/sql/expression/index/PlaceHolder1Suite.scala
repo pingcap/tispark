@@ -18,11 +18,10 @@
 package org.apache.spark.sql.expression.index
 
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.test.SharedSQLContext
 
 class PlaceHolder1Suite extends BaseTiSparkSuite {
   private val allCases = Seq[String](
-         "select tp_decimal from full_data_type_table_idx  where tp_decimal > -128",
+    "select tp_decimal from full_data_type_table_idx  where tp_decimal > -128",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal > 0",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal > 2147868.65536",
     "select tp_tinyint from full_data_type_table_idx  where tp_tinyint <= null",
@@ -515,12 +514,15 @@ class PlaceHolder1Suite extends BaseTiSparkSuite {
     "select tp_real from full_data_type_table_idx  where tp_real != 127",
     "select tp_real from full_data_type_table_idx  where tp_real != -128",
     "select tp_real from full_data_type_table_idx  where tp_real != 0",
-    "select tp_real from full_data_type_table_idx  where tp_real != 2147868.65536")
+    "select tp_real from full_data_type_table_idx  where tp_real != 2147868.65536"
+  )
 
-  allCases foreach { query => {
-    test(query) {
-      runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+  allCases foreach { query =>
+    {
+      test(query) {
+        runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+      }
     }
-  }}
-         
+  }
+
 }

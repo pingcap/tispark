@@ -84,6 +84,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    setLogLevel("WARN")
     loadTestData()
     initializeTimeZone()
   }

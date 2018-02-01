@@ -18,11 +18,10 @@
 package org.apache.spark.sql.expression.index
 
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.test.SharedSQLContext
 
 class Special0Suite extends BaseTiSparkSuite {
   private val allCases = Seq[String](
-         "select * from full_data_type_table_idx where tp_date = date(date '2017-10-30')",
+    "select * from full_data_type_table_idx where tp_date = date(date '2017-10-30')",
     "select * from full_data_type_table_idx where tp_date = date(date '2017-11-02')",
     "select * from full_data_type_table_idx where tp_date < date(date '2017-10-30')",
     "select * from full_data_type_table_idx where tp_date < date(date '2017-11-02')",
@@ -77,12 +76,15 @@ class Special0Suite extends BaseTiSparkSuite {
     "select * from full_data_type_table_idx where tp_timestamp != timestamp(timestamp '2017-09-07 11:11:11')",
     "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-11-02 00:00:00')",
     "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-11-02 08:47:43')",
-    "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-09-07 11:11:11')")
+    "select * from full_data_type_table_idx where tp_timestamp <> timestamp(timestamp '2017-09-07 11:11:11')"
+  )
 
-  allCases foreach { query => {
-    test(query) {
-      runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+  allCases foreach { query =>
+    {
+      test(query) {
+        runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+      }
     }
-  }}
-         
+  }
+
 }

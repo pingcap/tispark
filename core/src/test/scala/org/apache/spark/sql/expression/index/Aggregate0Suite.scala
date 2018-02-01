@@ -18,11 +18,10 @@
 package org.apache.spark.sql.expression.index
 
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.test.SharedSQLContext
 
 class Aggregate0Suite extends BaseTiSparkSuite {
   private val allCases = Seq[String](
-         "select tp_mediumint from full_data_type_table_idx  group by (tp_mediumint)  order by tp_mediumint ",
+    "select tp_mediumint from full_data_type_table_idx  group by (tp_mediumint)  order by tp_mediumint ",
     "select tp_float from full_data_type_table_idx  group by (tp_float)  order by tp_float ",
     "select tp_tinyint from full_data_type_table_idx  group by (tp_tinyint)  order by tp_tinyint ",
     "select tp_varchar from full_data_type_table_idx  group by (tp_varchar)  order by tp_varchar ",
@@ -37,12 +36,15 @@ class Aggregate0Suite extends BaseTiSparkSuite {
     "select tp_decimal from full_data_type_table_idx  group by (tp_decimal)  order by tp_decimal ",
     "select id_dt from full_data_type_table_idx  group by (id_dt)  order by id_dt ",
     "select tp_char from full_data_type_table_idx  group by (tp_char)  order by tp_char ",
-    "select tp_date from full_data_type_table_idx  group by (tp_date)  order by tp_date ")
+    "select tp_date from full_data_type_table_idx  group by (tp_date)  order by tp_date "
+  )
 
-  allCases foreach { query => {
-    test(query) {
-      runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+  allCases foreach { query =>
+    {
+      test(query) {
+        runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+      }
     }
-  }}
-         
+  }
+
 }

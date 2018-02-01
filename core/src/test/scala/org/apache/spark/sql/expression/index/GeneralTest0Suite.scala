@@ -18,20 +18,22 @@
 package org.apache.spark.sql.expression.index
 
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.test.SharedSQLContext
 
 class GeneralTest0Suite extends BaseTiSparkSuite {
   private val allCases = Seq[String](
-         "select tp_date from full_data_type_table_idx where DATE(tp_date) = date '2008-02-05'",
+    "select tp_date from full_data_type_table_idx where DATE(tp_date) = date '2008-02-05'",
     "select tp_date from full_data_type_table_idx where DATE(tp_date) > date '2008-02-05'",
     "select tp_date from full_data_type_table_idx where DATE(tp_date) >= date '2008-02-05'",
     "select tp_date from full_data_type_table_idx where DATE(tp_date) < date '2008-02-05'",
-    "select tp_date from full_data_type_table_idx where DATE(tp_date) <= date '2008-02-05'")
+    "select tp_date from full_data_type_table_idx where DATE(tp_date) <= date '2008-02-05'"
+  )
 
-  allCases foreach { query => {
-    test(query) {
-      runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+  allCases foreach { query =>
+    {
+      test(query) {
+        runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+      }
     }
-  }}
-         
+  }
+
 }

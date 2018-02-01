@@ -18,11 +18,10 @@
 package org.apache.spark.sql.expression.index
 
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.test.SharedSQLContext
 
 class Join0Suite extends BaseTiSparkSuite {
   private val allCases = Seq[String](
-         "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_decimal = b.tp_decimal order by a.tp_decimal",
+    "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_decimal = b.tp_decimal order by a.tp_decimal",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.id_dt = b.id_dt order by a.id_dt",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_double = b.tp_double order by a.tp_double",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_real = b.tp_real order by a.tp_real",
@@ -34,12 +33,15 @@ class Join0Suite extends BaseTiSparkSuite {
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_int = b.tp_int order by a.tp_int",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_tinyint = b.tp_tinyint order by a.tp_tinyint",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_date = b.tp_date order by a.tp_date",
-    "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_timestamp = b.tp_timestamp order by a.tp_timestamp")
+    "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_timestamp = b.tp_timestamp order by a.tp_timestamp"
+  )
 
-  allCases foreach { query => {
-    test(query) {
-      runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+  allCases foreach { query =>
+    {
+      test(query) {
+        runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+      }
     }
-  }}
-         
+  }
+
 }

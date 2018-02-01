@@ -70,7 +70,6 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
           e
         )
     }
-    spark.sparkContext.setLogLevel("WARN")
   }
 }
 
@@ -146,19 +145,15 @@ object SharedSQLContext extends Logging {
 
   private def initializeTiDB(): Unit = {
     if (_tidbConnection == null) {
-      val useRawSparkMySql: Boolean = Utils.getFlag(_tidbConf, KeyUseRawSparkMySql)
+      val jdbcUsername = getOrElse(_tidbConf, TiDB_USER, "root")
 
-      val jdbcUsername = getOrElse(_tidbConf, KeyTiDBUser, "root")
+      val jdbcHostname = getOrElse(_tidbConf, TiDB_ADDRESS, "127.0.0.1")
 
-      val jdbcHostname = getOrElse(_tidbConf, KeyTiDBAddress, "127.0.0.1")
+      val jdbcPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
 
-      val jdbcPort = Integer.parseInt(getOrElse(_tidbConf, KeyTiDBPort, "4000"))
+      val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toBoolean
 
-      val loadData = getOrElse(_tidbConf, KeyShouldLoadData, "true").toBoolean
-
-      jdbcUrl = s"jdbc:mysql://$jdbcHostname" +
-        (if (useRawSparkMySql) "" else s":$jdbcPort") +
-        s"/?user=$jdbcUsername"
+      jdbcUrl = s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername"
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, "")
       _statement = _tidbConnection.createStatement()
@@ -202,7 +197,7 @@ object SharedSQLContext extends Logging {
         prop.load(confStream)
       }
 
-      tpchDBName = getOrElse(prop, KeyTPCHDB, "tpch_test")
+      tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_DOUBLE_READ, getOrElse(prop, ALLOW_INDEX_DOUBLE_READ, "true"))

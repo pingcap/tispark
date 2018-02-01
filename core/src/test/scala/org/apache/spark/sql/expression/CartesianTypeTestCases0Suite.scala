@@ -18,7 +18,6 @@
 package org.apache.spark.sql.expression
 
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.test.SharedSQLContext
 
 class CartesianTypeTestCases0Suite extends BaseTiSparkSuite {
   private val allCases = Seq[String](
