@@ -20,7 +20,7 @@ package org.apache.spark.sql.expression
 import org.apache.spark.sql.BaseTiSparkSuite
 
 class Count0Suite extends BaseTiSparkSuite {
-  private val allCases = Seq[String](
+  private val countCases = Seq[String](
     "select count(tp_int) from full_data_type_table ",
     "select count(tp_date) from full_data_type_table ",
     "select count(tp_tinytext) from full_data_type_table ",
@@ -44,6 +44,9 @@ class Count0Suite extends BaseTiSparkSuite {
     "select count(tp_real) from full_data_type_table ",
     "select count(tp_bigint) from full_data_type_table "
   )
+
+  // count(distinct_*) cases
+  private val allCases = countCases.map { _.replace(")", "))").replace("count", "count(distinct") } ++ countCases
 
   allCases foreach { query =>
     {

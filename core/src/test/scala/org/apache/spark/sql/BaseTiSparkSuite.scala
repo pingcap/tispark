@@ -95,9 +95,22 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
+  override def refreshConnections(): Unit = {
+    super.refreshConnections()
+    loadTestData()
+    initializeTimeZone()
+  }
+
   def setLogLevel(level: String): Unit = {
     spark.sparkContext.setLogLevel(level)
   }
+
+  def execDBTSAndJudge(str: String, skipped: Boolean = false): Boolean =
+    try {
+      compResult(querySpark(str), queryTiDB(str))
+    } catch {
+      case e: Throwable => fail(e)
+    }
 
   def runTest(qSpark: String, qJDBC: String): Unit = {
     var r1: List[List[Any]] = null

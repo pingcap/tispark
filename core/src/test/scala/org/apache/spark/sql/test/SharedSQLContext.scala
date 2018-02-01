@@ -54,6 +54,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
+  protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
+
   /**
    * The [[TestSQLContext]] to use for all tests in this suite.
    */
@@ -112,8 +114,11 @@ object SharedSQLContext extends Logging {
    */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
-  protected lazy val createSparkSession: SparkSession = {
-    new TestSparkSession(sparkConf)
+  protected var _sparkSession: SparkSession = _
+
+  def refreshConnections(): Unit = {
+    stop()
+    init()
   }
 
   /**
@@ -127,13 +132,13 @@ object SharedSQLContext extends Logging {
    */
   protected def initializeSession(): Unit = {
     if (_spark == null) {
-      _spark = createSparkSession
+      _spark = _sparkSession
     }
   }
 
   private def initializeJDBC(): Unit = {
     if (_sparkJDBC == null) {
-      _sparkJDBC = createSparkSession
+      _sparkJDBC = _sparkSession
     }
   }
 
@@ -202,6 +207,7 @@ object SharedSQLContext extends Logging {
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_DOUBLE_READ, getOrElse(prop, ALLOW_INDEX_DOUBLE_READ, "true"))
       _tidbConf = prop
+      _sparkSession = new TestSparkSession(sparkConf)
     }
   }
 
@@ -234,6 +240,16 @@ object SharedSQLContext extends Logging {
 
     if (_tidbConnection != null) {
       _tidbConnection.close()
+      _tidbConnection = null
+    }
+
+    if (_ti != null) {
+      _ti.tiSession.close()
+      _ti = null
+    }
+
+    if (_tidbConf != null) {
+      _tidbConf = null
     }
   }
 }
