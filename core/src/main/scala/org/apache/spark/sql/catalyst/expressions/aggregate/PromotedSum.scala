@@ -21,8 +21,10 @@ import org.apache.spark.sql.catalyst.util.TypeUtils
 import org.apache.spark.sql.types._
 
 @ExpressionDescription(
-  usage = "_FUNC_(expr) - Returns the sum calculated from values of a group.")
-case class RewriteSum(child: Expression) extends DeclarativeAggregate {
+  usage =
+    "_FUNC_(expr) - Returns the sum calculated from values of a group. Result type is promoted to double/decimal."
+)
+case class PromotedSum(child: Expression) extends DeclarativeAggregate {
 
   override def children: Seq[Expression] = child :: Nil
 
