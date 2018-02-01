@@ -14,6 +14,12 @@
     <name>TiSpark Project Core</name>
     <url>http://github.copm/pingcap/tispark</url>
 
+    <properties>
+        <scalatest.version>3.0.4</scalatest.version>
+        <scalaj.version>2.3.0</scalaj.version>
+        <mysql.connector.version>5.1.18</mysql.connector.version>
+        <play.version>2.6.8</play.version>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>com.pingcap.tikv</groupId>
@@ -23,12 +29,25 @@
         <dependency>
             <groupId>org.scalaj</groupId>
             <artifactId>scalaj-http_${scala.binary.version}</artifactId>
-            <version>2.3.0</version>
+            <version>${scalaj.version}</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.play</groupId>
             <artifactId>play-json_${scala.binary.version}</artifactId>
-            <version>2.6.7</version>
+            <version>${play.version}</version>
+        </dependency>
+        <!-- For tests -->
+        <dependency>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_${scala.binary.version}</artifactId>
+            <version>${scalatest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>${mysql.connector.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -95,6 +114,16 @@
                             <executable>${basedir}/scripts/version.sh</executable>
                         </configuration>
                         <phase>validate</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>test data fetch</id>
+                        <phase>validate</phase>
+                        <configuration>
+                            <executable>${basedir}/scripts/fetch-test-data.sh</executable>
+                        </configuration>
                         <goals>
                             <goal>exec</goal>
                         </goals>
@@ -187,6 +216,32 @@
                         <phase>validate</phase>
                         <goals>
                             <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.scalatest</groupId>
+                <artifactId>scalatest-maven-plugin</artifactId>
+                <version>1.0</version>
+                <configuration>
+                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                    <junitxml>.</junitxml>
+                    <filereports>WDF TestSuite.txt</filereports>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <goals>
+                            <goal>test</goal>
                         </goals>
                     </execution>
                 </executions>
