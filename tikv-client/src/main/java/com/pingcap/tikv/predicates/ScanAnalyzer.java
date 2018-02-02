@@ -81,8 +81,7 @@ public class ScanAnalyzer {
 
   // Build scan plan picking access path with lowest cost by estimation
   public ScanPlan buildScan(List<Expression> conditions, TiTableInfo table) {
-    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    ScanPlan minPlan = buildScan(conditions, pkIndex, table);
+    ScanPlan minPlan = buildTableScan(conditions, table);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
       ScanPlan plan = buildScan(conditions, index, table);
@@ -114,7 +113,11 @@ public class ScanAnalyzer {
     if (index == null || index.isFakePrimaryKey()) {
       keyRanges = buildTableScanKeyRange(table, irs);
     } else {
-      keyRanges = buildIndexScanKeyRange(table, index, irs);
+      boolean isDoubleRead = !isCoveringIndex(table.getColumns(), index, table.isPkHandle());
+      if (isDoubleRead) {
+        cost *= 2;
+      }
+      keyRanges = buildIndexScanKeyRange(table, index, irs, isDoubleRead);
     }
 
     return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost);
@@ -179,7 +182,7 @@ public class ScanAnalyzer {
 
   @VisibleForTesting
   List<KeyRange> buildIndexScanKeyRange(
-      TiTableInfo table, TiIndexInfo index, List<IndexRange> indexRanges) {
+      TiTableInfo table, TiIndexInfo index, List<IndexRange> indexRanges, boolean isDoubleRead) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(index, "Index cannot be null to encoding keyRange");
     requireNonNull(index, "indexRanges cannot be null to encoding keyRange");
