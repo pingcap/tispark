@@ -27,9 +27,11 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
+import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.types.DataType;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -94,8 +96,7 @@ public class ScanAnalyzer {
 
   public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    ScanPlan plan = buildScan(conditions, pkIndex, table);
-    return plan;
+    return buildScan(conditions, pkIndex, table);
   }
 
   public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
@@ -234,6 +235,30 @@ public class ScanAnalyzer {
       ranges.add(makeCoprocRange(Key.MIN.toByteString(), Key.MAX.toByteString()));
     }
     return ranges;
+  }
+
+  private boolean isCoveringIndex(List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
+    for (TiColumnInfo colInfo: columns) {
+      if (pkIsHandle && colInfo.isPrimaryKey()) {
+        continue;
+      }
+      if (colInfo.getId() == -1) {
+        continue;
+      }
+      boolean isIndexColumn = false;
+      for (TiIndexColumn indexCol: indexColumns.getIndexColumns()) {
+        boolean isFullLength = indexCol.getLength() == DataType.UNSPECIFIED_LEN ||
+            indexCol.getLength() == colInfo.getType().getLength();
+        if (colInfo.getName().equalsIgnoreCase(indexCol.getName()) && isFullLength) {
+          isIndexColumn = true;
+          break;
+        }
+      }
+      if (!isIndexColumn) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @VisibleForTesting
