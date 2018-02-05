@@ -29,6 +29,7 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.predicates.ScanAnalyzer;
 import com.pingcap.tikv.row.Row;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -52,7 +53,7 @@ public class IndexScanExample {
     dagRequest.setTableInfo(table);
     dagRequest.setStartTs(session.getTimestamp().getVersion());
     columns.forEach(c -> c.resolve(table));
-    columns.forEach(c -> dagRequest.addRequiredColumn(c));
+    columns.forEach(dagRequest::addRequiredColumn);
 
     TiIndexInfo selectedIndex = null;
     for (TiIndexInfo index : table.getIndices()) {
@@ -63,7 +64,7 @@ public class IndexScanExample {
     }
     Objects.requireNonNull(selectedIndex, "Provided Index Name " + indexName + " does not exist.");
     ScanAnalyzer builder = new ScanAnalyzer();
-    ScanAnalyzer.ScanPlan scanPlan = builder.buildScan(filters, selectedIndex, table);
+    ScanAnalyzer.ScanPlan scanPlan = builder.buildScan(columns, filters, selectedIndex, table);
     dagRequest.addRanges(scanPlan.getKeyRanges());
     dagRequest.setIndexInfo(scanPlan.getIndex());
     Iterator<Row> iter = snapshot.tableRead(dagRequest);

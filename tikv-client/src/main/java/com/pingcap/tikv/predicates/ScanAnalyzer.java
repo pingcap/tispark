@@ -17,6 +17,7 @@ package com.pingcap.tikv.predicates;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ColumnRef;
@@ -85,7 +86,7 @@ public class ScanAnalyzer {
     ScanPlan minPlan = buildTableScan(conditions, table);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildScan(conditions, index, table);
+      ScanPlan plan = buildScan(projections, conditions, index, table);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -96,10 +97,10 @@ public class ScanAnalyzer {
 
   public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildScan(conditions, pkIndex, table);
+    return buildScan(ImmutableList.of(), conditions, pkIndex, table);
   }
 
-  public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
+  public ScanPlan buildScan(List<ColumnRef> projections, List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 

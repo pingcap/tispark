@@ -30,7 +30,6 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.*;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -121,7 +120,7 @@ public class ScanAnalyzerTest {
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
-    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs);
+    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, true);
 
     assertEquals(keyRanges.size(), 1);
 
@@ -135,7 +134,7 @@ public class ScanAnalyzerTest {
 
     irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
 
-    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs);
+    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, true);
 
     assertEquals(keyRanges.size(), 1);
 
@@ -227,7 +226,7 @@ public class ScanAnalyzerTest {
     TiTableInfo table = createTableWithPrefix();
     TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanAnalyzer scanBuilder = new ScanAnalyzer();
-    ScanAnalyzer.ScanPlan scanPlan = scanBuilder.buildScan(new ArrayList<>(), index, table);
+    ScanAnalyzer.ScanPlan scanPlan = scanBuilder.buildScan(ImmutableList.of(), ImmutableList.of(), index, table);
 
     ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
     ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();
