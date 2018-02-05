@@ -61,7 +61,7 @@ public class RegionUtils {
     TiTableInfo table = session.getCatalog().getTable(databaseName, tableName);
     requireNonNull(table, String.format("Table not found %s.%s", databaseName, tableName));
     ScanAnalyzer builder = new ScanAnalyzer();
-    ScanAnalyzer.ScanPlan scanPlan = builder.buildScan(ImmutableList.of(), table);
+    ScanAnalyzer.ScanPlan scanPlan = builder.buildScan(ImmutableList.of(), ImmutableList.of(), table);
     return RangeSplitter
         .newSplitter(session.getRegionManager())
         .splitRangeByRegion(scanPlan.getKeyRanges());

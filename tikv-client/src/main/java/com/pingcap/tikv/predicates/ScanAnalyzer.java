@@ -19,6 +19,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
@@ -80,7 +81,7 @@ public class ScanAnalyzer {
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildScan(List<Expression> conditions, TiTableInfo table) {
+  public ScanPlan buildScan(List<ColumnRef> projections, List<Expression> conditions, TiTableInfo table) {
     ScanPlan minPlan = buildTableScan(conditions, table);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {

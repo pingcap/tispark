@@ -48,6 +48,7 @@ import scala.collection.JavaConverters._
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf: SQLConf = context.conf
   type TiExpression = com.pingcap.tikv.expression.Expression
+  type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
 
   private def blacklist: ExpressionBlacklist = {
     val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
@@ -184,11 +185,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def referencedTiColumns(expression: TiExpression): Seq[ColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
-  private def filterToDAGRequest(
-    filters: Seq[Expression],
-    source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
+  private def filterToDAGRequest(projectList: Seq[NamedExpression],
+                                 filters: Seq[Expression],
+                                 source: TiDBRelation,
+                                 dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
+    val tiProjects: Seq[TiColumnRef] = projectList.map { _.toAttribute.name }.map { ColumnRef.create }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
     val tableScanPlan =
@@ -196,7 +198,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val scanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
-      scanBuilder.buildScan(tiFilters.asJava, source.table)
+      scanBuilder.buildScan(tiProjects.asJava, tiFilters.asJava, source.table)
     } else {
       tableScanPlan
     }
@@ -281,7 +283,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val residualFilter: Option[Expression] =
       residualFilters.reduceLeftOption(catalyst.expressions.And)
 
-    filterToDAGRequest(pushdownFilters, source, dagRequest)
+    filterToDAGRequest(projectList, pushdownFilters, source, dagRequest)
 
     // Right now we still use a projection even if the only evaluation is applying an alias
     // to a column.  Since this is a no-op, it could be avoided. However, using this
@@ -352,7 +354,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
 
-    val projectionTiRefs = projects
+    val projectionTiRefs: Seq[TiColumnRef] = projects
       .map { _.toAttribute.name }
       .map { ColumnRef.create }
 
@@ -436,7 +438,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           resultExpressions,
           TiAggregationProjection(filters, _, `source`, projects)
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
-        val dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
+        val dagReq: TiDAGRequest = filterToDAGRequest(projects, filters, source)
         groupAggregateProjection(
           filters,
           groupingExpressions,
