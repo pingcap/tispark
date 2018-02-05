@@ -17,8 +17,13 @@
 
 package com.pingcap.tikv.types;
 
+import com.google.common.collect.ImmutableMap;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.util.Map;
 
 public class StringType extends BytesType {
   public static final StringType VARCHAR = new StringType(MySQLType.TypeVarchar);
@@ -30,12 +35,34 @@ public class StringType extends BytesType {
       MySQLType.TypeString
   };
 
+  private Charset charset;
+
+  /**
+   * @see com.mysql.jdbc.CharsetMapping
+   */
+  private static final Map<String, Charset> charsetMap = ImmutableMap.<String, Charset>builder()
+      .put("latin1", Charset.forName("ISO8859_1"))
+      .put("utf8", Charset.forName("UTF-8"))
+      .put("utf8mb4", Charset.forName("UTF-8"))
+      .put("ascii", Charset.forName("ASCII"))
+      .put("binary", Charset.forName("ISO8859_1"))
+      .build();
+
+  private void mapCharset() {
+    this.charset = charsetMap.get(getCharset());
+    if (charset == null) {
+      throw new TiClientInternalException("Unsupported charset:" + getCharset());
+    }
+  }
+
   protected StringType(MySQLType tp) {
     super(tp);
+    mapCharset();
   }
 
   protected StringType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
+    mapCharset();
   }
 
   /**
@@ -43,6 +70,7 @@ public class StringType extends BytesType {
    */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    return new String((byte[])super.decodeNotNull(flag, cdi));
+    byte[] rawByte = (byte[])super.decodeNotNull(flag, cdi);
+    return new String(rawByte, charset);
   }
 }
