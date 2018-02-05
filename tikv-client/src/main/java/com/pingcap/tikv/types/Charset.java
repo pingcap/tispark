@@ -16,6 +16,10 @@
 package com.pingcap.tikv.types;
 
 
+import com.google.common.collect.ImmutableMap;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
 public class Charset {
   // CharsetBin is used for marking binary charset.
   public static final String CharsetBin = "binary";
@@ -37,4 +41,20 @@ public class Charset {
   public static final String CharsetLatin1 = "latin1";
   // CollationLatin1 is the default collation for CharsetLatin1.
   public static final String CollationLatin1 = "latin1_bin";
+
+  private static final Map<String, java.nio.charset.Charset> charsetMap =
+      ImmutableMap.<String, java.nio.charset.Charset>builder()
+      .put("latin1", StandardCharsets.ISO_8859_1)
+      .put("utf8", StandardCharsets.UTF_8)
+      .put("utf8mb4", StandardCharsets.UTF_8)
+      .put("ascii", StandardCharsets.US_ASCII)
+      .put("binary", StandardCharsets.ISO_8859_1)
+      .build();
+
+  private static final java.nio.charset.Charset defaultCharset = StandardCharsets.UTF_8;
+
+  public static java.nio.charset.Charset getJavaCharset(String name) {
+    java.nio.charset.Charset charset = charsetMap.get(name);
+    return charset != null ? charset : defaultCharset;
+  }
 }
