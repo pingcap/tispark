@@ -1,0 +1,7 @@
+tidb.addr=127.0.0.1
+tidb.port=4000
+tidb.user=root
+tpch.db=tpch_test
+spark.tispark.pd.addresses=127.0.0.1:2379
+spark.tispark.plan.allow_index_double_read=true
+test.data.load=true

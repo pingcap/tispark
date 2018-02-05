@@ -45,7 +45,7 @@ object TiUtils {
                            tiDBRelation: TiDBRelation,
                            blacklist: ExpressionBlacklist): Boolean = {
     aggExpr.aggregateFunction match {
-      case Average(_) | Sum(_) | Count(_) | Min(_) | Max(_) =>
+      case Average(_) | Sum(_) | PromotedSum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blacklist))
@@ -127,6 +127,9 @@ object TiUtils {
       case _: DateTimeType  => sql.types.TimestampType
       case _: TimestampType => sql.types.TimestampType
       case _: DateType      => sql.types.DateType
+      case _: EnumType      => sql.types.LongType
+      case _: SetType       => sql.types.LongType
+      case _: YearType      => sql.types.LongType
     }
   }
 

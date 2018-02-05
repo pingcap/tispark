@@ -16,21 +16,17 @@
 package com.pingcap.tikv.expression;
 
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.EQUAL;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.GREATER_EQUAL;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.GREATER_THAN;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.LESS_EQUAL;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.LESS_THAN;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.NOT_EQUAL;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.TypedKey;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.*;
+import static java.util.Objects.requireNonNull;
 
 public class ComparisonBinaryExpression implements Expression {
   public enum Type {

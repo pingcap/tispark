@@ -55,7 +55,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   def typeBlackList: TypeBlacklist = {
-    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "")
+    val blacklistString =
+      sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "time,enum,set,year")
     new TypeBlacklist(blacklistString)
   }
 
@@ -112,7 +113,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest.resolve()
 
     val notAllowPushDown = dagRequest.getFields.asScala
-      .map { _.getColumnInfo.getType.toString }
+      .map { _.getColumnInfo.getType.getType }
       .exists { typeBlackList.isUnsupportedType }
 
     if (notAllowPushDown) {
@@ -138,6 +139,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         throw new IllegalArgumentException("Should never be here")
 
       case f @ Sum(BasicExpression(arg)) =>
+        dagRequest
+          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
+
+      case f @ PromotedSum(BasicExpression(arg)) =>
         dagRequest
           .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
 
@@ -334,13 +339,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       val partialResultRef = aliasPushedPartialResult(aggExpr).toAttribute
 
       aggExpr.aggregateFunction match {
-        case e: Max     => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Min     => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Sum     => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: First   => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case _: Count   => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
-        case _: Average => throw new IllegalStateException("All AVGs should have been rewritten.")
-        case _          => aggExpr
+        case e: Max         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Min         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Sum         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: PromotedSum => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: First       => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case _: Count       => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
+        case _: Average     => throw new IllegalStateException("All AVGs should have been rewritten.")
+        case _              => aggExpr
       }
     }
 
@@ -461,8 +467,11 @@ object TiAggregation {
       // converted `Sum`s and `Count`s.
       val rewriteMap = averages.map {
         case a @ AggregateExpression(Average(ref), _, _, _) =>
+          // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
+          // scenarios to stay consistent with original spark's Average behaviour
+          val sum = if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
           a.resultAttribute -> Seq(
-            a.copy(aggregateFunction = Sum(ref), resultId = newExprId),
+            a.copy(aggregateFunction = sum, resultId = newExprId),
             a.copy(aggregateFunction = Count(ref), resultId = newExprId)
           )
       }.toMap
