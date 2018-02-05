@@ -17,8 +17,13 @@
 
 package com.pingcap.tikv.types;
 
+import static com.pingcap.tikv.types.Charset.getJavaCharset;
+
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.nio.charset.Charset;
 
 public class StringType extends BytesType {
   public static final StringType VARCHAR = new StringType(MySQLType.TypeVarchar);
@@ -30,12 +35,16 @@ public class StringType extends BytesType {
       MySQLType.TypeString
   };
 
+  transient private Charset charset;
+
   protected StringType(MySQLType tp) {
     super(tp);
+    this.charset = getJavaCharset(getCharset());
   }
 
   protected StringType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
+    this.charset = getJavaCharset(getCharset());
   }
 
   /**
@@ -43,6 +52,13 @@ public class StringType extends BytesType {
    */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    return new String((byte[])super.decodeNotNull(flag, cdi));
+    byte[] rawByte = (byte[])super.decodeNotNull(flag, cdi);
+    return new String(rawByte, charset);
+  }
+
+  private void readObject(ObjectInputStream in)
+      throws IOException, ClassNotFoundException {
+    in.defaultReadObject();
+    charset = getJavaCharset(getCharset());
   }
 }
