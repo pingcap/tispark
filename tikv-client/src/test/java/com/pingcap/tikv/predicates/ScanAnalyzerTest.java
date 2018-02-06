@@ -36,8 +36,7 @@ import java.util.Set;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 public class ScanAnalyzerTest {
   private static TiTableInfo createTable() {
@@ -120,7 +119,7 @@ public class ScanAnalyzerTest {
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
-    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, true);
+    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs);
 
     assertEquals(keyRanges.size(), 1);
 
@@ -134,7 +133,7 @@ public class ScanAnalyzerTest {
 
     irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
 
-    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, true);
+    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs);
 
     assertEquals(keyRanges.size(), 1);
 
@@ -165,6 +164,7 @@ public class ScanAnalyzerTest {
     assertEquals(eq1, result.getPointPredicates().get(0));
     assertEquals(eq2, result.getPointPredicates().get(1));
 
+    assertTrue(result.getRangePredicate().isPresent());
     assertEquals(le1, result.getRangePredicate().get());
   }
 

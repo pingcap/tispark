@@ -171,7 +171,8 @@ public class TiDAGRequest implements Serializable {
       indexScanBuilder.addColumns(colBuilder);
     }
 
-    if (!hasPk) {
+    // double read case without primary key
+    if (!hasPk && isHandleNeeded()) {
       ColumnInfo handleColumn = ColumnInfo.newBuilder()
           .setColumnId(-1)
           .setPkHandle(true)

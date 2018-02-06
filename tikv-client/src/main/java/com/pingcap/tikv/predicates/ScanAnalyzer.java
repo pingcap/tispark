@@ -48,17 +48,19 @@ import static java.util.Objects.requireNonNull;
 
 public class ScanAnalyzer {
   public static class ScanPlan {
-    public ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost) {
+    public ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost, boolean isDoubleRead) {
       this.filters = filters;
       this.keyRanges = keyRanges;
       this.cost = cost;
       this.index = index;
+      this.isDoubleRead = isDoubleRead;
     }
 
     private final List<KeyRange> keyRanges;
     private final Set<Expression> filters;
     private final double cost;
     private TiIndexInfo index;
+    private final boolean isDoubleRead;
 
     public List<KeyRange> getKeyRanges() {
       return keyRanges;
@@ -79,6 +81,8 @@ public class ScanAnalyzer {
     public TiIndexInfo getIndex() {
       return index;
     }
+
+    public boolean isDoubleRead() { return isDoubleRead; }
   }
 
   // Build scan plan picking access path with lowest cost by estimation
@@ -107,22 +111,22 @@ public class ScanAnalyzer {
     MetaResolver.resolve(conditions, table);
 
     ScanSpec result = extractConditions(conditions, table, index);
+    List<TiColumnInfo> columnInfoList = extractColumnInfoList(table, projections, conditions);
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
     List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
 
     List<KeyRange> keyRanges;
+    boolean isDoubleRead = false;
+
     if (index == null || index.isFakePrimaryKey()) {
       keyRanges = buildTableScanKeyRange(table, irs);
     } else {
-      boolean isDoubleRead = !isCoveringIndex(table.getColumns(), index, table.isPkHandle());
-      if (isDoubleRead) {
-        cost *= 2;
-      }
-      keyRanges = buildIndexScanKeyRange(table, index, irs, isDoubleRead);
+      isDoubleRead = !isCoveringIndex(columnInfoList, index, table.isPkHandle());
+      keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
 
-    return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost);
+    return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead);
   }
 
   @VisibleForTesting
@@ -184,7 +188,7 @@ public class ScanAnalyzer {
 
   @VisibleForTesting
   List<KeyRange> buildIndexScanKeyRange(
-      TiTableInfo table, TiIndexInfo index, List<IndexRange> indexRanges, boolean isDoubleRead) {
+      TiTableInfo table, TiIndexInfo index, List<IndexRange> indexRanges) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(index, "Index cannot be null to encoding keyRange");
     requireNonNull(index, "indexRanges cannot be null to encoding keyRange");
@@ -264,6 +268,19 @@ public class ScanAnalyzer {
       }
     }
     return true;
+  }
+
+  private static List<TiColumnInfo> extractColumnInfoList(TiTableInfo table, List<ColumnRef> cols, List<Expression> conditions) {
+    Set<TiColumnInfo> result = new HashSet<>();
+    loop: for (TiColumnInfo colInfo: table.getColumns()) {
+      for (ColumnRef col: cols) if (col.getName().equalsIgnoreCase(colInfo.getName())) {
+        result.add(colInfo);
+        continue loop;
+      }
+    }
+    List<TiColumnInfo> ret = new ArrayList<>();
+    ret.addAll(result);
+    return ret;
   }
 
   @VisibleForTesting

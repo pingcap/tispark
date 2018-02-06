@@ -150,7 +150,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       case f @ Count(args) if args.length == 1 =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
         dagRequest.addAggregate(
-          AggregateFunction.newCall(FunctionType.Count, tiArgs(0)),
+          AggregateFunction.newCall(FunctionType.Count, tiArgs.head),
           fromSparkType(f.dataType)
         )
 
@@ -185,12 +185,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def referencedTiColumns(expression: TiExpression): Seq[ColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
-  private def filterToDAGRequest(projectList: Seq[NamedExpression],
-                                 filters: Seq[Expression],
-                                 source: TiDBRelation,
-                                 dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
+  private def filterToDAGRequest(
+    projectList: Seq[NamedExpression],
+    filters: Seq[Expression],
+    source: TiDBRelation,
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiProjects: Seq[TiColumnRef] = projectList.map { _.toAttribute.name }.map { ColumnRef.create }
+    lazy val tiProjects: Seq[TiColumnRef] =
+      projectList.map { _.toAttribute.name }.map { ColumnRef.create }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
     val tableScanPlan =
@@ -207,6 +209,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
+      // need to set HandleNeeded to true for dagRequest in case of double read
+      if (scanPlan.isDoubleRead) {
+        dagRequest.setHandleNeeded(true)
+      }
     }
     dagRequest
   }
