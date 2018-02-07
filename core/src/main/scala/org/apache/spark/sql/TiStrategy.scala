@@ -316,12 +316,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
-    val deterministicAggAliases = aggregateExpressions.collect {
+    val aliasMap = (aggregateExpressions ++ groupingExpressions).collect {
       case e if e.deterministic => e.canonicalized -> Alias(e, e.toString())()
     }.toMap
 
-    def aliasPushedPartialResult(e: AggregateExpression): Alias = {
-      deterministicAggAliases.getOrElse(e.canonicalized, Alias(e, e.toString())())
+    def aliasPushedPartialResult(e: Expression): Alias = {
+      aliasMap.getOrElse(e.canonicalized, Alias(e, e.toString())())
     }
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
@@ -350,6 +350,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       }
     }
 
+    val residualGroupExpressions = groupingExpressions.map { groupExpr =>
+      aliasPushedPartialResult(groupExpr).toAttribute
+    }
+
     aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
 
     val projectionTiRefs = projects
@@ -362,14 +366,26 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     projectionTiRefs ++ filterTiRefs foreach { dagReq.addRequiredColumn }
 
-    val output = (aggregateExpressions.map(aliasPushedPartialResult) ++ groupingExpressions).map {
+    val output = (aggregateExpressions.map(aliasPushedPartialResult) ++
+      groupingExpressions.map(aliasPushedPartialResult)).map {
       _.toAttribute
     }
 
+    // In group by without any aggregate function case, some result
+    // expressions remains the same as input in result reference
+    // Those needs to be replaced as well
+    val rewrittenResultExpressions = resultExpressions.map { expr =>
+      if (aliasMap.contains(expr.canonicalized)) {
+        aliasPushedPartialResult(expr).toAttribute
+      } else {
+        expr
+      }
+    }
+
     aggregate.AggUtils.planAggregateWithoutDistinct(
-      groupingExpressions,
+      residualGroupExpressions,
       residualAggregateExpressions,
-      resultExpressions,
+      rewrittenResultExpressions,
       toCoprocessorRDD(source, output, dagReq)
     )
   }
