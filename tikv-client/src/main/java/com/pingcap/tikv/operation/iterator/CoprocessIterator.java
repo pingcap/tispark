@@ -15,8 +15,6 @@
 
 package com.pingcap.tikv.operation.iterator;
 
-import static java.util.Objects.requireNonNull;
-
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tikv.TiSession;
@@ -29,9 +27,12 @@ import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+
+import static java.util.Objects.requireNonNull;
 
 public abstract class CoprocessIterator<T> implements Iterator<T> {
   protected final TiSession session;
@@ -63,7 +64,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
                                                       List<RegionTask> regionTasks,
                                                       TiSession session) {
     return new DAGIterator<Row>(
-        req.buildScan(false),
+        req.buildScan(req.isIndexScan()),
         regionTasks,
         session,
         SchemaInfer.create(req),

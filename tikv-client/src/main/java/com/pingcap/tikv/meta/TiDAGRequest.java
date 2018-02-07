@@ -128,8 +128,8 @@ public class TiDAGRequest implements Serializable {
     typeMap = inferrer.getTypeMap();
   }
 
-  public DAGRequest buildScan(boolean idxScan) {
-    if (idxScan) {
+  public DAGRequest buildScan(boolean isIndexScan) {
+    if (isIndexScan) {
       return buildIndexScan();
     } else {
       return buildTableScan();
