@@ -196,20 +196,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       projectList.map { _.toAttribute.name }.map { ColumnRef.create }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
-//    val tiColumns = tiProjects ++ tiFilters.flatMap { referencedTiColumns }
+    val tiColumns = (tiProjects ++ tiFilters.flatMap { referencedTiColumns }).distinct
 
-//    tiColumns.foreach { dagRequest.addRequiredColumn }
-
-//    val output = (aggregateExpressions.map(aliasPushedPartialResult) ++ groupingExpressions).map {
-//      _.toAttribute
-//    }
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
     val tableScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table)
     val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
-      scanBuilder.buildScan(tiProjects.asJava, tiFilters.asJava, source.table)
+      scanBuilder.buildScan(tiColumns.asJava, tiFilters.asJava, source.table)
     } else {
       tableScanPlan
     }
@@ -219,9 +214,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
       // need to set isDoubleRead to true for dagRequest in case of double read
-      if (scanPlan.isDoubleRead) {
-        dagRequest.setIsDoubleRead(true)
-      }
+      dagRequest.setIsDoubleRead(scanPlan.isDoubleRead)
     }
     dagRequest
   }

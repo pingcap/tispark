@@ -156,6 +156,7 @@ public class TiDAGRequest implements Serializable {
     }
 
     if (isIndexScan) {
+      // IndexScan
       if (indexInfo == null) {
         throw new TiClientInternalException("Index is empty for index scan");
       }
@@ -209,6 +210,7 @@ public class TiDAGRequest implements Serializable {
         );
       }
     } else {
+      // TableScan
       executorBuilder.setTp(ExecType.TypeTableScan);
       tblScanBuilder.setTableId(tableInfo.getId());
       // Currently, according to TiKV's implementation, if handle
