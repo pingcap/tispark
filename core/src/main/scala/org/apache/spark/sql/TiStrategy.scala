@@ -380,10 +380,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     // and in turn a + 1 in projection should be replaced by
     // reference of coprocessor output entirely
     val rewrittenResultExpressions = resultExpressions.map {
-        _.transform {
-          case e: NamedExpression => groupExpressionMap.getOrElse(e.exprId, e)
-        }
-        .asInstanceOf[NamedExpression]
+      _.transform {
+        case e: NamedExpression => groupExpressionMap.getOrElse(e.exprId, e)
+      }.asInstanceOf[NamedExpression]
     }
 
     aggregate.AggUtils.planAggregateWithoutDistinct(
