@@ -22,6 +22,7 @@ import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
+import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
 import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
@@ -120,7 +121,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     if (notAllowPushDown) {
       throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
     } else {
-      if (dagRequest.isIndexScan) {
+      if (dagRequest.isDoubleRead) {
         source.dagRequestToRegionTaskExec(dagRequest, output)
       } else {
         val tiRdd = source.logicalPlanToRDD(dagRequest)
@@ -197,7 +198,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
     val tableScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table)
-    val scanPlan = if (allowIndexDoubleRead()) {
+    val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
       scanBuilder.buildScan(tiProjects.asJava, tiFilters.asJava, source.table)
@@ -209,9 +210,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
-      // need to set HandleNeeded to true for dagRequest in case of double read
+      // need to set isDoubleRead to true for dagRequest in case of double read
       if (scanPlan.isDoubleRead) {
-        dagRequest.setHandleNeeded(true)
+        dagRequest.setIsDoubleRead(true)
       }
     }
     dagRequest

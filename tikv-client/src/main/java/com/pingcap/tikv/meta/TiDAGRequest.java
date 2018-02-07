@@ -98,6 +98,7 @@ public class TiDAGRequest implements Serializable {
   private Expression having;
   private boolean distinct;
   private boolean handleNeeded;
+  private boolean isDoubleRead;
   private final PushDownType pushDownType;
   private IdentityHashMap<Expression, DataType> typeMap;
 
@@ -171,8 +172,8 @@ public class TiDAGRequest implements Serializable {
       indexScanBuilder.addColumns(colBuilder);
     }
 
-    // double read case without primary key
-    if (!hasPk && isHandleNeeded()) {
+    // double read case
+    if (!hasPk && isDoubleRead()) {
       ColumnInfo handleColumn = ColumnInfo.newBuilder()
           .setColumnId(-1)
           .setPkHandle(true)
@@ -579,6 +580,24 @@ public class TiDAGRequest implements Serializable {
    */
   public void setHandleNeeded(boolean handleNeeded) {
     this.handleNeeded = handleNeeded;
+  }
+
+  /**
+   * Returns whether needs double read
+   *
+   * @return boolean
+   */
+  public boolean isDoubleRead() {
+    return isDoubleRead;
+  }
+
+  /**
+   * Sets isDoubleRead
+   *
+   * @param isDoubleRead if is double read
+   */
+  public void setIsDoubleRead(boolean isDoubleRead) {
+    this.isDoubleRead = isDoubleRead;
   }
 
   /**
