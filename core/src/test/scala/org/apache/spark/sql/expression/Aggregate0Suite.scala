@@ -42,7 +42,11 @@ class Aggregate0Suite extends BaseTiSparkSuite {
     "select tp_char from full_data_type_table  group by (tp_char)  order by tp_char ",
     "select tp_longtext from full_data_type_table  group by (tp_longtext)  order by tp_longtext ",
     "select tp_varchar from full_data_type_table  group by (tp_varchar)  order by tp_varchar ",
-    "select tp_datetime from full_data_type_table  group by (tp_datetime)  order by tp_datetime "
+    "select tp_datetime from full_data_type_table  group by (tp_datetime)  order by tp_datetime ",
+    "select 999 + tp_int + sum(tp_int + 999) from full_data_type_table  group by tp_int + 999 order by 1",
+    "select 999 + tp_int + sum(tp_int) from full_data_type_table  group by tp_int + 999 order by 1",
+    "select 999 + tp_int+sum(tp_int), tp_int + 999 + 1 from full_data_type_table  group by tp_int + 999 order by 1,2",
+    "select tp_int + 999+1 from full_data_type_table group by tp_int + 999 order by 1"
   )
 
   allCases foreach { query =>

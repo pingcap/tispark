@@ -362,14 +362,24 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     projectionTiRefs ++ filterTiRefs foreach { dagReq.addRequiredColumn }
 
-    val output = (aggregateExpressions.map(aliasPushedPartialResult) ++ groupingExpressions).map {
-      _.toAttribute
+    val aggregateArributes =
+      aggregateExpressions.map(expr => aliasPushedPartialResult(expr).toAttribute)
+    val groupAttributes = groupingExpressions.map(_.toAttribute)
+    val output = (aggregateArributes ++ groupAttributes)
+
+    val groupExpressionMap = groupingExpressions.map(expr => expr.exprId -> expr.toAttribute).toMap
+    val rewrittenResultExpressions = resultExpressions.map { expr =>
+      expr
+        .transform {
+          case e: NamedExpression => groupExpressionMap.getOrElse(e.exprId, e)
+        }
+        .asInstanceOf[NamedExpression]
     }
 
     aggregate.AggUtils.planAggregateWithoutDistinct(
-      groupingExpressions,
+      groupAttributes,
       residualAggregateExpressions,
-      resultExpressions,
+      rewrittenResultExpressions,
       toCoprocessorRDD(source, output, dagReq)
     )
   }
