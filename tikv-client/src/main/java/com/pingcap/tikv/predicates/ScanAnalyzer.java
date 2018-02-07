@@ -86,11 +86,11 @@ public class ScanAnalyzer {
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildScan(List<ColumnRef> projections, List<Expression> conditions, TiTableInfo table) {
+  public ScanPlan buildScan(List<ColumnRef> columnList, List<Expression> conditions, TiTableInfo table) {
     ScanPlan minPlan = buildTableScan(conditions, table);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildScan(projections, conditions, index, table);
+      ScanPlan plan = buildScan(columnList, conditions, index, table);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -104,14 +104,14 @@ public class ScanAnalyzer {
     return buildScan(ImmutableList.of(), conditions, pkIndex, table);
   }
 
-  public ScanPlan buildScan(List<ColumnRef> projections, List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
+  public ScanPlan buildScan(List<ColumnRef> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
     MetaResolver.resolve(conditions, table);
 
     ScanSpec result = extractConditions(conditions, table, index);
-    List<TiColumnInfo> columnInfoList = extractColumnInfoList(table, projections, conditions);
+    List<TiColumnInfo> columnInfoList = extractColumnInfoList(table, columnList);
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
     List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
@@ -270,7 +270,7 @@ public class ScanAnalyzer {
     return true;
   }
 
-  private static List<TiColumnInfo> extractColumnInfoList(TiTableInfo table, List<ColumnRef> cols, List<Expression> conditions) {
+  private static List<TiColumnInfo> extractColumnInfoList(TiTableInfo table, List<ColumnRef> cols) {
     Set<TiColumnInfo> result = new HashSet<>();
     loop: for (TiColumnInfo colInfo: table.getColumns()) {
       for (ColumnRef col: cols) if (col.getName().equalsIgnoreCase(colInfo.getName())) {

@@ -192,9 +192,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    lazy val tiProjects: Seq[TiColumnRef] =
+    val tiProjects: Seq[TiColumnRef] =
       projectList.map { _.toAttribute.name }.map { ColumnRef.create }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
+
+//    val tiColumns = tiProjects ++ tiFilters.flatMap { referencedTiColumns }
+
+//    tiColumns.foreach { dagRequest.addRequiredColumn }
+
+//    val output = (aggregateExpressions.map(aliasPushedPartialResult) ++ groupingExpressions).map {
+//      _.toAttribute
+//    }
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
     val tableScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table)

@@ -67,6 +67,7 @@ public class IndexScanExample {
     ScanAnalyzer.ScanPlan scanPlan = builder.buildScan(columns, filters, selectedIndex, table);
     dagRequest.addRanges(scanPlan.getKeyRanges());
     dagRequest.setIndexInfo(scanPlan.getIndex());
+    dagRequest.setIsDoubleRead(true);
     Iterator<Row> iter = snapshot.tableRead(dagRequest);
     SchemaInfer schemaInfer = SchemaInfer.create(dagRequest);
 
