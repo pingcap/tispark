@@ -24,24 +24,23 @@ import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
 import java.util.Objects;
 import java.util.Set;
 
 
-public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> {
-  private static RangeSet<TypedKey> fullRange =
-      TreeRangeSet.create().add(Range.openClosed(Key.));
-
-  public static Set<Range<TypedKey>> buildRange(Expression predicate) {
+public class IndexRangeBuilder extends DefaultVisitor<RangeSet<Key>, Void> {
+  public static Set<Range<Key>> buildRange(Expression predicate) {
     Objects.requireNonNull(predicate, "predicate is null");
     IndexRangeBuilder visitor = new IndexRangeBuilder();
-    Set<Range<TypedKey>> ranges = predicate.accept(visitor, null).asRanges();
-    RangeSet<TypedKey> fullRange = TreeRangeSet.create();
-    fullRange
-    for (Range<TypedKey> range : ranges) {
-
+    Set<Range<Key>> ranges = predicate.accept(visitor, null).asRanges();
+    RangeSet<Key> resultRange = TreeRangeSet.create();
+    resultRange.add(Range.closed(Key.MIN, Key.MAX));
+    for (Range<Key> range : ranges) {
+      resultRange = resultRange.subRangeSet(range);
     }
+    return resultRange.asRanges();
   }
 
   private static void throwOnError(Expression node) {
@@ -49,18 +48,18 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     throw new TiExpressionException(String.format(errorFormat, node));
   }
 
-  protected RangeSet<TypedKey> process(Expression node, Void context) {
+  protected RangeSet<Key> process(Expression node, Void context) {
     throwOnError(node);
     return null;
   }
 
   @Override
-  protected RangeSet<TypedKey> visit(LogicalBinaryExpression node, Void context) {
-    RangeSet<TypedKey> leftRanges = node.getLeft().accept(this, context);
-    RangeSet<TypedKey> rightRanges = node.getRight().accept(this, context);
+  protected RangeSet<Key> visit(LogicalBinaryExpression node, Void context) {
+    RangeSet<Key> leftRanges = node.getLeft().accept(this, context);
+    RangeSet<Key> rightRanges = node.getRight().accept(this, context);
     switch (node.getCompType()) {
       case AND:
-        for (Range<TypedKey> range : leftRanges.asRanges()) {
+        for (Range<Key> range : leftRanges.asRanges()) {
           rightRanges = rightRanges.subRangeSet(range);
         }
         break;
@@ -69,8 +68,8 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
         break;
       case XOR:
         // AND
-        RangeSet<TypedKey> intersection = rightRanges;
-        for (Range<TypedKey> range : leftRanges.asRanges()) {
+        RangeSet<Key> intersection = rightRanges;
+        for (Range<Key> range : leftRanges.asRanges()) {
           intersection = intersection.subRangeSet(range);
         }
         // full set
@@ -84,13 +83,13 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
   }
 
   @Override
-  protected RangeSet<TypedKey> visit(ComparisonBinaryExpression node, Void context) {
+  protected RangeSet<Key> visit(ComparisonBinaryExpression node, Void context) {
     NormalizedPredicate predicate = node.normalize();
     if (predicate == null) {
       throwOnError(node);
     }
     TypedKey literal = predicate.getTypedLiteral();
-    RangeSet<TypedKey> ranges = TreeRangeSet.create();
+    RangeSet<Key> ranges = TreeRangeSet.create();
 
     switch (predicate.getType()) {
       case GREATER_THAN:

@@ -137,14 +137,14 @@ public class ScanAnalyzer {
         endKey = startKey.next();
       } else if (ir.hasRange()) {
         checkArgument(!ir.hasAccessKey(), "Table scan must have one and only one access condition / point");
-        Range<TypedKey> r = ir.getRange();
+        Range<Key> r = ir.getRange();
 
         if (!r.hasLowerBound()) {
           // -INF
           startKey = RowKey.createMin(table.getId());
         } else {
           // Comparision with null should be filtered since it yields unknown always
-          startKey = RowKey.toRowKey(table.getId(), r.lowerEndpoint());
+          startKey = RowKey.toRowKey(table.getId(), (TypedKey)r.lowerEndpoint());
           if (r.lowerBoundType().equals(BoundType.OPEN)) {
             startKey = startKey.next();
           }
@@ -154,7 +154,7 @@ public class ScanAnalyzer {
           // INF
           endKey = RowKey.createBeyondMax(table.getId());
         } else {
-          endKey = RowKey.toRowKey(table.getId(), r.upperEndpoint());
+          endKey = RowKey.toRowKey(table.getId(), (TypedKey)r.upperEndpoint());
           if (r.upperBoundType().equals(BoundType.CLOSED)) {
             endKey = endKey.next();
           }
@@ -187,7 +187,7 @@ public class ScanAnalyzer {
     for (IndexRange ir : indexRanges) {
       Key pointKey = ir.hasAccessKey() ? ir.getAccessKey() : Key.EMPTY;
 
-      Range<TypedKey> range = ir.getRange();
+      Range<Key> range = ir.getRange();
       Key lPointKey;
       Key uPointKey;
 

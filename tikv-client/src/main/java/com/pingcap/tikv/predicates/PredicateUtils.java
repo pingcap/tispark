@@ -28,7 +28,6 @@ import com.pingcap.tikv.expression.visitor.DefaultVisitor;
 import com.pingcap.tikv.expression.visitor.IndexRangeBuilder;
 import com.pingcap.tikv.key.CompoundKey;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.key.TypedKey;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -76,8 +75,8 @@ public class PredicateUtils {
       List<Key> pointKeys = expressionToPoints(pointPredicates);
       for (Key key : pointKeys) {
         if (rangePredicate.isPresent()) {
-          Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
-          for (Range<TypedKey> range : ranges) {
+          Set<Range<Key>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
+          for (Range<Key> range : ranges) {
             builder.add(new IndexRange(key, range));
           }
         } else {
@@ -86,8 +85,8 @@ public class PredicateUtils {
       }
     } else {
       if (rangePredicate.isPresent()) {
-        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
-        for (Range<TypedKey> range : ranges) {
+        Set<Range<Key>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
+        for (Range<Key> range : ranges) {
           builder.add(new IndexRange(null, range));
         }
       }
@@ -111,7 +110,7 @@ public class PredicateUtils {
       Expression predicate = pointPredicates.get(i);
       try {
         // each expr will be expand to one or more points
-        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(predicate);
+        Set<Range<Key>> ranges = IndexRangeBuilder.buildRange(predicate);
         List<Key> points = rangesToPoint(ranges);
         resultKeys = joinKeys(resultKeys, points);
       } catch (Exception e) {
@@ -122,10 +121,10 @@ public class PredicateUtils {
   }
 
   // Convert ranges of equal condition points to List of TypedKeys
-  private static List<Key> rangesToPoint(Set<Range<TypedKey>> ranges) {
+  private static List<Key> rangesToPoint(Set<Range<Key>> ranges) {
     requireNonNull(ranges, "ranges is null");
     ImmutableList.Builder<Key> builder = ImmutableList.builder();
-    for (Range<TypedKey> range : ranges) {
+    for (Range<Key> range : ranges) {
       // test if range is a point
       if (range.hasLowerBound() &&
           range.hasUpperBound() &&
