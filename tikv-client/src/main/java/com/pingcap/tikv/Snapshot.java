@@ -82,17 +82,19 @@ public class Snapshot {
     return client.get(key, timestamp.getVersion());
   }
 
-  public void analyzeIndex(TiAnalyzeRequest analyzeRequest) {
+  public List<AnalyzeIndexResp> analyzeIndex(TiAnalyzeRequest analyzeRequest) {
     List<RegionTask> tasks = RangeSplitter.newSplitter(getSession().getRegionManager())
         .splitRangeByRegion(analyzeRequest.getRanges());
+    List<AnalyzeIndexResp> indexResps = new ArrayList<>();
     for (RegionTask regionTask : tasks) {
       List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
       TiRegion region = regionTask.getRegion();
       Metapb.Store store = regionTask.getStore();
       RegionStoreClient client = RegionStoreClient.create(region, store, session);
       AnalyzeIndexResp resp = client.analyzeIndex(analyzeRequest.buildIndexAnalyzeReq(), ranges);
-      System.out.println(resp.getHist());
+      indexResps.add(resp);
     }
+    return indexResps;
   }
 
   public List<AnalyzeColumnsResp> analyzeColumn(TiAnalyzeRequest analyzeRequest) {
