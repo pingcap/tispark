@@ -30,10 +30,18 @@ import java.util.Set;
 
 
 public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> {
+  private static RangeSet<TypedKey> fullRange =
+      TreeRangeSet.create().add(Range.openClosed(Key.));
+
   public static Set<Range<TypedKey>> buildRange(Expression predicate) {
     Objects.requireNonNull(predicate, "predicate is null");
     IndexRangeBuilder visitor = new IndexRangeBuilder();
-    return predicate.accept(visitor, null).asRanges();
+    Set<Range<TypedKey>> ranges = predicate.accept(visitor, null).asRanges();
+    RangeSet<TypedKey> fullRange = TreeRangeSet.create();
+    fullRange
+    for (Range<TypedKey> range : ranges) {
+
+    }
   }
 
   private static void throwOnError(Expression node) {

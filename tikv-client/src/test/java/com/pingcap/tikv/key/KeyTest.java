@@ -77,7 +77,7 @@ public class KeyTest {
   @Test
   public void compareToTest() throws Exception {
     Key kNegInf = toRawKey(new byte[0], true);
-    Key kMin = Key.MIN;
+    Key kMin = Key.MIN_NOT_NULL;
     Key k = toRawKey(new byte[]{1});
     Key kMax = Key.MAX;
     Key kInf = toRawKey(new byte[0], false);

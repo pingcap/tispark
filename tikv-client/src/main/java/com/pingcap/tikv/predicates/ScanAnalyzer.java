@@ -15,6 +15,11 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
@@ -30,16 +35,10 @@ import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
-import static java.util.Objects.requireNonNull;
 
 
 public class ScanAnalyzer {
@@ -192,46 +191,51 @@ public class ScanAnalyzer {
       Key lPointKey;
       Key uPointKey;
 
-      Key lKey;
-      Key uKey;
+      Key lRangeKey;
+      Key uRangeKey;
       if (!ir.hasRange()) {
         lPointKey = pointKey;
         uPointKey = pointKey.next();
 
-        lKey = Key.EMPTY;
-        uKey = Key.EMPTY;
+        lRangeKey = Key.EMPTY;
+        uRangeKey = Key.EMPTY;
       } else {
         lPointKey = pointKey;
         uPointKey = pointKey;
 
         if (!range.hasLowerBound()) {
           // -INF
-          lKey = Key.MIN;
+          lRangeKey = Key.MIN_NOT_NULL;
         } else {
-          lKey = range.lowerEndpoint();
+          lRangeKey = range.lowerEndpoint();
           if (range.lowerBoundType().equals(BoundType.OPEN)) {
-            lKey = lKey.next();
+            lRangeKey = lRangeKey.next();
           }
         }
 
         if (!range.hasUpperBound()) {
           // INF
-          uKey = Key.MAX;
+          uRangeKey = Key.MAX;
         } else {
-          uKey = range.upperEndpoint();
+          uRangeKey = range.upperEndpoint();
           if (range.upperBoundType().equals(BoundType.CLOSED)) {
-            uKey = uKey.next();
+            uRangeKey = uRangeKey.next();
           }
         }
       }
-      IndexKey lbsKey = IndexKey.toIndexKey(table.getId(), index.getId(), lPointKey, lKey);
-      IndexKey ubsKey = IndexKey.toIndexKey(table.getId(), index.getId(), uPointKey, uKey);
+      IndexKey lbsKey = IndexKey.toIndexKey(table.getId(), index.getId(), lPointKey, lRangeKey);
+      IndexKey ubsKey = IndexKey.toIndexKey(table.getId(), index.getId(), uPointKey, uRangeKey);
 
       ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
     }
 
+    // No range at all means no filter applied and all needs to be in result set
+    // including null
     if (ranges.isEmpty()) {
-      ranges.add(makeCoprocRange(Key.MIN.toByteString(), Key.MAX.toByteString()));
+      IndexKey lbsKey = IndexKey.toIndexKey(table.getId(), index.getId(), Key.MIN);
+      IndexKey ubsKey = IndexKey.toIndexKey(table.getId(), index.getId(), Key.MAX);
+
+      ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
     }
     return ranges;
   }
