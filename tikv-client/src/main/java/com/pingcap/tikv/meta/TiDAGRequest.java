@@ -169,22 +169,40 @@ public class TiDAGRequest implements Serializable {
           .map(TiIndexColumn::getOffset)
           .collect(Collectors.toList());
 
-      for (Integer idx : indexColIds) {
-        ColumnInfo columnInfo = columnInfoList
-            .get(idx)
-            .toProto(tableInfo);
+      if (isDoubleRead()) {
+        for (Integer idx : indexColIds) {
+          ColumnInfo columnInfo = columnInfoList
+              .get(idx)
+              .toProto(tableInfo);
 
-        ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder();
-        colBuilder.setTp(columnInfo.getTp());
-        colBuilder.setColumnId(columnInfo.getColumnId());
-        colBuilder.setCollation(columnInfo.getCollation());
-        colBuilder.setColumnLen(columnInfo.getColumnLen());
-        colBuilder.setFlag(columnInfo.getFlag());
-        if (columnInfo.getColumnId() == -1) {
-          hasPk = true;
-          colBuilder.setPkHandle(true);
+          ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder();
+          colBuilder.setTp(columnInfo.getTp());
+          colBuilder.setColumnId(columnInfo.getColumnId());
+          colBuilder.setCollation(columnInfo.getCollation());
+          colBuilder.setColumnLen(columnInfo.getColumnLen());
+          colBuilder.setFlag(columnInfo.getFlag());
+          if (columnInfo.getColumnId() == -1) {
+            hasPk = true;
+            colBuilder.setPkHandle(true);
+          }
+          indexScanBuilder.addColumns(colBuilder);
         }
-        indexScanBuilder.addColumns(colBuilder);
+      } else {
+        for (ColumnRef columnRef: getFields()) {
+          ColumnInfo columnInfo = columnRef.getColumnInfo().toProto(tableInfo);
+
+          ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder();
+          colBuilder.setTp(columnInfo.getTp());
+          colBuilder.setColumnId(columnInfo.getColumnId());
+          colBuilder.setCollation(columnInfo.getCollation());
+          colBuilder.setColumnLen(columnInfo.getColumnLen());
+          colBuilder.setFlag(columnInfo.getFlag());
+          if (columnInfo.getColumnId() == -1) {
+            hasPk = true;
+            colBuilder.setPkHandle(true);
+          }
+          indexScanBuilder.addColumns(colBuilder);
+        }
       }
       executorBuilder.setTp(ExecType.TypeIndexScan);
       // double read case
@@ -205,9 +223,20 @@ public class TiDAGRequest implements Serializable {
       dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
       int colCount = indexScanBuilder.getColumnsCount();
       if (isDoubleRead()) {
+        // double read case: need to retrieve handle
         dagRequestBuilder.addOutputOffsets(
             colCount != 0 ? colCount - 1 : 0
         );
+      } else {
+        // column offset should be in accordance with index
+        for (Integer idx: indexColIds) {
+          for (int i = 0; i < getFields().size(); i++) {
+            if (getFields().get(i).getName().equalsIgnoreCase(columnInfoList.get(idx).getName())) {
+              dagRequestBuilder.addOutputOffsets(i);
+              break;
+            }
+          }
+        }
       }
     } else {
       // TableScan
@@ -228,63 +257,65 @@ public class TiDAGRequest implements Serializable {
       }
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
 
+      // column offset should be in accordance with fields
+      for (int i = 0; i < getFields().size(); i++) {
+        dagRequestBuilder.addOutputOffsets(i);
+      }
+
       // if handle is needed, we should append one output offset
       if (isHandleNeeded()) {
         dagRequestBuilder.addOutputOffsets(tableInfo.getColumns().size());
       }
     }
 
-    // clear executorBuilder
-    executorBuilder.clear();
-
-    // Step2. Add others
-    // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
-    // Or make sure the construction order is below:
-    // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
-    Expression whereExpr = mergeCNFExpressions(getFilters());
-    if (whereExpr != null) {
-      executorBuilder.setTp(ExecType.TypeSelection);
-      dagRequestBuilder.addExecutors(
-          executorBuilder.setSelection(
-              Selection.newBuilder().addConditions(ProtoConverter.toProto(whereExpr, colOffsetMap))
-          )
-      );
+    if (!isIndexScan || (isIndexScan() && !isDoubleRead())) {
+      // clear executorBuilder
       executorBuilder.clear();
-    }
 
-    if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
-      Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
-      getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap)));
-      getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetMap)));
-      executorBuilder.setTp(ExecType.TypeAggregation);
-      dagRequestBuilder.addExecutors(
-          executorBuilder.setAggregation(aggregationBuilder)
-      );
-      executorBuilder.clear();
-    }
+      // Step2. Add others
+      // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
+      // Or make sure the construction order is below:
+      // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
+      Expression whereExpr = mergeCNFExpressions(getFilters());
+      if (whereExpr != null) {
+        executorBuilder.setTp(ExecType.TypeSelection);
+        dagRequestBuilder.addExecutors(
+            executorBuilder.setSelection(
+                Selection.newBuilder().addConditions(ProtoConverter.toProto(whereExpr, colOffsetMap))
+            )
+        );
+        executorBuilder.clear();
+      }
 
-    if (!getOrderByItems().isEmpty()) {
-      TopN.Builder topNBuilder = TopN.newBuilder();
-      getOrderByItems().forEach(tiByItem -> topNBuilder
-          .addOrderBy(com.pingcap.tidb.tipb.ByItem.newBuilder()
-              .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap))
-              .setDesc(tiByItem.isDesc())
-          ));
-      executorBuilder.setTp(ExecType.TypeTopN);
-      topNBuilder.setLimit(getLimit());
-      dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
-      executorBuilder.clear();
-    } else if (getLimit() != 0) {
-      Limit.Builder limitBuilder = Limit.newBuilder();
-      limitBuilder.setLimit(getLimit());
-      executorBuilder.setTp(ExecType.TypeLimit);
-      dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
-      executorBuilder.clear();
-    }
+      if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
+        Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
+        getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap)));
+        getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetMap)));
+        executorBuilder.setTp(ExecType.TypeAggregation);
+        dagRequestBuilder.addExecutors(
+            executorBuilder.setAggregation(aggregationBuilder)
+        );
+        executorBuilder.clear();
+      }
 
-    // column offset should be in accordance with fields
-    for (int i = 0; i < getFields().size(); i++) {
-      dagRequestBuilder.addOutputOffsets(i);
+      if (!getOrderByItems().isEmpty()) {
+        TopN.Builder topNBuilder = TopN.newBuilder();
+        getOrderByItems().forEach(tiByItem -> topNBuilder
+            .addOrderBy(com.pingcap.tidb.tipb.ByItem.newBuilder()
+                .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap))
+                .setDesc(tiByItem.isDesc())
+            ));
+        executorBuilder.setTp(ExecType.TypeTopN);
+        topNBuilder.setLimit(getLimit());
+        dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
+        executorBuilder.clear();
+      } else if (getLimit() != 0) {
+        Limit.Builder limitBuilder = Limit.newBuilder();
+        limitBuilder.setLimit(getLimit());
+        executorBuilder.setTp(ExecType.TypeLimit);
+        dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
+        executorBuilder.clear();
+      }
     }
 
     DAGRequest request = dagRequestBuilder

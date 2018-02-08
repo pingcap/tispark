@@ -17,7 +17,6 @@ package com.pingcap.tikv.predicates;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ColumnRef;
@@ -86,7 +85,7 @@ public class ScanAnalyzer {
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildScan(List<ColumnRef> columnList, List<Expression> conditions, TiTableInfo table) {
+  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
     ScanPlan minPlan = buildTableScan(conditions, table);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
@@ -101,17 +100,16 @@ public class ScanAnalyzer {
 
   public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildScan(ImmutableList.of(), conditions, pkIndex, table);
+    return buildScan(table.getColumns(), conditions, pkIndex, table);
   }
 
-  public ScanPlan buildScan(List<ColumnRef> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
+  private ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
     MetaResolver.resolve(conditions, table);
 
     ScanSpec result = extractConditions(conditions, table, index);
-    List<TiColumnInfo> columnInfoList = extractColumnInfoList(table, columnList);
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
     List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
@@ -122,7 +120,10 @@ public class ScanAnalyzer {
     if (index == null || index.isFakePrimaryKey()) {
       keyRanges = buildTableScanKeyRange(table, irs);
     } else {
-      isDoubleRead = !isCoveringIndex(columnInfoList, index, table.isPkHandle());
+      isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
+      if (isDoubleRead) {
+        cost *= 2;
+      }
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
 
@@ -270,7 +271,7 @@ public class ScanAnalyzer {
     return true;
   }
 
-  private static List<TiColumnInfo> extractColumnInfoList(TiTableInfo table, List<ColumnRef> cols) {
+  public static List<TiColumnInfo> extractColumnInfoList(TiTableInfo table, List<ColumnRef> cols) {
     Set<TiColumnInfo> result = new HashSet<>();
     loop: for (TiColumnInfo colInfo: table.getColumns()) {
       for (ColumnRef col: cols) if (col.getName().equalsIgnoreCase(colInfo.getName())) {

@@ -64,7 +64,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
                                                       List<RegionTask> regionTasks,
                                                       TiSession session) {
     return new DAGIterator<Row>(
-        req.buildScan(req.isIndexScan()),
+        req.buildScan(req.isIndexScan() && !req.isDoubleRead()),
         regionTasks,
         session,
         SchemaInfer.create(req),

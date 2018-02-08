@@ -39,6 +39,8 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
@@ -183,6 +185,23 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
+  private def distinct(seq1: Seq[TiColumnRef], seq2: Seq[TiColumnRef]): Seq[TiColumnRef] = {
+    var ret = new ArrayBuffer[TiColumnRef]
+    var set = new mutable.HashSet[TiColumnRef]
+    seq1.foreach(f => {
+      ret += f
+      set += f
+    })
+    seq2.foreach(
+      f =>
+        if (!set.contains(f)) {
+          ret += f
+          set += f
+      }
+    )
+    ret
+  }
+
   def referencedTiColumns(expression: TiExpression): Seq[ColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
@@ -196,15 +215,18 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       projectList.map { _.toAttribute.name }.map { ColumnRef.create }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
-    val tiColumns = (tiProjects ++ tiFilters.flatMap { referencedTiColumns }).distinct
+    val tiColumns = distinct(tiFilters.flatMap { referencedTiColumns }, tiProjects)
+
+    val columnInfoList = ScanAnalyzer.extractColumnInfoList(source.table, tiColumns.asJava)
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
+
     val tableScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table)
     val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
-      scanBuilder.buildScan(tiColumns.asJava, tiFilters.asJava, source.table)
+      scanBuilder.buildScan(columnInfoList, tiFilters.asJava, source.table)
     } else {
       tableScanPlan
     }

@@ -29,7 +29,6 @@ import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.Pair;
-import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 
 import java.util.ArrayList;
@@ -75,27 +74,6 @@ public class Snapshot {
         RegionStoreClient.create(pair.first, pair.second, getSession());
     // TODO: Need to deal with lock error after grpc stable
     return client.get(key, timestamp.getVersion());
-  }
-
-  /**
-   * Issue a table read request
-   *
-   * @param dagRequest DAG request for coprocessor
-   * @return a Iterator that contains all result from this select request.
-   */
-  public Iterator<Row> tableRead(TiDAGRequest dagRequest) {
-    if (dagRequest.isDoubleRead()) {
-      Iterator<Long> iter = getHandleIterator(
-          dagRequest,
-          RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(dagRequest.getRanges()),
-          session);
-      return new IndexScanIterator(this, dagRequest, iter);
-    } else {
-      return getRowIterator(
-          dagRequest,
-          RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(dagRequest.getRanges()),
-          session);
-    }
   }
 
   /**
