@@ -258,7 +258,7 @@ public class TiDAGRequest implements Serializable {
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
 
       // column offset should be in accordance with fields
-      for (int i = 0; i < getFields().size(); i++) {
+      for (int i = 0; i < getFields().size(); i ++) {
         dagRequestBuilder.addOutputOffsets(i);
       }
 
