@@ -29,7 +29,7 @@ public class IndexRange {
     this.range = range;
   }
 
-  Key getAccessKey() {
+  public Key getAccessKey() {
     return accessKey;
   }
 

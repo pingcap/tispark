@@ -110,7 +110,7 @@ public class TiColumnInfo implements Serializable {
     return comment;
   }
 
-  boolean isPrimaryKey() {
+  public boolean isPrimaryKey() {
     return isPrimaryKey;
   }
 

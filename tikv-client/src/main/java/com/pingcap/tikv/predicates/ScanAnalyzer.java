@@ -101,6 +101,23 @@ public class ScanAnalyzer {
   public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
+//    TiAnalyzeRequest ar = new TiAnalyzeRequest();
+//    List<KeyRange> fullRange = new ArrayList<>();
+//    if (index != null && !index.isFakePrimaryKey()) {
+//      IndexKey start = IndexKey.toIndexKey(table.getId(), index.getId(), Key.MIN);
+//      IndexKey end = IndexKey.toIndexKey(table.getId(), index.getId(), Key.MAX);
+//      fullRange.add(KeyRange.newBuilder().setStart(start.toByteString()).setEnd(end.toByteString()).build());
+//      AnalyzeReq analyzeReq = ar.buildIndexAnalyzeReq(index.getIndexColumns().size());
+//      AnalyzeIndexResp resp = analyzeIndex(analyzeReq, fullRange);
+//      System.out.println(resp);
+//    } else {
+      Key start = RowKey.createMin(table.getId());
+      Key end = RowKey.createBeyondMax(table.getId());
+//      fullRange.add(KeyRange.newBuilder().setStart(start.toByteString()).setEnd(end.toByteString()).build());
+//      AnalyzeReq analyzeReq = ar.buildColumnAnalyzeReq(table.getColumns().stream().map(tiColumnInfo -> tiColumnInfo.toProto(table)).collect(Collectors.toList()));
+//      AnalyzeColumnsResp resp = analyzeColumns(analyzeReq, fullRange);
+//      System.out.println(resp);
+//    }
 
     MetaResolver.resolve(conditions, table);
 
