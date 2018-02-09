@@ -35,8 +35,8 @@ class ArithmeticAgg0Suite extends BaseTiSparkSuite {
     // Below two cases will causes overflow if no predicates applied
     // While Spark does not check overflow for types other than decimal
     // TiKV will do the check and throw exception
-    "select avg(tp_bigint) from full_data_type_table where tp_bigint < 10000000 and tp_bigint > -100000000",
-    "select sum(tp_bigint) from full_data_type_table where tp_bigint < 10000000 and tp_bigint > -100000000",
+    "select avg(tp_bigint) from full_data_type_table",
+    "select sum(tp_bigint) from full_data_type_table",
     "select sum(tp_decimal) from full_data_type_table",
     "select sum(tp_mediumint) from full_data_type_table",
     "select abs(tp_float) from full_data_type_table",
