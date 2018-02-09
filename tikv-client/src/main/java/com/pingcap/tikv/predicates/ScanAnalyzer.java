@@ -15,6 +15,11 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
@@ -30,16 +35,10 @@ import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
-import static java.util.Objects.requireNonNull;
 
 
 public class ScanAnalyzer {
@@ -167,12 +166,6 @@ public class ScanAnalyzer {
       ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
     }
 
-    if (ranges.isEmpty()) {
-      Key startKey = RowKey.createMin(table.getId());
-      Key endKey = RowKey.createBeyondMax(table.getId());
-      ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
-    }
-
     return ranges;
   }
 
@@ -230,9 +223,6 @@ public class ScanAnalyzer {
       ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
     }
 
-    if (ranges.isEmpty()) {
-      ranges.add(makeCoprocRange(Key.MIN.toByteString(), Key.MAX.toByteString()));
-    }
     return ranges;
   }
 
