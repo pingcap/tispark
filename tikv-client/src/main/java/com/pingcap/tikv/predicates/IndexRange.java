@@ -17,14 +17,13 @@ package com.pingcap.tikv.predicates;
 
 import com.google.common.collect.Range;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.key.TypedKey;
 
 
 public class IndexRange {
   private Key accessKey;
-  private Range<TypedKey> range;
+  private Range<Key> range;
 
-  public IndexRange(Key accessKey, Range<TypedKey> range) {
+  public IndexRange(Key accessKey, Range<Key> range) {
     this.accessKey = accessKey;
     this.range = range;
   }
@@ -41,7 +40,7 @@ public class IndexRange {
     return range != null;
   }
 
-  public Range<TypedKey> getRange() {
+  public Range<Key> getRange() {
     return range;
   }
 }

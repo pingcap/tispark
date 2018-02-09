@@ -115,7 +115,7 @@ public abstract class DataType implements Serializable {
     cdo.writeByte(Codec.NULL_FLAG);
   }
 
-  public static void encodeIndex(CodecDataOutput cdo) {
+  public static void encodeMinNotNull(CodecDataOutput cdo) {
     cdo.writeByte(Codec.BYTES_FLAG);
   }
 

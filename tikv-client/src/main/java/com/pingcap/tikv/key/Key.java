@@ -16,15 +16,14 @@
 package com.pingcap.tikv.key;
 
 
+import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
+import static java.util.Objects.requireNonNull;
+
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.FastByteComparisons;
-
 import java.util.Arrays;
-
-import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
-import static java.util.Objects.requireNonNull;
 
 public class Key implements Comparable<Key> {
   protected static final byte[] TBL_PREFIX = new byte[] {'t'};
@@ -35,6 +34,7 @@ public class Key implements Comparable<Key> {
   public final static Key EMPTY = createEmpty();
   public final static Key NULL = createNull();
   public final static Key MIN = createTypelessMin();
+  public final static Key MIN_NOT_NULL = createTypelessMinNotNull();
   public final static Key MAX = createTypelessMax();
 
   private Key(byte[] value, boolean negative) {
@@ -89,11 +89,22 @@ public class Key implements Comparable<Key> {
 
   private static Key createTypelessMin() {
     CodecDataOutput cdo = new CodecDataOutput();
-    DataType.encodeIndex(cdo);
+    DataType.encodeNull(cdo);
     return new Key(cdo.toBytes()) {
       @Override
       public String toString() {
         return "MIN";
+      }
+    };
+  }
+
+  private static Key createTypelessMinNotNull() {
+    CodecDataOutput cdo = new CodecDataOutput();
+    DataType.encodeMinNotNull(cdo);
+    return new Key(cdo.toBytes()) {
+      @Override
+      public String toString() {
+        return "MIN_NOT_NULL";
       }
     };
   }
