@@ -148,13 +148,6 @@ public class TiDAGRequest implements Serializable {
     TableScan.Builder tblScanBuilder = TableScan.newBuilder();
     Map<ColumnRef, Integer> colOffsetMap = new HashMap<>();
 
-    // Step1. Add columns to first executor
-    for (int i = 0; i < getFields().size(); i++) {
-      ColumnRef col = getFields().get(i);
-      tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
-      colOffsetMap.put(col, i);
-    }
-
     if (isIndexScan) {
       // IndexScan
       if (indexInfo == null) {
@@ -169,79 +162,73 @@ public class TiDAGRequest implements Serializable {
           .map(TiIndexColumn::getOffset)
           .collect(Collectors.toList());
 
-      if (isDoubleRead()) {
-        for (Integer idx : indexColIds) {
-          ColumnInfo columnInfo = columnInfoList
-              .get(idx)
-              .toProto(tableInfo);
+      for (Integer idx : indexColIds) {
+        ColumnInfo columnInfo = columnInfoList
+            .get(idx)
+            .toProto(tableInfo);
 
-          ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder();
-          colBuilder.setTp(columnInfo.getTp());
-          colBuilder.setColumnId(columnInfo.getColumnId());
-          colBuilder.setCollation(columnInfo.getCollation());
-          colBuilder.setColumnLen(columnInfo.getColumnLen());
-          colBuilder.setFlag(columnInfo.getFlag());
-          if (columnInfo.getColumnId() == -1) {
-            hasPk = true;
-            colBuilder.setPkHandle(true);
-          }
-          indexScanBuilder.addColumns(colBuilder);
+        ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder();
+        colBuilder.setTp(columnInfo.getTp());
+        colBuilder.setColumnId(columnInfo.getColumnId());
+        colBuilder.setCollation(columnInfo.getCollation());
+        colBuilder.setColumnLen(columnInfo.getColumnLen());
+        colBuilder.setFlag(columnInfo.getFlag());
+        if (columnInfo.getColumnId() == -1) {
+          hasPk = true;
+          colBuilder.setPkHandle(true);
         }
-      } else {
-        for (ColumnRef columnRef: getFields()) {
-          ColumnInfo columnInfo = columnRef.getColumnInfo().toProto(tableInfo);
-
-          ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder();
-          colBuilder.setTp(columnInfo.getTp());
-          colBuilder.setColumnId(columnInfo.getColumnId());
-          colBuilder.setCollation(columnInfo.getCollation());
-          colBuilder.setColumnLen(columnInfo.getColumnLen());
-          colBuilder.setFlag(columnInfo.getFlag());
-          if (columnInfo.getColumnId() == -1) {
-            hasPk = true;
-            colBuilder.setPkHandle(true);
-          }
-          indexScanBuilder.addColumns(colBuilder);
-        }
-      }
-      executorBuilder.setTp(ExecType.TypeIndexScan);
-      // double read case
-      if (!hasPk && isDoubleRead()) {
-        ColumnInfo handleColumn = ColumnInfo.newBuilder()
-            .setColumnId(-1)
-            .setPkHandle(true)
-            // We haven't changed the field name in protobuf file, but
-            // we need to set this to true in order to retrieve the handle,
-            // so the name 'setPkHandle' may sounds strange.
-            .build();
-        indexScanBuilder.addColumns(handleColumn);
+        indexScanBuilder.addColumns(colBuilder);
       }
 
-      indexScanBuilder
-          .setTableId(tableInfo.getId())
-          .setIndexId(indexInfo.getId());
-      dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
-      int colCount = indexScanBuilder.getColumnsCount();
       if (isDoubleRead()) {
+        // double read case
+        if (!hasPk) {
+          ColumnInfo handleColumn = ColumnInfo.newBuilder()
+              .setColumnId(-1)
+              .setPkHandle(true)
+              // We haven't changed the field name in protobuf file, but
+              // we need to set this to true in order to retrieve the handle,
+              // so the name 'setPkHandle' may sounds strange.
+              .build();
+          indexScanBuilder.addColumns(handleColumn);
+        }
+
+        int colCount = indexScanBuilder.getColumnsCount();
         // double read case: need to retrieve handle
         dagRequestBuilder.addOutputOffsets(
             colCount != 0 ? colCount - 1 : 0
         );
       } else {
+        // offset for dagRequest should be in accordance with fields
         // column offset should be in accordance with index
-        for (Integer idx: indexColIds) {
-          for (int i = 0; i < getFields().size(); i++) {
-            if (getFields().get(i).getName().equalsIgnoreCase(columnInfoList.get(idx).getName())) {
+        for (int j = 0; j < indexColIds.size(); j ++) {
+          TiColumnInfo columnInfo = columnInfoList.get(indexColIds.get(j));
+          for (int i = 0; i < getFields().size(); i ++) {
+            ColumnRef col = getFields().get(i);
+            if (col.getColumnInfo().equals(columnInfo)) {
               dagRequestBuilder.addOutputOffsets(i);
+              colOffsetMap.put(col, j);
               break;
             }
           }
         }
       }
+      executorBuilder.setTp(ExecType.TypeIndexScan);
+
+      indexScanBuilder
+          .setTableId(tableInfo.getId())
+          .setIndexId(indexInfo.getId());
+      dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
     } else {
       // TableScan
       executorBuilder.setTp(ExecType.TypeTableScan);
       tblScanBuilder.setTableId(tableInfo.getId());
+      // Step1. Add columns to first executor
+      for (int i = 0; i < getFields().size(); i++) {
+        ColumnRef col = getFields().get(i);
+        tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
+        colOffsetMap.put(col, i);
+      }
       // Currently, according to TiKV's implementation, if handle
       // is needed, we should add an extra column with an ID of -1
       // to the TableScan executor

@@ -185,9 +185,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  private def distinct(seq1: Seq[TiColumnRef], seq2: Seq[TiColumnRef]): Seq[TiColumnRef] = {
-    var ret = new ArrayBuffer[TiColumnRef]
-    var set = new mutable.HashSet[TiColumnRef]
+  private def distinct[A](seq1: Seq[A], seq2: Seq[A]): Seq[A] = {
+    var ret = new ArrayBuffer[A]
+    var set = new mutable.HashSet[A]
     seq1.foreach(f => {
       ret += f
       set += f
@@ -215,7 +215,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       projectList.map { _.toAttribute.name }.map { ColumnRef.create }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
-    val tiColumns = distinct(tiFilters.flatMap { referencedTiColumns }, tiProjects)
+    val tiColumns: Seq[TiColumnRef] =
+      distinct(tiFilters.flatMap { referencedTiColumns }, tiProjects)
 
     val columnInfoList = ScanAnalyzer.extractColumnInfoList(source.table, tiColumns.asJava)
 
