@@ -17,10 +17,10 @@
 
 package com.pingcap.tikv.region;
 
-import com.google.protobuf.AbstractMessage;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.pingcap.tidb.tipb.*;
+import com.pingcap.tidb.tipb.DAGRequest;
+import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.KeyException;
@@ -46,8 +46,7 @@ import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.*;
-import static java.util.Objects.requireNonNull;
+import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
 
 // RegionStore itself is not thread-safe
 public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, TikvStub> implements RegionErrorReceiver {
@@ -55,8 +54,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     REQ_TYPE_SELECT(101),
     REQ_TYPE_INDEX(102),
     REQ_TYPE_DAG(103),
-    REQ_TYPE_ANALYZE_COLUMN(104),
-    REQ_TYPE_ANALYZE_INDEX(104),
+    REQ_TYPE_ANALYZE(104),
     BATCH_ROW_COUNT(64);
 
     private final int value;
@@ -179,36 +177,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return resp.getPairsList();
   }
 
-  public AnalyzeColumnsResp analyzeColumns(AnalyzeReq req, List<KeyRange> ranges) {
-    return (AnalyzeColumnsResp) coprocessRangeRequest(req, REQ_TYPE_ANALYZE_COLUMN, ranges);
-  }
-
-  public AnalyzeIndexResp analyzeIndex(AnalyzeReq req, List<KeyRange> ranges) {
-    return (AnalyzeIndexResp) coprocessRangeRequest(req, REQ_TYPE_ANALYZE_INDEX, ranges);
-  }
-
-  private AbstractMessage coprocessRangeRequest(AbstractMessage req, RequestTypes type, List<KeyRange> ranges) {
-    requireNonNull(type, "RequestTypes cannot be null.");
-    requireNonNull(req, "Request cannot be null.");
-    requireNonNull(ranges, "Request ranges cannot be null");
-
-    Supplier<Coprocessor.Request> reqToSend = () ->
-        Coprocessor.Request.newBuilder()
-            .setContext(region.getContext())
-            .setData(req.toByteString())
-            .setTp(type.getValue())
-            .addAllRanges(ranges)
-            .build();
-
-    KVErrorHandler<Coprocessor.Response> errHandler =
-        new KVErrorHandler<>(
-            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-            Coprocessor.Response::getOtherError);
-
-    Coprocessor.Response resp = callWithRetry(TikvGrpc.METHOD_COPROCESSOR, reqToSend, errHandler);
-    return coprocessorHelper(type, resp);
-  }
-
   /**
    * Execute a DAGRequest and retrieve the response from TiKV server.
    *
@@ -217,10 +185,25 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
    * @return Execution result computed by coprocessor
    */
   public SelectResponse coprocess(DAGRequest req, List<KeyRange> ranges) {
-    if (req.getExecutorsCount() < 1) {
+    if (req == null ||
+        ranges == null ||
+        req.getExecutorsCount() < 1) {
       throw new IllegalArgumentException("Invalid coprocess argument!");
     }
-    return (SelectResponse) coprocessRangeRequest(req, REQ_TYPE_DAG, ranges);
+
+    Supplier<Coprocessor.Request> reqToSend = () ->
+        Coprocessor.Request.newBuilder()
+            .setContext(region.getContext())
+            .setTp(REQ_TYPE_DAG.getValue())
+            .setData(req.toByteString())
+            .addAllRanges(ranges)
+            .build();
+    KVErrorHandler<Coprocessor.Response> handler =
+        new KVErrorHandler<>(
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null,
+            Coprocessor.Response::getOtherError);
+    Coprocessor.Response resp = callWithRetry(TikvGrpc.METHOD_COPROCESSOR, reqToSend, handler);
+    return coprocessorHelper(resp);
   }
 
   public Iterator<SelectResponse> coprocessStreaming(DAGRequest req, List<KeyRange> ranges) {
@@ -265,27 +248,18 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
       @Override
       public SelectResponse next() {
-        return (SelectResponse) coprocessorHelper(REQ_TYPE_DAG, responseIterator.next());
+        return coprocessorHelper(responseIterator.next());
       }
     };
   }
 
-  private AbstractMessage coprocessorHelper(RequestTypes type, Coprocessor.Response resp) {
+  private SelectResponse coprocessorHelper(Coprocessor.Response resp) {
     try {
-      switch (type) {
-        case REQ_TYPE_DAG:
-          SelectResponse selectResp = SelectResponse.parseFrom(resp.getData());
-          if (selectResp.hasError()) {
-            throw new SelectException(selectResp.getError(), selectResp.getError().getMsg());
-          }
-          return selectResp;
-        case REQ_TYPE_ANALYZE_INDEX:
-          return AnalyzeIndexResp.parseFrom(resp.getData());
-        case REQ_TYPE_ANALYZE_COLUMN:
-          return AnalyzeColumnsResp.parseFrom(resp.getData());
-        default:
-          throw new IllegalArgumentException("Invalid request type:" + type);
+      SelectResponse selectResp = SelectResponse.parseFrom(resp.getData());
+      if (selectResp.hasError()) {
+        throw new SelectException(selectResp.getError(), selectResp.getError().getMsg());
       }
+      return selectResp;
     } catch (InvalidProtocolBufferException e) {
       throw new TiClientInternalException("Error parsing protobuf for coprocessor response.", e);
     }

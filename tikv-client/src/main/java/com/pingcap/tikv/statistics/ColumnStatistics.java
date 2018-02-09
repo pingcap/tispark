@@ -1,27 +1,51 @@
 package com.pingcap.tikv.statistics;
 
-import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
-import java.util.Set;
+public class ColumnStatistics {
+  private Histogram histogram;
+  private CMSketch cmSketch;
+  private long count;
+  private TiColumnInfo columnInfo;
 
-/**
- * Created by birdstorm on 2017/8/14.
- * may be deleted according to TiDB's implementation
- */
-public class ColumnWithHistogram {
-  private Histogram hg;
-  private TiColumnInfo info;
-
-  public ColumnWithHistogram(Histogram hist, TiColumnInfo colInfo) {
-    this.hg = hist;
-    this.info = colInfo;
+  public ColumnStatistics(Histogram histogram, CMSketch cmSketch, long count, TiColumnInfo columnInfo) {
+    this.histogram = histogram;
+    this.cmSketch = cmSketch;
+    this.count = count;
+    this.columnInfo = columnInfo;
   }
 
-  long getLastUpdateVersion() {
-    return hg.getLastUpdateVersion();
+  public Histogram getHistogram() {
+    return histogram;
   }
 
+  public void setHistogram(Histogram histogram) {
+    this.histogram = histogram;
+  }
+
+  public CMSketch getCmSketch() {
+    return cmSketch;
+  }
+
+  public void setCmSketch(CMSketch cmSketch) {
+    this.cmSketch = cmSketch;
+  }
+
+  public long getCount() {
+    return count;
+  }
+
+  public void setCount(long count) {
+    this.count = count;
+  }
+
+  public TiColumnInfo getColumnInfo() {
+    return columnInfo;
+  }
+
+  public void setColumnInfo(TiColumnInfo columnInfo) {
+    this.columnInfo = columnInfo;
+  }
   /** getColumnRowCount estimates the row count by a slice of ColumnRange. */
 //  double getColumnRowCount(List<IndexRange> columnRanges) {
 //    double rowCount = 0.0;
@@ -100,17 +124,5 @@ public class ColumnWithHistogram {
 //    }
 //    return rowCount;
 //  }
-
-  public Histogram getHistogram() {
-    return hg;
-  }
-
-  public TiColumnInfo getColumnInfo() {
-    return info;
-  }
-
-  public static ColumnRef indexInfo2Col(Set<ColumnRef> cols, TiColumnInfo col) {
-    return null;
-  }
 
 }

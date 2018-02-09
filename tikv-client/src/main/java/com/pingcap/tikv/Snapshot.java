@@ -17,15 +17,10 @@ package com.pingcap.tikv;
 
 import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
-import com.pingcap.tidb.tipb.AnalyzeColumnsResp;
-import com.pingcap.tidb.tipb.AnalyzeIndexResp;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Kvrpcpb.KvPair;
-import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Store;
-import com.pingcap.tikv.meta.TiAnalyzeRequest;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
@@ -80,36 +75,6 @@ public class Snapshot {
         RegionStoreClient.create(pair.first, pair.second, getSession());
     // TODO: Need to deal with lock error after grpc stable
     return client.get(key, timestamp.getVersion());
-  }
-
-  public List<AnalyzeIndexResp> analyzeIndex(TiAnalyzeRequest analyzeRequest) {
-    List<RegionTask> tasks = RangeSplitter.newSplitter(getSession().getRegionManager())
-        .splitRangeByRegion(analyzeRequest.getRanges());
-    List<AnalyzeIndexResp> indexResps = new ArrayList<>();
-    for (RegionTask regionTask : tasks) {
-      List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
-      TiRegion region = regionTask.getRegion();
-      Metapb.Store store = regionTask.getStore();
-      RegionStoreClient client = RegionStoreClient.create(region, store, session);
-      AnalyzeIndexResp resp = client.analyzeIndex(analyzeRequest.buildIndexAnalyzeReq(), ranges);
-      indexResps.add(resp);
-    }
-    return indexResps;
-  }
-
-  public List<AnalyzeColumnsResp> analyzeColumn(TiAnalyzeRequest analyzeRequest) {
-    List<RegionTask> tasks = RangeSplitter.newSplitter(getSession().getRegionManager())
-        .splitRangeByRegion(analyzeRequest.getRanges());
-    List<AnalyzeColumnsResp> columnsResps = new ArrayList<>();
-    for (RegionTask regionTask : tasks) {
-      List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
-      TiRegion region = regionTask.getRegion();
-      Metapb.Store store = regionTask.getStore();
-      RegionStoreClient client = RegionStoreClient.create(region, store, session);
-      AnalyzeColumnsResp resp = client.analyzeColumns(analyzeRequest.buildColumnAnalyzeReq(), ranges);
-      columnsResps.add(resp);
-    }
-    return columnsResps;
   }
 
   /**

@@ -2,24 +2,41 @@ package com.pingcap.tikv.statistics;
 
 import com.pingcap.tikv.meta.TiIndexInfo;
 
-/**
- * Created by birdstorm on 2017/8/14.
- *
- */
-public class IndexWithHistogram {
-  private Histogram hg;
-  private TiIndexInfo info;
+public class IndexStatistics {
+  private Histogram histogram;
+  private CMSketch cmSketch;
+  private TiIndexInfo indexInfo;
 
-  public IndexWithHistogram(Histogram hist, TiIndexInfo indexInfo) {
-    this.hg = hist;
-    this.info = indexInfo;
+  public IndexStatistics(Histogram histogram, CMSketch cmSketch, TiIndexInfo indexInfo) {
+    this.histogram = histogram;
+    this.cmSketch = cmSketch;
+    this.indexInfo = indexInfo;
   }
 
-  long getLastUpdateVersion() {
-    return hg.getLastUpdateVersion();
+  public Histogram getHistogram() {
+    return histogram;
   }
 
-//  double getRowCount(List<IndexRange> indexRanges, long tableID) {
+  public void setHistogram(Histogram histogram) {
+    this.histogram = histogram;
+  }
+
+  public CMSketch getCmSketch() {
+    return cmSketch;
+  }
+
+  public void setCmSketch(CMSketch cmSketch) {
+    this.cmSketch = cmSketch;
+  }
+
+  public TiIndexInfo getIndexInfo() {
+    return indexInfo;
+  }
+
+  public void setIndexInfo(TiIndexInfo indexInfo) {
+    this.indexInfo = indexInfo;
+  }
+  //  double getRowCount(List<IndexRange> indexRanges, long tableID) {
 //    double rowCount = 0.0;
 //    for (IndexRange range : indexRanges) {
 //      double cnt = 0.0;
@@ -89,12 +106,4 @@ public class IndexWithHistogram {
 //    }
 //    return rowCount;
 //  }
-
-  public Histogram getHistogram() {
-    return hg;
-  }
-
-  public TiIndexInfo getIndexInfo() {
-    return info;
-  }
 }

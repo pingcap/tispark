@@ -18,47 +18,66 @@ package com.pingcap.tikv.statistics;
 
 import com.pingcap.tikv.key.Key;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
 public class Histogram {
 
-  private static final String TABLE_ID = "table_id"; //the ID of table
-  private static final String IS_INDEX = "is_index"; // whether or not have an index
-  private static final String HIST_ID = "hist_id"; //ColumnWithHistogram ID for each histogram
-  private static final String BUCKET_ID = "bucket_id"; //the ID of bucket
-  private static final String COUNT = "count"; //the total number of bucket
-  private static final String REPEATS = "repeats"; //repeats values in histogram
-  private static final String LOWER_BOUND = "lower_bound"; //lower bound of histogram
-  private static final String UPPER_BOUND = "upper_bound"; //upper bound of histogram
-
   //Histogram
-  private long id;
-  private long numberOfDistinctValue; // Number of distinct values.
+  private final long id;
+  private final long numberOfDistinctValue; // Number of distinct values.
   private List<Bucket> buckets;
-  private long nullCount;
-  private long lastUpdateVersion;
+  private final long nullCount;
+  private final long lastUpdateVersion;
 
+  public static class Builder {
+    private long id;
+    private long NDV;
+    private List<Bucket> buckets = new ArrayList<>();
+    private long nullCount;
+    private long lastUpdateVersion;
 
-  public Histogram() {
+    public Builder setId(long id) {
+      this.id = id;
+      return this;
+    }
+
+    public Builder setNDV(long NDV) {
+      this.NDV = NDV;
+      return this;
+    }
+
+    public Builder setBuckets(List<Bucket> buckets) {
+      this.buckets = buckets;
+      return this;
+    }
+
+    public Builder setNullCount(long nullCount) {
+      this.nullCount = nullCount;
+      return this;
+    }
+
+    public Builder setLastUpdateVersion(long lastUpdateVersion) {
+      this.lastUpdateVersion = lastUpdateVersion;
+      return this;
+    }
+
+    public Histogram build() {
+      return new Histogram(id, NDV, buckets, nullCount, lastUpdateVersion);
+    }
   }
 
-  public Histogram(long id,
-                   long numberOfDistinctValue,
-                   List<Bucket> buckets) {
-    this.id = id;
-    this.numberOfDistinctValue = numberOfDistinctValue;
-    this.buckets = buckets;
-    this.nullCount = 0;
-    this.lastUpdateVersion = 0;
+  public static Builder newBuilder() {
+    return new Builder();
   }
 
-  public Histogram(long id,
-                   long numberOfDistinctValue,
-                   List<Bucket> buckets,
-                   long nullCount,
-                   long lastUpdateVersion) {
+  private Histogram(long id,
+                    long numberOfDistinctValue,
+                    List<Bucket> buckets,
+                    long nullCount,
+                    long lastUpdateVersion) {
     this.id = id;
     this.numberOfDistinctValue = numberOfDistinctValue;
     this.buckets = buckets;
@@ -70,44 +89,26 @@ public class Histogram {
     return numberOfDistinctValue;
   }
 
-  void setNumberOfDistinctValue(long numberOfDistinctValue) {
-    this.numberOfDistinctValue = numberOfDistinctValue;
-  }
-
   public List<Bucket> getBuckets() {
     return buckets;
-  }
-
-  public void setBuckets(List<Bucket> buckets) {
-    this.buckets = buckets;
   }
 
   public long getNullCount() {
     return nullCount;
   }
 
-  void setNullCount(long nullCount) {
-    this.nullCount = nullCount;
-  }
-
   long getLastUpdateVersion() {
     return lastUpdateVersion;
-  }
-
-  void setLastUpdateVersion(long lastUpdateVersion) {
-    this.lastUpdateVersion = lastUpdateVersion;
   }
 
   public long getId() {
     return id;
   }
 
-  public void setId(long id) {
-    this.id = id;
-  }
 
-
-  /** equalRowCount estimates the row count where the column equals to value. */
+  /**
+   * equalRowCount estimates the row count where the column equals to value.
+   */
   double equalRowCount(Key values) {
     int index = lowerBound(values);
     //index not in range
@@ -133,7 +134,9 @@ public class Histogram {
     return totalRowCount() / numberOfDistinctValue;
   }
 
-  /** greaterRowCount estimates the row count where the column greater than value. */
+  /**
+   * greaterRowCount estimates the row count where the column greater than value.
+   */
   double greaterRowCount(Key values) {
     double lessCount = lessRowCount(values);
     double equalCount = equalRowCount(values);
@@ -145,14 +148,18 @@ public class Histogram {
     return greaterCount;
   }
 
-  /** greaterAndEqRowCount estimates the row count where the column less than or equal to value. */
+  /**
+   * greaterAndEqRowCount estimates the row count where the column less than or equal to value.
+   */
   private double greaterAndEqRowCount(Key values) {
     double greaterCount = greaterRowCount(values);
     double equalCount = equalRowCount(values);
     return greaterCount + equalCount;
   }
 
-  /** lessRowCount estimates the row count where the column less than value. */
+  /**
+   * lessRowCount estimates the row count where the column less than value.
+   */
   double lessRowCount(Key values) {
     int index = lowerBound(values);
     //index not in range
@@ -170,7 +177,7 @@ public class Histogram {
     double lessThanBucketValueCount = curCount - buckets.get(index).getRepeats();
     Key lowerBound = buckets.get(index).getLowerBound();
     int c;
-    if(lowerBound != null) {
+    if (lowerBound != null) {
       c = values.compareTo(lowerBound);
     } else {
       c = 1;
@@ -181,14 +188,18 @@ public class Histogram {
     return (preCount + lessThanBucketValueCount) / 2;
   }
 
-  /** lessAndEqRowCount estimates the row count where the column less than or equal to value. */
+  /**
+   * lessAndEqRowCount estimates the row count where the column less than or equal to value.
+   */
   public double lessAndEqRowCount(Key values) {
     double lessCount = lessRowCount(values);
     double equalCount = equalRowCount(values);
     return lessCount + equalCount;
   }
 
-  /** betweenRowCount estimates the row count where column greater than or equal to a and less than b. */
+  /**
+   * betweenRowCount estimates the row count where column greater than or equal to a and less than b.
+   */
   double betweenRowCount(Key a, Key b) {
 //    CodecDataInput c = new CodecDataInput(a.getByteString());
 //    CodecDataInput d = new CodecDataInput(b.getByteString());
@@ -201,18 +212,18 @@ public class Histogram {
     return lessCountB - lessCountA;
   }
 
-  protected double totalRowCount() {
+  public double totalRowCount() {
     if (buckets.isEmpty()) {
       return 0;
     }
     return (buckets.get(buckets.size() - 1).count);
   }
 
-  protected double bucketRowCount() {
+  public double bucketRowCount() {
     return totalRowCount() / buckets.size();
   }
 
-  protected double inBucketBetweenCount() {
+  public double inBucketBetweenCount() {
     // TODO: Make this estimation more accurate using uniform spread assumption.
     return bucketRowCount() / 3 + 1;
   }
@@ -222,16 +233,17 @@ public class Histogram {
    * and returns (-[insertion point] - 1) if the key is not found in buckets
    * where [insertion point] denotes the index of the first element greater than the key
    */
-  protected int lowerBound(Key key) {
+  public int lowerBound(Key key) {
     assert key.getClass() == buckets.get(0).getUpperBound().getClass();
     return Arrays.binarySearch(buckets.toArray(), new Bucket(key));
   }
 
   /**
    * mergeBuckets is used to merge every two neighbor buckets.
-   * @param  bucketIdx: index of the last bucket.
+   *
+   * @param bucketIdx: index of the last bucket.
    */
-  void mergeBlock(int bucketIdx) {
+  public void mergeBlock(int bucketIdx) {
     int curBuck = 0;
     for (int i = 0; i + 1 <= bucketIdx; i += 2) {
       buckets.set(curBuck++, new Bucket(buckets.get(i + 1).count,
@@ -245,7 +257,9 @@ public class Histogram {
     buckets = buckets.subList(0, curBuck);
   }
 
-  /** getIncreaseFactor will return a factor of data increasing after the last analysis. */
+  /**
+   * getIncreaseFactor will return a factor of data increasing after the last analysis.
+   */
   double getIncreaseFactor(long totalCount) {
     long columnCount = buckets.get(buckets.size() - 1).count + nullCount;
     if (columnCount == 0) {
