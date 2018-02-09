@@ -103,7 +103,8 @@ public class ScanAnalyzer {
     return buildScan(table.getColumns(), conditions, pkIndex, table);
   }
 
-  private ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
+  @VisibleForTesting
+  ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
