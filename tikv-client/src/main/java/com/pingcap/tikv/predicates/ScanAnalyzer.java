@@ -163,7 +163,10 @@ public class ScanAnalyzer {
         throw new TiClientInternalException("Empty access conditions");
       }
 
-      ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+      // This range only possible when < MIN or > MAX
+      if (!startKey.equals(endKey)) {
+        ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+      }
     }
 
     return ranges;

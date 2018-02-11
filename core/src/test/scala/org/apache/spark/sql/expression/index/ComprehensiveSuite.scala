@@ -26,7 +26,6 @@ class ComprehensiveSuite extends BaseTiSparkSuite {
     """select tp_int, tp_float from full_data_type_table_idx
       | where tp_int = 1690889031 or tp_int = 1431435712
       | order by 1, 2""".stripMargin,
-
     """select tp_int, tp_float from full_data_type_table_idx
       | where tp_float > 0.000001 and tp_float <= 3.1415925 and tp_int = 1690889031 and tp_int = 1690889031
       | order by 1, 2""".stripMargin,
@@ -40,7 +39,6 @@ class ComprehensiveSuite extends BaseTiSparkSuite {
     """select tp_float, tp_int from full_data_type_table_idx
       | where (tp_float < 0.000001 or tp_float > 0.1415925) and (tp_int = 2333 or tp_int = 1238733782)
       | order by 1,2""".stripMargin,
-
     // Is null
     "select count(*) from full_data_type_table_idx where tp_int != 0",
     "select count(*) from full_data_type_table_idx where tp_int is null",
