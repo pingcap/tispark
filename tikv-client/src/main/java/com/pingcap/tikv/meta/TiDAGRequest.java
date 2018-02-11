@@ -129,14 +129,13 @@ public class TiDAGRequest implements Serializable {
   }
 
   private ColumnInfo handleColumn() {
-    ColumnInfo handleColumn = ColumnInfo.newBuilder()
+    return ColumnInfo.newBuilder()
         .setColumnId(-1)
         .setPkHandle(true)
         // We haven't changed the field name in protobuf file, but
         // we need to set this to true in order to retrieve the handle,
         // so the name 'setPkHandle' may sounds strange.
         .build();
-    return handleColumn;
   }
 
   /**
@@ -157,7 +156,10 @@ public class TiDAGRequest implements Serializable {
     Executor.Builder executorBuilder = Executor.newBuilder();
     IndexScan.Builder indexScanBuilder = IndexScan.newBuilder();
     TableScan.Builder tblScanBuilder = TableScan.newBuilder();
+    // find a column's offset in fields
     Map<ColumnRef, Integer> colOffsetMap = new HashMap<>();
+    // find a column's position in index
+    Map<TiColumnInfo, Integer> colPosMap = new HashMap<>();
 
     if (isIndexScan) {
       // IndexScan
@@ -173,10 +175,11 @@ public class TiDAGRequest implements Serializable {
           .map(TiIndexColumn::getOffset)
           .collect(Collectors.toList());
 
+      int idxPos = 0;
       for (Integer idx : indexColIds) {
-        ColumnInfo columnInfo = columnInfoList
-            .get(idx)
-            .toProto(tableInfo);
+        TiColumnInfo tiColumnInfo = columnInfoList.get(idx);
+        ColumnInfo columnInfo = tiColumnInfo.toProto(tableInfo);
+        colPosMap.put(tiColumnInfo, idxPos ++);
 
         ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder();
         colBuilder.setTp(columnInfo.getTp());
@@ -208,24 +211,25 @@ public class TiDAGRequest implements Serializable {
         boolean pkIsNeeded = false;
         // =================== IMPORTANT ======================
         // offset for dagRequest should be in accordance with fields
-        // but column offset for index scan should be in accordance with index
-        loop: for (ColumnRef col: getFields()) {
-          for (int j = 0; j < indexColIds.size(); j ++) {
-            TiColumnInfo columnInfo = columnInfoList.get(indexColIds.get(j));
+        for (ColumnRef col: getFields()) {
+          Integer pos = colPosMap.get(col.getColumnInfo());
+          if (pos != null) {
+            TiColumnInfo columnInfo = columnInfoList.get(indexColIds.get(pos));
             if (col.getColumnInfo().equals(columnInfo)) {
-              dagRequestBuilder.addOutputOffsets(count);
+              dagRequestBuilder.addOutputOffsets(pos);
               count ++;
-              colOffsetMap.put(col, j);
-              continue loop;
+              colOffsetMap.put(col, pos);
             }
           }
           // if a column of field is not contained in index selected,
           // logically it must be the pk column and
           // the pkIsHandle must be true. Extra check here.
-          if (col.getColumnInfo().isPrimaryKey() && tableInfo.isPkHandle()) {
+          else if (col.getColumnInfo().isPrimaryKey() && tableInfo.isPkHandle()) {
             pkIsNeeded = true;
             // offset should be processed for each primary key encountered
             dagRequestBuilder.addOutputOffsets(colCount);
+            // for index scan, column offset must be in the order of index->handle
+            colOffsetMap.put(col, indexColIds.size());
           } else {
             throw new DAGRequestException("columns other than primary key and index key exist in fields while index single read");
           }
