@@ -19,6 +19,7 @@ package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.nio.charset.StandardCharsets;
 
 public class StringType extends BytesType {
   public static final StringType VARCHAR = new StringType(MySQLType.TypeVarchar);
@@ -43,6 +44,6 @@ public class StringType extends BytesType {
    */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    return new String((byte[])super.decodeNotNull(flag, cdi));
+    return new String((byte[])super.decodeNotNull(flag, cdi), StandardCharsets.UTF_8);
   }
 }

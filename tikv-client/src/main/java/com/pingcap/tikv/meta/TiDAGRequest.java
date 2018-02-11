@@ -531,8 +531,8 @@ public class TiDAGRequest implements Serializable {
   }
 
   public void resetFilters(List<Expression> filters) {
-    filters.clear();
-    filters.addAll(filters);
+    this.filters.clear();
+    this.filters.addAll(filters);
   }
 
   public List<Coprocessor.KeyRange> getRanges() {
