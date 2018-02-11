@@ -39,8 +39,6 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
@@ -185,23 +183,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  private def distinct[A](seq1: Seq[A], seq2: Seq[A]): Seq[A] = {
-    var ret = new ArrayBuffer[A]
-    var set = new mutable.HashSet[A]
-    seq1.foreach(f => {
-      ret += f
-      set += f
-    })
-    seq2.foreach(
-      f =>
-        if (!set.contains(f)) {
-          ret += f
-          set += f
-      }
-    )
-    ret
-  }
-
   def referencedTiColumns(expression: TiExpression): Seq[ColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
@@ -216,9 +197,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
     val tiColumns: Seq[TiColumnRef] =
-      distinct(tiFilters.flatMap { referencedTiColumns }, tiProjects)
+      (tiFilters.flatMap { referencedTiColumns } ++ tiProjects).distinct
 
-    val columnInfoList = ScanAnalyzer.extractColumnInfoList(source.table, tiColumns.asJava)
+    // bind all ColumnRefs to table
+    tiColumns.foreach { _.resolve(source.table) }
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
@@ -227,7 +209,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
-      scanBuilder.buildScan(columnInfoList, tiFilters.asJava, source.table)
+      scanBuilder.buildScan(
+        tiColumns.map { _.getColumnInfo }.asJava,
+        tiFilters.asJava,
+        source.table
+      )
     } else {
       tableScanPlan
     }

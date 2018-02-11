@@ -19,7 +19,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
@@ -270,19 +269,6 @@ public class ScanAnalyzer {
       }
     }
     return true;
-  }
-
-  public static List<TiColumnInfo> extractColumnInfoList(TiTableInfo table, List<ColumnRef> cols) {
-    Set<TiColumnInfo> result = new HashSet<>();
-    loop: for (TiColumnInfo colInfo: table.getColumns()) {
-      for (ColumnRef col: cols) if (col.getName().equalsIgnoreCase(colInfo.getName())) {
-        result.add(colInfo);
-        continue loop;
-      }
-    }
-    List<TiColumnInfo> ret = new ArrayList<>();
-    ret.addAll(result);
-    return ret;
   }
 
   @VisibleForTesting
