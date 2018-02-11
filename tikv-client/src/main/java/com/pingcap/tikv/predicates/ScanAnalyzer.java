@@ -248,7 +248,7 @@ public class ScanAnalyzer {
     return ranges;
   }
 
-  private boolean isCoveringIndex(List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
+  boolean isCoveringIndex(List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
     for (TiColumnInfo colInfo: columns) {
       if (pkIsHandle && colInfo.isPrimaryKey()) {
         continue;

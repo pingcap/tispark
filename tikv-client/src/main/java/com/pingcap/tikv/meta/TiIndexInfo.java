@@ -15,17 +15,19 @@
 
 package com.pingcap.tikv.meta;
 
-import static java.util.Objects.requireNonNull;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tidb.tipb.IndexInfo;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static java.util.Objects.requireNonNull;
 
 public class TiIndexInfo implements Serializable {
   private final long id;
@@ -40,7 +42,8 @@ public class TiIndexInfo implements Serializable {
   private final boolean isFakePrimaryKey;
 
   @JsonCreator
-  TiIndexInfo(
+  @VisibleForTesting
+  public TiIndexInfo(
       @JsonProperty("id") long id,
       @JsonProperty("idx_name") CIStr name,
       @JsonProperty("tbl_name") CIStr tableName,
