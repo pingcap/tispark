@@ -181,7 +181,7 @@ public class ScanAnalyzer {
       TiTableInfo table, TiIndexInfo index, List<IndexRange> indexRanges) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(index, "Index cannot be null to encoding keyRange");
-    requireNonNull(index, "indexRanges cannot be null to encoding keyRange");
+    requireNonNull(indexRanges, "indexRanges cannot be null to encoding keyRange");
 
     List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
 
