@@ -21,7 +21,7 @@ class StatisticsManager(tiSession: TiSession) {
   private lazy val histTable = catalog.getTable("mysql", "stats_histograms")
   private lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
-  private final val statisticsMap = mutable.Map[Long, TableStatistics]()
+  private final val statisticsMap = StatisticsManager.getTableStatistics
 
   def loadNeededHistograms(): Unit = {}
 
@@ -89,7 +89,7 @@ class StatisticsManager(tiSession: TiSession) {
       if (isIndex && histogram != null) {
         statisticsMap(table.getId).getIndexHistMap
           .put(histID, new IndexStatistics(histogram, cms, indexInfos.head))
-      } else if (histogram != null && cms != null) {
+      } else if (histogram != null) {
         statisticsMap(table.getId).getColumnsHistMap
           .put(
             histID,
@@ -150,8 +150,8 @@ class StatisticsManager(tiSession: TiSession) {
       val repeats = row.getLong(1)
       var lowerBound: Key = null
       var upperBound: Key = null
-      lowerBound = TypedKey.toTypedKey(row.get(2, DataTypeFactory.of(MySQLType.TypeBlob)), dataType)
-      upperBound = TypedKey.toTypedKey(row.get(3, DataTypeFactory.of(MySQLType.TypeBlob)), dataType)
+      lowerBound = TypedKey.toTypedKey(row.getBytes(2), DataTypeFactory.of(MySQLType.TypeBlob))
+      upperBound = TypedKey.toTypedKey(row.getBytes(3), DataTypeFactory.of(MySQLType.TypeBlob))
       totalCount += count
       buckets += new Bucket(totalCount, repeats, lowerBound, upperBound)
     }
@@ -196,7 +196,7 @@ class StatisticsManager(tiSession: TiSession) {
       return null
     }
     val rawData = rows.next().getBytes(0)
-    if (rawData == null) {
+    if (rawData == null || rawData.length <= 0) {
       return null
     }
     val sketch = com.pingcap.tidb.tipb.CMSketch.parseFrom(rawData)
@@ -212,4 +212,10 @@ class StatisticsManager(tiSession: TiSession) {
     }
     result
   }
+}
+
+object StatisticsManager {
+  private final lazy val statisticsMap = mutable.Map[Long, TableStatistics]()
+
+  private def getTableStatistics: mutable.Map[Long, TableStatistics] = statisticsMap
 }
