@@ -62,3 +62,4 @@ data
 
 # ignore test properties
 core/src/test/resources/tidb_config.properties
+/core/src/test/resources/tispark-test/
