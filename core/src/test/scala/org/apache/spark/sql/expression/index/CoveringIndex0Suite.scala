@@ -485,7 +485,11 @@ class CoveringIndex0Suite extends BaseTiSparkSuite {
     "select tp_int, tp_bigint from full_data_type_table_idx where tp_real > 0.7",
     "select tp_int, tp_real from full_data_type_table_idx where id_dt > 40 and tp_bigint < 0",
     "select id_dt, tp_real from full_data_type_table_idx where tp_int >= tp_bigint",
-    "select tp_bigint from full_data_type_table_idx where tp_real > 0.7 and tp_int <= 2333"
+    "select tp_bigint from full_data_type_table_idx where tp_real > 0.7 and tp_int <= 2333",
+    // special case:
+    "select id_dt from full_data_type_table_idx where (tp_int is null or tp_int = 4355836469450447576) and tp_tinyint < 100 order by id_dt",
+    "select id_dt from full_data_type_table_idx where tp_int is null and tp_tinyint < 100 order by id_dt",
+    "select id_dt from full_data_type_table_idx where tp_int = 4355836469450447576 is null and tp_tinyint < 100 order by id_dt"
   )
 
   allCases foreach { query =>
