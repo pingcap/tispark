@@ -81,6 +81,7 @@ public class PredicateUtils {
             builder.add(new IndexRange(key, range));
           }
         } else {
+          // no predicates with point keys leads to empty range encoding
           builder.add(new IndexRange(key, null));
         }
       }
@@ -90,6 +91,9 @@ public class PredicateUtils {
         for (Range<TypedKey> range : ranges) {
           builder.add(new IndexRange(null, range));
         }
+      } else {
+        // no filter at all means full range
+        builder.add(new IndexRange(null, Range.all()));
       }
     }
 
