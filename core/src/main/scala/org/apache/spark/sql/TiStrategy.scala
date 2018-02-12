@@ -20,6 +20,7 @@ import java.time.ZonedDateTime
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
+import com.pingcap.tikv.expression.visitor.MetaResolver
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
@@ -192,15 +193,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiProjects: Seq[TiColumnRef] =
-      projectList.map { _.toAttribute.name }.map { ColumnRef.create }
-    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
+    val tiProjects: Seq[TiExpression] = projectList.collect { case BasicExpression(expr) => expr }
+    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr)      => expr }
 
-    val tiColumns: Seq[TiColumnRef] =
-      (tiFilters.flatMap { referencedTiColumns } ++ tiProjects).distinct
+    val tiColumns
+      : Seq[TiColumnRef] = (tiFilters ++ tiProjects).flatMap { referencedTiColumns }.distinct
 
-    // bind all ColumnRefs to table
-    tiColumns.foreach { _.resolve(source.table) }
+    val resolver = new MetaResolver(source.table)
+    // need to bind all columns needed
+    tiColumns.foreach { resolver.resolve(_) }
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
