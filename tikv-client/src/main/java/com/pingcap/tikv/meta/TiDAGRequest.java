@@ -231,7 +231,7 @@ public class TiDAGRequest implements Serializable {
             // for index scan, column offset must be in the order of index->handle
             colOffsetMap.put(col, indexColIds.size());
           } else {
-            throw new DAGRequestException("columns other than primary key and index key exist in fields while index single read");
+            throw new DAGRequestException("columns other than primary key and index key exist in fields while index single read: " + col.getName());
           }
         }
         // pk is not included in index but still needed
