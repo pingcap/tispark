@@ -15,11 +15,6 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
@@ -42,6 +37,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static java.util.Objects.requireNonNull;
 
 
 public class ScanAnalyzer {
@@ -116,13 +116,18 @@ public class ScanAnalyzer {
 
     List<KeyRange> keyRanges;
     boolean isDoubleRead = false;
+    int tableSize = table.getColumns().size() + 1;
 
     if (index == null || index.isFakePrimaryKey()) {
       keyRanges = buildTableScanKeyRange(table, irs);
+      cost *= tableSize;
     } else {
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
+      int indexSize = index.getIndexColumns().size() + 1;
       if (isDoubleRead) {
-        cost *= 2;
+        cost *= tableSize + indexSize;
+      } else {
+        cost *= indexSize;
       }
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
