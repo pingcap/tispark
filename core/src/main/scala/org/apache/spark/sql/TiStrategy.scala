@@ -188,7 +188,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
   private def filterToDAGRequest(
-    projectList: Seq[NamedExpression],
+    projectList: Seq[Expression],
     filters: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
@@ -197,7 +197,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr)      => expr }
 
     val tiColumns
-      : Seq[TiColumnRef] = (tiFilters ++ tiProjects).flatMap { referencedTiColumns }.distinct
+      : Seq[TiColumnRef] = tiProjects.flatMap { referencedTiColumns }
 
     val resolver = new MetaResolver(source.table)
     // need to bind all columns needed
@@ -301,7 +301,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val residualFilter: Option[Expression] =
       residualFilters.reduceLeftOption(catalyst.expressions.And)
 
-    filterToDAGRequest(projectList, pushdownFilters, source, dagRequest)
+    filterToDAGRequest((projectSet ++ filterSet).toSeq, pushdownFilters, source, dagRequest)
 
     // Right now we still use a projection even if the only evaluation is applying an alias
     // to a column.  Since this is a no-op, it could be avoided. However, using this
