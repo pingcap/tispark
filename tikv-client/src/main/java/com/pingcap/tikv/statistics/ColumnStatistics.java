@@ -1,6 +1,14 @@
 package com.pingcap.tikv.statistics;
 
+import com.google.common.collect.BoundType;
+import com.google.common.collect.Range;
+import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.predicates.IndexRange;
+
+import java.util.List;
 
 public class ColumnStatistics {
   private Histogram histogram;
@@ -46,83 +54,66 @@ public class ColumnStatistics {
   public void setColumnInfo(TiColumnInfo columnInfo) {
     this.columnInfo = columnInfo;
   }
-  /** getColumnRowCount estimates the row count by a slice of ColumnRange. */
-//  double getColumnRowCount(List<IndexRange> columnRanges) {
-//    double rowCount = 0.0;
-//    for (IndexRange range : columnRanges) {
-//      double cnt = 0.0;
-//      List<Object> points = range.getAccessPoints();
-//      if (!points.isEmpty()) {
-//        if (points.size() > 1) {
-//          System.out.println("Warning: ColumnRowCount should only contain one attribute.");
-//        }
-//        cnt = hg.equalRowCount(Key.create(points.get(0)));
-//        assert range.getRange() == null;
-//      } else if (range.getRange() != null){
-//        Range rg = range.getRange();
-//        Key lowerBound, upperBound;
-//        DataType t;
-//        boolean lNull = !rg.hasLowerBound();
-//        boolean rNull = !rg.hasUpperBound();
-//        boolean lOpen = lNull || rg.lowerBoundType().equals(BoundType.OPEN);
-//        boolean rOpen = rNull || rg.upperBoundType().equals(BoundType.OPEN);
-//        String l = lOpen ? "(" : "[";
-//        String r = rOpen ? ")" : "]";
-//        CodecDataOutput cdo = new CodecDataOutput();
-//        Object lower = Key.unwrap(!lNull ? rg.lowerEndpoint() : DataType.encodeIndex(cdo));
-//        Object upper = Key.unwrap(!rNull ? rg.upperEndpoint() : DataType.encodeMaxValue(cdo));
-////        System.out.println("=>Column " + l + (!lNull ? Key.create(lower) : "-∞")
-////            + "," + (!rNull ? Key.create(upper) : "∞") + r);
-//        t = DataTypeFactory.of(TYPE_LONG);
-//        if(lNull) {
-//          t.encodeMinValue(cdo);
-//        } else {
-//          if(lower instanceof Number) {
-//            t.encode(cdo, DataType.EncodeType.KEY, lower);
-//          } else if(lower instanceof byte[]) {
-//            cdo.write(((byte[]) lower));
-//          } else {
-//            cdo.write(((ByteString) lower).toByteArray());
-//          }
-//          if(lOpen) {
-//            cdo.writeByte(0);
-//          }
-//        }
-//        if(!lNull && lOpen) {
-//          lowerBound = Key.create(KeyUtils.prefixNext(cdo.toBytes()));
-//        } else {
-//          lowerBound = Key.create(cdo.toBytes());
-//        }
-//
-//        cdo.reset();
-//        if(rNull) {
-//          t.encodeMaxValue(cdo);
-//        } else {
-//          if(upper instanceof Number) {
-//            t.encode(cdo, DataType.EncodeType.KEY, upper);
-//          } else if(upper instanceof byte[]) {
-//            cdo.write(((byte[]) upper));
-//          } else {
-//            cdo.write(((ByteString) upper).toByteArray());
-//          }
-//        }
-//        if(!rNull && !rOpen) {
-//          upperBound = Key.create(KeyUtils.prefixNext(cdo.toBytes()));
-//        } else {
-//          upperBound = Key.create(cdo.toBytes());
-//        }
-//
-//
-//        cnt += hg.betweenRowCount(lowerBound, upperBound);
-//      }
-//      rowCount += cnt;
-//    }
-//    if (rowCount > hg.totalRowCount()) {
-//      rowCount = hg.totalRowCount();
-//    } else if (rowCount < 0) {
-//      rowCount = 0;
-//    }
-//    return rowCount;
-//  }
+
+  /**
+   * getColumnRowCount estimates the row count by a slice of ColumnRange.
+   */
+  public double getColumnRowCount(List<IndexRange> columnRanges) {
+    double rowCount = 0.0;
+    for (IndexRange ir : columnRanges) {
+      double cnt = 0.0;
+      Key pointKey = ir.hasAccessKey() ? ir.getAccessKey() : Key.EMPTY;
+      Range<TypedKey> range = ir.getRange();
+      Key lPointKey;
+      Key uPointKey;
+
+      Key lKey;
+      Key uKey;
+      if (!ir.hasRange()) {
+//        lPointKey = pointKey;
+//        uPointKey = pointKey.next();
+        cnt = histogram.equalRowCount(pointKey);
+      } else {
+        lPointKey = pointKey;
+        uPointKey = pointKey;
+
+        if (!range.hasLowerBound()) {
+          // -INF
+          lKey = Key.MIN;
+        } else {
+          lKey = range.lowerEndpoint();
+          if (range.lowerBoundType().equals(BoundType.OPEN)) {
+            lKey = lKey.next();
+          }
+        }
+        if (!range.hasUpperBound()) {
+          // INF
+          uKey = Key.MAX;
+        } else {
+          uKey = range.upperEndpoint();
+          if (range.upperBoundType().equals(BoundType.CLOSED)) {
+            uKey = uKey.next();
+          }
+        }
+        CodecDataOutput cdo = new CodecDataOutput();
+        cdo.write(lPointKey.getBytes());
+        cdo.write(lKey.getBytes());
+        Key lowerBound = Key.toRawKey(cdo.toByteString());
+        cdo.reset();
+        cdo.write(uPointKey.getBytes());
+        cdo.write(uKey.getBytes());
+        Key upperBound = Key.toRawKey(cdo.toByteString());
+        cnt += histogram.betweenRowCount(lowerBound, upperBound);
+      }
+
+      rowCount += cnt;
+    }
+    if (rowCount > histogram.totalRowCount()) {
+      rowCount = histogram.totalRowCount();
+    } else if (rowCount < 0) {
+      rowCount = 0;
+    }
+    return rowCount;
+  }
 
 }

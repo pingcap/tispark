@@ -33,11 +33,11 @@ public class IndexRange {
     return accessKey;
   }
 
-  boolean hasAccessKey() {
+  public boolean hasAccessKey() {
     return accessKey != null;
   }
 
-  boolean hasRange() {
+  public boolean hasRange() {
     return range != null;
   }
 

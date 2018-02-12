@@ -30,11 +30,10 @@ import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.statistics.ColumnStatistics;
+import com.pingcap.tikv.statistics.TableStatistics;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
@@ -92,32 +91,20 @@ public class ScanAnalyzer {
     return minPlan;
   }
 
-  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table) {
+  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanPlan plan = buildScan(conditions, pkIndex, table);
+    ColumnStatistics cs = ts.getColumnsHistMap().get(table.getId());
+    ScanSpec result = extractConditions(conditions, table, pkIndex);
+    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
+    double cnt = cs.getColumnRowCount(irs);
+    System.out.println(cnt);
     return plan;
   }
 
   public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
-//    TiAnalyzeRequest ar = new TiAnalyzeRequest();
-//    List<KeyRange> fullRange = new ArrayList<>();
-//    if (index != null && !index.isFakePrimaryKey()) {
-//      IndexKey start = IndexKey.toIndexKey(table.getId(), index.getId(), Key.MIN);
-//      IndexKey end = IndexKey.toIndexKey(table.getId(), index.getId(), Key.MAX);
-//      fullRange.add(KeyRange.newBuilder().setStart(start.toByteString()).setEnd(end.toByteString()).build());
-//      AnalyzeReq analyzeReq = ar.buildIndexAnalyzeReq(index.getIndexColumns().size());
-//      AnalyzeIndexResp resp = analyzeIndex(analyzeReq, fullRange);
-//      System.out.println(resp);
-//    } else {
-      Key start = RowKey.createMin(table.getId());
-      Key end = RowKey.createBeyondMax(table.getId());
-//      fullRange.add(KeyRange.newBuilder().setStart(start.toByteString()).setEnd(end.toByteString()).build());
-//      AnalyzeReq analyzeReq = ar.buildColumnAnalyzeReq(table.getColumns().stream().map(tiColumnInfo -> tiColumnInfo.toProto(table)).collect(Collectors.toList()));
-//      AnalyzeColumnsResp resp = analyzeColumns(analyzeReq, fullRange);
-//      System.out.println(resp);
-//    }
 
     MetaResolver.resolve(conditions, table);
 
@@ -150,7 +137,7 @@ public class ScanAnalyzer {
 
         Key key = ir.getAccessKey();
         checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
-        TypedKey typedKey = (TypedKey)key;
+        TypedKey typedKey = (TypedKey) key;
         startKey = RowKey.toRowKey(table.getId(), typedKey);
         endKey = startKey.next();
       } else if (ir.hasRange()) {

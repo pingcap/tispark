@@ -217,5 +217,5 @@ class StatisticsManager(tiSession: TiSession) {
 object StatisticsManager {
   private final lazy val statisticsMap = mutable.Map[Long, TableStatistics]()
 
-  private def getTableStatistics: mutable.Map[Long, TableStatistics] = statisticsMap
+  def getTableStatistics: mutable.Map[Long, TableStatistics] = statisticsMap
 }

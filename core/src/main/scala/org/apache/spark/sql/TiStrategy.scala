@@ -24,6 +24,7 @@ import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
 import com.pingcap.tispark.TiUtils._
+import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
@@ -192,7 +193,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
     val tableScanPlan =
-      scanBuilder.buildTableScan(tiFilters.asJava, source.table)
+      scanBuilder.buildTableScan(
+        tiFilters.asJava,
+        source.table,
+        StatisticsManager.getTableStatistics(source.table.getId)
+      )
     val scanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
