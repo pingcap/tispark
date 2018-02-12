@@ -188,16 +188,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
   private def filterToDAGRequest(
-    projectList: Seq[Expression],
+    projectSet: Seq[Expression],
     filters: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiProjects: Seq[TiExpression] = projectList.collect { case BasicExpression(expr) => expr }
+    val tiProjects: Seq[TiExpression] = projectSet.collect { case BasicExpression(expr) => expr }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr)      => expr }
 
-    val tiColumns
-      : Seq[TiColumnRef] = tiProjects.flatMap { referencedTiColumns }
+    val tiColumns: Seq[TiColumnRef] = tiProjects.flatMap { referencedTiColumns }
 
     val resolver = new MetaResolver(source.table)
     // need to bind all columns needed
@@ -475,7 +474,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           resultExpressions,
           TiAggregationProjection(filters, _, `source`, projects)
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
-        val dagReq: TiDAGRequest = filterToDAGRequest(projects, filters, source)
+        val expressions = projects ++ groupingExpressions ++ aggregateExpressions ++ resultExpressions ++ filters
+        val projectSet = AttributeSet(expressions.flatMap { _.references })
+        val dagReq: TiDAGRequest = filterToDAGRequest(projectSet.toSeq, filters, source)
         groupAggregateProjection(
           filters,
           groupingExpressions,
