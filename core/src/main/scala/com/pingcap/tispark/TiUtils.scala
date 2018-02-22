@@ -26,6 +26,7 @@ import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheListenerManager
+import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
@@ -219,5 +220,6 @@ object TiUtils {
     session.udf.register("ti_version", () => TiSparkVersion.version)
     CacheListenerManager.initCacheListener(session.sparkContext, tiSession.getRegionManager)
     tiSession.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
+    StatisticsManager.initStatisticsManager(tiSession)
   }
 }

@@ -94,11 +94,11 @@ public class ScanAnalyzer {
   public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanPlan plan = buildScan(conditions, pkIndex, table);
-    ColumnStatistics cs = ts.getColumnsHistMap().get(table.getId());
-    ScanSpec result = extractConditions(conditions, table, pkIndex);
-    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
-    double cnt = cs.getColumnRowCount(irs);
-    System.out.println(cnt);
+//    ColumnStatistics cs = ts.getColumnsHistMap().get(table.getId());
+//    ScanSpec result = extractConditions(conditions, table, pkIndex);
+//    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
+//    double cnt = cs.getColumnRowCount(irs);
+//    System.out.println(cnt);
     return plan;
   }
 

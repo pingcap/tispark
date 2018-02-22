@@ -1,5 +1,6 @@
 package com.pingcap.tispark.statistics
 
+import com.google.common.cache.CacheBuilder
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
 import com.pingcap.tikv.key.{Key, RowKey, TypedKey}
@@ -14,20 +15,25 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-class StatisticsManager(tiSession: TiSession) {
+class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
+  private lazy val conf = tiSession.getConf
   private lazy val metaTable = catalog.getTable("mysql", "stats_meta")
   private lazy val histTable = catalog.getTable("mysql", "stats_histograms")
   private lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
-  private final val statisticsMap = StatisticsManager.getTableStatistics
-
-  def loadNeededHistograms(): Unit = {}
+  private final val statisticsMap = CacheBuilder.newBuilder()
+    .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
+    .weigher((_: Long, value: TableStatistics) => { // we calculate bucket number as weight
+      value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
+        value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
+    })
+    .build[Long, TableStatistics]
 
   def tableStatsFromStorage(table: TiTableInfo): Unit = {
     require(table != null, "TableInfo should not be null")
-    statisticsMap.putIfAbsent(table.getId, new TableStatistics(table.getId))
+    statisticsMap.put(table.getId, new TableStatistics(table.getId))
     val req = new TiDAGRequest(PushDownType.NORMAL)
     req.setTableInfo(histTable)
     val start = RowKey.createMin(histTable.getId)
@@ -87,10 +93,10 @@ class StatisticsManager(tiSession: TiSession) {
       )
       val cms = cmSketchFromStorage(table.getId, indexFlag, histID)
       if (isIndex && histogram != null) {
-        statisticsMap(table.getId).getIndexHistMap
+        statisticsMap.getIfPresent(table.getId).getIndexHistMap
           .put(histID, new IndexStatistics(histogram, cms, indexInfos.head))
       } else if (histogram != null) {
-        statisticsMap(table.getId).getColumnsHistMap
+        statisticsMap.getIfPresent(table.getId).getColumnsHistMap
           .put(
             histID,
             new ColumnStatistics(histogram, cms, histogram.totalRowCount.toLong, colInfos.head)
@@ -212,10 +218,29 @@ class StatisticsManager(tiSession: TiSession) {
     }
     result
   }
+
+  def getTableStatistics(id: Long): TableStatistics = {
+    statisticsMap.getIfPresent(id)
+  }
 }
 
 object StatisticsManager {
-  private final lazy val statisticsMap = mutable.Map[Long, TableStatistics]()
+  private var manager: StatisticsManager = _
 
-  def getTableStatistics: mutable.Map[Long, TableStatistics] = statisticsMap
+  def initStatisticsManager(tiSession: TiSession): Unit = {
+    if (manager == null) {
+      synchronized {
+        if (manager == null) {
+          manager = new StatisticsManager(tiSession)
+        }
+      }
+    }
+  }
+
+  def getInstance(): StatisticsManager = synchronized {
+    if (manager == null) {
+      throw new RuntimeException("StatisticsManager has not been initialized completely.")
+    }
+    manager
+  }
 }
