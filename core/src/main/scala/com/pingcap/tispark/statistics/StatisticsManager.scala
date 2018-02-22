@@ -26,15 +26,33 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private final val statisticsMap = CacheBuilder.newBuilder()
     .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
-    .weigher((_: Long, value: TableStatistics) => { // we calculate bucket number as weight
+    .weigher((_: Long, value: TableStatistics) => {
+    // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
     value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
       value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
   })
     .build[Long, TableStatistics]
 
-  def tableStatsFromStorage(table: TiTableInfo): Unit = {
+  def tableStatsFromStorage(table: TiTableInfo, columns: String*): Unit = synchronized {
     require(table != null, "TableInfo should not be null")
-    val tblStatistic = new TableStatistics(table.getId)
+    // unify col names to lower cases
+    val loadAll = columns == null || columns.isEmpty
+    if (!loadAll) {
+      // check whether input column could be found in the table
+      columns.distinct.foreach((col: String) => {
+        val isColValid = table.getColumns.exists(_.matchName(col))
+        if (!isColValid) {
+          throw new RuntimeException(s"Column $col cannot be found in table ${table.getName}")
+        }
+      })
+    }
+
+    val tblStatistic = if (statisticsMap.asMap().contains(table.getId)) {
+      statisticsMap.getIfPresent(table.getId)
+    } else {
+      new TableStatistics(table.getId)
+    }
+
     val req = new TiDAGRequest(PushDownType.NORMAL)
     req.setTableInfo(histTable)
     val start = RowKey.createMin(histTable.getId)
@@ -103,8 +121,8 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
             new ColumnStatistics(histogram, cms, histogram.totalRowCount.toLong, colInfos.head)
           )
       }
-      statisticsMap.put(table.getId, tblStatistic)
     }
+    statisticsMap.put(table.getId, tblStatistic)
   }
 
   // TODO: Version number may overflow since it's uint64
