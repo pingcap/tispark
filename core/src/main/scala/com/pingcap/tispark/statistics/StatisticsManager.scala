@@ -10,6 +10,8 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.{DataType, DataTypeFactory, MySQLType}
 import com.pingcap.tikv.util.KeyRangeUtils
+import com.pingcap.tispark.TiConfigConst
+import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -26,9 +28,9 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
   private final val statisticsMap = CacheBuilder.newBuilder()
     .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
     .weigher((_: Long, value: TableStatistics) => { // we calculate bucket number as weight
-      value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
-        value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
-    })
+    value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
+      value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
+  })
     .build[Long, TableStatistics]
 
   def tableStatsFromStorage(table: TiTableInfo): Unit = {
@@ -227,11 +229,14 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
 object StatisticsManager {
   private var manager: StatisticsManager = _
 
-  def initStatisticsManager(tiSession: TiSession): Unit = {
+  def initStatisticsManager(tiSession: TiSession, session: SparkSession): Unit = {
     if (manager == null) {
       synchronized {
         if (manager == null) {
-          manager = new StatisticsManager(tiSession)
+          manager = new StatisticsManager(
+            tiSession,
+            session.conf.get(TiConfigConst.MAX_BUCKET_SIZE_PER_TABLE, "2000000").toLong
+          )
         }
       }
     }

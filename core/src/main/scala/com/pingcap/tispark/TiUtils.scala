@@ -220,6 +220,6 @@ object TiUtils {
     session.udf.register("ti_version", () => TiSparkVersion.version)
     CacheListenerManager.initCacheListener(session.sparkContext, tiSession.getRegionManager)
     tiSession.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
-    StatisticsManager.initStatisticsManager(tiSession)
+    StatisticsManager.initStatisticsManager(tiSession, session)
   }
 }
