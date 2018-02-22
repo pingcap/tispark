@@ -20,7 +20,6 @@ import scala.collection.mutable
 class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
-  private lazy val conf = tiSession.getConf
   private lazy val metaTable = catalog.getTable("mysql", "stats_meta")
   private lazy val histTable = catalog.getTable("mysql", "stats_histograms")
   private lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
@@ -35,7 +34,7 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
 
   def tableStatsFromStorage(table: TiTableInfo): Unit = {
     require(table != null, "TableInfo should not be null")
-    statisticsMap.put(table.getId, new TableStatistics(table.getId))
+    val tblStatistic = new TableStatistics(table.getId)
     val req = new TiDAGRequest(PushDownType.NORMAL)
     req.setTableInfo(histTable)
     val start = RowKey.createMin(histTable.getId)
@@ -95,15 +94,16 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
       )
       val cms = cmSketchFromStorage(table.getId, indexFlag, histID)
       if (isIndex && histogram != null) {
-        statisticsMap.getIfPresent(table.getId).getIndexHistMap
+        tblStatistic.getIndexHistMap
           .put(histID, new IndexStatistics(histogram, cms, indexInfos.head))
       } else if (histogram != null) {
-        statisticsMap.getIfPresent(table.getId).getColumnsHistMap
+        tblStatistic.getColumnsHistMap
           .put(
             histID,
             new ColumnStatistics(histogram, cms, histogram.totalRowCount.toLong, colInfos.head)
           )
       }
+      statisticsMap.put(table.getId, tblStatistic)
     }
   }
 
