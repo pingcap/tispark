@@ -36,5 +36,5 @@ object TiConfigConst {
   val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String = "spark.tispark.plan.downgrade.index_threshold"
   val KV_TIMEZONE_OFFSET: String = "spark.tispark.request.timezone.offset"
   val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported_mysql_types"
-  val MAX_BUCKET_SIZE_PER_TABLE:String = "spark.tispark.statistics.max_bucket_per_table"
+  val MAX_BUCKET_SIZE_PER_TABLE: String = "spark.tispark.statistics.max_bucket_per_table"
 }
