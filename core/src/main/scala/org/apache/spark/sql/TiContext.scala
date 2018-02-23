@@ -36,13 +36,13 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
-  val statisticsManager: StatisticsManager = new StatisticsManager(tiSession)
 
   val debug: DebugTool = new DebugTool
 
   TiUtils.sessionInitialize(session, tiSession)
 
   final val version: String = TiSparkVersion.version
+  val statisticsManager: StatisticsManager = StatisticsManager.getInstance()
 
   class DebugTool {
     def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] = {

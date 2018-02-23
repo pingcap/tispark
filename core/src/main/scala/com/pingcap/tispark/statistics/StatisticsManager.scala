@@ -1,6 +1,5 @@
 package com.pingcap.tispark.statistics
 
-import com.google.common.cache.{CacheBuilder, Weigher}
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
 import com.pingcap.tikv.key.{Key, RowKey, TypedKey}
@@ -45,17 +44,18 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
   private lazy val histTable = catalog.getTable("mysql", "stats_histograms")
   private lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
-  private final val statisticsMap = CacheBuilder
-    .newBuilder()
-    .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
-    .weigher(new Weigher[Long, TableStatistics] {
-      override def weigh(key: Long, value: TableStatistics): Int = {
-        // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
-        value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
-          value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
-      }
-    })
-    .build[Long, TableStatistics]
+  private final val statisticsMap = mutable.Map[Long, TableStatistics]()
+//      CacheBuilder
+//      .newBuilder()
+//      .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
+//      .weigher(new Weigher[Long, TableStatistics] {
+//        override def weigh(key: Long, value: TableStatistics): Int = {
+//          // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
+//          value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
+//            value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
+//        }
+//      })
+//      .build[Long, TableStatistics]
 
   def tableStatsFromStorage(table: TiTableInfo, columns: String*): Unit = synchronized {
     require(table != null, "TableInfo should not be null")
@@ -76,8 +76,8 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
       })
     }
 
-    val tblStatistic = if (statisticsMap.asMap().contains(tblId)) {
-      statisticsMap.getIfPresent(tblId)
+    val tblStatistic = if (statisticsMap.contains(tblId)) {
+      statisticsMap(tblId)
     } else {
       new TableStatistics(tblId)
     }
@@ -106,44 +106,51 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
     val rows = snapshot.tableRead(req)
     if (!rows.hasNext) return
 
-    val requests = rows.map((row: Row) => {
-      val isIndex = if (row.getLong(1) > 0) true else false
-      val histID = row.getLong(2)
-      val distinct = row.getLong(3)
-      val histVer = row.getLong(4)
-      val nullCount = row.getLong(5)
-      val cMSketch = row.getBytes(6)
-      val indexInfos = table.getIndices.filter(_.getId == histID)
-      val colInfos = table.getColumns.filter(_.getId == histID)
+    val requests = rows
+      .map((row: Row) => {
+        val isIndex = if (row.getLong(1) > 0) true else false
+        val histID = row.getLong(2)
+        val distinct = row.getLong(3)
+        val histVer = row.getLong(4)
+        val nullCount = row.getLong(5)
+        val cMSketch = row.getBytes(6)
+        val indexInfos = table.getIndices.filter(_.getId == histID)
+        val colInfos = table.getColumns.filter(_.getId == histID)
+        var needed = true
 
-      // we should only query those columns that user specified before
-      if (!loadAll && !neededColIds.contains(histID)) return
+        // we should only query those columns that user specified before
+        if (!loadAll && !neededColIds.contains(histID)) needed = false
 
-      var indexFlag = 1
-      var dataType: DataType = DataTypeFactory.of(MySQLType.TypeBlob)
-      // Columns info found
-      if (!isIndex && colInfos.nonEmpty) {
-        indexFlag = 0
-        dataType = colInfos.head.getType
-      } else if (colInfos.isEmpty || indexInfos.isEmpty) {
-        logger.error(
-          s"We cannot find histogram id $histID in table info ${table.getName} now. It may be deleted."
-        )
-        return
-      }
+        var indexFlag = 1
+        var dataType: DataType = DataTypeFactory.of(MySQLType.TypeBlob)
+        // Columns info found
+        if (!isIndex && colInfos.nonEmpty) {
+          indexFlag = 0
+          dataType = colInfos.head.getType
+        } else if (!isIndex || indexInfos.isEmpty) {
+          logger.error(
+            s"We cannot find histogram id $histID in table info ${table.getName} now. It may be deleted."
+          )
+          needed = false
+        }
 
-      StatisticsDTO(
-        histID,
-        indexFlag,
-        distinct,
-        histVer,
-        nullCount,
-        dataType,
-        cMSketch,
-        indexInfos.head,
-        colInfos.head
-      )
-    })
+        if (needed) {
+          StatisticsDTO(
+            histID,
+            indexFlag,
+            distinct,
+            histVer,
+            nullCount,
+            dataType,
+            cMSketch,
+            if (indexInfos.nonEmpty) indexInfos.head else null,
+            if (colInfos.nonEmpty) colInfos.head else null
+          )
+        } else {
+          null
+        }
+      })
+      .filter(_ != null)
     val results = statisticsFromStorage(tblId, requests.toSeq)
 
     results.foreach((result: StatisticsResult) => {
@@ -196,7 +203,7 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
     req.resolve()
 
     val rows = snapshot.tableRead(req)
-    if (rows.isEmpty) return null
+    if (rows.isEmpty) return Nil
     // Group by hist_id(column_id)
     rows.toList
       .groupBy(_.getLong(7))
@@ -260,7 +267,7 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
   }
 
   def getTableStatistics(id: Long): TableStatistics = {
-    statisticsMap.getIfPresent(id)
+    statisticsMap(id)
   }
 }
 
