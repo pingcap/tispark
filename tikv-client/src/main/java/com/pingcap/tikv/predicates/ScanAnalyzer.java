@@ -15,6 +15,11 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
@@ -30,15 +35,12 @@ import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.statistics.ColumnStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 
-import java.util.*;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
-import static java.util.Objects.requireNonNull;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 
 public class ScanAnalyzer {
@@ -168,13 +170,10 @@ public class ScanAnalyzer {
         throw new TiClientInternalException("Empty access conditions");
       }
 
-      ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
-    }
-
-    if (ranges.isEmpty()) {
-      Key startKey = RowKey.createMin(table.getId());
-      Key endKey = RowKey.createBeyondMax(table.getId());
-      ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+      // This range only possible when < MIN or > MAX
+      if (!startKey.equals(endKey)) {
+        ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+      }
     }
 
     return ranges;
@@ -185,7 +184,7 @@ public class ScanAnalyzer {
       TiTableInfo table, TiIndexInfo index, List<IndexRange> indexRanges) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(index, "Index cannot be null to encoding keyRange");
-    requireNonNull(index, "indexRanges cannot be null to encoding keyRange");
+    requireNonNull(indexRanges, "indexRanges cannot be null to encoding keyRange");
 
     List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
 
@@ -234,9 +233,6 @@ public class ScanAnalyzer {
       ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
     }
 
-    if (ranges.isEmpty()) {
-      ranges.add(makeCoprocRange(Key.MIN.toByteString(), Key.MAX.toByteString()));
-    }
     return ranges;
   }
 

@@ -367,14 +367,33 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     projectionTiRefs ++ filterTiRefs foreach { dagReq.addRequiredColumn }
 
-    val output = (aggregateExpressions.map(aliasPushedPartialResult) ++ groupingExpressions).map {
-      _.toAttribute
+    val aggregateAttributes =
+      aggregateExpressions.map(expr => aliasPushedPartialResult(expr).toAttribute)
+    val groupAttributes = groupingExpressions.map(_.toAttribute)
+
+    // output of Coprocessor plan should contain all references within
+    // aggregates and group by expressions
+    val output = (aggregateAttributes ++ groupAttributes)
+
+    val groupExpressionMap = groupingExpressions.map(expr => expr.exprId -> expr.toAttribute).toMap
+
+    // resultExpression might refer to some of the group by expressions
+    // Those expressions originally refer to table columns but now it refers to
+    // results of coprocessor.
+    // For example, select a + 1 from t group by a + 1
+    // expression a + 1 has been pushed down to coprocessor
+    // and in turn a + 1 in projection should be replaced by
+    // reference of coprocessor output entirely
+    val rewrittenResultExpressions = resultExpressions.map {
+      _.transform {
+        case e: NamedExpression => groupExpressionMap.getOrElse(e.exprId, e)
+      }.asInstanceOf[NamedExpression]
     }
 
     aggregate.AggUtils.planAggregateWithoutDistinct(
-      groupingExpressions,
+      groupAttributes,
       residualAggregateExpressions,
-      resultExpressions,
+      rewrittenResultExpressions,
       toCoprocessorRDD(source, output, dagReq)
     )
   }

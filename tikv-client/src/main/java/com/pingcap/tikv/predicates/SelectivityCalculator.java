@@ -43,7 +43,7 @@ public class SelectivityCalculator extends DefaultVisitor<Double, TableStatistic
       }
     }
     if (rangePred.isPresent()) {
-      return PseudoCostCalculator.calculateCost(rangePred.get());
+      cost *= PseudoCostCalculator.calculateCost(rangePred.get());
     }
     return cost;
   }
