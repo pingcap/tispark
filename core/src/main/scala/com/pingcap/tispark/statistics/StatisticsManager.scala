@@ -1,5 +1,6 @@
 package com.pingcap.tispark.statistics
 
+import com.google.common.cache.{CacheBuilder, Weigher}
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
 import com.pingcap.tikv.key.{Key, RowKey, TypedKey}
@@ -44,18 +45,18 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
   private lazy val histTable = catalog.getTable("mysql", "stats_histograms")
   private lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
-  private final val statisticsMap = mutable.Map[Long, TableStatistics]()
-//      CacheBuilder
-//      .newBuilder()
-//      .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
-//      .weigher(new Weigher[Long, TableStatistics] {
-//        override def weigh(key: Long, value: TableStatistics): Int = {
-//          // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
-//          value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
-//            value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
-//        }
-//      })
-//      .build[Long, TableStatistics]
+  private final val statisticsMap = CacheBuilder
+    .newBuilder()
+    .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
+    .weigher(new Weigher[Object, Object] {
+      override def weigh(k: Object, v: Object): Int = {
+        // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
+        val value = v.asInstanceOf[TableStatistics]
+        value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
+          value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
+      }
+    })
+    .build[Object, Object]
 
   def tableStatsFromStorage(table: TiTableInfo, columns: String*): Unit = synchronized {
     require(table != null, "TableInfo should not be null")
@@ -76,8 +77,8 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
       })
     }
 
-    val tblStatistic = if (statisticsMap.contains(tblId)) {
-      statisticsMap(tblId)
+    val tblStatistic = if (statisticsMap.asMap.containsKey(tblId)) {
+      statisticsMap.getIfPresent(tblId).asInstanceOf[TableStatistics]
     } else {
       new TableStatistics(tblId)
     }
@@ -173,7 +174,7 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
           )
     })
 
-    statisticsMap.put(tblId, tblStatistic)
+    statisticsMap.put(tblId.asInstanceOf[Object], tblStatistic.asInstanceOf[Object])
   }
 
   private def statisticsFromStorage(tableId: Long,
@@ -267,7 +268,7 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
   }
 
   def getTableStatistics(id: Long): TableStatistics = {
-    statisticsMap(id)
+    statisticsMap.getIfPresent(id).asInstanceOf[TableStatistics]
   }
 }
 
