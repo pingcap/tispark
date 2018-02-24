@@ -1,6 +1,16 @@
 package com.pingcap.tikv.statistics;
 
+import com.google.common.collect.BoundType;
+import com.google.common.collect.Range;
+import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiIndexInfo;
+import com.pingcap.tikv.predicates.IndexRange;
+import com.pingcap.tikv.types.DataTypeFactory;
+import com.pingcap.tikv.types.MySQLType;
+
+import java.util.List;
 
 public class IndexStatistics {
   private Histogram histogram;
@@ -36,74 +46,60 @@ public class IndexStatistics {
   public void setIndexInfo(TiIndexInfo indexInfo) {
     this.indexInfo = indexInfo;
   }
-  //  double getRowCount(List<IndexRange> indexRanges, long tableID) {
-//    double rowCount = 0.0;
-//    for (IndexRange range : indexRanges) {
-//      double cnt = 0.0;
-//      Key accessKey = range.getAccessKey();
-//      if (accessKey != null) {
-//        cnt += hg.equalRowCount(accessKey);
-//      }
-//      if (range.getRange() != null){
-//        Range rg = range.getRange();
-//        Key lowerBound, upperBound;
-//        DataType t;
-//        boolean lNull = !rg.hasLowerBound();
-//        boolean rNull = !rg.hasUpperBound();
-//        boolean lOpen = lNull || rg.lowerBoundType().equals(BoundType.OPEN);
-//        boolean rOpen = rNull || rg.upperBoundType().equals(BoundType.OPEN);
-//        String l = lOpen ? "(" : "[";
-//        String r = rOpen ? ")" : "]";
-//        CodecDataOutput cdo = new CodecDataOutput();
-//        Object lower = Key.unwrap(!lNull ? rg.lowerEndpoint() : DataType.encodeIndex(cdo));
-//        Object upper = Key.unwrap(!rNull ? rg.upperEndpoint() : DataType.encodeMaxValue(cdo));
-////        System.out.println("=>Index " + l + (!lNull ? Key.create(lower) : "-∞")
-////            + "," + (!rNull ? Key.create(upper) : "∞") + r);
-//        t = DataTypeFactory.of(MySQLType.TypeLong);
-//        if(lNull) {
-//          t.encodeMinValue(cdo);
-//        } else {
-//          if(lower instanceof Number) {
-//            t.encode(cdo, DataType.EncodeType.KEY, lower);
-//          } else if(lower instanceof byte[]) {
-//            cdo.write(((byte[]) lower));
-//          } else {
-//            cdo.write(((ByteString) lower).toByteArray());
-//          }
-//        }
-//        if(!lNull && lOpen) {
-//          lowerBound = Key.create(KeyUtils.prefixNext(cdo.toBytes()));
-//        } else {
-//          lowerBound = Key.create(cdo.toBytes());
-//        }
-//
-//        cdo.reset();
-//        if(rNull) {
-//          t.encodeMaxValue(cdo);
-//        } else {
-//          if(upper instanceof Number) {
-//            t.encode(cdo, DataType.EncodeType.KEY, upper);
-//          } else if(upper instanceof byte[]) {
-//            cdo.write(((byte[]) upper));
-//          } else {
-//            cdo.write(((ByteString) upper).toByteArray());
-//          }
-//        }
-//        if(!rNull && !rOpen) {
-//          upperBound = Key.create(KeyUtils.prefixNext(cdo.toBytes()));
-//        } else {
-//          upperBound = Key.create(cdo.toBytes());
-//        }
-//
-//        cnt += hg.betweenRowCount(lowerBound, upperBound);
-//      }
-//      rowCount += cnt;
-//    }
-//    if (rowCount > hg.totalRowCount()) {
-//      rowCount = hg.totalRowCount();
-//    } else if (rowCount < 0) {
-//      rowCount = 0;
-//    }
-//    return rowCount;
-//  }
+
+  public double getRowCount(List<IndexRange> indexRanges) {
+    double rowCount = 0.0;
+    for (IndexRange ir : indexRanges) {
+      double cnt = 0.0;
+      Key pointKey = ir.hasAccessKey() ? ir.getAccessKey() : Key.EMPTY;
+      Range<TypedKey> range = ir.getRange();
+      Key lPointKey;
+      Key uPointKey;
+
+      Key lKey;
+      Key uKey;
+      if (pointKey!= Key.EMPTY) {
+        rowCount += histogram.equalRowCount(TypedKey.toTypedKey(pointKey.getBytes(), DataTypeFactory.of(MySQLType.TypeBlob)));
+      }
+      if (range != null) {
+        lPointKey = pointKey;
+        uPointKey = pointKey;
+
+        if (!range.hasLowerBound()) {
+          // -INF
+          lKey = Key.MIN;
+        } else {
+          lKey = range.lowerEndpoint();
+          if (range.lowerBoundType().equals(BoundType.OPEN)) {
+            lKey = lKey.next();
+          }
+        }
+        if (!range.hasUpperBound()) {
+          // INF
+          uKey = Key.MAX;
+        } else {
+          uKey = range.upperEndpoint();
+          if (range.upperBoundType().equals(BoundType.CLOSED)) {
+            uKey = uKey.next();
+          }
+        }
+        CodecDataOutput cdo = new CodecDataOutput();
+        cdo.write(lPointKey.getBytes());
+        cdo.write(lKey.getBytes());
+        Key lowerBound = TypedKey.toTypedKey(cdo.toBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
+        cdo.reset();
+        cdo.write(uPointKey.getBytes());
+        cdo.write(uKey.getBytes());
+        Key upperBound = TypedKey.toTypedKey(cdo.toBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
+        cnt += histogram.betweenRowCount(lowerBound, upperBound);
+      }
+      rowCount += cnt;
+    }
+    if (rowCount > histogram.totalRowCount()) {
+      rowCount = histogram.totalRowCount();
+    } else if (rowCount < 0) {
+      rowCount = 0;
+    }
+    return rowCount;
+  }
 }

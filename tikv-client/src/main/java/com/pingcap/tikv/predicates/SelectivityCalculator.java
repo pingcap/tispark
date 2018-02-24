@@ -25,6 +25,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.ColumnStatistics;
+import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 
 import java.util.BitSet;
@@ -33,7 +34,43 @@ import java.util.Optional;
 
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
 
-public class SelectivityCalculator extends DefaultVisitor<Double, TableStatistics> {
+public class SelectivityCalculator extends DefaultVisitor<Double, SelectivityCalculator.CalculationContext> {
+  public static class CalculationContext {
+    private TableStatistics tblStatistics;
+    private TiColumnInfo columnInfo;
+    private TiIndexInfo indexInfo;
+
+    public CalculationContext(TableStatistics tblStatistics, TiColumnInfo columnInfo, TiIndexInfo indexInfo) {
+      this.tblStatistics = tblStatistics;
+      this.columnInfo = columnInfo;
+      this.indexInfo = indexInfo;
+    }
+
+    public TiColumnInfo getColumnInfo() {
+      return columnInfo;
+    }
+
+    public void setColumnInfo(TiColumnInfo columnInfo) {
+      this.columnInfo = columnInfo;
+    }
+
+    public TiIndexInfo getIndexInfo() {
+      return indexInfo;
+    }
+
+    public void setIndexInfo(TiIndexInfo indexInfo) {
+      this.indexInfo = indexInfo;
+    }
+
+    public TableStatistics getTblStatistics() {
+      return tblStatistics;
+    }
+
+    public void setTblStatistics(TableStatistics tblStatistics) {
+      this.tblStatistics = tblStatistics;
+    }
+  }
+
   public static double calcPseudoSelectivity(ScanSpec spec) {
     Optional<Expression> rangePred = spec.getRangePredicate();
     double cost = 100.0;
@@ -48,13 +85,32 @@ public class SelectivityCalculator extends DefaultVisitor<Double, TableStatistic
     return cost;
   }
 
+  public static double calcSelectivity(ScanSpec spec, CalculationContext context) {
+    Optional<Expression> rangePred = spec.getRangePredicate();
+    double cost = 100.0;
+    if (spec.getPointPredicates() != null) {
+      for (Expression expr : spec.getPointPredicates()) {
+        cost *= calculateCost(expr, context);
+      }
+    }
+    if (rangePred.isPresent()) {
+      cost *= calculateCost(rangePred.get(), context);
+    }
+    return cost;
+  }
+
+  private static double calculateCost(Expression expr, CalculationContext context) {
+    SelectivityCalculator calc = new SelectivityCalculator();
+    return expr.accept(calc, context);
+  }
+
   @Override
-  protected Double process(Expression node, TableStatistics context) {
+  protected Double process(Expression node, CalculationContext context) {
     return 1.0;
   }
 
   @Override
-  protected Double visit(LogicalBinaryExpression node, TableStatistics context) {
+  protected Double visit(LogicalBinaryExpression node, CalculationContext context) {
     double leftCost = node.getLeft().accept(this, context);
     double rightCost = node.getLeft().accept(this, context);
     switch (node.getCompType()) {
@@ -69,16 +125,18 @@ public class SelectivityCalculator extends DefaultVisitor<Double, TableStatistic
   }
 
   @Override
-  protected Double visit(ComparisonBinaryExpression node, TableStatistics context) {
+  protected Double visit(ComparisonBinaryExpression node, CalculationContext context) {
     switch (node.getComparisonType()) {
       case EQUAL:
         ComparisonBinaryExpression.NormalizedPredicate predicate = node.normalize();
         if (predicate == null) {
           return 1.0;
         }
-        TiColumnInfo columnInfo = predicate.getColumnRef().getColumnInfo();
-        ColumnStatistics statistics = context.getColumnsHistMap().get(columnInfo.getId());
-
+//        TiColumnInfo columnInfo = predicate.getColumnRef().getColumnInfo();
+//        ColumnStatistics colStatistics = context.getTblStatistics().getColumnsHistMap().get(columnInfo.getId());
+        IndexStatistics idxStatistics = context.getTblStatistics().getIndexHistMap().get(context.getIndexInfo().getId());
+//        System.out.println(colStatistics.getCount());
+        System.out.println(idxStatistics.getHistogram().totalRowCount());
         return 0.01;
       case GREATER_EQUAL:
       case GREATER_THAN:

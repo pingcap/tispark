@@ -49,13 +49,13 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
     .newBuilder()
     .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
     .weigher(new Weigher[Object, Object] {
-      override def weigh(k: Object, v: Object): Int = {
-        // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
-        val value = v.asInstanceOf[TableStatistics]
-        value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
-          value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
-      }
-    })
+    override def weigh(k: Object, v: Object): Int = {
+      // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
+      val value = v.asInstanceOf[TableStatistics]
+      value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
+        value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
+    }
+  })
     .build[Object, Object]
 
   def tableStatsFromStorage(table: TiTableInfo, columns: String*): Unit = synchronized {
@@ -82,6 +82,9 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
     } else {
       new TableStatistics(tblId)
     }
+
+    // load count, modify_count, version info
+    metaFromStorage(tblId, tblStatistic)
 
     val req = new TiDAGRequest(PushDownType.NORMAL)
     req.setTableInfo(histTable)
@@ -175,6 +178,34 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
     })
 
     statisticsMap.put(tblId.asInstanceOf[Object], tblStatistic.asInstanceOf[Object])
+  }
+
+  private def metaFromStorage(tableId: Long, tableStatistics: TableStatistics): Unit = {
+    val req = new TiDAGRequest(PushDownType.NORMAL)
+    req.setTableInfo(metaTable)
+    val start = RowKey.createMin(metaTable.getId)
+    val end = RowKey.createBeyondMax(metaTable.getId)
+    val ranges = mutable.ArrayBuffer[Coprocessor.KeyRange]()
+    ranges += KeyRangeUtils.makeCoprocRange(start.toByteString, end.toByteString)
+    req.addFilter(
+      ComparisonBinaryExpression
+        .equal(ColumnRef.create("table_id"), Constant.create(tableId))
+    )
+    req.addRequiredColumn(ColumnRef.create("table_id"))
+    req.addRequiredColumn(ColumnRef.create("count"))
+    req.addRequiredColumn(ColumnRef.create("modify_count"))
+    req.addRequiredColumn(ColumnRef.create("version"))
+    req.addRanges(ranges)
+    req.setStartTs(snapshot.getTimestamp.getVersion)
+    req.resolve()
+
+    val rows = snapshot.tableRead(req)
+    if (rows.isEmpty) return
+
+    val row = rows.next()
+    tableStatistics.setCount(row.getLong(1))
+    tableStatistics.setModifyCount(row.getLong(2))
+    tableStatistics.setVersion(row.getLong(3))
   }
 
   private def statisticsFromStorage(tableId: Long,

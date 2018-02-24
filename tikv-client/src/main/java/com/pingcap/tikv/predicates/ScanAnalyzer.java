@@ -15,11 +15,6 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
@@ -35,12 +30,18 @@ import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static java.util.Objects.requireNonNull;
 
 
 public class ScanAnalyzer {
@@ -78,13 +79,17 @@ public class ScanAnalyzer {
     }
   }
 
-  // Build scan plan picking access path with lowest cost by estimation
   public ScanPlan buildScan(List<Expression> conditions, TiTableInfo table) {
+    return buildScan(conditions, table, null);
+  }
+
+  // Build scan plan picking access path with lowest cost by estimation
+  public ScanPlan buildScan(List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    ScanPlan minPlan = buildScan(conditions, pkIndex, table);
+    ScanPlan minPlan = buildScan(conditions, pkIndex, table, ts);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildScan(conditions, index, table);
+      ScanPlan plan = buildScan(conditions, index, table, ts);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -93,25 +98,20 @@ public class ScanAnalyzer {
     return minPlan;
   }
 
-  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
+  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    ScanPlan plan = buildScan(conditions, pkIndex, table);
-//    ColumnStatistics cs = ts.getColumnsHistMap().get(table.getId());
-//    ScanSpec result = extractConditions(conditions, table, pkIndex);
-//    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
-//    double cnt = cs.getColumnRowCount(irs);
-//    System.out.println(cnt);
-    return plan;
+    return buildScan(conditions, pkIndex, table);
   }
 
-  public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
+  public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table, TableStatistics ts) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
     MetaResolver.resolve(conditions, table);
 
     ScanSpec result = extractConditions(conditions, table, index);
-    double cost = SelectivityCalculator.calcPseudoSelectivity(result);
+
+    double cost = 1.0;
 
     List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
 
@@ -119,10 +119,20 @@ public class ScanAnalyzer {
     if (index == null || index.isFakePrimaryKey()) {
       keyRanges = buildTableScanKeyRange(table, irs);
     } else {
+      if (ts != null) {
+        IndexStatistics is = ts.getIndexHistMap().get(index.getId());
+        double idxRangeRowCnt = is.getRowCount(irs);
+        cost = idxRangeRowCnt / ts.getCount();
+//        System.out.println("Idx " + index.getName() + " cost:\t" + cost);
+      }
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
 
     return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost);
+  }
+
+  public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
+    return buildScan(conditions, index, table, null);
   }
 
   @VisibleForTesting
@@ -237,7 +247,7 @@ public class ScanAnalyzer {
   }
 
   @VisibleForTesting
-  static ScanSpec extractConditions(
+  public static ScanSpec extractConditions(
       List<Expression> conditions, TiTableInfo table, TiIndexInfo index) {
     // 0. Different than TiDB implementation, here logic has been unified for TableScan and IndexScan by
     // adding fake index on clustered table's pk
