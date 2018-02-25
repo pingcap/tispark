@@ -50,7 +50,7 @@ public class Histogram {
     }
 
     public Builder setBuckets(List<Bucket> buckets) {
-      this.buckets = buckets;
+      this.buckets = new ArrayList<>(buckets);
       return this;
     }
 

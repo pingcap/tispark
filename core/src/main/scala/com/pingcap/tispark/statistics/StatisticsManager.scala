@@ -49,13 +49,13 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
     .newBuilder()
     .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
     .weigher(new Weigher[Object, Object] {
-    override def weigh(k: Object, v: Object): Int = {
-      // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
-      val value = v.asInstanceOf[TableStatistics]
-      value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
-        value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
-    }
-  })
+      override def weigh(k: Object, v: Object): Int = {
+        // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
+        val value = v.asInstanceOf[TableStatistics]
+        value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
+          value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
+      }
+    })
     .build[Object, Object]
 
   def tableStatsFromStorage(table: TiTableInfo, columns: String*): Unit = synchronized {

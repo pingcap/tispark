@@ -196,7 +196,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val scanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
-      scanBuilder.buildScan(tiFilters.asJava, source.table, StatisticsManager.getInstance().getTableStatistics(source.table.getId))
+      scanBuilder.buildScan(
+        tiFilters.asJava,
+        source.table,
+        StatisticsManager.getInstance().getTableStatistics(source.table.getId)
+      )
     } else {
       tableScanPlan
     }

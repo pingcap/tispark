@@ -59,7 +59,13 @@ public class IndexStatistics {
       Key lKey;
       Key uKey;
       if (pointKey!= Key.EMPTY) {
-        rowCount += histogram.equalRowCount(TypedKey.toTypedKey(pointKey.getBytes(), DataTypeFactory.of(MySQLType.TypeBlob)));
+        Key convertedKey = TypedKey.toTypedKey(pointKey.getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
+        // TODO: Implement CMSketch
+//        if (cmSketch != null) {
+//          rowCount += cmSketch.queryBytes(convertedKey.getBytes());
+//        } else {
+          rowCount += histogram.equalRowCount(convertedKey);
+//        }
       }
       if (range != null) {
         lPointKey = pointKey;
