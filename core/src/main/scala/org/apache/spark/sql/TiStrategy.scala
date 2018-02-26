@@ -40,6 +40,7 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
@@ -184,19 +185,40 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def referencedTiColumns(expression: TiExpression): Seq[ColumnRef] =
+  def referencedTiColumns(expression: TiExpression): Seq[TiColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
+  def extractTiColumnRefFromExpression(expression: TiExpression): mutable.HashSet[TiColumnRef] = {
+    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
+    expression match {
+      case r: TiColumnRef => set += r
+      case _: Constant    =>
+      case e: TiExpression =>
+        for (child <- e.getChildren.asScala) {
+          extractTiColumnRefFromExpression(child).foreach { set += _ }
+        }
+    }
+    set
+  }
+
+  def extractTiColumnRefFromExpressions(expressions: Seq[TiExpression]): Seq[TiColumnRef] = {
+    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
+    for (expression <- expressions) {
+      extractTiColumnRefFromExpression(expression).foreach { set += _ }
+    }
+    set.toSeq
+  }
+
   private def filterToDAGRequest(
-    projectSet: Seq[Expression],
+    columnSet: Seq[Expression],
     filters: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiProjects: Seq[TiExpression] = projectSet.collect { case BasicExpression(expr) => expr }
+    val tiColumnSet: Seq[TiExpression] = columnSet.collect { case BasicExpression(expr) => expr }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr)     => expr }
 
-    val tiColumns: Seq[TiColumnRef] = tiProjects.flatMap { referencedTiColumns }
+    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
 
     val resolver = new MetaResolver(source.table)
 
@@ -396,7 +418,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     // output of Coprocessor plan should contain all references within
     // aggregates and group by expressions
-    val output = (aggregateAttributes ++ groupAttributes)
+    val output = aggregateAttributes ++ groupAttributes
 
     val groupExpressionMap = groupingExpressions.map(expr => expr.exprId -> expr.toAttribute).toMap
 
@@ -483,7 +505,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           resultExpressions,
           TiAggregationProjection(filters, _, `source`, projects)
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
-        val expressions = projects ++ groupingExpressions ++ aggregateExpressions ++ resultExpressions ++ filters
+        val expressions = groupingExpressions ++ aggregateExpressions ++ filters
         val projectSet = AttributeSet(expressions.flatMap { _.references })
         val dagReq: TiDAGRequest = filterToDAGRequest(projectSet.toSeq, filters, source)
         groupAggregateProjection(
