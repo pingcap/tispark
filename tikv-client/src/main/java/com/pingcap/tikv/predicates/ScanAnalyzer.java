@@ -33,10 +33,7 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
@@ -111,19 +108,24 @@ public class ScanAnalyzer {
 
     ScanSpec result = extractConditions(conditions, table, index);
 
-    double cost = 1.0;
+    double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
     List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
 
     List<KeyRange> keyRanges;
     if (index == null || index.isFakePrimaryKey()) {
+      if (ts != null) {
+        cost = 1.0;// Full table scan cost
+        // TODO: Fine-grained statistics usage
+      }
       keyRanges = buildTableScanKeyRange(table, irs);
     } else {
       if (ts != null) {
         IndexStatistics is = ts.getIndexHistMap().get(index.getId());
         double idxRangeRowCnt = is.getRowCount(irs);
-        cost = idxRangeRowCnt / ts.getCount();
-//        System.out.println("Idx " + index.getName() + " cost:\t" + cost);
+        // Index double read cost is double of table scan.
+        cost = 2 * idxRangeRowCnt / ts.getCount();
+//        System.out.println("Idx " + index.getId() + " " + index.getName() +" cost:\t" + cost);
       }
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }

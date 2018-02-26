@@ -58,13 +58,14 @@ public class IndexStatistics {
 
       Key lKey;
       Key uKey;
-      if (pointKey!= Key.EMPTY) {
+      if (pointKey != Key.EMPTY) {
         Key convertedKey = TypedKey.toTypedKey(pointKey.getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
-        // TODO: Implement CMSketch
+        Key convertedNext = TypedKey.toTypedKey(pointKey.next().getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
+        // TODO: Implement CMSketch point query
 //        if (cmSketch != null) {
 //          rowCount += cmSketch.queryBytes(convertedKey.getBytes());
 //        } else {
-          rowCount += histogram.equalRowCount(convertedKey);
+        rowCount += histogram.betweenRowCount(convertedKey, convertedNext);
 //        }
       }
       if (range != null) {

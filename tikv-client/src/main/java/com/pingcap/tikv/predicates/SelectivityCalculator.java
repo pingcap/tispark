@@ -132,11 +132,12 @@ public class SelectivityCalculator extends DefaultVisitor<Double, SelectivityCal
         if (predicate == null) {
           return 1.0;
         }
+        // TODO implement fined-grained cost calculation
 //        TiColumnInfo columnInfo = predicate.getColumnRef().getColumnInfo();
 //        ColumnStatistics colStatistics = context.getTblStatistics().getColumnsHistMap().get(columnInfo.getId());
-        IndexStatistics idxStatistics = context.getTblStatistics().getIndexHistMap().get(context.getIndexInfo().getId());
+//        IndexStatistics idxStatistics = context.getTblStatistics().getIndexHistMap().get(context.getIndexInfo().getId());
 //        System.out.println(colStatistics.getCount());
-        System.out.println(idxStatistics.getHistogram().totalRowCount());
+//        System.out.println(idxStatistics.getHistogram().totalRowCount());
         return 0.01;
       case GREATER_EQUAL:
       case GREATER_THAN:

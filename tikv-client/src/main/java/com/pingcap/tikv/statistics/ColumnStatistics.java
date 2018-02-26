@@ -70,8 +70,6 @@ public class ColumnStatistics {
       Key lKey;
       Key uKey;
       if (!ir.hasRange()) {
-//        lPointKey = pointKey;
-//        uPointKey = pointKey.next();
         cnt = histogram.equalRowCount(pointKey);
       } else {
         lPointKey = pointKey;

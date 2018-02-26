@@ -18,7 +18,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    initStatistics()
+//    initStatistics()
     loadStatistics()
   }
 
@@ -56,9 +56,10 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     assert(rc == 46)
   }
 
-//  test("Index scan test cases") {
-//    spark.sql("select tp_int from full_data_type_table_idx where tp_bigint < 10 and tp_int < 40").explain
+  test("Index scan test cases") {
+    spark.sql("select id_dt from full_data_type_table_idx where tp_int = 2333").explain
+    //    spark.sql("select tp_int from full_data_type_table_idx where tp_bigint < 10 and tp_int < 40").explain
 //    spark.sql("select tp_int from full_data_type_table_idx where tp_bigint = 122222 and tp_int < 40").explain
 //    spark.sql("select id_dt from full_data_type_table_idx where tp_int = 2333 and tp_bigint < 40").explain
-//  }
+  }
 }
