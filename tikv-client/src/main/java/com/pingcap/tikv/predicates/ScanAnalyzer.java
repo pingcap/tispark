@@ -219,7 +219,7 @@ public class ScanAnalyzer {
 
         if (!range.hasLowerBound()) {
           // -INF
-          lKey = Key.MIN;
+          lKey = Key.NULL;
         } else {
           lKey = range.lowerEndpoint();
           if (range.lowerBoundType().equals(BoundType.OPEN)) {

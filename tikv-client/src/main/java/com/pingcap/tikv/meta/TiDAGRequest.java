@@ -206,7 +206,6 @@ public class TiDAGRequest implements Serializable {
             colCount != 0 ? colCount - 1 : 0
         );
       } else {
-        int count = 0;
         int colCount = indexScanBuilder.getColumnsCount();
         boolean pkIsNeeded = false;
         // =================== IMPORTANT ======================
@@ -217,7 +216,6 @@ public class TiDAGRequest implements Serializable {
             TiColumnInfo columnInfo = columnInfoList.get(indexColIds.get(pos));
             if (col.getColumnInfo().equals(columnInfo)) {
               dagRequestBuilder.addOutputOffsets(pos);
-              count ++;
               colOffsetMap.put(col, pos);
             }
           }
