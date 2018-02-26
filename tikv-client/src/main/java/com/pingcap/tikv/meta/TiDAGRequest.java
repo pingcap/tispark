@@ -157,9 +157,9 @@ public class TiDAGRequest implements Serializable {
     IndexScan.Builder indexScanBuilder = IndexScan.newBuilder();
     TableScan.Builder tblScanBuilder = TableScan.newBuilder();
     // find a column's offset in fields
-    Map<ColumnRef, Integer> colOffsetMap = new HashMap<>();
+    Map<ColumnRef, Integer> colOffsetInFieldMap = new HashMap<>();
     // find a column's position in index
-    Map<TiColumnInfo, Integer> colPosMap = new HashMap<>();
+    Map<TiColumnInfo, Integer> colPosInIndexMap = new HashMap<>();
 
     if (isIndexScan) {
       // IndexScan
@@ -176,17 +176,13 @@ public class TiDAGRequest implements Serializable {
           .collect(Collectors.toList());
 
       int idxPos = 0;
+      // for index scan builder, columns are added by its order in index
       for (Integer idx : indexColIds) {
         TiColumnInfo tiColumnInfo = columnInfoList.get(idx);
         ColumnInfo columnInfo = tiColumnInfo.toProto(tableInfo);
-        colPosMap.put(tiColumnInfo, idxPos ++);
+        colPosInIndexMap.put(tiColumnInfo, idxPos ++);
 
-        ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder();
-        colBuilder.setTp(columnInfo.getTp());
-        colBuilder.setColumnId(columnInfo.getColumnId());
-        colBuilder.setCollation(columnInfo.getCollation());
-        colBuilder.setColumnLen(columnInfo.getColumnLen());
-        colBuilder.setFlag(columnInfo.getFlag());
+        ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder(columnInfo);
         if (columnInfo.getColumnId() == -1) {
           hasPk = true;
           colBuilder.setPkHandle(true);
@@ -211,12 +207,12 @@ public class TiDAGRequest implements Serializable {
         // =================== IMPORTANT ======================
         // offset for dagRequest should be in accordance with fields
         for (ColumnRef col: getFields()) {
-          Integer pos = colPosMap.get(col.getColumnInfo());
+          Integer pos = colPosInIndexMap.get(col.getColumnInfo());
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColIds.get(pos));
             if (col.getColumnInfo().equals(columnInfo)) {
               dagRequestBuilder.addOutputOffsets(pos);
-              colOffsetMap.put(col, pos);
+              colOffsetInFieldMap.put(col, pos);
             }
           }
           // if a column of field is not contained in index selected,
@@ -227,7 +223,7 @@ public class TiDAGRequest implements Serializable {
             // offset should be processed for each primary key encountered
             dagRequestBuilder.addOutputOffsets(colCount);
             // for index scan, column offset must be in the order of index->handle
-            colOffsetMap.put(col, indexColIds.size());
+            colOffsetInFieldMap.put(col, indexColIds.size());
           } else {
             throw new DAGRequestException("columns other than primary key and index key exist in fields while index single read: " + col.getName());
           }
@@ -251,7 +247,7 @@ public class TiDAGRequest implements Serializable {
       for (int i = 0; i < getFields().size(); i++) {
         ColumnRef col = getFields().get(i);
         tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
-        colOffsetMap.put(col, i);
+        colOffsetInFieldMap.put(col, i);
       }
       // Currently, according to TiKV's implementation, if handle
       // is needed, we should add an extra column with an ID of -1
@@ -285,7 +281,7 @@ public class TiDAGRequest implements Serializable {
         executorBuilder.setTp(ExecType.TypeSelection);
         dagRequestBuilder.addExecutors(
             executorBuilder.setSelection(
-                Selection.newBuilder().addConditions(ProtoConverter.toProto(whereExpr, colOffsetMap))
+                Selection.newBuilder().addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))
             )
         );
         executorBuilder.clear();
@@ -293,8 +289,8 @@ public class TiDAGRequest implements Serializable {
 
       if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
         Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
-        getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap)));
-        getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetMap)));
+        getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
+        getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
         executorBuilder.setTp(ExecType.TypeAggregation);
         dagRequestBuilder.addExecutors(
             executorBuilder.setAggregation(aggregationBuilder)
@@ -306,7 +302,7 @@ public class TiDAGRequest implements Serializable {
         TopN.Builder topNBuilder = TopN.newBuilder();
         getOrderByItems().forEach(tiByItem -> topNBuilder
             .addOrderBy(com.pingcap.tidb.tipb.ByItem.newBuilder()
-                .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap))
+                .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
                 .setDesc(tiByItem.isDesc())
             ));
         executorBuilder.setTp(ExecType.TypeTopN);
