@@ -369,7 +369,7 @@ public class TiDAGRequest implements Serializable {
     return this;
   }
 
-  TiIndexInfo getIndexInfo() {
+  public TiIndexInfo getIndexInfo() {
     return indexInfo;
   }
 

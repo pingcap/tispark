@@ -8,6 +8,7 @@ import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
 import com.pingcap.tikv.predicates.ScanAnalyzer
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.execution.HandleRDDExec
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -18,7 +19,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-//    initStatistics()
+    initStatistics()
     loadStatistics()
   }
 
@@ -39,7 +40,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     ti.statisticsManager.tableStatsFromStorage(fDataTbl)
   }
 
-  test("TP_INT statistic count") {
+  test("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
     val indexes = fDataIdxTbl.getIndices
     val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
     val eq1: Expression =
@@ -47,8 +48,8 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     val eq2: Expression = lessEqual(ColumnRef.create("tp_int", fDataIdxTbl), Constant.create(0))
     val or: Expression = LogicalBinaryExpression.or(eq1, eq2)
 
-    val exps = ImmutableList.of(or)
-    val result = ScanAnalyzer.extractConditions(exps, fDataIdxTbl, idx)
+    val expressions = ImmutableList.of(or)
+    val result = ScanAnalyzer.extractConditions(expressions, fDataIdxTbl, idx)
     val irs = expressionToIndexRanges(result.getPointPredicates, result.getRangePredicate)
     val tblStatistics = StatisticsManager.getInstance().getTableStatistics(fDataIdxTbl.getId)
     val idxStatistics = tblStatistics.getIndexHistMap.get(idx.getId)
@@ -56,10 +57,44 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     assert(rc == 46)
   }
 
+  // TODO: consider covering index cases
+  val cases = Map(
+    "select id_dt from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
+    "select tp_int from full_data_type_table_idx where tp_bigint < 10 and tp_int < 40" -> "idx_tp_int",
+    "select tp_int from full_data_type_table_idx where tp_bigint < -4511898209778166952 and tp_int < 40" -> "idx_tp_bigint"
+  )
+
+  cases.foreach((t: (String, String)) => {
+    val query = t._1
+    val idxName = t._2
+    test(query) {
+      val handleRDDExec = extractHandleRDDExec(query)
+      val usedIdxName = extractUsedIndex(handleRDDExec)
+      assert(usedIdxName.eq(idxName))
+    }
+  })
+
   test("Index scan test cases") {
-    spark.sql("select id_dt from full_data_type_table_idx where tp_int = 2333").explain
+
+    //    val handleRDDExec = extractHandleRDDExec("select id_dt from full_data_type_table_idx where tp_int = 2333")
+    //    val idxName = extractUsedIndex(handleRDDExec)
+    //    println(idxName)
+
     //    spark.sql("select tp_int from full_data_type_table_idx where tp_bigint < 10 and tp_int < 40").explain
-//    spark.sql("select tp_int from full_data_type_table_idx where tp_bigint = 122222 and tp_int < 40").explain
-//    spark.sql("select id_dt from full_data_type_table_idx where tp_int = 2333 and tp_bigint < 40").explain
+    //    spark.sql("select tp_int from full_data_type_table_idx where tp_bigint = 122222 and tp_int < 40").explain
+    //    spark.sql("select id_dt from full_data_type_table_idx where tp_int = 2333 and tp_bigint < 40").explain
+  }
+
+  /**
+    * Extract first handle rdd exec node from the given query
+    *
+    * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
+    */
+  private def extractHandleRDDExec(query: String): HandleRDDExec = {
+    spark.sql(query).queryExecution.executedPlan.find(_.isInstanceOf[HandleRDDExec]).get.asInstanceOf[HandleRDDExec]
+  }
+
+  private def extractUsedIndex(handleRDDExec: HandleRDDExec): String = {
+    handleRDDExec.tiHandleRDD.dagRequest.getIndexInfo.getName
   }
 }
