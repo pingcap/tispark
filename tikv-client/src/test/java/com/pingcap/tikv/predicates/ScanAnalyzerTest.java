@@ -136,7 +136,7 @@ public class ScanAnalyzerTest {
 
     keyRange = keyRanges.get(0);
 
-    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,1}), keyRange.getStart());
+    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,0}), keyRange.getStart());
     assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,1,119,116,102,0,0,0,0,0,-5}), keyRange.getEnd());
   }
 
