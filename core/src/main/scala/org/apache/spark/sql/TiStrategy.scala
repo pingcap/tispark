@@ -199,15 +199,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val tiColumns: Seq[TiColumnRef] = tiProjects.flatMap { referencedTiColumns }
 
     val resolver = new MetaResolver(source.table)
-    // need to bind all columns needed
-    tiColumns.filter { f =>
-      try {
-        resolver.resolve(f)
-        true
-      } catch {
-        case _: Exception => false
-      }
-    }
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
@@ -217,7 +208,18 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
       scanBuilder.buildScan(
-        tiColumns.map { _.getColumnInfo }.asJava,
+        // need to bind all columns needed
+        tiColumns
+          .filter { f =>
+            try {
+              resolver.resolve(f)
+              true
+            } catch {
+              case _: Exception => false
+            }
+          }
+          .map { _.getColumnInfo }
+          .asJava,
         tiFilters.asJava,
         source.table
       )
