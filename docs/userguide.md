@@ -280,17 +280,19 @@ Then load statistics information from your storage
 val ti = new TiContext(spark)
 
 // ... map databases needed to use
-
+  
 // Get the table that you want to load statistics information from
 val table = ti.meta.getTable("db_name", "tb_name").get
-
+  
 // If you want to load statistics information for all the columns, use
 ti.statisticsManager.tableStatsFromStorage(table)
-
+  
 // If you just want to use some of the columns' statistics information, use
 ti.statisticsManager.tableStatsFromStorage(table, "col1", "col2", "col3") // You could specify required columns by vararg
-
-// Then you could query as usual, and TiSpark will use statistic information collect to optimized index selection
+  
+// Collect other tables' statistic information...
+  
+// Then you could query as usual, TiSpark will use statistic information collect to optimized index selection
 ```
 
 ## FAQ
