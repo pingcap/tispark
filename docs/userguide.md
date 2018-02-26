@@ -270,6 +270,29 @@ save()
 ``` 
 It is recommended to set `isolationLevel` to `NONE` to avoid large single transactions which may potentialy lead to TiDB OOM.
 
+## Statistics information
+TiSpark could use TiDB's statistic information for determining which index to ues in your query plan with the estimated lowest cost.
+
+If you would like TiSpark to use statistic information, first you need to make sure that concerning tables have already been analyzed. Read more about how to analyze tables [here](https://github.com/pingcap/docs/blob/master/sql/statistics.md).
+
+Then load statistics information from your storage
+```scala
+val ti = new TiContext(spark)
+
+// ... map databases needed to use
+
+// Get the table that you want to load statistics information from
+val table = ti.meta.getTable("db_name", "tb_name").get
+
+// If you want to load statistics information for all the columns, use
+ti.statisticsManager.tableStatsFromStorage(table)
+
+// If you just want to use some of the columns' statistics information, use
+ti.statisticsManager.tableStatsFromStorage(table, "col1", "col2", "col3") // You could specify required columns by vararg
+
+// Then you could query as usual, and TiSpark will use statistic information collect to optimized index selection
+```
+
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?
