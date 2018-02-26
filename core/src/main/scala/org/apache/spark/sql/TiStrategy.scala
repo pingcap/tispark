@@ -194,13 +194,20 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
     val tiProjects: Seq[TiExpression] = projectSet.collect { case BasicExpression(expr) => expr }
-    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr)      => expr }
+    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr)     => expr }
 
     val tiColumns: Seq[TiColumnRef] = tiProjects.flatMap { referencedTiColumns }
 
     val resolver = new MetaResolver(source.table)
     // need to bind all columns needed
-    tiColumns.foreach { resolver.resolve(_) }
+    tiColumns.filter { f =>
+      try {
+        resolver.resolve(f)
+        true
+      } catch {
+        case _: Exception => false
+      }
+    }
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 

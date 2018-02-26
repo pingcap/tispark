@@ -128,7 +128,7 @@ public class TiDAGRequest implements Serializable {
     typeMap = inferrer.getTypeMap();
   }
 
-  private ColumnInfo handleColumn() {
+  private static ColumnInfo handleColumn() {
     return ColumnInfo.newBuilder()
         .setColumnId(-1)
         .setPkHandle(true)
@@ -259,14 +259,7 @@ public class TiDAGRequest implements Serializable {
       // is needed, we should add an extra column with an ID of -1
       // to the TableScan executor
       if (isHandleNeeded()) {
-        ColumnInfo handleColumn = ColumnInfo.newBuilder()
-            .setColumnId(-1)
-            .setPkHandle(true)
-            // We haven't changed the field name in protobuf file, but
-            // we need to set this to true in order to retrieve the handle,
-            // so the name 'setPkHandle' may sounds strange.
-            .build();
-        tblScanBuilder.addColumns(handleColumn);
+        tblScanBuilder.addColumns(handleColumn());
       }
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
 

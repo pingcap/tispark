@@ -62,7 +62,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
         val lst = new TLongArrayList()
         handleIterator.asScala.foreach {
           // Kill the task in case it has been marked as killed. This logic is from
-          // InterruptableIterator, but we inline it here instead of wrapping the iterator in order
+          // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
           // to avoid performance overhead.
           if (context.isInterrupted()) {
             throw new TaskKilledException
