@@ -78,17 +78,17 @@ public class Snapshot {
   }
 
   /**
-   -   * Issue a table read request
-   -   *
-   -   * @param dagRequest DAG request for coprocessor
-   -   * @return a Iterator that contains all result from this select request.
-   -   */
+   * Issue a table read request
+   *
+   * @param dagRequest DAG request for coprocessor
+   * @return a Iterator that contains all result from this select request.
+   */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest) {
     if (dagRequest.isIndexScan()) {
       Iterator<Long> iter = getHandleIterator(
-        dagRequest,
-        RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(dagRequest.getRanges()),
-        session);
+          dagRequest,
+          RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(dagRequest.getRanges()),
+          session);
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
       return getRowIterator(
