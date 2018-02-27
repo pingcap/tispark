@@ -21,6 +21,7 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.*;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 
 public class Cast extends NoOp {
   public Cast(DataType type) {
@@ -78,7 +79,7 @@ public class Cast extends NoOp {
   private String castToString(Object obj) {
     String result;
     if (obj instanceof byte[]) {
-      result = new String((byte[]) obj);
+      result = new String((byte[]) obj, StandardCharsets.UTF_8);
     } else if (obj instanceof char[]) {
       result = new String((char[]) obj);
     } else {

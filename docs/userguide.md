@@ -252,6 +252,24 @@ tisparkDF.write.saveAsTable("hive_table") // save table to hive
 spark.sql("select * from hive_table a, tispark_table b where a.col1 = b.col1").show // join table across Hive and Tispark
 ```
 
+## Load Spark Dataframe into TiDB using JDBC
+TiSpark does not provide a direct way to load data into yout TiDB cluster, but you can still load using jdbc like this:
+```scala
+val df = spark.sql("select * from lineitem limit 100000")
+
+df.write.
+mode(saveMode = "overwrite").
+format("jdbc").
+option("driver","com.mysql.jdbc.Driver").
+option("url", "jdbc:mysql://127.0.0.1:4000/test"). // replace with your TiDB address and port
+option("useSSL", "false").
+option("dbtable", "lineitem").
+option("isolationLevel", "NONE") // recommended to set isolationLevel to NONE if you have a large DF to load.
+option("user", "root").
+save()
+``` 
+It is recommended to set `isolationLevel` to `NONE` to avoid large single transactions which may potentialy lead to TiDB OOM.
+
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?

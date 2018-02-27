@@ -142,6 +142,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         dagRequest
           .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
 
+      case f @ PromotedSum(BasicExpression(arg)) =>
+        dagRequest
+          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
+
       case f @ Count(args) if args.length == 1 =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
         dagRequest.addAggregate(
@@ -335,13 +339,14 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       val partialResultRef = aliasPushedPartialResult(aggExpr).toAttribute
 
       aggExpr.aggregateFunction match {
-        case e: Max     => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Min     => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Sum     => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: First   => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case _: Count   => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
-        case _: Average => throw new IllegalStateException("All AVGs should have been rewritten.")
-        case _          => aggExpr
+        case e: Max         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Min         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Sum         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: PromotedSum => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: First       => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case _: Count       => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
+        case _: Average     => throw new IllegalStateException("All AVGs should have been rewritten.")
+        case _              => aggExpr
       }
     }
 
@@ -357,14 +362,33 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     projectionTiRefs ++ filterTiRefs foreach { dagReq.addRequiredColumn }
 
-    val output = (aggregateExpressions.map(aliasPushedPartialResult) ++ groupingExpressions).map {
-      _.toAttribute
+    val aggregateAttributes =
+      aggregateExpressions.map(expr => aliasPushedPartialResult(expr).toAttribute)
+    val groupAttributes = groupingExpressions.map(_.toAttribute)
+
+    // output of Coprocessor plan should contain all references within
+    // aggregates and group by expressions
+    val output = (aggregateAttributes ++ groupAttributes)
+
+    val groupExpressionMap = groupingExpressions.map(expr => expr.exprId -> expr.toAttribute).toMap
+
+    // resultExpression might refer to some of the group by expressions
+    // Those expressions originally refer to table columns but now it refers to
+    // results of coprocessor.
+    // For example, select a + 1 from t group by a + 1
+    // expression a + 1 has been pushed down to coprocessor
+    // and in turn a + 1 in projection should be replaced by
+    // reference of coprocessor output entirely
+    val rewrittenResultExpressions = resultExpressions.map {
+      _.transform {
+        case e: NamedExpression => groupExpressionMap.getOrElse(e.exprId, e)
+      }.asInstanceOf[NamedExpression]
     }
 
     aggregate.AggUtils.planAggregateWithoutDistinct(
-      groupingExpressions,
+      groupAttributes,
       residualAggregateExpressions,
-      resultExpressions,
+      rewrittenResultExpressions,
       toCoprocessorRDD(source, output, dagReq)
     )
   }
@@ -462,8 +486,11 @@ object TiAggregation {
       // converted `Sum`s and `Count`s.
       val rewriteMap = averages.map {
         case a @ AggregateExpression(Average(ref), _, _, _) =>
+          // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
+          // scenarios to stay consistent with original spark's Average behaviour
+          val sum = if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
           a.resultAttribute -> Seq(
-            a.copy(aggregateFunction = Sum(ref), resultId = newExprId),
+            a.copy(aggregateFunction = sum, resultId = newExprId),
             a.copy(aggregateFunction = Count(ref), resultId = newExprId)
           )
       }.toMap
