@@ -102,6 +102,15 @@ public class TiDAGRequest implements Serializable {
   private final PushDownType pushDownType;
   private IdentityHashMap<Expression, DataType> typeMap;
 
+  private static ColumnInfo handleColumn =
+      ColumnInfo.newBuilder()
+        .setColumnId(-1)
+        .setPkHandle(true)
+        // We haven't changed the field name in protobuf file, but
+        // we need to set this to true in order to retrieve the handle,
+        // so the name 'setPkHandle' may sounds strange.
+        .build();
+
   private List<Expression> getAllExpressions() {
     ImmutableList.Builder<Expression> builder = ImmutableList.builder();
     builder.addAll(getFields());
@@ -128,26 +137,16 @@ public class TiDAGRequest implements Serializable {
     typeMap = inferrer.getTypeMap();
   }
 
-  private static ColumnInfo handleColumn() {
-    return ColumnInfo.newBuilder()
-        .setColumnId(-1)
-        .setPkHandle(true)
-        // We haven't changed the field name in protobuf file, but
-        // we need to set this to true in order to retrieve the handle,
-        // so the name 'setPkHandle' may sounds strange.
-        .build();
-  }
-
   /**
-   * merge buildIndexScan and buildTableScan since they are very much alike.
+   * Unify indexScan and tableScan building logic since they are very much alike.
    * DAGRequest for IndexScan should also contain filters and aggregation, so
    * we can reuse this part of logic.
    *
    * DAGRequest is made up of a chain of executors with strict orders:
    * TableScan/IndexScan > Selection > Aggregation > TopN/Limit
-   * DAGRequest must contain one and only one TableScan or IndexScan.
+   * a DAGRequest must contain one and only one TableScan or IndexScan.
    *
-   * @param isIndexScan whether this dagRequest is IndexScan
+   * @param isIndexScan whether the dagRequest to build is an IndexScan
    * @return final DAGRequest built
    */
   public DAGRequest buildScan(boolean isIndexScan) {
@@ -180,7 +179,7 @@ public class TiDAGRequest implements Serializable {
       for (Integer idx : indexColIds) {
         TiColumnInfo tiColumnInfo = columnInfoList.get(idx);
         ColumnInfo columnInfo = tiColumnInfo.toProto(tableInfo);
-        colPosInIndexMap.put(tiColumnInfo, idxPos ++);
+        colPosInIndexMap.put(tiColumnInfo, idxPos++);
 
         ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder(columnInfo);
         if (columnInfo.getColumnId() == -1) {
@@ -193,7 +192,7 @@ public class TiDAGRequest implements Serializable {
       if (isDoubleRead()) {
         // double read case
         if (!hasPk) {
-          indexScanBuilder.addColumns(handleColumn());
+          indexScanBuilder.addColumns(handleColumn);
         }
 
         int colCount = indexScanBuilder.getColumnsCount();
@@ -230,7 +229,7 @@ public class TiDAGRequest implements Serializable {
         }
         // pk is not included in index but still needed
         if (pkIsNeeded) {
-          indexScanBuilder.addColumns(handleColumn());
+          indexScanBuilder.addColumns(handleColumn);
         }
       }
       executorBuilder.setTp(ExecType.TypeIndexScan);
@@ -253,7 +252,7 @@ public class TiDAGRequest implements Serializable {
       // is needed, we should add an extra column with an ID of -1
       // to the TableScan executor
       if (isHandleNeeded()) {
-        tblScanBuilder.addColumns(handleColumn());
+        tblScanBuilder.addColumns(handleColumn);
       }
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
 
