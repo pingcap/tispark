@@ -376,7 +376,7 @@ class LogicalAndOr0Suite extends BaseTiSparkSuite {
     "select tp_float,tp_bigint from full_data_type_table  where tp_float = tp_bigint or tp_float > 0",
     "select tp_char,tp_char from full_data_type_table  where tp_char = tp_char or tp_char > 0",
     "select tp_mediumint,tp_int from full_data_type_table  where tp_mediumint = tp_int or tp_mediumint > 0",
-    "select tp_double,tp_smallint from full_data_type_table  where tp_double = tp_smallint or tp_double > 0")
+    "select tp_double,tp_smallint from full_data_type_table  where tp_double = tp_smallint or tp_double > 0").map(_.concat(" order by id_dt"))
 
   allCases foreach { query => {
     test(query) {
