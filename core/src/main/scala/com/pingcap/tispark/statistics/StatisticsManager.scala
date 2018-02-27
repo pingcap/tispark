@@ -1,5 +1,7 @@
 package com.pingcap.tispark.statistics
 
+import java.util.concurrent.TimeUnit
+
 import com.google.common.cache.{CacheBuilder, Weigher}
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
@@ -38,7 +40,7 @@ private case class StatisticsResult(histId: Long,
   def hasColInfo: Boolean = colInfo != null
 }
 
-class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue) {
+class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue, expireAfterAccess: Long = Long.MaxValue) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
   private lazy val metaTable = catalog.getTable("mysql", "stats_meta")
@@ -47,6 +49,7 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private final val statisticsMap = CacheBuilder
     .newBuilder()
+    .expireAfterAccess(expireAfterAccess, TimeUnit.MINUTES)
     .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
     .weigher(new Weigher[Object, Object] {
       override def weigh(k: Object, v: Object): Int = {
@@ -301,6 +304,14 @@ class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue
   def getTableStatistics(id: Long): TableStatistics = {
     statisticsMap.getIfPresent(id).asInstanceOf[TableStatistics]
   }
+
+  def invalidateAll(): Unit = {
+    statisticsMap.invalidateAll()
+  }
+
+  def invalidate(table: TiTableInfo): Unit = {
+    statisticsMap.invalidate(table.getId)
+  }
 }
 
 object StatisticsManager {
@@ -312,7 +323,8 @@ object StatisticsManager {
         if (manager == null) {
           manager = new StatisticsManager(
             tiSession,
-            session.conf.get(TiConfigConst.MAX_BUCKET_SIZE_PER_TABLE, "2000000").toLong
+            session.conf.get(TiConfigConst.MAX_BUCKET_SIZE_PER_TABLE, "2000000000").toLong,
+            session.conf.get(TiConfigConst.CACHE_EXPIRE_AFTER_ACCESS, "43200").toLong
           )
         }
       }

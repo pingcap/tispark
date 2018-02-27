@@ -294,6 +294,22 @@ ti.statisticsManager.tableStatsFromStorage(table, "col1", "col2", "col3") // You
   
 // Then you could query as usual, TiSpark will use statistic information collect to optimized index selection
 ```
+Note that table statistics will be automatically stored in your spark driver node once you fetch them from your storage, and may evict according to some rules.
+Currently you could adjust these configs in your spark.conf file
+  
+| Property Name | Default | Description
+| --------   | -----:   | :----: |
+| spark.tispark.statistics.max_bucket_per_table        | 2000000000      |   Statistic information for a column mainly consists of buckets, the number of which is proportional to the number of distinct values for one column. If the bucket number of this table exceeds this threshold, this table may not be allowed to be cached since it may not fit your memory. Adjust it to a bigger value to allow more buckets stored in your cache.    |
+| spark.tispark.statistics.expire_after_access        | 43200      |   How much time will a table's statistic information cache be automatically cleared after the last access to it(in minutes, defaults to one month).    |
+  
+If you want to manually invalidate your table statistic caches
+```scala
+// Invalidate all tables' statistic information cache
+ti.statisticsManager.invalidateAll()
+
+// Or you could specify which table to invalidate
+ti.statisticsManager.invalidate(table)
+```
 
 ## FAQ
 

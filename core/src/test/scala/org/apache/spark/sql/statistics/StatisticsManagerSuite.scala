@@ -59,14 +59,17 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
 
     val le1: Expression =
       lessThan(ColumnRef.create("tp_int", fDataIdxTbl), Constant.create(5390653))
-    val gt: Expression = greaterThan(ColumnRef.create("tp_int", fDataIdxTbl), Constant.create(-46759812))
+    val gt: Expression =
+      greaterThan(ColumnRef.create("tp_int", fDataIdxTbl), Constant.create(-46759812))
     val and: Expression = LogicalBinaryExpression.and(le1, gt)
 
     val expressions = ImmutableList.of(and)
     testSelectRowCount(expressions, idx, 5)
   }
 
-  def testSelectRowCount(expressions: Seq[Expression], idx: TiIndexInfo, expectedCount: Long):Unit = {
+  def testSelectRowCount(expressions: Seq[Expression],
+                         idx: TiIndexInfo,
+                         expectedCount: Long): Unit = {
     val result = ScanAnalyzer.extractConditions(expressions, fDataIdxTbl, idx)
     val irs = expressionToIndexRanges(result.getPointPredicates, result.getRangePredicate)
     val tblStatistics = StatisticsManager.getInstance().getTableStatistics(fDataIdxTbl.getId)
@@ -93,12 +96,18 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
   })
 
   /**
-    * Extract first handle rdd exec node from the given query
-    *
-    * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
-    */
+   * Extract first handle rdd exec node from the given query
+   *
+   * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
+   */
   private def extractHandleRDDExec(query: String): HandleRDDExec = {
-    spark.sql(query).queryExecution.executedPlan.find(_.isInstanceOf[HandleRDDExec]).get.asInstanceOf[HandleRDDExec]
+    spark
+      .sql(query)
+      .queryExecution
+      .executedPlan
+      .find(_.isInstanceOf[HandleRDDExec])
+      .get
+      .asInstanceOf[HandleRDDExec]
   }
 
   private def extractUsedIndex(handleRDDExec: HandleRDDExec): String = {
