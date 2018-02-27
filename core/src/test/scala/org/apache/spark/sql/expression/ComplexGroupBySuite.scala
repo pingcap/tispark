@@ -30,7 +30,6 @@ class ComplexGroupBySuite extends BaseTiSparkSuite {
     "select tp_float + tp_float from full_data_type_table group by (tp_float + tp_float)",
     "select tp_real + tp_float from full_data_type_table group by (tp_real + tp_float)",
     "select tp_decimal + tp_float from full_data_type_table group by (tp_decimal + tp_float)",
-    "select tp_bigint + tp_bigint from full_data_type_table group by (tp_bigint + tp_bigint)",
     "select tp_int + tp_float from full_data_type_table group by (tp_int + tp_float)",
     "select tp_int + tp_float - tp_double / 5 + tp_bigint / tp_int from full_data_type_table group by (tp_int + tp_float - tp_double / 5 + tp_bigint / tp_int)"
   )
