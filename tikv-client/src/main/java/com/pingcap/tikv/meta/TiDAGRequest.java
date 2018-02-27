@@ -168,7 +168,7 @@ public class TiDAGRequest implements Serializable {
       List<TiColumnInfo> columnInfoList = tableInfo.getColumns();
       boolean hasPk = false;
       // We extract index column info
-      List<Integer> indexColIds = indexInfo
+      List<Integer> indexColOffsets = indexInfo
           .getIndexColumns()
           .stream()
           .map(TiIndexColumn::getOffset)
@@ -176,7 +176,7 @@ public class TiDAGRequest implements Serializable {
 
       int idxPos = 0;
       // for index scan builder, columns are added by its order in index
-      for (Integer idx : indexColIds) {
+      for (Integer idx : indexColOffsets) {
         TiColumnInfo tiColumnInfo = columnInfoList.get(idx);
         ColumnInfo columnInfo = tiColumnInfo.toProto(tableInfo);
         colPosInIndexMap.put(tiColumnInfo, idxPos++);
@@ -208,7 +208,7 @@ public class TiDAGRequest implements Serializable {
         for (ColumnRef col: getFields()) {
           Integer pos = colPosInIndexMap.get(col.getColumnInfo());
           if (pos != null) {
-            TiColumnInfo columnInfo = columnInfoList.get(indexColIds.get(pos));
+            TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
             if (col.getColumnInfo().equals(columnInfo)) {
               dagRequestBuilder.addOutputOffsets(pos);
               colOffsetInFieldMap.put(col, pos);
@@ -222,7 +222,7 @@ public class TiDAGRequest implements Serializable {
             // offset should be processed for each primary key encountered
             dagRequestBuilder.addOutputOffsets(colCount);
             // for index scan, column offset must be in the order of index->handle
-            colOffsetInFieldMap.put(col, indexColIds.size());
+            colOffsetInFieldMap.put(col, indexColOffsets.size());
           } else {
             throw new DAGRequestException("columns other than primary key and index key exist in fields while index single read: " + col.getName());
           }
