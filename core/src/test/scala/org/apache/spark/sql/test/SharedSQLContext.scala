@@ -118,7 +118,7 @@ object SharedSQLContext extends Logging {
 
   def refreshConnections(): Unit = {
     stop()
-    init()
+    init(true)
   }
 
   /**
@@ -148,7 +148,7 @@ object SharedSQLContext extends Logging {
     }
   }
 
-  private def initializeTiDB(): Unit = {
+  private def initializeTiDB(forceNotLoad: Boolean = false): Unit = {
     if (_tidbConnection == null) {
       val jdbcUsername = getOrElse(_tidbConf, TiDB_USER, "root")
 
@@ -163,7 +163,7 @@ object SharedSQLContext extends Logging {
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, "")
       _statement = _tidbConnection.createStatement()
 
-      if (loadData) {
+      if (loadData && !forceNotLoad) {
         logger.warn("Loading TiSparkTestData")
         // Load index test data
         var queryString = resourceToString(
@@ -214,10 +214,10 @@ object SharedSQLContext extends Logging {
   /**
    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
    */
-  def init(): Unit = {
+  def init(forceNotLoad: Boolean = false): Unit = {
     initializeConf()
     initializeSession()
-    initializeTiDB()
+    initializeTiDB(forceNotLoad)
     initializeJDBC()
     initializeTiContext()
   }
