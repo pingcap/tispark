@@ -20,8 +20,10 @@ import java.time.ZonedDateTime
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
+import com.pingcap.tikv.expression.visitor.MetaResolver
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
+import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
 import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
@@ -38,6 +40,7 @@ import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
@@ -48,6 +51,7 @@ import scala.collection.JavaConverters._
 class TiStrategy(context: SQLContext) extends Strategy with Logging {
   val sqlConf: SQLConf = context.conf
   type TiExpression = com.pingcap.tikv.expression.Expression
+  type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
 
   private def blacklist: ExpressionBlacklist = {
     val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
@@ -119,7 +123,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     if (notAllowPushDown) {
       throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
     } else {
-      if (dagRequest.isIndexScan) {
+      if (dagRequest.isDoubleRead) {
         source.dagRequestToRegionTaskExec(dagRequest, output)
       } else {
         val tiRdd = source.logicalPlanToRDD(dagRequest)
@@ -149,7 +153,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       case f @ Count(args) if args.length == 1 =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
         dagRequest.addAggregate(
-          AggregateFunction.newCall(FunctionType.Count, tiArgs(0)),
+          AggregateFunction.newCall(FunctionType.Count, tiArgs.head),
           fromSparkType(f.dataType)
         )
 
@@ -181,22 +185,66 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  def referencedTiColumns(expression: TiExpression): Seq[ColumnRef] =
+  def referencedTiColumns(expression: TiExpression): Seq[TiColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
+  def extractTiColumnRefFromExpression(expression: TiExpression): mutable.HashSet[TiColumnRef] = {
+    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
+    expression match {
+      case r: TiColumnRef => set += r
+      case _: Constant    =>
+      case e: TiExpression =>
+        for (child <- e.getChildren.asScala) {
+          extractTiColumnRefFromExpression(child).foreach { set += _ }
+        }
+    }
+    set
+  }
+
+  def extractTiColumnRefFromExpressions(expressions: Seq[TiExpression]): Seq[TiColumnRef] = {
+    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
+    for (expression <- expressions) {
+      extractTiColumnRefFromExpression(expression).foreach { set += _ }
+    }
+    set.toSeq
+  }
+
   private def filterToDAGRequest(
+    columnSet: Seq[Expression],
     filters: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
+    val tiColumnSet: Seq[TiExpression] = columnSet.collect { case BasicExpression(expr) => expr }
+    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr)     => expr }
+
+    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
+
+    val resolver = new MetaResolver(source.table)
+
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
+
     val tableScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table)
-    val scanPlan = if (allowIndexDoubleRead()) {
+    val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
-      scanBuilder.buildScan(tiFilters.asJava, source.table)
+      scanBuilder.buildScan(
+        // need to bind all columns needed
+        tiColumns
+          .filter { f =>
+            try {
+              resolver.resolve(f)
+              true
+            } catch {
+              case _: Exception => false
+            }
+          }
+          .map { _.getColumnInfo }
+          .asJava,
+        tiFilters.asJava,
+        source.table
+      )
     } else {
       tableScanPlan
     }
@@ -205,6 +253,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
+      // need to set isDoubleRead to true for dagRequest in case of double read
+      dagRequest.setIsDoubleRead(scanPlan.isDoubleRead)
     }
     dagRequest
   }
@@ -281,7 +331,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val residualFilter: Option[Expression] =
       residualFilters.reduceLeftOption(catalyst.expressions.And)
 
-    filterToDAGRequest(pushdownFilters, source, dagRequest)
+    filterToDAGRequest((projectSet ++ filterSet).toSeq, pushdownFilters, source, dagRequest)
 
     // Right now we still use a projection even if the only evaluation is applying an alias
     // to a column.  Since this is a no-op, it could be avoided. However, using this
@@ -352,7 +402,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
 
-    val projectionTiRefs = projects
+    val projectionTiRefs: Seq[TiColumnRef] = projects
       .map { _.toAttribute.name }
       .map { ColumnRef.create }
 
@@ -368,7 +418,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     // output of Coprocessor plan should contain all references within
     // aggregates and group by expressions
-    val output = (aggregateAttributes ++ groupAttributes)
+    val output = aggregateAttributes ++ groupAttributes
 
     val groupExpressionMap = groupingExpressions.map(expr => expr.exprId -> expr.toAttribute).toMap
 
@@ -455,7 +505,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           resultExpressions,
           TiAggregationProjection(filters, _, `source`, projects)
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
-        val dagReq: TiDAGRequest = filterToDAGRequest(filters, source)
+        val expressions = groupingExpressions ++ aggregateExpressions ++ filters
+        val projectSet = AttributeSet(expressions.flatMap { _.references })
+        val dagReq: TiDAGRequest = filterToDAGRequest(projectSet.toSeq, filters, source)
         groupAggregateProjection(
           filters,
           groupingExpressions,

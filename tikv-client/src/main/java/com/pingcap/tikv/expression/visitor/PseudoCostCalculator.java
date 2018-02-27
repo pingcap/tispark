@@ -54,7 +54,8 @@ public class PseudoCostCalculator extends DefaultVisitor<Double, Void> {
       case GREATER_THAN:
       case LESS_EQUAL:
       case LESS_THAN:
-        return 0.1;
+        // magic number for testing
+        return 0.3;
       case NOT_EQUAL:
         return 0.99;
       default:

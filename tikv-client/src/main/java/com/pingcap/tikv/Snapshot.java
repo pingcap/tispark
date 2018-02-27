@@ -15,13 +15,10 @@
 
 package com.pingcap.tikv;
 
-import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getHandleIterator;
-import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getRowIterator;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
-
 import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Kvrpcpb.KvPair;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.meta.TiDAGRequest;
@@ -34,10 +31,14 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
-import com.pingcap.tikv.key.Key;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getHandleIterator;
+import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getRowIterator;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
@@ -106,7 +107,7 @@ public class Snapshot {
    * @return Row iterator to iterate over resulting rows
    */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest, List<RegionTask> task) {
-    if (dagRequest.isIndexScan()) {
+    if (dagRequest.isDoubleRead()) {
       Iterator<Long> iter = getHandleIterator(
           dagRequest,
           task,
