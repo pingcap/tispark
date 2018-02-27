@@ -116,6 +116,7 @@ public class ScanAnalyzer {
 
     List<KeyRange> keyRanges;
     boolean isDoubleRead = false;
+    // table name and columns
     int tableSize = table.getColumns().size() + 1;
 
     if (index == null || index.isFakePrimaryKey()) {
@@ -123,7 +124,8 @@ public class ScanAnalyzer {
       cost *= tableSize;
     } else {
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
-      int indexSize = index.getIndexColumns().size() + 1;
+      // table name, index and handle column
+      int indexSize = index.getIndexColumns().size() + 2;
       if (isDoubleRead) {
         cost *= tableSize + indexSize;
       } else {
