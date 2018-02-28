@@ -27,13 +27,18 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
+import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
+import com.pingcap.tikv.types.DataType;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
@@ -43,17 +48,19 @@ import static java.util.Objects.requireNonNull;
 
 public class ScanAnalyzer {
   public static class ScanPlan {
-    public ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost) {
+    public ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost, boolean isDoubleRead) {
       this.filters = filters;
       this.keyRanges = keyRanges;
       this.cost = cost;
       this.index = index;
+      this.isDoubleRead = isDoubleRead;
     }
 
     private final List<KeyRange> keyRanges;
     private final Set<Expression> filters;
     private final double cost;
     private TiIndexInfo index;
+    private final boolean isDoubleRead;
 
     public List<KeyRange> getKeyRanges() {
       return keyRanges;
@@ -74,19 +81,20 @@ public class ScanAnalyzer {
     public TiIndexInfo getIndex() {
       return index;
     }
+
+    public boolean isDoubleRead() { return isDoubleRead; }
   }
 
-  public ScanPlan buildScan(List<Expression> conditions, TiTableInfo table) {
-    return buildScan(conditions, table, null);
+  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
+    return buildScan(columnList, conditions, table, null);
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildScan(List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
-    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    ScanPlan minPlan = buildScan(conditions, pkIndex, table, ts);
+  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
+    ScanPlan minPlan = buildTableScan(conditions, table, ts);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildScan(conditions, index, table, ts);
+      ScanPlan plan = buildScan(columnList, conditions, index, table, ts);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -95,12 +103,12 @@ public class ScanAnalyzer {
     return minPlan;
   }
 
-  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table) {
+  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildScan(conditions, pkIndex, table);
+    return buildScan(table.getColumns(), conditions, pkIndex, table, ts);
   }
 
-  public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table, TableStatistics ts) {
+  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table, TableStatistics ts) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
@@ -113,28 +121,36 @@ public class ScanAnalyzer {
     List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
 
     List<KeyRange> keyRanges;
+    boolean isDoubleRead = false;
+    // table name and columns
+    int tableSize = table.getColumns().size() + 1;
+
     if (index == null || index.isFakePrimaryKey()) {
       if (ts != null) {
-        cost = 1.0;// Full table scan cost
+        cost = 100.0;// Full table scan cost
         // TODO: Fine-grained statistics usage
       }
       keyRanges = buildTableScanKeyRange(table, irs);
+      cost *= tableSize;
     } else {
       if (ts != null) {
         IndexStatistics is = ts.getIndexHistMap().get(index.getId());
         double idxRangeRowCnt = is.getRowCount(irs);
-        // Index double read cost is double of table scan.
-        cost = 2 * idxRangeRowCnt / ts.getCount();
-//        System.out.println("Idx " + index.getId() + " " + index.getName() +" cost:\t" + cost);
+        // guess the percentage of rows hit
+        cost = 100.0 * idxRangeRowCnt / ts.getCount();
+      }
+      isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
+      // table name, index and handle column
+      int indexSize = index.getIndexColumns().size() + 2;
+      if (isDoubleRead) {
+        cost *= tableSize + indexSize;
+      } else {
+        cost *= indexSize;
       }
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
 
-    return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost);
-  }
-
-  public ScanPlan buildScan(List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
-    return buildScan(conditions, index, table, null);
+    return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead);
   }
 
   @VisibleForTesting
@@ -221,7 +237,7 @@ public class ScanAnalyzer {
 
         if (!range.hasLowerBound()) {
           // -INF
-          lKey = Key.MIN;
+          lKey = Key.NULL;
         } else {
           lKey = range.lowerEndpoint();
           if (range.lowerBoundType().equals(BoundType.OPEN)) {
@@ -246,6 +262,30 @@ public class ScanAnalyzer {
     }
 
     return ranges;
+  }
+
+  boolean isCoveringIndex(List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
+    for (TiColumnInfo colInfo: columns) {
+      if (pkIsHandle && colInfo.isPrimaryKey()) {
+        continue;
+      }
+      if (colInfo.getId() == -1) {
+        continue;
+      }
+      boolean isIndexColumn = false;
+      for (TiIndexColumn indexCol: indexColumns.getIndexColumns()) {
+        boolean isFullLength = indexCol.getLength() == DataType.UNSPECIFIED_LEN ||
+            indexCol.getLength() == colInfo.getType().getLength();
+        if (colInfo.getName().equalsIgnoreCase(indexCol.getName()) && isFullLength) {
+          isIndexColumn = true;
+          break;
+        }
+      }
+      if (!isIndexColumn) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @VisibleForTesting

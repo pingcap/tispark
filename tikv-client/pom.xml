@@ -27,6 +27,7 @@
         <jackson.version>2.6.6</jackson.version>
         <trove4j.version>3.0.1</trove4j.version>
         <joda-time.version>2.9.9</joda-time.version>
+        <joda-convert.version>1.9.2</joda-convert.version>
         <proto.folder>${basedir}/proto</proto.folder>
     </properties>
 
@@ -97,6 +98,11 @@
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
             <version>${joda-time.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.joda</groupId>
+            <artifactId>joda-convert</artifactId>
+            <version>${joda-convert.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>

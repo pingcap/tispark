@@ -23,29 +23,24 @@ import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.kvproto.Coprocessor;
-import com.pingcap.tikv.meta.MetaUtils;
+import com.pingcap.tikv.meta.*;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
-import com.pingcap.tikv.meta.TiIndexInfo;
-import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.*;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
 import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 public class ScanAnalyzerTest {
   private static TiTableInfo createTable() {
-    return createTable(1, 1);
+    return createTableWithIndex(1, 1);
   }
 
-  private static TiTableInfo createTable(long tableId, long indexId) {
+  private static TiTableInfo createTableWithIndex(long tableId, long indexId) {
     return new MetaUtils.TableBuilder()
         .name("testTable")
         .addColumn("c1", IntegerType.INT, true)
@@ -84,7 +79,7 @@ public class ScanAnalyzerTest {
 
   @Test
   public void buildTableScanKeyRangeTest() throws Exception {
-    TiTableInfo table = createTable(6, 5);
+    TiTableInfo table = createTableWithIndex(6, 5);
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
 
     Expression eq1 = lessThan(ColumnRef.create("c1", table), Constant.create(3, IntegerType.INT));
@@ -108,7 +103,7 @@ public class ScanAnalyzerTest {
 
   @Test
   public void buildIndexScanKeyRangeTest() throws Exception {
-    TiTableInfo table = createTable(6, 5);
+    TiTableInfo table = createTableWithIndex(6, 5);
     TiIndexInfo index = table.getIndices().get(0);
 
     Expression eq1 = equal(ColumnRef.create("c1", table), Constant.create(0));
@@ -141,7 +136,7 @@ public class ScanAnalyzerTest {
 
     keyRange = keyRanges.get(0);
 
-    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,1}), keyRange.getStart());
+    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,0}), keyRange.getStart());
     assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,1,119,116,102,0,0,0,0,0,-5}), keyRange.getEnd());
   }
 
@@ -166,6 +161,7 @@ public class ScanAnalyzerTest {
     assertEquals(eq1, result.getPointPredicates().get(0));
     assertEquals(eq2, result.getPointPredicates().get(1));
 
+    assertTrue(result.getRangePredicate().isPresent());
     assertEquals(le1, result.getRangePredicate().get());
   }
 
@@ -227,7 +223,7 @@ public class ScanAnalyzerTest {
     TiTableInfo table = createTableWithPrefix();
     TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanAnalyzer scanBuilder = new ScanAnalyzer();
-    ScanAnalyzer.ScanPlan scanPlan = scanBuilder.buildScan(new ArrayList<>(), index, table);
+    ScanAnalyzer.ScanPlan scanPlan = scanBuilder.buildScan(ImmutableList.of(), ImmutableList.of(), index, table);
 
     ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
     ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();
@@ -235,5 +231,103 @@ public class ScanAnalyzerTest {
     assertEquals(1, scanPlan.getKeyRanges().size());
     assertEquals(startKey, scanPlan.getKeyRanges().get(0).getStart());
     assertEquals(endKey, scanPlan.getKeyRanges().get(0).getEnd());
+  }
+
+  @Test
+  public void TestCoveringIndex() throws Exception {
+    InternalTypeHolder holder =
+        new InternalTypeHolder(
+            MySQLType.TypeVarchar.getTypeCode(),
+            0,
+            3, // indicating a prefix type
+            0,
+            "",
+            "",
+            "",
+            "",
+            ImmutableList.of());
+
+    Map<String, DataType> dataTypeMap = new HashMap<>();
+    dataTypeMap.put("id", IntegerType.INT);
+    dataTypeMap.put("a", IntegerType.INT);
+    dataTypeMap.put("b", IntegerType.INT);
+    dataTypeMap.put("c", IntegerType.INT);
+    dataTypeMap.put("holder", DataTypeFactory.of(holder));
+
+    Map<String, Integer> offsetMap = new HashMap<>();
+    offsetMap.put("id", 0);
+    offsetMap.put("a", 1);
+    offsetMap.put("b", 2);
+    offsetMap.put("c", 3);
+    offsetMap.put("holder", 4);
+
+    class test {
+      private String[] columnNames;
+      private String[] indexNames;
+      private int[] indexLens;
+      private boolean isCovering;
+      private test(String[] col, String[] idx, int[] idxLen, boolean result) {
+        columnNames = col;
+        indexNames = idx;
+        indexLens = idxLen;
+        isCovering = result;
+      }
+
+      private String[] getColumnNames() {
+        return columnNames;
+      }
+
+      private String[] getIndexNames() {
+        return indexNames;
+      }
+
+      private int[] getIndexLens() {
+        return indexLens;
+      }
+    }
+
+    final test[] tests = {
+        new test(new String[]{"a"}, new String[]{"a"}, new int[]{-1}, true),
+        new test(new String[]{"a"}, new String[]{"a", "b"}, new int[]{-1, -1}, true),
+        new test(new String[]{"a", "b"}, new String[]{"b", "a"}, new int[]{-1, -1}, true),
+        new test(new String[]{"a", "b"}, new String[]{"b", "c"}, new int[]{-1, -1}, false),
+        new test(new String[]{"holder", "b"}, new String[]{"holder", "b"}, new int[]{50, -1}, false),
+        new test(new String[]{"a", "b"}, new String[]{"a", "c"}, new int[]{-1, -1}, false),
+        new test(new String[]{"id", "a"}, new String[]{"a", "b"}, new int[]{-1, -1}, true)
+    };
+
+    ScanAnalyzer scanBuilder = new ScanAnalyzer();
+
+    for (test t: tests) {
+      List<TiColumnInfo> columns = new ArrayList<>();
+      List<TiIndexColumn> indexCols = new ArrayList<>();
+      boolean pkIsHandle = false;
+      for (int i = 0; i < t.getColumnNames().length; i ++) {
+        String colName = t.getColumnNames()[i];
+        if (colName.equals("id")) {
+          pkIsHandle = true;
+        }
+        columns.add(new TiColumnInfo(offsetMap.get(colName), colName, i, dataTypeMap.get(colName), colName.equals("id")));
+      }
+      for (int i = 0; i < t.getIndexNames().length; i ++) {
+        String idxName = t.getIndexNames()[i];
+        int idxLen = t.getIndexLens()[i];
+        indexCols.add(new TiIndexColumn(CIStr.newCIStr(idxName), offsetMap.get(idxName), idxLen));
+      }
+      TiIndexInfo indexInfo = new TiIndexInfo(
+          1,
+          CIStr.newCIStr("test_idx"),
+          CIStr.newCIStr("testTable"),
+          ImmutableList.copyOf(indexCols),
+          false,
+          false,
+          SchemaState.StatePublic.getStateCode(),
+          "Test Index",
+          IndexType.IndexTypeBtree.getTypeCode(),
+          false
+      );
+      boolean isCovering = scanBuilder.isCoveringIndex(columns, indexInfo, pkIsHandle);
+      assertEquals(isCovering, t.isCovering);
+    }
   }
 }

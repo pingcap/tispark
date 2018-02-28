@@ -113,8 +113,18 @@ public class TiDAGRequest implements Serializable {
   private Expression having;
   private boolean distinct;
   private boolean handleNeeded;
+  private boolean isDoubleRead;
   private final PushDownType pushDownType;
   private IdentityHashMap<Expression, DataType> typeMap;
+
+  private static ColumnInfo handleColumn =
+      ColumnInfo.newBuilder()
+        .setColumnId(-1)
+        .setPkHandle(true)
+        // We haven't changed the field name in protobuf file, but
+        // we need to set this to true in order to retrieve the handle,
+        // so the name 'setPkHandle' may sounds strange.
+        .build();
 
   private List<Expression> getAllExpressions() {
     ImmutableList.Builder<Expression> builder = ImmutableList.builder();
@@ -142,163 +152,184 @@ public class TiDAGRequest implements Serializable {
     typeMap = inferrer.getTypeMap();
   }
 
-  public DAGRequest buildScan(boolean idxScan) {
-    if (idxScan) {
-      return buildIndexScan();
-    } else {
-      return buildTableScan();
-    }
-  }
-
-  private DAGRequest buildIndexScan() {
+  /**
+   * Unify indexScan and tableScan building logic since they are very much alike.
+   * DAGRequest for IndexScan should also contain filters and aggregation, so
+   * we can reuse this part of logic.
+   *
+   * DAGRequest is made up of a chain of executors with strict orders:
+   * TableScan/IndexScan > Selection > Aggregation > TopN/Limit
+   * a DAGRequest must contain one and only one TableScan or IndexScan.
+   *
+   * @param isIndexScan whether the dagRequest to build is an IndexScan
+   * @return final DAGRequest built
+   */
+  public DAGRequest buildScan(boolean isIndexScan) {
     checkArgument(startTs != 0, "timestamp is 0");
-    if (indexInfo == null) {
-      throw new TiClientInternalException("Index is empty for index scan");
-    }
     DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
     Executor.Builder executorBuilder = Executor.newBuilder();
     IndexScan.Builder indexScanBuilder = IndexScan.newBuilder();
-
-    List<TiColumnInfo> columnInfoList = tableInfo.getColumns();
-    boolean hasPk = false;
-    // We extract index column info
-    List<Integer> indexColIds = indexInfo
-        .getIndexColumns()
-        .stream()
-        .map(TiIndexColumn::getOffset)
-        .collect(Collectors.toList());
-
-    for (Integer idx : indexColIds) {
-      ColumnInfo columnInfo = columnInfoList
-          .get(idx)
-          .toProto(tableInfo);
-
-      ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder();
-      colBuilder.setTp(columnInfo.getTp());
-      colBuilder.setColumnId(columnInfo.getColumnId());
-      colBuilder.setCollation(columnInfo.getCollation());
-      colBuilder.setColumnLen(columnInfo.getColumnLen());
-      colBuilder.setFlag(columnInfo.getFlag());
-      if (columnInfo.getColumnId() == -1) {
-        hasPk = true;
-        colBuilder.setPkHandle(true);
-      }
-      indexScanBuilder.addColumns(colBuilder);
-    }
-
-    if (!hasPk) {
-      ColumnInfo handleColumn = ColumnInfo.newBuilder()
-          .setColumnId(-1)
-          .setPkHandle(true)
-          // We haven't changed the field name in protobuf file, but
-          // we need to set this to true in order to retrieve the handle,
-          // so the name 'setPkHandle' may sounds strange.
-          .build();
-      indexScanBuilder.addColumns(handleColumn);
-    }
-    executorBuilder.setTp(ExecType.TypeIndexScan);
-
-    indexScanBuilder
-        .setTableId(tableInfo.getId())
-        .setIndexId(indexInfo.getId());
-    dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
-    int colCount = indexScanBuilder.getColumnsCount();
-    dagRequestBuilder.addOutputOffsets(
-         colCount != 0 ? colCount - 1 : 0
-    );
-    return dagRequestBuilder
-        .setFlags(flags)
-        .setTimeZoneOffset(timeZoneOffset)
-        .setStartTs(startTs)
-        .build();
-  }
-
-  /**
-   * @return DAGRequest built
-   */
-  private DAGRequest buildTableScan() {
-    checkArgument(startTs != 0, "timestamp is 0");
-    DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
-    Executor.Builder executorBuilder = Executor.newBuilder();
     TableScan.Builder tblScanBuilder = TableScan.newBuilder();
+    // find a column's offset in fields
+    Map<ColumnRef, Integer> colOffsetInFieldMap = new HashMap<>();
+    // find a column's position in index
+    Map<TiColumnInfo, Integer> colPosInIndexMap = new HashMap<>();
 
-    Map<ColumnRef, Integer> colOffsetMap = new HashMap<>();
-    // Step1. Add columns to first executor
-    for (int i = 0; i < getFields().size(); i++) {
-      ColumnRef col = getFields().get(i);
-      tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
-      colOffsetMap.put(col, i);
-    }
-    executorBuilder.setTp(ExecType.TypeTableScan);
-    tblScanBuilder.setTableId(tableInfo.getId());
-    // Currently, according to TiKV's implementation, if handle
-    // is needed, we should add an extra column with an ID of -1
-    // to the TableScan executor
-    if (isHandleNeeded()) {
-      ColumnInfo handleColumn = ColumnInfo.newBuilder()
-          .setColumnId(-1)
-          .setPkHandle(true)
-          // We haven't changed the field name in protobuf file, but
-          // we need to set this to true in order to retrieve the handle,
-          // so the name 'setPkHandle' may sounds strange.
-          .build();
-      tblScanBuilder.addColumns(handleColumn);
-    }
-    dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
-    executorBuilder.clear();
+    if (isIndexScan) {
+      // IndexScan
+      if (indexInfo == null) {
+        throw new TiClientInternalException("Index is empty for index scan");
+      }
+      List<TiColumnInfo> columnInfoList = tableInfo.getColumns();
+      boolean hasPk = false;
+      // We extract index column info
+      List<Integer> indexColOffsets = indexInfo
+          .getIndexColumns()
+          .stream()
+          .map(TiIndexColumn::getOffset)
+          .collect(Collectors.toList());
 
-    // Step2. Add others
-    // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
-    // Or make sure the construction order is below:
-    // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
-    Expression whereExpr = mergeCNFExpressions(getFilters());
-    if (whereExpr != null) {
-      executorBuilder.setTp(ExecType.TypeSelection);
-      dagRequestBuilder.addExecutors(
-          executorBuilder.setSelection(
-              Selection.newBuilder().addConditions(ProtoConverter.toProto(whereExpr, colOffsetMap))
-          )
-      );
+      int idxPos = 0;
+      // for index scan builder, columns are added by its order in index
+      for (Integer idx : indexColOffsets) {
+        TiColumnInfo tiColumnInfo = columnInfoList.get(idx);
+        ColumnInfo columnInfo = tiColumnInfo.toProto(tableInfo);
+        colPosInIndexMap.put(tiColumnInfo, idxPos++);
+
+        ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder(columnInfo);
+        if (columnInfo.getColumnId() == -1) {
+          hasPk = true;
+          colBuilder.setPkHandle(true);
+        }
+        indexScanBuilder.addColumns(colBuilder);
+      }
+
+      if (isDoubleRead()) {
+        // double read case
+        if (!hasPk) {
+          indexScanBuilder.addColumns(handleColumn);
+        }
+
+        int colCount = indexScanBuilder.getColumnsCount();
+        // double read case: need to retrieve handle
+        dagRequestBuilder.addOutputOffsets(
+            colCount != 0 ? colCount - 1 : 0
+        );
+      } else {
+        int colCount = indexScanBuilder.getColumnsCount();
+        boolean pkIsNeeded = false;
+        // =================== IMPORTANT ======================
+        // offset for dagRequest should be in accordance with fields
+        for (ColumnRef col: getFields()) {
+          Integer pos = colPosInIndexMap.get(col.getColumnInfo());
+          if (pos != null) {
+            TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
+            if (col.getColumnInfo().equals(columnInfo)) {
+              dagRequestBuilder.addOutputOffsets(pos);
+              colOffsetInFieldMap.put(col, pos);
+            }
+          }
+          // if a column of field is not contained in index selected,
+          // logically it must be the pk column and
+          // the pkIsHandle must be true. Extra check here.
+          else if (col.getColumnInfo().isPrimaryKey() && tableInfo.isPkHandle()) {
+            pkIsNeeded = true;
+            // offset should be processed for each primary key encountered
+            dagRequestBuilder.addOutputOffsets(colCount);
+            // for index scan, column offset must be in the order of index->handle
+            colOffsetInFieldMap.put(col, indexColOffsets.size());
+          } else {
+            throw new DAGRequestException("columns other than primary key and index key exist in fields while index single read: " + col.getName());
+          }
+        }
+        // pk is not included in index but still needed
+        if (pkIsNeeded) {
+          indexScanBuilder.addColumns(handleColumn);
+        }
+      }
+      executorBuilder.setTp(ExecType.TypeIndexScan);
+
+      indexScanBuilder
+          .setTableId(tableInfo.getId())
+          .setIndexId(indexInfo.getId());
+      dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
+    } else {
+      // TableScan
+      executorBuilder.setTp(ExecType.TypeTableScan);
+      tblScanBuilder.setTableId(tableInfo.getId());
+      // Step1. Add columns to first executor
+      for (int i = 0; i < getFields().size(); i++) {
+        ColumnRef col = getFields().get(i);
+        tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
+        colOffsetInFieldMap.put(col, i);
+      }
+      // Currently, according to TiKV's implementation, if handle
+      // is needed, we should add an extra column with an ID of -1
+      // to the TableScan executor
+      if (isHandleNeeded()) {
+        tblScanBuilder.addColumns(handleColumn);
+      }
+      dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
+
+      // column offset should be in accordance with fields
+      for (int i = 0; i < getFields().size(); i ++) {
+        dagRequestBuilder.addOutputOffsets(i);
+      }
+
+      // if handle is needed, we should append one output offset
+      if (isHandleNeeded()) {
+        dagRequestBuilder.addOutputOffsets(tableInfo.getColumns().size());
+      }
+    }
+
+    if (!isIndexScan || (isIndexScan() && !isDoubleRead())) {
+      // clear executorBuilder
       executorBuilder.clear();
-    }
 
-    if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
-      Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
-      getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap)));
-      getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetMap)));
-      executorBuilder.setTp(ExecType.TypeAggregation);
-      dagRequestBuilder.addExecutors(
-          executorBuilder.setAggregation(aggregationBuilder)
-      );
-      executorBuilder.clear();
-    }
+      // Step2. Add others
+      // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
+      // Or make sure the construction order is below:
+      // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
+      Expression whereExpr = mergeCNFExpressions(getFilters());
+      if (whereExpr != null) {
+        executorBuilder.setTp(ExecType.TypeSelection);
+        dagRequestBuilder.addExecutors(
+            executorBuilder.setSelection(
+                Selection.newBuilder().addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))
+            )
+        );
+        executorBuilder.clear();
+      }
 
-    if (!getOrderByItems().isEmpty()) {
-      TopN.Builder topNBuilder = TopN.newBuilder();
-      getOrderByItems().forEach(tiByItem -> topNBuilder
-          .addOrderBy(com.pingcap.tidb.tipb.ByItem.newBuilder()
-          .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetMap))
-          .setDesc(tiByItem.isDesc())
-      ));
-      executorBuilder.setTp(ExecType.TypeTopN);
-      topNBuilder.setLimit(getLimit());
-      dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
-      executorBuilder.clear();
-    } else if (getLimit() != 0) {
-      Limit.Builder limitBuilder = Limit.newBuilder();
-      limitBuilder.setLimit(getLimit());
-      executorBuilder.setTp(ExecType.TypeLimit);
-      dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
-      executorBuilder.clear();
-    }
+      if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
+        Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
+        getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
+        getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
+        executorBuilder.setTp(ExecType.TypeAggregation);
+        dagRequestBuilder.addExecutors(
+            executorBuilder.setAggregation(aggregationBuilder)
+        );
+        executorBuilder.clear();
+      }
 
-    // column offset should be in accordance with the
-    for (int i = 0; i < getFields().size(); i++) {
-      dagRequestBuilder.addOutputOffsets(i);
-    }
-    // if handle is needed, we should append one output offset
-    if (isHandleNeeded()) {
-      dagRequestBuilder.addOutputOffsets(tableInfo.getColumns().size());
+      if (!getOrderByItems().isEmpty()) {
+        TopN.Builder topNBuilder = TopN.newBuilder();
+        getOrderByItems().forEach(tiByItem -> topNBuilder
+            .addOrderBy(com.pingcap.tidb.tipb.ByItem.newBuilder()
+                .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
+                .setDesc(tiByItem.isDesc())
+            ));
+        executorBuilder.setTp(ExecType.TypeTopN);
+        topNBuilder.setLimit(getLimit());
+        dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
+        executorBuilder.clear();
+      } else if (getLimit() != 0) {
+        Limit.Builder limitBuilder = Limit.newBuilder();
+        limitBuilder.setLimit(getLimit());
+        executorBuilder.setTp(ExecType.TypeLimit);
+        dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
+        executorBuilder.clear();
+      }
     }
 
     DAGRequest request = dagRequestBuilder
@@ -310,10 +341,6 @@ public class TiDAGRequest implements Serializable {
     validateRequest(request);
 
     return request;
-  }
-
-  public boolean isIndexScan() {
-    return indexInfo != null;
   }
 
   /**
@@ -593,6 +620,33 @@ public class TiDAGRequest implements Serializable {
    */
   public void setHandleNeeded(boolean handleNeeded) {
     this.handleNeeded = handleNeeded;
+  }
+
+  /**
+   * Returns whether needs double read
+   *
+   * @return boolean
+   */
+  public boolean isDoubleRead() {
+    return isDoubleRead;
+  }
+
+  /**
+   * Sets isDoubleRead
+   *
+   * @param isDoubleRead if is double read
+   */
+  public void setIsDoubleRead(boolean isDoubleRead) {
+    this.isDoubleRead = isDoubleRead;
+  }
+
+  /**
+   * Returns whether this request is of indexScanType
+   *
+   * @return true iff indexInfo is provided, false otherwise
+   */
+  public boolean isIndexScan() {
+    return indexInfo != null;
   }
 
   /**

@@ -21,6 +21,7 @@ import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -79,7 +80,7 @@ public class ColumnRef implements Expression {
 
   public TiColumnInfo getColumnInfo() {
     if (columnInfo == null) {
-      throw new TiClientInternalException("ColumnRef is unbound");
+      throw new TiClientInternalException(String.format("ColumnRef [%s] is unbound", name));
     }
     return columnInfo;
   }

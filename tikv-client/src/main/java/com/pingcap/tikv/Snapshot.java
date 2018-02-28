@@ -107,7 +107,7 @@ public class Snapshot {
    * @return Row iterator to iterate over resulting rows
    */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest, List<RegionTask> task) {
-    if (dagRequest.isIndexScan()) {
+    if (dagRequest.isDoubleRead()) {
       Iterator<Long> iter = getHandleIterator(
           dagRequest,
           task,
