@@ -22,7 +22,16 @@ import org.apache.spark.sql.BaseTiSparkSuite
 class OtherTestSuite extends BaseTiSparkSuite {
   private val cases = Seq[String](
     "select id_dt from full_data_type_table where tp_date is null",
-    "select id_dt from full_data_type_table where tp_date is not null"
+    "select id_dt from full_data_type_table where tp_date is not null",
+    "select tp_char from full_data_type_table where tp_char like 'g%' order by id_dt",
+    "select tp_int from full_data_type_table where tp_int like '-5%' order by id_dt",
+    "select tp_float from full_data_type_table where tp_float like '0.51%' order by id_dt",
+    "select tp_text from full_data_type_table where tp_text like 'S%' order by id_dt",
+    "select tp_char from full_data_type_table where tp_char like '%H%' order by id_dt",
+    "select tp_real from full_data_type_table where tp_real like '%44%' order by id_dt",
+    "select tp_date from full_data_type_table where tp_date like '2016%' order by id_dt",
+    "select tp_date from full_data_type_table where tp_date like '%12%' order by id_dt",
+    "select tp_timestamp from full_data_type_table where tp_timestamp like '%00%' order by id_dt"
   )
 
   cases foreach { query =>
