@@ -15,4 +15,4 @@
 
 package com.pingcap.tispark
 
-class TiTableReference(val databaseName: String, val tableName: String) extends Serializable
+class TiTableReference(val databaseName: String, val tableName: String, val sizeInBytes: Long = Long.MaxValue) extends Serializable
