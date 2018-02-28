@@ -143,17 +143,15 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       db <- meta.getDatabase(dbName)
       table <- meta.getTables(db)
     } {
+      var sizeInBytes = Long.MaxValue
       if (loadStatistics) {
         statisticsManager.tableStatsFromStorage(table)
+        sizeInBytes = 64 * statisticsManager.getTableCount(table.getId)
       }
 
       val rel: TiDBRelation = new TiDBRelation(
         tiSession,
-        new TiTableReference(
-          dbName,
-          table.getName,
-          64 * statisticsManager.getTableCount(table.getId)
-        ),
+        new TiTableReference(dbName, table.getName, sizeInBytes),
         meta
       )(sqlContext)
 
