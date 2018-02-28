@@ -8,7 +8,7 @@ import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
 import com.pingcap.tikv.predicates.ScanAnalyzer
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.execution.HandleRDDExec
+import org.apache.spark.sql.execution.{CoprocessorRDD, HandleRDDExec, SparkPlan}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -78,36 +78,66 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     assert(rc == expectedCount)
   }
 
-  // TODO: consider covering index cases
   val indexSelectionCases = Map(
+    // double read case
+    "select tp_bigint, tp_real from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
+    "select * from full_data_type_table_idx where id_dt = 2333" -> "",
+    // cover index case
     "select id_dt from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
-    "select tp_int from full_data_type_table_idx where tp_bigint < 10 and tp_int < 40" -> "idx_tp_int",
-    "select tp_int from full_data_type_table_idx where tp_bigint < -4511898209778166952 and tp_int < 40" -> "idx_tp_bigint"
+    "select tp_int from full_data_type_table_idx where tp_bigint < 10 and tp_int < 40" -> "idx_tp_int_tp_bigint",
+    "select tp_int from full_data_type_table_idx where tp_bigint < -4511898209778166952 and tp_int < 40" -> "idx_tp_bigint_tp_int"
   )
 
   indexSelectionCases.foreach((t: (String, String)) => {
     val query = t._1
     val idxName = t._2
     test(query) {
-      val handleRDDExec = extractHandleRDDExec(query)
-      val usedIdxName = extractUsedIndex(handleRDDExec)
+      val executedPlan = spark.sql(query).queryExecution.executedPlan
+      val usedIdxName = {
+        if (isDoubleRead(executedPlan)) {
+          val handleRDDExec = extractHandleRDDExec(executedPlan)
+          extractUsedIndex(handleRDDExec)
+        } else {
+          val coprocessorRDD = extractCoprocessorRDD(executedPlan)
+          extractUsedIndex(coprocessorRDD)
+        }
+      }
       assert(usedIdxName.equals(idxName))
     }
   })
+
+  private def isDoubleRead(executedPlan: SparkPlan): Boolean = {
+    executedPlan
+      .find(_.isInstanceOf[HandleRDDExec])
+      .isDefined
+  }
+
+  /**
+    * Extract first Coprocessor tiRdd exec node from the given query
+    *
+    * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
+    */
+  private def extractCoprocessorRDD(executedPlan: SparkPlan): CoprocessorRDD = {
+    executedPlan
+      .find(_.isInstanceOf[CoprocessorRDD])
+      .get
+      .asInstanceOf[CoprocessorRDD]
+  }
 
   /**
    * Extract first handle rdd exec node from the given query
    *
    * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
    */
-  private def extractHandleRDDExec(query: String): HandleRDDExec = {
-    spark
-      .sql(query)
-      .queryExecution
-      .executedPlan
+  private def extractHandleRDDExec(executedPlan: SparkPlan): HandleRDDExec = {
+    executedPlan
       .find(_.isInstanceOf[HandleRDDExec])
       .get
       .asInstanceOf[HandleRDDExec]
+  }
+
+  private def extractUsedIndex(coprocessorRDD: CoprocessorRDD): String = {
+    coprocessorRDD.tiRdd.dagRequest.getIndexInfo.getName
   }
 
   private def extractUsedIndex(handleRDDExec: HandleRDDExec): String = {
