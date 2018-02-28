@@ -280,6 +280,9 @@ Then load statistics information from your storage
 val ti = new TiContext(spark)
 
 // ... map databases needed to use
+// You can specify whether to load statistics information automatically during database mapping
+// `loadStatistics` defaults to false
+ti.tidbMapDatabase("db_name", loadStatistics = true)
   
 // Get the table that you want to load statistics information from
 val table = ti.meta.getTable("db_name", "tb_name").get

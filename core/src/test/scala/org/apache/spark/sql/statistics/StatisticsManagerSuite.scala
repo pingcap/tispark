@@ -113,10 +113,10 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
   }
 
   /**
-    * Extract first Coprocessor tiRdd exec node from the given query
-    *
-    * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
-    */
+   * Extract first Coprocessor tiRdd exec node from the given query
+   *
+   * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
+   */
   private def extractCoprocessorRDD(executedPlan: SparkPlan): CoprocessorRDD = {
     executedPlan
       .find(_.isInstanceOf[CoprocessorRDD])
