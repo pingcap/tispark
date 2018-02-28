@@ -143,9 +143,17 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       db <- meta.getDatabase(dbName)
       table <- meta.getTables(db)
     } {
+      var sizeInBytes = Long.MaxValue
+      if (loadStatistics) {
+        statisticsManager.tableStatsFromStorage(table)
+        val count = statisticsManager.getTableCount(table.getId)
+        if (count == 0) sizeInBytes = 0
+        else if (Long.MaxValue / count < 64) sizeInBytes = 64 * count
+      }
+
       val rel: TiDBRelation = new TiDBRelation(
         tiSession,
-        new TiTableReference(dbName, table.getName),
+        new TiTableReference(dbName, table.getName, sizeInBytes),
         meta
       )(sqlContext)
 
@@ -153,9 +161,6 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
         val tableName = if (dbNameAsPrefix) db.getName + "_" + table.getName else table.getName
         sqlContext.baseRelationToDataFrame(rel).createTempView(tableName)
         logInfo("Registered table " + table.getName)
-      }
-      if (loadStatistics) {
-        statisticsManager.tableStatsFromStorage(table)
       }
     }
 }

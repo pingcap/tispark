@@ -307,6 +307,15 @@ class StatisticsManager(tiSession: TiSession,
     statisticsMap.getIfPresent(id).asInstanceOf[TableStatistics]
   }
 
+  def getTableCount(id: Long): Long = {
+    val tbStst = getTableStatistics(id)
+    if (tbStst != null) {
+      tbStst.getCount
+    } else {
+      Long.MaxValue
+    }
+  }
+
   def invalidateAll(): Unit = {
     statisticsMap.invalidateAll()
   }
