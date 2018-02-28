@@ -153,7 +153,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
         logInfo("Registered table " + table.getName)
       }
       if (loadStatistics) {
-        statisticsManager.getTableStatistics(table.getId)
+        statisticsManager.tableStatsFromStorage(table)
       }
     }
 }
