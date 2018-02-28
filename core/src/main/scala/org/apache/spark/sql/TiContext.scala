@@ -147,6 +147,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       if (loadStatistics) {
         statisticsManager.tableStatsFromStorage(table)
         sizeInBytes = 64 * statisticsManager.getTableCount(table.getId)
+        if (sizeInBytes < 0) sizeInBytes = Long.MaxValue
       }
 
       val rel: TiDBRelation = new TiDBRelation(
