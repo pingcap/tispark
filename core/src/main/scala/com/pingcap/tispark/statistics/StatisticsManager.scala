@@ -40,7 +40,9 @@ private case class StatisticsResult(histId: Long,
   def hasColInfo: Boolean = colInfo != null
 }
 
-class StatisticsManager(tiSession: TiSession, maxBktPerTbl: Long = Long.MaxValue, expireAfterAccess: Long = Long.MaxValue) {
+class StatisticsManager(tiSession: TiSession,
+                        maxBktPerTbl: Long = Long.MaxValue,
+                        expireAfterAccess: Long = Long.MaxValue) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
   private lazy val metaTable = catalog.getTable("mysql", "stats_meta")

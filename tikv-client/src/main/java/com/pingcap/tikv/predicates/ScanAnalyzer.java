@@ -135,9 +135,11 @@ public class ScanAnalyzer {
     } else {
       if (ts != null) {
         IndexStatistics is = ts.getIndexHistMap().get(index.getId());
-        double idxRangeRowCnt = is.getRowCount(irs);
-        // guess the percentage of rows hit
-        cost = 100.0 * idxRangeRowCnt / ts.getCount();
+        if (is != null) {
+          double idxRangeRowCnt = is.getRowCount(irs);
+          // guess the percentage of rows hit
+          cost = 100.0 * idxRangeRowCnt / ts.getCount();
+        }
       }
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
       // table name, index and handle column

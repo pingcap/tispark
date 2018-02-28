@@ -136,7 +136,9 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
-  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean = false): Unit =
+  def tidbMapDatabase(dbName: String,
+                      dbNameAsPrefix: Boolean = false,
+                      loadStatistics: Boolean = false): Unit =
     for {
       db <- meta.getDatabase(dbName)
       table <- meta.getTables(db)
@@ -151,6 +153,9 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
         val tableName = if (dbNameAsPrefix) db.getName + "_" + table.getName else table.getName
         sqlContext.baseRelationToDataFrame(rel).createTempView(tableName)
         logInfo("Registered table " + table.getName)
+      }
+      if (loadStatistics) {
+        statisticsManager.tableStatsFromStorage(table)
       }
     }
 }
