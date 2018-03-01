@@ -223,6 +223,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     val resolver = new MetaResolver(source.table)
 
+    tiColumns.foreach { resolver.resolve(_) }
+
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
     val tblStatistics = StatisticsManager.getInstance().getTableStatistics(source.table.getId)
@@ -235,14 +237,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       scanBuilder.buildScan(
         // need to bind all columns needed
         tiColumns
-          .filter { f =>
-            try {
-              resolver.resolve(f)
-              true
-            } catch {
-              case _: Exception => false
-            }
-          }
           .map { _.getColumnInfo }
           .asJava,
         tiFilters.asJava,
