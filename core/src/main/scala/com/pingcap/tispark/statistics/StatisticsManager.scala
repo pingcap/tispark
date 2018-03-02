@@ -1,5 +1,6 @@
 package com.pingcap.tispark.statistics
 
+import java.lang
 import java.util.concurrent.TimeUnit
 
 import com.google.common.cache.{CacheBuilder, Weigher}
@@ -55,10 +56,13 @@ class StatisticsManager(tiSession: TiSession,
     .maximumWeight(maxBktPerTbl) // cache should not grow beyond a certain size
     .weigher(new Weigher[Object, Object] {
       override def weigh(k: Object, v: Object): Int = {
+        def histSize(hist: Histogram): Int =
+          if (hist != null && hist.getBuckets != null) hist.getBuckets.size() else 0
+
         // we calculate bucket number as weight. Weights are computed at entry creation time, and are static thereafter
         val value = v.asInstanceOf[TableStatistics]
-        value.getColumnsHistMap.map(_._2.getHistogram.getBuckets.size).sum +
-          value.getIndexHistMap.map(_._2.getHistogram.getBuckets.size).sum
+        value.getColumnsHistMap.map(_._2.getHistogram).map(histSize).sum +
+          value.getIndexHistMap.map(_._2.getHistogram).map(histSize).sum
       }
     })
     .build[Object, Object]

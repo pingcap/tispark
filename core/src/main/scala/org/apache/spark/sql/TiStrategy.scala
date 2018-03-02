@@ -236,9 +236,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
       scanBuilder.buildScan(
         // need to bind all columns needed
-        tiColumns
-          .map { _.getColumnInfo }
-          .asJava,
+        tiColumns.map { _.getColumnInfo }.asJava,
         tiFilters.asJava,
         source.table,
         tblStatistics
