@@ -3,10 +3,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-      <groupId>com.pingcap.tispark</groupId>
-      <artifactId>tispark-parent</artifactId>
-      <version>0.1.0-SNAPSHOT</version>
-      <relativePath>../pom.xml</relativePath>
+        <groupId>com.pingcap.tispark</groupId>
+        <artifactId>tispark-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>tispark-core</artifactId>
@@ -30,11 +30,27 @@
             <groupId>org.scalaj</groupId>
             <artifactId>scalaj-http_${scala.binary.version}</artifactId>
             <version>${scalaj.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.scala-lang</groupId>
+                    <artifactId>scala-library</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.typesafe.play</groupId>
             <artifactId>play-json_${scala.binary.version}</artifactId>
             <version>${play.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.scala-lang</groupId>
+                    <artifactId>scala-library</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.scala-lang</groupId>
+                    <artifactId>scala-reflect</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- For tests -->
         <dependency>
