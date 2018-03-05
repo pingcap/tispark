@@ -99,7 +99,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   case class TestTables(dbName: String, tables: String*)
 
-  private val defaultTestTables: TestTables = TestTables("tispark_test", "full_data_type_table", "full_data_type_table_idx")
+  private val defaultTestTables: TestTables =
+    TestTables(dbName = "tispark_test", "full_data_type_table", "full_data_type_table_idx")
 
   def refreshConnections(testTables: TestTables): Unit = {
     super.refreshConnections()
