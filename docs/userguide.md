@@ -271,7 +271,10 @@ save()
 It is recommended to set `isolationLevel` to `NONE` to avoid large single transactions which may potentialy lead to TiDB OOM.
 
 ## Statistics information
-TiSpark could use TiDB's statistic information for determining which index to ues in your query plan with the estimated lowest cost.
+TiSpark could use TiDB's statistic information for 
+
+1. Determining which index to ues in your query plan with the estimated lowest cost.
+2. Small table broadcasting, which enables efficient broadcast join.
 
 If you would like TiSpark to use statistic information, first you need to make sure that concerning tables have already been analyzed. Read more about how to analyze tables [here](https://github.com/pingcap/docs/blob/master/sql/statistics.md).
 
@@ -284,7 +287,7 @@ val ti = new TiContext(spark)
 // `loadStatistics` defaults to false
 ti.tidbMapDatabase("db_name", loadStatistics = true)
   
-// Get the table that you want to load statistics information from
+// Get the table that you want to load statistics information from manually
 val table = ti.meta.getTable("db_name", "tb_name").get
   
 // If you want to load statistics information for all the columns, use
