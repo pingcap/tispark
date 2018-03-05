@@ -31,6 +31,8 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.statistics.IndexStatistics;
+import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.types.DataType;
 
 import java.util.ArrayList;
@@ -83,12 +85,16 @@ public class ScanAnalyzer {
     public boolean isDoubleRead() { return isDoubleRead; }
   }
 
-  // Build scan plan picking access path with lowest cost by estimation
   public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
-    ScanPlan minPlan = buildTableScan(conditions, table);
+    return buildScan(columnList, conditions, table, null);
+  }
+
+  // Build scan plan picking access path with lowest cost by estimation
+  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
+    ScanPlan minPlan = buildTableScan(conditions, table, ts);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildScan(columnList, conditions, index, table);
+      ScanPlan plan = buildScan(columnList, conditions, index, table, ts);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -97,19 +103,19 @@ public class ScanAnalyzer {
     return minPlan;
   }
 
-  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table) {
+  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildScan(table.getColumns(), conditions, pkIndex, table);
+    return buildScan(table.getColumns(), conditions, pkIndex, table, ts);
   }
 
-  @VisibleForTesting
-  ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table) {
+  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table, TableStatistics ts) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
     MetaResolver.resolve(conditions, table);
 
     ScanSpec result = extractConditions(conditions, table, index);
+
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
     List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
@@ -120,9 +126,21 @@ public class ScanAnalyzer {
     int tableSize = table.getColumns().size() + 1;
 
     if (index == null || index.isFakePrimaryKey()) {
+      if (ts != null) {
+        cost = 100.0;// Full table scan cost
+        // TODO: Fine-grained statistics usage
+      }
       keyRanges = buildTableScanKeyRange(table, irs);
       cost *= tableSize;
     } else {
+      if (ts != null) {
+        IndexStatistics is = ts.getIndexHistMap().get(index.getId());
+        if (is != null) {
+          double idxRangeRowCnt = is.getRowCount(irs);
+          // guess the percentage of rows hit
+          cost = 100.0 * idxRangeRowCnt / ts.getCount();
+        }
+      }
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
       // table name, index and handle column
       int indexSize = index.getIndexColumns().size() + 2;
@@ -151,7 +169,7 @@ public class ScanAnalyzer {
 
         Key key = ir.getAccessKey();
         checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
-        TypedKey typedKey = (TypedKey)key;
+        TypedKey typedKey = (TypedKey) key;
         startKey = RowKey.toRowKey(table.getId(), typedKey);
         endKey = startKey.next();
       } else if (ir.hasRange()) {
@@ -273,7 +291,7 @@ public class ScanAnalyzer {
   }
 
   @VisibleForTesting
-  static ScanSpec extractConditions(
+  public static ScanSpec extractConditions(
       List<Expression> conditions, TiTableInfo table, TiIndexInfo index) {
     // 0. Different than TiDB implementation, here logic has been unified for TableScan and IndexScan by
     // adding fake index on clustered table's pk

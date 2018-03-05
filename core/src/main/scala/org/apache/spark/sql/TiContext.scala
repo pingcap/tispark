@@ -20,6 +20,7 @@ import java.lang
 import com.pingcap.tikv.tools.RegionUtils
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
+import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 import play.api.libs.json._
@@ -41,6 +42,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   TiUtils.sessionInitialize(session, tiSession)
 
   final val version: String = TiSparkVersion.version
+  val statisticsManager: StatisticsManager = StatisticsManager.getInstance()
 
   class DebugTool {
     def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] = {
@@ -134,14 +136,24 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
-  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean = false): Unit =
+  def tidbMapDatabase(dbName: String,
+                      dbNameAsPrefix: Boolean = false,
+                      loadStatistics: Boolean = false): Unit =
     for {
       db <- meta.getDatabase(dbName)
       table <- meta.getTables(db)
     } {
+      var sizeInBytes = Long.MaxValue
+      if (loadStatistics) {
+        statisticsManager.tableStatsFromStorage(table)
+        val count = statisticsManager.getTableCount(table.getId)
+        if (count == 0) sizeInBytes = 0
+        else if (Long.MaxValue / count < 64) sizeInBytes = 64 * count
+      }
+
       val rel: TiDBRelation = new TiDBRelation(
         tiSession,
-        new TiTableReference(dbName, table.getName),
+        new TiTableReference(dbName, table.getName, sizeInBytes),
         meta
       )(sqlContext)
 

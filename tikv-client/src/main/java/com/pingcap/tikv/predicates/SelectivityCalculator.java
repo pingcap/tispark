@@ -15,13 +15,13 @@
 
 package com.pingcap.tikv.predicates;
 
-
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.visitor.DefaultVisitor;
 import com.pingcap.tikv.expression.visitor.PseudoCostCalculator;
 
 import java.util.Optional;
 
-public class SelectivityCalculator {
+public class SelectivityCalculator extends DefaultVisitor<Double, Void> {
   public static double calcPseudoSelectivity(ScanSpec spec) {
     Optional<Expression> rangePred = spec.getRangePredicate();
     double cost = 100.0;
@@ -34,5 +34,10 @@ public class SelectivityCalculator {
       cost *= PseudoCostCalculator.calculateCost(rangePred.get());
     }
     return cost;
+  }
+
+  @Override
+  protected Double process(Expression node, Void context) {
+    return 1.0;
   }
 }

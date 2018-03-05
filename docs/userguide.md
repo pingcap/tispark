@@ -270,6 +270,53 @@ save()
 ``` 
 It is recommended to set `isolationLevel` to `NONE` to avoid large single transactions which may potentialy lead to TiDB OOM.
 
+## Statistics information
+TiSpark could use TiDB's statistic information for 
+
+1. Determining which index to ues in your query plan with the estimated lowest cost.
+2. Small table broadcasting, which enables efficient broadcast join.
+
+If you would like TiSpark to use statistic information, first you need to make sure that concerning tables have already been analyzed. Read more about how to analyze tables [here](https://github.com/pingcap/docs/blob/master/sql/statistics.md).
+
+Then load statistics information from your storage
+```scala
+val ti = new TiContext(spark)
+
+// ... map databases needed to use
+// You can specify whether to load statistics information automatically during database mapping
+// `loadStatistics` defaults to false
+ti.tidbMapDatabase("db_name", loadStatistics = true)
+  
+// Get the table that you want to load statistics information from manually
+val table = ti.meta.getTable("db_name", "tb_name").get
+  
+// If you want to load statistics information for all the columns, use
+ti.statisticsManager.tableStatsFromStorage(table)
+  
+// If you just want to use some of the columns' statistics information, use
+ti.statisticsManager.tableStatsFromStorage(table, "col1", "col2", "col3") // You could specify required columns by vararg
+  
+// Collect other tables' statistic information...
+  
+// Then you could query as usual, TiSpark will use statistic information collect to optimized index selection
+```
+Note that table statistics will be automatically stored in your spark driver node once you fetch them from your storage, and may evict according to some rules.
+Currently you could adjust these configs in your spark.conf file
+  
+| Property Name | Default | Description
+| --------   | -----:   | :----: |
+| spark.tispark.statistics.max_bucket_per_table        | 2000000000      |   Statistic information for a column mainly consists of buckets, the number of which is proportional to the number of distinct values for one column. If the bucket number of this table exceeds this threshold, this table may not be allowed to be cached since it may not fit your memory. Adjust it to a bigger value to allow more buckets stored in your cache.    |
+| spark.tispark.statistics.expire_after_access        | 43200      |   How much time will a table's statistic information cache be automatically cleared after the last access to it(in minutes, defaults to one month).    |
+  
+If you want to manually invalidate your table statistic caches
+```scala
+// Invalidate all tables' statistic information cache
+ti.statisticsManager.invalidateAll()
+
+// Or you could specify which table to invalidate
+ti.statisticsManager.invalidate(table)
+```
+
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?

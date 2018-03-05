@@ -1,3 +1,18 @@
+/*
+ * Copyright 2017 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.meta;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -13,8 +28,10 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
+import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.util.KeyRangeUtils;
 import com.pingcap.tikv.util.Pair;
 
 import java.io.Serializable;
@@ -31,6 +48,76 @@ import static java.util.Objects.requireNonNull;
  * Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
+  public static class Builder {
+    private List<String> requiredCols = new ArrayList<>();
+    private List<Expression> filters = new ArrayList<>();
+    private List<ByItem> orderBys = new ArrayList<>();
+    private List<Coprocessor.KeyRange> ranges = new ArrayList<>();
+    private TiTableInfo tableInfo;
+    private int limit;
+    private long startTs;
+
+    public static Builder newBuilder() {
+      return new Builder();
+    }
+
+    public Builder setFullTableScan(TiTableInfo tableInfo) {
+      requireNonNull(tableInfo);
+      setTableInfo(tableInfo);
+      RowKey start = RowKey.createMin(tableInfo.getId());
+      RowKey end = RowKey.createBeyondMax(tableInfo.getId());
+      ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+      return this;
+    }
+
+    public Builder setLimit(int limit) {
+      this.limit = limit;
+      return this;
+    }
+
+    public Builder setTableInfo(TiTableInfo tableInfo) {
+      this.tableInfo = tableInfo;
+      return this;
+    }
+
+    public Builder addRequiredCols(String... cols) {
+      this.requiredCols.addAll(Arrays.asList(cols));
+      return this;
+    }
+
+    public Builder addFilter(Expression filter) {
+      this.filters.add(filter);
+      return this;
+    }
+
+    public Builder addOrderBy(ByItem item) {
+      this.orderBys.add(item);
+      return this;
+    }
+
+    public Builder setStartTs(long ts) {
+      this.startTs = ts;
+      return this;
+    }
+
+    public TiDAGRequest build(PushDownType pushDownType) {
+      TiDAGRequest req = new TiDAGRequest(pushDownType);
+      req.setTableInfo(tableInfo);
+      req.addRanges(ranges);
+      filters.forEach(req::addFilter);
+      if (!orderBys.isEmpty()) {
+        orderBys.forEach(req::addOrderByItem);
+      }
+      if (limit != 0) {
+        req.setLimit(limit);
+      }
+      requiredCols.forEach(c -> req.addRequiredColumn(ColumnRef.create(c)));
+
+      req.resolve();
+      return req;
+    }
+  }
+
   public TiDAGRequest(PushDownType pushDownType) {
     this.pushDownType = pushDownType;
   }
@@ -104,12 +191,12 @@ public class TiDAGRequest implements Serializable {
 
   private static ColumnInfo handleColumn =
       ColumnInfo.newBuilder()
-        .setColumnId(-1)
-        .setPkHandle(true)
-        // We haven't changed the field name in protobuf file, but
-        // we need to set this to true in order to retrieve the handle,
-        // so the name 'setPkHandle' may sounds strange.
-        .build();
+          .setColumnId(-1)
+          .setPkHandle(true)
+          // We haven't changed the field name in protobuf file, but
+          // we need to set this to true in order to retrieve the handle,
+          // so the name 'setPkHandle' may sounds strange.
+          .build();
 
   private List<Expression> getAllExpressions() {
     ImmutableList.Builder<Expression> builder = ImmutableList.builder();
@@ -141,7 +228,7 @@ public class TiDAGRequest implements Serializable {
    * Unify indexScan and tableScan building logic since they are very much alike.
    * DAGRequest for IndexScan should also contain filters and aggregation, so
    * we can reuse this part of logic.
-   *
+   * <p>
    * DAGRequest is made up of a chain of executors with strict orders:
    * TableScan/IndexScan > Selection > Aggregation > TopN/Limit
    * a DAGRequest must contain one and only one TableScan or IndexScan.
@@ -205,7 +292,7 @@ public class TiDAGRequest implements Serializable {
         boolean pkIsNeeded = false;
         // =================== IMPORTANT ======================
         // offset for dagRequest should be in accordance with fields
-        for (ColumnRef col: getFields()) {
+        for (ColumnRef col : getFields()) {
           Integer pos = colPosInIndexMap.get(col.getColumnInfo());
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
@@ -257,7 +344,7 @@ public class TiDAGRequest implements Serializable {
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
 
       // column offset should be in accordance with fields
-      for (int i = 0; i < getFields().size(); i ++) {
+      for (int i = 0; i < getFields().size(); i++) {
         dagRequestBuilder.addOutputOffsets(i);
       }
 
@@ -330,7 +417,7 @@ public class TiDAGRequest implements Serializable {
 
   /**
    * Check if a DAG request is valid.
-   *
+   * <p>
    * Note:
    * When constructing a DAG request, a executor with an ExecType of higher priority
    * should always be placed before those lower ones.
@@ -381,7 +468,7 @@ public class TiDAGRequest implements Serializable {
     return this;
   }
 
-  TiIndexInfo getIndexInfo() {
+  public TiIndexInfo getIndexInfo() {
     return indexInfo;
   }
 
@@ -636,6 +723,7 @@ public class TiDAGRequest implements Serializable {
 
   /**
    * Whether we use streaming processing to retrieve data
+   *
    * @return push down type.
    */
   public PushDownType getPushDownType() {
