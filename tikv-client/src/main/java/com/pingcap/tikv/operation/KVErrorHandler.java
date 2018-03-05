@@ -116,13 +116,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
             ctxRegion.getId(),
             ctxRegion.getLeader().getStoreId()));
 
-        regionManager.invalidateRegion(ctxRegion.getId());
-        regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
-        notifyCacheInvalidation(
-            ctxRegion.getId(),
-            ctxRegion.getLeader().getStoreId(),
-            CacheInvalidateEvent.CacheType.REGION_STORE
-        );
+        invalidateRegionStoreCache(ctxRegion);
         recv.onStoreNotMatch();
         throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasStaleEpoch()) {
@@ -131,29 +125,19 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         throw new GrpcRegionStaleException(error.toString());
       } else if (error.hasServerIsBusy()) {
         logger.warn(String.format("Server is busy for region [%s]", ctxRegion));
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasStaleCommand()) {
         logger.warn(String.format("Stale command for region [%s]", ctxRegion));
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasRaftEntryTooLarge()) {
         logger.warn(String.format("Raft too large for region [%s]", ctxRegion));
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasKeyNotInRegion()) {
         ByteString invalidKey = error.getKeyNotInRegion().getKey();
         logger.warn(String.format("Key not in region [%s] for key [%s]", ctxRegion, KeyUtils.formatBytes(invalidKey)));
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else {
         logger.warn(String.format("Unknown error for region [%s]", error));
-        // for other errors, we only drop cache here and throw a retryable exception.
-        regionManager.invalidateRegion(ctxRegion.getId());
-        regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
-        notifyCacheInvalidation(
-            ctxRegion.getId(),
-            ctxRegion.getLeader().getStoreId(),
-            CacheInvalidateEvent.CacheType.REGION_STORE
-        );
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       }
+
+      invalidateRegionStoreCache(ctxRegion);
+      throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
     }
 
     // Other error handling logic
@@ -164,6 +148,16 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       // Just throw to upper layer to handle
       throw new IllegalStateException("Received other error from TiKV:" + otherError);
     }
+  }
+
+  private void invalidateRegionStoreCache(TiRegion ctxRegion) {
+    regionManager.invalidateRegion(ctxRegion.getId());
+    regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
+    notifyCacheInvalidation(
+        ctxRegion.getId(),
+        ctxRegion.getLeader().getStoreId(),
+        CacheInvalidateEvent.CacheType.REGION_STORE
+    );
   }
 
   /**
