@@ -36,6 +36,8 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+  val autoLoadStatistics: Boolean =
+    conf.getBoolean("spark.tispark.statistics.auto_load", defaultValue = true)
 
   val debug: DebugTool = new DebugTool
 
@@ -136,19 +138,17 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
-  def tidbMapDatabase(dbName: String,
-                      dbNameAsPrefix: Boolean = false,
-                      loadStatistics: Boolean = false): Unit =
+  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean = false): Unit =
     for {
       db <- meta.getDatabase(dbName)
       table <- meta.getTables(db)
     } {
       var sizeInBytes = Long.MaxValue
-      if (loadStatistics) {
-        statisticsManager.tableStatsFromStorage(table)
+      if (autoLoadStatistics) {
+        statisticsManager.loadStatisticsInfo(table)
         val count = statisticsManager.getTableCount(table.getId)
         if (count == 0) sizeInBytes = 0
-        else if (Long.MaxValue / count < 64) sizeInBytes = 64 * count
+        else if (Long.MaxValue / count > 64) sizeInBytes = 64 * count
       }
 
       val rel: TiDBRelation = new TiDBRelation(

@@ -283,40 +283,32 @@ Then load statistics information from your storage
 val ti = new TiContext(spark)
 
 // ... map databases needed to use
-// You can specify whether to load statistics information automatically during database mapping
-// `loadStatistics` defaults to false
-ti.tidbMapDatabase("db_name", loadStatistics = true)
+// You can specify whether to load statistics information automatically during database mapping in your config file described as below.
+// Statistics information will be loaded automatically by default, which is recommended in most cases.
+ti.tidbMapDatabase("db_name")
   
-// Get the table that you want to load statistics information from manually
+// Another option is manually load by yourself, yet this is not the recommended way.
+  
+// Firstly, get the table that you want to load statistics information from.
 val table = ti.meta.getTable("db_name", "tb_name").get
   
 // If you want to load statistics information for all the columns, use
-ti.statisticsManager.tableStatsFromStorage(table)
+ti.statisticsManager.loadStatisticsInfo(table)
   
 // If you just want to use some of the columns' statistics information, use
-ti.statisticsManager.tableStatsFromStorage(table, "col1", "col2", "col3") // You could specify required columns by vararg
+ti.statisticsManager.loadStatisticsInfo(table, "col1", "col2", "col3") // You could specify required columns by vararg
   
 // Collect other tables' statistic information...
   
-// Then you could query as usual, TiSpark will use statistic information collect to optimized index selection
+// Then you could query as usual, TiSpark will use statistic information collect to optimized index selection and broadcast join.
 ```
-Note that table statistics will be automatically stored in your spark driver node once you fetch them from your storage, and may evict according to some rules.
-Currently you could adjust these configs in your spark.conf file
+Note that table statistics will be cached in your spark driver node's memory, so you need to make sure that your memory should be enough for your statistics information.
+Currently you could adjust these configs in your spark.conf file.
   
 | Property Name | Default | Description
 | --------   | -----:   | :----: |
-| spark.tispark.statistics.max_bucket_per_table        | 2000000000      |   Statistic information for a column mainly consists of buckets, the number of which is proportional to the number of distinct values for one column. If the bucket number of this table exceeds this threshold, this table may not be allowed to be cached since it may not fit your memory. Adjust it to a bigger value to allow more buckets stored in your cache.    |
-| spark.tispark.statistics.expire_after_access        | 43200      |   How much time will a table's statistic information cache be automatically cleared after the last access to it(in minutes, defaults to one month).    |
+| spark.tispark.statistics.auto_load | true | Whether to load statistics info automatically during database mapping. |
   
-If you want to manually invalidate your table statistic caches
-```scala
-// Invalidate all tables' statistic information cache
-ti.statisticsManager.invalidateAll()
-
-// Or you could specify which table to invalidate
-ti.statisticsManager.invalidate(table)
-```
-
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?

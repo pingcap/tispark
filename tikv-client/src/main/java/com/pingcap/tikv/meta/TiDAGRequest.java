@@ -112,6 +112,7 @@ public class TiDAGRequest implements Serializable {
         req.setLimit(limit);
       }
       requiredCols.forEach(c -> req.addRequiredColumn(ColumnRef.create(c)));
+      req.setStartTs(startTs);
 
       req.resolve();
       return req;

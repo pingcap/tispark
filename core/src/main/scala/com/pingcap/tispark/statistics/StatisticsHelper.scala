@@ -1,3 +1,20 @@
+/*
+ *
+ * Copyright 2017 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package com.pingcap.tispark.statistics
 
 import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
@@ -5,7 +22,7 @@ import com.pingcap.tikv.key.{Key, TypedKey}
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.row.Row
-import com.pingcap.tikv.statistics.{Bucket, CMSketch, Histogram}
+import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.{DataType, DataTypeFactory, MySQLType}
 import org.slf4j.LoggerFactory
 
@@ -14,8 +31,6 @@ import scala.collection.mutable
 
 object StatisticsHelper {
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
-
-//  def loadStatisticInformation(tblId: Long)
 
   def extractStatisticsDTO(row: Row,
                            table: TiTableInfo,
@@ -162,6 +177,7 @@ object StatisticsHelper {
         ComparisonBinaryExpression
           .equal(ColumnRef.create("table_id"), Constant.create(targetTblId))
       )
+      .setLimit(Int.MaxValue)
       .addOrderBy(ByItem.create(ColumnRef.create("bucket_id"), false))
       .addRequiredCols(
         "count",

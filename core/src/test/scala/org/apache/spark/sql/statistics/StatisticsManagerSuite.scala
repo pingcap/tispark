@@ -53,8 +53,8 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
   private def loadStatistics(): Unit = {
     fDataIdxTbl = ti.meta.getTable("tispark_test", "full_data_type_table_idx").get
     fDataTbl = ti.meta.getTable("tispark_test", "full_data_type_table").get
-    ti.statisticsManager.tableStatsFromStorage(fDataIdxTbl)
-    ti.statisticsManager.tableStatsFromStorage(fDataTbl)
+    ti.statisticsManager.loadStatisticsInfo(fDataIdxTbl)
+    ti.statisticsManager.loadStatisticsInfo(fDataTbl)
   }
 
   test("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
