@@ -193,6 +193,8 @@ object StatisticsManager {
     }
   }
 
+  def reset(): Unit = manager = null
+
   def getInstance(): StatisticsManager = {
     if (manager == null) {
       throw new RuntimeException("StatisticsManager has not been initialized properly.")

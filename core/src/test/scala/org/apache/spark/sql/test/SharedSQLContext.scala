@@ -20,6 +20,7 @@ package org.apache.spark.sql.test
 import java.sql.{Connection, DriverManager, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
+import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
@@ -194,8 +195,8 @@ object SharedSQLContext extends Logging {
         )
         _statement.execute(queryString)
         logger.warn("Loading TPCHData.sql successfully.")
+        initStatistics()
       }
-      initStatistics()
     }
   }
 
@@ -254,6 +255,8 @@ object SharedSQLContext extends Logging {
 
     if (_ti != null) {
       _ti.tiSession.close()
+      // Reset statisticsManager in case it use older version of TiContext
+      StatisticsManager.reset()
       _ti = null
     }
 
