@@ -143,6 +143,14 @@ object SharedSQLContext extends Logging {
     }
   }
 
+  private def initStatistics(): Unit = {
+    logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
+    _statement.execute("analyze table tispark_test.full_data_type_table_idx")
+    logger.info("Analyzing table tispark_test.full_data_type_table...")
+    _statement.execute("analyze table tispark_test.full_data_type_table")
+    logger.info("Analyzing table finished.")
+  }
+
   private def initializeTiDB(): Unit = {
     if (_tidbConnection == null) {
       val jdbcUsername = getOrElse(_tidbConf, TiDB_USER, "root")
@@ -182,6 +190,7 @@ object SharedSQLContext extends Logging {
         _statement.execute(queryString)
         logger.warn("Loading TPCHData.sql successfully.")
       }
+      initStatistics()
     }
   }
 

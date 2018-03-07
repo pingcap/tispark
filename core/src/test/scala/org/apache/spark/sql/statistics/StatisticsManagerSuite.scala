@@ -36,25 +36,12 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    initStatistics()
-    loadStatistics()
+    initTable()
   }
 
-  private def initStatistics(): Unit = {
-    setLogLevel("INFO")
-    logger.info("Analyzing table full_data_type_table_idx...")
-    tidbStmt.execute("analyze table full_data_type_table_idx")
-    logger.info("Analyzing table full_data_type_table...")
-    tidbStmt.execute("analyze table full_data_type_table")
-    logger.info("Analyzing table finished.")
-    setLogLevel("WARN")
-  }
-
-  private def loadStatistics(): Unit = {
+  private def initTable(): Unit = {
     fDataIdxTbl = ti.meta.getTable("tispark_test", "full_data_type_table_idx").get
     fDataTbl = ti.meta.getTable("tispark_test", "full_data_type_table").get
-//    ti.statisticsManager.loadStatisticsInfo(fDataIdxTbl)
-//    ti.statisticsManager.loadStatisticsInfo(fDataTbl)
   }
 
   test("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
