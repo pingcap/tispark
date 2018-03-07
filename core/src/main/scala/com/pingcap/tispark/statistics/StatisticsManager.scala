@@ -65,20 +65,23 @@ class StatisticsManager(tiSession: TiSession) {
   // stats_meta:
   //       Version       | A time stamp assigned by pd, updates along with DDL updates.
   //       Count         | Number of rows in the table, if equals to -1, that means this table may had been removed.
-  //       Modify_count  | Indicates the count loas during update procedure, which shows the `healthiness` of the table.表示Table在更新过程中损失的Count，表示表的“健康度”
+  //       Modify_count  | Indicates the count lose during update procedure, which shows the `healthiness` of the table.表示Table在更新过程中损失的Count，表示表的“健康度”
   // stats_histograms:
   //       Version       | Indicate version of this column's histogram.
   //       IsIndex       | Indicate whether this column is index.
   //       HistID        | Index id or column id, related to `IsIndex` above.
-  //       Null Count    | Number of null column.
+  //       Null Count    | The number of `NULL`.
   //       Distinct Count| Distinct value count.
   //       Modify Count  | Modification count, not used currently.
   // stats_buckets:
   //       TableID IsIndex HistID BucketID | Intuitive columns.
-  //       Count         | Depth of this bucket.
+  //       Count         | The number of all the values that falls on the bucket and the previous buckets.
   //       Lower_Bound   | Minimal value of this bucket.
   //       Upper_Bound   | Maximal value of this bucket.
   //       Repeats       | The repeat count of maximal value.
+  //
+  // More explanation could be found here
+  // https://github.com/pingcap/docs/blob/master/sql/statistics.md
   private lazy val metaTable = catalog.getTable("mysql", "stats_meta")
   private lazy val histTable = catalog.getTable("mysql", "stats_histograms")
   private lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
