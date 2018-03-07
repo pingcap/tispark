@@ -70,16 +70,18 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     spark.read
       .format("jdbc")
       .option(JDBCOptions.JDBC_URL, jdbcUrl)
-      .option(JDBCOptions.JDBC_TABLE_NAME, s"$dbName.$viewName")
+      .option(JDBCOptions.JDBC_TABLE_NAME, s"`$dbName`.`$viewName`")
       .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
       .load()
-      .createOrReplaceTempView(s"$viewName$postfix")
+      .createOrReplaceTempView(s"`$viewName$postfix`")
 
-  def loadTestData(): Unit = {
-    tidbConn.setCatalog("tispark_test")
-    ti.tidbMapDatabase("tispark_test")
-    createOrReplaceTempView("tispark_test", "full_data_type_table")
-    createOrReplaceTempView("tispark_test", "full_data_type_table_idx")
+  def loadTestData(testTables: TestTables = defaultTestTables): Unit = {
+    val dbName = testTables.dbName
+    tidbConn.setCatalog(dbName)
+    ti.tidbMapDatabase(dbName)
+    for (tableName <- testTables.tables) {
+      createOrReplaceTempView(dbName, tableName)
+    }
   }
 
   override def beforeAll(): Unit = {
@@ -95,9 +97,33 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
+  case class TestTables(dbName: String, tables: String*)
+
+  private val defaultTestTables: TestTables =
+    TestTables(dbName = "tispark_test", "full_data_type_table", "full_data_type_table_idx")
+
+  def refreshConnections(testTables: TestTables): Unit = {
+    super.refreshConnections()
+    loadTestData(testTables)
+    initializeTimeZone()
+  }
+
+  override def refreshConnections(): Unit = {
+    super.refreshConnections()
+    loadTestData()
+    initializeTimeZone()
+  }
+
   def setLogLevel(level: String): Unit = {
     spark.sparkContext.setLogLevel(level)
   }
+
+  def execDBTSAndJudge(str: String, skipped: Boolean = false): Boolean =
+    try {
+      compResult(querySpark(str), queryTiDB(str))
+    } catch {
+      case e: Throwable => fail(e)
+    }
 
   def runTest(qSpark: String, qJDBC: String): Unit = {
     var r1: List[List[Any]] = null
