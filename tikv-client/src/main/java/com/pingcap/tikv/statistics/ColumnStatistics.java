@@ -1,15 +1,29 @@
+/*
+ *
+ * Copyright 2018 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package com.pingcap.tikv.statistics;
 
-import com.google.common.collect.BoundType;
-import com.google.common.collect.Range;
-import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import com.pingcap.tikv.predicates.IndexRange;
 
-import java.util.List;
-
+/**
+ * Each Column will have a single {@link ColumnStatistics} to store {@link Histogram} info
+ * and {@link CMSketch} info, if any.
+ *
+ */
 public class ColumnStatistics {
   private Histogram histogram;
   private CMSketch cmSketch;
@@ -54,64 +68,4 @@ public class ColumnStatistics {
   public void setColumnInfo(TiColumnInfo columnInfo) {
     this.columnInfo = columnInfo;
   }
-
-  /**
-   * getColumnRowCount estimates the row count by a slice of ColumnRange.
-   */
-  public double getColumnRowCount(List<IndexRange> columnRanges) {
-    double rowCount = 0.0;
-    for (IndexRange ir : columnRanges) {
-      double cnt = 0.0;
-      Key pointKey = ir.hasAccessKey() ? ir.getAccessKey() : Key.EMPTY;
-      Range<TypedKey> range = ir.getRange();
-      Key lPointKey;
-      Key uPointKey;
-
-      Key lKey;
-      Key uKey;
-      if (!ir.hasRange()) {
-        cnt = histogram.equalRowCount(pointKey);
-      } else {
-        lPointKey = pointKey;
-        uPointKey = pointKey;
-
-        if (!range.hasLowerBound()) {
-          // -INF
-          lKey = Key.MIN;
-        } else {
-          lKey = range.lowerEndpoint();
-          if (range.lowerBoundType().equals(BoundType.OPEN)) {
-            lKey = lKey.next();
-          }
-        }
-        if (!range.hasUpperBound()) {
-          // INF
-          uKey = Key.MAX;
-        } else {
-          uKey = range.upperEndpoint();
-          if (range.upperBoundType().equals(BoundType.CLOSED)) {
-            uKey = uKey.next();
-          }
-        }
-        CodecDataOutput cdo = new CodecDataOutput();
-        cdo.write(lPointKey.getBytes());
-        cdo.write(lKey.getBytes());
-        Key lowerBound = Key.toRawKey(cdo.toByteString());
-        cdo.reset();
-        cdo.write(uPointKey.getBytes());
-        cdo.write(uKey.getBytes());
-        Key upperBound = Key.toRawKey(cdo.toByteString());
-        cnt += histogram.betweenRowCount(lowerBound, upperBound);
-      }
-
-      rowCount += cnt;
-    }
-    if (rowCount > histogram.totalRowCount()) {
-      rowCount = histogram.totalRowCount();
-    } else if (rowCount < 0) {
-      rowCount = 0;
-    }
-    return rowCount;
-  }
-
 }

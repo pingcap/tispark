@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2018 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,21 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Histogram represents core statistics for a column or index.
+ *
+ * Each Histogram will have at most 256 buckets, each bucket contains a lower bound, a upper bound
+ * and the number of rows contain in such bound. With this information, SQL layer will be able to
+ * estimate how many rows will a index scan selects and determine which index to use will have the
+ * lowest cost.
+ *
+ * @see Bucket for moreinformation on the core data structure.
+ */
 public class Histogram {
 
-  //Histogram
-  private final long id;
+  private final long id;                    // Column ID
   private final long numberOfDistinctValue; // Number of distinct values.
-  private List<Bucket> buckets;
+  private List<Bucket> buckets;             // Histogram bucket list.
   private final long nullCount;
   private final long lastUpdateVersion;
 
@@ -158,7 +167,7 @@ public class Histogram {
   }
 
   /**
-   * lessRowCount estimates the row count where the column less than value.
+   * lessRowCount estimates the row count where the column less than values.
    */
   double lessRowCount(Key values) {
     int index = lowerBound(values);
@@ -201,13 +210,12 @@ public class Histogram {
    * betweenRowCount estimates the row count where column greater than or equal to a and less than b.
    */
   double betweenRowCount(Key a, Key b) {
-//    CodecDataInput c = new CodecDataInput(a.getByteString());
-//    CodecDataInput d = new CodecDataInput(b.getByteString());
-//    System.out.println(c.readLine() + " with " + d.readLine());
     double lessCountA = lessRowCount(a);
     double lessCountB = lessRowCount(b);
+    // If lessCountA is not less than lessCountB, it may be that they fall to the same bucket and we cannot estimate
+    // the fraction, so we use `totalCount / NDV` to estimate the row count, but the result should not greater than lessCountB.
     if (lessCountA >= lessCountB) {
-      return inBucketBetweenCount();
+      return Math.min(lessCountB, totalRowCount() / numberOfDistinctValue);
     }
     return lessCountB - lessCountA;
   }
@@ -217,15 +225,6 @@ public class Histogram {
       return 0;
     }
     return (buckets.get(buckets.size() - 1).count);
-  }
-
-  public double bucketRowCount() {
-    return totalRowCount() / buckets.size();
-  }
-
-  public double inBucketBetweenCount() {
-    // TODO: Make this estimation more accurate using uniform spread assumption.
-    return bucketRowCount() / 3 + 1;
   }
 
   /**

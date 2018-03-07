@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2018 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,9 +48,37 @@ private[statistics] case class StatisticsResult(histId: Long,
   def hasColInfo: Boolean = colInfo != null
 }
 
+/**
+  * Manager class for maintaining table statistics information cache.
+  *
+  * Statistics information is useful for index selection and broadcast join support in TiSpark currently,
+  * and these are arranged follows:
+  * `statisticsMap` contains `tableId`->[[TableStatistics]] data, each table(id) will have a [[TableStatistics]]
+  * if you have loaded statistics information successfully.
+  *
+  * @param tiSession TiSession used for selecting statistics information from TiKV
+  */
 class StatisticsManager(tiSession: TiSession) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
+  // Statistics information table columns explanation:
+  // stats_meta:
+  //       Version       | A time stamp assigned by pd, updates along with DDL updates.
+  //       Count         | Number of rows in the table, if equals to -1, that means this table may had been removed.
+  //       Modify_count  | Indicates the count loas during update procedure, which shows the `healthiness` of the table.表示Table在更新过程中损失的Count，表示表的“健康度”
+  // stats_histograms:
+  //       Version       | Indicate version of this column's histogram.
+  //       IsIndex       | Indicate whether this column is index.
+  //       HistID        | Index id or column id, related to `IsIndex` above.
+  //       Null Count    | Number of null column.
+  //       Distinct Count| Distinct value count.
+  //       Modify Count  | Modification count, not used currently.
+  // stats_buckets:
+  //       TableID IsIndex HistID BucketID | Intuitive columns.
+  //       Count         | Depth of this bucket.
+  //       Lower_Bound   | Minimal value of this bucket.
+  //       Upper_Bound   | Maximal value of this bucket.
+  //       Repeats       | The repeat count of maximal value.
   private lazy val metaTable = catalog.getTable("mysql", "stats_meta")
   private lazy val histTable = catalog.getTable("mysql", "stats_histograms")
   private lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
@@ -59,12 +87,12 @@ class StatisticsManager(tiSession: TiSession) {
     .build[Object, Object]
 
   /**
-   * Load statistics information maintained by TiDB to TiSpark.
-   *
-   * @param table   The table whose statistics info is needed.
-   * @param columns Concerning columns for `table`, only these columns' statistics information
-   *                will be loaded, if empty, all columns' statistics info will be loaded
-   */
+    * Load statistics information maintained by TiDB to TiSpark.
+    *
+    * @param table   The table whose statistics info is needed.
+    * @param columns Concerning columns for `table`, only these columns' statistics information
+    *                will be loaded, if empty, all columns' statistics info will be loaded
+    */
   def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit = synchronized {
     require(table != null, "TableInfo should not be null")
 
@@ -84,6 +112,7 @@ class StatisticsManager(tiSession: TiSession) {
       })
     }
 
+    // use cached one for incremental update
     val tblStatistic = if (statisticsMap.asMap.containsKey(tblId)) {
       statisticsMap.getIfPresent(tblId).asInstanceOf[TableStatistics]
     } else {
