@@ -59,12 +59,12 @@ class StatisticsManager(tiSession: TiSession) {
     .build[Object, Object]
 
   /**
-    * Load statistics information maintained by TiDB to TiSpark.
-    *
-    * @param table   The table whose statistics info is needed.
-    * @param columns Concerning columns for `table`, only these columns' statistics information
-    *                will be loaded, if empty, all columns' statistics info will be loaded
-    */
+   * Load statistics information maintained by TiDB to TiSpark.
+   *
+   * @param table   The table whose statistics info is needed.
+   * @param columns Concerning columns for `table`, only these columns' statistics information
+   *                will be loaded, if empty, all columns' statistics info will be loaded
+   */
   def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit = synchronized {
     require(table != null, "TableInfo should not be null")
 
