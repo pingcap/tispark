@@ -36,8 +36,6 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
-  val autoLoadStatistics: Boolean =
-    conf.getBoolean("spark.tispark.statistics.auto_load", defaultValue = true)
 
   val debug: DebugTool = new DebugTool
 
@@ -45,6 +43,8 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
 
   final val version: String = TiSparkVersion.version
   val statisticsManager: StatisticsManager = StatisticsManager.getInstance()
+  private val autoLoad =
+    conf.getBoolean("spark.tispark.statistics.auto_load", defaultValue = true)
 
   class DebugTool {
     def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] = {
@@ -138,7 +138,9 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
-  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean = false): Unit =
+  def tidbMapDatabase(dbName: String,
+                      dbNameAsPrefix: Boolean = false,
+                      autoLoadStatistics: Boolean = autoLoad): Unit =
     for {
       db <- meta.getDatabase(dbName)
       table <- meta.getTables(db)

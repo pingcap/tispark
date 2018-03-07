@@ -17,8 +17,6 @@
 
 package com.pingcap.tispark.statistics
 
-import java.util.concurrent.TimeUnit
-
 import com.google.common.cache.CacheBuilder
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.meta.{TiColumnInfo, TiIndexInfo, TiTableInfo}
@@ -26,7 +24,6 @@ import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.DataType
 import org.apache.spark.sql.SparkSession
-import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -57,10 +54,44 @@ class StatisticsManager(tiSession: TiSession) {
   private lazy val metaTable = catalog.getTable("mysql", "stats_meta")
   private lazy val histTable = catalog.getTable("mysql", "stats_histograms")
   private lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
-  private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private final val statisticsMap = CacheBuilder
     .newBuilder()
     .build[Object, Object]
+
+  /**
+    * Load statistics information maintained by TiDB to TiSpark.
+    *
+    * @param table   The table whose statistics info is needed.
+    * @param columns Concerning columns for `table`, only these columns' statistics information
+    *                will be loaded, if empty, all columns' statistics info will be loaded
+    */
+  def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit = synchronized {
+    require(table != null, "TableInfo should not be null")
+
+    val tblId = table.getId
+    val tblCols = table.getColumns
+    val loadAll = columns == null || columns.isEmpty
+    var neededColIds = mutable.ArrayBuffer[Long]()
+    if (!loadAll) {
+      // check whether input column could be found in the table
+      columns.distinct.foreach((col: String) => {
+        val isColValid = tblCols.exists(_.matchName(col))
+        if (!isColValid) {
+          throw new RuntimeException(s"Column $col cannot be found in table ${table.getName}")
+        } else {
+          neededColIds += tblCols.find(_.matchName(col)).get.getId
+        }
+      })
+    }
+
+    val tblStatistic = if (statisticsMap.asMap.containsKey(tblId)) {
+      statisticsMap.getIfPresent(tblId).asInstanceOf[TableStatistics]
+    } else {
+      new TableStatistics(tblId)
+    }
+
+    loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
+  }
 
   private def loadStatsFromStorage(tblId: Long,
                                    tblStatistic: TableStatistics,
@@ -101,34 +132,6 @@ class StatisticsManager(tiSession: TiSession) {
     })
 
     statisticsMap.put(tblId.asInstanceOf[Object], tblStatistic.asInstanceOf[Object])
-  }
-
-  def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit = synchronized {
-    require(table != null, "TableInfo should not be null")
-
-    val tblId = table.getId
-    val tblCols = table.getColumns
-    val loadAll = columns == null || columns.isEmpty
-    var neededColIds = mutable.ArrayBuffer[Long]()
-    if (!loadAll) {
-      // check whether input column could be found in the table
-      columns.distinct.foreach((col: String) => {
-        val isColValid = tblCols.exists(_.matchName(col))
-        if (!isColValid) {
-          throw new RuntimeException(s"Column $col cannot be found in table ${table.getName}")
-        } else {
-          neededColIds += tblCols.find(_.matchName(col)).get.getId
-        }
-      })
-    }
-
-    val tblStatistic = if (statisticsMap.asMap.containsKey(tblId)) {
-      statisticsMap.getIfPresent(tblId).asInstanceOf[TableStatistics]
-    } else {
-      new TableStatistics(tblId)
-    }
-
-    loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
   }
 
   private def loadMetaToTblStats(tableId: Long, tableStatistics: TableStatistics): Unit = {
@@ -174,14 +177,6 @@ class StatisticsManager(tiSession: TiSession) {
     } else {
       Long.MaxValue
     }
-  }
-
-  private def invalidateAll(): Unit = {
-    statisticsMap.invalidateAll()
-  }
-
-  private def invalidate(table: TiTableInfo): Unit = {
-    statisticsMap.invalidate(table.getId)
   }
 }
 
