@@ -29,7 +29,7 @@ import com.pingcap.tikv.key.Key;
  * A bucket count is the number of items stored in all previous buckets and the current bucket.
  * Bucket counts are always in increasing order.
  * <p>
- * A bucket repeat is the number of repeats of the bucket value, it can be used to find popular values.
+ * A bucket repeat is the number of repeats of the greatest bucket value, it can be used to find popular values.
  *
  * Note that lowerBound and upperBound keys should be 'comparable objects', and these bounds are encoded
  * as `binary` type in TiDB. Intuitively, you should also use Keys encoded as binary format to do comparison

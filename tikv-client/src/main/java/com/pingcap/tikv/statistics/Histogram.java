@@ -177,6 +177,8 @@ public class Histogram {
     }
     if (index < 0) {
       index = -index - 1;
+    } else {
+      return buckets.get(index).count - buckets.get(index).getRepeats();
     }
     double curCount = buckets.get(index).count;
     double preCount = 0;
@@ -191,7 +193,7 @@ public class Histogram {
     } else {
       c = 1;
     }
-    if (c <= 0) {
+    if (c < 0) {
       return preCount;
     }
     return (preCount + lessThanBucketValueCount) / 2;
