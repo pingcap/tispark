@@ -20,27 +20,29 @@ class IssueTestSuite extends BaseTiSparkSuite {
   // https://github.com/pingcap/tispark/issues/255
   test("Group by with first") {
     ti.tidbMapDatabase("tpch_test")
-    val q1 = spark.sql("""
-                         |select
-                         |   l_returnflag
-                         |from
-                         |   lineitem
-                         |where
-                         |   l_shipdate <= date '1998-12-01'
-                         |group by
-                         |   l_returnflag""".stripMargin)
-    val q2 = spark.sql("""
-                         |select
-                         |   avg(l_quantity)
-                         |from
-                         |   lineitem
-                         |where
-                         |   l_shipdate >= date '1994-01-01'
-                         |group by
-                         |   l_partkey""".stripMargin)
+    val q1 =
+      """
+        |select
+        |   l_returnflag
+        |from
+        |   lineitem
+        |where
+        |   l_shipdate <= date '1998-12-01'
+        |group by
+        |   l_returnflag""".stripMargin
+    val q2 =
+      """
+        |select
+        |   avg(l_quantity)
+        |from
+        |   lineitem
+        |where
+        |   l_shipdate >= date '1994-01-01'
+        |group by
+        |   l_partkey""".stripMargin
     // Should not throw any exception
-    q1.collect()
-    q2.collect()
+    runTest(q1, q1.replace("full_data_type_table", "full_data_type_table_j"))
+    runTest(q2, q2.replace("full_data_type_table", "full_data_type_table_j"))
   }
 
   // https://github.com/pingcap/tikv-client-lib-java/issues/198

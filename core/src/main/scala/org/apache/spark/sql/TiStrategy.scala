@@ -178,6 +178,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     groupByList.foreach {
       case BasicExpression(keyExpr) =>
         dagRequest.addGroupByItem(ByItem.create(keyExpr, false))
+        // We need to add a `First` function in DAGRequest along with group by
         dagRequest.resolve()
         dagRequest.getFields.asScala
           .filter(ColumnMatcher.`match`(_, keyExpr))
