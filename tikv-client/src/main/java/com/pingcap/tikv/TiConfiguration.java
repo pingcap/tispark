@@ -35,7 +35,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
   private static final int DEF_META_RELOAD_PERIOD = 10;
   private static final TimeUnit DEF_META_RELOAD_UNIT = TimeUnit.SECONDS;
-  private static final int DEF_RETRY_TIMES = 3;
+  private static final int DEF_RETRY_TIMES = 4;
   private static final Class<? extends BackOff> DEF_BACKOFF_CLASS = ExponentialBackOff.class;
   private static final int DEF_MAX_FRAME_SIZE = 268435456 * 2; // 256 * 2 MB
   private static final int DEF_INDEX_SCAN_BATCH_SIZE = 2000000;

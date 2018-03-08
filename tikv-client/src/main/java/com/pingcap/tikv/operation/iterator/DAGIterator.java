@@ -4,7 +4,7 @@ import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.exception.GrpcRegionStaleException;
+import com.pingcap.tikv.exception.GrpcNeedRegionRefreshException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Metapb;
@@ -164,7 +164,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
         return null;
       }
       return response;
-    } catch (GrpcRegionStaleException e) {
+    } catch (GrpcNeedRegionRefreshException e) {
       List<Chunk> resultChunk = new ArrayList<>();
       List<RangeSplitter.RegionTask> splitTasks = RangeSplitter
           .newSplitter(session.getRegionManager())
