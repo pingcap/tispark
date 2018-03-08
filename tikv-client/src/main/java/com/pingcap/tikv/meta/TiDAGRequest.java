@@ -10,6 +10,7 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.visitor.ColumnMatcher;
 import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
@@ -22,6 +23,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.expression.AggregateFunction.FunctionType.First;
+import static com.pingcap.tikv.expression.AggregateFunction.newCall;
 import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
 import static java.util.Objects.requireNonNull;
 
@@ -104,12 +107,12 @@ public class TiDAGRequest implements Serializable {
 
   private static ColumnInfo handleColumn =
       ColumnInfo.newBuilder()
-        .setColumnId(-1)
-        .setPkHandle(true)
-        // We haven't changed the field name in protobuf file, but
-        // we need to set this to true in order to retrieve the handle,
-        // so the name 'setPkHandle' may sounds strange.
-        .build();
+          .setColumnId(-1)
+          .setPkHandle(true)
+          // We haven't changed the field name in protobuf file, but
+          // we need to set this to true in order to retrieve the handle,
+          // so the name 'setPkHandle' may sounds strange.
+          .build();
 
   private List<Expression> getAllExpressions() {
     ImmutableList.Builder<Expression> builder = ImmutableList.builder();
@@ -141,7 +144,7 @@ public class TiDAGRequest implements Serializable {
    * Unify indexScan and tableScan building logic since they are very much alike.
    * DAGRequest for IndexScan should also contain filters and aggregation, so
    * we can reuse this part of logic.
-   *
+   * <p>
    * DAGRequest is made up of a chain of executors with strict orders:
    * TableScan/IndexScan > Selection > Aggregation > TopN/Limit
    * a DAGRequest must contain one and only one TableScan or IndexScan.
@@ -205,7 +208,7 @@ public class TiDAGRequest implements Serializable {
         boolean pkIsNeeded = false;
         // =================== IMPORTANT ======================
         // offset for dagRequest should be in accordance with fields
-        for (ColumnRef col: getFields()) {
+        for (ColumnRef col : getFields()) {
           Integer pos = colPosInIndexMap.get(col.getColumnInfo());
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
@@ -257,7 +260,7 @@ public class TiDAGRequest implements Serializable {
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
 
       // column offset should be in accordance with fields
-      for (int i = 0; i < getFields().size(); i ++) {
+      for (int i = 0; i < getFields().size(); i++) {
         dagRequestBuilder.addOutputOffsets(i);
       }
 
@@ -330,7 +333,7 @@ public class TiDAGRequest implements Serializable {
 
   /**
    * Check if a DAG request is valid.
-   *
+   * <p>
    * Note:
    * When constructing a DAG request, a executor with an ExecType of higher priority
    * should always be placed before those lower ones.
@@ -636,6 +639,7 @@ public class TiDAGRequest implements Serializable {
 
   /**
    * Whether we use streaming processing to retrieve data
+   *
    * @return push down type.
    */
   public PushDownType getPushDownType() {
