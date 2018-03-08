@@ -90,7 +90,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
           ctxRegion.getLeader().getStoreId(),
           CacheInvalidateEvent.CacheType.REQ_FAILED
       );
-      return;
+      throw new GrpcNeedRegionRefreshException("Request Failed with unknown reason");
     }
 
     // Region error handling logic
