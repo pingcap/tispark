@@ -17,6 +17,34 @@ package org.apache.spark.sql
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  // https://github.com/pingcap/tispark/issues/255
+  test("Group by with first") {
+    val q1 = spark.sql(
+      """select
+        |   l_returnflag
+        |from
+        |   lineitem
+        |where
+        |   l_shipdate <= date '1998-12-01'
+        |group by
+        |   l_returnflag
+      """.stripMargin)
+    val q2 = spark.sql(
+      """
+        |select
+        |   avg(l_quantity)
+        |from
+        |   lineitem
+        |where
+        |   l_shipdate >= date '1994-01-01'
+        |group by
+        |   l_partkey
+      """.stripMargin)
+    // Should not throw any exception
+    q1.collect()
+    q2.collect()
+  }
+
   // https://github.com/pingcap/tikv-client-lib-java/issues/198
   test("Default value information not fetched") {
     tidbStmt.execute("drop table if exists t")

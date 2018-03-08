@@ -20,7 +20,7 @@ import java.time.ZonedDateTime
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
-import com.pingcap.tikv.expression.visitor.MetaResolver
+import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
@@ -178,6 +178,16 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     groupByList.foreach {
       case BasicExpression(keyExpr) =>
         dagRequest.addGroupByItem(ByItem.create(keyExpr, false))
+        dagRequest.resolve()
+        dagRequest.getFields.asScala
+          .filter(ColumnMatcher.`match`(_, keyExpr))
+          .foreach(
+            (ref: TiColumnRef) =>
+              dagRequest.addAggregate(
+                AggregateFunction.newCall(FunctionType.First, ref),
+                ref.getType
+            )
+          )
 
       case _ =>
     }
@@ -256,6 +266,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // need to set isDoubleRead to true for dagRequest in case of double read
       dagRequest.setIsDoubleRead(scanPlan.isDoubleRead)
     }
+    dagRequest.setTableInfo(source.table)
     dagRequest
   }
 
@@ -400,8 +411,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       }
     }
 
-    aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
-
     val projectionTiRefs: Seq[TiColumnRef] = projects
       .map { _.toAttribute.name }
       .map { ColumnRef.create }
@@ -411,6 +420,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       .flatMap { referencedTiColumns }
 
     projectionTiRefs ++ filterTiRefs foreach { dagReq.addRequiredColumn }
+
+    aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
 
     val aggregateAttributes =
       aggregateExpressions.map(expr => aliasPushedPartialResult(expr).toAttribute)

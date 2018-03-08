@@ -292,15 +292,15 @@ public class TiDAGRequest implements Serializable {
       if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
         Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
         getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
-        if (!getGroupByItems().isEmpty()) {
-          getFields().stream()
-              .filter(
-                  columnRef -> getGroupByItems().stream()
-                      .map(ByItem::getExpr)
-                      .anyMatch(expression -> ColumnMatcher.match(columnRef, expression))
-              )
-              .forEach(columnRef -> addAggregate(newCall(First, columnRef), columnRef.getType()));
-        }
+//        if (!getGroupByItems().isEmpty()) {
+//          getFields().stream()
+//              .filter(
+//                  columnRef -> getGroupByItems().stream()
+//                      .map(ByItem::getExpr)
+//                      .anyMatch(expression -> ColumnMatcher.match(columnRef, expression))
+//              )
+//              .forEach(columnRef -> addAggregate(newCall(First, columnRef), columnRef.getType()));
+//        }
         getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
         executorBuilder.setTp(ExecType.TypeAggregation);
         dagRequestBuilder.addExecutors(
