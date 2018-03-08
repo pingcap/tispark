@@ -120,7 +120,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         recv.onStoreNotMatch();
         throw new GrpcNeedRegionRefreshException(error.toString());
       } else if (error.hasStaleEpoch()) {
-        logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion.getId()));
+        logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion));
         this.regionManager.onRegionStale(ctxRegion.getId());
         throw new GrpcNeedRegionRefreshException(error.toString());
       } else if (error.hasServerIsBusy()) {
