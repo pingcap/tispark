@@ -19,6 +19,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
 
   // https://github.com/pingcap/tispark/issues/255
   test("Group by with first") {
+    ti.tidbMapDatabase("tpch_test")
     val q1 = spark.sql(
       """select
         |   l_returnflag
