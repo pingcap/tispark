@@ -1,3 +1,18 @@
+/*
+ * Copyright 2017 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.meta;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -14,8 +29,10 @@ import com.pingcap.tikv.expression.visitor.ColumnMatcher;
 import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
+import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.util.KeyRangeUtils;
 import com.pingcap.tikv.util.Pair;
 
 import java.io.Serializable;
@@ -34,6 +51,77 @@ import static java.util.Objects.requireNonNull;
  * Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
+  public static class Builder {
+    private List<String> requiredCols = new ArrayList<>();
+    private List<Expression> filters = new ArrayList<>();
+    private List<ByItem> orderBys = new ArrayList<>();
+    private List<Coprocessor.KeyRange> ranges = new ArrayList<>();
+    private TiTableInfo tableInfo;
+    private int limit;
+    private long startTs;
+
+    public static Builder newBuilder() {
+      return new Builder();
+    }
+
+    public Builder setFullTableScan(TiTableInfo tableInfo) {
+      requireNonNull(tableInfo);
+      setTableInfo(tableInfo);
+      RowKey start = RowKey.createMin(tableInfo.getId());
+      RowKey end = RowKey.createBeyondMax(tableInfo.getId());
+      ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+      return this;
+    }
+
+    public Builder setLimit(int limit) {
+      this.limit = limit;
+      return this;
+    }
+
+    public Builder setTableInfo(TiTableInfo tableInfo) {
+      this.tableInfo = tableInfo;
+      return this;
+    }
+
+    public Builder addRequiredCols(String... cols) {
+      this.requiredCols.addAll(Arrays.asList(cols));
+      return this;
+    }
+
+    public Builder addFilter(Expression filter) {
+      this.filters.add(filter);
+      return this;
+    }
+
+    public Builder addOrderBy(ByItem item) {
+      this.orderBys.add(item);
+      return this;
+    }
+
+    public Builder setStartTs(long ts) {
+      this.startTs = ts;
+      return this;
+    }
+
+    public TiDAGRequest build(PushDownType pushDownType) {
+      TiDAGRequest req = new TiDAGRequest(pushDownType);
+      req.setTableInfo(tableInfo);
+      req.addRanges(ranges);
+      filters.forEach(req::addFilter);
+      if (!orderBys.isEmpty()) {
+        orderBys.forEach(req::addOrderByItem);
+      }
+      if (limit != 0) {
+        req.setLimit(limit);
+      }
+      requiredCols.forEach(c -> req.addRequiredColumn(ColumnRef.create(c)));
+      req.setStartTs(startTs);
+
+      req.resolve();
+      return req;
+    }
+  }
+
   public TiDAGRequest(PushDownType pushDownType) {
     this.pushDownType = pushDownType;
   }
@@ -384,7 +472,7 @@ public class TiDAGRequest implements Serializable {
     return this;
   }
 
-  TiIndexInfo getIndexInfo() {
+  public TiIndexInfo getIndexInfo() {
     return indexInfo;
   }
 

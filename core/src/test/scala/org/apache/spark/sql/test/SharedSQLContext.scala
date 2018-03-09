@@ -20,6 +20,7 @@ package org.apache.spark.sql.test
 import java.sql.{Connection, DriverManager, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
+import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
@@ -148,6 +149,14 @@ object SharedSQLContext extends Logging {
     }
   }
 
+  private def initStatistics(): Unit = {
+    logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
+    _statement.execute("analyze table tispark_test.full_data_type_table_idx")
+    logger.info("Analyzing table tispark_test.full_data_type_table...")
+    _statement.execute("analyze table tispark_test.full_data_type_table")
+    logger.info("Analyzing table finished.")
+  }
+
   private def initializeTiDB(forceNotLoad: Boolean = false): Unit = {
     if (_tidbConnection == null) {
       val jdbcUsername = getOrElse(_tidbConf, TiDB_USER, "root")
@@ -186,6 +195,7 @@ object SharedSQLContext extends Logging {
         )
         _statement.execute(queryString)
         logger.warn("Loading TPCHData.sql successfully.")
+        initStatistics()
       }
     }
   }
@@ -245,6 +255,8 @@ object SharedSQLContext extends Logging {
 
     if (_ti != null) {
       _ti.tiSession.close()
+      // Reset statisticsManager in case it use older version of TiContext
+      StatisticsManager.reset()
       _ti = null
     }
 

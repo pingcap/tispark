@@ -29,15 +29,15 @@ public class IndexRange {
     this.range = range;
   }
 
-  Key getAccessKey() {
+  public Key getAccessKey() {
     return accessKey;
   }
 
-  boolean hasAccessKey() {
+  public boolean hasAccessKey() {
     return accessKey != null;
   }
 
-  boolean hasRange() {
+  public boolean hasRange() {
     return range != null;
   }
 

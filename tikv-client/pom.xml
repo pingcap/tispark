@@ -63,6 +63,11 @@
             <artifactId>trove4j</artifactId>
             <version>${trove4j.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.sangupta</groupId>
+            <artifactId>murmur</artifactId>
+            <version>1.0.0</version>
+        </dependency>
         <!-- grpc dependencies -->
         <dependency>
             <groupId>io.grpc</groupId>

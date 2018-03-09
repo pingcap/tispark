@@ -270,6 +270,45 @@ save()
 ``` 
 It is recommended to set `isolationLevel` to `NONE` to avoid large single transactions which may potentialy lead to TiDB OOM.
 
+## Statistics information
+TiSpark could use TiDB's statistic information for 
+
+1. Determining which index to ues in your query plan with the estimated lowest cost.
+2. Small table broadcasting, which enables efficient broadcast join.
+
+If you would like TiSpark to use statistic information, first you need to make sure that concerning tables have already been analyzed. Read more about how to analyze tables [here](https://github.com/pingcap/docs/blob/master/sql/statistics.md).
+
+Then load statistics information from your storage
+```scala
+val ti = new TiContext(spark)
+
+// ... map databases needed to use
+// You can specify whether to load statistics information automatically during database mapping in your config file described as below.
+// Statistics information will be loaded automatically by default, which is recommended in most cases.
+ti.tidbMapDatabase("db_name")
+  
+// Another option is manually load by yourself, yet this is not the recommended way.
+  
+// Firstly, get the table that you want to load statistics information from.
+val table = ti.meta.getTable("db_name", "tb_name").get
+  
+// If you want to load statistics information for all the columns, use
+ti.statisticsManager.loadStatisticsInfo(table)
+  
+// If you just want to use some of the columns' statistics information, use
+ti.statisticsManager.loadStatisticsInfo(table, "col1", "col2", "col3") // You could specify required columns by vararg
+  
+// Collect other tables' statistic information...
+  
+// Then you could query as usual, TiSpark will use statistic information collect to optimized index selection and broadcast join.
+```
+Note that table statistics will be cached in your spark driver node's memory, so you need to make sure that your memory should be enough for your statistics information.
+Currently you could adjust these configs in your spark.conf file.
+  
+| Property Name | Default | Description
+| --------   | -----:   | :----: |
+| spark.tispark.statistics.auto_load | true | Whether to load statistics info automatically during database mapping. |
+  
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.TableInfo;
 import com.pingcap.tikv.exception.TiClientInternalException;
