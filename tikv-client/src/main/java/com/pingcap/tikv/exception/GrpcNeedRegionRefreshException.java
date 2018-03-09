@@ -16,16 +16,16 @@
 package com.pingcap.tikv.exception;
 
 
-public class GrpcRegionStaleException extends GrpcException {
-  public GrpcRegionStaleException(Exception e) {
+public class GrpcNeedRegionRefreshException extends GrpcException {
+  public GrpcNeedRegionRefreshException(Exception e) {
     super(e);
   }
 
-  public GrpcRegionStaleException(String msg) {
+  public GrpcNeedRegionRefreshException(String msg) {
     super(msg);
   }
 
-  public GrpcRegionStaleException(String msg, Exception e) {
+  public GrpcNeedRegionRefreshException(String msg, Exception e) {
     super(msg, e);
   }
 }

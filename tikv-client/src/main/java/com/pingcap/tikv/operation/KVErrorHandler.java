@@ -20,7 +20,7 @@ package com.pingcap.tikv.operation;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
-import com.pingcap.tikv.exception.GrpcRegionStaleException;
+import com.pingcap.tikv.exception.GrpcNeedRegionRefreshException;
 import com.pingcap.tikv.kvproto.Errorpb;
 import com.pingcap.tikv.region.RegionErrorReceiver;
 import com.pingcap.tikv.region.RegionManager;
@@ -90,7 +90,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
           ctxRegion.getLeader().getStoreId(),
           CacheInvalidateEvent.CacheType.REQ_FAILED
       );
-      return;
+      throw new GrpcNeedRegionRefreshException("Request Failed with unknown reason");
     }
 
     // Region error handling logic
@@ -110,27 +110,21 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         );
         recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
             this.regionManager.getStoreById(newStoreId));
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
+        throw new GrpcNeedRegionRefreshException(error.toString());
       } else if (error.hasStoreNotMatch()) {
         logger.warn(String.format("Store Not Match happened with region id %d, store id %d",
             ctxRegion.getId(),
             ctxRegion.getLeader().getStoreId()));
 
-        regionManager.invalidateRegion(ctxRegion.getId());
-        regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
-        notifyCacheInvalidation(
-            ctxRegion.getId(),
-            ctxRegion.getLeader().getStoreId(),
-            CacheInvalidateEvent.CacheType.REGION_STORE
-        );
+        invalidateRegionStoreCache(ctxRegion);
         recv.onStoreNotMatch();
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
+        throw new GrpcNeedRegionRefreshException(error.toString());
       } else if (error.hasStaleEpoch()) {
-        logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion.getId()));
+        logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion));
         this.regionManager.onRegionStale(ctxRegion.getId());
-        throw new GrpcRegionStaleException(error.toString());
+        throw new GrpcNeedRegionRefreshException(error.toString());
       } else if (error.hasServerIsBusy()) {
-        logger.warn(String.format("Server is busy for region [%s]", ctxRegion));
+        logger.warn(String.format("Server is busy for region [%s], reason: %s", ctxRegion, error.getServerIsBusy().getReason()));
         throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasStaleCommand()) {
         logger.warn(String.format("Stale command for region [%s]", ctxRegion));
@@ -141,18 +135,12 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       } else if (error.hasKeyNotInRegion()) {
         ByteString invalidKey = error.getKeyNotInRegion().getKey();
         logger.warn(String.format("Key not in region [%s] for key [%s]", ctxRegion, KeyUtils.formatBytes(invalidKey)));
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
+        throw new GrpcNeedRegionRefreshException(error.toString());
       } else {
-        logger.warn(String.format("Unknown error for region [%s]", error));
+        logger.warn(String.format("Unknown error for region [%s]", ctxRegion));
         // for other errors, we only drop cache here and throw a retryable exception.
-        regionManager.invalidateRegion(ctxRegion.getId());
-        regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
-        notifyCacheInvalidation(
-            ctxRegion.getId(),
-            ctxRegion.getLeader().getStoreId(),
-            CacheInvalidateEvent.CacheType.REGION_STORE
-        );
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
+        invalidateRegionStoreCache(ctxRegion);
+        throw new GrpcNeedRegionRefreshException(error.toString());
       }
     }
 
@@ -160,10 +148,21 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     // Currently we need to handle potential other errors from coprocessor responses.
     String otherError = getOtherError(resp);
     if (otherError != null) {
-      logger.warn(String.format("Other error occurred for region [%s]", ctxRegion));
+      logger.warn(String.format("Other error occurred for region [%s], message: %s", ctxRegion, otherError));
+      invalidateRegionStoreCache(ctxRegion);
       // Just throw to upper layer to handle
-      throw new IllegalStateException("Received other error from TiKV:" + otherError);
+      throw new GrpcNeedRegionRefreshException("Received other error from TiKV");
     }
+  }
+
+  private void invalidateRegionStoreCache(TiRegion ctxRegion) {
+    regionManager.invalidateRegion(ctxRegion.getId());
+    regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
+    notifyCacheInvalidation(
+        ctxRegion.getId(),
+        ctxRegion.getLeader().getStoreId(),
+        CacheInvalidateEvent.CacheType.REGION_STORE
+    );
   }
 
   /**

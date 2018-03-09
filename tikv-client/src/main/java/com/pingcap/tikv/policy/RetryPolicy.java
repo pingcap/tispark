@@ -17,7 +17,7 @@ package com.pingcap.tikv.policy;
 
 import com.google.common.collect.ImmutableSet;
 import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.exception.GrpcRegionStaleException;
+import com.pingcap.tikv.exception.GrpcNeedRegionRefreshException;
 import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.util.BackOff;
 import io.grpc.Status;
@@ -45,8 +45,8 @@ public abstract class RetryPolicy<RespT> {
   }
 
   private void rethrowNotRecoverableException(Exception e) {
-    if (e instanceof GrpcRegionStaleException) {
-      throw (GrpcRegionStaleException)e;
+    if (e instanceof GrpcNeedRegionRefreshException) {
+      throw (GrpcNeedRegionRefreshException) e;
     }
     Status status = Status.fromThrowable(e);
     if (unrecoverableStatus.contains(status.getCode())) {
@@ -55,8 +55,8 @@ public abstract class RetryPolicy<RespT> {
   }
 
   private void handleFailure(Exception e, String methodName, long nextBackMills) {
-    if(nextBackMills == BackOff.STOP) {
-          throw new GrpcException("retry is exhausted.", e);
+    if (nextBackMills == BackOff.STOP) {
+      throw new GrpcException("retry is exhausted.", e);
     }
     rethrowNotRecoverableException(e);
     doWait(nextBackMills);
@@ -71,7 +71,7 @@ public abstract class RetryPolicy<RespT> {
   }
 
   public RespT callWithRetry(Callable<RespT> proc, String methodName) {
-    for(;true;) {
+    for (; true; ) {
       try {
         RespT result = proc.call();
         if (handler != null) {
@@ -79,7 +79,7 @@ public abstract class RetryPolicy<RespT> {
         }
         return result;
       } catch (Exception e) {
-          handleFailure(e, methodName, backOff.nextBackOffMillis());
+        handleFailure(e, methodName, backOff.nextBackOffMillis());
       }
     }
   }
