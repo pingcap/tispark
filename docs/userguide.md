@@ -241,7 +241,7 @@ select count(*) from account;
 
 ## TiSparkR
 TiSparkR is a thin layer built for supporting R language with TiSpark
-Refer to [this document](../TiSparkR/README.md) for usage.
+Refer to [this document](../R/README.md) for usage.
 
 ## Use TiSpark together with Hive
 TiSpark should be ok to use together with Hive. 
