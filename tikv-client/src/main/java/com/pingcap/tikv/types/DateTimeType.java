@@ -52,6 +52,11 @@ public class DateTimeType extends AbstractDateTimeType {
   @Override
   protected Timestamp decodeNotNull(int flag, CodecDataInput cdi) {
     DateTime dateTime = decodeDateTime(flag, cdi);
+    // Even though null is filtered out but data like 0000-00-00 exists
+    // according to MySQL JDBC behavior, it's converted to null
+    if (dateTime == null) {
+      return null;
+    }
     return new Timestamp(dateTime.getMillis());
   }
 }
