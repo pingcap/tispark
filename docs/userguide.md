@@ -241,7 +241,11 @@ select count(*) from account;
 
 ## TiSparkR
 TiSparkR is a thin layer built for supporting R language with TiSpark
-Refer to [this document](../TiSparkR/README.md) for usage.
+Refer to [this document](../R/README.md) for usage.
+
+## TiSpark on PySpark
+TiSpark on PySpark is a Python package build to support the Python language with TiSpark. 
+Refer to [this document](../python/README.md) for usage.
 
 ## Use TiSpark together with Hive
 TiSpark should be ok to use together with Hive. 
