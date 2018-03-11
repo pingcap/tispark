@@ -17,6 +17,15 @@ package org.apache.spark.sql
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  // https://github.com/pingcap/tispark/issues/262
+  test("NPE when decoding datetime") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `tmp_debug`")
+    tidbStmt.execute("CREATE TABLE `tmp_debug` (\n  `sign_time` datetime DEFAULT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;")
+    tidbStmt.execute("INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00')")
+    refreshConnections()
+    assert(execDBTSAndJudge("select * from tmp_debug"))
+  }
+
   // https://github.com/pingcap/tispark/issues/255
   test("Group by with first") {
     ti.tidbMapDatabase("tpch_test")
@@ -87,6 +96,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
   override def afterAll(): Unit = {
     try {
       tidbStmt.execute("drop table if exists t")
+      tidbStmt.execute("drop table if exists tmp_debug")
     } finally {
       super.afterAll()
     }
