@@ -52,7 +52,7 @@ import pytispark.pytispark as pti
  
 ti = pti.TiContext(spark)
  
-ti.tidbMapDatabase("tpch", False)
+ti.tidbMapDatabase("tpch", False, True)
  
 sql("select count(*) from customer").show()
 

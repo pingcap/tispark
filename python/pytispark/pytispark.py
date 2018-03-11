@@ -40,6 +40,7 @@ class TiContext:
     Change TiContext designated database
     :param dbName Database to map(switch to)
     :param isPrefix Whether to use dbName As Prefix
+    :param loadStatistics Whether to use statistics information from TiDB
     """
-    def tidbMapDatabase(self, dbName, isPrefix):
-        self.ti.tidbMapDatabase(dbName, isPrefix)
+    def tidbMapDatabase(self, dbName, isPrefix, loadStatistics):
+        self.ti.tidbMapDatabase(dbName, isPrefix, loadStatistics)
