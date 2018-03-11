@@ -15,8 +15,11 @@
 #
 
 
-SHA1=`git rev-parse HEAD`
+TiSparkReleaseVersion=`git describe --tags --dirty`
+TiSparkBuildTS=`date -u '+%Y-%m-%d %I:%M:%S'`
+TiSparkGitHash=`git rev-parse HEAD`
+TiSparkGitBranch=`git rev-parse --abbrev-ref HEAD`
 echo '
 package com.pingcap.tispark
 
-object TiSparkVersion { val version: String = "'${SHA1}'" }' > src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
+object TiSparkVersion { val version: String = "Release Version: '${TiSparkReleaseVersion}'\\nGit Commit Hash: '${TiSparkGitHash}'\\nGit Branch: '${TiSparkGitBranch}'\\nUTC Build Time: '${TiSparkBuildTS}'" }' > src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
