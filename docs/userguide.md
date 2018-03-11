@@ -243,6 +243,10 @@ select count(*) from account;
 TiSparkR is a thin layer built for supporting R language with TiSpark
 Refer to [this document](../R/README.md) for usage.
 
+## TiSpark on PySpark
+TiSpark on PySpark is a Python package build to support the Python language with TiSpark. 
+Refer to [this document](../python/README.md) for usage.
+
 ## Use TiSpark together with Hive
 TiSpark should be ok to use together with Hive. 
 You need to set environment variable HADOOP_CONF_DIR to your Hadoop's configuration folder and copy hive-site.xml to spark/conf folder before starting Spark.
