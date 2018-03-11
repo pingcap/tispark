@@ -33,7 +33,9 @@ createTiContext <- function(session) {
 #
 # @param tiContext TiSpark context
 # @param dbName Database name to map
-tidbMapDatabase <- function(tiContext, dbName) {
-  sparkR.callJMethod(tiContext, "tidbMapDatabase", dbName, FALSE)
+# @param isPrefix Whether to use dbName As Prefix
+# @param loadStatistics Whether to use statistics information from TiDB
+tidbMapDatabase <- function(tiContext, dbName, isPrefix=FALSE, loadStatistics=TRUE) {
+  sparkR.callJMethod(tiContext, "tidbMapDatabase", dbName, isPrefix, loadStatistics)
   paste("Mapping to database:", dbName)
 }

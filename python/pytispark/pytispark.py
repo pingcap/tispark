@@ -42,5 +42,5 @@ class TiContext:
     :param isPrefix Whether to use dbName As Prefix
     :param loadStatistics Whether to use statistics information from TiDB
     """
-    def tidbMapDatabase(self, dbName, isPrefix, loadStatistics):
+    def tidbMapDatabase(self, dbName, isPrefix=False, loadStatistics=True):
         self.ti.tidbMapDatabase(dbName, isPrefix, loadStatistics)
