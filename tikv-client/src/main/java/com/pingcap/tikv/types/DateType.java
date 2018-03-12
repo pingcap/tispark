@@ -46,6 +46,9 @@ public class DateType extends AbstractDateTimeType {
   @Override
   protected Date decodeNotNull(int flag, CodecDataInput cdi) {
     DateTime dateTime = decodeDateTime(flag, cdi);
+    if (dateTime == null) {
+      return null;
+    }
     return new Date(dateTime.getMillis());
   }
 }
