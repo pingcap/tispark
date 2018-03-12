@@ -31,13 +31,13 @@ import scala.collection.mutable
 
 object StatisticsHelper {
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
-  val metaRequiredCols = Seq(
+  private val metaRequiredCols = Seq(
     "table_id",
     "count",
     "modify_count",
     "version"
   )
-  val histRequiredCols = Seq(
+  private val histRequiredCols = Seq(
     "table_id",
     "is_index",
     "hist_id",
@@ -46,7 +46,7 @@ object StatisticsHelper {
     "null_count",
     "cm_sketch"
   )
-  val bucketRequiredCols = Seq(
+  private val bucketRequiredCols = Seq(
     "count",
     "repeats",
     "lower_bound",
@@ -57,12 +57,12 @@ object StatisticsHelper {
     "hist_id"
   )
 
-  def isManagerReady(manager: StatisticsManager): Boolean =
+  private[statistics] def isManagerReady(manager: StatisticsManager): Boolean =
     manager.metaTable != null &&
       manager.bucketTable != null &&
       manager.histTable != null
 
-  def extractStatisticsDTO(row: Row,
+  private[statistics] def extractStatisticsDTO(row: Row,
                            table: TiTableInfo,
                            loadAll: Boolean,
                            neededColIds: mutable.ArrayBuffer[Long],
@@ -111,7 +111,7 @@ object StatisticsHelper {
     }
   }
 
-  def extractStatisticResult(histId: Long,
+  private[statistics] def extractStatisticResult(histId: Long,
                              rows: Iterator[Row],
                              requests: Seq[StatisticsDTO]): StatisticsResult = {
     val matches = requests.filter(_.colId == histId)
@@ -165,7 +165,7 @@ object StatisticsHelper {
     }
   }
 
-  def buildHistogramsRequest(histTable: TiTableInfo,
+  private[statistics] def buildHistogramsRequest(histTable: TiTableInfo,
                              targetTblId: Long,
                              startTs: Long): TiDAGRequest = {
     TiDAGRequest.Builder
@@ -185,7 +185,7 @@ object StatisticsHelper {
   private def checkColExists(table: TiTableInfo, column: String): Boolean =
     table.getColumns.exists(_.matchName(column))
 
-  def buildMetaRequest(metaTable: TiTableInfo, targetTblId: Long, startTs: Long): TiDAGRequest = {
+  private[statistics] def buildMetaRequest(metaTable: TiTableInfo, targetTblId: Long, startTs: Long): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(metaTable)
@@ -198,7 +198,7 @@ object StatisticsHelper {
       .build(PushDownType.NORMAL)
   }
 
-  def buildBucketRequest(bucketTable: TiTableInfo, targetTblId: Long, startTs: Long): TiDAGRequest = {
+  private[statistics] def buildBucketRequest(bucketTable: TiTableInfo, targetTblId: Long, startTs: Long): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(bucketTable)
