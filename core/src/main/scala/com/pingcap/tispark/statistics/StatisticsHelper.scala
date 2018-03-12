@@ -63,10 +63,10 @@ object StatisticsHelper {
       manager.histTable != null
 
   private[statistics] def extractStatisticsDTO(row: Row,
-                           table: TiTableInfo,
-                           loadAll: Boolean,
-                           neededColIds: mutable.ArrayBuffer[Long],
-                           histTable: TiTableInfo): StatisticsDTO = {
+                                               table: TiTableInfo,
+                                               loadAll: Boolean,
+                                               neededColIds: mutable.ArrayBuffer[Long],
+                                               histTable: TiTableInfo): StatisticsDTO = {
     if (row.fieldCount() < 6) return null
     val isIndex = if (row.getLong(1) > 0) true else false
     val histID = row.getLong(2)
@@ -112,8 +112,8 @@ object StatisticsHelper {
   }
 
   private[statistics] def extractStatisticResult(histId: Long,
-                             rows: Iterator[Row],
-                             requests: Seq[StatisticsDTO]): StatisticsResult = {
+                                                 rows: Iterator[Row],
+                                                 requests: Seq[StatisticsDTO]): StatisticsResult = {
     val matches = requests.filter(_.colId == histId)
     if (matches.nonEmpty) {
       val matched = matches.head
@@ -166,8 +166,8 @@ object StatisticsHelper {
   }
 
   private[statistics] def buildHistogramsRequest(histTable: TiTableInfo,
-                             targetTblId: Long,
-                             startTs: Long): TiDAGRequest = {
+                                                 targetTblId: Long,
+                                                 startTs: Long): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(histTable)
@@ -185,7 +185,9 @@ object StatisticsHelper {
   private def checkColExists(table: TiTableInfo, column: String): Boolean =
     table.getColumns.exists(_.matchName(column))
 
-  private[statistics] def buildMetaRequest(metaTable: TiTableInfo, targetTblId: Long, startTs: Long): TiDAGRequest = {
+  private[statistics] def buildMetaRequest(metaTable: TiTableInfo,
+                                           targetTblId: Long,
+                                           startTs: Long): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(metaTable)
@@ -198,7 +200,9 @@ object StatisticsHelper {
       .build(PushDownType.NORMAL)
   }
 
-  private[statistics] def buildBucketRequest(bucketTable: TiTableInfo, targetTblId: Long, startTs: Long): TiDAGRequest = {
+  private[statistics] def buildBucketRequest(bucketTable: TiTableInfo,
+                                             targetTblId: Long,
+                                             startTs: Long): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(bucketTable)
