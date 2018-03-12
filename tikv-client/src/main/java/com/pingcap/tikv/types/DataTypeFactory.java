@@ -22,6 +22,7 @@ import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
 import java.util.Map;
 
 public class DataTypeFactory {
@@ -74,8 +75,18 @@ public class DataTypeFactory {
     return dataType;
   }
 
+  // Convert non-binary to string type
+  private static MySQLType convertType(MySQLType type, InternalTypeHolder holder) {
+    if (Arrays.asList(BytesType.subTypes).contains(type) &&
+        !Charset.CharsetBin.equals(holder.getCharset())) {
+      return MySQLType.TypeVarchar;
+    }
+    return type;
+  }
+
   public static DataType of(InternalTypeHolder holder) {
     MySQLType type = MySQLType.fromTypeCode(holder.getTp());
+    type = convertType(type, holder);
     Constructor<? extends DataType> ctor = dataTypeCreatorMap.get(type);
     if (ctor == null) {
       throw new NullPointerException(
