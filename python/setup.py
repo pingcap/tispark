@@ -2,7 +2,7 @@ from setuptools import setup
 setup(
     name = 'pytispark',
     packages = ['pytispark'],
-    version = '1.0.0-RC1',
+    version = '1.0-RC1',
     description = 'TiSpark support for python',
     author = 'PingCAP',
     author_email = 'novemser@gmail.com',
