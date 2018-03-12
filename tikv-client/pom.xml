@@ -140,16 +140,6 @@
                             <goal>exec</goal>
                         </goals>
                     </execution>
-                   <execution>
-                        <id>version imprint</id>
-                        <configuration>
-                            <executable>${basedir}/scripts/version.sh</executable>
-                        </configuration>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -175,7 +165,11 @@
                                <directory>${basedir}/kvproto/proto</directory>
                                <filtering>true</filtering>
                             </resource>
-                            <resource>
+                             <resource>
+                                 <directory>${basedir}/raft-rs/proto</directory>
+                                 <filtering>true</filtering>
+                             </resource>
+                             <resource>
                                <directory>${basedir}/tipb/proto</directory>
                                <filtering>true</filtering>
                             </resource>

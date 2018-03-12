@@ -20,6 +20,12 @@ else
     git clone https://github.com/pingcap/kvproto
 fi
 
+if [ -d "raft-rs" ]; then
+    cd raft-rs; git pull origin master; cd ..
+else
+    git clone https://github.com/pingcap/raft-rs
+fi
+
 if [ -d "tipb" ]; then
     cd tipb; git pull origin master; cd ..
 else 
