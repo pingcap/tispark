@@ -175,7 +175,11 @@
                                <directory>${basedir}/kvproto/proto</directory>
                                <filtering>true</filtering>
                             </resource>
-                            <resource>
+                             <resource>
+                                 <directory>${basedir}/raft-rs/proto</directory>
+                                 <filtering>true</filtering>
+                             </resource>
+                             <resource>
                                <directory>${basedir}/tipb/proto</directory>
                                <filtering>true</filtering>
                             </resource>

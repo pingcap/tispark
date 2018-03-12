@@ -23,7 +23,9 @@ import com.pingcap.tikv.meta.{TiColumnInfo, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.DataType
+import com.pingcap.tispark.statistics.StatisticsHelper.getClass
 import org.apache.spark.sql.SparkSession
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -82,9 +84,10 @@ class StatisticsManager(tiSession: TiSession) {
   //
   // More explanation could be found here
   // https://github.com/pingcap/docs/blob/master/sql/statistics.md
-  private lazy val metaTable = catalog.getTable("mysql", "stats_meta")
-  private lazy val histTable = catalog.getTable("mysql", "stats_histograms")
-  private lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
+  private[statistics] lazy val metaTable = catalog.getTable("mysql", "stats_meta")
+  private[statistics] lazy val histTable = catalog.getTable("mysql", "stats_histograms")
+  private[statistics] lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
+  private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private final val statisticsMap = CacheBuilder
     .newBuilder()
     .build[Object, Object]
@@ -98,6 +101,13 @@ class StatisticsManager(tiSession: TiSession) {
    */
   def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit = synchronized {
     require(table != null, "TableInfo should not be null")
+    if (!StatisticsHelper.isManagerReady(this)) {
+      logger.warn(
+        "Some of the statistics information table are not loaded properly, " +
+          "make sure you have executed analyze table command before these information could be used by TiSpark."
+      )
+      return
+    }
 
     val tblId = table.getId
     val tblCols = table.getColumns
@@ -139,7 +149,7 @@ class StatisticsManager(tiSession: TiSession) {
     if (!rows.hasNext) return
 
     val requests = rows
-      .map(StatisticsHelper.extractStatisticsDTO(_, table, loadAll, neededColIds))
+      .map(StatisticsHelper.extractStatisticsDTO(_, table, loadAll, neededColIds, histTable))
       .filter(_ != null)
     val results = statisticsResultFromStorage(tblId, requests.toSeq)
 
