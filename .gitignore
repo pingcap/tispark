@@ -53,6 +53,7 @@ metastore_db/
 tikv-client/kvproto
 tikv-client/tipb
 tikv-client/proto
+tikv-client/raft-rs
 
 # ignore tikv-client bazel build
 tikv-client/bazel-*
