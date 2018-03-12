@@ -49,15 +49,15 @@ private[statistics] case class StatisticsResult(histId: Long,
 }
 
 /**
-  * Manager class for maintaining table statistics information cache.
-  *
-  * Statistics information is useful for index selection and broadcast join support in TiSpark currently,
-  * and these are arranged follows:
-  * `statisticsMap` contains `tableId`->[[TableStatistics]] data, each table(id) will have a [[TableStatistics]]
-  * if you have loaded statistics information successfully.
-  *
-  * @param tiSession TiSession used for selecting statistics information from TiKV
-  */
+ * Manager class for maintaining table statistics information cache.
+ *
+ * Statistics information is useful for index selection and broadcast join support in TiSpark currently,
+ * and these are arranged follows:
+ * `statisticsMap` contains `tableId`->[[TableStatistics]] data, each table(id) will have a [[TableStatistics]]
+ * if you have loaded statistics information successfully.
+ *
+ * @param tiSession TiSession used for selecting statistics information from TiKV
+ */
 class StatisticsManager(tiSession: TiSession) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
@@ -90,12 +90,12 @@ class StatisticsManager(tiSession: TiSession) {
     .build[Object, Object]
 
   /**
-    * Load statistics information maintained by TiDB to TiSpark.
-    *
-    * @param table   The table whose statistics info is needed.
-    * @param columns Concerning columns for `table`, only these columns' statistics information
-    *                will be loaded, if empty, all columns' statistics info will be loaded
-    */
+   * Load statistics information maintained by TiDB to TiSpark.
+   *
+   * @param table   The table whose statistics info is needed.
+   * @param columns Concerning columns for `table`, only these columns' statistics information
+   *                will be loaded, if empty, all columns' statistics info will be loaded
+   */
   def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit = synchronized {
     require(table != null, "TableInfo should not be null")
 
