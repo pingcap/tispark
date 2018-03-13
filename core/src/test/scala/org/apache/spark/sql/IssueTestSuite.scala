@@ -18,14 +18,14 @@ package org.apache.spark.sql
 class IssueTestSuite extends BaseTiSparkSuite {
 
   // https://github.com/pingcap/tispark/issues/262
-  test("NPE when decoding datetime") {
+  test("NPE when decoding datetime,date,timestamp") {
     tidbStmt.execute("DROP TABLE IF EXISTS `tmp_debug`")
     tidbStmt.execute(
-      "CREATE TABLE `tmp_debug` (\n  `sign_time` datetime DEFAULT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
+      "CREATE TABLE `tmp_debug` (\n  `tp_datetime` datetime DEFAULT NULL, `tp_date` date DEFAULT NULL, `tp_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
     )
-    tidbStmt.execute("INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00')")
+    tidbStmt.execute("INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')")
     refreshConnections()
-    assert(execDBTSAndJudge("select * from tmp_debug"))
+    spark.sql("select * from tmp_debug").collect()
   }
 
   // https://github.com/pingcap/tispark/issues/255
