@@ -2,7 +2,7 @@ version: '2.3'
 
 services:
   pd0:
-    image: pingcap/pd:v1.0.1
+    image: pingcap/pd:latest
     ports:
       - "2379:2379"
     volumes:
@@ -19,7 +19,7 @@ services:
       - --config=/pd.toml
     restart: on-failure
   tikv0:
-    image: pingcap/tikv:v1.0.1
+    image: pingcap/tikv:latest
     ports:
       - "20160:20160"
     volumes:
@@ -35,7 +35,7 @@ services:
       - "pd0"
     restart: on-failure
   tidb:
-    image: pingcap/tidb:v1.0.1
+    image: pingcap/tidb:latest
     ports:
       - "4000:4000"
       - "10080:10080"
