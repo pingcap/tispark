@@ -755,6 +755,11 @@ public class TiDAGRequest implements Serializable {
       sb.append(Joiner.on(", ").skipNulls().join(getFilters()));
     }
 
+    if (getDowngradeFilters().size() != 0) {
+      sb.append(", Downgrade filter: ");
+      sb.append(Joiner.on(", ").skipNulls().join(getDowngradeFilters()));
+    }
+
     if (getAggregates().size() != 0) {
       sb.append(", Aggregates: ");
       sb.append(Joiner.on(", ").skipNulls().join(getAggregates()));
