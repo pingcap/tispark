@@ -153,7 +153,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
 
   private SelectResponse process(RangeSplitter.RegionTask regionTask, int curDepth) {
     if (curDepth > MAX_PROCESS_DEPTH) {
-      return null;
+      throw new RuntimeException("Request failed after " + curDepth + " region refresh operation, abort.");
     }
     List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
     TiRegion region = regionTask.getRegion();
