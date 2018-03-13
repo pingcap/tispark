@@ -323,11 +323,11 @@ public class ScanAnalyzer {
             continue;
           }
           if (eqMatcher.match(cond)) {
-            specBuilder.addPointPredicate(col, cond);
             if (col.isPrefixIndex()) {
               specBuilder.addResidualPredicate(cond);
               break IndexMatchingLoop;
             }
+            specBuilder.addPointPredicate(col, cond);
             visited.add(cond);
             found = true;
             break;
