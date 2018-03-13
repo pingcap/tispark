@@ -127,18 +127,17 @@ public class KeyRangeUtils {
       return ranges;
     }
 
-    RangeSet<Key> rangeSet = TreeRangeSet.create();
-    for (KeyRange keyRange : ranges) {
-      Range<Key> range = makeRange(keyRange.getStart(), keyRange.getEnd());
-      rangeSet.add(range);
-    }
+    // Merge discrete ranges into one complete big range
+    ByteString start = ranges.get(0).getStart();
+    ByteString end = ranges.get(ranges.size() - 1).getEnd();
 
-    Set<Range<Key>> mergedRanges = rangeSet.asRanges();
     ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
-    for (Range<Key> range : mergedRanges) {
-      rangeBuilder.add(makeCoprocRange(range));
-    }
-
+    rangeBuilder.add(
+        KeyRange.newBuilder()
+        .setStart(start)
+        .setEnd(end)
+        .build()
+    );
     return rangeBuilder.build();
   }
 
