@@ -1,11 +1,13 @@
 ## TiSpark on PySpark:
 ### Usage
-#### Via pyspark
+There are currently three ways to use TiSpark on Python:
+#### Directly via pyspark
+This is the simplest way, just a decent Spark environment should be enough.
 1. Make sure you have the latest version of [TiSpark](https://github.com/pingcap/tispark) and a `jar` with all TiSpark's dependencies.
 
 2. Run this command in your `SPARK_HOME` directory:
 ```
-./bin/pyspark --jars /where-ever-it-is/tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar
+./bin/pyspark --jars /where-ever-it-is/tispark-1.0-RC1-jar-with-dependencies.jar
 ```
 
 3. To use TiSpark, run these commands:
@@ -24,7 +26,7 @@ java_import(gw.jvm, "org.apache.spark.sql.TiContext")
 ti = gw.jvm.TiContext(spark._jsparkSession)
  
 # Map database
-ti.tidbMapDatabase("tpch_test", False)
+ti.tidbMapDatabase("tpch_test", False, True)
  
 # Query as usual
 sql("select count(*) from customer").show()
@@ -37,13 +39,14 @@ sql("select count(*) from customer").show()
 # +--------+
 ```
 #### Via pip
+This way is generally the same as the first way, but more readable.
 1. Use ```pip install pytispark``` in your console to install `pytispark`  
 
 2. Make sure you have the latest version of [TiSpark](https://github.com/pingcap/tispark) and a `jar` with all TiSpark's dependencies.
 
 3. Run this command in your `SPARK_HOME` directory:
 ```
-./bin/pyspark --jars /where-ever-it-is/tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar
+./bin/pyspark --jars /where-ever-it-is/tispark-core-1.0-RC1-jar-with-dependencies.jar
 ```
 
 4. Use as below:
@@ -52,7 +55,7 @@ import pytispark.pytispark as pti
  
 ti = pti.TiContext(spark)
  
-ti.tidbMapDatabase("tpch", False)
+ti.tidbMapDatabase("tpch")
  
 sql("select count(*) from customer").show()
 
@@ -66,6 +69,7 @@ sql("select count(*) from customer").show()
 ```
 
 #### Via spark-submit
+This way is useful when you want to execute your own Python scripts.
 1. Create a Python file named `test.py` as below:
 ```python
 from pyspark.sql import SparkSession
@@ -75,14 +79,14 @@ spark = SparkSession.builder.master("Your master url").appName("Your app name").
 
 ti = pti.TiContext(spark)
  
-ti.tidbMapDatabase("tpch", False)
+ti.tidbMapDatabase("tpch")
  
 spark.sql("select count(*) from customer").show()
 ```
 
 2. Prepare your TiSpark environment as above and execute
 ```bash
-./bin/spark-submit --jars /where-ever-it-is/tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar test.py
+./bin/spark-submit --jars /where-ever-it-is/tispark-1.0-RC1-jar-with-dependencies.jar test.py
 ```
 
 3. Result:

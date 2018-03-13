@@ -61,7 +61,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
   def typeBlackList: TypeBlacklist = {
     val blacklistString =
-      sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "time,enum,set,year")
+      sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "time,enum,set,year,json")
     new TypeBlacklist(blacklistString)
   }
 

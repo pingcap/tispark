@@ -24,6 +24,8 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.lang.reflect.Constructor;
 import java.util.Map;
 
+import static com.pingcap.tikv.types.MySQLType.TypeJSON;
+
 public class DataTypeFactory {
   private static final Map<MySQLType, Constructor<? extends DataType>> dataTypeCreatorMap;
   private static final Map<MySQLType, DataType> dataTypeInstanceMap;
@@ -43,6 +45,7 @@ public class DataTypeFactory {
     extractTypeMap(EnumType.subTypes, EnumType.class, builder, instBuilder);
     extractTypeMap(SetType.subTypes, SetType.class, builder, instBuilder);
     extractTypeMap(YearType.subTypes, YearType.class, builder, instBuilder);
+    extractTypeMap(new MySQLType[]{MySQLType.TypeJSON}, StringType.class, builder, instBuilder);
     dataTypeCreatorMap = builder.build();
     dataTypeInstanceMap = instBuilder.build();
   }

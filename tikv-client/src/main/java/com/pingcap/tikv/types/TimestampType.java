@@ -68,6 +68,9 @@ public class TimestampType extends AbstractDateTimeType {
   @Override
   protected Timestamp decodeNotNull(int flag, CodecDataInput cdi) {
     DateTime dateTime = decodeDateTime(flag, cdi);
+    if (dateTime == null) {
+      return null;
+    }
     return new Timestamp(dateTime.getMillis());
   }
 

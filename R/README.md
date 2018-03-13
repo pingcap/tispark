@@ -2,11 +2,11 @@
 A thin layer build for supporting R language with TiSpark
 
 ### Usage
-1. Download TiSparkR source code and build a binary package. Install it to your local R library(e.g. via `R CMD INSTALL you-bin-package`)
-2. Build or download TiSpark dependency jar `tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar` [here](https://github.com/pingcap/tispark).
+1. Download TiSparkR source code and build a binary package(run `R CMD build R` in TiSpark root directory). Install it to your local R library(e.g. via `R CMD INSTALL TiSparkR_1.0.0.tar.gz`)
+2. Build or download TiSpark dependency jar `tispark-core-1.0-RC1-jar-with-dependencies.jar` [here](https://github.com/pingcap/tispark).
 3. `cd` to your Spark home directory, and run
 ```
-./bin/sparkR --jars /where-ever-it-is/tispark-0.1.0-SNAPSHOT-jar-with-dependencies.jar
+./bin/sparkR --jars /where-ever-it-is/tispark-core-1.0-RC1-jar-with-dependencies.jar
 ```
 Note that you should replace the `TiSpark` jar path with your own.
  
