@@ -23,7 +23,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute(
       "CREATE TABLE `tmp_debug` (\n  `tp_datetime` datetime DEFAULT NULL, `tp_date` date DEFAULT NULL, `tp_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;"
     )
-    tidbStmt.execute("INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')")
+    tidbStmt.execute(
+      "INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')"
+    )
     refreshConnections()
     spark.sql("select * from tmp_debug").collect()
   }
