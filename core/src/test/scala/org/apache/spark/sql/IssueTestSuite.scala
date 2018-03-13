@@ -112,6 +112,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     try {
       tidbStmt.execute("drop table if exists t")
       tidbStmt.execute("drop table if exists tmp_debug")
+      tidbStmt.execute("drop table if exists prefix")
     } finally {
       super.afterAll()
     }
