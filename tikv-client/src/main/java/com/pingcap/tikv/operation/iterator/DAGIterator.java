@@ -25,6 +25,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
   private ExecutorCompletionService<Iterator<SelectResponse>> streamingService;
   private ExecutorCompletionService<SelectResponse> dagService;
   private SelectResponse response;
+  private static final int MAX_PROCESS_DEPTH = 5;
 
   private Iterator<SelectResponse> responseIterator;
 
@@ -56,7 +57,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
           streamingService.submit(() -> processByStreaming(task));
           break;
         case NORMAL:
-          dagService.submit(() -> process(task));
+          dagService.submit(() -> process(task, 0));
           break;
       }
     }
@@ -150,7 +151,10 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     return advanceNextResponse();
   }
 
-  private SelectResponse process(RangeSplitter.RegionTask regionTask) {
+  private SelectResponse process(RangeSplitter.RegionTask regionTask, int curDepth) {
+    if (curDepth > MAX_PROCESS_DEPTH) {
+      return null;
+    }
     List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
     TiRegion region = regionTask.getRegion();
     Metapb.Store store = regionTask.getStore();
@@ -171,7 +175,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
           .splitRangeByRegion(ranges);
 
       for (RangeSplitter.RegionTask t : splitTasks) {
-        SelectResponse resFromCurTask = process(t);
+        SelectResponse resFromCurTask = process(t, curDepth + 1);
         if (resFromCurTask != null) {
           resultChunk.addAll(resFromCurTask.getChunksList());
         }
