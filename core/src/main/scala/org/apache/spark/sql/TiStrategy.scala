@@ -257,12 +257,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
-    if (!allowIndexDoubleRead())
-      scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
       // need to set isDoubleRead to true for dagRequest in case of double read
       dagRequest.setIsDoubleRead(scanPlan.isDoubleRead)
+    }
+    if (!scanPlan.isDoubleRead) {
+      scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
     }
     dagRequest.setTableInfo(source.table)
     dagRequest
