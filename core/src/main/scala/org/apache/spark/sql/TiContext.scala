@@ -138,14 +138,6 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
-  def time[R](block: => R, msg: String): R = {
-    val t0 = System.nanoTime()
-    val result = block // call-by-name
-    val t1 = System.nanoTime()
-    println(s"$msg elapsed time: " + (t1 - t0) + "ns")
-    result
-  }
-
   def tidbMapDatabase(dbName: String,
                       dbNameAsPrefix: Boolean = false,
                       autoLoadStatistics: Boolean = autoLoad): Unit =
@@ -155,9 +147,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     } {
       var sizeInBytes = Long.MaxValue
       if (autoLoadStatistics) {
-        time({
-          statisticsManager.loadStatisticsInfo(table)
-        }, s"load table ${table.getName} took")
+        statisticsManager.loadStatisticsInfo(table)
         val count = statisticsManager.getTableCount(table.getId)
         if (count == 0) sizeInBytes = 0
         else if (Long.MaxValue / count > 64) sizeInBytes = 64 * count
