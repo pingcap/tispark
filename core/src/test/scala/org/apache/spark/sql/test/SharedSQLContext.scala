@@ -216,7 +216,7 @@ object SharedSQLContext extends Logging {
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
-      sparkConf.set(ALLOW_INDEX_DOUBLE_READ, getOrElse(prop, ALLOW_INDEX_DOUBLE_READ, "true"))
+      sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf)
     }
