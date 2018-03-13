@@ -70,7 +70,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def allowIndexDoubleRead(): Boolean = {
-    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_DOUBLE_READ, "false").toBoolean
+    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "false").toBoolean
   }
 
   private def useStreamingProcess(): Boolean = {
