@@ -183,9 +183,8 @@ public class ScanAnalyzerTest {
     // 3 remains since c2 condition pushed back as well
     assertEquals(baselineSet, result.getResidualPredicates());
 
-    assertEquals(2, result.getPointPredicates().size());
+    assertEquals(1, result.getPointPredicates().size());
     assertEquals(eq1, result.getPointPredicates().get(0));
-    assertEquals(eq2, result.getPointPredicates().get(1));
 
     assertFalse(result.getRangePredicate().isPresent());
   }
