@@ -3,6 +3,7 @@ package com.pingcap.tikv.operation.iterator;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
+import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcNeedRegionRefreshException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -25,7 +26,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
   private ExecutorCompletionService<Iterator<SelectResponse>> streamingService;
   private ExecutorCompletionService<SelectResponse> dagService;
   private SelectResponse response;
-  private static final int MAX_PROCESS_DEPTH = 5;
+  private static final int MAX_PROCESS_DEPTH = 3;
 
   private Iterator<SelectResponse> responseIterator;
 
