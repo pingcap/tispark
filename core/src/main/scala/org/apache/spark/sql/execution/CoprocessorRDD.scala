@@ -26,7 +26,7 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{TiDBRelation, TiSessionCache}
+import com.pingcap.tispark.{TiDBRelation, TiSessionCache, TiUtils}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
@@ -68,7 +68,8 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   }
 
   override def verboseString: String = {
-    s"TiDB $nodeName{${tiRdd.dagRequest.toString}}"
+    s"TiDB $nodeName{${tiRdd.dagRequest.toString}}" +
+      s"${TiUtils.getReqEstCountStr(tiRdd.dagRequest)}"
   }
 
   override def simpleString: String = verboseString
@@ -118,7 +119,8 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   override def output: Seq[Attribute] = attributeRef
 
   override def verboseString: String = {
-    s"TiDB $nodeName{${tiHandleRDD.dagRequest.toString}}"
+    s"TiDB $nodeName{${tiHandleRDD.dagRequest.toString}}" +
+      s"${TiUtils.getReqEstCountStr(tiHandleRDD.dagRequest)}"
   }
 
   override def simpleString: String = verboseString
