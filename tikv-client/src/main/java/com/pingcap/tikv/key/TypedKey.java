@@ -43,6 +43,15 @@ public class TypedKey extends Key {
     return toTypedKey(val, type, DataType.UNSPECIFIED_LEN);
   }
 
+  /**
+   * Map a typed value into TypedKey, only encoding first prefixLength bytes
+   * When prefixLength is DataType.UNSPECIFIED_LEN, encode full length of value
+   *
+   * @param val value
+   * @param type type of value
+   * @param prefixLength described above
+   * @return an encoded TypedKey
+   */
   public static TypedKey toTypedKey(Object val, DataType type, int prefixLength) {
     requireNonNull(type, "type is null");
     return new TypedKey(val, type, prefixLength);

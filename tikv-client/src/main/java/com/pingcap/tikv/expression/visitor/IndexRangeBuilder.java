@@ -102,6 +102,15 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     if (predicate == null) {
       throwOnError(node);
     }
+    // In order to match a prefix index, we have to cut the literal by prefix length.
+    // e.g., for table t:
+    // CREATE TABLE `t` {
+    //     `c1` VARCHAR(10) DEFAULT NULL,
+    //     KEY `prefix_index` (`c`(2))
+    // }
+    // when the predicate is `c1` = 'abc', the index range should be ['ab', 'ab'].
+    // for varchar, `c1`(2) will take first two characters(bytes) as prefix index.
+    // TODO: Note that TiDB only supports UTF-8, we need to check if prefix index behave differently under other encoding methods
     int prefixLen = lengths.getOrDefault(predicate.getColumnRef(), DataType.UNSPECIFIED_LEN);
     TypedKey literal = predicate.getTypedLiteral(prefixLen);
     RangeSet<TypedKey> ranges = TreeRangeSet.create();

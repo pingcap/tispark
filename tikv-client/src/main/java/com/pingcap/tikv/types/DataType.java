@@ -126,7 +126,7 @@ public abstract class DataType implements Serializable {
    *
    * @param cdo destination of data.
    * @param encodeType Key or Value.
-   * @param value need to be encoded.
+   * @param value value to be encoded.
    */
   public void encode(CodecDataOutput cdo, EncodeType encodeType, Object value) {
     requireNonNull(cdo, "cdo is null");
@@ -155,10 +155,21 @@ public abstract class DataType implements Serializable {
   protected abstract void encodeValue(CodecDataOutput cdo, Object value);
   protected abstract void encodeProto(CodecDataOutput cdo, Object value);
 
+  /**
+   * encode a Key's prefix to CodecDataOutput
+   *
+   * @param cdo destination of data.
+   * @param value value to be encoded.
+   * @param prefixLength specifies prefix length of value to be encoded.
+   *                     When prefixLength is DataType.UNSPECIFIED_LEN,
+   *                     encode full length of value.
+   */
   public void encodeKey(CodecDataOutput cdo, Object value, int prefixLength) {
     requireNonNull(cdo, "cdo is null");
     if (isPrefixIndexSupported()) {
-      if (prefixLength == DataType.UNSPECIFIED_LEN) {
+      if (value == null) {
+        encodeNull(cdo);
+      } else if (prefixLength == DataType.UNSPECIFIED_LEN) {
         encodeKey(cdo, value);
       } else {
         byte[] bytes = Converter.convertToBytes(value);
@@ -169,6 +180,11 @@ public abstract class DataType implements Serializable {
     }
   }
 
+  /**
+   * Indicates whether a data type supports prefix index
+   *
+   * @return returns true iff the type is BytesType
+   */
   protected boolean isPrefixIndexSupported() {
     return false;
   }
