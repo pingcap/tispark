@@ -88,6 +88,11 @@ public class TiDAGRequest implements Serializable {
       return this;
     }
 
+    public Builder addRequiredCols(List<String> cols) {
+      this.requiredCols.addAll(cols);
+      return this;
+    }
+
     public Builder addFilter(Expression filter) {
       this.filters.add(filter);
       return this;

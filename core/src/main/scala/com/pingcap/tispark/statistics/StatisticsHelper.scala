@@ -31,17 +31,49 @@ import scala.collection.mutable
 
 object StatisticsHelper {
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
+  private val metaRequiredCols = Seq(
+    "table_id",
+    "count",
+    "modify_count",
+    "version"
+  )
+  private val histRequiredCols = Seq(
+    "table_id",
+    "is_index",
+    "hist_id",
+    "distinct_count",
+    "version",
+    "null_count",
+    "cm_sketch"
+  )
+  private val bucketRequiredCols = Seq(
+    "count",
+    "repeats",
+    "lower_bound",
+    "upper_bound",
+    "bucket_id",
+    "table_id",
+    "is_index",
+    "hist_id"
+  )
 
-  def extractStatisticsDTO(row: Row,
-                           table: TiTableInfo,
-                           loadAll: Boolean,
-                           neededColIds: mutable.ArrayBuffer[Long]): StatisticsDTO = {
+  private[statistics] def isManagerReady(manager: StatisticsManager): Boolean =
+    manager.metaTable != null &&
+      manager.bucketTable != null &&
+      manager.histTable != null
+
+  private[statistics] def extractStatisticsDTO(row: Row,
+                                               table: TiTableInfo,
+                                               loadAll: Boolean,
+                                               neededColIds: mutable.ArrayBuffer[Long],
+                                               histTable: TiTableInfo): StatisticsDTO = {
+    if (row.fieldCount() < 6) return null
     val isIndex = if (row.getLong(1) > 0) true else false
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
     val histVer = row.getLong(4)
     val nullCount = row.getLong(5)
-    val cMSketch = row.getBytes(6)
+    val cMSketch = if (checkColExists(histTable, "cm_sketch")) row.getBytes(6) else null
     val indexInfos = table.getIndices.filter(_.getId == histID)
     val colInfos = table.getColumns.filter(_.getId == histID)
     var needed = true
@@ -79,9 +111,9 @@ object StatisticsHelper {
     }
   }
 
-  def extractStatisticResult(histId: Long,
-                             rows: Iterator[Row],
-                             requests: Seq[StatisticsDTO]): StatisticsResult = {
+  private[statistics] def extractStatisticResult(histId: Long,
+                                                 rows: Iterator[Row],
+                                                 requests: Seq[StatisticsDTO]): StatisticsResult = {
     val matches = requests.filter(_.colId == histId)
     if (matches.nonEmpty) {
       val matched = matches.head
@@ -133,9 +165,9 @@ object StatisticsHelper {
     }
   }
 
-  def buildHistogramsRequest(histTable: TiTableInfo,
-                             targetTblId: Long,
-                             startTs: Long): TiDAGRequest = {
+  private[statistics] def buildHistogramsRequest(histTable: TiTableInfo,
+                                                 targetTblId: Long,
+                                                 startTs: Long): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(histTable)
@@ -144,19 +176,18 @@ object StatisticsHelper {
           .equal(ColumnRef.create("table_id"), Constant.create(targetTblId))
       )
       .addRequiredCols(
-        "table_id",
-        "is_index",
-        "hist_id",
-        "distinct_count",
-        "version",
-        "null_count",
-        "cm_sketch"
+        histRequiredCols.filter(checkColExists(histTable, _))
       )
       .setStartTs(startTs)
       .build(PushDownType.NORMAL)
   }
 
-  def buildMetaRequest(metaTable: TiTableInfo, targetTblId: Long, startTs: Long): TiDAGRequest = {
+  private def checkColExists(table: TiTableInfo, column: String): Boolean =
+    table.getColumns.exists(_.matchName(column))
+
+  private[statistics] def buildMetaRequest(metaTable: TiTableInfo,
+                                           targetTblId: Long,
+                                           startTs: Long): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(metaTable)
@@ -164,12 +195,14 @@ object StatisticsHelper {
         ComparisonBinaryExpression
           .equal(ColumnRef.create("table_id"), Constant.create(targetTblId))
       )
-      .addRequiredCols("table_id", "count", "modify_count", "version")
+      .addRequiredCols(metaRequiredCols.filter(checkColExists(metaTable, _)))
       .setStartTs(startTs)
       .build(PushDownType.NORMAL)
   }
 
-  def buildBucketRequest(bucketTable: TiTableInfo, targetTblId: Long, startTs: Long): TiDAGRequest = {
+  private[statistics] def buildBucketRequest(bucketTable: TiTableInfo,
+                                             targetTblId: Long,
+                                             startTs: Long): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(bucketTable)
@@ -180,14 +213,7 @@ object StatisticsHelper {
       .setLimit(Int.MaxValue)
       .addOrderBy(ByItem.create(ColumnRef.create("bucket_id"), false))
       .addRequiredCols(
-        "count",
-        "repeats",
-        "lower_bound",
-        "upper_bound",
-        "bucket_id",
-        "table_id",
-        "is_index",
-        "hist_id"
+        bucketRequiredCols.filter(checkColExists(bucketTable, _))
       )
       .setStartTs(startTs)
       .build(PushDownType.NORMAL)
