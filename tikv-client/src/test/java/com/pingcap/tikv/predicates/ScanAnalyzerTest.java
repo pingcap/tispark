@@ -87,7 +87,7 @@ public class ScanAnalyzerTest {
     List<Expression> exprs = ImmutableList.of(eq1);
 
     ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, pkIndex);
-    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
+    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, pkIndex);
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
@@ -112,7 +112,7 @@ public class ScanAnalyzerTest {
     List<Expression> exprs = ImmutableList.of(eq1);
 
     ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
-    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
+    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
@@ -128,7 +128,7 @@ public class ScanAnalyzerTest {
     exprs = ImmutableList.of(eq1, eq2);
     result = ScanAnalyzer.extractConditions(exprs, table, index);
 
-    irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
+    irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
 
     keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs);
 

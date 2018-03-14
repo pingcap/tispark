@@ -118,7 +118,7 @@ public class ScanAnalyzer {
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
-    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
+    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
 
     List<KeyRange> keyRanges;
     boolean isDoubleRead = false;
@@ -323,11 +323,11 @@ public class ScanAnalyzer {
             continue;
           }
           if (eqMatcher.match(cond)) {
+            specBuilder.addPointPredicate(col, cond);
             if (col.isPrefixIndex()) {
               specBuilder.addResidualPredicate(cond);
               break IndexMatchingLoop;
             }
-            specBuilder.addPointPredicate(col, cond);
             visited.add(cond);
             found = true;
             break;

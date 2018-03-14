@@ -15,16 +15,6 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.divide;
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.minus;
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
@@ -38,10 +28,19 @@ import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
+import org.junit.Test;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import org.junit.Test;
+
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.*;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class PredicateUtilsTest {
   private static TiTableInfo createTable() {
@@ -105,7 +104,7 @@ public class PredicateUtilsTest {
     Expression predicate2 = or(equal(c3, col4), equal(c4, col4));
     Expression rangePredicate = notEqual(col5, c1);
     List<IndexRange> indexRanges =
-        PredicateUtils.expressionToIndexRanges(ImmutableList.of(predicate1, predicate2), Optional.of(rangePredicate));
+        PredicateUtils.expressionToIndexRanges(ImmutableList.of(predicate1, predicate2), Optional.of(rangePredicate), table, null);
     assertEquals(8, indexRanges.size());
     Key indexKey1 = CompoundKey.concat(key1, key3);
     Key indexKey2 = CompoundKey.concat(key1, key4);

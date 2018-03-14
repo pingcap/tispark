@@ -16,18 +16,23 @@
 package com.pingcap.tikv.key;
 
 
-import static java.util.Objects.requireNonNull;
-
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataType.EncodeType;
 
+import static java.util.Objects.requireNonNull;
+
 public class TypedKey extends Key {
   private final DataType type;
 
-  private TypedKey(Object val, DataType type) {
+  public TypedKey(Object val, DataType type) {
     super(encode(val, type));
+    this.type = type;
+  }
+
+  public TypedKey(Object val, DataType type, int prefixLength) {
+    super(encode(val, type, prefixLength));
     this.type = type;
   }
 
@@ -45,9 +50,20 @@ public class TypedKey extends Key {
     return new TypedKey(val, type);
   }
 
+  public static TypedKey toTypedKey(Object val, DataType type, int prefixLength) {
+    requireNonNull(type, "type is null");
+    return new TypedKey(val, type, prefixLength);
+  }
+
   private static byte[] encode(Object val, DataType type) {
     CodecDataOutput cdo = new CodecDataOutput();
     type.encode(cdo, EncodeType.KEY, val);
+    return cdo.toBytes();
+  }
+
+  private static byte[] encode(Object val, DataType type, int prefixLength) {
+    CodecDataOutput cdo = new CodecDataOutput();
+    type.encodeKey(cdo, val, prefixLength);
     return cdo.toBytes();
   }
 

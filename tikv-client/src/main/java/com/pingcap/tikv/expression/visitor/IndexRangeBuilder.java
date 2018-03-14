@@ -20,23 +20,44 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.exception.TiExpressionException;
+import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.key.TypedKey;
+import com.pingcap.tikv.meta.TiIndexColumn;
+import com.pingcap.tikv.meta.TiIndexInfo;
+import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.types.DataType;
+
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 
 public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> {
-  public static Set<Range<TypedKey>> buildRange(Expression predicate) {
-    Objects.requireNonNull(predicate, "predicate is null");
-    IndexRangeBuilder visitor = new IndexRangeBuilder();
-    return predicate.accept(visitor, null).asRanges();
+
+  private final Map<ColumnRef, Integer> lengths;
+
+  public IndexRangeBuilder(TiTableInfo table, TiIndexInfo index) {
+    Map<ColumnRef, Integer> result = new HashMap<>();
+    if (table != null && index != null) {
+      for (TiIndexColumn indexColumn : index.getIndexColumns()) {
+        ColumnRef columnRef = ColumnRef.create(indexColumn.getName(), table);
+        result.put(columnRef, (int) indexColumn.getLength());
+      }
+    }
+    this.lengths = result;
   }
 
-  private static void throwOnError(Expression node) {
+  public Set<Range<TypedKey>> buildRange(Expression predicate) {
+    Objects.requireNonNull(predicate, "predicate is null");
+    return predicate.accept(this, null).asRanges();
+  }
+
+  private void throwOnError(Expression node) {
     final String errorFormat = "Unsupported conversion to Range: %s";
     throw new TiExpressionException(String.format(errorFormat, node));
   }
@@ -81,7 +102,13 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     if (predicate == null) {
       throwOnError(node);
     }
-    TypedKey literal = predicate.getTypedLiteral();
+    int len = lengths.getOrDefault(predicate.getColumnRef(), -1);
+    TypedKey literal;
+    if (len == DataType.UNSPECIFIED_LEN) {
+      literal = predicate.getTypedLiteral();
+    } else {
+      literal = predicate.getTypedLiteral(len);
+    }
     RangeSet<TypedKey> ranges = TreeRangeSet.create();
 
     switch (predicate.getType()) {

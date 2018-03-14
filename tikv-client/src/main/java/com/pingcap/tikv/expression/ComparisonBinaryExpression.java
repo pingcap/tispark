@@ -90,6 +90,13 @@ public class ComparisonBinaryExpression implements Expression {
       }
       return key;
     }
+
+    public TypedKey getTypedLiteral(int prefixLength) {
+      if (key == null) {
+        key = TypedKey.toTypedKey(getValue().getValue(), getColumnRef().getType(), prefixLength);
+      }
+      return key;
+    }
   }
 
   private final Expression left;

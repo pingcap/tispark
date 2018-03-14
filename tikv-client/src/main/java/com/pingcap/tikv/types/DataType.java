@@ -15,9 +15,6 @@
 
 package com.pingcap.tikv.types;
 
-import static com.pingcap.tikv.codec.Codec.isNullFlag;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
@@ -26,8 +23,13 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
+
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
+
+import static com.pingcap.tikv.codec.Codec.isNullFlag;
+import static java.util.Objects.requireNonNull;
 
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {
@@ -152,6 +154,19 @@ public abstract class DataType implements Serializable {
   protected abstract void encodeKey(CodecDataOutput cdo, Object value);
   protected abstract void encodeValue(CodecDataOutput cdo, Object value);
   protected abstract void encodeProto(CodecDataOutput cdo, Object value);
+
+  public void encodeKey(CodecDataOutput cdo, Object value, int prefixLength) {
+    if (isPrefixIndexSupported()) {
+      byte[] bytes = Converter.convertToBytes(value);
+      Codec.BytesCodec.writeBytesFully(cdo, Arrays.copyOf(bytes, prefixLength));
+    } else {
+      throw new TypeException("Data type can not encode with prefix");
+    }
+  }
+
+  protected boolean isPrefixIndexSupported() {
+    return false;
+  }
 
   public abstract ExprType getProtoExprType();
 
