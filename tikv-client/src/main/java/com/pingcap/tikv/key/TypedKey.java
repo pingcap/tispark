@@ -19,20 +19,14 @@ package com.pingcap.tikv.key;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DataType.EncodeType;
 
 import static java.util.Objects.requireNonNull;
 
 public class TypedKey extends Key {
   private final DataType type;
 
-  public TypedKey(Object val, DataType type) {
-    super(encode(val, type));
-    this.type = type;
-  }
-
   public TypedKey(Object val, DataType type, int prefixLength) {
-    super(encode(val, type, prefixLength));
+    super(encodeKey(val, type, prefixLength));
     this.type = type;
   }
 
@@ -46,8 +40,7 @@ public class TypedKey extends Key {
   }
 
   public static TypedKey toTypedKey(Object val, DataType type) {
-    requireNonNull(type, "type is null");
-    return new TypedKey(val, type);
+    return toTypedKey(val, type, DataType.UNSPECIFIED_LEN);
   }
 
   public static TypedKey toTypedKey(Object val, DataType type, int prefixLength) {
@@ -55,13 +48,7 @@ public class TypedKey extends Key {
     return new TypedKey(val, type, prefixLength);
   }
 
-  private static byte[] encode(Object val, DataType type) {
-    CodecDataOutput cdo = new CodecDataOutput();
-    type.encode(cdo, EncodeType.KEY, val);
-    return cdo.toBytes();
-  }
-
-  private static byte[] encode(Object val, DataType type, int prefixLength) {
+  private static byte[] encodeKey(Object val, DataType type, int prefixLength) {
     CodecDataOutput cdo = new CodecDataOutput();
     type.encodeKey(cdo, val, prefixLength);
     return cdo.toBytes();

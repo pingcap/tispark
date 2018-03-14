@@ -156,9 +156,14 @@ public abstract class DataType implements Serializable {
   protected abstract void encodeProto(CodecDataOutput cdo, Object value);
 
   public void encodeKey(CodecDataOutput cdo, Object value, int prefixLength) {
+    requireNonNull(cdo, "cdo is null");
     if (isPrefixIndexSupported()) {
-      byte[] bytes = Converter.convertToBytes(value);
-      Codec.BytesCodec.writeBytesFully(cdo, Arrays.copyOf(bytes, prefixLength));
+      if (prefixLength == DataType.UNSPECIFIED_LEN) {
+        encodeKey(cdo, value);
+      } else {
+        byte[] bytes = Converter.convertToBytes(value);
+        Codec.BytesCodec.writeBytesFully(cdo, Arrays.copyOf(bytes, prefixLength));
+      }
     } else {
       throw new TypeException("Data type can not encode with prefix");
     }

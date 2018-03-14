@@ -39,7 +39,7 @@ import java.util.Set;
 
 public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> {
 
-  private final Map<ColumnRef, Integer> lengths;
+  private final Map<ColumnRef, Integer> lengths; // length of corresponding ColumnRef
 
   public IndexRangeBuilder(TiTableInfo table, TiIndexInfo index) {
     Map<ColumnRef, Integer> result = new HashMap<>();
@@ -57,7 +57,7 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     return predicate.accept(this, null).asRanges();
   }
 
-  private void throwOnError(Expression node) {
+  private static void throwOnError(Expression node) {
     final String errorFormat = "Unsupported conversion to Range: %s";
     throw new TiExpressionException(String.format(errorFormat, node));
   }
@@ -102,13 +102,8 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     if (predicate == null) {
       throwOnError(node);
     }
-    int len = lengths.getOrDefault(predicate.getColumnRef(), -1);
-    TypedKey literal;
-    if (len == DataType.UNSPECIFIED_LEN) {
-      literal = predicate.getTypedLiteral();
-    } else {
-      literal = predicate.getTypedLiteral(len);
-    }
+    int prefixLen = lengths.getOrDefault(predicate.getColumnRef(), DataType.UNSPECIFIED_LEN);
+    TypedKey literal = predicate.getTypedLiteral(prefixLen);
     RangeSet<TypedKey> ranges = TreeRangeSet.create();
 
     switch (predicate.getType()) {

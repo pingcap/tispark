@@ -19,6 +19,7 @@ package com.pingcap.tikv.expression;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.TypedKey;
+import com.pingcap.tikv.types.DataType;
 
 import java.util.List;
 import java.util.Objects;
@@ -85,10 +86,7 @@ public class ComparisonBinaryExpression implements Expression {
     }
 
     public TypedKey getTypedLiteral() {
-      if (key == null) {
-        key = TypedKey.toTypedKey(getValue().getValue(), getColumnRef().getType());
-      }
-      return key;
+      return getTypedLiteral(DataType.UNSPECIFIED_LEN);
     }
 
     public TypedKey getTypedLiteral(int prefixLength) {
@@ -134,7 +132,7 @@ public class ComparisonBinaryExpression implements Expression {
 
   public NormalizedPredicate normalize() {
     if (normalizedPredicate != null) {
-      return normalizedPredicate.orElseGet(() -> null);
+      return normalizedPredicate.orElseGet(null);
     }
     if (getLeft() instanceof Constant && getRight() instanceof ColumnRef) {
       Constant left = (Constant) getLeft();
