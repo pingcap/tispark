@@ -15,7 +15,9 @@
 
 package com.pingcap.tikv.util;
 
-import com.google.common.collect.*;
+import com.google.common.collect.BoundType;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -131,14 +133,25 @@ public class KeyRangeUtils {
     if (ranges == null || ranges.isEmpty() || ranges.size() == 1) {
       return ranges;
     }
-    RangeSet<Key> rangeSet = TreeRangeSet.create();
-    for (KeyRange keyRange : ranges) {
-      Range<Key> range = makeRange(keyRange.getStart(), keyRange.getEnd());
-      rangeSet.add(range);
+
+    KeyRange first = ranges.get(0);
+    Key lowMin = toRawKey(first.getStart(), true);
+    Key upperMax = toRawKey(first.getEnd(), false);
+
+    for (int i = 1; i < ranges.size(); i++) {
+      KeyRange keyRange = ranges.get(i);
+      Key start = toRawKey(keyRange.getStart(), true);
+      Key end = toRawKey(keyRange.getEnd(), false);
+      if (start.compareTo(lowMin) < 0) {
+        lowMin = start;
+      }
+      if (end.compareTo(upperMax) > 0) {
+        upperMax = end;
+      }
     }
 
     ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
-    rangeBuilder.add(makeCoprocRange(rangeSet.span()));
+    rangeBuilder.add(makeCoprocRange(lowMin.toByteString(), upperMax.toByteString()));
     return rangeBuilder.build();
   }
 
