@@ -88,6 +88,11 @@ public class TiDAGRequest implements Serializable {
       return this;
     }
 
+    public Builder addRequiredCols(List<String> cols) {
+      this.requiredCols.addAll(cols);
+      return this;
+    }
+
     public Builder addFilter(Expression filter) {
       this.filters.add(filter);
       return this;
@@ -192,6 +197,7 @@ public class TiDAGRequest implements Serializable {
   private boolean isDoubleRead;
   private final PushDownType pushDownType;
   private IdentityHashMap<Expression, DataType> typeMap;
+  private double estimatedCount = -1;
 
   private static ColumnInfo handleColumn =
       ColumnInfo.newBuilder()
@@ -732,6 +738,20 @@ public class TiDAGRequest implements Serializable {
    */
   public PushDownType getPushDownType() {
     return pushDownType;
+  }
+
+  /**
+   * Set the estimated row count will be fetched from this request.
+   */
+  public void setEstimatedCount(double estimatedCount) {
+    this.estimatedCount = estimatedCount;
+  }
+
+  /**
+   * Get the estimated row count will be fetched from this request.
+   */
+  public double getEstimatedCount() {
+    return estimatedCount;
   }
 
   @Override

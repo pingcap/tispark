@@ -21,7 +21,7 @@ import java.util.logging.Logger
 import com.pingcap.tikv.expression.ExpressionBlacklist
 import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
-import com.pingcap.tikv.meta.{TiColumnInfo, TiTableInfo}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
 import com.pingcap.tikv.{TiConfiguration, TiSession}
@@ -221,5 +221,13 @@ object TiUtils {
     CacheListenerManager.initCacheListener(session.sparkContext, tiSession.getRegionManager)
     tiSession.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
     StatisticsManager.initStatisticsManager(tiSession, session)
+  }
+
+  def getReqEstCountStr(req: TiDAGRequest): String = {
+    if (req.getEstimatedCount > 0) {
+      import java.text.DecimalFormat
+      val df = new DecimalFormat("#.#")
+      s" EstimatedCount:${df.format(req.getEstimatedCount)}"
+    } else ""
   }
 }
