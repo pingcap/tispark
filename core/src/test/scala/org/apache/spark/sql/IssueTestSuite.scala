@@ -24,8 +24,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("INSERT INTO `prefix` VALUES(1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7)")
     tidbStmt.execute("ANALYZE TABLE `prefix`")
     refreshConnections()
-    spark.sql("explain select a, b from prefix where a = 1 and b = \"bbb\"").show(false)
-    spark.sql("explain select b from prefix where b = \"bbc\"").show(false)
+    // add explain to show if we have actually used prefix index in plan
+    spark.sql("select a, b from prefix where a = 1 and b = \"bbb\"").explain
+    spark.sql("select b from prefix where b = \"bbc\"").explain
     assert(execDBTSAndJudge("select a, b from prefix where a = 1 and b = \"bbb\""))
     assert(execDBTSAndJudge("select b from prefix where b = \"bbc\""))
   }
