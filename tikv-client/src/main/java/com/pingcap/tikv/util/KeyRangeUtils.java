@@ -15,7 +15,9 @@
 
 package com.pingcap.tikv.util;
 
-import com.google.common.collect.*;
+import com.google.common.collect.BoundType;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -25,7 +27,6 @@ import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 
 import java.util.List;
-import java.util.Set;
 
 import static com.pingcap.tikv.key.Key.toRawKey;
 
@@ -70,7 +71,7 @@ public class KeyRangeUtils {
     }
 
     ByteString prefix = startKey.size() > endKey.size() ?
-                        startKey.substring(0, i) : endKey.substring(0, i);
+        startKey.substring(0, i) : endKey.substring(0, i);
     ByteString newStartKey = startKey;
     ByteString newEndKey;
     for (int j = 0; j < splitFactor; j++) {
@@ -97,7 +98,7 @@ public class KeyRangeUtils {
    * Build a Coprocessor Range with CLOSED_OPEN endpoints
    *
    * @param startKey startKey
-   * @param endKey endKey
+   * @param endKey   endKey
    * @return a CLOSED_OPEN range for coprocessor
    */
   public static KeyRange makeCoprocRange(ByteString startKey, ByteString endKey) {
@@ -119,26 +120,38 @@ public class KeyRangeUtils {
       throw new TiClientInternalException("range must be CLOSED_OPEN");
     }
     return makeCoprocRange(range.lowerEndpoint().toByteString(),
-                           range.upperEndpoint().toByteString());
+        range.upperEndpoint().toByteString());
   }
 
+  /**
+   * Merge potential discrete ranges into one large range.
+   *
+   * @param ranges the range list to merge
+   * @return the minimal range which encloses all ranges in this range list.
+   */
   public static List<KeyRange> mergeRanges(List<KeyRange> ranges) {
     if (ranges == null || ranges.isEmpty() || ranges.size() == 1) {
       return ranges;
     }
 
-    RangeSet<Key> rangeSet = TreeRangeSet.create();
-    for (KeyRange keyRange : ranges) {
-      Range<Key> range = makeRange(keyRange.getStart(), keyRange.getEnd());
-      rangeSet.add(range);
+    KeyRange first = ranges.get(0);
+    Key lowMin = toRawKey(first.getStart(), true);
+    Key upperMax = toRawKey(first.getEnd(), false);
+
+    for (int i = 1; i < ranges.size(); i++) {
+      KeyRange keyRange = ranges.get(i);
+      Key start = toRawKey(keyRange.getStart(), true);
+      Key end = toRawKey(keyRange.getEnd(), false);
+      if (start.compareTo(lowMin) < 0) {
+        lowMin = start;
+      }
+      if (end.compareTo(upperMax) > 0) {
+        upperMax = end;
+      }
     }
 
-    Set<Range<Key>> mergedRanges = rangeSet.asRanges();
     ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
-    for (Range<Key> range : mergedRanges) {
-      rangeBuilder.add(makeCoprocRange(range));
-    }
-
+    rangeBuilder.add(makeCoprocRange(lowMin.toByteString(), upperMax.toByteString()));
     return rangeBuilder.build();
   }
 
