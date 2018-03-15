@@ -41,6 +41,7 @@ object TiUtils {
   type TiExpression = com.pingcap.tikv.expression.Expression
 
   private final val logger = Logger.getLogger(getClass.getName)
+  private final val MAX_PRECISION = sql.types.DecimalType.MAX_PRECISION
 
   def isSupportedAggregate(aggExpr: AggregateExpression,
                            tiDBRelation: TiDBRelation,
@@ -120,9 +121,15 @@ object TiUtils {
       case _: IntegerType => sql.types.LongType
       case _: RealType    => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
+      // Decimal precision cannot exceed 38.
       case _: DecimalType =>
+        var len = tp.getLength
+        if (len > MAX_PRECISION) {
+          logger.warning("Decimal precision exceeding 38, value will be truncated")
+          len = MAX_PRECISION
+        }
         DataTypes.createDecimalType(
-          Math.min(Integer.MAX_VALUE, tp.getLength).asInstanceOf[Int],
+          len.asInstanceOf[Int],
           tp.getDecimal
         )
       case _: DateTimeType  => sql.types.TimestampType
