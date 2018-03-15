@@ -124,7 +124,7 @@ public class ScanAnalyzer {
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
-    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
+    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
 
     List<KeyRange> keyRanges;
     boolean isDoubleRead = false;

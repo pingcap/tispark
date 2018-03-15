@@ -15,9 +15,6 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiExpressionException;
@@ -29,11 +26,13 @@ import com.pingcap.tikv.expression.visitor.IndexRangeBuilder;
 import com.pingcap.tikv.key.CompoundKey;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import com.pingcap.tikv.meta.TiIndexInfo;
+import com.pingcap.tikv.meta.TiTableInfo;
+
+import java.util.*;
+
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
+import static java.util.Objects.requireNonNull;
 
 public class PredicateUtils {
   public static Expression mergeCNFExpressions(List<Expression> exprs) {
@@ -67,16 +66,19 @@ public class PredicateUtils {
    */
   public static List<IndexRange> expressionToIndexRanges(
       List<Expression> pointPredicates,
-      Optional<Expression> rangePredicate) {
+      Optional<Expression> rangePredicate,
+      TiTableInfo table,
+      TiIndexInfo index) {
     requireNonNull(pointPredicates, "pointPredicates is null");
     requireNonNull(rangePredicate, "rangePredicate is null");
     ImmutableList.Builder<IndexRange> builder = ImmutableList.builder();
+    IndexRangeBuilder indexRangeBuilder = new IndexRangeBuilder(table, index);
 
     if (pointPredicates.size() != 0) {
-      List<Key> pointKeys = expressionToPoints(pointPredicates);
+      List<Key> pointKeys = expressionToPoints(pointPredicates, table, index);
       for (Key key : pointKeys) {
         if (rangePredicate.isPresent()) {
-          Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
+          Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(rangePredicate.get());
           for (Range<TypedKey> range : ranges) {
             builder.add(new IndexRange(key, range));
           }
@@ -87,7 +89,7 @@ public class PredicateUtils {
       }
     } else {
       if (rangePredicate.isPresent()) {
-        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(rangePredicate.get());
+        Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(rangePredicate.get());
         for (Range<TypedKey> range : ranges) {
           builder.add(new IndexRange(null, range));
         }
@@ -107,15 +109,17 @@ public class PredicateUtils {
    * @param pointPredicates expressions that convertible to access points
    * @return access points for each index
    */
-  private static List<Key> expressionToPoints(List<Expression> pointPredicates) {
+  private static List<Key> expressionToPoints(List<Expression> pointPredicates, TiTableInfo table, TiIndexInfo index) {
     requireNonNull(pointPredicates, "pointPredicates cannot be null");
 
     List<Key> resultKeys = new ArrayList<>();
+    IndexRangeBuilder indexRangeBuilder = new IndexRangeBuilder(table, index);
+
     for (int i = 0; i < pointPredicates.size(); i++) {
       Expression predicate = pointPredicates.get(i);
       try {
         // each expr will be expand to one or more points
-        Set<Range<TypedKey>> ranges = IndexRangeBuilder.buildRange(predicate);
+        Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(predicate);
         List<Key> points = rangesToPoint(ranges);
         resultKeys = joinKeys(resultKeys, points);
       } catch (Exception e) {
