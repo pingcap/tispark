@@ -20,8 +20,12 @@ class IssueTestSuite extends BaseTiSparkSuite {
   // https://github.com/pingcap/tispark/issues/272
   test("Prefix index read does not work correctly") {
     tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
-    tidbStmt.execute("CREATE TABLE `prefix` (\n  `a` int(11) NOT NULL,\n  `b` varchar(55) DEFAULT NULL,\n  `c` int(11) DEFAULT NULL,\n  PRIMARY KEY (`a`),\n  KEY `prefix_index` (`b`(2)),\n KEY `prefix_complex` (`a`, `b`(2))\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
-    tidbStmt.execute("INSERT INTO `prefix` VALUES(1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7)")
+    tidbStmt.execute(
+      "CREATE TABLE `prefix` (\n  `a` int(11) NOT NULL,\n  `b` varchar(55) DEFAULT NULL,\n  `c` int(11) DEFAULT NULL,\n  PRIMARY KEY (`a`),\n  KEY `prefix_index` (`b`(2)),\n KEY `prefix_complex` (`a`, `b`(2))\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
+    )
+    tidbStmt.execute(
+      "INSERT INTO `prefix` VALUES(1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7)"
+    )
     tidbStmt.execute("ANALYZE TABLE `prefix`")
     refreshConnections()
     // add explain to show if we have actually used prefix index in plan
