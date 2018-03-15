@@ -31,7 +31,6 @@ class TiDBMapDatabaseSuite extends BaseTiSparkSuite {
       "insert into high_decimal_precision values(123456789012345678901234567890123456789012345678, 12.31411, 4), (223456789012345678901234567890123456789012345678, 123131414141.31431311, 6);"
     )
     refreshConnections(TestTables("decimals", "high_decimal_precision"))
-    spark.sql("select b from high_decimal_precision").show(false)
     assert(execDBTSAndJudge("select b from high_decimal_precision"))
     spark.sql("select a from high_decimal_precision").show(false)
     spark.sql("select a, b from high_decimal_precision").show(false)
