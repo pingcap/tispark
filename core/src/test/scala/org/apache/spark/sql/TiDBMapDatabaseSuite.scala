@@ -24,8 +24,12 @@ class TiDBMapDatabaseSuite extends BaseTiSparkSuite {
     tidbStmt.execute("create database decimals")
     tidbStmt.execute("use decimals")
     tidbStmt.execute("drop table if exists high_decimal_precision")
-    tidbStmt.execute("CREATE TABLE `high_decimal_precision` (\n  `a` decimal(50) DEFAULT NULL,\n  `b` decimal(22,10) DEFAULT NULL,\n  `c` int(11) DEFAULT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
-    tidbStmt.execute("insert into high_decimal_precision values(123456789012345678901234567890123456789012345678, 12.31411, 4), (223456789012345678901234567890123456789012345678, 123131414141.31431311, 6);")
+    tidbStmt.execute(
+      "CREATE TABLE `high_decimal_precision` (\n  `a` decimal(50) DEFAULT NULL,\n  `b` decimal(22,10) DEFAULT NULL,\n  `c` int(11) DEFAULT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
+    )
+    tidbStmt.execute(
+      "insert into high_decimal_precision values(123456789012345678901234567890123456789012345678, 12.31411, 4), (223456789012345678901234567890123456789012345678, 123131414141.31431311, 6);"
+    )
     refreshConnections(TestTables("decimals", "high_decimal_precision"))
     spark.sql("select b from high_decimal_precision").show(false)
     assert(execDBTSAndJudge("select b from high_decimal_precision"))
