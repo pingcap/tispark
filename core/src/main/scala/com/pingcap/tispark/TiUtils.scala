@@ -125,7 +125,7 @@ object TiUtils {
       case _: DecimalType =>
         var len = tp.getLength
         if (len > MAX_PRECISION) {
-          println("Decimal precision exceeding 38, value will be truncated")
+          logger.warning("Decimal precision exceeding 38, value will be truncated")
           len = MAX_PRECISION
         }
         DataTypes.createDecimalType(
