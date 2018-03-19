@@ -153,7 +153,8 @@ public class ScanAnalyzer {
       // table name, index and handle column
       int indexSize = index.getIndexColumns().size() + 2;
       if (isDoubleRead) {
-        cost *= tableSize * 4;
+        cost *= 4; // we assume double read's cost is around 4 times of simple table scan.
+        cost *= tableSize + indexSize;
       } else {
         cost *= indexSize;
       }
