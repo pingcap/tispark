@@ -264,6 +264,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       dagRequest.setIsDoubleRead(scanPlan.isDoubleRead)
     }
     dagRequest.setTableInfo(source.table)
+    dagRequest.setEstimatedCount(scanPlan.getEstimatedRowCount)
     dagRequest
   }
 

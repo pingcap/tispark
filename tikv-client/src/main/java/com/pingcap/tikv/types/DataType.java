@@ -15,9 +15,6 @@
 
 package com.pingcap.tikv.types;
 
-import static com.pingcap.tikv.codec.Codec.isNullFlag;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
@@ -26,8 +23,13 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
+
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
+
+import static com.pingcap.tikv.codec.Codec.isNullFlag;
+import static java.util.Objects.requireNonNull;
 
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {
@@ -124,7 +126,7 @@ public abstract class DataType implements Serializable {
    *
    * @param cdo destination of data.
    * @param encodeType Key or Value.
-   * @param value need to be encoded.
+   * @param value value to be encoded.
    */
   public void encode(CodecDataOutput cdo, EncodeType encodeType, Object value) {
     requireNonNull(cdo, "cdo is null");
@@ -152,6 +154,38 @@ public abstract class DataType implements Serializable {
   protected abstract void encodeKey(CodecDataOutput cdo, Object value);
   protected abstract void encodeValue(CodecDataOutput cdo, Object value);
   protected abstract void encodeProto(CodecDataOutput cdo, Object value);
+
+  /**
+   * encode a Key's prefix to CodecDataOutput
+   *
+   * @param cdo destination of data.
+   * @param value value to be encoded.
+   * @param prefixLength specifies prefix length of value to be encoded.
+   *                     When prefixLength is DataType.UNSPECIFIED_LEN,
+   *                     encode full length of value.
+   */
+  public void encodeKey(CodecDataOutput cdo, Object value, int prefixLength) {
+    requireNonNull(cdo, "cdo is null");
+    if (value == null) {
+      encodeNull(cdo);
+    } else if (prefixLength == DataType.UNSPECIFIED_LEN) {
+      encodeKey(cdo, value);
+    } else if (isPrefixIndexSupported()) {
+        byte[] bytes = Converter.convertToBytes(value);
+        Codec.BytesCodec.writeBytesFully(cdo, Arrays.copyOf(bytes, prefixLength));
+    } else {
+      throw new TypeException("Data type can not encode with prefix");
+    }
+  }
+
+  /**
+   * Indicates whether a data type supports prefix index
+   *
+   * @return returns true iff the type is BytesType
+   */
+  protected boolean isPrefixIndexSupported() {
+    return false;
+  }
 
   public abstract ExprType getProtoExprType();
 

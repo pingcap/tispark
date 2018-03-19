@@ -64,6 +64,11 @@ public class BytesType extends DataType {
     }
   }
 
+  @Override
+  protected boolean isPrefixIndexSupported() {
+    return true;
+  }
+
   /**
    * {@inheritDoc}
    */

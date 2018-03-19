@@ -48,12 +48,13 @@ import static java.util.Objects.requireNonNull;
 
 public class ScanAnalyzer {
   public static class ScanPlan {
-    public ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost, boolean isDoubleRead) {
+    ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost, boolean isDoubleRead, double estimatedRowCount) {
       this.filters = filters;
       this.keyRanges = keyRanges;
       this.cost = cost;
       this.index = index;
       this.isDoubleRead = isDoubleRead;
+      this.estimatedRowCount = estimatedRowCount;
     }
 
     private final List<KeyRange> keyRanges;
@@ -61,6 +62,11 @@ public class ScanAnalyzer {
     private final double cost;
     private TiIndexInfo index;
     private final boolean isDoubleRead;
+    private final double estimatedRowCount;
+
+    public double getEstimatedRowCount() {
+      return estimatedRowCount;
+    }
 
     public List<KeyRange> getKeyRanges() {
       return keyRanges;
@@ -118,10 +124,11 @@ public class ScanAnalyzer {
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
-    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate());
+    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
 
     List<KeyRange> keyRanges;
     boolean isDoubleRead = false;
+    double estimatedRowCount = -1;
     // table name and columns
     int tableSize = table.getColumns().size() + 1;
 
@@ -139,6 +146,7 @@ public class ScanAnalyzer {
           double idxRangeRowCnt = is.getRowCount(irs);
           // guess the percentage of rows hit
           cost = 100.0 * idxRangeRowCnt / ts.getCount();
+          estimatedRowCount = idxRangeRowCnt;
         }
       }
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
@@ -152,7 +160,7 @@ public class ScanAnalyzer {
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
 
-    return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead);
+    return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead, estimatedRowCount);
   }
 
   @VisibleForTesting
