@@ -78,8 +78,8 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | year |
 | json |
 
-# Supported TiDB version
-
+# Supported TiKV version
+TiSpark has been tested working well on TiKV v1.0, v1.1, v2.0. It is recommended to upgrade your TiKV to at least v1.0 before using TiSpark.
 
 ## Statistics information
 If you want to know how TiSpark could benefit from TiDB's statistic information, read more [here](./docs/userguide.md).
