@@ -74,8 +74,13 @@ object StatisticsHelper {
     val histVer = row.getLong(4)
     val nullCount = row.getLong(5)
     val cMSketch = if (checkColExists(histTable, "cm_sketch")) row.getBytes(6) else null
-    val indexInfos = table.getIndices.filter(_.getId == histID)
-    val colInfos = table.getColumns.filter(_.getId == histID)
+    // get index/col info for StatisticsDTO
+    val indexInfos = table.getIndices
+      .filter { _.getId == histID }
+
+    val colInfos = table.getColumns
+      .filter { _.getId == histID }
+
     var needed = true
 
     // we should only query those columns that user specified before
@@ -111,6 +116,27 @@ object StatisticsHelper {
     }
   }
 
+  private[statistics] def shouldUpdateHistogram(statistics: ColumnStatistics,
+                                                result: StatisticsResult): Boolean = {
+    if (statistics == null || result == null) return false
+    shouldUpdateHistogram(statistics.getHistogram, result.histogram)
+  }
+
+  private[statistics] def shouldUpdateHistogram(statistics: IndexStatistics,
+                                                result: StatisticsResult): Boolean = {
+    if (statistics == null || result == null) return false
+    shouldUpdateHistogram(statistics.getHistogram, result.histogram)
+  }
+
+  /**
+   * Check whether histogram should be updated according to version
+   */
+  private[statistics] def shouldUpdateHistogram(oldHis: Histogram, newHis: Histogram): Boolean = {
+    if (oldHis == null || newHis == null) return false
+    if (oldHis.getLastUpdateVersion < newHis.getLastUpdateVersion) return true
+    false
+  }
+
   private[statistics] def extractStatisticResult(histId: Long,
                                                  rows: Iterator[Row],
                                                  requests: Seq[StatisticsDTO]): StatisticsResult = {
@@ -121,15 +147,20 @@ object StatisticsHelper {
       val buckets = mutable.ArrayBuffer[Bucket]()
       while (rows.hasNext) {
         val row = rows.next()
-        val count = row.getLong(0)
-        val repeats = row.getLong(1)
-        var lowerBound: Key = null
-        var upperBound: Key = null
-        // all bounds are stored as blob in bucketTable currently, decode using blob type
-        lowerBound = TypedKey.toTypedKey(row.getBytes(2), DataTypeFactory.of(MySQLType.TypeBlob))
-        upperBound = TypedKey.toTypedKey(row.getBytes(3), DataTypeFactory.of(MySQLType.TypeBlob))
-        totalCount += count
-        buckets += new Bucket(totalCount, repeats, lowerBound, upperBound)
+        val isRowIndex = if (row.getLong(6) > 0) true else false
+        val isRequestIndex = matched.isIndex > 0
+        // if required DTO type(index/non index) is the same with the row
+        if (isRequestIndex && isRowIndex || !isRequestIndex && !isRowIndex) {
+          val count = row.getLong(0)
+          val repeats = row.getLong(1)
+          var lowerBound: Key = null
+          var upperBound: Key = null
+          // all bounds are stored as blob in bucketTable currently, decode using blob type
+          lowerBound = TypedKey.toTypedKey(row.getBytes(2), DataTypeFactory.of(MySQLType.TypeBlob))
+          upperBound = TypedKey.toTypedKey(row.getBytes(3), DataTypeFactory.of(MySQLType.TypeBlob))
+          totalCount += count
+          buckets += new Bucket(totalCount, repeats, lowerBound, upperBound)
+        }
       }
       // create histogram for column `colId`
       val histogram = Histogram
@@ -183,7 +214,7 @@ object StatisticsHelper {
   }
 
   private def checkColExists(table: TiTableInfo, column: String): Boolean =
-    table.getColumns.exists(_.matchName(column))
+    table.getColumns.exists { _.matchName(column) }
 
   private[statistics] def buildMetaRequest(metaTable: TiTableInfo,
                                            targetTblId: Long,
