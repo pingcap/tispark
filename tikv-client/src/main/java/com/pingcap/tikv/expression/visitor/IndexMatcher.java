@@ -85,6 +85,21 @@ public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
     }
   }
 
+//  @Override
+//  protected Boolean visit(StringRegExpression node, Void context) {
+//    switch (node.getRegType()) {
+//      // If the predicate is StartsWith(col, 'a'), this predicate
+//      // indicates a range of ['a',+∞) which can be used by index scan
+//      case STARTS_WITH:
+//        if (matchEqualTestOnly) {
+//          return false;
+//        }
+//        return node.getLeft().accept(this, context);
+//      default:
+//        return false;
+//    }
+//  }
+
   @Override
   protected Boolean visit(LogicalBinaryExpression node, Void context) {
     switch (node.getCompType()) {

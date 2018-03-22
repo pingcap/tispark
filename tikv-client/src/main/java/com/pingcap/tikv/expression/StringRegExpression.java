@@ -17,7 +17,7 @@ package com.pingcap.tikv.expression;
 
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.types.BytesType;
+import com.pingcap.tikv.types.IntegerType;
 
 import java.util.List;
 import java.util.Objects;
@@ -29,39 +29,46 @@ public class StringRegExpression implements Expression {
   public enum Type {
     STARTS_WITH,
     CONTAINS,
-    ENDS_WITH
+    ENDS_WITH,
+    LIKE
   }
 
   public static StringRegExpression startsWith(Expression left, Expression right) {
-    if (right instanceof Constant && ((Constant) right).getType() instanceof BytesType) {
-      right = Constant.create(((Constant) right).getValue() + "%", ((Constant) right).getType());
-    } else {
-      System.out.println("Impossible");
-    }
-    return new StringRegExpression(STARTS_WITH, left, right);
+    Expression reg = Constant.create(((Constant) right).getValue() + "%", ((Constant) right).getType());
+    return new StringRegExpression(STARTS_WITH, left, right, reg);
   }
 
   public static StringRegExpression contains(Expression left, Expression right) {
-    return new StringRegExpression(CONTAINS, left, right);
+    Expression reg = Constant.create("%" + ((Constant) right).getValue() + "%", ((Constant) right).getType());
+    return new StringRegExpression(CONTAINS, left, right, reg);
   }
 
   public static StringRegExpression endsWith(Expression left, Expression right) {
-    return new StringRegExpression(ENDS_WITH, left, right);
+    Expression reg = Constant.create("%" + ((Constant) right).getValue(), ((Constant) right).getType());
+    return new StringRegExpression(ENDS_WITH, left, right, reg);
+  }
+
+  public static StringRegExpression like(Expression left, Expression right) {
+    return new StringRegExpression(LIKE, left, right, right);
   }
 
   private final Expression left;
   private final Expression right;
+  private final Expression reg;
   private final Type regType;
 
-  public StringRegExpression(Type type, Expression left, Expression right) {
+  public StringRegExpression(Type type, Expression left, Expression right, Expression reg) {
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
     this.regType = requireNonNull(type, "type is null");
+    this.reg = requireNonNull(reg, "reg string is null");
   }
 
   @Override
   public List<Expression> getChildren() {
-    return ImmutableList.of(left, right);
+    // For LIKE statement, an extra ESCAPE parameter is required as the third parameter for ScalarFunc.
+    // However in Spark ESCAPE is not supported so we simply set this value to zero.
+    return ImmutableList.of(left, reg, Constant.create(0, IntegerType.BIGINT));
   }
 
   @Override
@@ -81,9 +88,13 @@ public class StringRegExpression implements Expression {
     return regType;
   }
 
+  public Expression getReg() {
+    return reg;
+  }
+
   @Override
   public String toString() {
-    return String.format("[%s %s %s]", getLeft(), getRegType(), getRight());
+    return String.format("[%s %s %s reg: %s]", getLeft(), getRegType(), getRight(), getReg());
   }
 
   @Override
@@ -98,11 +109,12 @@ public class StringRegExpression implements Expression {
     StringRegExpression that = (StringRegExpression) other;
     return (regType == that.regType) &&
         Objects.equals(left, that.left) &&
-        Objects.equals(right, that.right);
+        Objects.equals(left, that.right) &&
+        Objects.equals(right, that.reg);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(regType, left, right);
+    return Objects.hash(regType, left, right, reg);
   }
 }

@@ -19,7 +19,7 @@ import java.sql.Timestamp
 
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, StartsWith, Subtract}
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, StartsWith, Subtract}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
@@ -113,6 +113,15 @@ object BasicExpression {
 
       case StartsWith(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(StringRegExpression.startsWith(lhs, rhs))
+
+      case Contains(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(StringRegExpression.contains(lhs, rhs))
+
+      case EndsWith(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(StringRegExpression.endsWith(lhs, rhs))
+
+      case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(StringRegExpression.like(lhs, rhs))
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>
