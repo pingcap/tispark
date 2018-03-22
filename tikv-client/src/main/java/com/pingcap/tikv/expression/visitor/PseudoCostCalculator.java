@@ -58,10 +58,6 @@ public class PseudoCostCalculator extends DefaultVisitor<Double, Void> {
         return 0.3;
       case NOT_EQUAL:
         return 0.99;
-      case STARTS_WITH:
-      case CONTAINS:
-      case ENDS_WITH:
-        return 0.05;
       default:
         return 1.0;
     }

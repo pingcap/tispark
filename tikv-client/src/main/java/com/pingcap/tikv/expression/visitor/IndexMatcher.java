@@ -71,9 +71,6 @@ public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
       case GREATER_THAN:
       case GREATER_EQUAL:
       case NOT_EQUAL:
-      case STARTS_WITH:
-      case CONTAINS:
-      case ENDS_WITH:
         if (matchEqualTestOnly) {
           return false;
         }

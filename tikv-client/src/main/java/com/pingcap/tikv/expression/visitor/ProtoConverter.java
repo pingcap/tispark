@@ -97,9 +97,13 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     return expression.accept(converter, context);
   }
 
+  private Expr.Builder scalaToPartialProto(Expression node, Object context) {
+    return scalaToPartialProto(node, context, false);
+  }
+
   // Generate protobuf builder with partial data encoded.
   // Scala Signature is left alone
-  private Expr.Builder scalaToPartialProto(Expression node, Object context) {
+  private Expr.Builder scalaToPartialProto(Expression node, Object context, boolean isStringReg) {
     Expr.Builder builder = Expr.newBuilder();
     // Scalar function type
     builder.setTp(ExprType.ScalarFunc);
@@ -112,6 +116,13 @@ public class ProtoConverter extends Visitor<Expr, Object> {
 
     for (Expression child : node.getChildren()) {
       Expr exprProto = child.accept(this, context);
+      builder.addChildren(exprProto);
+    }
+
+    if (isStringReg) {
+      // For LIKE statement, an extra ESCAPE parameter is required as the third parameter for ScalarFunc.
+      // However in Spark ESCAPE is not supported so we simply set this value to zero.
+      Expr exprProto = Constant.create(0, IntegerType.BIGINT).accept(this, context);
       builder.addChildren(exprProto);
     }
 
@@ -201,15 +212,28 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       case NOT_EQUAL:
         protoSig = ScalarFuncSig.valueOf("NE" + typeSignature);
         break;
+      default:
+        throw new TiExpressionException(String.format("Unknown comparison type %s", node.getComparisonType()));
+    }
+    Expr.Builder builder = scalaToPartialProto(node, context);
+    builder.setSig(protoSig);
+    return builder.build();
+  }
+
+  @Override
+  protected Expr visit(StringRegExpression node, Object context) {
+    // assume after type coerce, children should be compatible
+    ScalarFuncSig protoSig;
+    switch (node.getRegType()) {
       case STARTS_WITH:
       case CONTAINS:
       case ENDS_WITH:
         protoSig = ScalarFuncSig.LikeSig;
         break;
       default:
-        throw new TiExpressionException(String.format("Unknown comparison type %s", node.getComparisonType()));
+        throw new TiExpressionException(String.format("Unknown reg type %s", node.getRegType()));
     }
-    Expr.Builder builder = scalaToPartialProto(node, context);
+    Expr.Builder builder = scalaToPartialProto(node, context, true);
     builder.setSig(protoSig);
     return builder.build();
   }
