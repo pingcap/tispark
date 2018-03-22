@@ -36,7 +36,10 @@ public class ComparisonBinaryExpression implements Expression {
     LESS_THAN,
     LESS_EQUAL,
     GREATER_THAN,
-    GREATER_EQUAL
+    GREATER_EQUAL,
+    STARTS_WITH,
+    CONTAINS,
+    ENDS_WITH
   }
 
   public static ComparisonBinaryExpression equal(Expression left, Expression right) {
@@ -61,6 +64,18 @@ public class ComparisonBinaryExpression implements Expression {
 
   public static ComparisonBinaryExpression greaterEqual(Expression left, Expression right) {
     return new ComparisonBinaryExpression(GREATER_EQUAL, left, right);
+  }
+
+  public static ComparisonBinaryExpression startsWith(Expression left, Expression right) {
+    return new ComparisonBinaryExpression(STARTS_WITH, left, right);
+  }
+
+  public static ComparisonBinaryExpression contains(Expression left, Expression right) {
+    return new ComparisonBinaryExpression(CONTAINS, left, right);
+  }
+
+  public static ComparisonBinaryExpression endsWith(Expression left, Expression right) {
+    return new ComparisonBinaryExpression(ENDS_WITH, left, right);
   }
 
   public static class NormalizedPredicate {

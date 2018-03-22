@@ -201,6 +201,11 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       case NOT_EQUAL:
         protoSig = ScalarFuncSig.valueOf("NE" + typeSignature);
         break;
+      case STARTS_WITH:
+      case CONTAINS:
+      case ENDS_WITH:
+        protoSig = ScalarFuncSig.LikeSig;
+        break;
       default:
         throw new TiExpressionException(String.format("Unknown comparison type %s", node.getComparisonType()));
     }

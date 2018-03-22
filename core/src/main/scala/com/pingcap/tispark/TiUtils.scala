@@ -121,11 +121,13 @@ object TiUtils {
       case _: IntegerType => sql.types.LongType
       case _: RealType    => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
-      // Decimal precision cannot exceed 38.
+      // Decimal precision cannot exceed MAX_PRECISION.
       case _: DecimalType =>
         var len = tp.getLength
         if (len > MAX_PRECISION) {
-          logger.warning("Decimal precision exceeding 38, value will be truncated")
+          logger.warning(
+            "Decimal precision exceeding MAX_PRECISION=" + MAX_PRECISION + ", value will be truncated"
+          )
           len = MAX_PRECISION
         }
         DataTypes.createDecimalType(

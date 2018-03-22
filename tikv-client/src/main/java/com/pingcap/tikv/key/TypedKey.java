@@ -63,6 +63,10 @@ public class TypedKey extends Key {
     return cdo.toBytes();
   }
 
+  public TypedKey next(int prefixLength) {
+    return toTypedKey(nextValue(value), type, prefixLength);
+  }
+
   @Override
   public String toString() {
     CodecDataInput cdi = new CodecDataInput(value);

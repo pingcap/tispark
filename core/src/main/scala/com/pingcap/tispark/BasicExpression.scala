@@ -17,12 +17,12 @@ package com.pingcap.tispark
 
 import java.sql.Timestamp
 
-import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
-import org.joda.time.DateTime
 import com.pingcap.tikv.expression.{ArithmeticBinaryExpression, ColumnRef, ComparisonBinaryExpression, Constant}
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, Subtract}
+import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Divide, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Literal, Multiply, Not, StartsWith, Subtract}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
+import org.joda.time.DateTime
 
 import scala.language.implicitConversions
 
@@ -110,6 +110,9 @@ object BasicExpression {
 
       case Not(BasicExpression(child)) =>
         Some(new TiNot(child))
+
+      case StartsWith(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(ComparisonBinaryExpression.startsWith(lhs, rhs))
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>

@@ -15,14 +15,14 @@
 
 package com.pingcap.tikv.expression.visitor;
 
-import static java.util.Objects.requireNonNull;
-
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.meta.TiIndexColumn;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Test if a predicate matches and index column entirely and can be convert to
@@ -71,6 +71,9 @@ public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
       case GREATER_THAN:
       case GREATER_EQUAL:
       case NOT_EQUAL:
+      case STARTS_WITH:
+      case CONTAINS:
+      case ENDS_WITH:
         if (matchEqualTestOnly) {
           return false;
         }
