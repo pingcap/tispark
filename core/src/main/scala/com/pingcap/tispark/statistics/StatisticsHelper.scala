@@ -150,7 +150,7 @@ object StatisticsHelper {
         val isRowIndex = if (row.getLong(6) > 0) true else false
         val isRequestIndex = matched.isIndex > 0
         // if required DTO type(index/non index) is the same with the row
-        if (isRequestIndex && isRowIndex || !isRequestIndex && !isRowIndex) {
+        if (isRequestIndex == isRowIndex) {
           val count = row.getLong(0)
           val repeats = row.getLong(1)
           var lowerBound: Key = null
