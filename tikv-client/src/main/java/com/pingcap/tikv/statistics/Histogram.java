@@ -106,7 +106,7 @@ public class Histogram {
     return nullCount;
   }
 
-  long getLastUpdateVersion() {
+  public long getLastUpdateVersion() {
     return lastUpdateVersion;
   }
 

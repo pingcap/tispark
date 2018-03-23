@@ -19,11 +19,11 @@ package com.pingcap.tispark.statistics
 
 import com.google.common.cache.CacheBuilder
 import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.meta.{TiColumnInfo, TiIndexInfo, TiTableInfo}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.DataType
-import com.pingcap.tispark.statistics.StatisticsHelper.getClass
+import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 
@@ -135,6 +135,8 @@ class StatisticsManager(tiSession: TiSession) {
     loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
   }
 
+  private[statistics] def readDAGRequest(req: TiDAGRequest): Iterator[Row] = snapshot.tableRead(req)
+
   private def loadStatsFromStorage(tblId: Long,
                                    tblStatistic: TableStatistics,
                                    table: TiTableInfo,
@@ -142,51 +144,63 @@ class StatisticsManager(tiSession: TiSession) {
                                    neededColIds: mutable.ArrayBuffer[Long]): Unit = {
     // load count, modify_count, version info
     loadMetaToTblStats(tblId, tblStatistic)
-    val req =
-      StatisticsHelper.buildHistogramsRequest(histTable, tblId, snapshot.getTimestamp.getVersion)
+    val req = StatisticsHelper
+      .buildHistogramsRequest(histTable, tblId, snapshot.getTimestamp.getVersion)
 
-    val rows = snapshot.tableRead(req)
-    if (!rows.hasNext) return
+    val rows = readDAGRequest(req)
+    if (rows.isEmpty) return
 
     val requests = rows
-      .map(StatisticsHelper.extractStatisticsDTO(_, table, loadAll, neededColIds, histTable))
-      .filter(_ != null)
+      .map { StatisticsHelper.extractStatisticsDTO(_, table, loadAll, neededColIds, histTable) }
+      .filter { _ != null }
     val results = statisticsResultFromStorage(tblId, requests.toSeq)
 
-    results.foreach((result: StatisticsResult) => {
-      if (result.hasIdxInfo)
-        tblStatistic.getIndexHistMap
-          .put(
-            result.histId,
-            new IndexStatistics(result.histogram, result.cMSketch, result.idxInfo)
-          )
-      else if (result.hasColInfo)
-        tblStatistic.getColumnsHistMap
-          .put(
-            result.histId,
-            new ColumnStatistics(
-              result.histogram,
-              result.cMSketch,
-              result.histogram.totalRowCount.toLong,
-              result.colInfo
-            )
-          )
-    })
+    // Update cache
+    results.foreach { putOrUpdateTblStats(tblStatistic, _) }
 
     statisticsMap.put(tblId.asInstanceOf[Object], tblStatistic.asInstanceOf[Object])
   }
+
+  private def putOrUpdateTblStats(tblStatistic: TableStatistics, result: StatisticsResult): Unit =
+    if (result.hasIdxInfo) {
+      val oldIdxSts = tblStatistic.getIndexHistMap.putIfAbsent(
+        result.histId,
+        new IndexStatistics(result.histogram, result.cMSketch, result.idxInfo)
+      )
+      if (shouldUpdateHistogram(oldIdxSts, result)) {
+        oldIdxSts.setHistogram { result.histogram }
+        oldIdxSts.setCmSketch { result.cMSketch }
+        oldIdxSts.setIndexInfo { result.idxInfo }
+      }
+    } else if (result.hasColInfo) {
+      val oldColSts = tblStatistic.getColumnsHistMap
+        .putIfAbsent(
+          result.histId,
+          new ColumnStatistics(
+            result.histogram,
+            result.cMSketch,
+            result.histogram.totalRowCount.toLong,
+            result.colInfo
+          )
+        )
+      if (shouldUpdateHistogram(oldColSts, result)) {
+        oldColSts.setHistogram { result.histogram }
+        oldColSts.setCmSketch { result.cMSketch }
+        oldColSts.setColumnInfo { result.colInfo }
+      }
+    }
 
   private def loadMetaToTblStats(tableId: Long, tableStatistics: TableStatistics): Unit = {
     val req =
       StatisticsHelper.buildMetaRequest(metaTable, tableId, snapshot.getTimestamp.getVersion)
 
-    val rows = snapshot.tableRead(req)
+    val rows = readDAGRequest(req)
     if (rows.isEmpty) return
 
     val row = rows.next()
-    tableStatistics.setCount(row.getLong(1))
-    tableStatistics.setModifyCount(row.getLong(2))
-    tableStatistics.setVersion(row.getLong(3))
+    tableStatistics.setCount { row.getLong(1) }
+    tableStatistics.setModifyCount { row.getLong(2) }
+    tableStatistics.setVersion { row.getLong(3) }
   }
 
   private def statisticsResultFromStorage(tableId: Long,
@@ -194,17 +208,23 @@ class StatisticsManager(tiSession: TiSession) {
     val req =
       StatisticsHelper.buildBucketRequest(bucketTable, tableId, snapshot.getTimestamp.getVersion)
 
-    val rows = snapshot.tableRead(req)
+    val rows = readDAGRequest(req)
     if (rows.isEmpty) return Nil
     // Group by hist_id(column_id)
     rows.toList
-      .groupBy(_.getLong(7))
-      .map((t: (Long, List[Row])) => {
+      .groupBy { _.getLong(7) }
+      .flatMap { (t: (Long, List[Row])) =>
         val histId = t._1
-        val rows = t._2.iterator
-        StatisticsHelper.extractStatisticResult(histId, rows, requests)
-      })
-      .filter(_ != null)
+        val rowsById = t._2
+        // split bucket rows into index rows / non-index rows
+        val (idxRows, colRows) = rowsById.partition { _.getLong(6) > 0 }
+        val (idxReq, colReq) = requests.partition { _.isIndex > 0 }
+        Array(
+          StatisticsHelper.extractStatisticResult(histId, idxRows.iterator, idxReq),
+          StatisticsHelper.extractStatisticResult(histId, colRows.iterator, colReq)
+        )
+      }
+      .filter { _ != null }
       .toSeq
   }
 
