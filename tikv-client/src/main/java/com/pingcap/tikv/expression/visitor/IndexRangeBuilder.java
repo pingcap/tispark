@@ -188,10 +188,7 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
 
     switch (node.getRegType()) {
       case STARTS_WITH:
-        ranges.add(Range.atLeast(literal));
-        ranges.add(Range.lessThan(literal.next(prefixLen)));
-        System.out.println(literal.getValue());
-        System.out.println(literal.next(prefixLen).getValue());
+        ranges.add(Range.atLeast(literal).intersection(Range.lessThan(literal.next(prefixLen))));
         break;
       case CONTAINS:
       case ENDS_WITH:
