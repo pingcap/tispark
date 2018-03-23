@@ -17,6 +17,19 @@ package org.apache.spark.sql
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  test("my test") {
+    spark
+      .sql("select tp_varchar from full_data_type_table_idx where tp_varchar LIKE 'a%'")
+      .explain()
+    spark
+      .sql("select tp_varchar from full_data_type_table_idx where tp_varchar LIKE 'a%f'")
+      .explain()
+    spark.sql("select tp_varchar from full_data_type_table_idx where tp_varchar LIKE 'a%'").show(false)
+    spark
+      .sql("select tp_varchar from full_data_type_table_idx where tp_varchar LIKE 'a%f'")
+      .show(false)
+  }
+
   // https://github.com/pingcap/tispark/issues/272
   test("Prefix index read does not work correctly") {
     tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")

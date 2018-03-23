@@ -9,7 +9,9 @@ class LikeTestSuite extends BaseTiSparkSuite {
     "select tp_varchar from full_data_type_table where tp_varchar LIKE '%a'",
     "select tp_varchar from full_data_type_table where tp_varchar LIKE 'a%a%'",
     "select tp_varchar from full_data_type_table where tp_varchar LIKE 'a%a'",
-    "select tp_varchar from full_data_type_table where tp_varchar LIKE '%'"
+    "select tp_varchar from full_data_type_table where tp_varchar LIKE '%'",
+    "select tp_varchar from full_data_type_table_idx where tp_varchar LIKE 'a%'",
+    "select tp_varchar from full_data_type_table_idx where tp_varchar LIKE 'a%a'"
   )
 
   allCases foreach { query =>

@@ -20,11 +20,8 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
+import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
@@ -168,6 +165,40 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
         default:
           throwOnError(node);
       }
+    }
+    return ranges;
+  }
+
+  @Override
+  protected RangeSet<TypedKey> visit(StringRegExpression node, Void context) {
+    ColumnRef columnRef = node.getColumnRef();
+    // In order to match a prefix index, we have to cut the literal by prefix length.
+    // e.g., for table t:
+    // CREATE TABLE `t` {
+    //     `c1` VARCHAR(10) DEFAULT NULL,
+    //     KEY `prefix_index` (`c`(2))
+    // }
+    // when the predicate is `c1` LIKE 'abc%', the index range should be ['ab', 'ab'].
+    // when the predicate is `c1` LIKE 'a%', the index range should be ['a', 'b').
+    // for varchar, `c1`(2) will take first two characters(bytes) as prefix index.
+    // TODO: Note that TiDB only supports UTF-8, we need to check if prefix index behave differently under other encoding methods
+    int prefixLen = lengths.getOrDefault(columnRef, DataType.UNSPECIFIED_LEN);
+    TypedKey literal = node.getTypedLiteral(prefixLen);
+    RangeSet<TypedKey> ranges = TreeRangeSet.create();
+
+    switch (node.getRegType()) {
+      case STARTS_WITH:
+        ranges.add(Range.atLeast(literal));
+        ranges.add(Range.lessThan(literal.next(prefixLen)));
+        System.out.println(literal.getValue());
+        System.out.println(literal.next(prefixLen).getValue());
+        break;
+      case CONTAINS:
+      case ENDS_WITH:
+      case LIKE:
+        break;
+      default:
+        throwOnError(node);
     }
     return ranges;
   }

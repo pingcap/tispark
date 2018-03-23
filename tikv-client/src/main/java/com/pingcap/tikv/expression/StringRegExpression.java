@@ -17,6 +17,8 @@ package com.pingcap.tikv.expression;
 
 
 import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.key.TypedKey;
+import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 
 import java.util.List;
@@ -50,6 +52,27 @@ public class StringRegExpression implements Expression {
 
   public static StringRegExpression like(Expression left, Expression right) {
     return new StringRegExpression(LIKE, left, right, right);
+  }
+
+  private TypedKey key;
+
+  public ColumnRef getColumnRef() {
+    return (ColumnRef) getLeft();
+  }
+
+  public Constant getValue() {
+    return (Constant) getRight();
+  }
+
+  public TypedKey getTypedLiteral() {
+    return getTypedLiteral(DataType.UNSPECIFIED_LEN);
+  }
+
+  public TypedKey getTypedLiteral(int prefixLength) {
+    if (key == null) {
+      key = TypedKey.toTypedKey(getValue().getValue(), getColumnRef().getType(), prefixLength);
+    }
+    return key;
   }
 
   private final Expression left;
@@ -110,7 +133,7 @@ public class StringRegExpression implements Expression {
     return (regType == that.regType) &&
         Objects.equals(left, that.left) &&
         Objects.equals(left, that.right) &&
-        Objects.equals(right, that.reg);
+        Objects.equals(reg, that.reg);
   }
 
   @Override
