@@ -29,10 +29,16 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("ANALYZE TABLE `prefix`")
     refreshConnections()
     // add explain to show if we have actually used prefix index in plan
+    spark.sql("select a, b from prefix where b < \"bbc\"").explain
     spark.sql("select a, b from prefix where a = 1 and b = \"bbb\"").explain
     spark.sql("select b from prefix where b = \"bbc\"").explain
+    spark.sql("select b from prefix where b >= \"bbc\" and b < \"bbd\"").explain
+    spark.sql("select c, b from prefix where b > \"bb\" and b < \"bbc\"").explain
+    assert(execDBTSAndJudge("select a, b from prefix where b < \"bbc\""))
     assert(execDBTSAndJudge("select a, b from prefix where a = 1 and b = \"bbb\""))
     assert(execDBTSAndJudge("select b from prefix where b = \"bbc\""))
+    assert(execDBTSAndJudge("select b from prefix where b >= \"bbc\" and b < \"bbd\""))
+    assert(execDBTSAndJudge("select c, b from prefix where b = \"bb\" and b < \"bbc\""))
   }
 
   // https://github.com/pingcap/tispark/issues/262
