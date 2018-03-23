@@ -109,14 +109,14 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     //     KEY `prefix_index` (`b`(2))
     // }
     //
-    // b(2) > "bbc" -> ("bb", +∞)
-    // b(2) >= "bbc" -> ("bb", +∞)
-    // b(2) < "bbc" -> (-∞, "bc")
-    // b(2) <= "bbc" -> (-∞, "bc")
+    // b(2) > "bbc" -> ["bb", +∞)
+    // b(2) >= "bbc" -> ["bb", +∞)
+    // b(2) < "bbc" -> (-∞, "bb"]
+    // b(2) <= "bbc" -> (-∞, "bb"]
     // b(2) = "bbc" -> ["bb", "bb"]
-    // b(2) > "b" -> ("b", +∞)
+    // b(2) > "b" -> ["b", +∞)
     // b(2) >= "b" -> ["b", +∞)
-    // b(2) < "b" -> (-∞, "b")
+    // b(2) < "b" -> (-∞, "b"]
     // b(2) <= "b" -> (-∞, "b"]
     //
     // For varchar, `b`(2) will take first two characters(bytes) as prefix index.
