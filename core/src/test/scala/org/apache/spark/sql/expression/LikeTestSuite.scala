@@ -9,7 +9,8 @@ class LikeTestSuite extends BaseTiSparkSuite {
     "select tp_varchar from full_data_type_table where tp_varchar LIKE '%a'",
     "select tp_varchar from full_data_type_table where tp_varchar LIKE 'a%a%'",
     "select tp_varchar from full_data_type_table where tp_varchar LIKE 'a%a'",
-    "select tp_varchar from full_data_type_table where tp_varchar LIKE '%'"
+    "select tp_varchar from full_data_type_table where tp_varchar LIKE '%'",
+    "select tp_varchar from full_data_type_table where tp_varchar LIKE 'z%'"
   )
 
   private val indexScanCases = Seq[String](
@@ -18,11 +19,11 @@ class LikeTestSuite extends BaseTiSparkSuite {
   )
 
   tableScanCases foreach { query =>
-  {
-    test(query) {
-      runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+    {
+      test(query) {
+        runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+      }
     }
-  }
   }
 
   indexScanCases foreach { query =>

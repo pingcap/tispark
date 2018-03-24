@@ -125,6 +125,14 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       case e: Throwable => fail(e)
     }
 
+  def explainAndTest(str: String, skipped: Boolean = false): Unit =
+    try {
+      spark.sql(str).explain()
+      assert(execDBTSAndJudge(str, skipped))
+    } catch {
+      case e: Throwable => fail(e)
+    }
+
   def runTest(qSpark: String, qJDBC: String): Unit = {
     var r1: List[List[Any]] = null
     var r2: List[List[Any]] = null
