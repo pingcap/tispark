@@ -141,11 +141,16 @@ public class ScanAnalyzer {
       cost *= tableSize;
     } else {
       if (ts != null) {
+        long totalRowCount = ts.getCount();
         IndexStatistics is = ts.getIndexHistMap().get(index.getId());
-        if (is != null) {
+        if (conditions.isEmpty()) {
+          cost = 100.0; // Full index scan cost
+          // TODO: Fine-grained statistics usage
+          estimatedRowCount = totalRowCount;
+        } else if (is != null) {
           double idxRangeRowCnt = is.getRowCount(irs);
           // guess the percentage of rows hit
-          cost = 100.0 * idxRangeRowCnt / ts.getCount();
+          cost = 100.0 * idxRangeRowCnt / totalRowCount;
           estimatedRowCount = idxRangeRowCnt;
         }
       }
