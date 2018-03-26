@@ -96,11 +96,11 @@ public class ScanAnalyzer {
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
-    ScanPlan minPlan = buildTableScan(conditions, table, ts);
+  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
+    ScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildScan(columnList, conditions, index, table, ts);
+      ScanPlan plan = buildScan(columnList, conditions, index, table, tableStatistics);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -109,12 +109,12 @@ public class ScanAnalyzer {
     return minPlan;
   }
 
-  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table, TableStatistics ts) {
+  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildScan(table.getColumns(), conditions, pkIndex, table, ts);
+    return buildScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
   }
 
-  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table, TableStatistics ts) {
+  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table, TableStatistics tableStatistics) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
@@ -133,19 +133,24 @@ public class ScanAnalyzer {
     int tableSize = table.getColumns().size() + 1;
 
     if (index == null || index.isFakePrimaryKey()) {
-      if (ts != null) {
+      if (tableStatistics != null) {
         cost = 100.0;// Full table scan cost
         // TODO: Fine-grained statistics usage
       }
       keyRanges = buildTableScanKeyRange(table, irs);
       cost *= tableSize;
     } else {
-      if (ts != null) {
-        IndexStatistics is = ts.getIndexHistMap().get(index.getId());
-        if (is != null) {
-          double idxRangeRowCnt = is.getRowCount(irs);
+      if (tableStatistics != null) {
+        long totalRowCount = tableStatistics.getCount();
+        IndexStatistics indexStatistics = tableStatistics.getIndexHistMap().get(index.getId());
+        if (conditions.isEmpty()) {
+          cost = 100.0; // Full index scan cost
+          // TODO: Fine-grained statistics usage
+          estimatedRowCount = totalRowCount;
+        } else if (indexStatistics != null) {
+          double idxRangeRowCnt = indexStatistics.getRowCount(irs);
           // guess the percentage of rows hit
-          cost = 100.0 * idxRangeRowCnt / ts.getCount();
+          cost = 100.0 * idxRangeRowCnt / totalRowCount;
           estimatedRowCount = idxRangeRowCnt;
         }
       }
