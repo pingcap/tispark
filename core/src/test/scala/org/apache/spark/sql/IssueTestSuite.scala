@@ -22,16 +22,20 @@ class IssueTestSuite extends BaseTiSparkSuite {
   test("TISPARK-16 fix excessive dag column") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
-    tidbStmt.execute("""CREATE TABLE `t1` (
-                       |         `c1` bigint(20) DEFAULT NULL,
-                       |         `k2` int(20) DEFAULT NULL,
-                       |         `k1` varchar(32) DEFAULT NULL
-                       |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin)
-    tidbStmt.execute("""CREATE TABLE `t2` (
-                       |         `c2` bigint(20) DEFAULT NULL,
-                       |         `k2` int(20) DEFAULT NULL,
-                       |         `k1` varchar(32) DEFAULT NULL
-                       |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin)
+    tidbStmt.execute(
+      """CREATE TABLE `t1` (
+        |         `c1` bigint(20) DEFAULT NULL,
+        |         `k2` int(20) DEFAULT NULL,
+        |         `k1` varchar(32) DEFAULT NULL
+        |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
+    )
+    tidbStmt.execute(
+      """CREATE TABLE `t2` (
+        |         `c2` bigint(20) DEFAULT NULL,
+        |         `k2` int(20) DEFAULT NULL,
+        |         `k1` varchar(32) DEFAULT NULL
+        |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
+    )
     tidbStmt.execute("insert into t1 values(1, 201707, 'aa')")
     tidbStmt.execute("insert into t2 values(2, 201707, 'aa')")
     refreshConnections()

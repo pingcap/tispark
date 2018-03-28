@@ -222,14 +222,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   /**
-    * build a Seq of used TiColumnRef from AttributeSet and bound them to souce table
-    *
-    * @param attributeSet AttributeSet containing projects w/ or w/o filters
-    * @param source source TiDBRelation
-    * @return a Seq of TiColumnRef extracted
-    */
-  def buildTiColumnRefFromColumnSet(attributeSet: AttributeSet, source: TiDBRelation): Seq[TiColumnRef] = {
-    val tiColumnSet: Seq[TiExpression] = attributeSet.toSeq.collect { case BasicExpression(expr) => expr }
+   * build a Seq of used TiColumnRef from AttributeSet and bound them to souce table
+   *
+   * @param attributeSet AttributeSet containing projects w/ or w/o filters
+   * @param source source TiDBRelation
+   * @return a Seq of TiColumnRef extracted
+   */
+  def buildTiColumnRefFromColumnSet(attributeSet: AttributeSet,
+                                    source: TiDBRelation): Seq[TiColumnRef] = {
+    val tiColumnSet: Seq[TiExpression] = attributeSet.toSeq.collect {
+      case BasicExpression(expr) => expr
+    }
     val resolver = new MetaResolver(source.table)
     val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
     tiColumns.foreach { resolver.resolve(_) }
@@ -242,7 +245,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr)     => expr }
+    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
