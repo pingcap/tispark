@@ -221,8 +221,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     set.toSeq
   }
 
-  def buildTiColumnRefFromColumnSet(seq: Seq[Expression], source: TiDBRelation): Seq[TiColumnRef] = {
-    val tiColumnSet: Seq[TiExpression] = seq.collect { case BasicExpression(expr) => expr }
+  /**
+    * build a Seq of used TiColumnRef from AttributeSet and bound them to souce table
+    *
+    * @param attributeSet AttributeSet containing projects w/ or w/o filters
+    * @param source source TiDBRelation
+    * @return a Seq of TiColumnRef extracted
+    */
+  def buildTiColumnRefFromColumnSet(attributeSet: AttributeSet, source: TiDBRelation): Seq[TiColumnRef] = {
+    val tiColumnSet: Seq[TiExpression] = attributeSet.toSeq.collect { case BasicExpression(expr) => expr }
     val resolver = new MetaResolver(source.table)
     val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
     tiColumns.foreach { resolver.resolve(_) }
@@ -341,7 +348,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val residualFilter: Option[Expression] =
       residualFilters.reduceLeftOption(catalyst.expressions.And)
 
-    val tiColumns = buildTiColumnRefFromColumnSet((projectSet ++ filterSet).toSeq, source)
+    val tiColumns = buildTiColumnRefFromColumnSet(projectSet ++ filterSet, source)
 
     filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
 
@@ -506,11 +513,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           groupingExpressions,
           aggregateExpressions,
           resultExpressions,
-          TiAggregationProjection(filters, _, `source`, projects)
+          TiAggregationProjection(filters, _, `source`, _)
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
         val expressions = groupingExpressions ++ aggregateExpressions ++ filters
         val projectSet = AttributeSet(expressions.flatMap { _.references })
-        val tiColumns = buildTiColumnRefFromColumnSet(projectSet.toSeq, source)
+        val tiColumns = buildTiColumnRefFromColumnSet(projectSet, source)
         val dagReq: TiDAGRequest = filterToDAGRequest(tiColumns, filters, source)
         groupAggregateProjection(
           tiColumns,
