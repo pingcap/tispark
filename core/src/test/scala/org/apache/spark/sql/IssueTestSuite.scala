@@ -15,7 +15,40 @@
 
 package org.apache.spark.sql
 
+import org.apache.spark.sql.functions.{col, sum}
+
 class IssueTestSuite extends BaseTiSparkSuite {
+
+  test("TISPARK-16 fix excessive dag column") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
+    tidbStmt.execute("""CREATE TABLE `t1` (
+                       |         `c1` bigint(20) DEFAULT NULL,
+                       |         `k2` int(20) DEFAULT NULL,
+                       |         `k1` varchar(32) DEFAULT NULL
+                       |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin)
+    tidbStmt.execute("""CREATE TABLE `t2` (
+                       |         `c2` bigint(20) DEFAULT NULL,
+                       |         `k2` int(20) DEFAULT NULL,
+                       |         `k1` varchar(32) DEFAULT NULL
+                       |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin)
+    tidbStmt.execute("insert into t1 values(1, 201707, 'aa')")
+    tidbStmt.execute("insert into t2 values(2, 201707, 'aa')")
+    refreshConnections()
+
+    val t1_df = spark.sql("select * from t1")
+    val t1_group_df = t1_df.groupBy("k1", "k2").agg(sum("c1").alias("c1"))
+    val t2_df = spark.sql("select * from t2")
+    t2_df.printSchema()
+    t2_df.show
+    val join_df = t1_group_df.join(t2_df, Seq("k1", "k2"), "left_outer")
+    join_df.printSchema()
+    join_df.show
+    val filter_df = join_df.filter(col("c2").isNotNull)
+    filter_df.show
+    val project_df = join_df.select("k1", "k2", "c1")
+    project_df.show
+  }
 
   // https://github.com/pingcap/tispark/issues/272
   test("Prefix index read does not work correctly") {
@@ -126,6 +159,8 @@ class IssueTestSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists t")
       tidbStmt.execute("drop table if exists tmp_debug")
       tidbStmt.execute("drop table if exists prefix")
+      tidbStmt.execute("drop table if exists t1")
+      tidbStmt.execute("drop table if exists t2")
     } finally {
       super.afterAll()
     }
