@@ -221,20 +221,21 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     set.toSeq
   }
 
+  def buildTiColumnRefFromColumnSet(seq: Seq[Expression], source: TiDBRelation): Seq[TiColumnRef] = {
+    val tiColumnSet: Seq[TiExpression] = seq.collect { case BasicExpression(expr) => expr }
+    val resolver = new MetaResolver(source.table)
+    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
+    tiColumns.foreach { resolver.resolve(_) }
+    tiColumns
+  }
+
   private def filterToDAGRequest(
-    columnSet: Seq[Expression],
+    tiColumns: Seq[TiColumnRef],
     filters: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiColumnSet: Seq[TiExpression] = columnSet.collect { case BasicExpression(expr) => expr }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr)     => expr }
-
-    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
-
-    val resolver = new MetaResolver(source.table)
-
-    tiColumns.foreach { resolver.resolve(_) }
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
@@ -340,7 +341,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     val residualFilter: Option[Expression] =
       residualFilters.reduceLeftOption(catalyst.expressions.And)
 
-    filterToDAGRequest((projectSet ++ filterSet).toSeq, pushdownFilters, source, dagRequest)
+    val tiColumns = buildTiColumnRefFromColumnSet((projectSet ++ filterSet).toSeq, source)
+
+    filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
 
     // Right now we still use a projection even if the only evaluation is applying an alias
     // to a column.  Since this is a no-op, it could be avoided. However, using this
@@ -513,7 +516,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
         val expressions = groupingExpressions ++ aggregateExpressions ++ filters
         val projectSet = AttributeSet(expressions.flatMap { _.references })
-        val dagReq: TiDAGRequest = filterToDAGRequest(projectSet.toSeq, filters, source)
+
+        val tiColumns = buildTiColumnRefFromColumnSet(projectSet.toSeq, source)
+
+        val dagReq: TiDAGRequest = filterToDAGRequest(tiColumns, filters, source)
         groupAggregateProjection(
           filters,
           groupingExpressions,
