@@ -370,11 +370,10 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def groupAggregateProjection(
-    filters: Seq[Expression],
+    tiColumns: Seq[TiColumnRef],
     groupingExpressions: Seq[NamedExpression],
     aggregateExpressions: Seq[AggregateExpression],
     resultExpressions: Seq[NamedExpression],
-    projects: Seq[NamedExpression],
     source: TiDBRelation,
     dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
@@ -411,11 +410,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         case _              => aggExpr
       }
     }
-
-    val projectSet = AttributeSet(projects.flatMap(_.references))
-    val filterSet = AttributeSet(filters.flatMap(_.references))
-    val tiColumnSet: Seq[TiExpression] = (projectSet ++ filterSet).toSeq.collect { case BasicExpression(tiExpr) => tiExpr }
-    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
 
     tiColumns foreach { dagReq.addRequiredColumn }
 
@@ -516,16 +510,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
         val expressions = groupingExpressions ++ aggregateExpressions ++ filters
         val projectSet = AttributeSet(expressions.flatMap { _.references })
-
         val tiColumns = buildTiColumnRefFromColumnSet(projectSet.toSeq, source)
-
         val dagReq: TiDAGRequest = filterToDAGRequest(tiColumns, filters, source)
         groupAggregateProjection(
-          filters,
+          tiColumns,
           groupingExpressions,
           aggregateExpressions,
           resultExpressions,
-          projects,
           `source`,
           dagReq
         )
