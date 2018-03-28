@@ -409,11 +409,12 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       }
     }
 
-    val projectionTiRefs: Seq[TiColumnRef] = projects
-      .map { _.toAttribute.name }
-      .map { ColumnRef.create }
+    val projectSet = AttributeSet(projects.flatMap(_.references))
+    val filterSet = AttributeSet(filters.flatMap(_.references))
+    val tiColumnSet: Seq[TiExpression] = (projectSet ++ filterSet).toSeq.collect { case BasicExpression(tiExpr) => tiExpr }
+    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
 
-    projectionTiRefs foreach { dagReq.addRequiredColumn }
+    tiColumns foreach { dagReq.addRequiredColumn }
 
     aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
 

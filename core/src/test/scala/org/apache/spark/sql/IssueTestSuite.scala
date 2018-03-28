@@ -36,6 +36,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into t2 values(2, 201707, 'aa')")
     refreshConnections()
 
+    // Note: Left outer join for DataSet is different from that in mysql.
+    // The result of DataSet[a, b, c] left outer join DataSet[d, b, c]
+    // on join key(b, c) will be DataSet[b, c, a, d]
     val t1_df = spark.sql("select * from t1")
     val t1_group_df = t1_df.groupBy("k1", "k2").agg(sum("c1").alias("c1"))
     val t2_df = spark.sql("select * from t2")
