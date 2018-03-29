@@ -138,13 +138,13 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
-  def tidbMapDatabase(dbName: String, dbNameAsPrefix:Boolean ): Unit = {
-    tidbMapDatabase(dbName,dbNameAsPrefix,autoLoad)
+  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit = {
+    tidbMapDatabase(dbName, dbNameAsPrefix, autoLoad)
   }
 
   def tidbMapDatabase(dbName: String,
                       dbNameAsPrefix: Boolean = false,
-                      autoLoadStatistics: Boolean = autoLoad ): Unit =
+                      autoLoadStatistics: Boolean = autoLoad): Unit =
     for {
       db <- meta.getDatabase(dbName)
       table <- meta.getTables(db)
