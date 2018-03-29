@@ -516,10 +516,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           groupingExpressions,
           aggregateExpressions,
           resultExpressions,
-          TiAggregationProjection(filters, _, `source`, _)
+          TiAggregationProjection(filters, _, `source`, projects)
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
-        val expressions = groupingExpressions ++ aggregateExpressions ++ filters
-        val projectSet = AttributeSet(expressions.flatMap { _.references })
+        val projectSet = AttributeSet((projects ++ filters).flatMap { _.references })
         val tiColumns = buildTiColumnRefFromColumnSet(projectSet, source)
         val dagReq: TiDAGRequest = filterToDAGRequest(tiColumns, filters, source)
         groupAggregateProjection(

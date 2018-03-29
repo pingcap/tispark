@@ -53,7 +53,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     join_df.show
     val filter_df = join_df.filter(col("c2").isNotNull)
     filter_df.show
-    val project_df = join_df.select("k1", "k2", "c1")
+    val project_df = join_df.select("k1", "k2", "c2")
     project_df.show
   }
 
