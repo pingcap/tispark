@@ -15,16 +15,7 @@
 
 package com.pingcap.tikv.expression.visitor;
 
-import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.AggregateFunction;
-import com.pingcap.tikv.expression.IsNull;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.Not;
-import com.pingcap.tikv.expression.Visitor;
+import com.pingcap.tikv.expression.*;
 
 public class DefaultVisitor<R, C> extends Visitor<R,C> {
   protected R process(Expression node, C context) {
@@ -41,6 +32,11 @@ public class DefaultVisitor<R, C> extends Visitor<R,C> {
 
   @Override
   protected R visit(ComparisonBinaryExpression node, C context) {
+    return process(node, context);
+  }
+
+  @Override
+  protected R visit(StringRegExpression node, C context) {
     return process(node, context);
   }
 

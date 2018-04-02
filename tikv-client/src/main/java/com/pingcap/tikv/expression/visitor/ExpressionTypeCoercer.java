@@ -43,6 +43,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   private final static double CONSTANT_CRED = MIN_CREDIBILITY;
   private final static double LOGICAL_OP_CRED = MAX_CREDIBILITY;
   private final static double COMPARISON_OP_CRED = MAX_CREDIBILITY;
+  private final static double SRING_REG_OP_CRED = MAX_CREDIBILITY;
   private final static double FUNCTION_CRED = MAX_CREDIBILITY;
   private final static double ISNULL_CRED = MAX_CREDIBILITY;
   private final static double NOT_CRED = MAX_CREDIBILITY;
@@ -117,6 +118,18 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
       typeMap.put(node, IntegerType.BOOLEAN);
     }
     return Pair.create(IntegerType.BOOLEAN, COMPARISON_OP_CRED);
+  }
+
+  @Override
+  protected Pair<DataType, Double> visit(StringRegExpression node, DataType targetType) {
+    if (targetType != null && !targetType.equals(IntegerType.BOOLEAN)) {
+      throw new TiExpressionException(String.format("Comparison result cannot be %s", targetType));
+    }
+    if (!typeMap.containsKey(node)) {
+      coerceType(null, node.getLeft(), node.getRight());
+      typeMap.put(node, IntegerType.BOOLEAN);
+    }
+    return Pair.create(IntegerType.BOOLEAN, SRING_REG_OP_CRED);
   }
 
   @Override

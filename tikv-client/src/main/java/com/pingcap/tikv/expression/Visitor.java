@@ -23,6 +23,8 @@ public abstract class Visitor<R, C> {
 
   abstract protected R visit(ComparisonBinaryExpression node, C context);
 
+  abstract protected R visit(StringRegExpression node, C context);
+
   abstract protected R visit(ArithmeticBinaryExpression node, C context);
 
   abstract protected R visit(LogicalBinaryExpression node, C context);
