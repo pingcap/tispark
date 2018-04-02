@@ -259,18 +259,23 @@ spark.sql("select * from hive_table a, tispark_table b where a.col1 = b.col1").s
 ## Load Spark Dataframe into TiDB using JDBC
 TiSpark does not provide a direct way to load data into yout TiDB cluster, but you can still load using jdbc like this:
 ```scala
-val df = spark.sql("select * from lineitem limit 100000")
-
-df.write.
-mode(saveMode = "overwrite").
-format("jdbc").
-option("driver","com.mysql.jdbc.Driver").
-option("url", "jdbc:mysql://127.0.0.1:4000/test"). // replace with your TiDB address and port
-option("useSSL", "false").
-option("dbtable", "lineitem").
-option("isolationLevel", "NONE") // recommended to set isolationLevel to NONE if you have a large DF to load.
-option("user", "root").
-save()
+val customer = spark.sql("select * from customer limit 100000")
+// you might repartition source to make it balance across nodes
+// and increase concurrency
+val df = customer.repartition(32)
+df.write
+.mode(saveMode = "overwrite")
+.format("jdbc")
+.option("driver", "com.mysql.jdbc.Driver")
+ // replace host and port as your and be sure to use rewrite batch
+.option("url", "jdbc:mysql://127.0.0.1:4000/test?rewriteBatchedStatements=true")
+.option("useSSL", "false")
+// As tested, 150 is good practice
+.option(JDBCOptions.JDBC_BATCH_INSERT_SIZE, 150)
+.option("dbtable", s"cust_test_select") // database name and table name here
+.option("isolationLevel", "NONE") // recommended to set isolationLevel to NONE if you have a large DF to load.
+.option("user", "root") // TiDB user here
+.save()
 ``` 
 It is recommended to set `isolationLevel` to `NONE` to avoid large single transactions which may potentialy lead to TiDB OOM.
 
