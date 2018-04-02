@@ -137,6 +137,7 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
           ranges.add(Range.singleton(literal));
           break;
         case NOT_EQUAL:
+          // Simply break here because an empty RangeSet will be evaluated as a full range
           break;
         default:
           throwOnError(node);
@@ -189,10 +190,6 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     switch (node.getRegType()) {
       case STARTS_WITH:
         ranges.add(Range.atLeast(literal).intersection(Range.lessThan(literal.next(prefixLen))));
-        break;
-      case CONTAINS:
-      case ENDS_WITH:
-      case LIKE:
         break;
       default:
         throwOnError(node);

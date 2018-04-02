@@ -33,6 +33,7 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     explainAndTest("select a, b from prefix where b < \"bbc\"")
     explainAndTest("select a, b from prefix where a = 1 and b = \"bbb\"")
     explainAndTest("select b from prefix where b = \"bbc\"")
+    explainAndTest("select b from prefix where b != \"bbc\"")
     explainAndTest("select b from prefix where b >= \"bbc\" and b < \"bbd\"")
     // FIXME: following test results in INDEX range [bb, bb] and TABLE range (-INF, bbc), while the table range should have been [bb, bb]
     // FYI, the predicate is [[b] LESS_THAN "bbc"], Not(IsNull([b])), [[b] EQUAL "bb"]
