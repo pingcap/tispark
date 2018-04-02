@@ -54,7 +54,7 @@ public class StringRegExpression implements Expression {
     return new StringRegExpression(LIKE, left, right, right);
   }
 
-  private TypedKey key;
+  private transient TypedKey key;
 
   public ColumnRef getColumnRef() {
     return (ColumnRef) getLeft();

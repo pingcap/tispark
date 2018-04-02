@@ -118,7 +118,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     spark.sparkContext.setLogLevel(level)
   }
 
-  private def judge(str: String, skipped: Boolean = false): Unit = assert(execDBTSAndJudge(str, skipped))
+  private def judge(str: String, skipped: Boolean = false): Unit =
+    assert(execDBTSAndJudge(str, skipped))
 
   def execDBTSAndJudge(str: String, skipped: Boolean = false): Boolean =
     try {

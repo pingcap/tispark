@@ -21,13 +21,12 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.FastByteComparisons;
 
-import java.io.Serializable;
 import java.util.Arrays;
 
 import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
 import static java.util.Objects.requireNonNull;
 
-public class Key implements Comparable<Key>, Serializable {
+public class Key implements Comparable<Key> {
   protected static final byte[] TBL_PREFIX = new byte[] {'t'};
 
   protected final byte[] value;

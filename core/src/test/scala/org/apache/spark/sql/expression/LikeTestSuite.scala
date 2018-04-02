@@ -38,7 +38,18 @@ class LikeTestSuite extends BaseTiSparkSuite {
     "select * from full_data_type_table_idx where tp_varchar LIKE 'ÿ%'"
   )
 
-  tableScanCases foreach { query => test(query) { explainAndRunTest(query, query.replace("full_data_type_table", "full_data_type_table_j")) } }
+  tableScanCases foreach { query =>
+    test(query) {
+      explainAndRunTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+    }
+  }
 
-  indexScanCases foreach { query => test(query) { explainAndRunTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j")) } }
+  indexScanCases foreach { query =>
+    test(query) {
+      explainAndRunTest(
+        query,
+        query.replace("full_data_type_table_idx", "full_data_type_table_idx_j")
+      )
+    }
+  }
 }
