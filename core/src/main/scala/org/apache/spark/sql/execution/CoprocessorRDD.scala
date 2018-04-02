@@ -77,9 +77,9 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
 
 /**
  * HandleRDDExec is used for scanning handles from TiKV as a LeafExecNode in index plan.
- * Providing handle scan via a TiHandleRDD.
+ * Providing handleResponseError scan via a TiHandleRDD.
  *
- * @param tiHandleRDD handle source
+ * @param tiHandleRDD handleResponseError source
  */
 case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   override val nodeName: String = "HandleRDD"
@@ -370,7 +370,7 @@ case class RegionTaskExec(child: SparkPlan,
               // Should downgrade to full table scan for one region
               val taskRanges = tasks.head.getRanges
               logger.warn(
-                s"Index scan handle size:${handles.length} exceed downgrade threshold:$downgradeThreshold" +
+                s"Index scan handleResponseError size:${handles.length} exceed downgrade threshold:$downgradeThreshold" +
                   s", downgrade to table scan with ${tasks.size()} region tasks, " +
                   s"original index scan task has ${taskRanges.size()} ranges, will try to merge."
               )

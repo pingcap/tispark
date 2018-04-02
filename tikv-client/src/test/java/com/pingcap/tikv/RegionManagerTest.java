@@ -50,7 +50,7 @@ public class RegionManagerTest {
 
     TiConfiguration conf =
         TiConfiguration.createDefault("127.0.0.1:" + server.port);
-    conf.setRetryTimes(3);
+    conf.setRetryTimeMs(3);
     conf.setBackOffClass(ZeroBackOff.class);
     TiSession session = TiSession.create(conf);
     mgr = session.getRegionManager();

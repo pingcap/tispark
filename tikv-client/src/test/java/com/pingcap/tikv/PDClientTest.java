@@ -52,7 +52,7 @@ public class PDClientTest {
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
     TiConfiguration conf =
         TiConfiguration.createDefault("127.0.0.1:" + server.port);
-    conf.setRetryTimes(3);
+    conf.setRetryTimeMs(3);
     conf.setBackOffClass(ZeroBackOff.class);
     session = TiSession.create(conf);
   }

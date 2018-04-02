@@ -17,10 +17,47 @@
 
 package com.pingcap.tikv.util;
 
+import com.pingcap.tikv.exception.GrpcException;
+
 public interface BackOff {
-  /** Indicates that no more retries should be made for use in {@link #nextBackOffMillis()}. */
+  /**
+   * Indicates that no more retries should be made for use in {@link #nextBackOffMillis()}.
+   */
   long STOP = -1L;
-  /** Reset to initial state. */
+
+  enum BackOffStrategy {
+    // NoJitter makes the backoff sequence strict exponential.
+    NoJitter,
+    // FullJitter applies random factors to strict exponential.
+    FullJitter,
+    // EqualJitter is also randomized, but prevents very short sleeps.
+    EqualJitter,
+    // DecorrJitter increases the maximum jitter based on the last random value.
+    DecorrJitter
+  }
+
+  int copBuildTaskMaxBackoff  = 5000;
+  int tsoMaxBackoff           = 5000;
+  int scannerNextMaxBackoff   = 20000;
+  int batchGetMaxBackoff      = 20000;
+  int copNextMaxBackoff       = 20000;
+  int getMaxBackoff           = 20000;
+  int prewriteMaxBackoff      = 20000;
+  int cleanupMaxBackoff       = 20000;
+  int GcOneRegionMaxBackoff   = 20000;
+  int GcResolveLockMaxBackoff = 100000;
+  int GcDeleteRangeMaxBackoff = 100000;
+  int rawkvMaxBackoff         = 20000;
+  int splitRegionBackoff      = 20000;
+
+  /**
+   * doBackoff sleeps a while base on the BackOffType and records the error message.
+   */
+  void doBackOff(BackoffFunction.BackOffFuncType funcTypes, Exception err);
+
+  /**
+   * Reset to initial state.
+   */
   void reset();
 
   /**
@@ -32,12 +69,12 @@ public interface BackOff {
    * </p>
    *
    * <pre>
-   long backOffMillis = backoff.nextBackOffMillis();
-   if (backOffMillis == Backoff.STOP) {
-   // do not retry operation
-   } else {
-   // sleep for backOffMillis milliseconds and retry operation
-   }
+   * long backOffMillis = backoff.nextBackOffMillis();
+   * if (backOffMillis == Backoff.STOP) {
+   * // do not retry operation
+   * } else {
+   * // sleep for backOffMillis milliseconds and retry operation
+   * }
    * </pre>
    */
   long nextBackOffMillis();
@@ -47,6 +84,11 @@ public interface BackOff {
    * immediately without waiting.
    */
   BackOff ZERO_BACKOFF = new BackOff() {
+
+    @Override
+    public void doBackOff(BackoffFunction.BackOffFuncType funcTypes, Exception err) {
+
+    }
 
     public void reset() {
     }
@@ -62,6 +104,11 @@ public interface BackOff {
    */
   BackOff STOP_BACKOFF = new BackOff() {
 
+    @Override
+    public void doBackOff(BackoffFunction.BackOffFuncType funcTypes, Exception err) {
+      throw new RuntimeException("Should stop");
+    }
+
     public void reset() {
     }
 
@@ -69,4 +116,12 @@ public interface BackOff {
       return STOP;
     }
   };
+
+  default void doWait(long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      throw new GrpcException(e);
+    }
+  }
 }

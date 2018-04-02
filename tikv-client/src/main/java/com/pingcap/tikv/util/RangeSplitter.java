@@ -107,7 +107,7 @@ public class RangeSplitter {
   /**
    * Group by a list of handles by the handles' region id
    *
-   * @param tableId Table id used for the handle
+   * @param tableId Table id used for the handleResponseError
    * @param handles Handle list
    * @return <RegionId, HandleList> map
    */
@@ -131,9 +131,9 @@ public class RangeSplitter {
       }
 
       // Region range is a close-open range
-      // If region end key match exactly or slightly less than a handle,
-      // that handle should be excluded from current region
-      // If region end key is greater than the handle, that handle should be included
+      // If region end key match exactly or slightly less than a handleResponseError,
+      // that handleResponseError should be excluded from current region
+      // If region end key is greater than the handleResponseError, that handleResponseError should be included
       long regionEndHandle = decodeResult.handle;
       int pos = handles.binarySearch(regionEndHandle, startPos, handles.size());
 
@@ -142,15 +142,15 @@ public class RangeSplitter {
         // [startPos, pos) all included
         pos = -(pos + 1);
       } else if (decodeResult.status == Status.GREATER) {
-        // found handle and then further consider decode status
+        // found handleResponseError and then further consider decode status
         // End key decode to a value v: regionEndHandle < v < regionEndHandle + 1
-        // handle at pos included
+        // handleResponseError at pos included
         pos ++;
       }
       result.put(regionStorePair.first.getId(), createHandleList(startPos, pos, handles));
       // pos equals to start leads to an dead loop
-      // startPos and its handle is used for searching region in PD.
-      // The returning close-open range should at least include startPos's handle
+      // startPos and its handleResponseError is used for searching region in PD.
+      // The returning close-open range should at least include startPos's handleResponseError
       // so only if PD error and startPos is not included in current region then startPos == pos
       if (startPos >= pos) {
         throw new TiExpressionException("searchKey is not included in region returned by PD");
@@ -174,7 +174,7 @@ public class RangeSplitter {
   }
 
   public List<RegionTask> splitHandlesByRegion(long tableId, TLongArrayList handles) {
-    // Max value for current index handle range
+    // Max value for current index handleResponseError range
     ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
 
     TLongObjectHashMap<TLongArrayList> regionHandlesMap = groupByHandlesByRegionId(tableId, handles);

@@ -36,6 +36,10 @@ public class RetryNTimes<T> extends RetryPolicy<T> {
       }
     }
 
+    public Builder(BackOff backOff) {
+      this.backOff = backOff;
+    }
+
     @Override
     public RetryPolicy<T> create(ErrorHandler<T> handler) {
       return new RetryNTimes<>(handler, backOff);

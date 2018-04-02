@@ -90,7 +90,7 @@ public class IndexScanIterator implements Iterator<Row> {
         return false;
       }
     } catch (Exception e) {
-      throw new TiClientInternalException("Error reading rows from handle", e);
+      throw new TiClientInternalException("Error reading rows from handleResponseError", e);
     }
     return rowIterator.hasNext();
   }

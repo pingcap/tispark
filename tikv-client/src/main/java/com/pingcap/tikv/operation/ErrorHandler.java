@@ -17,7 +17,11 @@
 
 package com.pingcap.tikv.operation;
 
-@FunctionalInterface
+import com.pingcap.tikv.util.BackOff;
+
 public interface ErrorHandler<RespT> {
-  void handle(RespT resp);
+  boolean handleResponseError(BackOff backOff, RespT resp);
+
+  // OnRequestFail is used for clearing cache when a tikv server does not respond.
+  boolean handleRequestError(BackOff backOff, Exception e);
 }

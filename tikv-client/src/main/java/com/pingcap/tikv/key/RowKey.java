@@ -43,7 +43,7 @@ public class RowKey extends Key {
   }
 
   /**
-   * The RowKey indicating maximum handle (its value exceeds Long.Max_Value)
+   * The RowKey indicating maximum handleResponseError (its value exceeds Long.Max_Value)
    *
    * Initializes an imaginary globally MAXIMUM rowKey with tableId.
    */

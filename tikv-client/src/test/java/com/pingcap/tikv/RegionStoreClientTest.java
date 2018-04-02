@@ -75,7 +75,7 @@ public class RegionStoreClientTest {
     // No PD needed in this test
     TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
     session = TiSession.create(conf);
-    conf.setRetryTimes(3);
+    conf.setRetryTimeMs(3);
     conf.setBackOffClass(ZeroBackOff.class);
   }
 

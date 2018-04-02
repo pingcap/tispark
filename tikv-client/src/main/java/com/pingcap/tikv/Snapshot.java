@@ -122,7 +122,7 @@ public class Snapshot {
   }
 
   /**
-   * Below is lower level API for env like Spark which already did key range split Perform handle
+   * Below is lower level API for env like Spark which already did key range split Perform handleResponseError
    * scan
    *
    * @param dagRequest DAGRequest for coprocessor

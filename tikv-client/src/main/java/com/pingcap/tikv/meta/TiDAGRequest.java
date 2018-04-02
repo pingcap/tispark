@@ -204,7 +204,7 @@ public class TiDAGRequest implements Serializable {
           .setColumnId(-1)
           .setPkHandle(true)
           // We haven't changed the field name in protobuf file, but
-          // we need to set this to true in order to retrieve the handle,
+          // we need to set this to true in order to retrieve the handleResponseError,
           // so the name 'setPkHandle' may sounds strange.
           .build();
 
@@ -293,7 +293,7 @@ public class TiDAGRequest implements Serializable {
         }
 
         int colCount = indexScanBuilder.getColumnsCount();
-        // double read case: need to retrieve handle
+        // double read case: need to retrieve handleResponseError
         dagRequestBuilder.addOutputOffsets(
             colCount != 0 ? colCount - 1 : 0
         );
@@ -318,7 +318,7 @@ public class TiDAGRequest implements Serializable {
             pkIsNeeded = true;
             // offset should be processed for each primary key encountered
             dagRequestBuilder.addOutputOffsets(colCount);
-            // for index scan, column offset must be in the order of index->handle
+            // for index scan, column offset must be in the order of index->handleResponseError
             colOffsetInFieldMap.put(col, indexColOffsets.size());
           } else {
             throw new DAGRequestException("columns other than primary key and index key exist in fields while index single read: " + col.getName());
@@ -345,7 +345,7 @@ public class TiDAGRequest implements Serializable {
         tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
         colOffsetInFieldMap.put(col, i);
       }
-      // Currently, according to TiKV's implementation, if handle
+      // Currently, according to TiKV's implementation, if handleResponseError
       // is needed, we should add an extra column with an ID of -1
       // to the TableScan executor
       if (isHandleNeeded()) {
@@ -358,7 +358,7 @@ public class TiDAGRequest implements Serializable {
         dagRequestBuilder.addOutputOffsets(i);
       }
 
-      // if handle is needed, we should append one output offset
+      // if handleResponseError is needed, we should append one output offset
       if (isHandleNeeded()) {
         dagRequestBuilder.addOutputOffsets(tableInfo.getColumns().size());
       }
@@ -687,7 +687,7 @@ public class TiDAGRequest implements Serializable {
   }
 
   /**
-   * Returns whether handle is needed.
+   * Returns whether handleResponseError is needed.
    *
    * @return the boolean
    */
@@ -696,9 +696,9 @@ public class TiDAGRequest implements Serializable {
   }
 
   /**
-   * Sets handle needed.
+   * Sets handleResponseError needed.
    *
-   * @param handleNeeded the handle needed
+   * @param handleNeeded the handleResponseError needed
    */
   public void setHandleNeeded(boolean handleNeeded) {
     this.handleNeeded = handleNeeded;

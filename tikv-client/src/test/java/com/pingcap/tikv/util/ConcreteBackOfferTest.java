@@ -20,10 +20,10 @@ package com.pingcap.tikv.util;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
-public class ExponentialBackOffTest {
+public class ConcreteBackOfferTest {
   @Test
   public void nextBackOffMillisTest() {
-    BackOff backOff = new ExponentialBackOff(10);
+    BackOff backOff = new ConcreteBackOffer(10);
     for(int i = 1; i < 10; i++) {
       long nextBackoffMillis = backOff.nextBackOffMillis();
       int factor = i<<2;

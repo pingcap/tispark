@@ -3,9 +3,7 @@ package com.pingcap.tikv.operation.iterator;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
-import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.exception.GrpcNeedRegionRefreshException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Metapb;
@@ -13,11 +11,13 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorCompletionService;
 
 import static com.pingcap.tikv.meta.TiDAGRequest.PushDownType.STREAMING;
@@ -27,6 +27,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
   private ExecutorCompletionService<SelectResponse> dagService;
   private SelectResponse response;
   private static final int MAX_PROCESS_DEPTH = 3;
+  private static final Logger logger = LoggerFactory.getLogger(DAGIterator.class.getName());
 
   private Iterator<SelectResponse> responseIterator;
 
@@ -58,7 +59,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
           streamingService.submit(() -> processByStreaming(task));
           break;
         case NORMAL:
-          dagService.submit(() -> process(task, 0));
+          dagService.submit(() -> process(task));
           break;
       }
     }
@@ -152,40 +153,45 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     return advanceNextResponse();
   }
 
-  private SelectResponse process(RangeSplitter.RegionTask regionTask, int curDepth) {
-    if (curDepth > MAX_PROCESS_DEPTH) {
-      throw new RuntimeException("Request failed after " + curDepth + " region refresh operation, abort.");
-    }
-    List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
-    TiRegion region = regionTask.getRegion();
-    Metapb.Store store = regionTask.getStore();
+  private SelectResponse process(RangeSplitter.RegionTask regionTask) {
+    Queue<RangeSplitter.RegionTask> remainTasks = new ArrayDeque<>();
+    Queue<SelectResponse> responseQueue = new ArrayDeque<>();
+    remainTasks.add(regionTask);
+    BackOff backOff = new ConcreteBackOffer(BackOff.copNextMaxBackoff);
+    // In case of one region task spilt into several others, we ues a queue to properly handleResponseError all
+    // the remaining tasks.
+    while (!remainTasks.isEmpty()) {
+      RangeSplitter.RegionTask task = remainTasks.poll();
+      if (task == null) continue;
+      List<Coprocessor.KeyRange> ranges = task.getRanges();
+      TiRegion region = task.getRegion();
+      Metapb.Store store = task.getStore();
 
-    RegionStoreClient client;
-    try {
-      client = RegionStoreClient.create(region, store, session);
-      SelectResponse response = client.coprocess(dagRequest, ranges);
-      if (response == null) {
+      try {
+        RegionStoreClient client = RegionStoreClient.create(region, store, session);
+        Collection<RangeSplitter.RegionTask> tasks =
+            client.handleRequestOnce(backOff, dagRequest, ranges, responseQueue);
+        remainTasks.addAll(tasks);
+      } catch (Throwable e) {
+        // Handle region task failed
+        logger.error("Handle region task failed.", e);
         eof = true;
         return null;
       }
-      return response;
-    } catch (GrpcNeedRegionRefreshException e) {
-      List<Chunk> resultChunk = new ArrayList<>();
-      List<RangeSplitter.RegionTask> splitTasks = RangeSplitter
-          .newSplitter(session.getRegionManager())
-          .splitRangeByRegion(ranges);
-
-      for (RangeSplitter.RegionTask t : splitTasks) {
-        SelectResponse resFromCurTask = process(t, curDepth + 1);
-        if (resFromCurTask != null) {
-          resultChunk.addAll(resFromCurTask.getChunksList());
-        }
-      }
-
-      return SelectResponse.newBuilder()
-          .addAllChunks(resultChunk)
-          .build();
     }
+
+    // Add all chunks to the final result
+    List<Chunk> resultChunk = new ArrayList<>();
+    while (!responseQueue.isEmpty()) {
+      SelectResponse response = responseQueue.poll();
+      if (response != null) {
+        resultChunk.addAll(response.getChunksList());
+      }
+    }
+
+    return SelectResponse.newBuilder()
+        .addAllChunks(resultChunk)
+        .build();
   }
 
   private Iterator<SelectResponse> processByStreaming(RangeSplitter.RegionTask regionTask) {

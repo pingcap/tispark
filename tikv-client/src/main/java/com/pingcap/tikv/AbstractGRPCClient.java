@@ -19,6 +19,7 @@ import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.policy.RetryNTimes.Builder;
 import com.pingcap.tikv.policy.RetryPolicy;
 import com.pingcap.tikv.streaming.StreamingResponse;
+import com.pingcap.tikv.util.BackOff;
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.ClientCalls;
@@ -50,6 +51,31 @@ public abstract class AbstractGRPCClient<
     return conf;
   }
 
+  protected <ReqT, RespT> RespT callWithRetry(BackOff backOff,
+                                              MethodDescriptor<ReqT, RespT> method,
+                                              Supplier<ReqT> requestFactory,
+                                              ErrorHandler<RespT> handler) {
+    if (logger.isTraceEnabled()) {
+      logger.trace(String.format("Calling %s...", method.getFullMethodName()));
+    }
+    RetryPolicy.Builder<RespT> builder = new Builder<>(backOff);
+    RespT resp =
+        builder.create(handler)
+            .callWithRetry(
+                () -> {
+                  BlockingStubT stub = getBlockingStub();
+                  return ClientCalls.blockingUnaryCall(
+                      stub.getChannel(), method, stub.getCallOptions(), requestFactory.get());
+                },
+                method.getFullMethodName()
+            );
+
+    if (logger.isTraceEnabled()) {
+      logger.trace(String.format("leaving %s...", method.getFullMethodName()));
+    }
+    return resp;
+  }
+
   // TODO: Seems a little bit messy for lambda part
   protected <ReqT, RespT> RespT callWithRetry(MethodDescriptor<ReqT, RespT> method,
                                               Supplier<ReqT> requestFactory,
@@ -57,7 +83,7 @@ public abstract class AbstractGRPCClient<
     if (logger.isTraceEnabled()) {
       logger.trace(String.format("Calling %s...", method.getFullMethodName()));
     }
-    RetryPolicy.Builder<RespT> builder = new Builder<>(conf.getRetryTimes(), conf.getBackOffClass());
+    RetryPolicy.Builder<RespT> builder = new Builder<>(conf.getRetryTimeMs(), conf.getBackOffClass());
     RespT resp =
         builder.create(handler)
             .callWithRetry(
@@ -80,7 +106,7 @@ public abstract class AbstractGRPCClient<
       ErrorHandler<RespT> handler) {
     logger.debug(String.format("Calling %s...", method.getFullMethodName()));
 
-    RetryPolicy.Builder<RespT> builder = new Builder<>(conf.getRetryTimes(), conf.getBackOffClass());
+    RetryPolicy.Builder<RespT> builder = new Builder<>(conf.getRetryTimeMs(), conf.getBackOffClass());
     builder.create(handler)
         .callWithRetry(
             () -> {
@@ -101,7 +127,7 @@ public abstract class AbstractGRPCClient<
       ErrorHandler<StreamObserver<ReqT>> handler) {
     logger.debug(String.format("Calling %s...", method.getFullMethodName()));
 
-    RetryPolicy.Builder<StreamObserver<ReqT>> builder = new Builder<>(conf.getRetryTimes(), conf.getBackOffClass());
+    RetryPolicy.Builder<StreamObserver<ReqT>> builder = new Builder<>(conf.getRetryTimeMs(), conf.getBackOffClass());
     StreamObserver<ReqT> observer =
         builder.create(handler)
             .callWithRetry(
@@ -122,7 +148,7 @@ public abstract class AbstractGRPCClient<
     logger.debug(String.format("Calling %s...", method.getFullMethodName()));
 
     RetryPolicy.Builder<StreamingResponse> builder =
-        new Builder<>(conf.getRetryTimes(), conf.getBackOffClass());
+        new Builder<>(conf.getRetryTimeMs(), conf.getBackOffClass());
     StreamingResponse response =
         builder.create(handler)
             .callWithRetry(

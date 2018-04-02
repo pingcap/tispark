@@ -53,7 +53,7 @@ public class SchemaInfer {
 
   private void extractHandleType(TiDAGRequest dagRequest) {
     if (dagRequest.isHandleNeeded()) {
-      // DataType of handle is long
+      // DataType of handleResponseError is long
       types.add(IntegerType.INT);
     }
   }
