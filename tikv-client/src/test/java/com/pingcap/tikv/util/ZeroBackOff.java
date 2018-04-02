@@ -29,6 +29,11 @@ public class ZeroBackOff implements BackOff {
   }
 
   @Override
+  public void doBackOff(BackoffFunction.BackOffFuncType funcTypes, Exception err) {
+
+  }
+
+  @Override
   public void reset() {
     this.counter = 1;
   }
