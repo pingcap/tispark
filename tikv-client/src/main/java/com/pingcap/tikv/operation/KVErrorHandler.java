@@ -149,7 +149,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       } else if (error.hasStaleEpoch()) {
         logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion));
         this.regionManager.onRegionStale(ctxRegion.getId());
-        return false;
+        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasServerIsBusy()) {
         logger.warn(String.format("Server is busy for region [%s], reason: %s", ctxRegion, error.getServerIsBusy().getReason()));
         backOff.doBackOff(BackoffFunction.BackOffFuncType.boServerBusy,
@@ -166,6 +166,9 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         logger.error(String.format("Key not in region [%s] for key [%s], this error should not happen here.", ctxRegion, KeyUtils.formatBytes(invalidKey)));
         throw new StatusRuntimeException(Status.UNKNOWN.withDescription(error.toString()));
       }
+    } else {
+      // No error to handle
+      return false;
     }
 
     logger.warn(String.format("Unknown error for region [%s]", ctxRegion));

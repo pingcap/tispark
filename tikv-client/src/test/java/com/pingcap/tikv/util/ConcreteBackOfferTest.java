@@ -21,14 +21,5 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 public class ConcreteBackOfferTest {
-  @Test
-  public void nextBackOffMillisTest() {
-    BackOff backOff = new ConcreteBackOffer(10);
-    for(int i = 1; i < 10; i++) {
-      long nextBackoffMillis = backOff.nextBackOffMillis();
-      int factor = i<<2;
-      assertEquals(nextBackoffMillis, factor*1000);
-    }
-  }
 
 }

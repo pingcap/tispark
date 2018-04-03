@@ -19,20 +19,21 @@ package com.pingcap.tikv.util;
 
 import com.google.common.base.Preconditions;
 import com.pingcap.tikv.exception.GrpcException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ConcreteBackOffer implements BackOff {
   private int attempts;
   private int counter;
   private int maxSleep;
   private int totalSleep;
-  private BackoffFunction backoffFunction;
+  private Map<BackoffFunction.BackOffFuncType, BackoffFunction> backoffFunctionMap;
   private List<Exception> errors;
-  private static final Logger logger = LoggerFactory.getLogger(ConcreteBackOffer.class);
+  private static final Logger logger = Logger.getLogger(ConcreteBackOffer.class);
 
 //  public ConcreteBackOffer(int attempts) {
 //    Preconditions.checkArgument(attempts >= 1, "Retry count cannot be less than 1.");
@@ -43,10 +44,12 @@ public class ConcreteBackOffer implements BackOff {
   public ConcreteBackOffer(int maxSleep) {
     this.maxSleep = maxSleep;
     this.errors = new ArrayList<>();
+    this.backoffFunctionMap = new HashMap<>();
   }
 
   @Override
   public void doBackOff(BackoffFunction.BackOffFuncType funcType, Exception err) {
+    BackoffFunction backoffFunction = backoffFunctionMap.get(funcType);
     if (backoffFunction == null) {
       switch (funcType) {
         case BoUpdateLeader:
@@ -71,6 +74,7 @@ public class ConcreteBackOffer implements BackOff {
           backoffFunction = BackoffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
           break;
       }
+      backoffFunctionMap.put(funcType, backoffFunction);
     }
 
     totalSleep += backoffFunction.doBackOff();

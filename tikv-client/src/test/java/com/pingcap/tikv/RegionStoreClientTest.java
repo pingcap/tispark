@@ -29,6 +29,7 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.ZeroBackOff;
 import org.junit.After;
 import org.junit.Before;
@@ -75,8 +76,8 @@ public class RegionStoreClientTest {
     // No PD needed in this test
     TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
     session = TiSession.create(conf);
-    conf.setRetryTimeMs(3);
-    conf.setBackOffClass(ZeroBackOff.class);
+    conf.setRetryTimeMs(3000);
+    conf.setBackOffClass(ConcreteBackOffer.class);
   }
 
   private RegionStoreClient createClient() {

@@ -51,7 +51,7 @@ public class BackoffFunction {
     }
 
     try {
-      Thread.sleep(sleep * 1000);
+      Thread.sleep(sleep);
     } catch (InterruptedException e) {
       throw new GrpcException(e);
     }

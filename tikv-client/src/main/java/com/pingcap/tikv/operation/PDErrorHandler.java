@@ -18,6 +18,7 @@
 package com.pingcap.tikv.operation;
 
 import com.pingcap.tikv.PDClient;
+import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.kvproto.Pdpb;
 import com.pingcap.tikv.util.BackOff;
 import com.pingcap.tikv.util.BackoffFunction;
@@ -51,6 +52,7 @@ public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
 
   @Override
   public boolean handleRequestError(BackOff backOff, Exception e) {
-    return false;
+    backOff.doBackOff(BackoffFunction.BackOffFuncType.boPDRPC, e);
+    return true;
   }
 }

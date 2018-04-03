@@ -20,7 +20,6 @@ import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.GrpcNeedRegionRefreshException;
 import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.util.BackOff;
-import com.pingcap.tikv.util.BackoffFunction;
 import io.grpc.Status;
 import org.apache.log4j.Logger;
 
@@ -72,13 +71,26 @@ public abstract class RetryPolicy<RespT> {
   }
 
   public RespT callWithRetry(Callable<RespT> proc, String methodName) {
+//    for (; true; ) {
+//      try {
+//        RespT result = proc.call();
+//        if (handler != null) {
+//          handler.handleResponseError(backOff, result);
+//        }
+//        return result;
+//      } catch (Exception e) {
+//        handleFailure(e, methodName, backOff.nextBackOffMillis());
+//      }
+//    }
+
     while (true) {
       RespT result = null;
       try {
         result = proc.call();
       } catch (Exception e) {
+        rethrowNotRecoverableException(e);
         // Handle request call error
-        boolean retry =  handler.handleRequestError(backOff, e);
+        boolean retry = handler.handleRequestError(backOff, e);
         if (retry) {
           continue;
         }

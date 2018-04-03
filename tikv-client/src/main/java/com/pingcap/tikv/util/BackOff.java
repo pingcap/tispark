@@ -116,12 +116,4 @@ public interface BackOff {
       return STOP;
     }
   };
-
-  default void doWait(long millis) {
-    try {
-      Thread.sleep(millis);
-    } catch (InterruptedException e) {
-      throw new GrpcException(e);
-    }
-  }
 }
