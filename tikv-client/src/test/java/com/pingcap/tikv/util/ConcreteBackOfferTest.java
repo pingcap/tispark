@@ -21,5 +21,9 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 public class ConcreteBackOfferTest {
+  @Test
+  public void testDoBackOff() {
+    ConcreteBackOffer.newBatchGetMaxBackOff();
 
+  }
 }

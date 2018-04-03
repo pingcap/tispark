@@ -209,6 +209,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     if (response.hasRegionError()) {
       Errorpb.Error regionError = response.getRegionError();
       backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(regionError.toString()));
+      logger.warn("Re-splitting region task due to region error:" + regionError.getMessage());
       // Split ranges
       return RangeSplitter
           .newSplitter(session.getRegionManager())
