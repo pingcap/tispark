@@ -74,7 +74,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     TiRegion region = pair.first;
     Metapb.Store store = pair.second;
     try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
-      BackOff backOff = ConcreteBackOffer.newScannerNextMaxBackoff();
+      BackOff backOff = ConcreteBackOffer.newScannerNextMaxBackOff();
       currentCache = client.scan(backOff, startKey, version);
       if (currentCache == null || currentCache.size() == 0) {
         return false;

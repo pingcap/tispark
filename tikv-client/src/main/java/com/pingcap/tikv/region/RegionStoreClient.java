@@ -249,7 +249,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
         );
 
     StreamingResponse responseIterator = callServerStreamingWithRetry(
-        ConcreteBackOffer.newCopNextMaxBackoff(),
+        ConcreteBackOffer.newCopNextMaxBackOff(),
         TikvGrpc.METHOD_COPROCESSOR_STREAM,
         reqToSend,
         handler);

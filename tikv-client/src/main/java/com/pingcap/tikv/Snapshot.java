@@ -152,7 +152,7 @@ public class Snapshot {
     Pair<TiRegion, Store> lastPair;
     List<ByteString> keyBuffer = new ArrayList<>();
     List<KvPair> result = new ArrayList<>(keys.size());
-    BackOff backOff = ConcreteBackOffer.newBatchGetMaxBackoff();
+    BackOff backOff = ConcreteBackOffer.newBatchGetMaxBackOff();
     for (ByteString key : keys) {
       if (curRegion == null || !curKeyRange.contains(Key.toRawKey(key))) {
         Pair<TiRegion, Store> pair = session.getRegionManager().getRegionStorePairByKey(key);

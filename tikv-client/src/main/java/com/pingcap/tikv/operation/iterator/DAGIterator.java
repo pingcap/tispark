@@ -157,7 +157,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     Queue<RangeSplitter.RegionTask> remainTasks = new ArrayDeque<>();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
     remainTasks.add(regionTask);
-    BackOff backOff = ConcreteBackOffer.newCopNextMaxBackoff();
+    BackOff backOff = ConcreteBackOffer.newCopNextMaxBackOff();
     // In case of one region task spilt into several others, we ues a queue to properly handleResponseError all
     // the remaining tasks.
     while (!remainTasks.isEmpty()) {

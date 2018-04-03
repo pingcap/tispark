@@ -35,26 +35,19 @@ public class ConcreteBackOffer implements BackOff {
   private List<Exception> errors;
   private static final Logger logger = Logger.getLogger(ConcreteBackOffer.class);
 
-//  public ConcreteBackOffer(int attempts) {
-//
-//    this.counter = 1;
-//    this.attempts = attempts;
-//    this.errors = new ArrayList<>();
-//  }
-
   public static ConcreteBackOffer newCustomBackOff(int maxSleep) {
     return new ConcreteBackOffer(maxSleep);
   }
 
-  public static ConcreteBackOffer newScannerNextMaxBackoff() {
+  public static ConcreteBackOffer newScannerNextMaxBackOff() {
     return new ConcreteBackOffer(scannerNextMaxBackoff);
   }
 
-  public static ConcreteBackOffer newBatchGetMaxBackoff() {
+  public static ConcreteBackOffer newBatchGetMaxBackOff() {
     return new ConcreteBackOffer(batchGetMaxBackoff);
   }
 
-  public static ConcreteBackOffer newCopNextMaxBackoff() {
+  public static ConcreteBackOffer newCopNextMaxBackOff() {
     return new ConcreteBackOffer(copNextMaxBackoff);
   }
 
