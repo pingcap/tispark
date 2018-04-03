@@ -138,7 +138,8 @@ public class KeyRangeUtils {
     Key lowMin = toRawKey(first.getStart(), true);
     Key upperMax = toRawKey(first.getEnd(), false);
 
-    for (int i = 1; i < ranges.size(); i++) {
+    int rangeSize = ranges.size();
+    for (int i = 1; i < rangeSize; i++) {
       KeyRange keyRange = ranges.get(i);
       Key start = toRawKey(keyRange.getStart(), true);
       Key end = toRawKey(keyRange.getEnd(), false);
