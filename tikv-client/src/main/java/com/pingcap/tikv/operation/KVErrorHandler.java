@@ -25,7 +25,7 @@ import com.pingcap.tikv.kvproto.Errorpb;
 import com.pingcap.tikv.region.RegionErrorReceiver;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.BackOffFunction;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -90,11 +90,11 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   // Referenced from TiDB
   // store/tikv/region_request.go - onRegionError
   @Override
-  public boolean handleResponseError(BackOff backOff, RespT resp) {
+  public boolean handleResponseError(BackOffer backOffer, RespT resp) {
     if (resp == null) {
       String msg = String.format("Request Failed with unknown reason for region region [%s]", ctxRegion);
       logger.warn(msg);
-      return handleRequestError(backOff, new GrpcException(msg));
+      return handleRequestError(backOffer, new GrpcException(msg));
     }
 
     // Region error handling logic
@@ -122,7 +122,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         } else {
           backOffFuncType = BackOffFunction.BackOffFuncType.BoRegionMiss;
         }
-        backOff.doBackOff(backOffFuncType, new GrpcException(error.toString()));
+        backOffer.doBackOff(backOffFuncType, new GrpcException(error.toString()));
 
         return true;
       } else if (error.hasStoreNotMatch()) {
@@ -139,7 +139,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasServerIsBusy()) {
         logger.warn(String.format("Server is busy for region [%s], reason: %s", ctxRegion, error.getServerIsBusy().getReason()));
-        backOff.doBackOff(BackOffFunction.BackOffFuncType.boServerBusy,
+        backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoServerBusy,
             new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString())));
         return true;
       } else if (error.hasStaleCommand()) {
@@ -153,20 +153,18 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         logger.error(String.format("Key not in region [%s] for key [%s], this error should not happen here.", ctxRegion, KeyUtils.formatBytes(invalidKey)));
         throw new StatusRuntimeException(Status.UNKNOWN.withDescription(error.toString()));
       }
-    } else {
-      // No error to handle, so no need to retry
-      return false;
+
+      logger.warn(String.format("Unknown error for region [%s]", ctxRegion));
+      // For other errors, we only drop cache here.
+      // Upper level may split this task.
+      invalidateRegionStoreCache(ctxRegion);
     }
 
-    logger.warn(String.format("Unknown error for region [%s]", ctxRegion));
-    // For other errors, we only drop cache here.
-    // Upper level may split this task.
-    invalidateRegionStoreCache(ctxRegion);
     return false;
   }
 
   @Override
-  public boolean handleRequestError(BackOff backOff, Exception e) {
+  public boolean handleRequestError(BackOffer backOffer, Exception e) {
     regionManager.onRequestFail(ctxRegion.getId(), ctxRegion.getLeader().getStoreId());
     notifyCacheInvalidation(
         ctxRegion.getId(),
@@ -174,7 +172,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         CacheInvalidateEvent.CacheType.REQ_FAILED
     );
 
-    backOff.doBackOff(BackOffFunction.BackOffFuncType.boTiKVRPC,
+    backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoTiKVRPC,
         new GrpcException("send tikv request error: " + e.getMessage() + ", try next peer later", e));
     return true;
   }

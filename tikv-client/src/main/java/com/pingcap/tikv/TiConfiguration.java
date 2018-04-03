@@ -19,8 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
-import com.pingcap.tikv.util.BackOff;
-import com.pingcap.tikv.util.ConcreteBackOffer;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;

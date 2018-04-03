@@ -9,13 +9,13 @@ public class BackOffFunction {
   private int cap;
   private int lastSleep;
   private int attempts;
-  private BackOff.BackOffStrategy strategy;
+  private BackOffer.BackOffStrategy strategy;
 
-  public static BackOffFunction create(int base, int cap, BackOff.BackOffStrategy strategy) {
+  public static BackOffFunction create(int base, int cap, BackOffer.BackOffStrategy strategy) {
     return new BackOffFunction(base, cap, strategy);
   }
 
-  private BackOffFunction(int base, int cap, BackOff.BackOffStrategy strategy) {
+  private BackOffFunction(int base, int cap, BackOffer.BackOffStrategy strategy) {
     this.base = base;
     this.cap = cap;
     this.strategy = strategy;
@@ -23,13 +23,13 @@ public class BackOffFunction {
   }
 
   public enum BackOffFuncType {
-    boTiKVRPC,
+    BoTiKVRPC,
     BoTxnLock,
-    boTxnLockFast,
-    boPDRPC,
+    BoTxnLockFast,
+    BoPDRPC,
     BoRegionMiss,
     BoUpdateLeader,
-    boServerBusy
+    BoServerBusy
   }
 
   public int doBackOff() {

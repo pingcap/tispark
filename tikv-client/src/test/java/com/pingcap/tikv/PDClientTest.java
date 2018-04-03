@@ -21,7 +21,7 @@ import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import org.junit.After;
 import org.junit.Before;
@@ -249,7 +249,7 @@ public class PDClientTest {
     }
   }
 
-  private BackOff defaultBackOff() {
+  private BackOffer defaultBackOff() {
     return ConcreteBackOffer.newCustomBackOff(1000);
   }
 

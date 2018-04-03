@@ -17,7 +17,8 @@
 
 package com.pingcap.tikv.util;
 
-public interface BackOff {
+public interface BackOffer {
+  // Back off strategies
   enum BackOffStrategy {
     // NoJitter makes the backoff sequence strict exponential.
     NoJitter,
@@ -29,6 +30,7 @@ public interface BackOff {
     DecorrJitter
   }
 
+  // Back off types.
   int copBuildTaskMaxBackoff  = 5000;
   int tsoMaxBackoff           = 5000;
   int scannerNextMaxBackoff   = 20000;
@@ -44,18 +46,8 @@ public interface BackOff {
   int splitRegionBackoff      = 20000;
 
   /**
-   * doBackoff sleeps a while base on the BackOffType and records the error message.
+   * doBackOff sleeps a while base on the BackOffType and records the error message.
+   * Will stop until max back off time exceeded and throw an exception to the caller.
    */
   void doBackOff(BackOffFunction.BackOffFuncType funcTypes, Exception err);
-
-  /**
-   * Fixed back-off policy whose back-off time is always zero, meaning that the operation is retried
-   * immediately without waiting.
-   */
-  BackOff ZERO_BACKOFF = new BackOff() {
-    @Override
-    public void doBackOff(BackOffFunction.BackOffFuncType funcTypes, Exception err) {
-      // Pass
-    }
-  };
 }

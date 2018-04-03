@@ -27,7 +27,7 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import org.junit.After;
 import org.junit.Before;
@@ -253,10 +253,10 @@ public class RegionStoreClientTest {
   }
 
   private SelectResponse coprocess(RegionStoreClient client, DAGRequest request, List<Coprocessor.KeyRange> ranges) {
-    BackOff backOff = defaultBackOff();
+    BackOffer backOffer = defaultBackOff();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
 
-    client.coprocess(backOff, request, ranges, responseQueue);
+    client.coprocess(backOffer, request, ranges, responseQueue);
 
     List<Chunk> resultChunk = new ArrayList<>();
     while (!responseQueue.isEmpty()) {
@@ -271,7 +271,7 @@ public class RegionStoreClientTest {
         .build();
   }
 
-  private BackOff defaultBackOff() {
+  private BackOffer defaultBackOff() {
     return ConcreteBackOffer.newCustomBackOff(1000);
   }
 }

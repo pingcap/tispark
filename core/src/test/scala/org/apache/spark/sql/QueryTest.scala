@@ -402,7 +402,7 @@ object QueryTest {
     if (!isSorted) converted.sortBy(_.toString()) else converted
   }
 
-  // We need to call prepareRow recursively to handleResponseError schemas with struct types.
+  // We need to call prepareRow recursively to handle schemas with struct types.
   def prepareRow(row: Row): Row = {
     Row.fromSeq(row.toSeq.map {
       case null                    => null

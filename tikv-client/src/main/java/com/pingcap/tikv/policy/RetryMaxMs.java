@@ -15,34 +15,25 @@
 
 package com.pingcap.tikv.policy;
 
-import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.operation.ErrorHandler;
-import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.BackOffer;
 
-public class RetryNTimes<T> extends RetryPolicy<T> {
-  private RetryNTimes(ErrorHandler<T> handler, BackOff backOff) {
+public class RetryMaxMs<T> extends RetryPolicy<T> {
+  private RetryMaxMs(ErrorHandler<T> handler, BackOffer backOffer) {
     super(handler);
-    this.backOff = backOff;
+    this.backOffer = backOffer;
   }
 
   public static class Builder<T> implements RetryPolicy.Builder<T> {
-    private BackOff backOff;
+    private BackOffer backOffer;
 
-    public Builder(int n, Class<? extends BackOff> backoffClass) {
-      try {
-        this.backOff = backoffClass.getConstructor(int.class).newInstance(n);
-      } catch (Exception e) {
-        throw new TiClientInternalException("failed to create backoff object", e);
-      }
-    }
-
-    public Builder(BackOff backOff) {
-      this.backOff = backOff;
+    public Builder(BackOffer backOffer) {
+      this.backOffer = backOffer;
     }
 
     @Override
     public RetryPolicy<T> create(ErrorHandler<T> handler) {
-      return new RetryNTimes<>(handler, backOff);
+      return new RetryMaxMs<>(handler, backOffer);
     }
   }
 }

@@ -19,7 +19,7 @@ package com.pingcap.tikv.operation;
 
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.kvproto.Pdpb;
-import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.BackOffFunction;
 
 import java.util.function.Function;
@@ -34,15 +34,14 @@ public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
   }
 
   @Override
-  public boolean handleResponseError(BackOff backOff, RespT resp) {
-    // TODO: Check pd error TiDB impl
+  public boolean handleResponseError(BackOffer backOffer, RespT resp) {
     if (resp == null) {
       return false;
     }
     Pdpb.Error error = getError.apply(resp);
     if (error != null) {
       client.updateLeader();
-      backOff.doBackOff(BackOffFunction.BackOffFuncType.boPDRPC,
+      backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoPDRPC,
           new RuntimeException(error.getMessage()));
       return true;
     }
@@ -50,8 +49,8 @@ public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
   }
 
   @Override
-  public boolean handleRequestError(BackOff backOff, Exception e) {
-    backOff.doBackOff(BackOffFunction.BackOffFuncType.boPDRPC, e);
+  public boolean handleRequestError(BackOffer backOffer, Exception e) {
+    backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoPDRPC, e);
     return true;
   }
 }

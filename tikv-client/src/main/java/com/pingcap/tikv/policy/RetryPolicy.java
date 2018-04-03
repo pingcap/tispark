@@ -18,16 +18,14 @@ package com.pingcap.tikv.policy;
 import com.google.common.collect.ImmutableSet;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.operation.ErrorHandler;
-import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import io.grpc.Status;
-import org.apache.log4j.Logger;
 
 import java.util.concurrent.Callable;
 
 public abstract class RetryPolicy<RespT> {
-  private static final Logger logger = Logger.getLogger(RetryPolicy.class);
-
-  BackOff backOff = BackOff.ZERO_BACKOFF;
+  BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
 
   // handles PD and TiKV's error.
   private ErrorHandler<RespT> handler;
@@ -58,7 +56,7 @@ public abstract class RetryPolicy<RespT> {
       } catch (Exception e) {
         rethrowNotRecoverableException(e);
         // Handle request call error
-        boolean retry = handler.handleRequestError(backOff, e);
+        boolean retry = handler.handleRequestError(backOffer, e);
         if (retry) {
           continue;
         }
@@ -66,7 +64,7 @@ public abstract class RetryPolicy<RespT> {
 
       // Handle response error
       if (handler != null) {
-        boolean retry = handler.handleResponseError(backOff, result);
+        boolean retry = handler.handleResponseError(backOffer, result);
         if (retry) {
           continue;
         }

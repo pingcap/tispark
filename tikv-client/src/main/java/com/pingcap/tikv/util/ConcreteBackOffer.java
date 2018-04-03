@@ -26,12 +26,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ConcreteBackOffer implements BackOff {
-  private int attempts;
-  private int counter;
+public class ConcreteBackOffer implements BackOffer {
   private int maxSleep;
   private int totalSleep;
-  private Map<BackOffFunction.BackOffFuncType, BackOffFunction> backoffFunctionMap;
+  private Map<BackOffFunction.BackOffFuncType, BackOffFunction> backOffFunctionMap;
   private List<Exception> errors;
   private static final Logger logger = Logger.getLogger(ConcreteBackOffer.class);
 
@@ -67,49 +65,58 @@ public class ConcreteBackOffer implements BackOff {
     Preconditions.checkArgument(maxSleep >= 0, "Max sleep time cannot be less than 0.");
     this.maxSleep = maxSleep;
     this.errors = new ArrayList<>();
-    this.backoffFunctionMap = new HashMap<>();
+    this.backOffFunctionMap = new HashMap<>();
+  }
+
+  /**
+   * Creates a back off func which implements exponential back off with optional jitters according
+   * to different back off strategies.
+   * See http://www.awsarchitectureblog.com/2015/03/backoff.html
+   */
+  private BackOffFunction createBackOffFunc(BackOffFunction.BackOffFuncType funcType) {
+    BackOffFunction backOffFunction = null;
+    switch (funcType) {
+      case BoUpdateLeader:
+        backOffFunction = BackOffFunction.create(1, 10, BackOffStrategy.NoJitter);
+        break;
+      case BoTxnLockFast:
+        backOffFunction = BackOffFunction.create(100, 3000, BackOffStrategy.EqualJitter);
+        break;
+      case BoServerBusy:
+        backOffFunction = BackOffFunction.create(2000, 10000, BackOffStrategy.EqualJitter);
+        break;
+      case BoRegionMiss:
+        backOffFunction = BackOffFunction.create(100, 500, BackOffStrategy.NoJitter);
+        break;
+      case BoTxnLock:
+        backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
+        break;
+      case BoPDRPC:
+        backOffFunction = BackOffFunction.create(500, 3000, BackOffStrategy.EqualJitter);
+        break;
+      case BoTiKVRPC:
+        backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
+        break;
+    }
+    return backOffFunction;
   }
 
   @Override
   public void doBackOff(BackOffFunction.BackOffFuncType funcType, Exception err) {
-    BackOffFunction backOffFunction = backoffFunctionMap.get(funcType);
-    if (backOffFunction == null) {
-      switch (funcType) {
-        case BoUpdateLeader:
-          backOffFunction = BackOffFunction.create(1, 10, BackOffStrategy.NoJitter);
-          break;
-        case boTxnLockFast:
-          backOffFunction = BackOffFunction.create(100, 3000, BackOffStrategy.EqualJitter);
-          break;
-        case boServerBusy:
-          backOffFunction = BackOffFunction.create(2000, 10000, BackOffStrategy.EqualJitter);
-          break;
-        case BoRegionMiss:
-          backOffFunction = BackOffFunction.create(100, 500, BackOffStrategy.NoJitter);
-          break;
-        case BoTxnLock:
-          backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
-          break;
-        case boPDRPC:
-          backOffFunction = BackOffFunction.create(500, 3000, BackOffStrategy.EqualJitter);
-          break;
-        case boTiKVRPC:
-          backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
-          break;
-      }
-      backoffFunctionMap.put(funcType, backOffFunction);
-    }
+    BackOffFunction backOffFunction = backOffFunctionMap
+        .computeIfAbsent(funcType, this::createBackOffFunc);
 
+    // Back off will be done here
     totalSleep += backOffFunction.doBackOff();
     logger.debug(String.format("%s, retry later(totalSleep %dms, maxSleep %dms)", err.getMessage(), totalSleep, maxSleep));
     errors.add(err);
     if (maxSleep > 0 && totalSleep >= maxSleep) {
       StringBuilder errMsg = new StringBuilder(String.format("backoffer.maxSleep %dms is exceeded, errors:", maxSleep));
       for (int i = 0; i < errors.size(); i++) {
-        Throwable curErr = errors.get(i);
+        Exception curErr = errors.get(i);
         // Print only last 3 errors for non-DEBUG log levels.
         if (logger.isDebugEnabled() || i >= errors.size() - 3) {
-          errMsg.append("\n").append(curErr.toString());
+          errMsg.append("\n").append(i).append(".").append(curErr.toString());
         }
       }
       logger.warn(errMsg.toString());

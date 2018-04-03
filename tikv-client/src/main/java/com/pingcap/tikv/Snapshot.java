@@ -28,7 +28,7 @@ import com.pingcap.tikv.operation.iterator.ScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
@@ -124,7 +124,7 @@ public class Snapshot {
   }
 
   /**
-   * Below is lower level API for env like Spark which already did key range split Perform handleResponseError
+   * Below is lower level API for env like Spark which already did key range split Perform handle
    * scan
    *
    * @param dagRequest DAGRequest for coprocessor
@@ -152,7 +152,7 @@ public class Snapshot {
     Pair<TiRegion, Store> lastPair;
     List<ByteString> keyBuffer = new ArrayList<>();
     List<KvPair> result = new ArrayList<>(keys.size());
-    BackOff backOff = ConcreteBackOffer.newBatchGetMaxBackOff();
+    BackOffer backOffer = ConcreteBackOffer.newBatchGetMaxBackOff();
     for (ByteString key : keys) {
       if (curRegion == null || !curKeyRange.contains(Key.toRawKey(key))) {
         Pair<TiRegion, Store> pair = session.getRegionManager().getRegionStorePairByKey(key);
@@ -162,7 +162,7 @@ public class Snapshot {
 
         try (RegionStoreClient client =
                  RegionStoreClient.create(lastPair.first, lastPair.second, getSession())) {
-          List<KvPair> partialResult = client.batchGet(backOff, keyBuffer, timestamp.getVersion());
+          List<KvPair> partialResult = client.batchGet(backOffer, keyBuffer, timestamp.getVersion());
           // TODO: Add lock check
           result.addAll(partialResult);
         } catch (Exception e) {

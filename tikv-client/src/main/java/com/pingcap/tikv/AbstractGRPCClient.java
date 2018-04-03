@@ -16,10 +16,10 @@
 package com.pingcap.tikv;
 
 import com.pingcap.tikv.operation.ErrorHandler;
-import com.pingcap.tikv.policy.RetryNTimes.Builder;
+import com.pingcap.tikv.policy.RetryMaxMs.Builder;
 import com.pingcap.tikv.policy.RetryPolicy;
 import com.pingcap.tikv.streaming.StreamingResponse;
-import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.BackOffer;
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.ClientCalls;
@@ -51,14 +51,15 @@ public abstract class AbstractGRPCClient<
     return conf;
   }
 
-  protected <ReqT, RespT> RespT callWithRetry(BackOff backOff,
+  // TODO: Seems a little bit messy for lambda part
+  protected <ReqT, RespT> RespT callWithRetry(BackOffer backOffer,
                                               MethodDescriptor<ReqT, RespT> method,
                                               Supplier<ReqT> requestFactory,
                                               ErrorHandler<RespT> handler) {
     if (logger.isTraceEnabled()) {
       logger.trace(String.format("Calling %s...", method.getFullMethodName()));
     }
-    RetryPolicy.Builder<RespT> builder = new Builder<>(backOff);
+    RetryPolicy.Builder<RespT> builder = new Builder<>(backOffer);
     RespT resp =
         builder.create(handler)
             .callWithRetry(
@@ -76,38 +77,15 @@ public abstract class AbstractGRPCClient<
     return resp;
   }
 
-  // TODO: Seems a little bit messy for lambda part
-//  protected <ReqT, RespT> RespT callWithRetry(MethodDescriptor<ReqT, RespT> method,
-//                                              Supplier<ReqT> requestFactory,
-//                                              ErrorHandler<RespT> handler) {
-//    if (logger.isTraceEnabled()) {
-//      logger.trace(String.format("Calling %s...", method.getFullMethodName()));
-//    }
-//    RetryPolicy.Builder<RespT> builder = new Builder<>(conf.getRetryTimeMs(), conf.getBackOffClass());
-//    RespT resp =
-//        builder.create(handler)
-//            .callWithRetry(
-//                () -> {
-//                  BlockingStubT stub = getBlockingStub();
-//                  return ClientCalls.blockingUnaryCall(
-//                      stub.getChannel(), method, stub.getCallOptions(), requestFactory.get());
-//                },
-//                method.getFullMethodName());
-//    if (logger.isTraceEnabled()) {
-//      logger.trace(String.format("leaving %s...", method.getFullMethodName()));
-//    }
-//    return resp;
-//  }
-
   protected <ReqT, RespT> void callAsyncWithRetry(
-      BackOff backOff,
+      BackOffer backOffer,
       MethodDescriptor<ReqT, RespT> method,
       Supplier<ReqT> requestFactory,
       StreamObserver<RespT> responseObserver,
       ErrorHandler<RespT> handler) {
     logger.debug(String.format("Calling %s...", method.getFullMethodName()));
 
-    RetryPolicy.Builder<RespT> builder = new Builder<>(backOff);
+    RetryPolicy.Builder<RespT> builder = new Builder<>(backOffer);
     builder.create(handler)
         .callWithRetry(
             () -> {
@@ -123,13 +101,13 @@ public abstract class AbstractGRPCClient<
   }
 
   <ReqT, RespT> StreamObserver<ReqT> callBidiStreamingWithRetry(
-      BackOff backOff,
+      BackOffer backOffer,
       MethodDescriptor<ReqT, RespT> method,
       StreamObserver<RespT> responseObserver,
       ErrorHandler<StreamObserver<ReqT>> handler) {
     logger.debug(String.format("Calling %s...", method.getFullMethodName()));
 
-    RetryPolicy.Builder<StreamObserver<ReqT>> builder = new Builder<>(backOff);
+    RetryPolicy.Builder<StreamObserver<ReqT>> builder = new Builder<>(backOffer);
     StreamObserver<ReqT> observer =
         builder.create(handler)
             .callWithRetry(
@@ -144,14 +122,14 @@ public abstract class AbstractGRPCClient<
   }
 
   protected <ReqT, RespT> StreamingResponse callServerStreamingWithRetry(
-      BackOff backOff,
+      BackOffer backOffer,
       MethodDescriptor<ReqT, RespT> method,
       Supplier<ReqT> requestFactory,
       ErrorHandler<StreamingResponse> handler) {
     logger.debug(String.format("Calling %s...", method.getFullMethodName()));
 
     RetryPolicy.Builder<StreamingResponse> builder =
-        new Builder<>(backOff);
+        new Builder<>(backOffer);
     StreamingResponse response =
         builder.create(handler)
             .callWithRetry(

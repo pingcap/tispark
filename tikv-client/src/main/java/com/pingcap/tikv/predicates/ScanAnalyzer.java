@@ -155,7 +155,7 @@ public class ScanAnalyzer {
         }
       }
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
-      // table name, index and handleResponseError column
+      // table name, index and handle column
       int indexSize = index.getIndexColumns().size() + 2;
       if (isDoubleRead) {
         cost *= tableSize + indexSize;

@@ -11,7 +11,7 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.util.BackOff;
+import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import org.slf4j.Logger;
@@ -157,8 +157,8 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     Queue<RangeSplitter.RegionTask> remainTasks = new ArrayDeque<>();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
     remainTasks.add(regionTask);
-    BackOff backOff = ConcreteBackOffer.newCopNextMaxBackOff();
-    // In case of one region task spilt into several others, we ues a queue to properly handleResponseError all
+    BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
+    // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
     while (!remainTasks.isEmpty()) {
       RangeSplitter.RegionTask task = remainTasks.poll();
@@ -170,7 +170,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       try {
         RegionStoreClient client = RegionStoreClient.create(region, store, session);
         Collection<RangeSplitter.RegionTask> tasks =
-            client.coprocess(backOff, dagRequest, ranges, responseQueue);
+            client.coprocess(backOffer, dagRequest, ranges, responseQueue);
         if (tasks != null) {
           remainTasks.addAll(tasks);
         }
