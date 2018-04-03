@@ -86,7 +86,7 @@ public class ConcreteBackOffer implements BackOff {
         Throwable curErr = errors.get(i);
         // Print only last 3 errors for non-DEBUG log levels.
         if (logger.isDebugEnabled() || i >= errors.size() - 3) {
-          errMsg.append("\n").append(curErr.getMessage());
+          errMsg.append("\n").append(curErr.toString());
         }
       }
       logger.warn(errMsg.toString());

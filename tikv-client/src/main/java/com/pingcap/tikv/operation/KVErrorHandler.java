@@ -102,6 +102,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     }
   }
 
+  // Referenced from TiDB
+  // store/tikv/region_request.go - onRegionError
   @Override
   public boolean handleResponseError(BackOff backOff, RespT resp) {
     if (resp == null) {
@@ -167,7 +169,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         throw new StatusRuntimeException(Status.UNKNOWN.withDescription(error.toString()));
       }
     } else {
-      // No error to handle
+      // No error to handle, so no need to retry
       return false;
     }
 

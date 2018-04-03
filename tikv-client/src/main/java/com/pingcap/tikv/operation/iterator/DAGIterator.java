@@ -171,7 +171,9 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
         RegionStoreClient client = RegionStoreClient.create(region, store, session);
         Collection<RangeSplitter.RegionTask> tasks =
             client.handleRequestOnce(backOff, dagRequest, ranges, responseQueue);
-        remainTasks.addAll(tasks);
+        if (tasks != null) {
+          remainTasks.addAll(tasks);
+        }
       } catch (Throwable e) {
         // Handle region task failed
         logger.error("Handle region task failed.", e);

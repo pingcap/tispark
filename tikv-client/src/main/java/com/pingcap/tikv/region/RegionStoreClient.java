@@ -203,8 +203,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   private List<RangeSplitter.RegionTask> handleCopResponse(BackOff backOffer, Coprocessor.Response response, List<KeyRange> ranges, Queue<SelectResponse> responseQueue) {
-    Errorpb.Error regionError = response.getRegionError();
-    if (regionError != null) {
+    if (response.hasRegionError()) {
+      Errorpb.Error regionError = response.getRegionError();
       backOffer.doBackOff(BackoffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(regionError.toString()));
       // Split ranges
       return RangeSplitter
@@ -212,15 +212,15 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
           .splitRangeByRegion(ranges);
     }
 
-    LockInfo lockError = response.getLocked();
-    if (lockError != null) {
+    if (response.hasLocked()) {
+      LockInfo lockError = response.getLocked();
       // TODO: Handle lock error in other PRs
     }
 
     String otherError = response.getOtherError();
     if (otherError != null && !otherError.isEmpty()) {
       logger.warn(String.format("Other error occurred, message: %s", otherError));
-      throw new RuntimeException(otherError);
+      throw new GrpcException(otherError);
     }
 
     responseQueue.offer(coprocessorHelper(response));
