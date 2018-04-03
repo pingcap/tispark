@@ -20,8 +20,22 @@ package com.pingcap.tikv.operation;
 import com.pingcap.tikv.util.BackOffer;
 
 public interface ErrorHandler<RespT> {
+  /**
+   * Handle the error received in the response after a calling process completes.
+   *
+   * @param backOffer Back offer used for retry
+   * @param resp      the response to handle
+   * @return whether the caller should retry
+   */
   boolean handleResponseError(BackOffer backOffer, RespT resp);
 
-  // OnRequestFail is used for clearing cache when a tikv server does not respond.
+  /**
+   * Handle the error received during a calling process before it could return
+   * a normal response.
+   *
+   * @param backOffer Back offer used for retry
+   * @param e         Exception received during a calling process
+   * @return whether the caller should retry
+   */
   boolean handleRequestError(BackOffer backOffer, Exception e);
 }

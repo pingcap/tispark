@@ -32,6 +32,10 @@ public class BackOffFunction {
     BoServerBusy
   }
 
+  /**
+   * Do back off in exponential with optional jitters according to different back off strategies.
+   * See http://www.awsarchitectureblog.com/2015/03/backoff.html
+   */
   public int doBackOff() {
     int sleep = 0;
     int v = expo(base, cap, attempts);
