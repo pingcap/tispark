@@ -18,10 +18,8 @@ package com.pingcap.tikv;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
-import com.pingcap.tidb.tipb.DAGRequest;
-import com.pingcap.tidb.tipb.ExecType;
-import com.pingcap.tidb.tipb.Executor;
-import com.pingcap.tidb.tipb.SelectResponse;
+import com.pingcap.tidb.tipb.*;
+import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
@@ -29,14 +27,13 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOff;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.ZeroBackOff;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
@@ -76,8 +73,6 @@ public class RegionStoreClientTest {
     // No PD needed in this test
     TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
     session = TiSession.create(conf);
-    conf.setRetryTimeMs(3000);
-    conf.setBackOffClass(ConcreteBackOffer.class);
   }
 
   private RegionStoreClient createClient() {
@@ -106,18 +101,18 @@ public class RegionStoreClientTest {
             .setRegionEpoch(region.getRegionEpoch())
             .setPeer(region.getLeader())
             .build();
-    ByteString value = client.rawGet(ByteString.copyFromUtf8("key1"), context);
+    ByteString value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"), context);
     assertEquals(ByteString.copyFromUtf8("value1"), value);
 
     server.putError("error1", KVMockServer.NOT_LEADER);
     // since not_leader is retryable, so the result should be correct.
-    value = client.rawGet(ByteString.copyFromUtf8("key1"), context);
+    value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"), context);
     assertEquals(ByteString.copyFromUtf8("value1"), value);
 
     server.putError("failure", KVMockServer.STALE_EPOCH);
     try {
       // since stale epoch is not retrable, so the test should fail.
-      client.rawGet(ByteString.copyFromUtf8("failure"), context);
+      client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("failure"), context);
       fail();
     } catch (Exception e) {
       assertTrue(true);
@@ -130,12 +125,12 @@ public class RegionStoreClientTest {
   public void getTest() throws Exception {
     RegionStoreClient client = createClient();
     server.put("key1", "value1");
-    ByteString value = client.get(ByteString.copyFromUtf8("key1"), 1);
+    ByteString value = client.get(defaultBackOff(), ByteString.copyFromUtf8("key1"), 1);
     assertEquals(ByteString.copyFromUtf8("value1"), value);
 
     server.putError("error1", KVMockServer.ABORT);
     try {
-      client.get(ByteString.copyFromUtf8("error1"), 1);
+      client.get(defaultBackOff(), ByteString.copyFromUtf8("error1"), 1);
       fail();
     } catch (Exception e) {
       assertTrue(true);
@@ -153,7 +148,7 @@ public class RegionStoreClientTest {
     server.put("key4", "value4");
     server.put("key5", "value5");
     List<Kvrpcpb.KvPair> kvs =
-        client.batchGet(
+        client.batchGet(defaultBackOff(),
             ImmutableList.of(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key2")), 1);
     assertEquals(2, kvs.size());
     kvs.forEach(
@@ -163,7 +158,7 @@ public class RegionStoreClientTest {
 
     server.putError("error1", KVMockServer.ABORT);
     try {
-      client.batchGet(
+      client.batchGet(defaultBackOff(),
           ImmutableList.of(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("error1")), 1);
       fail();
     } catch (Exception e) {
@@ -181,7 +176,7 @@ public class RegionStoreClientTest {
     server.put("key2", "value2");
     server.put("key4", "value4");
     server.put("key5", "value5");
-    List<Kvrpcpb.KvPair> kvs = client.scan(ByteString.copyFromUtf8("key2"), 1);
+    List<Kvrpcpb.KvPair> kvs = client.scan(defaultBackOff(), ByteString.copyFromUtf8("key2"), 1);
     assertEquals(3, kvs.size());
     kvs.forEach(
         kv ->
@@ -190,7 +185,7 @@ public class RegionStoreClientTest {
 
     server.putError("error1", KVMockServer.ABORT);
     try {
-      client.scan(ByteString.copyFromUtf8("error1"), 1);
+      client.scan(defaultBackOff(), ByteString.copyFromUtf8("error1"), 1);
       fail();
     } catch (Exception e) {
       assertTrue(true);
@@ -226,7 +221,7 @@ public class RegionStoreClientTest {
             createByteStringRange(
                 ByteString.copyFromUtf8("key6"), ByteString.copyFromUtf8("key7")));
 
-    SelectResponse resp = client.coprocess(builder.build(), keyRanges);
+    SelectResponse resp = coprocess(client, builder.build(), keyRanges);
     assertEquals(5, resp.getChunksCount());
     Set<String> results =
         ImmutableSet.copyOf(
@@ -248,12 +243,35 @@ public class RegionStoreClientTest {
 
     server.putError("error1", KVMockServer.ABORT);
     try {
-      client.coprocess(builder.build(), keyRanges);
+      coprocess(client, builder.build(), keyRanges);
       fail();
     } catch (Exception e) {
       assertTrue(true);
     }
     server.clearAllMap();
     client.close();
+  }
+
+  private SelectResponse coprocess(RegionStoreClient client, DAGRequest request, List<Coprocessor.KeyRange> ranges) {
+    BackOff backOff = defaultBackOff();
+    Queue<SelectResponse> responseQueue = new ArrayDeque<>();
+
+    client.coprocess(backOff, request, ranges, responseQueue);
+
+    List<Chunk> resultChunk = new ArrayList<>();
+    while (!responseQueue.isEmpty()) {
+      SelectResponse response = responseQueue.poll();
+      if (response != null) {
+        resultChunk.addAll(response.getChunksList());
+      }
+    }
+
+    return SelectResponse.newBuilder()
+        .addAllChunks(resultChunk)
+        .build();
+  }
+
+  private BackOff defaultBackOff() {
+    return ConcreteBackOffer.newCustomBackOff(1000);
   }
 }

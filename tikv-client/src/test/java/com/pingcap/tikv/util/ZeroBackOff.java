@@ -29,24 +29,7 @@ public class ZeroBackOff implements BackOff {
   }
 
   @Override
-  public void doBackOff(BackoffFunction.BackOffFuncType funcTypes, Exception err) {
-
-  }
-
-  @Override
-  public void reset() {
-    this.counter = 1;
-  }
-
-  /**
-   * produces 0 1 1 2 3 ... fibonacci series number.
-   */
-  @Override
-  public long nextBackOffMillis() {
-    if(attempts <= counter) {
-      return BackOff.STOP;
-    }
-    counter++;
-    return 0;
+  public void doBackOff(BackOffFunction.BackOffFuncType funcTypes, Exception err) {
+    // Pass
   }
 }

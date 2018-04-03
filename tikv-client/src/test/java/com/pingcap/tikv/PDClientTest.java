@@ -15,24 +15,22 @@
 
 package com.pingcap.tikv;
 
-import static com.pingcap.tikv.GrpcUtils.encodeKey;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOff;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.ZeroBackOff;
-import java.io.IOException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
+
+import static com.pingcap.tikv.GrpcUtils.encodeKey;
+import static org.junit.Assert.assertEquals;
 
 public class PDClientTest {
 
@@ -53,8 +51,6 @@ public class PDClientTest {
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
     TiConfiguration conf =
         TiConfiguration.createDefault("127.0.0.1:" + server.port);
-    conf.setRetryTimeMs(3000);
-    conf.setBackOffClass(ConcreteBackOffer.class);
     session = TiSession.create(conf);
   }
 
@@ -76,7 +72,7 @@ public class PDClientTest {
   @Test
   public void testTso() throws Exception {
     try (PDClient client = session.getPDClient()) {
-      TiTimestamp ts = client.getTimestamp();
+      TiTimestamp ts = client.getTimestamp(defaultBackOff());
       // Test server is set to generate physical == logical + 1
       assertEquals(ts.getPhysical(), ts.getLogical() + 1);
     }
@@ -99,7 +95,7 @@ public class PDClientTest {
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
     try (PDClient client = session.getPDClient()) {
-      TiRegion r = client.getRegionByKey(ByteString.EMPTY);
+      TiRegion r = client.getRegionByKey(defaultBackOff(), ByteString.EMPTY);
       assertEquals(r.getStartKey(), ByteString.copyFrom(startKey));
       assertEquals(r.getEndKey(), ByteString.copyFrom(endKey));
       assertEquals(r.getRegionEpoch().getConfVer(), confVer);
@@ -126,7 +122,7 @@ public class PDClientTest {
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
     try (PDClient client = session.getPDClient()) {
-      TiRegion r = client.getRegionByKeyAsync(ByteString.EMPTY).get();
+      TiRegion r = client.getRegionByKeyAsync(defaultBackOff(), ByteString.EMPTY).get();
       assertEquals(r.getStartKey(), ByteString.copyFrom(startKey));
       assertEquals(r.getEndKey(), ByteString.copyFrom(endKey));
       assertEquals(r.getRegionEpoch().getConfVer(), confVer);
@@ -154,7 +150,7 @@ public class PDClientTest {
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
     try (PDClient client = session.getPDClient()) {
-      TiRegion r = client.getRegionByID(0);
+      TiRegion r = client.getRegionByID(defaultBackOff(), 0);
       assertEquals(r.getStartKey(), ByteString.copyFrom(startKey));
       assertEquals(r.getEndKey(), ByteString.copyFrom(endKey));
       assertEquals(r.getRegionEpoch().getConfVer(), confVer);
@@ -181,7 +177,7 @@ public class PDClientTest {
                 GrpcUtils.makePeer(1, 10),
                 GrpcUtils.makePeer(2, 20))));
     try (PDClient client = session.getPDClient()) {
-      TiRegion r = client.getRegionByIDAsync(0).get();
+      TiRegion r = client.getRegionByIDAsync(defaultBackOff(), 0).get();
       assertEquals(r.getStartKey(), ByteString.copyFrom(startKey));
       assertEquals(r.getEndKey(), ByteString.copyFrom(endKey));
       assertEquals(r.getRegionEpoch().getConfVer(), confVer);
@@ -205,7 +201,7 @@ public class PDClientTest {
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
     try (PDClient client = session.getPDClient()) {
-      Store r = client.getStore(0);
+      Store r = client.getStore(defaultBackOff(), 0);
       assertEquals(r.getId(), storeId);
       assertEquals(r.getAddress(), testAddress);
       assertEquals(r.getState(), Metapb.StoreState.Up);
@@ -218,7 +214,7 @@ public class PDClientTest {
           GrpcUtils.makeGetStoreResponse(
               server.getClusterId(),
               GrpcUtils.makeStore(storeId, testAddress, Metapb.StoreState.Tombstone)));
-      assertEquals(StoreState.Tombstone, client.getStore(0).getState());
+      assertEquals(StoreState.Tombstone, client.getStore(defaultBackOff(), 0).getState());
     }
   }
 
@@ -236,7 +232,7 @@ public class PDClientTest {
                 GrpcUtils.makeStoreLabel("k1", "v1"),
                 GrpcUtils.makeStoreLabel("k2", "v2"))));
     try (PDClient client = session.getPDClient()) {
-      Store r = client.getStoreAsync(0).get();
+      Store r = client.getStoreAsync(defaultBackOff(), 0).get();
       assertEquals(r.getId(), storeId);
       assertEquals(r.getAddress(), testAddress);
       assertEquals(r.getState(), Metapb.StoreState.Up);
@@ -249,8 +245,12 @@ public class PDClientTest {
           GrpcUtils.makeGetStoreResponse(
               server.getClusterId(),
               GrpcUtils.makeStore(storeId, testAddress, Metapb.StoreState.Tombstone)));
-      assertEquals(StoreState.Tombstone, client.getStoreAsync(0).get().getState());
+      assertEquals(StoreState.Tombstone, client.getStoreAsync(defaultBackOff(), 0).get().getState());
     }
+  }
+
+  private BackOff defaultBackOff() {
+    return ConcreteBackOffer.newCustomBackOff(1000);
   }
 
   @Test

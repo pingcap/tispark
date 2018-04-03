@@ -157,7 +157,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     Queue<RangeSplitter.RegionTask> remainTasks = new ArrayDeque<>();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
     remainTasks.add(regionTask);
-    BackOff backOff = new ConcreteBackOffer(BackOff.copNextMaxBackoff);
+    BackOff backOff = ConcreteBackOffer.newCopNextMaxBackoff();
     // In case of one region task spilt into several others, we ues a queue to properly handleResponseError all
     // the remaining tasks.
     while (!remainTasks.isEmpty()) {
@@ -170,7 +170,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       try {
         RegionStoreClient client = RegionStoreClient.create(region, store, session);
         Collection<RangeSplitter.RegionTask> tasks =
-            client.handleRequestOnce(backOff, dagRequest, ranges, responseQueue);
+            client.coprocess(backOff, dagRequest, ranges, responseQueue);
         if (tasks != null) {
           remainTasks.addAll(tasks);
         }

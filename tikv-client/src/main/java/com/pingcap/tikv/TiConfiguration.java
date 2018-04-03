@@ -35,8 +35,6 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
   private static final int DEF_META_RELOAD_PERIOD = 10;
   private static final TimeUnit DEF_META_RELOAD_UNIT = TimeUnit.SECONDS;
-  private static final int DEF_RETRY_TIME_MS = 10000;
-  private static final Class<? extends BackOff> DEF_BACKOFF_CLASS = ConcreteBackOffer.class;
   private static final int DEF_MAX_FRAME_SIZE = 268435456 * 2; // 256 * 2 MB
   private static final int DEF_INDEX_SCAN_BATCH_SIZE = 2000000;
   // if keyRange size per request exceeds this limit, the request might be too large to be accepted
@@ -48,7 +46,6 @@ public class TiConfiguration implements Serializable {
   private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.RC;
   private static final long REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD = 100000;
 
-  private int retryTimeMs = DEF_RETRY_TIME_MS;
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
   private boolean ignoreTruncate = DEF_IGNORE_TRUNCATE;
@@ -56,7 +53,6 @@ public class TiConfiguration implements Serializable {
   private TimeUnit metaReloadUnit = DEF_META_RELOAD_UNIT;
   private int metaReloadPeriod = DEF_META_RELOAD_PERIOD;
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
-  private Class<? extends BackOff> backOffClass = DEF_BACKOFF_CLASS;
   private List<HostAndPort> pdAddrs = new ArrayList<>();
   private int indexScanBatchSize = DEF_INDEX_SCAN_BATCH_SIZE;
   private int indexScanConcurrency = DEF_INDEX_SCAN_CONCURRENCY;
@@ -71,14 +67,6 @@ public class TiConfiguration implements Serializable {
     TiConfiguration conf = new TiConfiguration();
     conf.pdAddrs = strToHostAndPort(pdAddrsStr);
     return conf;
-  }
-
-  public int getRetryTimeMs() {
-    return retryTimeMs;
-  }
-
-  public void setRetryTimeMs(int n) {
-    this.retryTimeMs = n;
   }
 
   private static List<HostAndPort> strToHostAndPort(String addressStr) {
@@ -160,22 +148,6 @@ public class TiConfiguration implements Serializable {
   public TiConfiguration setMaxFrameSize(int maxFrameSize) {
     this.maxFrameSize = maxFrameSize;
     return this;
-  }
-
-  public void setRpcRetryTimes(int rpcRetryTimes) {
-    this.retryTimeMs = rpcRetryTimes;
-  }
-
-  public int getRpcRetryTimes() {
-    return retryTimeMs;
-  }
-
-  public Class<? extends BackOff> getBackOffClass() {
-    return backOffClass;
-  }
-
-  public void setBackOffClass(Class<? extends BackOff> backOffClass) {
-    this.backOffClass = backOffClass;
   }
 
   public int getIndexScanBatchSize() {

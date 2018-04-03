@@ -20,7 +20,6 @@ package com.pingcap.tikv.region;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
-import com.pingcap.tidb.tipb.Error;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
@@ -35,10 +34,7 @@ import com.pingcap.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import com.pingcap.tikv.kvproto.TikvGrpc.TikvStub;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
-import com.pingcap.tikv.util.BackOff;
-import com.pingcap.tikv.util.BackoffFunction;
-import com.pingcap.tikv.util.Pair;
-import com.pingcap.tikv.util.RangeSplitter;
+import com.pingcap.tikv.util.*;
 import io.grpc.ManagedChannel;
 import org.apache.log4j.Logger;
 
@@ -77,45 +73,45 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private TikvStub asyncStub;
   private final RegionManager regionManager;
 
-  public ByteString get(ByteString key, long version) {
+  public ByteString get(BackOff backOff, ByteString key, long version) {
     Supplier<GetRequest> factory = () ->
         GetRequest.newBuilder().setContext(region.getContext()).setKey(key).setVersion(version).build();
 
     KVErrorHandler<GetResponse> handler =
         new KVErrorHandler<>(
             regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    GetResponse resp = callWithRetry(TikvGrpc.METHOD_KV_GET, factory, handler);
+    GetResponse resp = callWithRetry(backOff, TikvGrpc.METHOD_KV_GET, factory, handler);
     return getHelper(resp);
   }
 
-  public void rawPut(ByteString key, ByteString value, Context context) {
+  public void rawPut(BackOff backOff, ByteString key, ByteString value, Context context) {
     Supplier<RawPutRequest> factory = () ->
         RawPutRequest.newBuilder().setContext(region.getContext()).setKey(key).setValue(value).build();
 
     KVErrorHandler<RawPutResponse> handler =
         new KVErrorHandler<>(
             regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawPutResponse resp = callWithRetry(TikvGrpc.METHOD_RAW_PUT, factory, handler);
+    RawPutResponse resp = callWithRetry(backOff, TikvGrpc.METHOD_RAW_PUT, factory, handler);
   }
 
-  public ByteString rawGet(ByteString key, Context context) {
+  public ByteString rawGet(BackOff backOff, ByteString key, Context context) {
     Supplier<RawGetRequest> factory = () ->
         RawGetRequest.newBuilder().setContext(region.getContext()).setKey(key).build();
     KVErrorHandler<RawGetResponse> handler =
         new KVErrorHandler<>(
             regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawGetResponse resp = callWithRetry(TikvGrpc.METHOD_RAW_GET, factory, handler);
+    RawGetResponse resp = callWithRetry(backOff, TikvGrpc.METHOD_RAW_GET, factory, handler);
     return resp.getValue();
   }
 
-  public void rawDelete(ByteString key, Context context) {
+  public void rawDelete(BackOff backOff, ByteString key, Context context) {
     Supplier<RawDeleteRequest> factory = () ->
         RawDeleteRequest.newBuilder().setContext(context).setKey(key).build();
 
     KVErrorHandler<RawDeleteResponse> handler =
         new KVErrorHandler<>(
             regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawDeleteResponse resp = callWithRetry(TikvGrpc.METHOD_RAW_DELETE, factory, handler);
+    RawDeleteResponse resp = callWithRetry(backOff, TikvGrpc.METHOD_RAW_DELETE, factory, handler);
     if (resp == null) {
       this.regionManager.onRequestFail(context.getRegionId(), context.getPeer().getStoreId());
     }
@@ -131,7 +127,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return resp.getValue();
   }
 
-  public List<KvPair> batchGet(Iterable<ByteString> keys, long version) {
+  public List<KvPair> batchGet(BackOff backOff, Iterable<ByteString> keys, long version) {
     Supplier<BatchGetRequest> request = () ->
         BatchGetRequest.newBuilder()
             .setContext(region.getContext())
@@ -141,7 +137,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     KVErrorHandler<BatchGetResponse> handler =
         new KVErrorHandler<>(
             regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    BatchGetResponse resp = callWithRetry(TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
+    BatchGetResponse resp = callWithRetry(backOff, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
     return batchGetHelper(resp);
   }
 
@@ -152,11 +148,11 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return resp.getPairsList();
   }
 
-  public List<KvPair> scan(ByteString startKey, long version) {
-    return scan(startKey, version, false);
+  public List<KvPair> scan(BackOff backOff, ByteString startKey, long version) {
+    return scan(backOff, startKey, version, false);
   }
 
-  public List<KvPair> scan(ByteString startKey, long version, boolean keyOnly) {
+  public List<KvPair> scan(BackOff backOff, ByteString startKey, long version, boolean keyOnly) {
     Supplier<ScanRequest> request = () ->
         ScanRequest.newBuilder()
             .setContext(region.getContext())
@@ -169,7 +165,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     KVErrorHandler<ScanResponse> handler =
         new KVErrorHandler<>(
             regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    ScanResponse resp = callWithRetry(TikvGrpc.METHOD_KV_SCAN, request, handler);
+    ScanResponse resp = callWithRetry(backOff, TikvGrpc.METHOD_KV_SCAN, request, handler);
     return scanHelper(resp);
   }
 
@@ -180,7 +176,14 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return resp.getPairsList();
   }
 
-  public List<RangeSplitter.RegionTask> handleRequestOnce(BackOff backOffer, DAGRequest req, List<KeyRange> ranges, Queue<SelectResponse> responseQueue) {
+  /**
+   * Execute a DAGRequest and retrieve the response from TiKV server.
+   *
+   * @param req    Select request to process
+   * @param ranges Key range list
+   * @return Remaining tasks of this request, if task split happens, null otherwise
+   */
+  public List<RangeSplitter.RegionTask> coprocess(BackOff backOffer, DAGRequest req, List<KeyRange> ranges, Queue<SelectResponse> responseQueue) {
     if (req == null ||
         ranges == null ||
         req.getExecutorsCount() < 1) {
@@ -205,7 +208,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private List<RangeSplitter.RegionTask> handleCopResponse(BackOff backOffer, Coprocessor.Response response, List<KeyRange> ranges, Queue<SelectResponse> responseQueue) {
     if (response.hasRegionError()) {
       Errorpb.Error regionError = response.getRegionError();
-      backOffer.doBackOff(BackoffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(regionError.toString()));
+      backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(regionError.toString()));
       // Split ranges
       return RangeSplitter
           .newSplitter(session.getRegionManager())
@@ -227,34 +230,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return null;
   }
 
-  /**
-   * Execute a DAGRequest and retrieve the response from TiKV server.
-   *
-   * @param req    SelectRequest to process
-   * @param ranges Key range list
-   * @return Execution result computed by coprocessor
-   */
-  public SelectResponse coprocess(DAGRequest req, List<KeyRange> ranges) {
-    if (req == null ||
-        ranges == null ||
-        req.getExecutorsCount() < 1) {
-      throw new IllegalArgumentException("Invalid coprocess argument!");
-    }
-
-    Supplier<Coprocessor.Request> reqToSend = () ->
-        Coprocessor.Request.newBuilder()
-            .setContext(region.getContext())
-            .setTp(REQ_TYPE_DAG.getValue())
-            .setData(req.toByteString())
-            .addAllRanges(ranges)
-            .build();
-    KVErrorHandler<Coprocessor.Response> handler =
-        new KVErrorHandler<>(
-            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    Coprocessor.Response resp = callWithRetry(TikvGrpc.METHOD_COPROCESSOR, reqToSend, handler);
-    return coprocessorHelper(resp);
-  }
-
   public Iterator<SelectResponse> coprocessStreaming(DAGRequest req, List<KeyRange> ranges) {
     Supplier<Coprocessor.Request> reqToSend = () ->
         Coprocessor.Request.newBuilder()
@@ -274,6 +249,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
         );
 
     StreamingResponse responseIterator = callServerStreamingWithRetry(
+        ConcreteBackOffer.newCopNextMaxBackoff(),
         TikvGrpc.METHOD_COPROCESSOR_STREAM,
         reqToSend,
         handler);

@@ -28,14 +28,13 @@ import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.Metapb.StoreState;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.key.Key;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 
@@ -75,7 +74,7 @@ public class RegionManager {
 
       if (regionId == null) {
         logger.debug("Key not find in keyToRegionIdCache:" + formatBytes(key));
-        TiRegion region = pdClient.getRegionByKey(key);
+        TiRegion region = pdClient.getRegionByKey(ConcreteBackOffer.newGetBackOff(), key);
         if (!putRegion(region)) {
           throw new TiClientInternalException("Invalid Region: " + region.toString());
         }
@@ -104,7 +103,7 @@ public class RegionManager {
         logger.debug(String.format("getRegionByKey ID[%s] -> Region[%s]", regionId, region));
       }
       if (region == null) {
-        region = pdClient.getRegionByID(regionId);
+        region = pdClient.getRegionByID(ConcreteBackOffer.newGetBackOff(), regionId);
         if (!putRegion(region)) {
           throw new TiClientInternalException("Invalid Region: " + region.toString());
         }
@@ -149,7 +148,7 @@ public class RegionManager {
       try {
         Store store = storeCache.get(id);
         if (store == null) {
-          store = pdClient.getStore(id);
+          store = pdClient.getStore(ConcreteBackOffer.newGetBackOff(), id);
         }
         if (store.getState().equals(StoreState.Tombstone)) {
           return null;

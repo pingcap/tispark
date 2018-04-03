@@ -21,13 +21,12 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.exception.GrpcNeedRegionRefreshException;
 import com.pingcap.tikv.kvproto.Errorpb;
 import com.pingcap.tikv.region.RegionErrorReceiver;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOff;
-import com.pingcap.tikv.util.BackoffFunction;
+import com.pingcap.tikv.util.BackOffFunction;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.apache.log4j.Logger;
@@ -62,20 +61,6 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       return getRegionError.apply(resp);
     }
     return null;
-  }
-
-  public void handle(RespT resp) {
-    // if resp is null, then region maybe out of dated. we need handleResponseError this on RegionManager.
-    if (resp == null) {
-      logger.warn(String.format("Request Failed with unknown reason for region region [%s]", ctxRegion));
-      regionManager.onRequestFail(ctxRegion.getId(), ctxRegion.getLeader().getStoreId());
-      notifyCacheInvalidation(
-          ctxRegion.getId(),
-          ctxRegion.getLeader().getStoreId(),
-          CacheInvalidateEvent.CacheType.REQ_FAILED
-      );
-      throw new GrpcNeedRegionRefreshException("Request Failed with unknown reason");
-    }
   }
 
   private void invalidateRegionStoreCache(TiRegion ctxRegion) {
@@ -131,11 +116,11 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
             this.regionManager.getStoreById(newStoreId));
 
-        BackoffFunction.BackOffFuncType backOffFuncType;
+        BackOffFunction.BackOffFuncType backOffFuncType;
         if (error.getNotLeader().getLeader() != null) {
-          backOffFuncType = BackoffFunction.BackOffFuncType.BoUpdateLeader;
+          backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
-          backOffFuncType = BackoffFunction.BackOffFuncType.BoRegionMiss;
+          backOffFuncType = BackOffFunction.BackOffFuncType.BoRegionMiss;
         }
         backOff.doBackOff(backOffFuncType, new GrpcException(error.toString()));
 
@@ -154,7 +139,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasServerIsBusy()) {
         logger.warn(String.format("Server is busy for region [%s], reason: %s", ctxRegion, error.getServerIsBusy().getReason()));
-        backOff.doBackOff(BackoffFunction.BackOffFuncType.boServerBusy,
+        backOff.doBackOff(BackOffFunction.BackOffFuncType.boServerBusy,
             new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString())));
         return true;
       } else if (error.hasStaleCommand()) {
@@ -189,8 +174,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         CacheInvalidateEvent.CacheType.REQ_FAILED
     );
 
-    backOff.doBackOff(BackoffFunction.BackOffFuncType.boTiKVRPC,
-        new GrpcException("send tikv request error: %v, , try next peer later", e));
+    backOff.doBackOff(BackOffFunction.BackOffFuncType.boTiKVRPC,
+        new GrpcException("send tikv request error: " + e.getMessage() + ", try next peer later", e));
     return true;
   }
 }

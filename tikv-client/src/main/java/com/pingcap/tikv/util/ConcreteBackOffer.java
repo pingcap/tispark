@@ -31,53 +31,83 @@ public class ConcreteBackOffer implements BackOff {
   private int counter;
   private int maxSleep;
   private int totalSleep;
-  private Map<BackoffFunction.BackOffFuncType, BackoffFunction> backoffFunctionMap;
+  private Map<BackOffFunction.BackOffFuncType, BackOffFunction> backoffFunctionMap;
   private List<Exception> errors;
   private static final Logger logger = Logger.getLogger(ConcreteBackOffer.class);
 
 //  public ConcreteBackOffer(int attempts) {
-//    Preconditions.checkArgument(attempts >= 1, "Retry count cannot be less than 1.");
+//
 //    this.counter = 1;
 //    this.attempts = attempts;
 //    this.errors = new ArrayList<>();
 //  }
-  public ConcreteBackOffer(int maxSleep) {
+
+  public static ConcreteBackOffer newCustomBackOff(int maxSleep) {
+    return new ConcreteBackOffer(maxSleep);
+  }
+
+  public static ConcreteBackOffer newScannerNextMaxBackoff() {
+    return new ConcreteBackOffer(scannerNextMaxBackoff);
+  }
+
+  public static ConcreteBackOffer newBatchGetMaxBackoff() {
+    return new ConcreteBackOffer(batchGetMaxBackoff);
+  }
+
+  public static ConcreteBackOffer newCopNextMaxBackoff() {
+    return new ConcreteBackOffer(copNextMaxBackoff);
+  }
+
+  public static ConcreteBackOffer newGetBackOff() {
+    return new ConcreteBackOffer(getMaxBackoff);
+  }
+
+  public static ConcreteBackOffer newRawKVBackOff() {
+    return new ConcreteBackOffer(rawkvMaxBackoff);
+  }
+
+  public static ConcreteBackOffer newTsoBackOff() {
+    return new ConcreteBackOffer(tsoMaxBackoff);
+  }
+
+  private ConcreteBackOffer(int maxSleep) {
+    Preconditions.checkArgument(maxSleep >= 0, "Max sleep time cannot be less than 0.");
     this.maxSleep = maxSleep;
     this.errors = new ArrayList<>();
     this.backoffFunctionMap = new HashMap<>();
   }
 
   @Override
-  public void doBackOff(BackoffFunction.BackOffFuncType funcType, Exception err) {
-    BackoffFunction backoffFunction = backoffFunctionMap.get(funcType);
-    if (backoffFunction == null) {
+  public void doBackOff(BackOffFunction.BackOffFuncType funcType, Exception err) {
+    BackOffFunction backOffFunction = backoffFunctionMap.get(funcType);
+    if (backOffFunction == null) {
       switch (funcType) {
         case BoUpdateLeader:
-          backoffFunction = BackoffFunction.create(1, 10, BackOffStrategy.NoJitter);
+          backOffFunction = BackOffFunction.create(1, 10, BackOffStrategy.NoJitter);
           break;
         case boTxnLockFast:
-          backoffFunction = BackoffFunction.create(100, 3000, BackOffStrategy.EqualJitter);
+          backOffFunction = BackOffFunction.create(100, 3000, BackOffStrategy.EqualJitter);
           break;
         case boServerBusy:
-          backoffFunction = BackoffFunction.create(2000, 10000, BackOffStrategy.EqualJitter);
+          backOffFunction = BackOffFunction.create(2000, 10000, BackOffStrategy.EqualJitter);
           break;
         case BoRegionMiss:
-          backoffFunction = BackoffFunction.create(100, 500,  BackOffStrategy.NoJitter);
+          backOffFunction = BackOffFunction.create(100, 500, BackOffStrategy.NoJitter);
           break;
         case BoTxnLock:
-          backoffFunction = BackoffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
+          backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
           break;
         case boPDRPC:
-          backoffFunction = BackoffFunction.create(500, 3000, BackOffStrategy.EqualJitter);
+          backOffFunction = BackOffFunction.create(500, 3000, BackOffStrategy.EqualJitter);
           break;
         case boTiKVRPC:
-          backoffFunction = BackoffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
+          backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
           break;
       }
-      backoffFunctionMap.put(funcType, backoffFunction);
+      backoffFunctionMap.put(funcType, backOffFunction);
     }
 
-    totalSleep += backoffFunction.doBackOff();
+    totalSleep += backOffFunction.doBackOff();
     logger.debug(String.format("%s, retry later(totalSleep %dms, maxSleep %dms)", err.getMessage(), totalSleep, maxSleep));
     errors.add(err);
     if (maxSleep > 0 && totalSleep >= maxSleep) {
@@ -93,23 +123,5 @@ public class ConcreteBackOffer implements BackOff {
       // Use the last backoff type to generate an exception
       throw new GrpcException("retry is exhausted.", err);
     }
-  }
-
-  @Override
-  public void reset() {
-    this.counter = 1;
-  }
-
-  /**
-   * produces 0 1 1 2 3 ... fibonacci series number.
-   */
-  @Override
-  public long nextBackOffMillis() {
-    if (attempts <= counter) {
-      return BackOff.STOP;
-    }
-    long millis = (counter << 2) * 1000;
-    counter++;
-    return millis;
   }
 }

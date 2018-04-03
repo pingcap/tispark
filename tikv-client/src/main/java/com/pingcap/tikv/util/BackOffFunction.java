@@ -4,18 +4,18 @@ import com.pingcap.tikv.exception.GrpcException;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-public class BackoffFunction {
+public class BackOffFunction {
   private int base;
   private int cap;
   private int lastSleep;
   private int attempts;
   private BackOff.BackOffStrategy strategy;
 
-  public static BackoffFunction create(int base, int cap, BackOff.BackOffStrategy strategy) {
-    return new BackoffFunction(base, cap, strategy);
+  public static BackOffFunction create(int base, int cap, BackOff.BackOffStrategy strategy) {
+    return new BackOffFunction(base, cap, strategy);
   }
 
-  private BackoffFunction(int base, int cap, BackOff.BackOffStrategy strategy) {
+  private BackOffFunction(int base, int cap, BackOff.BackOffStrategy strategy) {
     this.base = base;
     this.cap = cap;
     this.strategy = strategy;
