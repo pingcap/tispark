@@ -16,6 +16,7 @@
 package com.pingcap.tikv;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.Metapb.StoreState;
@@ -28,9 +29,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.concurrent.*;
 
 import static com.pingcap.tikv.GrpcUtils.encodeKey;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class PDClientTest {
 
@@ -255,31 +259,42 @@ public class PDClientTest {
 
   @Test
   public void testRetryPolicy() throws Exception {
-//    long storeId = 1024;
-//    server.addGetStoreResp(null);
-//    server.addGetStoreResp(null);
-//    server.addGetStoreResp(
-//        GrpcUtils.makeGetStoreResponse(
-//            server.getClusterId(), GrpcUtils.makeStore(storeId, "", Metapb.StoreState.Up)));
-//    try (PDClient client = session.getPDClient()) {
-//      Store r = client.getStore(0);
-//      assertEquals(r.getId(), storeId);
-//
-//      // Should fail
-//      server.addGetStoreResp(null);
-//      server.addGetStoreResp(null);
-//      server.addGetStoreResp(null);
-//
-//      server.addGetStoreResp(
-//          GrpcUtils.makeGetStoreResponse(
-//              server.getClusterId(), GrpcUtils.makeStore(storeId, "", Metapb.StoreState.Up)));
-//      try {
-//        client.getStore(0);
-//      } catch (GrpcException e) {
-//        assertTrue(true);
-//        return;
-//      }
-//      fail();
-//    }
+    long storeId = 1024;
+    ExecutorService service = Executors.newCachedThreadPool();
+    server.addGetStoreResp(null);
+    server.addGetStoreResp(null);
+    server.addGetStoreResp(
+        GrpcUtils.makeGetStoreResponse(
+            server.getClusterId(), GrpcUtils.makeStore(storeId, "", Metapb.StoreState.Up)));
+    try (PDClient client = session.getPDClient()) {
+      Callable<Store> storeCallable = () ->
+          client.getStore(ConcreteBackOffer.newCustomBackOff(5000), 0);
+      Future<Store> storeFuture = service.submit(storeCallable);
+      try {
+        Store r = storeFuture.get(5, TimeUnit.SECONDS);
+        assertEquals(r.getId(), storeId);
+      } catch (TimeoutException e) {
+        fail();
+      }
+
+      // Should fail
+      server.addGetStoreResp(null);
+      server.addGetStoreResp(null);
+      server.addGetStoreResp(null);
+      server.addGetStoreResp(null);
+      server.addGetStoreResp(null);
+      server.addGetStoreResp(null);
+
+      server.addGetStoreResp(
+          GrpcUtils.makeGetStoreResponse(
+              server.getClusterId(), GrpcUtils.makeStore(storeId, "", Metapb.StoreState.Up)));
+      try {
+        client.getStore(defaultBackOff(), 0);
+      } catch (GrpcException e) {
+        assertTrue(true);
+        return;
+      }
+      fail();
+    }
   }
 }
