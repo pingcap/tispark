@@ -19,6 +19,31 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  test("TISPARK-21 count(1) when single read results in DAGRequestException") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `single_read`")
+    tidbStmt.execute(
+      """CREATE TABLE `single_read` (
+        |  `c1` int(11) NOT NULL,
+        |  `c2` int(11) NOT NULL,
+        |  `c3` int(11) NOT NULL,
+        |  `c4` int(11) NOT NULL,
+        |  `c5` int(11) DEFAULT NULL,
+        |  PRIMARY KEY (`c3`,`c2`),
+        |  KEY `c4` (`c4`)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
+    )
+    tidbStmt.execute("insert into single_read values(1, 1, 1, 2, null), (1, 2, 1, 1, null), (2, 1, 3, 2, null), (2, 2, 2, 1, 0)")
+    refreshConnections()
+
+    assert(execDBTSAndJudge("select count(1) from single_read"))
+    assert(execDBTSAndJudge("select count(c1) from single_read"))
+    assert(execDBTSAndJudge("select count(c2) from single_read"))
+    assert(execDBTSAndJudge("select count(c5) from single_read"))
+    assert(execDBTSAndJudge("select count(1) from single_read where c2 < 2"))
+    assert(execDBTSAndJudge("select c2, c3 from single_read"))
+    assert(execDBTSAndJudge("select c3, c4 from single_read"))
+  }
+
   test("TISPARK-16 fix excessive dag column") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
@@ -55,30 +80,6 @@ class IssueTestSuite extends BaseTiSparkSuite {
     filter_df.show
     val project_df = join_df.select("k1", "k2", "c2")
     project_df.show
-  }
-
-  // https://github.com/pingcap/tispark/issues/272
-  test("Prefix index read does not work correctly") {
-    tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
-    tidbStmt.execute(
-      "CREATE TABLE `prefix` (\n  `a` int(11) NOT NULL,\n  `b` varchar(55) DEFAULT NULL,\n  `c` int(11) DEFAULT NULL,\n  PRIMARY KEY (`a`),\n  KEY `prefix_index` (`b`(2)),\n KEY `prefix_complex` (`a`, `b`(2))\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
-    )
-    tidbStmt.execute(
-      "INSERT INTO `prefix` VALUES(1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7)"
-    )
-    tidbStmt.execute("ANALYZE TABLE `prefix`")
-    refreshConnections()
-    // add explain to show if we have actually used prefix index in plan
-    spark.sql("select a, b from prefix where b < \"bbc\"").explain
-    spark.sql("select a, b from prefix where a = 1 and b = \"bbb\"").explain
-    spark.sql("select b from prefix where b = \"bbc\"").explain
-    spark.sql("select b from prefix where b >= \"bbc\" and b < \"bbd\"").explain
-    spark.sql("select c, b from prefix where b > \"bb\" and b < \"bbc\"").explain
-    assert(execDBTSAndJudge("select a, b from prefix where b < \"bbc\""))
-    assert(execDBTSAndJudge("select a, b from prefix where a = 1 and b = \"bbb\""))
-    assert(execDBTSAndJudge("select b from prefix where b = \"bbc\""))
-    assert(execDBTSAndJudge("select b from prefix where b >= \"bbc\" and b < \"bbd\""))
-    assert(execDBTSAndJudge("select c, b from prefix where b = \"bb\" and b < \"bbc\""))
   }
 
   // https://github.com/pingcap/tispark/issues/262
