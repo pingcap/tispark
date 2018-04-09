@@ -34,8 +34,9 @@ import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.key.Key;
-import java.util.HashMap;
-import java.util.Map;
+
+import java.util.*;
+
 import org.apache.log4j.Logger;
 
 
@@ -128,14 +129,20 @@ public class RegionManager {
     }
 
     public synchronized void invalidateAllRegionForStore(long storeId) {
+      List<TiRegion> regionToRemove = new ArrayList<>();
       for (TiRegion r : regionCache.values()) {
         if(r.getLeader().getStoreId() == storeId) {
           if (logger.isDebugEnabled()) {
             logger.debug(String.format("invalidateAllRegionForStore Region[%s]", r));
           }
-          regionCache.remove(r.getId());
-          keyToRegionIdCache.remove(makeRange(r.getStartKey(), r.getEndKey()));
+          regionToRemove.add(r);
         }
+      }
+
+      // remove region
+      for (TiRegion r : regionToRemove) {
+        regionCache.remove(r.getId());
+        keyToRegionIdCache.remove(makeRange(r.getStartKey(), r.getEndKey()));
       }
     }
 
