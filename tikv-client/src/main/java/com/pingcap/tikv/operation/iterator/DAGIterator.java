@@ -4,6 +4,7 @@ import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.exception.RegionTaskException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Metapb;
@@ -176,9 +177,10 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
         }
       } catch (Throwable e) {
         // Handle region task failed
-        logger.error("Handle region task failed.", e);
+        logger.error("Process region tasks failed, remain " + remainTasks.size() + " tasks not executed due to", e);
+        // Rethrow to upper levels
         eof = true;
-        return null;
+        throw new RegionTaskException("Handle region task failed:", e);
       }
     }
 
