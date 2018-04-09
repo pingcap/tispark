@@ -54,10 +54,6 @@ case class CollectHandles(child: Expression,
 
   override def dataType: DataType = ArrayType(LongType)
 
-  override def inputTypes: Seq[AbstractDataType] = Seq(AnyDataType)
-
-  override def supportsPartial: Boolean = false
-
   override def aggBufferAttributes: Seq[AttributeReference] = Nil
 
   override def aggBufferSchema: StructType = StructType.fromAttributes(aggBufferAttributes)

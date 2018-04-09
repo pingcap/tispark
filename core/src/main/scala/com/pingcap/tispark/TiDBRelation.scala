@@ -18,12 +18,10 @@ package com.pingcap.tispark
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
-import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
 import org.apache.spark.sql.execution._
-import org.apache.spark.sql.execution.aggregate.AggUtils
 import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
@@ -64,14 +62,13 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
       NamedExpression.newExprId
     )
 
-    val sortAgg = AggUtils
+    val sortAgg = TiUtils
       .planAggregateWithoutPartial(
         Seq(handlePlan.attributeRef.head), // group by region id
         Seq(aggExpr),
         Seq(handlePlan.output.head, aggExpr.resultAttribute), // output <region, handleList>
         handlePlan
       )
-      .head
 
     RegionTaskExec(
       sortAgg,
