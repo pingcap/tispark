@@ -32,7 +32,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
         |  KEY `c4` (`c4`)
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
     )
-    tidbStmt.execute("insert into single_read values(1, 1, 1, 2, null), (1, 2, 1, 1, null), (2, 1, 3, 2, null), (2, 2, 2, 1, 0)")
+    tidbStmt.execute(
+      "insert into single_read values(1, 1, 1, 2, null), (1, 2, 1, 1, null), (2, 1, 3, 2, null), (2, 2, 2, 1, 0)"
+    )
     refreshConnections()
 
     assert(execDBTSAndJudge("select count(1) from single_read"))
@@ -166,9 +168,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
     try {
       tidbStmt.execute("drop table if exists t")
       tidbStmt.execute("drop table if exists tmp_debug")
-      tidbStmt.execute("drop table if exists prefix")
       tidbStmt.execute("drop table if exists t1")
       tidbStmt.execute("drop table if exists t2")
+      tidbStmt.execute("drop table if exists single_read")
     } finally {
       super.afterAll()
     }
