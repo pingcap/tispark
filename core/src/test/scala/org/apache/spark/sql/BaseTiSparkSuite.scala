@@ -120,7 +120,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   def execDBTSAndJudge(str: String, skipped: Boolean = false): Boolean =
     try {
-      compResult(querySpark(str), queryTiDB(str))
+      compResult(querySpark(str), queryTiDB(str), str.contains(" order by "))
     } catch {
       case e: Throwable => fail(e)
     }
