@@ -111,9 +111,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   ): SparkPlan = {
     val table = source.table
     dagRequest.setTableInfo(table)
-    if (dagRequest.getFields.isEmpty) {
-      dagRequest.addRequiredColumn(ColumnRef.create(table.getColumns.get(0).getName))
-    }
     // Need to resolve column info after add aggregation push downs
     dagRequest.resolve()
 
