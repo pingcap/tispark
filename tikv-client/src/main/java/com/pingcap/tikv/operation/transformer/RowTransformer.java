@@ -24,9 +24,7 @@ import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * RowTransformer is used along with SchemaInfer and row and provide some operation. If you do not
@@ -57,21 +55,6 @@ public class RowTransformer {
       return this;
     }
 
-    public Builder addProjections(Projection... projections) {
-      this.projections.addAll(Arrays.asList(projections));
-      return this;
-    }
-
-    public Builder addSourceFieldType(DataType fieldType) {
-      this.sourceTypes.add(fieldType);
-      return this;
-    }
-
-    public Builder addSourceFieldTypes(DataType... fieldTypes) {
-      this.sourceTypes.addAll(Arrays.asList(fieldTypes));
-      return this;
-    }
-
     public Builder addSourceFieldTypes(List<DataType> fieldTypes) {
       this.sourceTypes.addAll(fieldTypes);
       return this;
@@ -79,12 +62,21 @@ public class RowTransformer {
   }
 
   private final List<Projection> projections;
-
   private final List<DataType> sourceFieldTypes;
+  private final int rowLength;
+  private final List<DataType> targetTypes;
 
   private RowTransformer(List<DataType> sourceTypes, List<Projection> projections) {
     this.sourceFieldTypes = ImmutableList.copyOf(requireNonNull(sourceTypes));
     this.projections = ImmutableList.copyOf(requireNonNull(projections));
+    int length = 0;
+    ImmutableList.Builder<DataType> builder = ImmutableList.builder();
+    for (Projection p : projections) {
+      length += p.size();
+      builder.add(p.getType());
+    }
+    rowLength = length;
+    targetTypes = builder.build();
   }
 
   /**
@@ -113,19 +105,11 @@ public class RowTransformer {
     return projections.get(index);
   }
 
-  /**
-   * Collect output row's length.
-   *
-   * @return a int which is the new length of output row.
-   */
   private int newRowLength() {
-    return this.projections.stream().reduce(0, (sum, p) -> sum += p.size(), (s1, s2) -> s1 + s2);
+    return rowLength;
   }
 
   public List<DataType> getTypes() {
-    return projections
-        .stream()
-        .flatMap(proj -> proj.getTypes().stream())
-        .collect(Collectors.toList());
+    return targetTypes;
   }
 }

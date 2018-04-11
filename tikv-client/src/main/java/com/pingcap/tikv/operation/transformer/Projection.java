@@ -19,12 +19,11 @@ package com.pingcap.tikv.operation.transformer;
 
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
-import java.util.List;
 
 public interface Projection {
   void set(Object value, Row row, int pos);
 
   int size();
 
-  List<DataType> getTypes();
+  DataType getType();
 }
