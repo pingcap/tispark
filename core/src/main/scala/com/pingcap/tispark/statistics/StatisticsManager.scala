@@ -90,7 +90,7 @@ class StatisticsManager(tiSession: TiSession) {
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private final val statisticsMap = CacheBuilder
     .newBuilder()
-    .build[Long, TableStatistics]
+    .build[java.lang.Long, TableStatistics]
 
   /**
    * Load statistics information maintained by TiDB to TiSpark.
