@@ -350,8 +350,7 @@ case class RegionTaskExec(child: SparkPlan,
           }
 
           if (satisfyDowngradeThreshold) {
-            val handleList = new TLongArrayList()
-            handles.foreach { handleList.add }
+            val handleList = new TLongArrayList(handles)
             // After `splitHandlesByRegion`, ranges in the task are arranged in order
             val tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
