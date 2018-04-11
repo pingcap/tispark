@@ -74,7 +74,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       // Fetch all handles and group by region id
       private val regionHandleMap = RangeSplitter
         .newSplitter(regionManager)
-        .groupByHandlesByRegionId(tableId, handleList)
+        .groupByAndSortHandlesByRegionId(tableId, handleList)
 
       private val iterator = regionHandleMap.iterator()
 

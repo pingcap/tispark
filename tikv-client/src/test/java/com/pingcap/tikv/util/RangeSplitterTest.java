@@ -167,7 +167,7 @@ public class RangeSplitterTest {
     ));
 
     RangeSplitter s = RangeSplitter.newSplitter(mgr);
-    List<RangeSplitter.RegionTask> tasks = new ArrayList<>(s.splitHandlesByRegion(tableId, handles));
+    List<RangeSplitter.RegionTask> tasks = new ArrayList<>(s.splitAndSortHandlesByRegion(tableId, handles));
     tasks.sort((l, r) -> {
       Long regionIdLeft = l.getRegion().getId();
       Long regionIdRight = r.getRegion().getId();
@@ -232,7 +232,7 @@ public class RangeSplitterTest {
     ));
 
     TLongObjectHashMap<TLongArrayList> result =
-        RangeSplitter.newSplitter(mgr).groupByHandlesByRegionId(tableId, handles);
+        RangeSplitter.newSplitter(mgr).groupByAndSortHandlesByRegionId(tableId, handles);
     assertEquals(2, result.get(0).size());
     assertEquals(10, result.get(1).size());
     assertEquals(2, result.get(2).size());

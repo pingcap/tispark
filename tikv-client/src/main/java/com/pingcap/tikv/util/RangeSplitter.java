@@ -105,13 +105,13 @@ public class RangeSplitter {
   private final RegionManager regionManager;
 
   /**
-   * Group by a list of handles by the handles' region id
+   * Group by a list of handles by the handles' region id, handles will be sorted.
    *
    * @param tableId Table id used for the handle
    * @param handles Handle list
    * @return <RegionId, HandleList> map
    */
-  public TLongObjectHashMap<TLongArrayList> groupByHandlesByRegionId(long tableId, TLongArrayList handles) {
+  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(long tableId, TLongArrayList handles) {
     TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
     handles.sort();
 
@@ -173,11 +173,17 @@ public class RangeSplitter {
     return result;
   }
 
-  public List<RegionTask> splitHandlesByRegion(long tableId, TLongArrayList handles) {
+  /**
+   * Build region tasks from handles split by region, handles will be sorted.
+   * @param tableId Table ID
+   * @param handles Handle list
+   * @return A list of region tasks
+   */
+  public List<RegionTask> splitAndSortHandlesByRegion(long tableId, TLongArrayList handles) {
     // Max value for current index handle range
     ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
 
-    TLongObjectHashMap<TLongArrayList> regionHandlesMap = groupByHandlesByRegionId(tableId, handles);
+    TLongObjectHashMap<TLongArrayList> regionHandlesMap = groupByAndSortHandlesByRegionId(tableId, handles);
 
     regionHandlesMap.forEachEntry((k, v) -> {
       Pair<TiRegion, Metapb.Store> regionStorePair = regionManager.getRegionStorePairByRegionId(k);

@@ -73,7 +73,7 @@ public class IndexScanIterator implements Iterator<Row> {
           completionService.submit(() -> {
             List<RegionTask> tasks = RangeSplitter
                 .newSplitter(session.getRegionManager())
-                .splitHandlesByRegion(dagReq.getTableInfo().getId(), handles);
+                .splitAndSortHandlesByRegion(dagReq.getTableInfo().getId(), handles);
             return CoprocessIterator.getRowIterator(dagReq, tasks, session);
           });
         }

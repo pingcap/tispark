@@ -155,6 +155,28 @@ public class KeyRangeUtils {
     return rangeBuilder.build();
   }
 
+  /**
+   * Merge SORTED potential discrete ranges into one large range.
+   *
+   * @param ranges the sorted range list to merge
+   * @return the minimal range which encloses all ranges in this range list.
+   */
+  public static List<KeyRange> mergeSortedRanges(List<KeyRange> ranges) {
+    if (ranges == null || ranges.isEmpty() || ranges.size() == 1) {
+      return ranges;
+    }
+
+    KeyRange first = ranges.get(0);
+    KeyRange last = ranges.get(ranges.size() - 1);
+
+    Key lowMin = toRawKey(first.getStart(), true);
+    Key upperMax = toRawKey(last.getEnd(), false);
+
+    ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
+    rangeBuilder.add(makeCoprocRange(lowMin.toByteString(), upperMax.toByteString()));
+    return rangeBuilder.build();
+  }
+
   static String formatByteString(ByteString key) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < key.size(); i++) {

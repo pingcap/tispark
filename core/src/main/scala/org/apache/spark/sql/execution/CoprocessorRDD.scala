@@ -293,7 +293,7 @@ case class RegionTaskExec(child: SparkPlan,
               numIndexScanTasks += 1
               var tasks = RangeSplitter
                 .newSplitter(session.getRegionManager)
-                .splitHandlesByRegion(
+                .splitAndSortHandlesByRegion(
                   dagRequest.getTableInfo.getId,
                   handleList
                 )
@@ -327,7 +327,7 @@ case class RegionTaskExec(child: SparkPlan,
 
             val tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
-              .splitRangeByRegion(KeyRangeUtils.mergeRanges(taskRanges))
+              .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges))
             proceedTasksOrThrow(tasks)
 
             val task = tasks.head
@@ -351,10 +351,10 @@ case class RegionTaskExec(child: SparkPlan,
 
           if (satisfyDowngradeThreshold) {
             val handleList = new TLongArrayList(handles)
-            // After `splitHandlesByRegion`, ranges in the task are arranged in order
+            // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
             val tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
-              .splitHandlesByRegion(
+              .splitAndSortHandlesByRegion(
                 dagRequest.getTableInfo.getId,
                 handleList
               )
