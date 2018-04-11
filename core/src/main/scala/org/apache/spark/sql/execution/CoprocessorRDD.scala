@@ -140,6 +140,7 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 case class RegionTaskExec(child: SparkPlan,
                           output: Seq[Attribute],
                           dagRequest: TiDAGRequest,
+                          downgradeDagRequest: TiDAGRequest,
                           tiConf: TiConfiguration,
                           ts: TiTimestamp,
                           @transient private val session: TiSession,
@@ -187,16 +188,12 @@ case class RegionTaskExec(child: SparkPlan,
         logger.info(s"In partition No.$index")
         val session = TiSessionCache.getSession(appId, tiConf)
         val batchSize = session.getConf.getIndexScanBatchSize
-        // We need to clear index info in order to perform table scan
-        dagRequest.clearIndexInfo()
-        val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
-        val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
-        val finalTypes = rowTransformer.getTypes.toList
 
         iter.flatMap { row =>
           val handles = row.getArray(1).toLongArray()
           val handleIterator: util.Iterator[Long] = handles.iterator
           var taskCount = 0
+          var downgrade = false
 
           val completionService =
             new ExecutorCompletionService[util.Iterator[TiRow]](session.getThreadPoolForIndexScan)
@@ -209,17 +206,6 @@ case class RegionTaskExec(child: SparkPlan,
               handles.add(handleIterator.next())
             }
             handles
-          }
-
-          def toSparkRow(row: TiRow): Row = {
-            val transRow = rowTransformer.transform(row)
-            val rowArray = new Array[Any](finalTypes.size)
-
-            for (i <- 0 until transRow.fieldCount) {
-              rowArray(i) = transRow.get(i, finalTypes(i))
-            }
-
-            Row.fromSeq(rowArray)
           }
 
           /**
@@ -275,7 +261,7 @@ case class RegionTaskExec(child: SparkPlan,
             task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
           }
 
-          def submitTasks(tasks: List[RegionTask]): Unit = {
+          def submitTasks(tasks: List[RegionTask], dagRequest: TiDAGRequest): Unit = {
             taskCount += 1
             val task = new Callable[util.Iterator[TiRow]] {
               override def call(): util.Iterator[TiRow] = {
@@ -310,7 +296,7 @@ case class RegionTaskExec(child: SparkPlan,
                 )
               })
 
-              submitTasks(tasks.toList)
+              submitTasks(tasks.toList, dagRequest)
             }
           }
 
@@ -323,7 +309,6 @@ case class RegionTaskExec(child: SparkPlan,
            */
           def doDowngradeScan(taskRanges: List[KeyRange]): Unit = {
             // Restore original filters to perform downgraded table scan logic
-            dagRequest.resetFilters(dagRequest.getDowngradeFilters)
 
             val tasks = RangeSplitter
               .newSplitter(session.getRegionManager)
@@ -342,7 +327,7 @@ case class RegionTaskExec(child: SparkPlan,
             )
             numDowngradedTasks += 1
 
-            submitTasks(tasks.toList)
+            submitTasks(tasks.toList, downgradeDagRequest)
           }
 
           def checkIsUnaryRange(regionTask: RegionTask): Boolean = {
@@ -373,11 +358,27 @@ case class RegionTaskExec(child: SparkPlan,
                   s", downgrade to table scan with ${tasks.size()} region tasks, " +
                   s"original index scan task has ${taskRanges.size()} ranges, will try to merge."
               )
+              downgrade = true
               doDowngradeScan(taskRanges.toList)
             }
           } else {
             // Request doesn't need to be downgraded
             doIndexScan()
+          }
+
+          val schemaInferrer: SchemaInfer = if (downgrade) SchemaInfer.create(downgradeDagRequest) else SchemaInfer.create(dagRequest)
+          val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
+          val finalTypes = rowTransformer.getTypes.toList
+
+          def toSparkRow(row: TiRow): Row = {
+            val transRow = rowTransformer.transform(row)
+            val rowArray = new Array[Any](finalTypes.size)
+
+            for (i <- 0 until transRow.fieldCount) {
+              rowArray(i) = transRow.get(i, finalTypes(i))
+            }
+
+            Row.fromSeq(rowArray)
           }
 
           // The result iterator serves as an wrapper to the final result we fetched from region tasks
