@@ -29,35 +29,6 @@ import org.joda.time.LocalDate;
 import org.joda.time.LocalDateTime;
 
 public class Codec {
-
-  public static void main(String args[]) {
-    long s = 0;
-    final int c = 10000000;
-    byte [] result = null;
-
-    s = System.nanoTime();
-    DateTime dt = null;
-    long tt = Codec.DateTimeCodec.toPackedLong(1000000000, DateTimeZone.getDefault());
-    for (int j = 0; j < 10; j++) {
-      for (int i = 0; i < c; i++) {
-        // dt = NewCodec.DateTimeCodec.fromPackedLong1(tt, DateTimeZone.getDefault());
-      }
-    }
-    System.out.println("NewCodec: " + (System.nanoTime() - s) / 1000000000.0);
-    System.out.println("R = " + dt.toString());
-
-    s = System.nanoTime();
-
-    DateTime jdt = null;
-    for (int j = 0; j < 10; j++) {
-      for (int i = 0; i < c; i++) {
-        jdt = Codec.DateTimeCodec.fromPackedLong(tt, DateTimeZone.getDefault());
-      }
-    }
-    System.out.println("OldCodec: " + (System.nanoTime() - s) / 1000000000.0);
-    System.out.println("R = " + jdt.toString());
-  }
-
   public static final int NULL_FLAG = 0;
   public static final int BYTES_FLAG = 1;
   public static final int COMPACT_BYTES_FLAG = 2;
