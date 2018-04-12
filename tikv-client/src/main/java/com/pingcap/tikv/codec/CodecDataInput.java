@@ -17,7 +17,10 @@
 
 package com.pingcap.tikv.codec;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import gnu.trove.list.array.TByteArrayList;
 import io.netty.handler.codec.CodecException;
 import java.lang.reflect.Field;
@@ -37,7 +40,7 @@ public class CodecDataInput {
       BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
       IS_LITTLE_ENDIAN = ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      throw new TiClientInternalException("Unable to use Java Unsafe Package", e);
     }
   }
 
@@ -57,12 +60,14 @@ public class CodecDataInput {
   }
 
   public CodecDataInput(byte[] buf) {
-    backingBuffer = buf;
+    backingBuffer = requireNonNull(buf, "buf is null");
     count = backingBuffer.length;
+    pos = 0;
     mark = 0;
   }
 
   void readFully(byte[] b, int len) {
+    requireNonNull(b, "buf is null");
     System.arraycopy(backingBuffer, pos, b, 0, len);
     pos += len;
   }
