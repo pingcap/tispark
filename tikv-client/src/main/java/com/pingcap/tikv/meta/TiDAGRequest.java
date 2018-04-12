@@ -797,9 +797,8 @@ public class TiDAGRequest implements Serializable {
     return sb.toString();
   }
 
-  public TiDAGRequest clone() {
+  public TiDAGRequest copy() {
     try {
-      super.clone();
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       ObjectOutputStream oos = new ObjectOutputStream(baos);
       oos.writeObject(this);
