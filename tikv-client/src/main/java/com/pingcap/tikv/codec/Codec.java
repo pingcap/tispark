@@ -323,7 +323,7 @@ public class Codec {
   public static class DecimalCodec {
 
     /**
-     * read a decimal value from NewCodecDataInput
+     * read a decimal value from CodecDataInput
      *
      * @param cdi cdi is source data.
      */
@@ -353,7 +353,7 @@ public class Codec {
     }
 
     /**
-     * write a decimal value from NewCodecDataInput
+     * write a decimal value from CodecDataInput
      *
      * @param cdo cdo is destination data.
      * @param dec is decimal value that will be written into cdo.

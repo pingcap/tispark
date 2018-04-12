@@ -19,8 +19,7 @@ public class CodecDataInput {
       UNSAFE = (Unsafe)field.get(null);
       BYTE_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(byte[].class);
       IS_LITTLE_ENDIAN = ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
