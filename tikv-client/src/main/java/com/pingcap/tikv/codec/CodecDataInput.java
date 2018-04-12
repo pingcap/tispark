@@ -20,9 +20,9 @@ package com.pingcap.tikv.codec;
 import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import gnu.trove.list.array.TByteArrayList;
-import io.netty.handler.codec.CodecException;
 import java.lang.reflect.Field;
 import java.nio.ByteOrder;
 import sun.misc.Unsafe;
@@ -51,7 +51,7 @@ public class CodecDataInput {
 
   private void checkLength(int required) {
     if (backingBuffer.length - pos < required) {
-      throw new CodecException("EOF reached");
+      throw new InvalidCodecFormatException("EOF reached");
     }
   }
 
