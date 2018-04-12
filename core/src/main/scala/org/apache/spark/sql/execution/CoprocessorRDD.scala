@@ -366,7 +366,9 @@ case class RegionTaskExec(child: SparkPlan,
             doIndexScan()
           }
 
-          val schemaInferrer: SchemaInfer = if (downgrade) SchemaInfer.create(downgradeDagRequest) else SchemaInfer.create(dagRequest)
+          val schemaInferrer: SchemaInfer =
+            if (downgrade) SchemaInfer.create(downgradeDagRequest)
+            else SchemaInfer.create(dagRequest)
           val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
           val finalTypes = rowTransformer.getTypes.toList
 
