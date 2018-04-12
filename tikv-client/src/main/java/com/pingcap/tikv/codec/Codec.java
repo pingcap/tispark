@@ -16,18 +16,47 @@
 package com.pingcap.tikv.codec;
 
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.codec.CodecDataInput.GRP_SIZE;
+import static com.pingcap.tikv.codec.CodecDataInput.MARKER;
+import static com.pingcap.tikv.codec.CodecDataInput.PADS;
 
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import gnu.trove.list.array.TIntArrayList;
 import java.math.BigDecimal;
-import java.util.Arrays;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 import org.joda.time.LocalDateTime;
 
 public class Codec {
+
+  public static void main(String args[]) {
+    long s = 0;
+    final int c = 10000000;
+    byte [] result = null;
+
+    s = System.nanoTime();
+    DateTime dt = null;
+    long tt = Codec.DateTimeCodec.toPackedLong(1000000000, DateTimeZone.getDefault());
+    for (int j = 0; j < 10; j++) {
+      for (int i = 0; i < c; i++) {
+        // dt = NewCodec.DateTimeCodec.fromPackedLong1(tt, DateTimeZone.getDefault());
+      }
+    }
+    System.out.println("NewCodec: " + (System.nanoTime() - s) / 1000000000.0);
+    System.out.println("R = " + dt.toString());
+
+    s = System.nanoTime();
+
+    DateTime jdt = null;
+    for (int j = 0; j < 10; j++) {
+      for (int i = 0; i < c; i++) {
+        jdt = Codec.DateTimeCodec.fromPackedLong(tt, DateTimeZone.getDefault());
+      }
+    }
+    System.out.println("OldCodec: " + (System.nanoTime() - s) / 1000000000.0);
+    System.out.println("R = " + jdt.toString());
+  }
 
   public static final int NULL_FLAG = 0;
   public static final int BYTES_FLAG = 1;
@@ -204,17 +233,12 @@ public class Codec {
 
   public static class BytesCodec {
 
-    private static final int GRP_SIZE = 8;
-    private static final byte[] PADS = new byte[GRP_SIZE];
-    private static final int MARKER = 0xFF;
-    private static final byte PAD = (byte) 0x0;
-
     public static void writeBytesRaw(CodecDataOutput cdo, byte[] data) {
       cdo.write(data);
     }
 
     public static void writeBytesFully(CodecDataOutput cdo, byte[] data) {
-      cdo.write(Codec.BYTES_FLAG);
+      cdo.write(BYTES_FLAG);
       BytesCodec.writeBytes(cdo, data);
     }
 
@@ -245,7 +269,7 @@ public class Codec {
     }
 
     public static void writeCompactBytesFully(CodecDataOutput cdo, byte[] data) {
-      cdo.write(Codec.COMPACT_BYTES_FLAG);
+      cdo.write(COMPACT_BYTES_FLAG);
       writeCompactBytes(cdo, data);
     }
 
@@ -264,7 +288,7 @@ public class Codec {
     // readBytes decodes bytes which is encoded by EncodeBytes before,
     // returns the leftover bytes and decoded value if no error.
     public static byte[] readBytes(CodecDataInput cdi) {
-      return readBytes(cdi, false);
+      return cdi.readBytes();
     }
 
     public static byte[] readCompactBytes(CodecDataInput cdi) {
@@ -274,53 +298,8 @@ public class Codec {
 
     private static byte[] readCompactBytes(CodecDataInput cdi, int size) {
       byte[] data = new byte[size];
-      for (int i = 0; i < size; i++) {
-        data[i] = cdi.readByte();
-      }
+      cdi.readFully(data, size);
       return data;
-    }
-
-    private static byte[] readBytes(CodecDataInput cdi, boolean reverse) {
-      CodecDataOutput cdo = new CodecDataOutput();
-      while (true) {
-        byte[] groupBytes = new byte[GRP_SIZE + 1];
-
-        cdi.readFully(groupBytes, 0, GRP_SIZE + 1);
-        byte[] group = Arrays.copyOfRange(groupBytes, 0, GRP_SIZE);
-
-        int padCount;
-        int marker = Byte.toUnsignedInt(groupBytes[GRP_SIZE]);
-
-        if (reverse) {
-          padCount = marker;
-        } else {
-          padCount = MARKER - marker;
-        }
-
-        checkArgument(padCount <= GRP_SIZE);
-        int realGroupSize = GRP_SIZE - padCount;
-        cdo.write(group, 0, realGroupSize);
-
-        if (padCount != 0) {
-          byte padByte = PAD;
-          if (reverse) {
-            padByte = (byte) MARKER;
-          }
-          // Check validity of padding bytes.
-          for (int i = realGroupSize; i < group.length; i++) {
-            byte b = group[i];
-            checkArgument(padByte == b);
-          }
-          break;
-        }
-      }
-      byte[] bytes = cdo.toBytes();
-      if (reverse) {
-        for (int i = 0; i < bytes.length; i++) {
-          bytes[i] = (byte) ~bytes[i];
-        }
-      }
-      return bytes;
     }
   }
 
@@ -373,7 +352,7 @@ public class Codec {
   public static class DecimalCodec {
 
     /**
-     * read a decimal value from CodecDataInput
+     * read a decimal value from NewCodecDataInput
      *
      * @param cdi cdi is source data.
      */
@@ -403,7 +382,7 @@ public class Codec {
     }
 
     /**
-     * write a decimal value from CodecDataInput
+     * write a decimal value from NewCodecDataInput
      *
      * @param cdo cdo is destination data.
      * @param dec is decimal value that will be written into cdo.

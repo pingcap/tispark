@@ -106,7 +106,7 @@ public class ObjectRowImpl implements Row {
 
   @Override
   public String getString(int pos) {
-    return (String) values[pos];
+    return values[pos].toString();
   }
 
   @Override
