@@ -210,6 +210,25 @@ public class ProtoConverter extends Visitor<Expr, Object> {
   }
 
   @Override
+  protected Expr visit(StringRegExpression node, Object context) {
+    // assume after type coerce, children should be compatible
+    ScalarFuncSig protoSig;
+    switch (node.getRegType()) {
+      case STARTS_WITH:
+      case CONTAINS:
+      case ENDS_WITH:
+      case LIKE:
+        protoSig = ScalarFuncSig.LikeSig;
+        break;
+      default:
+        throw new TiExpressionException(String.format("Unknown reg type %s", node.getRegType()));
+    }
+    Expr.Builder builder = scalaToPartialProto(node, context);
+    builder.setSig(protoSig);
+    return builder.build();
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   protected Expr visit(ColumnRef node, Object context) {
     long position = 0;

@@ -27,6 +27,8 @@ import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.KeyRangeUtils;
 import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.key.Key;
@@ -72,7 +74,8 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     TiRegion region = pair.first;
     Metapb.Store store = pair.second;
     try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
-      currentCache = client.scan(startKey, version);
+      BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
+      currentCache = client.scan(backOffer, startKey, version);
       if (currentCache == null || currentCache.size() == 0) {
         return false;
       }

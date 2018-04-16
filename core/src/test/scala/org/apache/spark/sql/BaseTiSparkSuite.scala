@@ -118,12 +118,39 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     spark.sparkContext.setLogLevel(level)
   }
 
+  private def judge(str: String, skipped: Boolean = false): Unit =
+    assert(execDBTSAndJudge(str, skipped))
+
   def execDBTSAndJudge(str: String, skipped: Boolean = false): Boolean =
     try {
-      compResult(querySpark(str), queryTiDB(str))
+      compResult(querySpark(str), queryTiDB(str), str.contains(" order by "))
     } catch {
       case e: Throwable => fail(e)
     }
+
+  def explainSpark(str: String, skipped: Boolean = false): Unit =
+    try {
+      spark.sql(str).explain()
+    } catch {
+      case e: Throwable => fail(e)
+    }
+
+  def explainAndTest(str: String, skipped: Boolean = false): Unit =
+    try {
+      explainSpark(str)
+      judge(str, skipped)
+    } catch {
+      case e: Throwable => fail(e)
+    }
+
+  def explainAndRunTest(qSpark: String, qJDBC: String, skipped: Boolean = false): Unit = {
+    try {
+      explainSpark(qSpark)
+      runTest(qSpark, qJDBC)
+    } catch {
+      case e: Throwable => fail(e)
+    }
+  }
 
   def runTest(qSpark: String, qJDBC: String): Unit = {
     var r1: List[List[Any]] = null

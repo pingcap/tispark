@@ -15,14 +15,11 @@
 
 package com.pingcap.tikv.expression.visitor;
 
-import static java.util.Objects.requireNonNull;
-
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
+import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.meta.TiIndexColumn;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Test if a predicate matches and index column entirely and can be convert to
@@ -80,6 +77,21 @@ public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
           return false;
         }
         return predicate.getColumnRef().accept(this, context);
+      default:
+        return false;
+    }
+  }
+
+  @Override
+  protected Boolean visit(StringRegExpression node, Void context) {
+    switch (node.getRegType()) {
+      // If the predicate is StartsWith(col, 'a'), this predicate
+      // indicates a range of ['a', +∞) which can be used by index scan
+      case STARTS_WITH:
+        if (matchEqualTestOnly) {
+          return false;
+        }
+        return node.getLeft().accept(this, context);
       default:
         return false;
     }
