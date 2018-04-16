@@ -151,7 +151,12 @@ case class RegionTaskExec(child: SparkPlan,
     "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of handles used in double scan"),
     "numDowngradedTasks" -> SQLMetrics.createMetric(sparkContext, "number of downgraded tasks"),
     "numIndexScanTasks" -> SQLMetrics
-      .createMetric(sparkContext, "number of index double read tasks")
+      .createMetric(sparkContext, "number of index double read tasks"),
+    "numRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions"),
+    "numIndexRangesScanned" -> SQLMetrics
+      .createMetric(sparkContext, "number of index ranges scanned"),
+    "numDowngradeRangesScanned" -> SQLMetrics
+      .createMetric(sparkContext, "number of downgrade ranges scanned")
   )
 
   private val appId = SparkContext.getOrCreate().appName
@@ -161,10 +166,11 @@ case class RegionTaskExec(child: SparkPlan,
 
   override val nodeName: String = "RegionTaskExec"
 
-  def rowToInternalRow(row: Row, outputTypes: Seq[DataType]): InternalRow = {
+  def rowToInternalRow(row: Row,
+                       outputTypes: Seq[DataType],
+                       converters: Seq[Any => Any]): InternalRow = {
     val numColumns = outputTypes.length
     val mutableRow = new GenericInternalRow(numColumns)
-    val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
     var i = 0
     while (i < numColumns) {
       mutableRow(i) = converters(i)(row(i))
@@ -180,7 +186,8 @@ case class RegionTaskExec(child: SparkPlan,
     val numIndexScanTasks = longMetric("numIndexScanTasks")
     val numDowngradedTasks = longMetric("numDowngradedTasks")
     val numRegions = longMetric("numRegions")
-    val numTotalRangesScanned = longMetric("numTotalRangesScanned")
+    val numIndexRangesScanned = longMetric("numIndexRangesScanned")
+    val numDowngradeRangesScanned = longMetric("numDowngradeRangesScanned")
 
     val downgradeDagRequest = dagRequest.copy()
     // We need to clear index info in order to perform table scan
@@ -316,7 +323,7 @@ case class RegionTaskExec(child: SparkPlan,
 
               submitTasks(tasks.toList, dagRequest)
             }
-            numTotalRangesScanned += indexTaskRanges.size
+            numIndexRangesScanned += indexTaskRanges.size
           }
 
           /**
@@ -346,7 +353,7 @@ case class RegionTaskExec(child: SparkPlan,
                 s"RangesListSize=${downgradeTaskRanges.size()}}"
             )
             numDowngradedTasks += 1
-            numTotalRangesScanned += downgradeTaskRanges.size
+            numDowngradeRangesScanned += downgradeTaskRanges.size
 
             submitTasks(downgradeTasks.toList, downgradeDagRequest)
           }
@@ -368,6 +375,8 @@ case class RegionTaskExec(child: SparkPlan,
 
           val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
           val finalTypes = rowTransformer.getTypes.toList
+          val outputTypes = output.map(_.dataType)
+          val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
 
           def toSparkRow(row: TiRow): Row = {
             val transRow = rowTransformer.transform(row)
@@ -416,9 +425,8 @@ case class RegionTaskExec(child: SparkPlan,
               val proj = UnsafeProjection.create(schema)
               proj.initialize(index)
               val sparkRow = toSparkRow(rowIterator.next())
-              val outputTypes = output.map(_.dataType)
               // Need to convert spark row to internal row for Catalyst
-              proj(rowToInternalRow(sparkRow, outputTypes))
+              proj(rowToInternalRow(sparkRow, outputTypes, converters))
             }
           }
           resultIter
