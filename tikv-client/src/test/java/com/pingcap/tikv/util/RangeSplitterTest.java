@@ -149,7 +149,7 @@ public class RangeSplitterTest {
   }
 
   @Test
-  public void splitHandlesByRegionTest() throws Exception {
+  public void splitAndSortHandlesByRegionTest() throws Exception {
     final long tableId = 1;
     TLongArrayList handles = new TLongArrayList();
     handles.add(new long[] {
@@ -214,7 +214,7 @@ public class RangeSplitterTest {
   }
 
   @Test
-  public void groupHandlesByRegionIdTest() {
+  public void groupByAndSortHandlesByRegionIdTest() {
     final long tableId = 1;
     TLongArrayList handles = new TLongArrayList();
     handles.add(new long[] {

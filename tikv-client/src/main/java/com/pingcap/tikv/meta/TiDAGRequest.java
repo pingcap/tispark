@@ -806,8 +806,7 @@ public class TiDAGRequest implements Serializable {
       ObjectInputStream ois = new ObjectInputStream(bais);
       return ((TiDAGRequest) ois.readObject());
     } catch (Exception e) {
-      e.printStackTrace();
-      return null;
+      throw new RuntimeException(e);
     }
   }
 
