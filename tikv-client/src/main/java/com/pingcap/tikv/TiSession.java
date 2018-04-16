@@ -21,6 +21,7 @@ import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
@@ -52,7 +53,7 @@ public class TiSession implements AutoCloseable {
   }
 
   public TiTimestamp getTimestamp() {
-    return getPDClient().getTimestamp();
+    return getPDClient().getTimestamp(ConcreteBackOffer.newTsoBackOff());
   }
 
   public Snapshot createSnapshot() {

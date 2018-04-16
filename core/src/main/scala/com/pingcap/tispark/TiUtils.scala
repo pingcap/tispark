@@ -188,10 +188,6 @@ object TiUtils {
       tiConf.setMetaReloadPeriodUnit(TimeUnit.SECONDS)
     }
 
-    if (conf.contains(TiConfigConst.GRPC_RETRY_TIMES)) {
-      tiConf.setRpcRetryTimes(conf.get(TiConfigConst.GRPC_RETRY_TIMES).toInt)
-    }
-
     if (conf.contains(TiConfigConst.INDEX_SCAN_BATCH_SIZE)) {
       tiConf.setIndexScanBatchSize(conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
     }
