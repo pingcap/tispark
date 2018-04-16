@@ -28,6 +28,8 @@ import com.pingcap.tikv.operation.iterator.ScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
@@ -74,7 +76,7 @@ public class Snapshot {
     RegionStoreClient client =
         RegionStoreClient.create(pair.first, pair.second, getSession());
     // TODO: Need to deal with lock error after grpc stable
-    return client.get(key, timestamp.getVersion());
+    return client.get(ConcreteBackOffer.newGetBackOff(), key, timestamp.getVersion());
   }
 
   /**
@@ -150,6 +152,7 @@ public class Snapshot {
     Pair<TiRegion, Store> lastPair;
     List<ByteString> keyBuffer = new ArrayList<>();
     List<KvPair> result = new ArrayList<>(keys.size());
+    BackOffer backOffer = ConcreteBackOffer.newBatchGetMaxBackOff();
     for (ByteString key : keys) {
       if (curRegion == null || !curKeyRange.contains(Key.toRawKey(key))) {
         Pair<TiRegion, Store> pair = session.getRegionManager().getRegionStorePairByKey(key);
@@ -159,7 +162,7 @@ public class Snapshot {
 
         try (RegionStoreClient client =
                  RegionStoreClient.create(lastPair.first, lastPair.second, getSession())) {
-          List<KvPair> partialResult = client.batchGet(keyBuffer, timestamp.getVersion());
+          List<KvPair> partialResult = client.batchGet(backOffer, keyBuffer, timestamp.getVersion());
           // TODO: Add lock check
           result.addAll(partialResult);
         } catch (Exception e) {
