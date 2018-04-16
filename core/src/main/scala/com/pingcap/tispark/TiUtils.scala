@@ -218,7 +218,7 @@ object TiUtils {
 
     if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {
       tiConf.setRegionIndexScanDowngradeThreshold(
-        conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toLong
+        conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt
       )
     }
     tiConf

@@ -72,16 +72,10 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
       )
       .head
 
-    val downgradeDagRequest = dagRequest.copy()
-    // We need to clear index info in order to perform table scan
-    downgradeDagRequest.clearIndexInfo()
-    downgradeDagRequest.resetFilters(downgradeDagRequest.getDowngradeFilters)
-
     RegionTaskExec(
       sortAgg,
       output,
       dagRequest,
-      downgradeDagRequest,
       session.getConf,
       session.getTimestamp,
       session,
