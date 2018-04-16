@@ -290,7 +290,7 @@ class StatisticsManager(tiSession: TiSession) {
 
     val tblCount = getTableCount(table.getId)
     if (Long.MaxValue / colWidth > tblCount) {
-      colWidth * tblCount
+      (colWidth * tblCount).toLong
     } else {
       Long.MaxValue
     }
