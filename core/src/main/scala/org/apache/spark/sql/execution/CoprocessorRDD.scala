@@ -203,13 +203,13 @@ case class RegionTaskExec(child: SparkPlan,
             new ExecutorCompletionService[util.Iterator[TiRow]](session.getThreadPoolForIndexScan)
           var rowIterator: util.Iterator[TiRow] = null
 
-          val handleList = new TLongArrayList(handles)
           // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
+          // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
           val indexTasks = RangeSplitter
             .newSplitter(session.getRegionManager)
             .splitAndSortHandlesByRegion(
               dagRequest.getTableInfo.getId,
-              handleList
+              new TLongArrayList(handles)
             )
           proceedTasksOrThrow(indexTasks)
 
@@ -228,7 +228,7 @@ case class RegionTaskExec(child: SparkPlan,
            * @return true, the number of handle ranges retrieved exceeds the `downgradeThreshold` after handle merge, false otherwise.
            */
           def satisfyDowngradeThreshold: Boolean = {
-            indexTasks.lengthCompare(downgradeThreshold) > 0
+            indexTasks.head.getRanges.size() > downgradeThreshold
           }
 
           /**
@@ -321,7 +321,7 @@ case class RegionTaskExec(child: SparkPlan,
            */
           def doDowngradeScan(taskRanges: List[KeyRange]): Unit = {
             // Restore original filters to perform downgraded table scan logic
-
+            // TODO: Maybe we can optimize splitRangeByRegion if we are sure the key ranges are in the same region?
             val downgradeTasks = RangeSplitter
               .newSplitter(session.getRegionManager)
               .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges))
