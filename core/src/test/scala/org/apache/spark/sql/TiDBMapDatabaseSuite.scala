@@ -31,7 +31,7 @@ class TiDBMapDatabaseSuite extends BaseTiSparkSuite {
       "insert into high_decimal_precision values(123456789012345678901234567890123456789012345678, 12.31411, 4), (223456789012345678901234567890123456789012345678, 123131414141.31431311, 6);"
     )
     refreshConnections(TestTables("decimals", "high_decimal_precision"))
-    assert(execDBTSAndJudge("select b from high_decimal_precision"))
+    judge("select b from high_decimal_precision")
     spark.sql("select a from high_decimal_precision").show(false)
     spark.sql("select a, b from high_decimal_precision").show(false)
   }
@@ -44,7 +44,7 @@ class TiDBMapDatabaseSuite extends BaseTiSparkSuite {
     tidbStmt.execute("create table `t-a`(`c-a` int default 1)")
     tidbStmt.execute("insert into `t-a` values(1), (2), (3)")
     refreshConnections(TestTables("test-a", "t-a"))
-    assert(execDBTSAndJudge("select * from `t-a`"))
+    judge("select * from `t-a`")
   }
 
   override def afterAll(): Unit = {
