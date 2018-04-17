@@ -19,9 +19,10 @@ package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import java.sql.Timestamp;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+
+import java.sql.Timestamp;
 
 /**
  * Datetime is a timezone neutral version of timestamp
@@ -58,5 +59,10 @@ public class DateTimeType extends AbstractDateTimeType {
       return null;
     }
     return new Timestamp(dateTime.getMillis());
+  }
+
+  @Override
+  public DateTime getOriginDefaultValueNonNull(String value) {
+    return Converter.convertToDateTime(value);
   }
 }
