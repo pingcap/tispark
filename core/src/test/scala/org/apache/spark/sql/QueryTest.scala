@@ -24,7 +24,7 @@ import java.util.TimeZone
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
-import org.apache.spark.sql.types.StructField
+import org.apache.spark.sql.types.{BinaryType, StructField}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -143,6 +143,8 @@ abstract class QueryTest extends PlanTest {
         for (i <- 0 until row.length) {
           if (row.get(i) == null) {
             rowRes += null
+          } else if (schema(i).dataType.isInstanceOf[BinaryType]) {
+            rowRes += row.get(i).asInstanceOf[Array[Byte]]
           } else {
             rowRes += toOutput(row.get(i), schema(i).dataType.typeName)
           }
