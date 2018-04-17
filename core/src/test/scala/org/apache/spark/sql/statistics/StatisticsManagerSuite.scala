@@ -89,16 +89,15 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     tidbStmt.execute("analyze table `tb_fixed_float`")
     tidbStmt.execute("analyze table `tb_fixed_time`")
     refreshConnections()
-    ti.tidbMapDatabase("tispark_test")
     val tbFixedInt = ti.meta.getTable("tispark_test", "tb_fixed_int").get
     val tbFixedFloat = ti.meta.getTable("tispark_test", "tb_fixed_float").get
     val tbFixedTime = ti.meta.getTable("tispark_test", "tb_fixed_time").get
     val intBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedInt)
     val floatBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedFloat)
     val timeBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedTime)
-    assertResult(18 * 4)(intBytes)
-    assertResult(22 * 4)(floatBytes)
-    assertResult(19 * 2)(timeBytes)
+    assert(intBytes >= 18 * 4)
+    assert(floatBytes >= 22 * 4)
+    assert(timeBytes >= 19 * 2)
   }
 
   test("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
@@ -216,9 +215,9 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
 
   override def afterAll(): Unit = {
     try {
-      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
-      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
-      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
+//      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
+//      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
+//      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
     } finally {
       super.afterAll()
     }

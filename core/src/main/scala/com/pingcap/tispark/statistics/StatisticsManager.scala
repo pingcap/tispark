@@ -22,8 +22,9 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
-import com.pingcap.tikv.types.{DataType, IntegerType, MySQLType}
+import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
+import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 
@@ -63,6 +64,8 @@ private[statistics] case class StatisticsResult(histId: Long,
 class StatisticsManager(tiSession: TiSession) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
+  // An estimator used to calculate table size.
+  private var tableSizeEstimator: TableSizeEstimator = new DefaultTableSizeEstimator(this)
   // Statistics information table columns explanation:
   // stats_meta:
   //       Version       | A time stamp assigned by pd, updates along with DDL updates.
@@ -232,68 +235,24 @@ class StatisticsManager(tiSession: TiSession) {
     statisticsMap.getIfPresent(id).asInstanceOf[TableStatistics]
   }
 
-  def getTableCount(id: Long): Long = {
-    val tbStst = getTableStatistics(id)
-    if (tbStst != null) {
-      tbStst.getCount
-    } else {
-      Long.MaxValue
-    }
-  }
-
-  import MySQLType._
   /**
-    * Estimate table size in bytes.
-    * Refer to
-    * https://pingcap.com/docs/sql/datatype/#tidb-data-type
-    * and
-    * https://dev.mysql.com/doc/refman/5.7/en/storage-requirements.html
+    * Estimated row count of one table
+    * @param table table to evaluate
+    * @return estimated number of rows in this table
+    */
+  def estimatedRowCount(table: TiTableInfo): Long = tableSizeEstimator.estimatedCount(table)
+
+  /**
+    * Estimated table size in bytes using statistic info.
     *
     * @param table table to estimate
     * @return estimated table size in bytes
-    *
     */
-  def estimateTableSize(table: TiTableInfo): Long = {
-    // Magic number used for estimating table size
-    val goldenSplitFactor = 0.618
-    val complementFactor = 1 - goldenSplitFactor
+  def estimateTableSize(table: TiTableInfo): Long = tableSizeEstimator.estimatedTableSize(table)
 
-    val colWidth = table.getColumns.map(_.getType.getType).map {
-      case TypeTiny => 1
-      case TypeShort => 2
-      case TypeInt24 => 3
-      case TypeLong => 4
-      case TypeLonglong => 8
-      case TypeFloat => 4
-      case TypeDouble => 8
-      case TypeDecimal => 10
-      case TypeNewDecimal => 10
-      case TypeNull => 1
-      case TypeTimestamp => 4
-      case TypeDate => 3
-      case TypeYear => 1
-      case TypeDatetime => 8
-      case TypeDuration => 3
-      case TypeString => 255 * goldenSplitFactor
-      case TypeVarchar => 255 * goldenSplitFactor
-      case TypeVarString => 255 * goldenSplitFactor
-      case TypeTinyBlob => 1 << (8 * goldenSplitFactor).toInt
-      case TypeBlob => 1 << (16 * goldenSplitFactor).toInt
-      case TypeMediumBlob => 1 << (24 * goldenSplitFactor).toInt
-      case TypeLongBlob => 1 << (32 * goldenSplitFactor).toInt
-      case TypeEnum => 2
-      case TypeSet => 8
-      case TypeBit => 8 * goldenSplitFactor
-      case TypeJSON => 1 << (10 * goldenSplitFactor).toInt
-      case _ => complementFactor * Int.MaxValue // for other types we just estimate as complementFactor * Int.MaxValue
-    }.sum
-
-    val tblCount = getTableCount(table.getId)
-    if (Long.MaxValue / colWidth > tblCount) {
-      (colWidth * tblCount).toLong
-    } else {
-      Long.MaxValue
-    }
+  def setEstimator(estimator: TableSizeEstimator): StatisticsManager = {
+    this.tableSizeEstimator = estimator
+    this
   }
 }
 
