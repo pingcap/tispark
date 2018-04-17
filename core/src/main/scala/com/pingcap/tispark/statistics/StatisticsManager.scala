@@ -236,18 +236,18 @@ class StatisticsManager(tiSession: TiSession) {
   }
 
   /**
-    * Estimated row count of one table
-    * @param table table to evaluate
-    * @return estimated number of rows in this table
-    */
+   * Estimated row count of one table
+   * @param table table to evaluate
+   * @return estimated number of rows in this table
+   */
   def estimatedRowCount(table: TiTableInfo): Long = tableSizeEstimator.estimatedCount(table)
 
   /**
-    * Estimated table size in bytes using statistic info.
-    *
-    * @param table table to estimate
-    * @return estimated table size in bytes
-    */
+   * Estimated table size in bytes using statistic info.
+   *
+   * @param table table to estimate
+   * @return estimated table size in bytes
+   */
   def estimateTableSize(table: TiTableInfo): Long = tableSizeEstimator.estimatedTableSize(table)
 
   def setEstimator(estimator: TableSizeEstimator): StatisticsManager = {
