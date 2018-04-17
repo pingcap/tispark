@@ -447,7 +447,9 @@ object QueryTest {
    * @param expectedAnswer the expected result in a[[Row]].
    * @param absTol the absolute tolerance between actual and expected answers.
    */
-  protected def checkAggregatesWithTol(actualAnswer: Row, expectedAnswer: Row, absTol: Double) = {
+  protected def checkAggregatesWithTol(actualAnswer: Row,
+                                       expectedAnswer: Row,
+                                       absTol: Double): Unit = {
     require(
       actualAnswer.length == expectedAnswer.length,
       s"actual answer length ${actualAnswer.length} != " +
