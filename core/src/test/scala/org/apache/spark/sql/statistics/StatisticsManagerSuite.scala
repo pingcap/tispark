@@ -215,9 +215,9 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
 
   override def afterAll(): Unit = {
     try {
-//      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
-//      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
-//      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
+      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
+      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
+      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
     } finally {
       super.afterAll()
     }
