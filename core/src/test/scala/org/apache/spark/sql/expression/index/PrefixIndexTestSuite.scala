@@ -22,7 +22,14 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
   test("Prefix index read does not work correctly") {
     tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
     tidbStmt.execute(
-      "CREATE TABLE `prefix` (\n  `a` int(11) NOT NULL,\n  `b` varchar(55) DEFAULT NULL,\n  `c` int(11) DEFAULT NULL,\n  PRIMARY KEY (`a`),\n  KEY `prefix_index` (`b`(2)),\n KEY `prefix_complex` (`a`, `b`(2))\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
+      """CREATE TABLE `prefix` (
+        |  `a` int(11) NOT NULL,
+        |  `b` varchar(55) DEFAULT NULL,
+        |  `c` int(11) DEFAULT NULL,
+        |  PRIMARY KEY (`a`),
+        |  KEY `prefix_index` (`b`(2)),
+        |  KEY `prefix_complex` (`a`, `b`(2))
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
     )
     tidbStmt.execute(
       "INSERT INTO `prefix` VALUES(0, \"b\", 2), (1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7), (7, \"ÿÿ\", 8), (8, \"ÿÿ0\", 9), (9, \"ÿÿÿ\", 10)"
