@@ -73,7 +73,7 @@ abstract class QueryTest extends PlanTest {
             if (l.length != r.length) {
               false
             } else {
-              for(pos <- l.indices) {
+              for (pos <- l.indices) {
                 if (l(pos) != r(pos)) {
                   return false
                 }
