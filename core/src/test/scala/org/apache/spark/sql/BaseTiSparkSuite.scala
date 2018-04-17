@@ -118,6 +118,9 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     spark.sparkContext.setLogLevel(level)
   }
 
+  def judge(str: String, skipped: Boolean = false): Unit =
+    assert(execDBTSAndJudge(str, skipped))
+
   def execDBTSAndJudge(str: String, skipped: Boolean = false): Boolean =
     try {
       compResult(querySpark(str), queryTiDB(str), str.contains(" order by "))
