@@ -44,6 +44,63 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     fDataTbl = ti.meta.getTable("tispark_test", "full_data_type_table").get
   }
 
+  test("Test fixed table size estimation") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
+    tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
+    tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
+    tidbStmt.execute(
+      """CREATE TABLE `tb_fixed_float` (
+        |  `c1` FLOAT NOT NULL,
+        |  `c2` DOUBLE NOT NULL,
+        |  `c3` DECIMAL(5,2) NOT NULL
+        |)""".stripMargin
+    )
+    tidbStmt.execute(
+      "insert into `tb_fixed_float` values(1.4, 1.2, 4.4), (1.2, 2.0, 55.22), (3.14, 1.0, 4.11), (2.4, 2.5, 9.99)"
+    )
+    tidbStmt.execute(
+      """CREATE TABLE `tb_fixed_int` (
+        |  `c1` tinyint NOT NULL,
+        |  `c2` smallint NOT NULL,
+        |  `c3` bigint NOT NULL,
+        |  `c4` int NOT NULL,
+        |  `c5` mediumint NOT NULL
+        |)""".stripMargin
+    )
+    tidbStmt.execute(
+      "insert into `tb_fixed_int` values(1, 1, 1, 2, 1), (1, 2, 1, 1, 1), (2, 1, 3, 2, 1), (2, 2, 2, 1, 1)"
+    )
+    tidbStmt.execute(
+      """CREATE TABLE `tb_fixed_time` (
+        |  `c1` YEAR NOT NULL,
+        |  `c2` DATE NOT NULL,
+        |  `c3` TIMESTAMP NOT NULL,
+        |  `c4` DATETIME NOT NULL,
+        |  `c5` TIME NOT NULL
+        |)""".stripMargin
+    )
+    tidbStmt.execute(
+      "insert into `tb_fixed_time` values(2018, '1997-11-22', '1995-11-06 00:00:00', '1970-09-07 00:00:00', '12:00:00')"
+    )
+    tidbStmt.execute(
+      "insert into `tb_fixed_time` values(2011, '1997-11-22', '1995-11-06 00:00:00', '1970-09-07 00:00:00', '12:00:00')"
+    )
+    tidbStmt.execute("analyze table `tb_fixed_int`")
+    tidbStmt.execute("analyze table `tb_fixed_float`")
+    tidbStmt.execute("analyze table `tb_fixed_time`")
+    refreshConnections()
+    ti.tidbMapDatabase("tispark_test")
+    val tbFixedInt = ti.meta.getTable("tispark_test", "tb_fixed_int").get
+    val tbFixedFloat = ti.meta.getTable("tispark_test", "tb_fixed_float").get
+    val tbFixedTime = ti.meta.getTable("tispark_test", "tb_fixed_time").get
+    val intBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedInt)
+    val floatBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedFloat)
+    val timeBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedTime)
+    assertResult(18 * 4)(intBytes)
+    assertResult(22 * 4)(floatBytes)
+    assertResult(19 * 2)(timeBytes)
+  }
+
   test("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
     val indexes = fDataIdxTbl.getIndices
     val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
@@ -154,6 +211,16 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
       indexInfo.getName
     } else {
       ""
+    }
+  }
+
+  override def afterAll(): Unit = {
+    try {
+      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
+      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
+      tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
+    } finally {
+      super.afterAll()
     }
   }
 }
