@@ -65,10 +65,10 @@ class AlterTableTestSuite extends BaseTiSparkSuite {
     )
     alterTable("bigint", "9223372036854775807", "-9223372036854775808", "1")
     alterTable(
-      "decimal",
-      "1.7976931348623157E308",
-      "0.7976931348623157E308",
-      "-0.7976931348623157E308"
+      "decimal(20,3)",
+      "12345678.123",
+      "2345678.321",
+      "-12345678.3"
     )
     alterTable("double", "0.1", "1.2", "3.4")
     alterTable("float", "0.1", "1.2", "3.4")
@@ -76,7 +76,7 @@ class AlterTableTestSuite extends BaseTiSparkSuite {
     alterTable("mediumint", "0", "1", "3")
     alterTable("real", "0.1", "1.2", "3.4")
     alterTable("smallint", "0", "1", "3")
-    alterTable("tinyint", "b'0'", "b'1'", "b'0'")
+    alterTable("tinyint", "b\'0\'", "b\'1\'", "b\'0\'")
     alterTable("char(10)", "\"a\"", "\"b\"", "\"c\"")
     alterTable("varchar(40)", "\"a\"", "\"b\"", "\"c\"")
     alterTable("text", "\"0\"", "null", "", defaultNullOnly = true)
