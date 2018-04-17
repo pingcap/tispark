@@ -19,9 +19,10 @@ package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import java.sql.Date;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+
+import java.sql.Date;
 
 public class DateType extends AbstractDateTimeType {
   public static final DateType DATE = new DateType(MySQLType.TypeDate);
@@ -38,6 +39,11 @@ public class DateType extends AbstractDateTimeType {
   @Override
   protected DateTimeZone getTimezone() {
     return Converter.getLocalTimezone();
+  }
+
+  @Override
+  public Date getOriginDefaultValueNonNull(String value) {
+    return Converter.convertToDate(value);
   }
 
   /**
