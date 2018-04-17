@@ -19,6 +19,27 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  // https://github.com/pingcap/tispark/issues/313
+  test("Date type cannot decode default values") {
+    // TODO: Merge this test with Test: "Default value information not fetched" in #312
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("create table t(c1 date default \"2018-02-02\")")
+    tidbStmt.execute("insert into t values()")
+    tidbStmt.execute("insert into t values(\"2018-01-01\")")
+    tidbStmt.execute("insert into t values(null)")
+    refreshConnections() // refresh since we need to load data again
+    assert(execDBTSAndJudge("select * from t"))
+    tidbStmt.execute("alter table t add column c2 date default null")
+    refreshConnections()
+    assert(execDBTSAndJudge("select * from t"))
+    tidbStmt.execute("alter table t drop column c2")
+    refreshConnections()
+    assert(execDBTSAndJudge("select * from t"))
+    tidbStmt.execute("alter table t add column c2 date default \"2018-03-03\"")
+    refreshConnections()
+    assert(execDBTSAndJudge("select * from t"))
+  }
+
   test("TISPARK-21 count(1) when single read results in DAGRequestException") {
     tidbStmt.execute("DROP TABLE IF EXISTS `single_read`")
     tidbStmt.execute(
@@ -37,13 +58,13 @@ class IssueTestSuite extends BaseTiSparkSuite {
     )
     refreshConnections()
 
-    assert(execDBTSAndJudge("select count(1) from single_read"))
-    assert(execDBTSAndJudge("select count(c1) from single_read"))
-    assert(execDBTSAndJudge("select count(c2) from single_read"))
-    assert(execDBTSAndJudge("select count(c5) from single_read"))
-    assert(execDBTSAndJudge("select count(1) from single_read where c2 < 2"))
-    assert(execDBTSAndJudge("select c2, c3 from single_read"))
-    assert(execDBTSAndJudge("select c3, c4 from single_read"))
+    judge("select count(1) from single_read")
+    judge("select count(c1) from single_read")
+    judge("select count(c2) from single_read")
+    judge("select count(c5) from single_read")
+    judge("select count(1) from single_read where c2 < 2")
+    judge("select c2, c3 from single_read")
+    judge("select c3, c4 from single_read")
   }
 
   test("TISPARK-16 fix excessive dag column") {
@@ -125,26 +146,6 @@ class IssueTestSuite extends BaseTiSparkSuite {
     runTest(q2, q2.replace("full_data_type_table", "full_data_type_table_j"))
   }
 
-  // https://github.com/pingcap/tikv-client-lib-java/issues/198
-  test("Default value information not fetched") {
-    tidbStmt.execute("drop table if exists t")
-    tidbStmt.execute("create table t(c1 int default 1)")
-    tidbStmt.execute("insert into t values()")
-    tidbStmt.execute("insert into t values(0)")
-    tidbStmt.execute("insert into t values(null)")
-    refreshConnections() // refresh since we need to load data again
-    assert(execDBTSAndJudge("select * from t"))
-    tidbStmt.execute("alter table t add column c2 int default null")
-    refreshConnections()
-    assert(execDBTSAndJudge("select * from t"))
-    tidbStmt.execute("alter table t drop column c2")
-    refreshConnections()
-    assert(execDBTSAndJudge("select * from t"))
-    tidbStmt.execute("alter table t add column c2 int default 3")
-    refreshConnections()
-    assert(execDBTSAndJudge("select * from t"))
-  }
-
   // https://github.com/pingcap/tispark/issues/162
   test("select count(something + constant) reveals NPE on master branch") {
     tidbStmt.execute("drop table if exists t")
@@ -153,15 +154,15 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into t values(2)")
     tidbStmt.execute("insert into t values(4)")
     refreshConnections() // refresh since we need to load data again
-    assert(execDBTSAndJudge("select count(c1) from t"))
-    assert(execDBTSAndJudge("select count(c1 + 1) from t"))
-    assert(execDBTSAndJudge("select count(1 + c1) from t"))
+    judge("select count(c1) from t")
+    judge("select count(c1 + 1) from t")
+    judge("select count(1 + c1) from t")
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(c1 int not null, c2 int not null)")
     tidbStmt.execute("insert into t values(1, 4)")
     tidbStmt.execute("insert into t values(2, 2)")
     refreshConnections()
-    assert(execDBTSAndJudge("select count(c1 + c2) from t"))
+    judge("select count(c1 + c2) from t")
   }
 
   override def afterAll(): Unit = {
