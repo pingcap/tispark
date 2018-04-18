@@ -19,27 +19,6 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
-  // https://github.com/pingcap/tispark/issues/313
-  test("Date type cannot decode default values") {
-    // TODO: Merge this test with Test: "Default value information not fetched" in #312
-    tidbStmt.execute("drop table if exists t")
-    tidbStmt.execute("create table t(c1 date default \"2018-02-02\")")
-    tidbStmt.execute("insert into t values()")
-    tidbStmt.execute("insert into t values(\"2018-01-01\")")
-    tidbStmt.execute("insert into t values(null)")
-    refreshConnections() // refresh since we need to load data again
-    assert(execDBTSAndJudge("select * from t"))
-    tidbStmt.execute("alter table t add column c2 date default null")
-    refreshConnections()
-    assert(execDBTSAndJudge("select * from t"))
-    tidbStmt.execute("alter table t drop column c2")
-    refreshConnections()
-    assert(execDBTSAndJudge("select * from t"))
-    tidbStmt.execute("alter table t add column c2 date default \"2018-03-03\"")
-    refreshConnections()
-    assert(execDBTSAndJudge("select * from t"))
-  }
-
   test("TISPARK-21 count(1) when single read results in DAGRequestException") {
     tidbStmt.execute("DROP TABLE IF EXISTS `single_read`")
     tidbStmt.execute(
