@@ -25,8 +25,6 @@ import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Map;
 
-import static com.pingcap.tikv.types.MySQLType.TypeJSON;
-
 public class DataTypeFactory {
   private static final Map<MySQLType, Constructor<? extends DataType>> dataTypeCreatorMap;
   private static final Map<MySQLType, DataType> dataTypeInstanceMap;
@@ -83,6 +81,10 @@ public class DataTypeFactory {
     if (Arrays.asList(BytesType.subTypes).contains(type) &&
         !Charset.CharsetBin.equals(holder.getCharset())) {
       return MySQLType.TypeVarchar;
+    }
+    if (Arrays.asList(StringType.subTypes).contains(type) &&
+        Charset.CharsetBin.equals(holder.getCharset())) {
+      return MySQLType.TypeBlob;
     }
     return type;
   }

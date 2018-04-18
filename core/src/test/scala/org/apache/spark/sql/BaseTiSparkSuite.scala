@@ -180,12 +180,31 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       }
       if (!compResult(r1, r3, isOrdered)) {
         fail(
-          s"Failed with \nTiSpark:\t\t${mkString(r1)}\nSpark With JDBC:${mkString(r2)}\nTiDB:\t\t\t${mkString(r3)}"
+          s"Failed with \nTiSpark:\t\t${mapStringNestedList(r1)}\nSpark With JDBC:${mapStringNestedList(r2)}\nTiDB:\t\t\t${mapStringNestedList(r3)}"
         )
       }
     }
   }
 
-  private def mkString(result: List[List[Any]]): String =
-    if (result == null) "null" else result.mkString(",")
+  private def mapStringNestedList(result: List[List[Any]]): String =
+    if (result == null) "null" else result.map(mapStringList).mkString(",")
+
+  private def mapStringList(result: List[Any]): String =
+    if (result == null) "null" else "List(" + result.map(mapString).mkString(",") + ")"
+
+  private def mapString(result: Any): String = {
+    if (result == null) "null"
+    else
+      result match {
+        case _: Array[Byte] =>
+          var str = "["
+          for (s <- result.asInstanceOf[Array[Byte]]) {
+            str += " " + s.toString
+          }
+          str += " ]"
+          str
+        case _ =>
+          result.toString
+      }
+  }
 }
