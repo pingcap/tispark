@@ -189,6 +189,8 @@ case class RegionTaskExec(child: SparkPlan,
     val numIndexRangesScanned = longMetric("numIndexRangesScanned")
     val numDowngradeRangesScanned = longMetric("numDowngradeRangesScanned")
 
+    val downgradeSplitFactor = 4
+
     val downgradeDagRequest = dagRequest.copy()
     // We need to clear index info in order to perform table scan
     downgradeDagRequest.clearIndexInfo()
@@ -221,21 +223,23 @@ case class RegionTaskExec(child: SparkPlan,
            *
            * @param tasks tasks to examine
            */
-          def proceedTasksOrThrow(tasks: Seq[RegionTask]): Unit = {
+          def proceedTasksOrThrow(tasks: Seq[RegionTask]): Seq[RegionTask] = {
             if (tasks.lengthCompare(1) != 0) {
               throw new RuntimeException(s"Unexpected region task size:${tasks.size}, expecting 1")
             }
+            tasks
           }
 
           // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
           // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
-          val indexTasks = RangeSplitter
-            .newSplitter(session.getRegionManager)
-            .splitAndSortHandlesByRegion(
-              dagRequest.getTableInfo.getId,
-              new TLongArrayList(handles)
-            )
-          proceedTasksOrThrow(indexTasks)
+          val indexTasks = proceedTasksOrThrow(
+            RangeSplitter
+              .newSplitter(session.getRegionManager)
+              .splitAndSortHandlesByRegion(
+                dagRequest.getTableInfo.getId,
+                new TLongArrayList(handles)
+              )
+          )
           val indexTaskRanges = indexTasks.head.getRanges
 
           def feedBatch(): TLongArrayList = {
@@ -308,16 +312,16 @@ case class RegionTaskExec(child: SparkPlan,
               val handleList = feedBatch()
               numHandles += handleList.size()
               logger.info("Single batch handles size:" + handleList.size())
-              numIndexScanTasks += 1
               val tasks = splitTasks(indexTasks)
+              numIndexScanTasks += tasks.size
 
-              logger.info(s"Single batch RegionTask size:${tasks.size()}")
+              logger.info(s"Single batch RegionTask size:${tasks.size}")
               tasks.foreach(task => {
                 logger.info(
                   s"Single batch RegionTask={Host:${task.getHost}," +
                     s"Region:${task.getRegion}," +
                     s"Store:{id=${task.getStore.getId},address=${task.getStore.getAddress}}, " +
-                    s"RangesListSize:${task.getRanges.size()}}"
+                    s"RangesListSize:${task.getRanges.size}}"
                 )
               })
 
@@ -336,21 +340,32 @@ case class RegionTaskExec(child: SparkPlan,
           def doDowngradeScan(taskRanges: List[KeyRange]): Unit = {
             // Restore original filters to perform downgraded table scan logic
             // TODO: Maybe we can optimize splitRangeByRegion if we are sure the key ranges are in the same region?
-            val downgradeTasks = RangeSplitter
-              .newSplitter(session.getRegionManager)
-              .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges))
-            proceedTasksOrThrow(downgradeTasks)
+            val downgradeTasks = proceedTasksOrThrow(
+              try {
+                RangeSplitter
+                  .newSplitter(session.getRegionManager)
+                  .splitSortedRangeInRegion(taskRanges, downgradeSplitFactor)
+              } catch {
+                case e: Exception =>
+                  logger.warn("Encountered problems when splitting range for single region.")
+                  logger.warn("Retrying split with unified logic")
+                  logger.warn("Exception message: " + e.getMessage)
+                  RangeSplitter
+                    .newSplitter(session.getRegionManager)
+                    .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges))
+              }
+            )
 
             val task = downgradeTasks.head
             val downgradeTaskRanges = task.getRanges
             logger.info(
-              s"Merged ${taskRanges.size()} index ranges to ${downgradeTaskRanges.size()} ranges."
+              s"Merged ${taskRanges.size} index ranges to ${downgradeTaskRanges.size} ranges."
             )
             logger.info(
               s"Unary task downgraded, task info:Host={${task.getHost}}, " +
                 s"RegionId={${task.getRegion.getId}}, " +
                 s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
-                s"RangesListSize=${downgradeTaskRanges.size()}}"
+                s"RangesListSize=${downgradeTaskRanges.size}}"
             )
             numDowngradedTasks += 1
             numDowngradeRangesScanned += downgradeTaskRanges.size

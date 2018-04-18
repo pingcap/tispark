@@ -162,18 +162,37 @@ public class KeyRangeUtils {
    * @return the minimal range which encloses all ranges in this range list.
    */
   public static List<KeyRange> mergeSortedRanges(List<KeyRange> ranges) {
-    if (ranges == null || ranges.isEmpty() || ranges.size() == 1) {
+    return mergeSortedRanges(ranges, 1);
+  }
+
+  /**
+   * Merge SORTED potential discrete ranges into no more than {@code splitNum} large range.
+   *
+   * @param ranges the sorted range list to merge
+   * @param splitNum upper bound of number of ranges to merge into
+   * @return the minimal range which encloses all ranges in this range list.
+   */
+  public static List<KeyRange> mergeSortedRanges(List<KeyRange> ranges, int splitNum) {
+    if (splitNum <= 0) {
+      throw new RuntimeException("Cannot split ranges by non-positive integer");
+    }
+    if (ranges == null || ranges.isEmpty() || ranges.size() <= splitNum) {
       return ranges;
     }
-
-    KeyRange first = ranges.get(0);
-    KeyRange last = ranges.get(ranges.size() - 1);
-
-    Key lowMin = toRawKey(first.getStart(), true);
-    Key upperMax = toRawKey(last.getEnd(), false);
-
+    // use ceil for split step
+    int step = (ranges.size() + splitNum - 1) / splitNum;
     ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
-    rangeBuilder.add(makeCoprocRange(lowMin.toByteString(), upperMax.toByteString()));
+    for (int i = 0, nowPos = 0; i < splitNum; i ++) {
+      int nextPos = Math.min(nowPos + step - 1, ranges.size() - 1);
+      KeyRange first = ranges.get(nowPos);
+      KeyRange last = ranges.get(nextPos);
+
+      Key lowerMin = toRawKey(first.getStart(), true);
+      Key upperMax = toRawKey(last.getEnd(), false);
+
+      rangeBuilder.add(makeCoprocRange(lowerMin.toByteString(), upperMax.toByteString()));
+      nowPos = nowPos + step;
+    }
     return rangeBuilder.build();
   }
 
