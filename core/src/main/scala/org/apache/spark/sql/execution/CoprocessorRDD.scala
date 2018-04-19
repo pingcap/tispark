@@ -26,7 +26,7 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{TiDBRelation, TiSessionCache, TiUtils}
+import com.pingcap.tispark.{TiConfigConst, TiDBRelation, TiSessionCache, TiUtils}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
@@ -159,8 +159,9 @@ case class RegionTaskExec(child: SparkPlan,
       .createMetric(sparkContext, "number of downgrade ranges scanned")
   )
 
+  private val sqlConf = sqlContext.conf
   private val appId = SparkContext.getOrCreate().appName
-  private val downgradeThreshold = session.getConf.getRegionIndexScanDowngradeThreshold
+  private val downgradeThreshold = sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "100000").toInt
 
   type TiRow = com.pingcap.tikv.row.Row
 
@@ -169,12 +170,9 @@ case class RegionTaskExec(child: SparkPlan,
   def rowToInternalRow(row: Row,
                        outputTypes: Seq[DataType],
                        converters: Seq[Any => Any]): InternalRow = {
-    val numColumns = outputTypes.length
-    val mutableRow = new GenericInternalRow(numColumns)
-    var i = 0
-    while (i < numColumns) {
+    val mutableRow = new GenericInternalRow(outputTypes.length)
+    for (i <- outputTypes.indices) {
       mutableRow(i) = converters(i)(row(i))
-      i += 1
     }
 
     mutableRow
@@ -203,7 +201,7 @@ case class RegionTaskExec(child: SparkPlan,
         val logger = Logger.getLogger(getClass.getName)
         logger.info(s"In partition No.$index")
         val session = TiSessionCache.getSession(appId, tiConf)
-        val batchSize = session.getConf.getIndexScanBatchSize
+        val batchSize = tiConf.getIndexScanBatchSize
 
         iter.flatMap { row =>
           val handles = row.getArray(1).toLongArray()
