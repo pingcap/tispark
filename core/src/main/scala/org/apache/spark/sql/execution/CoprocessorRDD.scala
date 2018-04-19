@@ -161,7 +161,8 @@ case class RegionTaskExec(child: SparkPlan,
 
   private val sqlConf = sqlContext.conf
   private val appId = SparkContext.getOrCreate().appName
-  private val downgradeThreshold = sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "100000").toInt
+  private val downgradeThreshold =
+    sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
 
   type TiRow = com.pingcap.tikv.row.Row
 
