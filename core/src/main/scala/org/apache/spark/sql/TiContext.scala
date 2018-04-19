@@ -129,6 +129,8 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     }
   }
 
+  // tidbTable does not do any check any meta information
+  // it just register table for later use
   def tidbTable(dbName: String, tableName: String): Unit = {
     val tiRelation = new TiDBRelation(
       tiSession,
