@@ -40,7 +40,7 @@ spark.sql("select count(*) from lineitem").show
 ## Metadata loading
 If you are using spark-shell, you need to manually load schema information as decribed above.
 
-If you have too many table, you might choose to disable histogram prepare and loading will be faster.
+If you have too many tables, you might choose to disable histogram preparison and loading will be faster.
 
 ```
 ti.tidbMapDatabase("tpch", autoLoadStatistics = true)
