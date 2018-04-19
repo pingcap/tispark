@@ -67,8 +67,10 @@ public class Converter {
   }
 
   private static final DateTimeZone localTimeZone = DateTimeZone.getDefault();
-  private static final DateTimeFormatter localTimeZoneFormatter =
+  private static final DateTimeFormatter localDateTimeFormatter =
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(localTimeZone);
+  private static final DateTimeFormatter localDateFormatter =
+      DateTimeFormat.forPattern("yyyy-MM-dd").withZone(localTimeZone);
 
   public static DateTimeZone getLocalTimezone() {
     return localTimeZone;
@@ -79,7 +81,7 @@ public class Converter {
    * If constant is a string, it parses as local timezone
    * If it is an long, it parsed as UTC epoch
    * @param val value to be converted to DateTime
-   * @return
+   * @return joda.time.DateTime indicating local Datetime
    */
   public static DateTime convertToDateTime(Object val) {
     requireNonNull(val, "val is null");
@@ -88,9 +90,9 @@ public class Converter {
     } else if (val instanceof String) {
       // interpret string as in local timezone
       try {
-        return DateTime.parse((String) val, localTimeZoneFormatter);
+        return DateTime.parse((String) val, localDateTimeFormatter);
       } catch (Exception e) {
-        throw new TypeException(String.format("Error parsing string to datetime", (String)val), e);
+        throw new TypeException(String.format("Error parsing string %s to datetime", (String)val), e);
       }
     } else if (val instanceof Long) {
       return new DateTime((long)val);
@@ -100,6 +102,34 @@ public class Converter {
       return new DateTime(((Date) val).getTime());
     } else {
       throw new TypeException("Can not cast Object to LocalDateTime ");
+    }
+  }
+
+  /**
+   * Convert an object to Date
+   * If constant is a string, it parses as local timezone
+   * If it is an long, it parsed as UTC epoch
+   * @param val value to be converted to DateTime
+   * @return java.sql.Date indicating Date
+   */
+  public static Date convertToDate(Object val) {
+    requireNonNull(val, "val is null");
+    if (val instanceof Date) {
+      return (Date) val;
+    } else if (val instanceof String) {
+      try {
+        return new Date(DateTime.parse((String) val, localDateFormatter).toDate().getTime());
+      } catch (Exception e) {
+        throw new TypeException(String.format("Error parsing string %s to date", (String) val), e);
+      }
+    } else if (val instanceof Long) {
+      return new Date((long) val);
+    } else if (val instanceof Timestamp) {
+      return new Date(((Timestamp) val).getTime());
+    } else if (val instanceof DateTime) {
+      return new Date(((DateTime) val).getMillis());
+    } else {
+      throw new TypeException("Can not cast Object to LocalDate");
     }
   }
 

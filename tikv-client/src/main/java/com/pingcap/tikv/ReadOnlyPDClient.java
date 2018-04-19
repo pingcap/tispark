@@ -19,6 +19,8 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOffer;
+
 import java.util.concurrent.Future;
 
 /** Readonly PD client including only reading related interface Supposed for TiDB-like use cases */
@@ -28,7 +30,7 @@ public interface ReadOnlyPDClient {
    *
    * @return a timestamp object
    */
-  TiTimestamp getTimestamp();
+  TiTimestamp getTimestamp(BackOffer backOffer);
 
   /**
    * Get Region from PD by key specified
@@ -36,9 +38,9 @@ public interface ReadOnlyPDClient {
    * @param key key in bytes for locating a region
    * @return the region whose startKey and endKey range covers the given key
    */
-  TiRegion getRegionByKey(ByteString key);
+  TiRegion getRegionByKey(BackOffer backOffer, ByteString key);
 
-  Future<TiRegion> getRegionByKeyAsync(ByteString key);
+  Future<TiRegion> getRegionByKeyAsync(BackOffer backOffer, ByteString key);
 
   /**
    * Get Region by Region Id
@@ -46,9 +48,9 @@ public interface ReadOnlyPDClient {
    * @param id Region Id
    * @return the region corresponding to the given Id
    */
-  TiRegion getRegionByID(long id);
+  TiRegion getRegionByID(BackOffer backOffer, long id);
 
-  Future<TiRegion> getRegionByIDAsync(long id);
+  Future<TiRegion> getRegionByIDAsync(BackOffer backOffer, long id);
 
   /**
    * Get Store by StoreId
@@ -56,9 +58,9 @@ public interface ReadOnlyPDClient {
    * @param storeId StoreId
    * @return the Store corresponding to the given Id
    */
-  Store getStore(long storeId);
+  Store getStore(BackOffer backOffer, long storeId);
 
-  Future<Store> getStoreAsync(long storeId);
+  Future<Store> getStoreAsync(BackOffer backOffer, long storeId);
 
   /**
    * Close underlining resources

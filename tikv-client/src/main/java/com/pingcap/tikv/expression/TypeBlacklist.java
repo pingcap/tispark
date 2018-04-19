@@ -53,7 +53,7 @@ public class TypeBlacklist extends Blacklist {
     map.put(TypeMediumBlob, "mediumtext");
     map.put(TypeLongBlob, "longtext");
     map.put(TypeBlob, "text");
-    map.put(TypeVarString, "varstring");
+    map.put(TypeVarString, "varString");
     map.put(TypeString, "string");
     return map;
   }
