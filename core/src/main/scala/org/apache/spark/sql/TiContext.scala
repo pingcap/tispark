@@ -129,13 +129,13 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     }
   }
 
-  def tidbTable(dbName: String, tableName: String): DataFrame = {
+  def tidbTable(dbName: String, tableName: String): Unit = {
     val tiRelation = new TiDBRelation(
       tiSession,
       new TiTableReference(dbName, tableName),
       meta
     )(sqlContext)
-    sqlContext.baseRelationToDataFrame(tiRelation)
+    sqlContext.baseRelationToDataFrame(tiRelation).createTempView(tableName)
   }
 
   def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit = {
