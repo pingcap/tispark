@@ -83,7 +83,7 @@ public class YearType extends DataType {
 
   @Override
   public ExprType getProtoExprType() {
-    return ExprType.Year;
+    return ExprType.Int64;
   }
 
   /**
