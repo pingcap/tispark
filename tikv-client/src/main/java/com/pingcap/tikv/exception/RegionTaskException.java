@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2018 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,8 @@
 
 package com.pingcap.tikv.exception;
 
-
-public class GrpcNeedRegionRefreshException extends GrpcException {
-  public GrpcNeedRegionRefreshException(Exception e) {
-    super(e);
-  }
-
-  public GrpcNeedRegionRefreshException(String msg) {
-    super(msg);
-  }
-
-  public GrpcNeedRegionRefreshException(String msg, Exception e) {
-    super(msg, e);
+public class RegionTaskException extends RuntimeException {
+  public RegionTaskException(String msg, Throwable throwable) {
+    super(msg, throwable);
   }
 }

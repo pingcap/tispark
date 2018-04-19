@@ -22,7 +22,6 @@ import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.Pair;
-import com.pingcap.tikv.util.ZeroBackOff;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,8 +49,6 @@ public class RegionManagerTest {
 
     TiConfiguration conf =
         TiConfiguration.createDefault("127.0.0.1:" + server.port);
-    conf.setRetryTimes(3);
-    conf.setBackOffClass(ZeroBackOff.class);
     TiSession session = TiSession.create(conf);
     mgr = session.getRegionManager();
   }

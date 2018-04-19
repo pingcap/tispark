@@ -24,6 +24,7 @@ import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
+import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 
@@ -63,6 +64,8 @@ private[statistics] case class StatisticsResult(histId: Long,
 class StatisticsManager(tiSession: TiSession) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
+  // An estimator used to calculate table size.
+  private var tableSizeEstimator: TableSizeEstimator = new DefaultTableSizeEstimator(this)
   // Statistics information table columns explanation:
   // stats_meta:
   //       Version       | A time stamp assigned by pd, updates along with DDL updates.
@@ -232,13 +235,24 @@ class StatisticsManager(tiSession: TiSession) {
     statisticsMap.getIfPresent(id)
   }
 
-  def getTableCount(id: Long): Long = {
-    val tbStst = getTableStatistics(id)
-    if (tbStst != null) {
-      tbStst.getCount
-    } else {
-      Long.MaxValue
-    }
+  /**
+   * Estimated row count of one table
+   * @param table table to evaluate
+   * @return estimated number of rows in this table
+   */
+  def estimatedRowCount(table: TiTableInfo): Long = tableSizeEstimator.estimatedCount(table)
+
+  /**
+   * Estimated table size in bytes using statistic info.
+   *
+   * @param table table to estimate
+   * @return estimated table size in bytes
+   */
+  def estimateTableSize(table: TiTableInfo): Long = tableSizeEstimator.estimatedTableSize(table)
+
+  def setEstimator(estimator: TableSizeEstimator): StatisticsManager = {
+    this.tableSizeEstimator = estimator
+    this
   }
 }
 

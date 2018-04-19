@@ -68,7 +68,7 @@ object StatisticsHelper {
                                                neededColIds: mutable.ArrayBuffer[Long],
                                                histTable: TiTableInfo): StatisticsDTO = {
     if (row.fieldCount() < 6) return null
-    val isIndex = if (row.getLong(1) > 0) true else false
+    val isIndex = row.getLong(1) > 0
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
     val histVer = row.getLong(4)

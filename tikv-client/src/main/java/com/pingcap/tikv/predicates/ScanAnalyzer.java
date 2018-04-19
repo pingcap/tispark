@@ -47,6 +47,10 @@ import static java.util.Objects.requireNonNull;
 
 
 public class ScanAnalyzer {
+  private static final double INDEX_SCAN_COST_FACTOR = 1.2;
+  private static final double TABLE_SCAN_COST_FACTOR = 1.0;
+  private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
+
   public static class ScanPlan {
     ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost, boolean isDoubleRead, double estimatedRowCount) {
       this.filters = filters;
@@ -138,7 +142,7 @@ public class ScanAnalyzer {
         // TODO: Fine-grained statistics usage
       }
       keyRanges = buildTableScanKeyRange(table, irs);
-      cost *= tableSize;
+      cost *= tableSize * TABLE_SCAN_COST_FACTOR;
     } else {
       if (tableStatistics != null) {
         long totalRowCount = tableStatistics.getCount();
@@ -158,9 +162,9 @@ public class ScanAnalyzer {
       // table name, index and handle column
       int indexSize = index.getIndexColumns().size() + 2;
       if (isDoubleRead) {
-        cost *= tableSize + indexSize;
+        cost *= tableSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
       } else {
-        cost *= indexSize;
+        cost *= indexSize * INDEX_SCAN_COST_FACTOR;
       }
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
