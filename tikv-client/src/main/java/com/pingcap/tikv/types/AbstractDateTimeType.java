@@ -68,11 +68,6 @@ public abstract class AbstractDateTimeType extends DataType {
   }
 
   @Override
-  public DateTime getOriginDefaultValueNonNull(String value) {
-    return Converter.convertToDateTime(value);
-  }
-
-  @Override
   public ExprType getProtoExprType() {
     return ExprType.MysqlTime;
   }

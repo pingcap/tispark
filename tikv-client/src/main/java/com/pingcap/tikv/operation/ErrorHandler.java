@@ -17,7 +17,25 @@
 
 package com.pingcap.tikv.operation;
 
-@FunctionalInterface
+import com.pingcap.tikv.util.BackOffer;
+
 public interface ErrorHandler<RespT> {
-  void handle(RespT resp);
+  /**
+   * Handle the error received in the response after a calling process completes.
+   *
+   * @param backOffer Back offer used for retry
+   * @param resp      the response to handle
+   * @return whether the caller should retry
+   */
+  boolean handleResponseError(BackOffer backOffer, RespT resp);
+
+  /**
+   * Handle the error received during a calling process before it could return
+   * a normal response.
+   *
+   * @param backOffer Back offer used for retry
+   * @param e         Exception received during a calling process
+   * @return whether the caller should retry
+   */
+  boolean handleRequestError(BackOffer backOffer, Exception e);
 }

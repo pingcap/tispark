@@ -21,9 +21,10 @@ import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import java.sql.Timestamp;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+
+import java.sql.Timestamp;
 
 /**
  * Timestamp in TiDB is represented as packed long including year/month and etc.
@@ -37,7 +38,7 @@ import org.joda.time.DateTimeZone;
  * Encoding:
  * If incoming literal is a string '2000-01-01 00:00:00' which has no timezone,
  * it interpreted as text in local timezone and encoded with UTC;
- * If incoming literal is a epoch millisec,
+ * If incoming literal is a epoch millisecond,
  * it interpreted as UTC epoch and encode with UTC if index / key or local timezone if proto
  *
  */
@@ -72,6 +73,11 @@ public class TimestampType extends AbstractDateTimeType {
       return null;
     }
     return new Timestamp(dateTime.getMillis());
+  }
+
+  @Override
+  public DateTime getOriginDefaultValueNonNull(String value) {
+    return Converter.convertToDateTime(value);
   }
 
   /**

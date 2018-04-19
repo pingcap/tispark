@@ -21,6 +21,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import org.apache.log4j.Logger;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +35,7 @@ public class Catalog implements AutoCloseable {
   private Supplier<Snapshot> snapshotProvider;
   private ScheduledExecutorService service;
   private CatalogCache metaCache;
+  private final Logger logger = Logger.getLogger(this.getClass());
 
   @Override
   public void close() throws Exception {
@@ -112,7 +115,14 @@ public class Catalog implements AutoCloseable {
                                                    "Snapshot Provider is null");
     metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()));
     service = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
-    service.scheduleAtFixedRate(this::reloadCache, refreshPeriod, refreshPeriod, periodUnit);
+    service.scheduleAtFixedRate(() -> {
+      // Wrap this with a try catch block in case schedule update fails
+      try {
+        reloadCache();
+      } catch (Exception e) {
+        logger.warn("Reload Cache failed", e);
+      }
+    }, refreshPeriod, refreshPeriod, periodUnit);
   }
 
   public Catalog(Supplier<Snapshot> snapshotProvider) {

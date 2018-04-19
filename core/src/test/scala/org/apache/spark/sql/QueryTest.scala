@@ -24,7 +24,7 @@ import java.util.TimeZone
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
-import org.apache.spark.sql.types.{BinaryType, StructField}
+import org.apache.spark.sql.types.StructField
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -67,6 +67,19 @@ abstract class QueryTest extends PlanTest {
         true
       } else
         lhs match {
+          case _: Array[Byte] =>
+            val l = lhs.asInstanceOf[Array[Byte]]
+            val r = rhs.asInstanceOf[Array[Byte]]
+            if (l.length != r.length) {
+              false
+            } else {
+              for (pos <- l.indices) {
+                if (l(pos) != r(pos)) {
+                  return false
+                }
+              }
+              true
+            }
           case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
             val l = toDouble(lhs)
             val r = toDouble(rhs)
@@ -115,12 +128,6 @@ abstract class QueryTest extends PlanTest {
   }
 
   protected def toOutput(value: Any, colType: String): Any = value match {
-    case _: Array[Byte] =>
-      var str: String = new String
-      for (b <- value.asInstanceOf[Array[Byte]]) {
-        str = str.concat(b.toString)
-      }
-      str
     case _: BigDecimal =>
       value.asInstanceOf[BigDecimal].setScale(2, BigDecimal.RoundingMode.HALF_UP)
     case _: Date if colType.equalsIgnoreCase("YEAR") =>
@@ -136,8 +143,6 @@ abstract class QueryTest extends PlanTest {
         for (i <- 0 until row.length) {
           if (row.get(i) == null) {
             rowRes += null
-          } else if (schema(i).dataType.isInstanceOf[BinaryType]) {
-            rowRes += new String(row.get(i).asInstanceOf[Array[Byte]])
           } else {
             rowRes += toOutput(row.get(i), schema(i).dataType.typeName)
           }
@@ -440,7 +445,9 @@ object QueryTest {
    * @param expectedAnswer the expected result in a[[Row]].
    * @param absTol the absolute tolerance between actual and expected answers.
    */
-  protected def checkAggregatesWithTol(actualAnswer: Row, expectedAnswer: Row, absTol: Double) = {
+  protected def checkAggregatesWithTol(actualAnswer: Row,
+                                       expectedAnswer: Row,
+                                       absTol: Double): Unit = {
     require(
       actualAnswer.length == expectedAnswer.length,
       s"actual answer length ${actualAnswer.length} != " +
