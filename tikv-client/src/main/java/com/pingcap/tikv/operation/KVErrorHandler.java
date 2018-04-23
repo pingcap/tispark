@@ -36,6 +36,7 @@ import java.util.function.Function;
 // TODO: consider refactor to Builder mode
 public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private static final Logger logger = Logger.getLogger(KVErrorHandler.class);
+  private static final int NO_LEADER_STORE_ID = 0;
   private final Function<RespT, Errorpb.Error> getRegionError;
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
   private final RegionManager regionManager;
@@ -107,14 +108,20 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
             ctxRegion.getLeader().getStoreId()));
 
         long newStoreId = error.getNotLeader().getLeader().getStoreId();
-        regionManager.updateLeader(ctxRegion.getId(), newStoreId);
-        notifyCacheInvalidation(
-            ctxRegion.getId(),
-            newStoreId,
-            CacheInvalidateEvent.CacheType.LEADER
-        );
-        recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
-            this.regionManager.getStoreById(newStoreId));
+        // if there's current no leader, we do not trigger update pd cache logic
+        // since issuing store = NO_LEADER_STORE_ID requests to pd will definitely fail.
+        if (newStoreId != NO_LEADER_STORE_ID) {
+          regionManager.updateLeader(ctxRegion.getId(), newStoreId);
+          notifyCacheInvalidation(
+              ctxRegion.getId(),
+              newStoreId,
+              CacheInvalidateEvent.CacheType.LEADER
+          );
+          recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
+              this.regionManager.getStoreById(newStoreId));
+        } else {
+          logger.info(String.format("Received zero store id, from region %d try next time", ctxRegion.getId()));
+        }
 
         BackOffFunction.BackOffFuncType backOffFuncType;
         if (error.getNotLeader().getLeader() != null) {
