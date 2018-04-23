@@ -110,6 +110,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
             ctxRegion.getId(),
             ctxRegion.getLeader().getStoreId(),
             newStoreId));
+
+        BackOffFunction.BackOffFuncType backOffFuncType;
         // if there's current no leader, we do not trigger update pd cache logic
         // since issuing store = NO_LEADER_STORE_ID requests to pd will definitely fail.
         if (newStoreId != NO_LEADER_STORE_ID) {
@@ -121,16 +123,13 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
           );
           recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
               this.regionManager.getStoreById(newStoreId));
-        } else {
-          logger.info(String.format("Received zero store id, from region %d try next time", ctxRegion.getId()));
-        }
 
-        BackOffFunction.BackOffFuncType backOffFuncType;
-        if (error.getNotLeader().getLeader() != null) {
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
+          logger.info(String.format("Received zero store id, from region %d try next time", ctxRegion.getId()));
           backOffFuncType = BackOffFunction.BackOffFuncType.BoRegionMiss;
         }
+
         backOffer.doBackOff(backOffFuncType, new GrpcException(error.toString()));
 
         return true;
