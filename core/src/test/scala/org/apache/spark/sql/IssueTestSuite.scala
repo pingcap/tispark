@@ -15,9 +15,32 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+
+  test("Test index task downgrade") {
+    val sqlConf = ti.session.sqlContext.conf
+    val prevRegionIndexScanDowngradeThreshold =
+      sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000")
+    sqlConf.setConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10")
+    val q = "select * from full_data_type_table_idx where tp_int < 1000000000 and tp_int > 0"
+    explainAndRunTest(q, q.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+    sqlConf.setConfString(
+      TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD,
+      prevRegionIndexScanDowngradeThreshold
+    )
+  }
+
+  test("Test index task batch size") {
+    val tiConf = ti.tiConf
+    val prevIndexScanBatchSize = tiConf.getIndexScanBatchSize
+    tiConf.setIndexScanBatchSize(5)
+    val q = "select * from full_data_type_table_idx where tp_int < 1000000000 and tp_int > 0"
+    explainAndRunTest(q, q.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+    tiConf.setIndexScanBatchSize(prevIndexScanBatchSize)
+  }
 
   test("TISPARK-21 count(1) when single read results in DAGRequestException") {
     tidbStmt.execute("DROP TABLE IF EXISTS `single_read`")
