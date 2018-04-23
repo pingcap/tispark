@@ -37,7 +37,7 @@ import java.util.function.Function;
 // TODO: consider refactor to Builder mode
 public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private static final Logger logger = Logger.getLogger(KVErrorHandler.class);
-  private static final int NO_LEADER_STORE_ID = 0;
+  private static final int NO_LEADER_STORE_ID = 0; // if there's currently no leader of a store, store id is set to 0
   private final Function<RespT, Errorpb.Error> getRegionError;
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
   private final RegionManager regionManager;
