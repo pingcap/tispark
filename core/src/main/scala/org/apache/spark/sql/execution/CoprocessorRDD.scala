@@ -319,7 +319,7 @@ case class RegionTaskExec(child: SparkPlan,
                   .newSplitter(session.getRegionManager)
                   .splitAndSortHandlesByRegion(
                     dagRequest.getTableInfo.getId,
-                    new TLongArrayList(handles)
+                    new TLongArrayList(handleList)
                   )
               )
               val taskRange = task.head.getRanges
