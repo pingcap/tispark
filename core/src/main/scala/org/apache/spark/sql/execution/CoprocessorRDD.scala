@@ -312,7 +312,18 @@ case class RegionTaskExec(child: SparkPlan,
               val handleList = feedBatch()
               numHandles += handleList.size()
               logger.info("Single batch handles size:" + handleList.size())
-              val tasks = splitTasks(indexTasks)
+              // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
+              // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
+              val task = proceedTasksOrThrow(
+                RangeSplitter
+                  .newSplitter(session.getRegionManager)
+                  .splitAndSortHandlesByRegion(
+                    dagRequest.getTableInfo.getId,
+                    new TLongArrayList(handles)
+                  )
+              )
+              val taskRange = task.head.getRanges
+              val tasks = splitTasks(task)
               numIndexScanTasks += tasks.size
 
               logger.info(s"Single batch RegionTask size:${tasks.size}")
@@ -326,8 +337,8 @@ case class RegionTaskExec(child: SparkPlan,
               })
 
               submitTasks(tasks.toList, dagRequest)
+              numIndexRangesScanned += taskRange.size
             }
-            numIndexRangesScanned += indexTaskRanges.size
           }
 
           /**
