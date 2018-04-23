@@ -27,6 +27,8 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Errorpb;
 import com.pingcap.tikv.kvproto.Errorpb.Error;
+import com.pingcap.tikv.kvproto.Errorpb.NotLeader;
+import com.pingcap.tikv.kvproto.Errorpb.ServerIsBusy;
 import com.pingcap.tikv.kvproto.Errorpb.StaleEpoch;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.kvproto.Kvrpcpb.Context;
@@ -326,8 +328,13 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
       for (Coprocessor.KeyRange keyRange : keyRanges) {
         Integer errorCode = errorMap.remove(keyRange.getStart());
         if (errorCode != null) {
-          errBuilder.setStaleEpoch(StaleEpoch.getDefaultInstance());
-
+          if (STALE_EPOCH == errorCode) {
+            errBuilder.setStaleEpoch(StaleEpoch.getDefaultInstance());
+          } else if (NOT_LEADER == errorCode) {
+            errBuilder.setNotLeader(NotLeader.getDefaultInstance());
+          } else {
+            errBuilder.setServerIsBusy(ServerIsBusy.getDefaultInstance());
+          }
           builderWrap.setRegionError(errBuilder.build());
           break;
         } else {
