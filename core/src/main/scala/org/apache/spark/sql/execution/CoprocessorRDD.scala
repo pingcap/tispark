@@ -54,15 +54,15 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   override val outputOrdering: Seq[SortOrder] = Nil
 
   val internalRdd: RDD[InternalRow] = RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
+  private lazy val project = UnsafeProjection.create(schema)
 
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
     internalRdd.mapPartitionsWithIndexInternal { (index, iter) =>
-      val proj = UnsafeProjection.create(schema)
-      proj.initialize(index)
+      project.initialize(index)
       iter.map { r =>
         numOutputRows += 1
-        proj(r)
+        project(r)
       }
     }
   }
