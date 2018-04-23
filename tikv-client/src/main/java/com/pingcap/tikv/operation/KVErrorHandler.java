@@ -31,6 +31,7 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.apache.log4j.Logger;
 
+import java.nio.ByteOrder;
 import java.util.function.Function;
 
 // TODO: consider refactor to Builder mode
@@ -102,12 +103,13 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     Errorpb.Error error = getRegionError(resp);
     if (error != null) {
       if (error.hasNotLeader()) {
-        // update Leader here
-        logger.warn(String.format("NotLeader Error with region id %d and store id %d",
-            ctxRegion.getId(),
-            ctxRegion.getLeader().getStoreId()));
-
         long newStoreId = error.getNotLeader().getLeader().getStoreId();
+
+        // update Leader here
+        logger.warn(String.format("NotLeader Error with region id %d and store id %d, new store id %d",
+            ctxRegion.getId(),
+            ctxRegion.getLeader().getStoreId(),
+            newStoreId));
         // if there's current no leader, we do not trigger update pd cache logic
         // since issuing store = NO_LEADER_STORE_ID requests to pd will definitely fail.
         if (newStoreId != NO_LEADER_STORE_ID) {
