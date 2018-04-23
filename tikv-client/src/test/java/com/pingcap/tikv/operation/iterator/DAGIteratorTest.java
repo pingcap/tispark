@@ -130,15 +130,7 @@ public class DAGIteratorTest {
     List<KeyRange> keyRanges =
         ImmutableList.of(createByteStringRange(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key4")));
 
-    pdServer.addGetRegionResp(
-        GrpcUtils.makeGetRegionResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeRegion(
-                region.getId(),
-                region.getStartKey(),
-                region.getEndKey(),
-                region.getRegionEpoch(),
-                region.getLeader())));
+    pdServer.addGetRegionResp(GrpcUtils.makeGetRegionResponse(pdServer.getClusterId(), region.getMeta()));
     pdServer.addGetStoreResp(GrpcUtils.makeGetStoreResponse(pdServer.getClusterId(), store));
     server.putError("key1", KVMockServer.STALE_EPOCH);
     CodecDataOutput cdo = new CodecDataOutput();
