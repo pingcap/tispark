@@ -92,16 +92,16 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 
   val internalRDD: RDD[InternalRow] =
     RDDConversions.rowToRowRdd(tiHandleRDD, output.map(_.dataType))
+  private lazy val project = UnsafeProjection.create(schema)
 
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRegions = longMetric("numOutputRegions")
 
     internalRDD.mapPartitionsWithIndexInternal { (index, iter) =>
-      val proj = UnsafeProjection.create(schema)
-      proj.initialize(index)
+      project.initialize(index)
       iter.map { r =>
         numOutputRegions += 1
-        proj(r)
+        project(r)
       }
     }
   }
@@ -163,6 +163,7 @@ case class RegionTaskExec(child: SparkPlan,
   private val appId = SparkContext.getOrCreate().appName
   private val downgradeThreshold =
     sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
+  private lazy val project = UnsafeProjection.create(schema)
 
   type TiRow = com.pingcap.tikv.row.Row
 
@@ -436,11 +437,10 @@ case class RegionTaskExec(child: SparkPlan,
             override def next(): UnsafeRow = {
               numOutputRows += 1
               // Unsafe row projection
-              val proj = UnsafeProjection.create(schema)
-              proj.initialize(index)
+              project.initialize(index)
               val sparkRow = toSparkRow(rowIterator.next())
               // Need to convert spark row to internal row for Catalyst
-              proj(rowToInternalRow(sparkRow, outputTypes, converters))
+              project(rowToInternalRow(sparkRow, outputTypes, converters))
             }
           }
           resultIter
