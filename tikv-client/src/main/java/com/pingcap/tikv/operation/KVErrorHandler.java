@@ -83,7 +83,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
           regionId, storeId,
           true, true,
           type));
-      logger.info("Sending cache invalidation info to driver:regionId=" + regionId + ",storeId=" + storeId + ",type=" + type.name());
+      logger.info("Accumulating cache invalidation info to driver:regionId=" + regionId + ",storeId=" + storeId + ",type=" + type.name());
     } else {
       logger.warn("Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
     }
