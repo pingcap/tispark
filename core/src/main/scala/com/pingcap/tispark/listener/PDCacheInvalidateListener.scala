@@ -29,10 +29,21 @@ class PDCacheInvalidateListener(accumulator: CacheInvalidateAccumulator,
   private final val logger: Logger = Logger.getLogger(getClass.getName)
 
   override def onJobEnd(jobEnd: SparkListenerJobEnd): Unit = {
+    if (accumulator == null) {
+      println(s"Null accumulator for job ${jobEnd.jobId}")
+      if (accumulator.isZero) {
+        println(s"Accumulator is zero for job ${jobEnd.jobId}")
+      }
+    }
+    if (handler == null) {
+      println(s"Null handler for job ${jobEnd.jobId}")
+    }
     if (accumulator != null && !accumulator.isZero && handler != null) {
+      println(s"On job ${jobEnd.jobId} end.....")
       synchronized {
         if (!accumulator.isZero) {
           val events = accumulator.value
+          println(s"events size:${events.size}")
           logger.info(
             s"Receiving ${events.size} cache invalidation request(s) from job ${jobEnd.jobId} at driver. " +
               s"This indicates that there's exception(s) thrown in executor node when communicating with " +
