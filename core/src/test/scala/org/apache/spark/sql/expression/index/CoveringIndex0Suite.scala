@@ -495,7 +495,7 @@ class CoveringIndex0Suite extends BaseTiSparkSuite {
   allCases foreach { query =>
     {
       test(query) {
-        runTest(query, query.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+        runTest(query)
       }
     }
   }

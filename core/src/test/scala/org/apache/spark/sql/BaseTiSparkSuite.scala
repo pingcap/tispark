@@ -175,23 +175,32 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     try {
       explainSpark(qSpark)
       if (qJDBC == null) {
-        runTestWithReplaceTableName(qSpark, skipped, rSpark, rJDBC, rTiDB, skipJDBC, skipTiDB)
+        runTest(qSpark, skipped, rSpark, rJDBC, rTiDB, skipJDBC, skipTiDB)
       } else {
-        runTest(qSpark, qJDBC, skipped, rSpark, rJDBC, rTiDB, skipJDBC, skipTiDB)
+        runTestWithoutReplaceTableName(
+          qSpark,
+          qJDBC,
+          skipped,
+          rSpark,
+          rJDBC,
+          rTiDB,
+          skipJDBC,
+          skipTiDB
+        )
       }
     } catch {
       case e: Throwable => fail(e)
     }
   }
 
-  def runTestWithReplaceTableName(qSpark: String,
-                                  skipped: Boolean = false,
-                                  rSpark: List[List[Any]] = null,
-                                  rJDBC: List[List[Any]] = null,
-                                  rTiDB: List[List[Any]] = null,
-                                  skipJDBC: Boolean = false,
-                                  skipTiDB: Boolean = false): Unit = {
-    runTest(
+  def runTest(qSpark: String,
+              skipped: Boolean = false,
+              rSpark: List[List[Any]] = null,
+              rJDBC: List[List[Any]] = null,
+              rTiDB: List[List[Any]] = null,
+              skipJDBC: Boolean = false,
+              skipTiDB: Boolean = false): Unit = {
+    runTestWithoutReplaceTableName(
       qSpark,
       replaceJDBCTableName(qSpark, skipJDBC),
       skipped,
@@ -220,14 +229,14 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
    * @param skipJDBC  whether not to run test for Spark-JDBC
    * @param skipTiDB  whether not to run test for TiDB
    */
-  def runTest(qSpark: String,
-              qJDBC: String,
-              skipped: Boolean = false,
-              rSpark: List[List[Any]] = null,
-              rJDBC: List[List[Any]] = null,
-              rTiDB: List[List[Any]] = null,
-              skipJDBC: Boolean = false,
-              skipTiDB: Boolean = false): Unit = {
+  def runTestWithoutReplaceTableName(qSpark: String,
+                                     qJDBC: String,
+                                     skipped: Boolean = false,
+                                     rSpark: List[List[Any]] = null,
+                                     rJDBC: List[List[Any]] = null,
+                                     rTiDB: List[List[Any]] = null,
+                                     skipJDBC: Boolean = false,
+                                     skipTiDB: Boolean = false): Unit = {
     if (skipped) {
       logger.warn(s"Test is skipped. [With Spark SQL: $qSpark]")
       return
@@ -275,7 +284,10 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       }
       if (skipTiDB || !compResult(r1, r3, isOrdered)) {
         fail(
-          s"Failed with \nTiSpark:\t\t${mapStringNestedList(r1)}\nSpark With JDBC:${mapStringNestedList(r2)}\nTiDB:\t\t\t${mapStringNestedList(r3)}"
+          s"""Failed with
+             |TiSpark:\t\t${mapStringNestedList(r1)}
+             |Spark With JDBC:${mapStringNestedList(r2)}
+             |TiDB:\t\t\t${mapStringNestedList(r3)}""".stripMargin
         )
       }
     }

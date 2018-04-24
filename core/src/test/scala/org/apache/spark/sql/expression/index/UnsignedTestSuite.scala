@@ -19,7 +19,7 @@ import org.apache.spark.sql.BaseTiSparkSuite
 
 class UnsignedTestSuite extends BaseTiSparkSuite {
 
-  test("Unsigned Index Tests") {
+  test("Unsigned Index Tests for TISPARK-28 and TISPARK-29") {
     tidbStmt.execute("DROP TABLE IF EXISTS `unsigned_test`")
     tidbStmt.execute(
       """CREATE TABLE `unsigned_test` (
@@ -35,8 +35,30 @@ class UnsignedTestSuite extends BaseTiSparkSuite {
     )
     tidbStmt.execute("ANALYZE TABLE `unsigned_test`")
     refreshConnections()
-    explainAndRunTest("select * from unsigned_test where c2 < -1", skipTiDB = true, skipped = true)
-    explainAndRunTest("select c2 from unsigned_test where c2 < -1", skipTiDB = true, skipped = true)
+    // TODO: After we fixed unsigned behavior, delete `skipped` setting for this test
+    explainAndRunTest(
+      "select * from unsigned_test",
+      rJDBC = List(
+        List(1, 1, 1),
+        List(2, 3, 4),
+        List(3, 5, 7),
+        List(9223372036854775807L, 9223372036854775807L, 0)
+      ),
+      skipTiDB = true,
+      skipped = true
+    )
+    explainAndRunTest(
+      "select * from unsigned_test where c2 < -1",
+      rJDBC = List(List.empty),
+      skipTiDB = true,
+      skipped = true
+    )
+    explainAndRunTest(
+      "select c2 from unsigned_test where c2 < -1",
+      rJDBC = List(List.empty),
+      skipTiDB = true,
+      skipped = true
+    )
   }
 
   override def afterAll(): Unit = {
