@@ -175,13 +175,13 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       for (int i = 0; i < store.getLabelsCount(); i++) {
         builder.setLabels(i, store.getLabels(i));
       }
-      if (ThreadLocalRandom.current().nextInt(2) == 0) {
-        int id = 233333333;
-        logger.warn("Using random store id for mock request" + id);
-        builder.setId(id);
-      } else {
-        builder.setId(store.getId());
-      }
+//      if (ThreadLocalRandom.current().nextInt(2) == 0) {
+//        int id = 233333333;
+//        logger.warn("Using random store id for mock request" + id);
+//        builder.setId(id);
+//      } else {
+//        builder.setId(store.getId());
+//      }
       store = builder.build();
 
       try {
