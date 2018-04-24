@@ -161,6 +161,9 @@ case class RegionTaskExec(child: SparkPlan,
   type TiRow = com.pingcap.tikv.row.Row
 
   override val nodeName: String = "RegionTaskExec"
+  // cache invalidation call back function
+  // used for driver to update PD cache
+  private val callBackFunc = CacheListenerManager.getInstance().CACHE_ACCUMULATOR_FUNCTION
 
   def rowToInternalRow(row: Row, outputTypes: Seq[DataType]): InternalRow = {
     val numColumns = outputTypes.length
@@ -187,7 +190,7 @@ case class RegionTaskExec(child: SparkPlan,
         val logger = Logger.getLogger(getClass.getName)
         logger.info(s"In partition No.$index")
         val session = TiSessionCache.getSession(appId, tiConf)
-        session.injectCallBackFunc(CacheListenerManager.getInstance().CACHE_ACCUMULATOR_FUNCTION)
+        session.injectCallBackFunc(callBackFunc)
         val batchSize = session.getConf.getIndexScanBatchSize
         // We need to clear index info in order to perform table scan
         dagRequest.clearIndexInfo()

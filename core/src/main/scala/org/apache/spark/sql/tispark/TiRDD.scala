@@ -51,13 +51,17 @@ class TiRDD(val dagRequest: TiDAGRequest,
     (schemaInferrer.getTypes.toList, rowTransformer)
   }
 
+  // cache invalidation call back function
+  // used for driver to update PD cache
+  private val callBackFunc = CacheListenerManager.getInstance().CACHE_ACCUMULATOR_FUNCTION
+
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
     dagRequest.resolve()
 
     // bypass, sum return a long type
     private val tiPartition = split.asInstanceOf[TiPartition]
     private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
-    session.injectCallBackFunc(CacheListenerManager.getInstance().CACHE_ACCUMULATOR_FUNCTION)
+    session.injectCallBackFunc(callBackFunc)
     private val snapshot = session.createSnapshot(ts)
     private[this] val tasks = tiPartition.tasks
 
