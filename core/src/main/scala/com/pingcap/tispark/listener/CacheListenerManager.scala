@@ -54,6 +54,7 @@ object CacheListenerManager {
     new java.util.function.Function[CacheInvalidateEvent, Void] {
       override def apply(t: CacheInvalidateEvent): Void = {
         // this operation shall be executed in executor nodes
+        logger.info("Add cache invalidate event 2 accumulator ...")
         CACHE_INVALIDATE_ACCUMULATOR.add(t)
         null
       }

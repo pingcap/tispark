@@ -195,17 +195,7 @@ public class RegionManager {
     Peer leader = region.getLeader();
     long storeId = leader.getStoreId();
 
-    if (ThreadLocalRandom.current().nextInt(2) == 0) {
-      int id = 233333333;
-      logger.warn("1 Using random store id for mock request " + id);
-      return Pair.create(region, Metapb.Store.newBuilder()
-          .setId(id)
-          .setAddress(cache.getStoreById(storeId).getAddress())
-          .build()
-      );
-    } else {
-      return Pair.create(region, cache.getStoreById(storeId));
-    }
+    return Pair.create(region, cache.getStoreById(storeId));
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByRegionId(long id) {
@@ -215,17 +205,8 @@ public class RegionManager {
     }
     Peer leader = region.getLeader();
     long storeId = leader.getStoreId();
-    if (ThreadLocalRandom.current().nextInt(2) == 0) {
-      int sid = 233333333;
-      logger.warn("2 Using random store id for mock request " + sid);
-      return Pair.create(region, Metapb.Store.newBuilder()
-          .setId(sid)
-          .setAddress(cache.getStoreById(storeId).getAddress())
-          .build()
-      );
-    } else {
-      return Pair.create(region, cache.getStoreById(storeId));
-    }
+
+    return Pair.create(region, cache.getStoreById(storeId));
   }
 
   public Store getStoreById(long id) {

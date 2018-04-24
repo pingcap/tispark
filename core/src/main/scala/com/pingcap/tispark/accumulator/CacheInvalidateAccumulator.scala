@@ -40,6 +40,7 @@ class CacheInvalidateAccumulator
   override def reset(): Unit = eventSet.clear()
 
   override def add(v: CacheInvalidateEvent): Unit = eventSet.synchronized {
+    println("adddddddd.....")
     eventSet.add(v)
   }
 
