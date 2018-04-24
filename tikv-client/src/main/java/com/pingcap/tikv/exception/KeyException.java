@@ -20,6 +20,11 @@ import com.pingcap.tikv.kvproto.Kvrpcpb;
 public class KeyException extends RuntimeException {
   private final Kvrpcpb.KeyError keyErr;
 
+  public KeyException(String errMsg) {
+    super(errMsg);
+    keyErr = null;
+  }
+
   public KeyException(Kvrpcpb.KeyError keyErr) {
     this.keyErr = keyErr;
   }
