@@ -24,17 +24,15 @@ import com.pingcap.tispark.handler.CacheInvalidateEventHandler
 import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 
-class CacheListenerManager() extends Serializable {
+class CacheListenerManager() extends Serializable with java.util.function.Function[CacheInvalidateEvent, Void] {
   final val CACHE_ACCUMULATOR_NAME = "CacheInvalidateAccumulator"
   final val CACHE_INVALIDATE_ACCUMULATOR = new CacheInvalidateAccumulator
-  final val CACHE_ACCUMULATOR_FUNCTION =
-    new java.util.function.Function[CacheInvalidateEvent, Void] {
-      override def apply(t: CacheInvalidateEvent): Void = {
-        // this operation shall be executed in executor nodes
-        CACHE_INVALIDATE_ACCUMULATOR.add(t)
-        null
-      }
-    }
+
+  override def apply(t: CacheInvalidateEvent): Void = {
+    // this operation shall be executed in executor nodes
+    CACHE_INVALIDATE_ACCUMULATOR.add(t)
+    null
+  }
 }
 
 object CacheListenerManager {

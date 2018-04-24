@@ -163,7 +163,7 @@ case class RegionTaskExec(child: SparkPlan,
   override val nodeName: String = "RegionTaskExec"
   // cache invalidation call back function
   // used for driver to update PD cache
-  private val callBackFunc = CacheListenerManager.getInstance().CACHE_ACCUMULATOR_FUNCTION
+  private val callBackFunc = CacheListenerManager.getInstance()
 
   def rowToInternalRow(row: Row, outputTypes: Seq[DataType]): InternalRow = {
     val numColumns = outputTypes.length
