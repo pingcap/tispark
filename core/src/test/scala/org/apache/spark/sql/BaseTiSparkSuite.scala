@@ -125,6 +125,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
         qJDBC = qSpark.replace("full_data_type_table_idx", "full_data_type_table_idx_j")
       } else if (qSpark.contains("full_data_type_table")) {
         qJDBC = qSpark.replace("full_data_type_table", "full_data_type_table_j")
+      } else {
+        qJDBC = qSpark
       }
     }
     qJDBC

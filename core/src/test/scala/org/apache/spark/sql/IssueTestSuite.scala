@@ -121,8 +121,8 @@ class IssueTestSuite extends BaseTiSparkSuite {
         |group by
         |   l_partkey""".stripMargin
     // Should not throw any exception
-    runTest(q1)
-    runTest(q2)
+    runTest(q1, skipTiDB = true)
+    runTest(q2, skipTiDB = true)
   }
 
   // https://github.com/pingcap/tispark/issues/162
