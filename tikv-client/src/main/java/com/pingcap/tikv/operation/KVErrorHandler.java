@@ -144,7 +144,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       } else if (error.hasStaleEpoch()) {
         logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion));
         this.regionManager.onRegionStale(ctxRegion.getId());
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
+        return false;
       } else if (error.hasServerIsBusy()) {
         logger.warn(String.format("Server is busy for region [%s], reason: %s", ctxRegion, error.getServerIsBusy().getReason()));
         backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoServerBusy,

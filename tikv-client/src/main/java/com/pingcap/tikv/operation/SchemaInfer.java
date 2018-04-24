@@ -44,7 +44,7 @@ public class SchemaInfer {
     return new SchemaInfer(dagRequest);
   }
 
-  private SchemaInfer(TiDAGRequest dagRequest) {
+  protected SchemaInfer(TiDAGRequest dagRequest) {
     types = new ArrayList<>();
     extractFieldTypes(dagRequest);
     extractHandleType(dagRequest);
