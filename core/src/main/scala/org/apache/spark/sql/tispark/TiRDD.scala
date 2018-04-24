@@ -22,6 +22,8 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
+import com.pingcap.tispark.handler.CacheInvalidateEventHandler
+import com.pingcap.tispark.listener.CacheListenerManager
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
@@ -58,6 +60,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
     // bypass, sum return a long type
     private val tiPartition = split.asInstanceOf[TiPartition]
     private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
+    session.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
     private val snapshot = session.createSnapshot(ts)
     private[this] val tasks = tiPartition.tasks
 

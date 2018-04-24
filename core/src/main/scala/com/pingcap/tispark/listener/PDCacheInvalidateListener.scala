@@ -29,7 +29,7 @@ class PDCacheInvalidateListener(accumulator: CacheInvalidateAccumulator,
   private final val logger: Logger = Logger.getLogger(getClass.getName)
 
   override def onJobEnd(jobEnd: SparkListenerJobEnd): Unit = {
-    logger.info(s"On job ${jobEnd.jobId} end.....")
+    logger.info(s"On job ${jobEnd.jobId} end..... ${accumulator.value.size}")
     println("on job end......")
     if (accumulator == null) {
       logger.info(s"Null accumulator for job ${jobEnd.jobId}")
