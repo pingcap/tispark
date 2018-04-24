@@ -22,14 +22,13 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
+import com.pingcap.tispark.listener.CacheListenerManager
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
-import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 
 import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
@@ -58,6 +57,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
     // bypass, sum return a long type
     private val tiPartition = split.asInstanceOf[TiPartition]
     private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
+    session.injectCallBackFunc(CacheListenerManager.getInstance().CACHE_ACCUMULATOR_FUNCTION)
     private val snapshot = session.createSnapshot(ts)
     private[this] val tasks = tiPartition.tasks
 

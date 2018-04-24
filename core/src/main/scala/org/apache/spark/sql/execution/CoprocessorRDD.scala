@@ -26,6 +26,7 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tispark.listener.CacheListenerManager
 import com.pingcap.tispark.{TiDBRelation, TiSessionCache, TiUtils}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
@@ -186,6 +187,7 @@ case class RegionTaskExec(child: SparkPlan,
         val logger = Logger.getLogger(getClass.getName)
         logger.info(s"In partition No.$index")
         val session = TiSessionCache.getSession(appId, tiConf)
+        session.injectCallBackFunc(CacheListenerManager.getInstance().CACHE_ACCUMULATOR_FUNCTION)
         val batchSize = session.getConf.getIndexScanBatchSize
         // We need to clear index info in order to perform table scan
         dagRequest.clearIndexInfo()

@@ -21,36 +21,13 @@ import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.region.RegionManager
 import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
-import com.pingcap.tispark.listener.CacheListenerManager._
 import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 
-/**
- * Initialize cache invalidation frame work for the given session.
- *
- * @param sc            The spark SparkContext used for attaching a cache listener.
- * @param regionManager The RegionManager to invalidate local cache.
- */
-private class CacheListenerManager(sc: SparkContext, regionManager: RegionManager) {
-  def init(): Unit = {
-    if (sc != null && regionManager != null) {
-      sc.register(CACHE_INVALIDATE_ACCUMULATOR, CACHE_ACCUMULATOR_NAME)
-      sc.addSparkListener(
-        new PDCacheInvalidateListener(
-          CACHE_INVALIDATE_ACCUMULATOR,
-          CacheInvalidateEventHandler(regionManager)
-        )
-      )
-    }
-  }
-}
-
-object CacheListenerManager {
-  private var manager: CacheListenerManager = _
-  private final val logger = Logger.getLogger(getClass.getName)
+class CacheListenerManager() {
   final val CACHE_ACCUMULATOR_NAME = "CacheInvalidateAccumulator"
   final val CACHE_INVALIDATE_ACCUMULATOR = new CacheInvalidateAccumulator
-  final var CACHE_ACCUMULATOR_FUNCTION =
+  final val CACHE_ACCUMULATOR_FUNCTION =
     new java.util.function.Function[CacheInvalidateEvent, Void] {
       override def apply(t: CacheInvalidateEvent): Void = {
         // this operation shall be executed in executor nodes
@@ -58,19 +35,49 @@ object CacheListenerManager {
         null
       }
     }
+}
 
+object CacheListenerManager {
+  private var manager: CacheListenerManager = _
+  private final val logger = Logger.getLogger(getClass.getName)
+
+  def getInstance(): CacheListenerManager = {
+    if (manager == null) {
+      throw new RuntimeException("CacheListenerManager has not been initialized properly.")
+    }
+    manager
+  }
+
+  /**
+   * Initialize cache invalidation frame work for the given session.
+   *
+   * @param sc            The spark SparkContext used for attaching a cache listener.
+   * @param regionManager The RegionManager to invalidate local cache.
+   */
   def initCacheListener(sc: SparkContext, regionManager: RegionManager): Unit = {
     if (manager == null) {
       synchronized {
         if (manager == null) {
           try {
-            manager = new CacheListenerManager(sc, regionManager)
-            manager.init()
+            manager = new CacheListenerManager()
+            init(sc, regionManager, manager)
           } catch {
-            case e: Throwable => logger.trace(s"Init CacheListener failed:${e.getMessage}")
+            case e: Throwable => logger.error(s"Init CacheListener failed.", e)
           }
         }
       }
+    }
+  }
+
+  def init(sc: SparkContext, regionManager: RegionManager, manager: CacheListenerManager): Unit = {
+    if (sc != null && regionManager != null) {
+      sc.register(manager.CACHE_INVALIDATE_ACCUMULATOR, manager.CACHE_ACCUMULATOR_NAME)
+      sc.addSparkListener(
+        new PDCacheInvalidateListener(
+          manager.CACHE_INVALIDATE_ACCUMULATOR,
+          CacheInvalidateEventHandler(regionManager)
+        )
+      )
     }
   }
 }

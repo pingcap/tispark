@@ -224,7 +224,7 @@ object TiUtils {
     session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
     session.udf.register("ti_version", () => TiSparkVersion.version)
     CacheListenerManager.initCacheListener(session.sparkContext, tiSession.getRegionManager)
-    tiSession.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
+    tiSession.injectCallBackFunc(CacheListenerManager.getInstance().CACHE_ACCUMULATOR_FUNCTION)
     StatisticsManager.initStatisticsManager(tiSession, session)
   }
 
