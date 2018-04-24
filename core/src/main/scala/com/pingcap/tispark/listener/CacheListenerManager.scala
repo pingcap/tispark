@@ -37,7 +37,7 @@ private class CacheListenerManager(sc: SparkContext, regionManager: RegionManage
     if (sc != null && regionManager != null) {
       logger.warn(s"Register $CACHE_ACCUMULATOR_NAME")
       sc.register(TEST_ACC, "WTF???")
-      sc.parallelize(Array(1,2,34,5)).foreach( x => TEST_ACC.add(new CacheInvalidateEvent(x,1,true,true,CacheType.LEADER)))
+      sc.parallelize(Array(1,2,34,5)).foreach( x => CacheListenerManager.TEST_ACC.add(new CacheInvalidateEvent(x,1,true,true,CacheType.LEADER)))
       sc.register(CACHE_INVALIDATE_ACCUMULATOR, CACHE_ACCUMULATOR_NAME)
       sc.addSparkListener(
         new PDCacheInvalidateListener(

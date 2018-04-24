@@ -55,7 +55,10 @@ class CacheInvalidateAccumulator
   override def merge(other: AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]]): Unit =
     eventSet.addAll(other.value)
 
-  override def value: Seq[CacheInvalidateEvent] = eventSet.toList
+  override def value: Seq[CacheInvalidateEvent] = {
+    println(s"Value:${eventSet.toList.mkString(",")}")
+    eventSet.toList
+  }
 
   def remove(event: CacheInvalidateEvent): Boolean = eventSet.synchronized {
     eventSet.remove(event)
