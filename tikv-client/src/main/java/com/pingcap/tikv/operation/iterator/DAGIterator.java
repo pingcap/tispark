@@ -17,13 +17,11 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Queue;
+
+import java.util.*;
 import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -170,6 +168,21 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       List<Coprocessor.KeyRange> ranges = task.getRanges();
       TiRegion region = task.getRegion();
       Metapb.Store store = task.getStore();
+      Metapb.Store.Builder builder = Metapb.Store.newBuilder()
+          .setAddress(store.getAddress())
+          .setState(store.getState())
+          .setStateValue(store.getStateValue());
+      for (int i = 0; i < store.getLabelsCount(); i++) {
+        builder.setLabels(i, store.getLabels(i));
+      }
+      if (ThreadLocalRandom.current().nextInt(2) == 0) {
+        int id = 233333333;
+        logger.warn("Using random store id for mock request" + id);
+        builder.setId(id);
+      } else {
+        builder.setId(store.getId());
+      }
+      store = builder.build();
 
       try {
         RegionStoreClient client = RegionStoreClient.create(region, store, session);
