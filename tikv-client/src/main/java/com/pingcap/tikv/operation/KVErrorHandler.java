@@ -31,11 +31,13 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.apache.log4j.Logger;
 
+import java.nio.ByteOrder;
 import java.util.function.Function;
 
 // TODO: consider refactor to Builder mode
 public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private static final Logger logger = Logger.getLogger(KVErrorHandler.class);
+  private static final int NO_LEADER_STORE_ID = 0; // if there's currently no leader of a store, store id is set to 0
   private final Function<RespT, Errorpb.Error> getRegionError;
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
   private final RegionManager regionManager;
@@ -101,27 +103,33 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     Errorpb.Error error = getRegionError(resp);
     if (error != null) {
       if (error.hasNotLeader()) {
-        // update Leader here
-        logger.warn(String.format("NotLeader Error with region id %d and store id %d",
-            ctxRegion.getId(),
-            ctxRegion.getLeader().getStoreId()));
-
         long newStoreId = error.getNotLeader().getLeader().getStoreId();
-        regionManager.updateLeader(ctxRegion.getId(), newStoreId);
-        notifyCacheInvalidation(
+
+        // update Leader here
+        logger.warn(String.format("NotLeader Error with region id %d and store id %d, new store id %d",
             ctxRegion.getId(),
-            newStoreId,
-            CacheInvalidateEvent.CacheType.LEADER
-        );
-        recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
-            this.regionManager.getStoreById(newStoreId));
+            ctxRegion.getLeader().getStoreId(),
+            newStoreId));
 
         BackOffFunction.BackOffFuncType backOffFuncType;
-        if (error.getNotLeader().getLeader() != null) {
+        // if there's current no leader, we do not trigger update pd cache logic
+        // since issuing store = NO_LEADER_STORE_ID requests to pd will definitely fail.
+        if (newStoreId != NO_LEADER_STORE_ID) {
+          regionManager.updateLeader(ctxRegion.getId(), newStoreId);
+          notifyCacheInvalidation(
+              ctxRegion.getId(),
+              newStoreId,
+              CacheInvalidateEvent.CacheType.LEADER
+          );
+          recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
+              this.regionManager.getStoreById(newStoreId));
+
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
+          logger.info(String.format("Received zero store id, from region %d try next time", ctxRegion.getId()));
           backOffFuncType = BackOffFunction.BackOffFuncType.BoRegionMiss;
         }
+
         backOffer.doBackOff(backOffFuncType, new GrpcException(error.toString()));
 
         return true;
