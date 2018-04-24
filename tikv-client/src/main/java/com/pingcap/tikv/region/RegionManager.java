@@ -18,9 +18,6 @@
 package com.pingcap.tikv.region;
 
 
-import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
-
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
 import com.google.protobuf.ByteString;
@@ -28,16 +25,23 @@ import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import com.pingcap.tikv.key.Key;
-
-import java.util.*;
-
 import org.apache.log4j.Logger;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+
+import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
 
 public class RegionManager {
@@ -190,7 +194,18 @@ public class RegionManager {
     }
     Peer leader = region.getLeader();
     long storeId = leader.getStoreId();
-    return Pair.create(region, cache.getStoreById(storeId));
+
+    if (ThreadLocalRandom.current().nextInt(2) == 0) {
+      int id = 233333333;
+      logger.warn("Using random store id for mock request " + id);
+      return Pair.create(region, Metapb.Store.newBuilder()
+          .setId(id)
+          .setAddress(cache.getStoreById(storeId).getAddress())
+          .build()
+      );
+    } else {
+      return Pair.create(region, cache.getStoreById(storeId));
+    }
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByRegionId(long id) {
