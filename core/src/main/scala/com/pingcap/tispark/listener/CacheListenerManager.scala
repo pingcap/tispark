@@ -18,6 +18,7 @@
 package com.pingcap.tispark.listener
 
 import com.pingcap.tikv.event.CacheInvalidateEvent
+import com.pingcap.tikv.event.CacheInvalidateEvent.CacheType
 import com.pingcap.tikv.region.RegionManager
 import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
@@ -36,6 +37,7 @@ private class CacheListenerManager(sc: SparkContext, regionManager: RegionManage
     if (sc != null && regionManager != null) {
       logger.warn(s"Register $CACHE_ACCUMULATOR_NAME")
       sc.register(TEST_ACC, "WTF???")
+      sc.parallelize(Array(1,2,34,5)).foreach( x => TEST_ACC.add(new CacheInvalidateEvent(x,1,true,true,CacheType.LEADER)))
       sc.register(CACHE_INVALIDATE_ACCUMULATOR, CACHE_ACCUMULATOR_NAME)
       sc.addSparkListener(
         new PDCacheInvalidateListener(
