@@ -34,6 +34,8 @@ import org.apache.spark.SparkContext
 private class CacheListenerManager(sc: SparkContext, regionManager: RegionManager) {
   def init(): Unit = {
     if (sc != null && regionManager != null) {
+      logger.warn(s"Register $CACHE_ACCUMULATOR_NAME")
+      sc.register(TEST_ACC, "WTF???")
       sc.register(CACHE_INVALIDATE_ACCUMULATOR, CACHE_ACCUMULATOR_NAME)
       sc.addSparkListener(
         new PDCacheInvalidateListener(
