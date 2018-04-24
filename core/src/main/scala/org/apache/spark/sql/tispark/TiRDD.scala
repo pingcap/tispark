@@ -16,6 +16,8 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
+import com.pingcap.tikv.event.CacheInvalidateEvent
+import com.pingcap.tikv.event.CacheInvalidateEvent.CacheType
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
@@ -61,6 +63,9 @@ class TiRDD(val dagRequest: TiDAGRequest,
     private val tiPartition = split.asInstanceOf[TiPartition]
     private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
     session.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
+    CacheListenerManager.TEST_ACC.add(new CacheInvalidateEvent(100, 0, true, true, CacheType.LEADER))
+    CacheListenerManager.TEST_ACC.add(new CacheInvalidateEvent(100, 2, true, true, CacheType.LEADER))
+    CacheListenerManager.TEST_ACC.add(new CacheInvalidateEvent(2100, 2, true, true, CacheType.LEADER))
     private val snapshot = session.createSnapshot(ts)
     private[this] val tasks = tiPartition.tasks
 

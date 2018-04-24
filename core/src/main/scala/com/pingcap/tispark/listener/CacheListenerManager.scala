@@ -50,6 +50,7 @@ object CacheListenerManager {
   private final val logger = Logger.getLogger(getClass.getName)
   final val CACHE_ACCUMULATOR_NAME = "CacheInvalidateAccumulator"
   final val CACHE_INVALIDATE_ACCUMULATOR = new CacheInvalidateAccumulator
+  final val TEST_ACC = new CacheInvalidateAccumulator
   final var CACHE_ACCUMULATOR_FUNCTION =
     new java.util.function.Function[CacheInvalidateEvent, Void] {
       override def apply(t: CacheInvalidateEvent): Void = {
