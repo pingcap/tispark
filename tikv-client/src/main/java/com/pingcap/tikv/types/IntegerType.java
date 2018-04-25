@@ -64,23 +64,23 @@ public class IntegerType extends DataType {
     switch (flag) {
       case Codec.UVARINT_FLAG:
         ret = IntegerCodec.readUVarLong(cdi);
-        if (tp == MySQLType.TypeLonglong) {
-          return unsignedValueOf(ret);
-        }
-        return ret;
+        break;
       case Codec.UINT_FLAG:
         ret = IntegerCodec.readULong(cdi);
-        if (tp == MySQLType.TypeLonglong) {
-          return unsignedValueOf(ret);
-        }
-        return ret;
+        break;
       case Codec.VARINT_FLAG:
-        return IntegerCodec.readVarLong(cdi);
+        ret = IntegerCodec.readVarLong(cdi);
+        break;
       case Codec.INT_FLAG:
-        return IntegerCodec.readLong(cdi);
+        ret = IntegerCodec.readLong(cdi);
+        break;
       default:
         throw new TypeException("Invalid IntegerType flag: " + flag);
     }
+    if (isUnsignedLong()) {
+      return unsignedValueOf(ret);
+    }
+    return ret;
   }
 
   /**
@@ -125,6 +125,10 @@ public class IntegerType extends DataType {
   @Override
   public ExprType getProtoExprType() {
     return isUnsigned() ?  ExprType.Uint64 : ExprType.Int64;
+  }
+
+  public boolean isUnsignedLong() {
+    return tp == MySQLType.TypeLonglong && isUnsigned();
   }
 
   public boolean isUnsigned() {
