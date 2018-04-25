@@ -17,6 +17,7 @@
 
 package com.pingcap.tikv.types;
 
+import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
@@ -26,7 +27,6 @@ import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 
 public class IntegerType extends DataType {
   public static final IntegerType TINYINT = new IntegerType(MySQLType.TypeTiny);
@@ -45,14 +45,8 @@ public class IntegerType extends DataType {
     super(tp);
   }
 
-  private static final BigDecimal UNSIGNED_OFFSET = new BigDecimal(BigInteger.ONE.shiftLeft(64));
-
-  private BigDecimal unsignedValueOf(long x) {
-    if (x < 0) {
-      return BigDecimal.valueOf(x).add(UNSIGNED_OFFSET);
-    } else {
-      return BigDecimal.valueOf(x);
-    }
+  private static BigDecimal unsignedValueOf(long x) {
+    return new BigDecimal(UnsignedLong.fromLongBits(x).bigIntegerValue());
   }
 
   /**
