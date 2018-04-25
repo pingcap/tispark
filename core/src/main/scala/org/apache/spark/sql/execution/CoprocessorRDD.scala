@@ -161,7 +161,6 @@ case class RegionTaskExec(child: SparkPlan,
   )
 
   private val sqlConf = sqlContext.conf
-  private val appId = SparkContext.getOrCreate().appName
   private val downgradeThreshold =
     sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
   private lazy val project = UnsafeProjection.create(schema)
