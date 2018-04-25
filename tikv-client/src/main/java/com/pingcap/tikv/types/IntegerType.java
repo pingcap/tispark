@@ -17,6 +17,7 @@
 
 package com.pingcap.tikv.types;
 
+import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
@@ -24,6 +25,8 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+
+import java.math.BigDecimal;
 
 public class IntegerType extends DataType {
   public static final IntegerType TINYINT = new IntegerType(MySQLType.TypeTiny);
@@ -42,23 +45,36 @@ public class IntegerType extends DataType {
     super(tp);
   }
 
+  private static BigDecimal unsignedValueOf(long x) {
+    return new BigDecimal(UnsignedLong.fromLongBits(x).bigIntegerValue());
+  }
+
   /**
    * {@inheritDoc}
    */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
+    long ret;
     switch (flag) {
       case Codec.UVARINT_FLAG:
-        return IntegerCodec.readUVarLong(cdi);
+        ret = IntegerCodec.readUVarLong(cdi);
+        break;
       case Codec.UINT_FLAG:
-        return IntegerCodec.readULong(cdi);
+        ret = IntegerCodec.readULong(cdi);
+        break;
       case Codec.VARINT_FLAG:
-        return IntegerCodec.readVarLong(cdi);
+        ret = IntegerCodec.readVarLong(cdi);
+        break;
       case Codec.INT_FLAG:
-        return IntegerCodec.readLong(cdi);
+        ret = IntegerCodec.readLong(cdi);
+        break;
       default:
         throw new TypeException("Invalid IntegerType flag: " + flag);
     }
+    if (isUnsignedLong()) {
+      return unsignedValueOf(ret);
+    }
+    return ret;
   }
 
   /**
@@ -103,6 +119,10 @@ public class IntegerType extends DataType {
   @Override
   public ExprType getProtoExprType() {
     return isUnsigned() ?  ExprType.Uint64 : ExprType.Int64;
+  }
+
+  public boolean isUnsignedLong() {
+    return tp == MySQLType.TypeLonglong && isUnsigned();
   }
 
   public boolean isUnsigned() {
