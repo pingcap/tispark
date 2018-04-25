@@ -53,7 +53,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
 
   // cache invalidation call back function
   // used for driver to update PD cache
-  private def callBackFunc = CacheInvalidateListener.getInstance()
+  private val callBackFunc = CacheInvalidateListener.getInstance()
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
     dagRequest.resolve()

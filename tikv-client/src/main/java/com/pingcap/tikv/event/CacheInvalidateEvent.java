@@ -94,4 +94,9 @@ public class CacheInvalidateEvent implements Serializable {
   public CacheType getCacheType() {
     return cacheType;
   }
+
+  @Override
+  public String toString() {
+    return String.format("RegionId=%d,StoreId=%d,Type=%s", regionId, storeId, cacheType.name());
+  }
 }
