@@ -131,7 +131,7 @@ public class Catalog implements AutoCloseable {
     metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()));
   }
 
-  private void reloadCache() {
+  public void reloadCache() {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     long latestVersion = newTrx.getLatestSchemaVersion();
