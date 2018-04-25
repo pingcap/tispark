@@ -31,34 +31,89 @@ class UnsignedTestSuite extends BaseTiSparkSuite {
         |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
     )
     tidbStmt.execute(
-      "insert into `unsigned_test` values(1,1,1),(2,3,4),(3,5,7),(9223372036854775807,9223372036854775807,0)"
+      """INSERT INTO `unsigned_test` VALUES
+        |  (1,1,1),
+        |  (2,3,4),
+        |  (3,5,7),
+        |  (0,18446744073709551615,-9223372036854775808),
+        |  (18446744073709551615,18446744073709551615,9223372036854775807)""".stripMargin
     )
     tidbStmt.execute("ANALYZE TABLE `unsigned_test`")
     refreshConnections()
     // TODO: After we fixed unsigned behavior, delete `skipped` setting for this test
-    explainAndRunTest(
+    val queries = Seq[String](
       "select * from unsigned_test",
-      rJDBC = List(
+      "select * from unsigned_test where c2 < -1",
+      "select * from unsigned_test where c2 > -1",
+      "select * from unsigned_test where c2 < 18446744073709551615",
+      "select * from unsigned_test where c2 > 18446744073709551615",
+      "select * from unsigned_test where c2 <= 18446744073709551615",
+      "select * from unsigned_test where c2 < 18446744073709551616",
+      "select * from unsigned_test where c2 > 18446744073709551616",
+      "select c2 from unsigned_test where c2 < -1",
+      "select c2 from unsigned_test where c2 > -1",
+      "select c2 from unsigned_test where c2 < 18446744073709551615",
+      "select c2 from unsigned_test where c2 > 18446744073709551615",
+      "select c2 from unsigned_test where c2 <= 18446744073709551615",
+      "select c2 from unsigned_test where c2 < 18446744073709551616",
+      "select c2 from unsigned_test where c2 > 18446744073709551616",
+      "select c1 from unsigned_test where c2 < 18446744073709551615",
+      "select c1 from unsigned_test where c2 <= 18446744073709551615"
+    )
+    val unsignedLongMaxValue = BigDecimal("18446744073709551615")
+    val LongMaxValue = 9223372036854775807L
+    val LongMinValue = -9223372036854775808L
+    val answers = Seq[List[List[Any]]](
+      List(
+        List(0, unsignedLongMaxValue, LongMinValue),
         List(1, 1, 1),
         List(2, 3, 4),
         List(3, 5, 7),
-        List(9223372036854775807L, 9223372036854775807L, 0)
+        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
       ),
-      skipTiDB = true,
-      skipped = true
+      List(List.empty),
+      List(
+        List(0, unsignedLongMaxValue, LongMinValue),
+        List(1, 1, 1),
+        List(2, 3, 4),
+        List(3, 5, 7),
+        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
+      ),
+      List(
+        List(1, 1, 1),
+        List(2, 3, 4),
+        List(3, 5, 7)
+      ),
+      List(List.empty),
+      List(
+        List(0, unsignedLongMaxValue, LongMinValue),
+        List(1, 1, 1),
+        List(2, 3, 4),
+        List(3, 5, 7),
+        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
+      ),
+      List(
+        List(0, unsignedLongMaxValue, LongMinValue),
+        List(1, 1, 1),
+        List(2, 3, 4),
+        List(3, 5, 7),
+        List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
+      ),
+      List(List.empty),
+      List(List.empty),
+      List(List(unsignedLongMaxValue), List(1), List(3), List(5), List(unsignedLongMaxValue)),
+      List(List(1), List(3), List(5)),
+      List(List.empty),
+      List(List(unsignedLongMaxValue), List(1), List(3), List(5), List(unsignedLongMaxValue)),
+      List(List(unsignedLongMaxValue), List(1), List(3), List(5), List(unsignedLongMaxValue)),
+      List(List.empty),
+      List(List(1), List(2), List(3)),
+      List(List(0), List(1), List(2), List(3), List(unsignedLongMaxValue))
     )
-    explainAndRunTest(
-      "select * from unsigned_test where c2 < -1",
-      rJDBC = List(List.empty),
-      skipTiDB = true,
-      skipped = true
-    )
-    explainAndRunTest(
-      "select c2 from unsigned_test where c2 < -1",
-      rJDBC = List(List.empty),
-      skipTiDB = true,
-      skipped = true
-    )
+    assert(queries.size == answers.size)
+    for (i <- queries.indices) {
+      explainAndRunTest(queries(i), rJDBC = answers(i), skipTiDB = true)
+    }
   }
 
   override def afterAll(): Unit = {
