@@ -26,7 +26,7 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.listener.CacheListenerManager
+import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiDBRelation, TiSessionCache, TiUtils}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
@@ -163,7 +163,7 @@ case class RegionTaskExec(child: SparkPlan,
   override val nodeName: String = "RegionTaskExec"
   // cache invalidation call back function
   // used for driver to update PD cache
-  private val callBackFunc = CacheListenerManager.getInstance()
+  private def callBackFunc = CacheInvalidateListener.getInstance()
 
   def rowToInternalRow(row: Row, outputTypes: Seq[DataType]): InternalRow = {
     val numColumns = outputTypes.length

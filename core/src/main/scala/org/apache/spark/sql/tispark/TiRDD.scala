@@ -22,7 +22,7 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
-import com.pingcap.tispark.listener.CacheListenerManager
+import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
@@ -53,7 +53,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
 
   // cache invalidation call back function
   // used for driver to update PD cache
-  private val callBackFunc = CacheListenerManager.getInstance()
+  private def callBackFunc = CacheInvalidateListener.getInstance()
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
     dagRequest.resolve()

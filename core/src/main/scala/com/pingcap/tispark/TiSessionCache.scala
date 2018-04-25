@@ -18,7 +18,7 @@ package com.pingcap.tispark
 import java.util.HashMap
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.listener.CacheListenerManager
+import com.pingcap.tispark.listener.CacheInvalidateListener
 
 object TiSessionCache {
   private val sessionCache: HashMap[String, TiSession] = new HashMap[String, TiSession]()

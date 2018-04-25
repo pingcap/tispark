@@ -24,7 +24,9 @@ import com.pingcap.tispark.handler.CacheInvalidateEventHandler
 import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 
-class CacheListenerManager() extends Serializable with java.util.function.Function[CacheInvalidateEvent, Void] {
+class CacheInvalidateListener()
+    extends Serializable
+    with java.util.function.Function[CacheInvalidateEvent, Void] {
   final val CACHE_ACCUMULATOR_NAME = "CacheInvalidateAccumulator"
   final val CACHE_INVALIDATE_ACCUMULATOR = new CacheInvalidateAccumulator
 
@@ -35,11 +37,11 @@ class CacheListenerManager() extends Serializable with java.util.function.Functi
   }
 }
 
-object CacheListenerManager {
-  private var manager: CacheListenerManager = _
+object CacheInvalidateListener {
+  private var manager: CacheInvalidateListener = _
   private final val logger = Logger.getLogger(getClass.getName)
 
-  def getInstance(): CacheListenerManager = {
+  def getInstance(): CacheInvalidateListener = {
     if (manager == null) {
       throw new RuntimeException("CacheListenerManager has not been initialized properly.")
     }
@@ -57,7 +59,7 @@ object CacheListenerManager {
       synchronized {
         if (manager == null) {
           try {
-            manager = new CacheListenerManager()
+            manager = new CacheInvalidateListener()
             init(sc, regionManager, manager)
           } catch {
             case e: Throwable => logger.error(s"Init CacheListener failed.", e)
@@ -67,7 +69,7 @@ object CacheListenerManager {
     }
   }
 
-  def init(sc: SparkContext, regionManager: RegionManager, manager: CacheListenerManager): Unit = {
+  def init(sc: SparkContext, regionManager: RegionManager, manager: CacheInvalidateListener): Unit = {
     if (sc != null && regionManager != null) {
       sc.register(manager.CACHE_INVALIDATE_ACCUMULATOR, manager.CACHE_ACCUMULATOR_NAME)
       sc.addSparkListener(
