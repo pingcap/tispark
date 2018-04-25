@@ -119,9 +119,7 @@ object TiUtils {
       case _: StringType => sql.types.StringType
       case _: BytesType  => sql.types.BinaryType
       case _: IntegerType =>
-        if (tp.asInstanceOf[IntegerType].getType == MySQLType.TypeLonglong && tp
-              .asInstanceOf[IntegerType]
-              .isUnsigned) {
+        if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
           DataTypes.createDecimalType(20, 0)
         } else {
           sql.types.LongType
