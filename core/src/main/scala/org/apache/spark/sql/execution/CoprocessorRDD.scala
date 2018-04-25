@@ -26,7 +26,8 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{TiDBRelation, TiSessionCache, TiUtils}
+import com.pingcap.tispark.listener.CacheInvalidateListener
+import com.pingcap.tispark.{TiConfigConst, TiDBRelation, TiSessionCache, TiUtils}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
@@ -54,15 +55,15 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   override val outputOrdering: Seq[SortOrder] = Nil
 
   val internalRdd: RDD[InternalRow] = RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
+  private lazy val project = UnsafeProjection.create(schema)
 
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
     internalRdd.mapPartitionsWithIndexInternal { (index, iter) =>
-      val proj = UnsafeProjection.create(schema)
-      proj.initialize(index)
+      project.initialize(index)
       iter.map { r =>
         numOutputRows += 1
-        proj(r)
+        project(r)
       }
     }
   }
@@ -92,16 +93,16 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 
   val internalRDD: RDD[InternalRow] =
     RDDConversions.rowToRowRdd(tiHandleRDD, output.map(_.dataType))
+  private lazy val project = UnsafeProjection.create(schema)
 
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRegions = longMetric("numOutputRegions")
 
     internalRDD.mapPartitionsWithIndexInternal { (index, iter) =>
-      val proj = UnsafeProjection.create(schema)
-      proj.initialize(index)
+      project.initialize(index)
       iter.map { r =>
         numOutputRegions += 1
-        proj(r)
+        project(r)
       }
     }
   }
@@ -151,24 +152,33 @@ case class RegionTaskExec(child: SparkPlan,
     "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of handles used in double scan"),
     "numDowngradedTasks" -> SQLMetrics.createMetric(sparkContext, "number of downgraded tasks"),
     "numIndexScanTasks" -> SQLMetrics
-      .createMetric(sparkContext, "number of index double read tasks")
+      .createMetric(sparkContext, "number of index double read tasks"),
+    "numRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions"),
+    "numIndexRangesScanned" -> SQLMetrics
+      .createMetric(sparkContext, "number of index ranges scanned"),
+    "numDowngradeRangesScanned" -> SQLMetrics
+      .createMetric(sparkContext, "number of downgrade ranges scanned")
   )
 
+  private val sqlConf = sqlContext.conf
   private val appId = SparkContext.getOrCreate().appName
-  private val downgradeThreshold = session.getConf.getRegionIndexScanDowngradeThreshold
+  private val downgradeThreshold =
+    sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
+  private lazy val project = UnsafeProjection.create(schema)
 
   type TiRow = com.pingcap.tikv.row.Row
 
   override val nodeName: String = "RegionTaskExec"
+  // cache invalidation call back function
+  // used for driver to update PD cache
+  private val callBackFunc = CacheInvalidateListener.getInstance()
 
-  def rowToInternalRow(row: Row, outputTypes: Seq[DataType]): InternalRow = {
-    val numColumns = outputTypes.length
-    val mutableRow = new GenericInternalRow(numColumns)
-    val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
-    var i = 0
-    while (i < numColumns) {
+  def rowToInternalRow(row: Row,
+                       outputTypes: Seq[DataType],
+                       converters: Seq[Any => Any]): InternalRow = {
+    val mutableRow = new GenericInternalRow(outputTypes.length)
+    for (i <- outputTypes.indices) {
       mutableRow(i) = converters(i)(row(i))
-      i += 1
     }
 
     mutableRow
@@ -179,6 +189,17 @@ case class RegionTaskExec(child: SparkPlan,
     val numHandles = longMetric("numHandles")
     val numIndexScanTasks = longMetric("numIndexScanTasks")
     val numDowngradedTasks = longMetric("numDowngradedTasks")
+    val numRegions = longMetric("numRegions")
+    val numIndexRangesScanned = longMetric("numIndexRangesScanned")
+    val numDowngradeRangesScanned = longMetric("numDowngradeRangesScanned")
+
+    val downgradeSplitFactor = 4
+
+    val downgradeDagRequest = dagRequest.copy()
+    // We need to clear index info in order to perform table scan
+    downgradeDagRequest.clearIndexInfo()
+    downgradeDagRequest.resetFilters(downgradeDagRequest.getDowngradeFilters)
+
     child
       .execute()
       .mapPartitionsWithIndexInternal { (index, iter) =>
@@ -186,21 +207,45 @@ case class RegionTaskExec(child: SparkPlan,
         val logger = Logger.getLogger(getClass.getName)
         logger.info(s"In partition No.$index")
         val session = TiSessionCache.getSession(appId, tiConf)
-        val batchSize = session.getConf.getIndexScanBatchSize
-        // We need to clear index info in order to perform table scan
-        dagRequest.clearIndexInfo()
-        val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
-        val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
-        val finalTypes = rowTransformer.getTypes.toList
+        session.injectCallBackFunc(callBackFunc)
+        val batchSize = tiConf.getIndexScanBatchSize
 
         iter.flatMap { row =>
           val handles = row.getArray(1).toLongArray()
           val handleIterator: util.Iterator[Long] = handles.iterator
           var taskCount = 0
+          numRegions += 1
 
           val completionService =
             new ExecutorCompletionService[util.Iterator[TiRow]](session.getThreadPoolForIndexScan)
           var rowIterator: util.Iterator[TiRow] = null
+
+          /**
+           * Checks whether the tasks are valid.
+           *
+           * Currently we only check whether the task list contains only one [[RegionTask]],
+           * since in each partition, handles received are from the same region.
+           *
+           * @param tasks tasks to examine
+           */
+          def proceedTasksOrThrow(tasks: Seq[RegionTask]): Seq[RegionTask] = {
+            if (tasks.lengthCompare(1) != 0) {
+              throw new RuntimeException(s"Unexpected region task size:${tasks.size}, expecting 1")
+            }
+            tasks
+          }
+
+          // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
+          // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
+          val indexTasks = proceedTasksOrThrow(
+            RangeSplitter
+              .newSplitter(session.getRegionManager)
+              .splitAndSortHandlesByRegion(
+                dagRequest.getTableInfo.getId,
+                new TLongArrayList(handles)
+              )
+          )
+          val indexTaskRanges = indexTasks.head.getRanges
 
           def feedBatch(): TLongArrayList = {
             val handles = new array.TLongArrayList(512)
@@ -211,42 +256,17 @@ case class RegionTaskExec(child: SparkPlan,
             handles
           }
 
-          def toSparkRow(row: TiRow): Row = {
-            val transRow = rowTransformer.transform(row)
-            val rowArray = new Array[Any](finalTypes.size)
-
-            for (i <- 0 until transRow.fieldCount) {
-              rowArray(i) = transRow.get(i, finalTypes(i))
-            }
-
-            Row.fromSeq(rowArray)
-          }
-
           /**
-           * Checks whether the number of handles retrieved from TiKV exceeds the `downgradeThreshold`.
+           * Checks whether the number of handle ranges retrieved from TiKV exceeds the `downgradeThreshold` after handle merge.
            *
-           * @return true, the number of handles retrieved exceeds the `downgradeThreshold`, false otherwise.
+           * @return true, the number of handle ranges retrieved exceeds the `downgradeThreshold` after handle merge, false otherwise.
            */
           def satisfyDowngradeThreshold: Boolean = {
-            handles.length > downgradeThreshold
+            indexTaskRanges.size() > downgradeThreshold
           }
 
           /**
-           * Checks whether the tasks are valid.
-           *
-           * Currently we only check whether the task list contains only one [[RegionTask]],
-           * since in each partition, handles received are from the same region.
-           *
-           * @param tasks tasks to examine
-           */
-          def proceedTasksOrThrow(tasks: Seq[RegionTask]): Unit = {
-            if (tasks.lengthCompare(1) != 0) {
-              throw new RuntimeException(s"Unexpected region task size:${tasks.size}, expecting 1")
-            }
-          }
-
-          /**
-           * If one task's ranges list exceeds some threshold, we split it into tow sub tasks and
+           * If one task's ranges list exceeds some threshold, we split it into two sub tasks and
            * each has half of the original ranges.
            *
            * @param tasks task list to examine
@@ -254,17 +274,24 @@ case class RegionTaskExec(child: SparkPlan,
            */
           def splitTasks(tasks: Seq[RegionTask]): mutable.Seq[RegionTask] = {
             val finalTasks = mutable.ListBuffer[RegionTask]()
-            tasks.foreach(finalTasks += _)
-            while (finalTasks.exists(isTaskRangeSizeInvalid)) {
-              val tasksToSplit = mutable.ListBuffer[RegionTask]()
-              finalTasks.filter(isTaskRangeSizeInvalid).foreach(tasksToSplit.add)
-              tasksToSplit.foreach(task => {
-                val newRanges = task.getRanges.grouped(task.getRanges.size() / 2)
-                newRanges.foreach(range => {
-                  finalTasks += RegionTask.newInstance(task.getRegion, task.getStore, range)
-                })
-                finalTasks -= task
-              })
+            val queue = mutable.Queue[RegionTask]()
+            for (task <- tasks) {
+              queue += task
+              while (queue.nonEmpty) {
+                val front = queue.dequeue
+                if (isTaskRangeSizeInvalid(front)) {
+                  // use (size + 1) / 2 here rather than size / 2
+                  // to avoid extra single task generated by odd list
+                  front.getRanges
+                    .grouped((task.getRanges.size() + 1) / 2)
+                    .foreach(range => {
+                      queue += RegionTask.newInstance(task.getRegion, task.getStore, range)
+                    })
+                } else {
+                  // add all ranges satisfying task range size to final task list
+                  finalTasks += front
+                }
+              }
             }
             logger.info(s"Split ${tasks.size} tasks into ${finalTasks.size} tasks.")
             finalTasks
@@ -275,7 +302,7 @@ case class RegionTaskExec(child: SparkPlan,
             task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
           }
 
-          def submitTasks(tasks: List[RegionTask]): Unit = {
+          def submitTasks(tasks: List[RegionTask], dagRequest: TiDAGRequest): Unit = {
             taskCount += 1
             val task = new Callable[util.Iterator[TiRow]] {
               override def call(): util.Iterator[TiRow] = {
@@ -290,27 +317,32 @@ case class RegionTaskExec(child: SparkPlan,
               val handleList = feedBatch()
               numHandles += handleList.size()
               logger.info("Single batch handles size:" + handleList.size())
-              numIndexScanTasks += 1
-              var tasks = RangeSplitter
-                .newSplitter(session.getRegionManager)
-                .splitHandlesByRegion(
-                  dagRequest.getTableInfo.getId,
-                  handleList
-                )
-              proceedTasksOrThrow(tasks)
-              tasks = splitTasks(tasks)
+              // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
+              // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
+              val task = proceedTasksOrThrow(
+                RangeSplitter
+                  .newSplitter(session.getRegionManager)
+                  .splitAndSortHandlesByRegion(
+                    dagRequest.getTableInfo.getId,
+                    new TLongArrayList(handleList)
+                  )
+              )
+              val taskRange = task.head.getRanges
+              val tasks = splitTasks(task)
+              numIndexScanTasks += tasks.size
 
-              logger.info(s"Single batch RegionTask size:${tasks.size()}")
+              logger.info(s"Single batch RegionTask size:${tasks.size}")
               tasks.foreach(task => {
                 logger.info(
                   s"Single batch RegionTask={Host:${task.getHost}," +
                     s"Region:${task.getRegion}," +
                     s"Store:{id=${task.getStore.getId},address=${task.getStore.getAddress}}, " +
-                    s"RangesListSize:${task.getRanges.size()}}"
+                    s"RangesListSize:${task.getRanges.size}}"
                 )
               })
 
-              submitTasks(tasks.toList)
+              submitTasks(tasks.toList, dagRequest)
+              numIndexRangesScanned += taskRange.size
             }
           }
 
@@ -323,62 +355,69 @@ case class RegionTaskExec(child: SparkPlan,
            */
           def doDowngradeScan(taskRanges: List[KeyRange]): Unit = {
             // Restore original filters to perform downgraded table scan logic
-            dagRequest.resetFilters(dagRequest.getDowngradeFilters)
+            // TODO: Maybe we can optimize splitRangeByRegion if we are sure the key ranges are in the same region?
+            val downgradeTasks = proceedTasksOrThrow(
+              try {
+                RangeSplitter
+                  .newSplitter(session.getRegionManager)
+                  .splitSortedRangeInRegion(taskRanges, downgradeSplitFactor)
+              } catch {
+                case e: Exception =>
+                  logger.warn("Encountered problems when splitting range for single region.")
+                  logger.warn("Retrying split with unified logic")
+                  logger.warn("Exception message: " + e.getMessage)
+                  RangeSplitter
+                    .newSplitter(session.getRegionManager)
+                    .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges))
+              }
+            )
 
-            val tasks = RangeSplitter
-              .newSplitter(session.getRegionManager)
-              .splitRangeByRegion(KeyRangeUtils.mergeRanges(taskRanges))
-            proceedTasksOrThrow(tasks)
-
-            val task = tasks.head
+            val task = downgradeTasks.head
+            val downgradeTaskRanges = task.getRanges
             logger.info(
-              s"Merged ${taskRanges.size()} index ranges to ${task.getRanges.size()} ranges."
+              s"Merged ${taskRanges.size} index ranges to ${downgradeTaskRanges.size} ranges."
             )
             logger.info(
               s"Unary task downgraded, task info:Host={${task.getHost}}, " +
                 s"RegionId={${task.getRegion.getId}}, " +
                 s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
-                s"RangesListSize=${task.getRanges.size()}}"
+                s"RangesListSize=${downgradeTaskRanges.size}}"
             )
             numDowngradedTasks += 1
+            numDowngradeRangesScanned += downgradeTaskRanges.size
 
-            submitTasks(tasks.toList)
+            submitTasks(downgradeTasks.toList, downgradeDagRequest)
           }
 
-          def checkIsUnaryRange(regionTask: RegionTask): Boolean = {
-            regionTask.getRanges.size() == 1
-          }
-
-          if (satisfyDowngradeThreshold) {
-            val handleList = new TLongArrayList()
-            handles.foreach { handleList.add }
-            // After `splitHandlesByRegion`, ranges in the task are arranged in order
-            val tasks = RangeSplitter
-              .newSplitter(session.getRegionManager)
-              .splitHandlesByRegion(
-                dagRequest.getTableInfo.getId,
-                handleList
-              )
-            proceedTasksOrThrow(tasks)
-
-            // if the original index scan task contains only one KeyRange, we don't need to downgrade that since downgraded
-            // plan will result in more filters and may be slower than the original index scan plan.
-            if (checkIsUnaryRange(tasks.head)) {
-              logger.info(s"Unary index scan range found, performing index scan.")
-              doIndexScan()
-            } else {
-              // Should downgrade to full table scan for one region
-              val taskRanges = tasks.head.getRanges
-              logger.warn(
-                s"Index scan handle size:${handles.length} exceed downgrade threshold:$downgradeThreshold" +
-                  s", downgrade to table scan with ${tasks.size()} region tasks, " +
-                  s"original index scan task has ${taskRanges.size()} ranges, will try to merge."
-              )
-              doDowngradeScan(taskRanges.toList)
-            }
+          val schemaInferrer: SchemaInfer = if (satisfyDowngradeThreshold) {
+            // Should downgrade to full table scan for one region
+            logger.warn(
+              s"Index scan task range size = ${indexTaskRanges.size}, " +
+                s"exceeding downgrade threshold = $downgradeThreshold, " +
+                s"index scan handle size = ${handles.length}, will try to merge."
+            )
+            doDowngradeScan(indexTaskRanges.toList)
+            SchemaInfer.create(downgradeDagRequest)
           } else {
             // Request doesn't need to be downgraded
             doIndexScan()
+            SchemaInfer.create(dagRequest)
+          }
+
+          val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
+          val finalTypes = rowTransformer.getTypes.toList
+          val outputTypes = output.map(_.dataType)
+          val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
+
+          def toSparkRow(row: TiRow): Row = {
+            val transRow = rowTransformer.transform(row)
+            val rowArray = new Array[Any](finalTypes.size)
+
+            for (i <- 0 until transRow.fieldCount) {
+              rowArray(i) = transRow.get(i, finalTypes(i))
+            }
+
+            Row.fromSeq(rowArray)
           }
 
           // The result iterator serves as an wrapper to the final result we fetched from region tasks
@@ -414,12 +453,10 @@ case class RegionTaskExec(child: SparkPlan,
             override def next(): UnsafeRow = {
               numOutputRows += 1
               // Unsafe row projection
-              val proj = UnsafeProjection.create(schema)
-              proj.initialize(index)
+              project.initialize(index)
               val sparkRow = toSparkRow(rowIterator.next())
-              val outputTypes = output.map(_.dataType)
               // Need to convert spark row to internal row for Catalyst
-              proj(rowToInternalRow(sparkRow, outputTypes))
+              project(rowToInternalRow(sparkRow, outputTypes, converters))
             }
           }
           resultIter

@@ -23,14 +23,17 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Errorpb;
 import com.pingcap.tikv.kvproto.Errorpb.Error;
+import com.pingcap.tikv.kvproto.Errorpb.NotLeader;
+import com.pingcap.tikv.kvproto.Errorpb.ServerIsBusy;
+import com.pingcap.tikv.kvproto.Errorpb.StaleEpoch;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.kvproto.Kvrpcpb.Context;
 import com.pingcap.tikv.kvproto.TikvGrpc;
 import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.key.Key;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
@@ -53,17 +56,17 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   private Map<ByteString, Integer> errorMap = new HashMap<>();
 
   // for KV error
-  static final int ABORT = 1;
-  static final int RETRY = 2;
+  public static final int ABORT = 1;
+  public static final int RETRY = 2;
   // for raw client error
-  static final int NOT_LEADER = 3;
-  static final int REGION_NOT_FOUND = 4;
-  static final int KEY_NOT_IN_REGION = 5;
-  static final int STALE_EPOCH = 6;
-  static final int SERVER_IS_BUSY = 7;
-  static final int STALE_COMMAND = 8;
-  static final int STORE_NOT_MATCH = 9;
-  static final int RAFT_ENTRY_TOO_LARGE = 10;
+  public static final int NOT_LEADER = 3;
+  public static final int REGION_NOT_FOUND = 4;
+  public static final int KEY_NOT_IN_REGION = 5;
+  public static final int STALE_EPOCH = 6;
+  public static final int SERVER_IS_BUSY = 7;
+  public static final int STALE_COMMAND = 8;
+  public static final int STORE_NOT_MATCH = 9;
+  public static final int RAFT_ENTRY_TOO_LARGE = 10;
 
   public int getPort() {
     return port;
@@ -82,11 +85,15 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
         ByteString.copyFromUtf8(value));
   }
 
+  public void put(String key, ByteString data) {
+    put(ByteString.copyFromUtf8(key), data);
+  }
+
   public void putError(String key, int code) {
     errorMap.put(ByteString.copyFromUtf8(key), code);
   }
 
-  void clearAllMap() {
+  public void clearAllMap() {
     dataMap.clear();
     errorMap.clear();
   }
@@ -134,7 +141,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
       ByteString key = request.getKey();
 
       Kvrpcpb.RawPutResponse.Builder builder = Kvrpcpb.RawPutResponse.newBuilder();
-      Integer errorCode = errorMap.get(key);
+      Integer errorCode = errorMap.remove(key);
       Errorpb.Error.Builder errBuilder = Errorpb.Error.newBuilder();
       if (errorCode != null) {
         setErrorInfo(errorCode, errBuilder);
@@ -178,7 +185,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
       ByteString key = request.getKey();
 
       Kvrpcpb.RawDeleteResponse.Builder builder = Kvrpcpb.RawDeleteResponse.newBuilder();
-      Integer errorCode = errorMap.get(key);
+      Integer errorCode = errorMap.remove(key);
       Errorpb.Error.Builder errBuilder = Errorpb.Error.newBuilder();
       if (errorCode != null) {
         setErrorInfo(errorCode, errBuilder);
@@ -203,7 +210,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
       ByteString key = request.getKey();
 
       Kvrpcpb.GetResponse.Builder builder = Kvrpcpb.GetResponse.newBuilder();
-      Integer errorCode = errorMap.get(key);
+      Integer errorCode = errorMap.remove(key);
       Kvrpcpb.KeyError.Builder errBuilder = Kvrpcpb.KeyError.newBuilder();
       if (errorCode != null) {
         if (errorCode == ABORT) {
@@ -236,7 +243,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
       Kvrpcpb.ScanResponse.Builder builder = Kvrpcpb.ScanResponse.newBuilder();
       Error.Builder errBuilder = Error.newBuilder();
-      Integer errorCode = errorMap.get(key);
+      Integer errorCode = errorMap.remove(key);
       if (errorCode != null) {
         if (errorCode == ABORT) {
           errBuilder.setServerIsBusy(Errorpb.ServerIsBusy.getDefaultInstance());
@@ -279,7 +286,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
       Error.Builder errBuilder = Error.newBuilder();
       ImmutableList.Builder<Kvrpcpb.KvPair> resultList = ImmutableList.builder();
       for (ByteString key : keys) {
-        Integer errorCode = errorMap.get(key);
+        Integer errorCode = errorMap.remove(key);
         if (errorCode != null) {
           if (errorCode == ABORT) {
             errBuilder.setServerIsBusy(Errorpb.ServerIsBusy.getDefaultInstance());
@@ -315,16 +322,20 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
       Coprocessor.Response.Builder builderWrap = Coprocessor.Response.newBuilder();
       SelectResponse.Builder builder = SelectResponse.newBuilder();
-      com.pingcap.tidb.tipb.Error.Builder errBuilder = com.pingcap.tidb.tipb.Error.newBuilder();
+      com.pingcap.tikv.kvproto.Errorpb.Error.Builder errBuilder = com.pingcap.tikv.kvproto.Errorpb.Error.newBuilder();
+
 
       for (Coprocessor.KeyRange keyRange : keyRanges) {
-        Integer errorCode = errorMap.get(keyRange.getStart());
+        Integer errorCode = errorMap.remove(keyRange.getStart());
         if (errorCode != null) {
-          if (errorCode == ABORT) {
-            errBuilder.setCode(errorCode);
-            errBuilder.setMsg("whatever");
+          if (STALE_EPOCH == errorCode) {
+            errBuilder.setStaleEpoch(StaleEpoch.getDefaultInstance());
+          } else if (NOT_LEADER == errorCode) {
+            errBuilder.setNotLeader(NotLeader.getDefaultInstance());
+          } else {
+            errBuilder.setServerIsBusy(ServerIsBusy.getDefaultInstance());
           }
-          builder.setError(errBuilder.build());
+          builderWrap.setRegionError(errBuilder.build());
           break;
         } else {
           ByteString startKey = keyRange.getStart();
@@ -361,7 +372,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
     return port;
   }
 
-  void stop() {
+  public void stop() {
     if (server != null) {
       server.shutdown();
     }

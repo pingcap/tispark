@@ -1,5 +1,7 @@
 package com.pingcap.tikv.operation.iterator;
 
+import static com.pingcap.tikv.meta.TiDAGRequest.PushDownType.STREAMING;
+
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
@@ -15,19 +17,20 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ExecutorCompletionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.concurrent.ExecutorCompletionService;
-
-import static com.pingcap.tikv.meta.TiDAGRequest.PushDownType.STREAMING;
 
 public abstract class DAGIterator<T> extends CoprocessIterator<T> {
   private ExecutorCompletionService<Iterator<SelectResponse>> streamingService;
   private ExecutorCompletionService<SelectResponse> dagService;
   private SelectResponse response;
-  private static final int MAX_PROCESS_DEPTH = 3;
   private static final Logger logger = LoggerFactory.getLogger(DAGIterator.class.getName());
 
   private Iterator<SelectResponse> responseIterator;

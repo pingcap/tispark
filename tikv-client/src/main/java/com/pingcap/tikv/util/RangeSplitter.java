@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.TiExpressionException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.RowKey.DecodeResult;
 import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
@@ -105,13 +106,13 @@ public class RangeSplitter {
   private final RegionManager regionManager;
 
   /**
-   * Group by a list of handles by the handles' region id
+   * Group by a list of handles by the handles' region id, handles will be sorted.
    *
    * @param tableId Table id used for the handle
    * @param handles Handle list
    * @return <RegionId, HandleList> map
    */
-  public TLongObjectHashMap<TLongArrayList> groupByHandlesByRegionId(long tableId, TLongArrayList handles) {
+  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(long tableId, TLongArrayList handles) {
     TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
     handles.sort();
 
@@ -173,11 +174,17 @@ public class RangeSplitter {
     return result;
   }
 
-  public List<RegionTask> splitHandlesByRegion(long tableId, TLongArrayList handles) {
+  /**
+   * Build region tasks from handles split by region, handles will be sorted.
+   * @param tableId Table ID
+   * @param handles Handle list
+   * @return A list of region tasks
+   */
+  public List<RegionTask> splitAndSortHandlesByRegion(long tableId, TLongArrayList handles) {
     // Max value for current index handle range
     ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
 
-    TLongObjectHashMap<TLongArrayList> regionHandlesMap = groupByHandlesByRegionId(tableId, handles);
+    TLongObjectHashMap<TLongArrayList> regionHandlesMap = groupByAndSortHandlesByRegionId(tableId, handles);
 
     regionHandlesMap.forEachEntry((k, v) -> {
       Pair<TiRegion, Metapb.Store> regionStorePair = regionManager.getRegionStorePairByRegionId(k);
@@ -239,6 +246,12 @@ public class RangeSplitter {
     return splitTasks.build();
   }
 
+  /**
+   * Split key ranges into corresponding region tasks and group by their region id
+   *
+   * @param keyRanges List of key ranges
+   * @return List of RegionTask, each task corresponds to a different region.
+   */
   public List<RegionTask> splitRangeByRegion(List<KeyRange> keyRanges) {
     if (keyRanges == null || keyRanges.size() == 0) {
       return ImmutableList.of();
@@ -287,8 +300,69 @@ public class RangeSplitter {
     for (Map.Entry<Long, List<KeyRange>> entry : idToRange.entrySet()) {
       Pair<TiRegion, Metapb.Store> regionStorePair = idToRegion.get(entry.getKey());
       resultBuilder.add(
-          new RegionTask(regionStorePair.first, regionStorePair.second, entry.getValue()));
+          new RegionTask(regionStorePair.first, regionStorePair.second, entry.getValue())
+      );
     }
+    return resultBuilder.build();
+  }
+
+  /**
+   * Split SORTED key ranges with same region id into corresponding region tasks
+   *
+   * @param keyRanges List of key ranges
+   * @param splitNum upper bound of number of ranges to merge into
+   * @return List of RegionTask, each task corresponds to a different region.
+   */
+  public List<RegionTask> splitSortedRangeInRegion(List<KeyRange> keyRanges, int splitNum) {
+
+    List<KeyRange> mergedKeyRanges = KeyRangeUtils.mergeSortedRanges(keyRanges, splitNum);
+
+    if (mergedKeyRanges == null || mergedKeyRanges.size() == 0) {
+      return ImmutableList.of();
+    }
+
+    if (mergedKeyRanges.size() > splitNum) {
+      throw new RuntimeException("Sorted ranges were merged into more key ranges than splitNum");
+    }
+
+    int i = 0;
+    KeyRange range = mergedKeyRanges.get(i++);
+    Pair<TiRegion, Metapb.Store> baseRegionStorePair = regionManager.getRegionStorePairByKey(range.getStart());
+    TiRegion region = baseRegionStorePair.first;
+    Key regionEndKey = toRawKey(region.getEndKey());
+    long regionId = region.getId();
+    ImmutableList.Builder<RegionTask> resultBuilder = ImmutableList.builder();
+    ImmutableList.Builder<KeyRange> ranges = ImmutableList.builder();
+
+    while (true) {
+      Pair<TiRegion, Metapb.Store> startKeyRegionStorePair =
+          regionManager.getRegionStorePairByKey(range.getStart());
+
+      if (startKeyRegionStorePair == null) {
+        throw new NullPointerException("fail to get region/store pair by key " + formatByteString(range.getStart()));
+      }
+      if (startKeyRegionStorePair.first.getId() != regionId) {
+        throw new RuntimeException("Something went wrong: key range not in current region");
+      }
+      // both key range is close-opened
+      // initial range inside PD is guaranteed to be -INF to +INF
+      // Both keys are at right hand side and then always not -INF
+      if (toRawKey(range.getEnd()).compareTo(regionEndKey) > 0) {
+        throw new RuntimeException("Something went wrong: key range not in current region");
+      }
+      ranges.add(range);
+      if (i >= mergedKeyRanges.size()) {
+        break;
+      }
+      range = mergedKeyRanges.get(i++);
+    }
+
+    // since all ranges are guaranteed to be in same region,
+    // current range is covered by region
+    resultBuilder.add(
+        new RegionTask(baseRegionStorePair.first, baseRegionStorePair.second, ranges.build())
+    );
+
     return resultBuilder.build();
   }
 }

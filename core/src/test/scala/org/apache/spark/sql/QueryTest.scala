@@ -111,19 +111,23 @@ abstract class QueryTest extends PlanTest {
       }
     }
 
-    try {
-      if (!isOrdered) {
-        comp(
-          lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
-          rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
-        )
-      } else {
-        comp(lhs, rhs)
+    if (lhs != null && rhs != null) {
+      try {
+        if (!isOrdered) {
+          comp(
+            lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
+            rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
+          )
+        } else {
+          comp(lhs, rhs)
+        }
+      } catch {
+        // TODO:Remove this temporary exception handling
+        //      case _:RuntimeException => false
+        case _: Throwable => false
       }
-    } catch {
-      // TODO:Remove this temporary exception handling
-      //      case _:RuntimeException => false
-      case _: Throwable => false
+    } else {
+      false
     }
   }
 
