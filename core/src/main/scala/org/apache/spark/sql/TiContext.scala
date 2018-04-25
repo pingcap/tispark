@@ -161,7 +161,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
         meta
       )(sqlContext)
 
-      if (!sqlContext.sparkSession.catalog.tableExists(table.getName)) {
+      if (!sqlContext.sparkSession.catalog.tableExists(s"`${table.getName}`")) {
         // add backtick for table name in case it contains, e.g., a minus sign
         val tableName = "`" + (if (dbNameAsPrefix) db.getName + "_" + table.getName
                                else table.getName) + "`"

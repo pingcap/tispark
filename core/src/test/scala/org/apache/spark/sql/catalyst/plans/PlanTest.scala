@@ -16,38 +16,13 @@
 package org.apache.spark.sql.catalyst.plans
 
 import org.apache.spark.SparkFunSuite
-import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.expressions.{Alias, And, AttributeReference, EqualNullSafe, EqualTo, Exists, ExprId, Expression, ListQuery, PredicateHelper, PredicateSubquery, ScalarSubquery}
+import org.apache.spark.sql.catalyst.expressions.{And, EqualNullSafe, EqualTo, Expression, PredicateHelper}
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.catalyst.util.sideBySide
 
 /**
  * Provides helper methods for comparing plans.
  */
 abstract class PlanTest extends SparkFunSuite with PredicateHelper {
-
-  /**
-   * Since attribute references are given globally unique ids during analysis,
-   * we must normalize them to check if two different queries are identical.
-   */
-  protected def normalizeExprIds(plan: LogicalPlan): plan.type = {
-    plan transformAllExpressions {
-      case s: ScalarSubquery =>
-        s.copy(exprId = ExprId(0))
-      case e: Exists =>
-        e.copy(exprId = ExprId(0))
-      case l: ListQuery =>
-        l.copy(exprId = ExprId(0))
-      case p: PredicateSubquery =>
-        p.copy(exprId = ExprId(0))
-      case a: AttributeReference =>
-        AttributeReference(a.name, a.dataType, a.nullable)(exprId = ExprId(0))
-      case a: Alias =>
-        Alias(a.child, a.name)(exprId = ExprId(0))
-      case ae: AggregateExpression =>
-        ae.copy(resultId = ExprId(0))
-    }
-  }
 
   /**
    * Normalizes plans:
@@ -91,22 +66,5 @@ abstract class PlanTest extends SparkFunSuite with PredicateHelper {
     case eq @ EqualNullSafe(l: Expression, r: Expression) =>
       Seq(l, r).sortBy(_.hashCode()).reduce(EqualNullSafe)
     case _ => condition // Don't reorder.
-  }
-
-  /** Fails the test if the two plans do not match */
-  protected def comparePlans(plan1: LogicalPlan, plan2: LogicalPlan) {
-    val normalized1 = normalizePlan(normalizeExprIds(plan1))
-    val normalized2 = normalizePlan(normalizeExprIds(plan2))
-    if (normalized1 != normalized2) {
-      fail(s"""
-              |== FAIL: Plans do not match ===
-              |${sideBySide(normalized1.treeString, normalized2.treeString).mkString("\n")}
-         """.stripMargin)
-    }
-  }
-
-  /** Fails the test if the two expressions do not match */
-  protected def compareExpressions(e1: Expression, e2: Expression): Unit = {
-    comparePlans(Filter(e1, OneRowRelation), Filter(e2, OneRowRelation))
   }
 }
