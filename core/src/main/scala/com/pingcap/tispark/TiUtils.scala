@@ -116,10 +116,15 @@ object TiUtils {
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
     tp match {
-      case _: StringType  => sql.types.StringType
-      case _: BytesType   => sql.types.BinaryType
-      case _: IntegerType => sql.types.LongType
-      case _: RealType    => sql.types.DoubleType
+      case _: StringType => sql.types.StringType
+      case _: BytesType  => sql.types.BinaryType
+      case _: IntegerType =>
+        if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
+          DataTypes.createDecimalType(20, 0)
+        } else {
+          sql.types.LongType
+        }
+      case _: RealType => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
       // Decimal precision cannot exceed MAX_PRECISION.
       case _: DecimalType =>

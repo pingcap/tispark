@@ -201,9 +201,9 @@ class StatisticsManager(tiSession: TiSession) {
     if (rows.isEmpty) return
 
     val row = rows.next()
-    tableStatistics.setCount { row.getLong(1) }
+    tableStatistics.setCount { row.getUnsignedLong(1) }
     tableStatistics.setModifyCount { row.getLong(2) }
-    tableStatistics.setVersion { row.getLong(3) }
+    tableStatistics.setVersion { row.getUnsignedLong(3) }
   }
 
   private def statisticsResultFromStorage(tableId: Long,
