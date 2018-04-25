@@ -37,8 +37,8 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_MAX_FRAME_SIZE = 268435456 * 2; // 256 * 2 MB
   private static final int DEF_INDEX_SCAN_BATCH_SIZE = 20000;
   // if keyRange size per request exceeds this limit, the request might be too large to be accepted
-  // by TiKV(maximum request size accepted by TiKV is around 10MB)
-  private static final int MAX_REQUEST_KEY_RANGE_SIZE = 200000;
+  // by TiKV(maximum request size accepted by TiKV is around 1MB)
+  private static final int MAX_REQUEST_KEY_RANGE_SIZE = 20000;
   private static final int DEF_INDEX_SCAN_CONCURRENCY = 5;
   private static final int DEF_TABLE_SCAN_CONCURRENCY = 512;
   private static final CommandPri DEF_COMMAND_PRIORITY = CommandPri.Low;
