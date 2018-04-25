@@ -58,6 +58,11 @@ If you have too many tables and use only some of them, to speed up meta loading 
 ti.tidbTable("tpch", "lineitem")
 ```
 
+If you have newly created table which is not yet synchronized into TiSpark between refresh period, you can manually refresh schema metadata:
+```
+ti.meta.reloadMeta
+```
+
 ## Current Version
 ```
 ti.version
