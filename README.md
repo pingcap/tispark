@@ -31,10 +31,31 @@ Uses as below
 import org.apache.spark.sql.TiContext
 val ti = new TiContext(spark) 
 
-// Mapping all TiDB tables from database tpch as Spark SQL tables
+// Map all TiDB tables from database tpch as Spark SQL tables
 ti.tidbMapDatabase("tpch")
 
 spark.sql("select count(*) from lineitem").show
+```
+
+## Metadata loading
+If you are using spark-shell, you need to manually load schema information as decribed above.
+
+If you have too many tables, you might choose to disable histogram preparison and loading will be faster.
+
+```
+ti.tidbMapDatabase("tpch", autoLoadStatistics = true)
+```
+
+If you have two tables with same name in different databases, you might choose to append database name as prefix for table name:
+
+```
+ti.tidbMapDatabase("tpch", dbNameAsPrefix = true)
+```
+
+If you have too many tables and use only some of them, to speed up meta loading process, you might manually load only tables you use:
+
+```
+ti.tidbTable("tpch", "lineitem")
 ```
 
 ## Current Version
