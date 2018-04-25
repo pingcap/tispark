@@ -77,7 +77,7 @@ public class ConcreteBackOffer implements BackOffer {
     BackOffFunction backOffFunction = null;
     switch (funcType) {
       case BoUpdateLeader:
-        backOffFunction = BackOffFunction.create(1, 10, BackOffStrategy.NoJitter);
+        backOffFunction = BackOffFunction.create(1, 100, BackOffStrategy.NoJitter);
         break;
       case BoTxnLockFast:
         backOffFunction = BackOffFunction.create(100, 3000, BackOffStrategy.EqualJitter);
@@ -86,16 +86,16 @@ public class ConcreteBackOffer implements BackOffer {
         backOffFunction = BackOffFunction.create(2000, 10000, BackOffStrategy.EqualJitter);
         break;
       case BoRegionMiss:
-        backOffFunction = BackOffFunction.create(100, 500, BackOffStrategy.NoJitter);
+        backOffFunction = BackOffFunction.create(500, 1000, BackOffStrategy.NoJitter);
         break;
       case BoTxnLock:
         backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
         break;
       case BoPDRPC:
-        backOffFunction = BackOffFunction.create(500, 3000, BackOffStrategy.EqualJitter);
+        backOffFunction = BackOffFunction.create(500, 5000, BackOffStrategy.EqualJitter);
         break;
       case BoTiKVRPC:
-        backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
+        backOffFunction = BackOffFunction.create(500, 5000, BackOffStrategy.EqualJitter);
         break;
     }
     return backOffFunction;

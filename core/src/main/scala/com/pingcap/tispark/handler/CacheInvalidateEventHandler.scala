@@ -20,7 +20,7 @@ package com.pingcap.tispark.handler
 import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.event.CacheInvalidateEvent.CacheType
 import com.pingcap.tikv.region.RegionManager
-import com.pingcap.tispark.listener.CacheListenerManager.CACHE_INVALIDATE_ACCUMULATOR
+import com.pingcap.tispark.listener.CacheInvalidateListener
 import org.slf4j.LoggerFactory
 
 /**
@@ -67,7 +67,7 @@ class CacheInvalidateEventHandler(regionManager: RegionManager) {
         logger.error(s"Updating cache failed:${e.getMessage}")
         return
     }
-    CACHE_INVALIDATE_ACCUMULATOR.remove(event)
+    CacheInvalidateListener.getInstance().CACHE_INVALIDATE_ACCUMULATOR.remove(event)
   }
 }
 
