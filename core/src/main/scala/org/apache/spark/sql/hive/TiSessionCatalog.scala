@@ -18,7 +18,7 @@ package org.apache.spark.sql.hive
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
-import com.pingcap.tispark.listener.CacheListenerManager
+import com.pingcap.tispark.listener.CacheInvalidateListener
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.analysis.{FunctionRegistry, NoSuchDatabaseException, NoSuchTableException}

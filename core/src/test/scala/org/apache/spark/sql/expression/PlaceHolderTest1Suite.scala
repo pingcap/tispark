@@ -636,7 +636,7 @@ class PlaceHolderTest1Suite extends BaseTiSparkSuite {
   allCases foreach { query =>
     {
       test(query) {
-        runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+        runTest(query)
       }
     }
   }

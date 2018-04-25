@@ -144,8 +144,8 @@ class IssueTestSuite extends BaseTiSparkSuite {
         |group by
         |   l_partkey""".stripMargin
     // Should not throw any exception
-    runTest(q1, q1.replace("full_data_type_table", "full_data_type_table_j"))
-    runTest(q2, q2.replace("full_data_type_table", "full_data_type_table_j"))
+    runTest(q1, skipTiDB = true)
+    runTest(q2, skipTiDB = true)
   }
 
   // https://github.com/pingcap/tispark/issues/162
