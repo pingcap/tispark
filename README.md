@@ -23,7 +23,7 @@ https://github.com/pingcap/tikv-client-lib-java
 
 Uses as below
 ```
-./bin/spark-shell --jars /wherever-it-is/tispark-1.0-RC1-jar-with-dependencies.jar
+./bin/spark-shell --jars /wherever-it-is/tispark-1.0-RC2-jar-with-dependencies.jar
 ```
 
 ```
