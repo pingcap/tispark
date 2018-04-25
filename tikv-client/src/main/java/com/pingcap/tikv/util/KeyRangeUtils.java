@@ -155,6 +155,47 @@ public class KeyRangeUtils {
     return rangeBuilder.build();
   }
 
+  /**
+   * Merge SORTED potential discrete ranges into one large range.
+   *
+   * @param ranges the sorted range list to merge
+   * @return the minimal range which encloses all ranges in this range list.
+   */
+  public static List<KeyRange> mergeSortedRanges(List<KeyRange> ranges) {
+    return mergeSortedRanges(ranges, 1);
+  }
+
+  /**
+   * Merge SORTED potential discrete ranges into no more than {@code splitNum} large range.
+   *
+   * @param ranges the sorted range list to merge
+   * @param splitNum upper bound of number of ranges to merge into
+   * @return the minimal range which encloses all ranges in this range list.
+   */
+  public static List<KeyRange> mergeSortedRanges(List<KeyRange> ranges, int splitNum) {
+    if (splitNum <= 0) {
+      throw new RuntimeException("Cannot split ranges by non-positive integer");
+    }
+    if (ranges == null || ranges.isEmpty() || ranges.size() <= splitNum) {
+      return ranges;
+    }
+    // use ceil for split step
+    int step = (ranges.size() + splitNum - 1) / splitNum;
+    ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
+    for (int i = 0, nowPos = 0; i < splitNum; i ++) {
+      int nextPos = Math.min(nowPos + step - 1, ranges.size() - 1);
+      KeyRange first = ranges.get(nowPos);
+      KeyRange last = ranges.get(nextPos);
+
+      Key lowerMin = toRawKey(first.getStart(), true);
+      Key upperMax = toRawKey(last.getEnd(), false);
+
+      rangeBuilder.add(makeCoprocRange(lowerMin.toByteString(), upperMax.toByteString()));
+      nowPos = nowPos + step;
+    }
+    return rangeBuilder.build();
+  }
+
   static String formatByteString(ByteString key) {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < key.size(); i++) {

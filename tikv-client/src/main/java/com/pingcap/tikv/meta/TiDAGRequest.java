@@ -35,7 +35,7 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.KeyRangeUtils;
 import com.pingcap.tikv.util.Pair;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -795,6 +795,19 @@ public class TiDAGRequest implements Serializable {
       sb.append("[").append(limit).append("]");
     }
     return sb.toString();
+  }
+
+  public TiDAGRequest copy() {
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ObjectOutputStream oos = new ObjectOutputStream(baos);
+      oos.writeObject(this);
+      ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+      ObjectInputStream ois = new ObjectInputStream(bais);
+      return ((TiDAGRequest) ois.readObject());
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }
