@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent</artifactId>
-    <version>1.0-RC1</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -26,6 +26,7 @@
         <name>PingCAP</name>
     </organization>
     <properties>
+        <revision>1.0-RC2</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
