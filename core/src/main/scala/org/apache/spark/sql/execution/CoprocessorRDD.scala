@@ -206,7 +206,7 @@ case class RegionTaskExec(child: SparkPlan,
         // For each partition, we do some initialization work
         val logger = Logger.getLogger(getClass.getName)
         logger.info(s"In partition No.$index")
-        val session = TiSessionCache.getSession(appId, tiConf)
+        val session = TiSessionCache.getSession(tiConf)
         session.injectCallBackFunc(callBackFunc)
         val batchSize = tiConf.getIndexScanBatchSize
 

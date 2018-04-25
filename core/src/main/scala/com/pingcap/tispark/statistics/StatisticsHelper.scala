@@ -93,8 +93,8 @@ object StatisticsHelper {
       indexFlag = 0
       dataType = colInfos.head.getType
     } else if (!isIndex || indexInfos.isEmpty) {
-      logger.error(
-        s"We cannot find histogram id $histID in table info ${table.getName} now. It may be deleted."
+      logger.warn(
+        s"Cannot find histogram id $histID in table info ${table.getName} now. It may be deleted."
       )
       needed = false
     }
