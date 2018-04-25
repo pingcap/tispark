@@ -25,15 +25,6 @@ import org.slf4j.Logger
 abstract class SparkFunSuite extends FunSuite with BeforeAndAfterAll with Logging {
   protected val logger: Logger = log
 
-  protected override def afterAll(): Unit = {
-    try {
-      // Avoid leaking map entries in tests that use accumulators without SparkContext
-      AccumulatorContext.clear()
-    } finally {
-      super.afterAll()
-    }
-  }
-
   // helper function
   protected final def getTestResourceFile(file: String): File = {
     new File(getClass.getClassLoader.getResource(file).getFile)
