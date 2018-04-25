@@ -51,7 +51,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
     new Iterator[Row] {
       dagRequest.resolve()
       private val tiPartition = split.asInstanceOf[TiPartition]
-      private val session = TiSessionCache.getSession(tiPartition.appId, tiConf)
+      private val session = TiSessionCache.getSession(tiConf)
       private val snapshot = session.createSnapshot(ts)
       private[this] val tasks = tiPartition.tasks
 

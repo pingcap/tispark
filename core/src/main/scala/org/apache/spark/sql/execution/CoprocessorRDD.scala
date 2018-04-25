@@ -161,7 +161,6 @@ case class RegionTaskExec(child: SparkPlan,
   )
 
   private val sqlConf = sqlContext.conf
-  private val appId = SparkContext.getOrCreate().appName
   private val downgradeThreshold =
     sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
   private lazy val project = UnsafeProjection.create(schema)
@@ -206,7 +205,7 @@ case class RegionTaskExec(child: SparkPlan,
         // For each partition, we do some initialization work
         val logger = Logger.getLogger(getClass.getName)
         logger.info(s"In partition No.$index")
-        val session = TiSessionCache.getSession(appId, tiConf)
+        val session = TiSessionCache.getSession(tiConf)
         session.injectCallBackFunc(callBackFunc)
         val batchSize = tiConf.getIndexScanBatchSize
 
