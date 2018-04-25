@@ -71,7 +71,7 @@ object StatisticsHelper {
     val isIndex = row.getLong(1) > 0
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
-    val histVer = row.getLong(4)
+    val histVer = row.getUnsignedLong(4)
     val nullCount = row.getLong(5)
     val cMSketch = if (checkColExists(histTable, "cm_sketch")) row.getBytes(6) else null
     // get index/col info for StatisticsDTO

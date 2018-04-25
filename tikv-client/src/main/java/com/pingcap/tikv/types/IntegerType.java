@@ -25,6 +25,9 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
 public class IntegerType extends DataType {
   public static final IntegerType TINYINT = new IntegerType(MySQLType.TypeTiny);
   public static final IntegerType SMALLINT = new IntegerType(MySQLType.TypeShort);
@@ -42,16 +45,35 @@ public class IntegerType extends DataType {
     super(tp);
   }
 
+  private static final BigDecimal UNSIGNED_OFFSET = new BigDecimal(BigInteger.ONE.shiftLeft(64));
+
+  private BigDecimal unsignedValueOf(long x) {
+    if (x < 0) {
+      return BigDecimal.valueOf(x).add(UNSIGNED_OFFSET);
+    } else {
+      return BigDecimal.valueOf(x);
+    }
+  }
+
   /**
    * {@inheritDoc}
    */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
+    long ret;
     switch (flag) {
       case Codec.UVARINT_FLAG:
-        return IntegerCodec.readUVarLong(cdi);
+        ret = IntegerCodec.readUVarLong(cdi);
+        if (tp == MySQLType.TypeLonglong) {
+          return unsignedValueOf(ret);
+        }
+        return ret;
       case Codec.UINT_FLAG:
-        return IntegerCodec.readULong(cdi);
+        ret = IntegerCodec.readULong(cdi);
+        if (tp == MySQLType.TypeLonglong) {
+          return unsignedValueOf(ret);
+        }
+        return ret;
       case Codec.VARINT_FLAG:
         return IntegerCodec.readVarLong(cdi);
       case Codec.INT_FLAG:

@@ -18,6 +18,7 @@
 package com.pingcap.tikv.row;
 
 import com.pingcap.tikv.types.DataType;
+
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -50,6 +51,8 @@ public interface Row {
   void setLong(int pos, long v);
 
   long getLong(int pos);
+
+  long getUnsignedLong(int pos);
 
   void setString(int pos, String v);
 
