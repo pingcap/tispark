@@ -209,12 +209,6 @@ object TiUtils {
       val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
       tiConf.setCommandPriority(priority)
     }
-
-    if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {
-      tiConf.setRegionIndexScanDowngradeThreshold(
-        conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toLong
-      )
-    }
     tiConf
   }
 

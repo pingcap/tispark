@@ -93,7 +93,7 @@ class StatisticsManager(tiSession: TiSession) {
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private final val statisticsMap = CacheBuilder
     .newBuilder()
-    .build[Object, Object]
+    .build[java.lang.Long, TableStatistics]
 
   /**
    * Load statistics information maintained by TiDB to TiSpark.
@@ -130,7 +130,7 @@ class StatisticsManager(tiSession: TiSession) {
 
     // use cached one for incremental update
     val tblStatistic = if (statisticsMap.asMap.containsKey(tblId)) {
-      statisticsMap.getIfPresent(tblId).asInstanceOf[TableStatistics]
+      statisticsMap.getIfPresent(tblId)
     } else {
       new TableStatistics(tblId)
     }
@@ -161,7 +161,7 @@ class StatisticsManager(tiSession: TiSession) {
     // Update cache
     results.foreach { putOrUpdateTblStats(tblStatistic, _) }
 
-    statisticsMap.put(tblId.asInstanceOf[Object], tblStatistic.asInstanceOf[Object])
+    statisticsMap.put(tblId, tblStatistic)
   }
 
   private def putOrUpdateTblStats(tblStatistic: TableStatistics, result: StatisticsResult): Unit =
@@ -232,7 +232,7 @@ class StatisticsManager(tiSession: TiSession) {
   }
 
   def getTableStatistics(id: Long): TableStatistics = {
-    statisticsMap.getIfPresent(id).asInstanceOf[TableStatistics]
+    statisticsMap.getIfPresent(id)
   }
 
   /**
