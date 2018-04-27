@@ -46,7 +46,7 @@ This way is generally the same as the first way, but more readable.
 
 3. Run this command in your `SPARK_HOME` directory:
 ```
-./bin/pyspark --jars /where-ever-it-is/tispark-core-1.0-RC1-jar-with-dependencies.jar
+./bin/pyspark --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar
 ```
 
 4. Use as below:
