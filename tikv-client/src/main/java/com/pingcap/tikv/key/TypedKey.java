@@ -20,6 +20,7 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.types.DataType;
+import org.apache.spark.unsafe.types.UTF8String;
 
 import static java.util.Objects.requireNonNull;
 
@@ -66,10 +67,12 @@ public class TypedKey extends Key {
 
   public TypedKey next(int prefixLength) {
     Object val = getValue();
-    if (val instanceof String) {
-      return toTypedKey(nextValue(((String) val).getBytes()), type, prefixLength);
+    if (val instanceof UTF8String) {
+      return toTypedKey(nextValue(((UTF8String) val).getBytes()), type, prefixLength);
     } else if (val instanceof byte[]) {
       return toTypedKey(nextValue(((byte[]) val)), type, prefixLength);
+    } else if (val instanceof String) {
+      return toTypedKey(nextValue(((String) val).getBytes()), type, prefixLength);
     } else {
       throw new TypeException("Type for TypedKey in next() function must be either String or Byte array");
     }
