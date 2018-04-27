@@ -17,6 +17,7 @@
 
 package com.pingcap.tispark.statistics
 
+import com.google.common.primitives.UnsignedLong
 import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
 import com.pingcap.tikv.key.{Key, TypedKey}
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
@@ -71,7 +72,7 @@ object StatisticsHelper {
     val isIndex = row.getLong(1) > 0
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
-    val histVer = row.getLong(4)
+    val histVer = row.getUnsignedLong(4)
     val nullCount = row.getLong(5)
     val cMSketch = if (checkColExists(histTable, "cm_sketch")) row.getBytes(6) else null
     // get index/col info for StatisticsDTO
@@ -93,8 +94,8 @@ object StatisticsHelper {
       indexFlag = 0
       dataType = colInfos.head.getType
     } else if (!isIndex || indexInfos.isEmpty) {
-      logger.error(
-        s"We cannot find histogram id $histID in table info ${table.getName} now. It may be deleted."
+      logger.warn(
+        s"Cannot find histogram id $histID in table info ${table.getName} now. It may be deleted."
       )
       needed = false
     }
@@ -133,8 +134,9 @@ object StatisticsHelper {
    */
   private[statistics] def shouldUpdateHistogram(oldHis: Histogram, newHis: Histogram): Boolean = {
     if (oldHis == null || newHis == null) return false
-    if (oldHis.getLastUpdateVersion < newHis.getLastUpdateVersion) return true
-    false
+    val oldVersion = UnsignedLong.fromLongBits(oldHis.getLastUpdateVersion)
+    val newVersion = UnsignedLong.fromLongBits(newHis.getLastUpdateVersion)
+    oldVersion.compareTo(newVersion) < 0
   }
 
   private[statistics] def extractStatisticResult(histId: Long,

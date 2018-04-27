@@ -18,7 +18,6 @@
 package org.apache.spark.sql.expression
 
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.test.SharedSQLContext
 
 class FirstLast0Suite extends BaseTiSparkSuite {
   private val allCases = Seq[String](
@@ -69,7 +68,7 @@ class FirstLast0Suite extends BaseTiSparkSuite {
   allCases foreach { query =>
     {
       test(query) {
-        runTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+        runTest(query)
       }
     }
   }

@@ -25,7 +25,7 @@ import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.listener.CacheListenerManager
+import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
@@ -116,10 +116,15 @@ object TiUtils {
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType = {
     tp match {
-      case _: StringType  => sql.types.StringType
-      case _: BytesType   => sql.types.BinaryType
-      case _: IntegerType => sql.types.LongType
-      case _: RealType    => sql.types.DoubleType
+      case _: StringType => sql.types.StringType
+      case _: BytesType  => sql.types.BinaryType
+      case _: IntegerType =>
+        if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
+          DataTypes.createDecimalType(20, 0)
+        } else {
+          sql.types.LongType
+        }
+      case _: RealType => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
       // Decimal precision cannot exceed MAX_PRECISION.
       case _: DecimalType =>
@@ -211,20 +216,14 @@ object TiUtils {
       val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
       tiConf.setCommandPriority(priority)
     }
-
-    if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {
-      tiConf.setRegionIndexScanDowngradeThreshold(
-        conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toLong
-      )
-    }
     tiConf
   }
 
   def sessionInitialize(session: SparkSession, tiSession: TiSession): Unit = {
     session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
     session.udf.register("ti_version", () => TiSparkVersion.version)
-    CacheListenerManager.initCacheListener(session.sparkContext, tiSession.getRegionManager)
-    tiSession.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
+    CacheInvalidateListener.initCacheListener(session.sparkContext, tiSession.getRegionManager)
+    tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
     StatisticsManager.initStatisticsManager(tiSession, session)
   }
 

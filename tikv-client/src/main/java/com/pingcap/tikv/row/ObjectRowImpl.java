@@ -18,6 +18,8 @@
 package com.pingcap.tikv.row;
 
 import com.pingcap.tikv.types.DataType;
+
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -97,6 +99,11 @@ public class ObjectRowImpl implements Row {
     // Null should be handled by client code with isNull
     // below all get method behave the same
     return (long) values[pos];
+  }
+
+  @Override
+  public long getUnsignedLong(int pos) {
+    return ((BigDecimal) values[pos]).longValue();
   }
 
   @Override

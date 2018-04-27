@@ -15,23 +15,19 @@
 
 package com.pingcap.tispark
 
-import java.util.HashMap
-
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.listener.CacheListenerManager
 
 object TiSessionCache {
-  private val sessionCache: HashMap[String, TiSession] = new HashMap[String, TiSession]()
+  private var sessionCached: TiSession = null
 
-  def getSession(appId: String, conf: TiConfiguration): TiSession = this.synchronized {
-    val session = sessionCache.get(appId)
-    if (session == null) {
-      val newSession = TiSession.create(conf)
-      newSession.injectCallBackFunc(CacheListenerManager.CACHE_ACCUMULATOR_FUNCTION)
-      sessionCache.put(appId, newSession)
-      newSession
+  // Since we create session as singleton now, configuration change will not
+  // reflect change
+  def getSession(conf: TiConfiguration): TiSession = this.synchronized {
+    if (sessionCached == null) {
+      sessionCached = TiSession.create(conf)
+      sessionCached
     } else {
-      session
+      sessionCached
     }
   }
 }

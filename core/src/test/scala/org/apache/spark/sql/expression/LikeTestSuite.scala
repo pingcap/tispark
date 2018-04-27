@@ -40,16 +40,13 @@ class LikeTestSuite extends BaseTiSparkSuite {
 
   tableScanCases foreach { query =>
     test(query) {
-      explainAndRunTest(query, query.replace("full_data_type_table", "full_data_type_table_j"))
+      explainAndRunTest(query)
     }
   }
 
   indexScanCases foreach { query =>
     test(query) {
-      explainAndRunTest(
-        query,
-        query.replace("full_data_type_table_idx", "full_data_type_table_idx_j")
-      )
+      explainAndRunTest(query)
     }
   }
 }

@@ -36,6 +36,7 @@ import java.util.function.Function;
 // TODO: consider refactor to Builder mode
 public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private static final Logger logger = Logger.getLogger(KVErrorHandler.class);
+  private static final int NO_LEADER_STORE_ID = 0; // if there's currently no leader of a store, store id is set to 0
   private final Function<RespT, Errorpb.Error> getRegionError;
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
   private final RegionManager regionManager;
@@ -66,7 +67,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private void invalidateRegionStoreCache(TiRegion ctxRegion) {
     regionManager.invalidateRegion(ctxRegion.getId());
     regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
-    notifyCacheInvalidation(
+    notifyRegionStoreCacheInvalidate(
         ctxRegion.getId(),
         ctxRegion.getLeader().getStoreId(),
         CacheInvalidateEvent.CacheType.REGION_STORE
@@ -76,14 +77,26 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   /**
    * Used for notifying Spark driver to invalidate cache from Spark workers.
    */
-  private void notifyCacheInvalidation(long regionId, long storeId, CacheInvalidateEvent.CacheType type) {
+  private void notifyRegionStoreCacheInvalidate(long regionId, long storeId, CacheInvalidateEvent.CacheType type) {
     if (cacheInvalidateCallBack != null) {
       cacheInvalidateCallBack.apply(new CacheInvalidateEvent(
           regionId, storeId,
           true, true,
           type));
+      logger.info("Accumulating cache invalidation info to driver:regionId=" + regionId + ",storeId=" + storeId + ",type=" + type.name());
     } else {
-      logger.error("Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
+      logger.warn("Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
+    }
+  }
+
+  private void notifyRegionCacheInvalidate(long regionId) {
+    if (cacheInvalidateCallBack != null) {
+      cacheInvalidateCallBack.apply(new CacheInvalidateEvent(
+          regionId, 0,
+          true, false,
+          CacheInvalidateEvent.CacheType.REGION_STORE));
+    } else {
+      logger.warn("Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
     }
   }
 
@@ -101,27 +114,33 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     Errorpb.Error error = getRegionError(resp);
     if (error != null) {
       if (error.hasNotLeader()) {
-        // update Leader here
-        logger.warn(String.format("NotLeader Error with region id %d and store id %d",
-            ctxRegion.getId(),
-            ctxRegion.getLeader().getStoreId()));
-
         long newStoreId = error.getNotLeader().getLeader().getStoreId();
-        regionManager.updateLeader(ctxRegion.getId(), newStoreId);
-        notifyCacheInvalidation(
+
+        // update Leader here
+        logger.warn(String.format("NotLeader Error with region id %d and store id %d, new store id %d",
             ctxRegion.getId(),
-            newStoreId,
-            CacheInvalidateEvent.CacheType.LEADER
-        );
-        recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
-            this.regionManager.getStoreById(newStoreId));
+            ctxRegion.getLeader().getStoreId(),
+            newStoreId));
 
         BackOffFunction.BackOffFuncType backOffFuncType;
-        if (error.getNotLeader().getLeader() != null) {
+        // if there's current no leader, we do not trigger update pd cache logic
+        // since issuing store = NO_LEADER_STORE_ID requests to pd will definitely fail.
+        if (newStoreId != NO_LEADER_STORE_ID) {
+          regionManager.updateLeader(ctxRegion.getId(), newStoreId);
+          notifyRegionStoreCacheInvalidate(
+              ctxRegion.getId(),
+              newStoreId,
+              CacheInvalidateEvent.CacheType.LEADER
+          );
+          recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
+              this.regionManager.getStoreById(newStoreId));
+
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
+          logger.info(String.format("Received zero store id, from region %d try next time", ctxRegion.getId()));
           backOffFuncType = BackOffFunction.BackOffFuncType.BoRegionMiss;
         }
+
         backOffer.doBackOff(backOffFuncType, new GrpcException(error.toString()));
 
         return true;
@@ -136,7 +155,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       } else if (error.hasStaleEpoch()) {
         logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion));
         this.regionManager.onRegionStale(ctxRegion.getId());
-        throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
+        notifyRegionCacheInvalidate(ctxRegion.getId());
+        return false;
       } else if (error.hasServerIsBusy()) {
         logger.warn(String.format("Server is busy for region [%s], reason: %s", ctxRegion, error.getServerIsBusy().getReason()));
         backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoServerBusy,
@@ -166,7 +186,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   @Override
   public boolean handleRequestError(BackOffer backOffer, Exception e) {
     regionManager.onRequestFail(ctxRegion.getId(), ctxRegion.getLeader().getStoreId());
-    notifyCacheInvalidation(
+    notifyRegionStoreCacheInvalidate(
         ctxRegion.getId(),
         ctxRegion.getLeader().getStoreId(),
         CacheInvalidateEvent.CacheType.REQ_FAILED
