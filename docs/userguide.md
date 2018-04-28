@@ -94,14 +94,14 @@ For the  hybrid deployment of TiSpark and TiKV, add the TiSpark required resourc
 
 ## Deploy TiSpark
 
-Download the TiSpark's jar package [here](http://download.pingcap.org/tispark-1.0-RC1-jar-with-dependencies.jar).
+Download the TiSpark's jar package [here](http://download.pingcap.org/tispark-core-${version}-jar-with-dependencies.jar).
 
 ### Deploy TiSpark on the existing Spark cluster
 
 Running TiSpark on an existing Spark cluster does not require a reboot of the cluster. You can use Spark's `--jars` parameter to introduce TiSpark as a dependency:
 
 ```
-Spark-shell --jars $ PATH / tispark-0.1.0.jar
+Spark-shell --jars $ PATH / tispark-core-${version}-jar-with-dependencies.jar
 ```
 
 If you want to deploy TiSpark as a default component, simply place the TiSpark jar package into the jars path for each node of the Spark cluster and restart the Spark cluster:
