@@ -52,6 +52,19 @@ public class TiDAGRequestTest {
   }
 
   @Test
+  public void testTopNCouldPushDownLimit0() {
+    TiTableInfo table = createTable();
+    TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
+    ColumnRef col1 = ColumnRef.create("c1", table);
+    dagRequest.addOrderByItem(ByItem.create(col1, false));
+    dagRequest.addRequiredColumn(col1);
+    dagRequest.setLimit(0);
+    dagRequest.setTableInfo(table);
+    dagRequest.setStartTs(1);
+    dagRequest.buildScan(false);
+  }
+
+  @Test
   public void testSerializable() throws Exception {
     TiTableInfo table = createTable();
     TiDAGRequest selReq = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
