@@ -454,12 +454,6 @@ public class TiDAGRequest implements Serializable {
           EXEC_TYPE_PRIORITY_MAP.get(formerType)) {
         throw new DAGRequestException("Invalid executor priority.");
       }
-      if (currentType.equals(ExecType.TypeTopN)) {
-        long limit = dagRequest.getExecutors(i).getTopN().getLimit();
-        if (limit == 0) {
-          throw new DAGRequestException("TopN executor should contain non-zero limit number but received:" + limit);
-        }
-      }
       formerType = currentType;
     }
   }
