@@ -35,6 +35,20 @@ abstract class QueryTest extends PlanTest {
 
   private val eps = 1.0e-2
 
+  protected def compSqlResult(sql: String, lhs: List[List[Any]], rhs: List[List[Any]]): Boolean = {
+    val isOrdered = sql.contains(" order by ")
+    val isLimited = sql.contains(" limit ")
+
+    if (!isOrdered && isLimited) {
+      logger.warn(
+        s"Unknown correctness of test result: sql contains \'limit\' but not \'order by\'."
+      )
+      true
+    } else {
+      compResult(lhs, rhs, isOrdered)
+    }
+  }
+
   /**
    * Compare whether lhs equals to rhs
    *

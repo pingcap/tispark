@@ -35,7 +35,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     dfData(df, schema)
   }
 
-  def queryTiDB(query: String): List[List[Any]] = {
+  protected def queryTiDB(query: String): List[List[Any]] = {
     val resultSet = tidbStmt.executeQuery(query)
     val rsMetaData = resultSet.getMetaData
     val retSet = ArrayBuffer.empty[List[Any]]
@@ -54,7 +54,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     retSet.toList
   }
 
-  def getTableColumnNames(tableName: String): List[String] = {
+  protected def getTableColumnNames(tableName: String): List[String] = {
     val rs = tidbConn
       .createStatement()
       .executeQuery("select * from " + tableName + " limit 1")
@@ -66,7 +66,9 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     resList.toList
   }
 
-  def createOrReplaceTempView(dbName: String, viewName: String, postfix: String = "_j"): Unit =
+  protected def createOrReplaceTempView(dbName: String,
+                                        viewName: String,
+                                        postfix: String = "_j"): Unit =
     spark.read
       .format("jdbc")
       .option(JDBCOptions.JDBC_URL, jdbcUrl)
@@ -75,7 +77,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       .load()
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
-  def loadTestData(testTables: TestTables = defaultTestTables): Unit = {
+  protected def loadTestData(testTables: TestTables = defaultTestTables): Unit = {
     val dbName = testTables.dbName
     tidbConn.setCatalog(dbName)
     ti.tidbMapDatabase(dbName)
@@ -91,24 +93,24 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     initializeTimeZone()
   }
 
-  def initializeTimeZone(): Unit = {
+  protected def initializeTimeZone(): Unit = {
     tidbStmt = tidbConn.createStatement()
     // Set default time zone to GMT+8
     tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
-  case class TestTables(dbName: String, tables: String*)
+  protected case class TestTables(dbName: String, tables: String*)
 
   private val defaultTestTables: TestTables =
     TestTables(dbName = "tispark_test", "full_data_type_table", "full_data_type_table_idx")
 
-  def refreshConnections(testTables: TestTables): Unit = {
+  protected def refreshConnections(testTables: TestTables): Unit = {
     super.refreshConnections()
     loadTestData(testTables)
     initializeTimeZone()
   }
 
-  override def refreshConnections(): Unit = {
+  override protected def refreshConnections(): Unit = {
     super.refreshConnections()
     loadTestData()
     initializeTimeZone()
@@ -118,7 +120,14 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     spark.sparkContext.setLogLevel(level)
   }
 
-  def replaceJDBCTableName(qSpark: String, skipJDBC: Boolean): String = {
+  /** Rename JDBC tables
+   *   - currently we use table names with `_j` suffix for JDBC tests
+   *
+   * @param qSpark spark sql query
+   * @param skipJDBC if JDBC tests are skipped, no need to rename
+   * @return
+   */
+  private def replaceJDBCTableName(qSpark: String, skipJDBC: Boolean): String = {
     var qJDBC: String = null
     if (!skipJDBC) {
       if (qSpark.contains("full_data_type_table_idx")) {
@@ -132,22 +141,26 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     qJDBC
   }
 
-  def judge(str: String, skipped: Boolean = false): Unit =
+  protected def judge(str: String, skipped: Boolean = false): Unit =
     assert(execDBTSAndJudge(str, skipped))
 
-  def execDBTSAndJudge(str: String, skipped: Boolean = false): Boolean =
+  private def compSparkWithTiDB(sql: String): Boolean = {
+    compSqlResult(sql, querySpark(sql), queryTiDB(sql))
+  }
+
+  protected def execDBTSAndJudge(str: String, skipped: Boolean = false): Boolean =
     try {
       if (skipped) {
         logger.warn(s"Test is skipped. [With Spark SQL: $str]")
         true
       } else {
-        compResult(querySpark(str), queryTiDB(str), str.contains(" order by "))
+        compSparkWithTiDB(str)
       }
     } catch {
       case e: Throwable => fail(e)
     }
 
-  def explainSpark(str: String, skipped: Boolean = false): Unit =
+  protected def explainSpark(str: String, skipped: Boolean = false): Unit =
     try {
       if (skipped) {
         logger.warn(s"Test is skipped. [With Spark SQL: $str]")
@@ -158,7 +171,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       case e: Throwable => fail(e)
     }
 
-  def explainAndTest(str: String, skipped: Boolean = false): Unit =
+  protected def explainAndTest(str: String, skipped: Boolean = false): Unit =
     try {
       explainSpark(str)
       judge(str, skipped)
@@ -166,14 +179,14 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       case e: Throwable => fail(e)
     }
 
-  def explainAndRunTest(qSpark: String,
-                        qJDBC: String = null,
-                        skipped: Boolean = false,
-                        rSpark: List[List[Any]] = null,
-                        rJDBC: List[List[Any]] = null,
-                        rTiDB: List[List[Any]] = null,
-                        skipJDBC: Boolean = false,
-                        skipTiDB: Boolean = false): Unit = {
+  protected def explainAndRunTest(qSpark: String,
+                                  qJDBC: String = null,
+                                  skipped: Boolean = false,
+                                  rSpark: List[List[Any]] = null,
+                                  rJDBC: List[List[Any]] = null,
+                                  rTiDB: List[List[Any]] = null,
+                                  skipJDBC: Boolean = false,
+                                  skipTiDB: Boolean = false): Unit = {
     try {
       explainSpark(qSpark)
       if (qJDBC == null) {
@@ -195,13 +208,32 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     }
   }
 
-  def runTest(qSpark: String,
-              skipped: Boolean = false,
-              rSpark: List[List[Any]] = null,
-              rJDBC: List[List[Any]] = null,
-              rTiDB: List[List[Any]] = null,
-              skipJDBC: Boolean = false,
-              skipTiDB: Boolean = false): Unit = {
+  /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
+   *    - TiSpark query throws exception
+   *    - Both TiDB and Spark-JDBC queries fails to execute
+   *    - Both TiDB and Spark-JDBC results differ from TiSpark result
+   *
+   * For JDBC tests we use different view names to distinguish, so table names in Spark SQL will be
+   * renamed in Spark-JDBC SQL
+   *
+   * rSpark, rJDBC and rTiDB are used when we want to guarantee a fixed result which might change due to
+   *    - Current incorrectness/instability in used version(s)
+   *    - Format differences for partial data types
+   *
+   * @param qSpark    query for TiSpark and TiDB
+   * @param rSpark    pre-calculated TiSpark result
+   * @param rJDBC     pre-calculated Spark-JDBC result
+   * @param rTiDB     pre-calculated TiDB result
+   * @param skipJDBC  whether not to run test for Spark-JDBC
+   * @param skipTiDB  whether not to run test for TiDB
+   */
+  protected def runTest(qSpark: String,
+                        skipped: Boolean = false,
+                        rSpark: List[List[Any]] = null,
+                        rJDBC: List[List[Any]] = null,
+                        rTiDB: List[List[Any]] = null,
+                        skipJDBC: Boolean = false,
+                        skipTiDB: Boolean = false): Unit = {
     runTestWithoutReplaceTableName(
       qSpark,
       replaceJDBCTableName(qSpark, skipJDBC),
@@ -231,14 +263,14 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
    * @param skipJDBC  whether not to run test for Spark-JDBC
    * @param skipTiDB  whether not to run test for TiDB
    */
-  def runTestWithoutReplaceTableName(qSpark: String,
-                                     qJDBC: String,
-                                     skipped: Boolean = false,
-                                     rSpark: List[List[Any]] = null,
-                                     rJDBC: List[List[Any]] = null,
-                                     rTiDB: List[List[Any]] = null,
-                                     skipJDBC: Boolean = false,
-                                     skipTiDB: Boolean = false): Unit = {
+  private def runTestWithoutReplaceTableName(qSpark: String,
+                                             qJDBC: String,
+                                             skipped: Boolean = false,
+                                             rSpark: List[List[Any]] = null,
+                                             rJDBC: List[List[Any]] = null,
+                                             rTiDB: List[List[Any]] = null,
+                                             skipJDBC: Boolean = false,
+                                             skipTiDB: Boolean = false): Unit = {
     if (skipped) {
       logger.warn(s"Test is skipped. [With Spark SQL: $qSpark]")
       return
@@ -274,9 +306,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       }
     }
 
-    val isOrdered = qSpark.contains(" order by ")
-
-    if (skipJDBC || !compResult(r1, r2, isOrdered)) {
+    if (skipJDBC || !compSqlResult(qSpark, r1, r2)) {
       if (!skipTiDB && r3 == null) {
         try {
           r3 = queryTiDB(qSpark)
@@ -284,7 +314,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
           case e: Throwable => logger.warn(s"TiDB failed when executing:$qSpark", e) // TiDB failed
         }
       }
-      if (skipTiDB || !compResult(r1, r3, isOrdered)) {
+      if (skipTiDB || !compSqlResult(qSpark, r1, r3)) {
         fail(
           s"""Failed with
              |TiSpark:\t\t${mapStringNestedList(r1)}
