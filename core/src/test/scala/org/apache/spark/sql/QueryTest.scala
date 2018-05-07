@@ -43,7 +43,7 @@ abstract class QueryTest extends PlanTest {
       logger.warn(
         s"Unknown correctness of test result: sql contains \'limit\' but not \'order by\'."
       )
-      true
+      false
     } else {
       compResult(lhs, rhs, isOrdered)
     }
