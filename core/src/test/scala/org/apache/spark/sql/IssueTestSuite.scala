@@ -20,6 +20,29 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  test("Test sql with limit without order by") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t`")
+    tidbStmt.execute(
+      """CREATE TABLE `t` (
+        |  `a` int(11) DEFAULT NULL,
+        |  `b` decimal(15,2) DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+      """.stripMargin
+    )
+    tidbStmt.execute(
+      "insert into t values(1,771.64),(2,378.49),(3,920.92),(4,113.97)"
+    )
+    refreshConnections()
+
+    assert(
+      try {
+        judge("select a, max(b) from t group by a limit 2")
+        false
+      } catch {
+        case _: Throwable => true
+      })
+  }
+
   test("Test index task downgrade") {
     val sqlConf = ti.session.sqlContext.conf
     val prevRegionIndexScanDowngradeThreshold =

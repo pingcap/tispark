@@ -35,6 +35,20 @@ abstract class QueryTest extends PlanTest {
 
   private val eps = 1.0e-2
 
+  protected def compSqlResult(sql: String, lhs: List[List[Any]], rhs: List[List[Any]]): Boolean = {
+    val isOrdered = sql.contains(" order by ")
+    val isLimited = sql.contains(" limit ")
+
+    if (!isOrdered && isLimited) {
+      logger.warn(
+        s"Unknown correctness of test result: sql contains \'limit\' but not \'order by\'."
+      )
+      false
+    } else {
+      compResult(lhs, rhs, isOrdered)
+    }
+  }
+
   /**
    * Compare whether lhs equals to rhs
    *
@@ -118,8 +132,10 @@ abstract class QueryTest extends PlanTest {
             lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
             rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
           )
-        } else {
+        } else if (lhs.length == rhs.length) {
           comp(lhs, rhs)
+        } else {
+          false
         }
       } catch {
         // TODO:Remove this temporary exception handling
