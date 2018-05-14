@@ -141,20 +141,22 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     qJDBC
   }
 
-  protected def judge(str: String, skipped: Boolean = false): Unit =
-    assert(execDBTSAndJudge(str, skipped))
+  protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
+    assert(execDBTSAndJudge(str, skipped, checkLimit))
 
-  private def compSparkWithTiDB(sql: String): Boolean = {
-    compSqlResult(sql, querySpark(sql), queryTiDB(sql))
+  private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean = {
+    compSqlResult(sql, querySpark(sql), queryTiDB(sql), checkLimit)
   }
 
-  protected def execDBTSAndJudge(str: String, skipped: Boolean = false): Boolean =
+  protected def execDBTSAndJudge(str: String,
+                                 skipped: Boolean = false,
+                                 checkLimit: Boolean = true): Boolean =
     try {
       if (skipped) {
         logger.warn(s"Test is skipped. [With Spark SQL: $str]")
         true
       } else {
-        compSparkWithTiDB(str)
+        compSparkWithTiDB(str, checkLimit)
       }
     } catch {
       case e: Throwable => fail(e)
@@ -186,11 +188,12 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
                                   rJDBC: List[List[Any]] = null,
                                   rTiDB: List[List[Any]] = null,
                                   skipJDBC: Boolean = false,
-                                  skipTiDB: Boolean = false): Unit = {
+                                  skipTiDB: Boolean = false,
+                                  checkLimit: Boolean = true): Unit = {
     try {
       explainSpark(qSpark)
       if (qJDBC == null) {
-        runTest(qSpark, skipped, rSpark, rJDBC, rTiDB, skipJDBC, skipTiDB)
+        runTest(qSpark, skipped, rSpark, rJDBC, rTiDB, skipJDBC, skipTiDB, checkLimit)
       } else {
         runTestWithoutReplaceTableName(
           qSpark,
@@ -200,7 +203,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
           rJDBC,
           rTiDB,
           skipJDBC,
-          skipTiDB
+          skipTiDB,
+          checkLimit
         )
       }
     } catch {
@@ -220,12 +224,13 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
    *    - Current incorrectness/instability in used version(s)
    *    - Format differences for partial data types
    *
-   * @param qSpark    query for TiSpark and TiDB
-   * @param rSpark    pre-calculated TiSpark result
-   * @param rJDBC     pre-calculated Spark-JDBC result
-   * @param rTiDB     pre-calculated TiDB result
-   * @param skipJDBC  whether not to run test for Spark-JDBC
-   * @param skipTiDB  whether not to run test for TiDB
+   * @param qSpark      query for TiSpark and TiDB
+   * @param rSpark      pre-calculated TiSpark result
+   * @param rJDBC       pre-calculated Spark-JDBC result
+   * @param rTiDB       pre-calculated TiDB result
+   * @param skipJDBC    whether not to run test for Spark-JDBC
+   * @param skipTiDB    whether not to run test for TiDB
+   * @param checkLimit  whether check if sql contains limit but not order by
    */
   protected def runTest(qSpark: String,
                         skipped: Boolean = false,
@@ -233,7 +238,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
                         rJDBC: List[List[Any]] = null,
                         rTiDB: List[List[Any]] = null,
                         skipJDBC: Boolean = false,
-                        skipTiDB: Boolean = false): Unit = {
+                        skipTiDB: Boolean = false,
+                        checkLimit: Boolean = true): Unit = {
     runTestWithoutReplaceTableName(
       qSpark,
       replaceJDBCTableName(qSpark, skipJDBC),
@@ -242,7 +248,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       rJDBC,
       rTiDB,
       skipJDBC,
-      skipTiDB
+      skipTiDB,
+      checkLimit
     )
   }
 
@@ -255,13 +262,14 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
    *    - Current incorrectness/instability in used version(s)
    *    - Format differences for partial data types
    *
-   * @param qSpark    query for TiSpark and TiDB
-   * @param qJDBC     query for Spark-JDBC
-   * @param rSpark    pre-calculated TiSpark result
-   * @param rJDBC     pre-calculated Spark-JDBC result
-   * @param rTiDB     pre-calculated TiDB result
-   * @param skipJDBC  whether not to run test for Spark-JDBC
-   * @param skipTiDB  whether not to run test for TiDB
+   * @param qSpark      query for TiSpark and TiDB
+   * @param qJDBC       query for Spark-JDBC
+   * @param rSpark      pre-calculated TiSpark result
+   * @param rJDBC       pre-calculated Spark-JDBC result
+   * @param rTiDB       pre-calculated TiDB result
+   * @param skipJDBC    whether not to run test for Spark-JDBC
+   * @param skipTiDB    whether not to run test for TiDB
+   * @param checkLimit  whether check if sql contains limit but not order by
    */
   private def runTestWithoutReplaceTableName(qSpark: String,
                                              qJDBC: String,
@@ -270,7 +278,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
                                              rJDBC: List[List[Any]] = null,
                                              rTiDB: List[List[Any]] = null,
                                              skipJDBC: Boolean = false,
-                                             skipTiDB: Boolean = false): Unit = {
+                                             skipTiDB: Boolean = false,
+                                             checkLimit: Boolean = true): Unit = {
     if (skipped) {
       logger.warn(s"Test is skipped. [With Spark SQL: $qSpark]")
       return
@@ -306,7 +315,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       }
     }
 
-    if (skipJDBC || !compSqlResult(qSpark, r1, r2)) {
+    if (skipJDBC || !compSqlResult(qSpark, r1, r2, checkLimit)) {
       if (!skipTiDB && r3 == null) {
         try {
           r3 = queryTiDB(qSpark)
@@ -314,7 +323,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
           case e: Throwable => logger.warn(s"TiDB failed when executing:$qSpark", e) // TiDB failed
         }
       }
-      if (skipTiDB || !compSqlResult(qSpark, r1, r3)) {
+      if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {
         fail(
           s"""Failed with
              |TiSpark:\t\t${mapStringNestedList(r1)}

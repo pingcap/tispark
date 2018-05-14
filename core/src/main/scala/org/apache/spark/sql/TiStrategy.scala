@@ -352,6 +352,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
 
+    if (tiColumns.isEmpty) {
+      val column = source.table.getColumn(0)
+      dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
+    }
+
     // Right now we still use a projection even if the only evaluation is applying an alias
     // to a column.  Since this is a no-op, it could be avoided. However, using this
     // optimization with the current implementation would change the output schema.
