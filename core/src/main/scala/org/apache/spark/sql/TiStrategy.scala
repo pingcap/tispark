@@ -353,6 +353,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
 
     if (tiColumns.isEmpty) {
+      // if tiColumns is empty, add a random column so that the plan will contain at least one column.
       val column = source.table.getColumn(0)
       dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
     }
