@@ -16,27 +16,20 @@
 package com.pingcap.tikv.codec;
 
 
-import static com.pingcap.tikv.codec.Codec.INT_FLAG;
-import static com.pingcap.tikv.codec.Codec.UINT_FLAG;
-import static com.pingcap.tikv.codec.Codec.UVARINT_FLAG;
-import static com.pingcap.tikv.codec.Codec.VARINT_FLAG;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import com.google.common.primitives.UnsignedLong;
-import com.pingcap.tikv.codec.Codec.DateTimeCodec;
-import com.pingcap.tikv.codec.Codec.DecimalCodec;
-import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.codec.Codec.RealCodec;
-import java.math.BigDecimal;
+import com.pingcap.tikv.codec.Codec.*;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
+
+import java.math.BigDecimal;
+import java.util.TimeZone;
+
+import static com.pingcap.tikv.codec.Codec.*;
+import static java.util.Objects.requireNonNull;
+import static org.junit.Assert.*;
 
 public class CodecTest {
   @Test
@@ -266,13 +259,13 @@ public class CodecTest {
     DateTimeZone otherTz = DateTimeZone.forOffsetHours(-8);
     DateTime time = new DateTime(1999, 12, 12, 1, 1, 1, 999);
     // Encode as UTC (loss timezone) and read it back as UTC
-    DateTime time1 = DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time, utc), utc);
+    DateTime time1 = requireNonNull(DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time, utc), utc));
     assertEquals(time.getMillis(), time1.getMillis());
 
     // Parse String as -8 timezone, encode and read it back
     DateTimeFormatter formatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss:SSSSSSS").withZone(otherTz);
     DateTime time2 = DateTime.parse("2010-10-10 10:11:11:0000000", formatter);
-    DateTime time3 = DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time2, otherTz), otherTz);
+    DateTime time3 = requireNonNull(DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time2, otherTz), otherTz));
     assertEquals(time2.getMillis(), time3.getMillis());
 
     // when packedLong is 0, then null is returned
@@ -280,21 +273,69 @@ public class CodecTest {
     assertNull(time4);
 
     DateTime time5 = DateTime.parse("9999-12-31 23:59:59:0000000", formatter);
-    DateTime time6 = DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time5, otherTz), otherTz);
+    DateTime time6 = requireNonNull(DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time5, otherTz), otherTz));
     assertEquals(time5.getMillis(), time6.getMillis());
 
     DateTime time7 = DateTime.parse("1000-01-01 00:00:00:0000000", formatter);
-    DateTime time8 = DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time7, otherTz), otherTz);
+    DateTime time8 = requireNonNull(DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time7, otherTz), otherTz));
     assertEquals(time7.getMillis(), time8.getMillis());
 
     DateTime time9 = DateTime.parse("2017-01-05 23:59:59:5756010", formatter);
-    DateTime time10 = DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time9, otherTz), otherTz);
+    DateTime time10 = requireNonNull(DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time9, otherTz), otherTz));
     assertEquals(time9.getMillis(), time10.getMillis());
 
     DateTimeFormatter formatter1 = DateTimeFormat.forPattern("yyyy-MM-dd");
     DateTime date1 = DateTime.parse("2099-10-30", formatter1);
     long time11 = DateTimeCodec.toPackedLong(date1, otherTz);
-    DateTime time12 = DateTimeCodec.fromPackedLong(time11, otherTz);
+    DateTime time12 = requireNonNull(DateTimeCodec.fromPackedLong(time11, otherTz));
     assertEquals(time12.getMillis(), date1.getMillis());
+  }
+
+  @Test
+  public void DSTTest() {
+    DateTimeZone defaultDateTimeZone = DateTimeZone.getDefault();
+    DateTimeZone utc = DateTimeZone.UTC;
+    DateTimeZone dst = DateTimeZone.forID("America/New_York");
+    TimeZone defaultTimeZone = TimeZone.getDefault();
+    TimeZone utcTimeZone = TimeZone.getTimeZone("UTC");
+    TimeZone dstTimeZone = TimeZone.getTimeZone("America/New_York");
+
+    TimeZone.setDefault(utcTimeZone);
+    DateTimeZone.setDefault(utc);
+
+    DateTime time = new DateTime(2007, 3, 11, 2, 0, 0, 0);
+    DateTime time11 = new DateTime(2007, 3, 11, 7, 0, 0, 0).toDateTime(dst);
+    DateTime time21 = new DateTime(2007, 3, 11, 6, 0, 0, 0).toDateTime(dst);
+
+    TimeZone.setDefault(dstTimeZone);
+    DateTimeZone.setDefault(dst);
+
+    // Local Time 2007-03-11T02:00:00.000 should be in dst gap
+    assertTrue(dst.isLocalDateTimeGap(time.toLocalDateTime()));
+
+    // Try Decode a dst datetime
+    DateTime time12 = requireNonNull(DateTimeCodec.fromPackedLong(((((2007L * 13 + 3) << 5L | 11) << 17L) | (2 << 12)) << 24L, dst));
+    DateTime time22 = requireNonNull(DateTimeCodec.fromPackedLong(((((2007L * 13 + 3) << 5L | 11) << 17L) | (1 << 12)) << 24L, dst));
+    DateTime time23 = requireNonNull(DateTimeCodec.fromPackedLong(((((2007L * 13 + 3) << 5L | 11) << 17L) | (7 << 12)) << 24L, utc));
+    DateTime time24 = time23.toDateTime(dst);
+    // time11: 2007-03-11T03:00:00.000-04:00
+    // time21: 2007-03-11T01:00:00.000-05:00
+    // time12: 2007-03-11T03:00:00.000-04:00
+    // time22: 2007-03-11T01:00:00.000-05:00
+    // time23: 2007-03-11T07:00:00.000Z
+    // time24: 2007-03-11T03:00:00.000-04:00
+    assertEquals(time11.getMillis(), time12.getMillis());
+    assertEquals(time21.getMillis(), time22.getMillis());
+    assertEquals(time12.getMillis(), time23.getMillis());
+    assertEquals(time23.getMillis(), time24.getMillis());
+    assertEquals(time22.getMillis() + 60 * 60 * 1000, time23.getMillis());
+
+    assertEquals(time12.toLocalDateTime().getHourOfDay(), 3);
+    assertEquals(time22.toLocalDateTime().getHourOfDay(), 1);
+    assertEquals(time23.toLocalDateTime().getHourOfDay(), 7);
+    assertEquals(time24.toLocalDateTime().getHourOfDay(), 3);
+
+    TimeZone.setDefault(defaultTimeZone);
+    DateTimeZone.setDefault(defaultDateTimeZone);
   }
 }

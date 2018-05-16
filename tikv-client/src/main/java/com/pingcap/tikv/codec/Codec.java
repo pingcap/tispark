@@ -16,16 +16,14 @@
 package com.pingcap.tikv.codec;
 
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import gnu.trove.list.array.TIntArrayList;
+import org.joda.time.*;
+
 import java.math.BigDecimal;
 import java.util.Arrays;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.LocalDate;
-import org.joda.time.LocalDateTime;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 public class Codec {
 
@@ -510,10 +508,17 @@ public class Codec {
       int minute = (hms >> 6) & ((1 << 6) - 1);
       int hour = hms >> 12;
       int microsec = (int) (packed % (1 << 24));
-      return new DateTime(
-          year, month, day, hour,
-          minute, second, microsec / 1000,
-          tz);
+
+      try {
+        return new DateTime(year, month, day, hour, minute, second, microsec / 1000, tz);
+      } catch (IllegalInstantException e) {
+        LocalDateTime localDateTime = new LocalDateTime(
+            year, month, day, hour,
+            minute, second, microsec / 1000);
+        DateTime dt = localDateTime.toLocalDate().toDateTimeAtStartOfDay(tz);
+        long millis = dt.getMillis() + localDateTime.toLocalTime().getMillisOfDay();
+        return new DateTime(millis, tz);
+      }
     }
 
     /**
