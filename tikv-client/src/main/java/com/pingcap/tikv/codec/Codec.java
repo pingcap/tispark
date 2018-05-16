@@ -517,7 +517,7 @@ public class Codec {
           minute, second, microsec / 1000);
       DateTime dt = localDateTime.toLocalDate().toDateTimeAtStartOfDay(tz);
       long millis = dt.getMillis() + localDateTime.toLocalTime().getMillisOfDay();
-      return new DateTime(millis);
+      return new DateTime(millis, tz);
     }
 
     /**

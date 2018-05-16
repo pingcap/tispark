@@ -317,19 +317,23 @@ public class CodecTest {
     DateTime time12 = requireNonNull(DateTimeCodec.fromPackedLong(((((2007L * 13 + 3) << 5L | 11) << 17L) | (2 << 12)) << 24L, dst));
     DateTime time22 = requireNonNull(DateTimeCodec.fromPackedLong(((((2007L * 13 + 3) << 5L | 11) << 17L) | (1 << 12)) << 24L, dst));
     DateTime time23 = requireNonNull(DateTimeCodec.fromPackedLong(((((2007L * 13 + 3) << 5L | 11) << 17L) | (7 << 12)) << 24L, utc));
+    DateTime time24 = time23.toDateTime(dst);
     // time11: 2007-03-11T03:00:00.000-04:00
     // time21: 2007-03-11T01:00:00.000-05:00
     // time12: 2007-03-11T03:00:00.000-04:00
     // time22: 2007-03-11T01:00:00.000-05:00
-    // time23: 2007-03-11T03:00:00.000-04:00
+    // time23: 2007-03-11T07:00:00.000Z
+    // time24: 2007-03-11T03:00:00.000-04:00
     assertEquals(time11.getMillis(), time12.getMillis());
     assertEquals(time21.getMillis(), time22.getMillis());
     assertEquals(time12.getMillis(), time23.getMillis());
+    assertEquals(time23.getMillis(), time24.getMillis());
     assertEquals(time22.getMillis() + 60 * 60 * 1000, time23.getMillis());
 
     assertEquals(time12.toLocalDateTime().getHourOfDay(), 3);
     assertEquals(time22.toLocalDateTime().getHourOfDay(), 1);
-    assertEquals(time23.toLocalDateTime().getHourOfDay(), 3);
+    assertEquals(time23.toLocalDateTime().getHourOfDay(), 7);
+    assertEquals(time24.toLocalDateTime().getHourOfDay(), 3);
 
     TimeZone.setDefault(defaultTimeZone);
     DateTimeZone.setDefault(defaultDateTimeZone);
