@@ -34,13 +34,12 @@ class IssueTestSuite extends BaseTiSparkSuite {
     )
     refreshConnections()
 
-    assert(
-      try {
-        judge("select a, max(b) from t group by a limit 2")
-        false
-      } catch {
-        case _: Throwable => true
-      })
+    assert(try {
+      judge("select a, max(b) from t group by a limit 2")
+      false
+    } catch {
+      case _: Throwable => true
+    })
   }
 
   test("Test index task downgrade") {
