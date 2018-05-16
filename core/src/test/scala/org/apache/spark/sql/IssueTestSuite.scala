@@ -20,6 +20,27 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  test("Test count") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t`")
+    tidbStmt.execute(
+      """CREATE TABLE `t` (
+        |  `a` int(11) DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+      """.stripMargin
+    )
+    tidbStmt.execute(
+      "insert into t values(1),(2),(3),(4),(null)"
+    )
+    refreshConnections()
+
+    assert(spark.sql("select * from t limit 10").count() == 5)
+    assert(spark.sql("select a from t limit 10").count() == 5)
+
+    judge("select count(1) from (select a from t limit 10) e", checkLimit = false)
+    judge("select count(a) from (select a from t limit 10) e", checkLimit = false)
+    judge("select count(1) from (select * from t limit 10) e", checkLimit = false)
+  }
+
   test("Test sql with limit without order by") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute(
@@ -34,13 +55,12 @@ class IssueTestSuite extends BaseTiSparkSuite {
     )
     refreshConnections()
 
-    assert(
-      try {
-        judge("select a, max(b) from t group by a limit 2")
-        false
-      } catch {
-        case _: Throwable => true
-      })
+    assert(try {
+      judge("select a, max(b) from t group by a limit 2")
+      false
+    } catch {
+      case _: Throwable => true
+    })
   }
 
   test("Test index task downgrade") {
@@ -109,7 +129,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
         |         `k1` varchar(32) DEFAULT NULL
         |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
     )
-    tidbStmt.execute("insert into t1 values(1, 201707, 'aa')")
+    tidbStmt.execute("insert into t1 values(1, 201707, 'aa'), (2, 201707, 'aa')")
     tidbStmt.execute("insert into t2 values(2, 201707, 'aa')")
     refreshConnections()
 
