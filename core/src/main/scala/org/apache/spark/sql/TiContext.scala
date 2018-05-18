@@ -138,7 +138,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       meta
     )(sqlContext)
     val df = sqlContext.baseRelationToDataFrame(tiRelation)
-    df.createTempView(tableName)
+    df.createOrReplaceTempView(tableName)
     df
   }
 
