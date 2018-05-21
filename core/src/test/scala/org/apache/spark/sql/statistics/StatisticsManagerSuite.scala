@@ -136,6 +136,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     val tblStatistics = StatisticsManager.getInstance().getTableStatistics(fDataIdxTbl.getId)
     val idxStatistics = tblStatistics.getIndexHistMap.get(idx.getId)
     val rc = idxStatistics.getRowCount(irs).toLong
+    println("table" + tblStatistics.getCount + " idx:" + (if (idxStatistics == null) idxStatistics.getHistogram.totalRowCount() else "null"))
     assert(rc == expectedCount)
   }
 
@@ -153,7 +154,9 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     val query = t._1
     val idxName = t._2
     test(query) {
-      val executedPlan = spark.sql(query).queryExecution.executedPlan
+      val df = spark.sql(query)
+      println(df.explain)
+      val executedPlan = df.queryExecution.executedPlan
       val usedIdxName = {
         if (isDoubleRead(executedPlan)) {
           val handleRDDExec = extractHandleRDDExec(executedPlan)
