@@ -372,8 +372,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   public void onNotLeader(TiRegion newRegion, Store newStore) {
     String addressStr = newStore.getAddress();
     ManagedChannel channel = getSession().getChannel(addressStr);
-    region = newRegion;
-    if (!region.switchPeer(newStore.getId())) {
+    if (!newRegion.switchPeer(newStore.getId())) {
       throw new TiClientInternalException("Failed to switch leader");
     }
     blockingStub = TikvGrpc.newBlockingStub(channel);
