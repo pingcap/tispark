@@ -226,7 +226,7 @@ public class Histogram {
     if (buckets.isEmpty()) {
       return 0;
     }
-    return (buckets.get(buckets.size() - 1).count);
+    return buckets.get(buckets.size() - 1).count + nullCount;
   }
 
   /**
