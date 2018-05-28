@@ -163,6 +163,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
           extractUsedIndex(coprocessorRDD)
         }
       }
+      println("index selection result: " + (usedIdxName, idxName))
       assert(usedIdxName.equals(idxName))
     }
   })

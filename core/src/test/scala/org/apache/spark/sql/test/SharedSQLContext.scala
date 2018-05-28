@@ -118,6 +118,7 @@ object SharedSQLContext extends Logging {
   protected var _sparkSession: SparkSession = _
 
   def refreshConnections(): Unit = {
+    Thread.sleep(3000)
     stop()
     init(true)
   }
