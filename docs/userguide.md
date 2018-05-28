@@ -264,7 +264,7 @@ val customer = spark.sql("select * from customer limit 100000")
 // and increase concurrency
 val df = customer.repartition(32)
 df.write
-.mode(saveMode = "overwrite")
+.mode(saveMode = "append")
 .format("jdbc")
 .option("driver", "com.mysql.jdbc.Driver")
  // replace host and port as your and be sure to use rewrite batch
