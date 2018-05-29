@@ -105,9 +105,6 @@ public class ScanAnalyzer {
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
       ScanPlan plan = buildScan(columnList, conditions, index, table, tableStatistics);
-      if (plan.getIndex() != null && plan.getIndex().getName().equalsIgnoreCase("idx_tp_int")) {
-        System.out.println("idx_tp_int cost = " + plan.getCost());
-      }
       if (plan.getCost() + 1.0e-8 < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -160,9 +157,14 @@ public class ScanAnalyzer {
           // guess the percentage of rows hit
           cost = 100.0 * idxRangeRowCnt / totalRowCount;
           estimatedRowCount = idxRangeRowCnt;
+          if (index.getName().equalsIgnoreCase("idx_tp_int")) {
+            System.out.println("Estimate row count = " + estimatedRowCount);
+          }
+        } else {
+          if (index.getName().equalsIgnoreCase("idx_tp_int")) {
+            System.out.println("Impossible: No Index Statistics found");
+          }
         }
-      } else {
-        System.out.println("No tableStatistics found for index " + index.getName());
       }
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
       // table name, index and handle column
@@ -171,6 +173,9 @@ public class ScanAnalyzer {
         cost *= tableSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
       } else {
         cost *= indexSize * INDEX_SCAN_COST_FACTOR;
+      }
+      if (index.getName().equalsIgnoreCase("idx_tp_int")) {
+        System.out.println("idx_tp_int cost = " + cost);
       }
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
