@@ -136,6 +136,11 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     val tblStatistics = StatisticsManager.getInstance().getTableStatistics(fDataIdxTbl.getId)
     val idxStatistics = tblStatistics.getIndexHistMap.get(idx.getId)
     val rc = idxStatistics.getRowCount(irs).toLong
+    println((
+      idxStatistics.getHistogram.getId,
+      idxStatistics.getHistogram.getNullCount,
+      idxStatistics.getHistogram.getBuckets.length,
+      idxStatistics.getHistogram.getNumberOfDistinctValue))
     assert(rc == expectedCount)
   }
 
