@@ -161,6 +161,8 @@ public class ScanAnalyzer {
           cost = 100.0 * idxRangeRowCnt / totalRowCount;
           estimatedRowCount = idxRangeRowCnt;
         }
+      } else {
+        System.out.println("No tableStatistics found for index " + index.getName());
       }
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
       // table name, index and handle column
