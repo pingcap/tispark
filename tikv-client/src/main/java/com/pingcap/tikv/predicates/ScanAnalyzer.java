@@ -110,7 +110,7 @@ public class ScanAnalyzer {
         minCost = plan.getCost();
       }
     }
-    System.out.println(minCost + ": " + minPlan.getIndex().getName());
+    System.out.println(minCost + ": " + ((minPlan.getIndex() != null) ? minPlan.getIndex().getName() : ""));
     return minPlan;
   }
 

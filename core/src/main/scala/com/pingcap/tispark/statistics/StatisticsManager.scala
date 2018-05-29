@@ -151,9 +151,11 @@ class StatisticsManager(tiSession: TiSession) {
       .buildHistogramsRequest(histTable, tblId, snapshot.getTimestamp.getVersion)
 
     val rows = readDAGRequest(req)
-    if (rows.isEmpty) return
+    val (rows1, rows2) = rows.duplicate
+    println("stats read with " + rows2.length + " rows")
+    if (rows1.isEmpty) return
 
-    val requests = rows
+    val requests = rows1
       .map { StatisticsHelper.extractStatisticsDTO(_, table, loadAll, neededColIds, histTable) }
       .filter { _ != null }
     val results = statisticsResultFromStorage(tblId, requests.toSeq)
