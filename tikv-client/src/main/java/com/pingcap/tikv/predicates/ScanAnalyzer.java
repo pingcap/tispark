@@ -105,7 +105,10 @@ public class ScanAnalyzer {
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
       ScanPlan plan = buildScan(columnList, conditions, index, table, tableStatistics);
-      if (plan.getCost() < minCost) {
+      if (plan.getIndex() != null && plan.getIndex().getName().equalsIgnoreCase("idx_tp_int")) {
+        System.out.println("idx_tp_int cost = " + plan.getCost());
+      }
+      if (plan.getCost() + 1.0e-8 < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
       }
