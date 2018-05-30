@@ -259,6 +259,8 @@ spark.sql("select * from hive_table a, tispark_table b where a.col1 = b.col1").s
 ## Load Spark Dataframe into TiDB using JDBC
 TiSpark does not provide a direct way to load data into yout TiDB cluster, but you can still load using jdbc like this:
 ```scala
+import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
+
 val customer = spark.sql("select * from customer limit 100000")
 // you might repartition source to make it balance across nodes
 // and increase concurrency
