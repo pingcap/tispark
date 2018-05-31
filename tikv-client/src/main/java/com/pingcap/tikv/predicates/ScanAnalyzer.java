@@ -158,7 +158,7 @@ public class ScanAnalyzer {
           cost = 100.0 * idxRangeRowCnt / totalRowCount;
           estimatedRowCount = idxRangeRowCnt;
           if (index.getName().equalsIgnoreCase("idx_tp_int")) {
-            System.out.println("Estimate row count = " + estimatedRowCount);
+            System.out.println("Estimate row count = " + estimatedRowCount + ", total row count = " + totalRowCount + " base cost = " + cost);
           }
         } else {
           if (index.getName().equalsIgnoreCase("idx_tp_int")) {
