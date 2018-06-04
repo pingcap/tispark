@@ -170,7 +170,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       }
       sizeInBytes = statisticsManager.estimateTableSize(table)
 
-      if (!sqlContext.sparkSession.catalog.tableExists(tableName)) {
+      if (!sqlContext.sparkSession.catalog.tableExists("`" + tableName + "`")) {
         val rel: TiDBRelation = new TiDBRelation(
           tiSession,
           new TiTableReference(dbName, tableName, sizeInBytes),

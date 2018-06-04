@@ -54,10 +54,6 @@ case class CollectHandles(child: Expression,
 
   override def dataType: DataType = ArrayType(LongType)
 
-  override def inputTypes: Seq[AbstractDataType] = Seq(AnyDataType)
-
-  override def supportsPartial: Boolean = false
-
   override def aggBufferAttributes: Seq[AttributeReference] = Nil
 
   override def aggBufferSchema: StructType = StructType.fromAttributes(aggBufferAttributes)
@@ -66,7 +62,7 @@ case class CollectHandles(child: Expression,
 
   // `CollectHandles` is non-deterministic since it's result depends on the
   // actual order of input rows.
-  override def deterministic: Boolean = false
+  override lazy val deterministic: Boolean = false
 
   override def initialize(b: InternalRow): Unit =
     buffer.clear()

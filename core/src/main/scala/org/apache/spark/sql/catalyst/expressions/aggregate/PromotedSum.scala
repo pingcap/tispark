@@ -33,8 +33,6 @@ case class PromotedSum(child: Expression) extends DeclarativeAggregate {
   // Return data type.
   override def dataType: DataType = resultType
 
-  override def inputTypes: Seq[AbstractDataType] = Seq(NumericType)
-
   override def checkInputDataTypes(): TypeCheckResult =
     TypeUtils.checkForNumericExpr(child.dataType, "function sum")
 
@@ -50,7 +48,7 @@ case class PromotedSum(child: Expression) extends DeclarativeAggregate {
 
   private lazy val zero = Cast(Literal(0), sumDataType)
 
-  override lazy val aggBufferAttributes = sum :: Nil
+  override lazy val aggBufferAttributes: Seq[AttributeReference] = sum :: Nil
 
   override lazy val initialValues: Seq[Expression] = Seq(
     /* sum = */ Literal.create(null, sumDataType)

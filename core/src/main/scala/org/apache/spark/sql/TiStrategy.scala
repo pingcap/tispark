@@ -92,7 +92,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   override def apply(plan: LogicalPlan): Seq[SparkPlan] =
     plan
       .collectFirst {
-        case LogicalRelation(relation: TiDBRelation, _, _) =>
+        case LogicalRelation(relation: TiDBRelation, _, _, _) =>
           doPlan(relation, plan)
       }
       .toSeq
@@ -294,7 +294,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def collectLimit(limit: Int, child: LogicalPlan): SparkPlan = child match {
-    case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+    case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
         if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
       pruneTopNFilterProject(limit, projectList, filters, source, Nil)
     case _ => planLater(child)
@@ -312,7 +312,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
 
     child match {
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
           if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
         execution.TakeOrderedAndProjectExec(
           limit,
@@ -492,7 +492,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         takeOrderedAndProject(limit, order, child, projectList) :: Nil
 
       // Collapse filters and projections and push plan directly
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
+      case PhysicalOperation(
+          projectList,
+          filters,
+          LogicalRelation(source: TiDBRelation, _, _, _)
+          ) =>
         pruneFilterProject(projectList, filters, source) :: Nil
 
       // Basic logic of original Spark's aggregation plan is:
@@ -582,7 +586,7 @@ object TiAggregationProjection {
   def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
     // Only push down aggregates projection when all filters can be applied and
     // all projection expressions are column references
-    case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _))
+    case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _, _))
         if projects.forall(_.isInstanceOf[Attribute]) =>
       Some((filters, rel, source, projects))
     case _ => Option.empty[ReturnType]

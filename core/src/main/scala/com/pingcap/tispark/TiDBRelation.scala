@@ -63,13 +63,14 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
       NamedExpression.newExprId
     )
 
-    val sortAgg = AggUtils
+    val sortAgg = TiUtils
       .planAggregateWithoutPartial(
         Seq(handlePlan.attributeRef.head), // group by region id
         Seq(aggExpr),
         Seq(handlePlan.output.head, aggExpr.resultAttribute), // output <region, handleList>
         handlePlan
       )
+      .children
       .head
 
     RegionTaskExec(

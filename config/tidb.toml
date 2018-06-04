@@ -36,7 +36,7 @@ enable-chunk = true
 
 [log]
 # Log level: info, debug, warn, error, fatal.
-level = "info"
+level = "debug"
 
 # Log format, one of json, text, console.
 format = "text"
