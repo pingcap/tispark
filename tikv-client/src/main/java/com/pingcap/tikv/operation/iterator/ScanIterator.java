@@ -114,10 +114,9 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     if (cacheDrain()) {
       if (!loadCache()) {
         endOfRegion = true;
-        return false;
       }
     }
-    if (!contains(currentCache.get(index).getKey())) {
+    if (!cacheDrain() && !contains(currentCache.get(index).getKey())) {
       endOfRegion = true;
       return false;
     }

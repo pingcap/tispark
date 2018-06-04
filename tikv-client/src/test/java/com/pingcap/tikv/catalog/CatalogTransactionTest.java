@@ -91,8 +91,8 @@ public class CatalogTransactionTest {
     TiSession session = TiSession.create(conf);
     CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
     List<TiTableInfo> tables = trx.getTables(130);
-    assertEquals(tables.size(), 2);
-    assertEquals(tables.get(0).getName(), "test");
-    assertEquals(tables.get(1).getName(), "test1");
+    assertEquals(2, tables.size());
+    assertEquals("test", tables.get(0).getName());
+    assertEquals("test1", tables.get(1).getName());
   }
 }
