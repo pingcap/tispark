@@ -60,7 +60,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
 
   /**
-   * The [[TestSQLContext]] to use for all tests in this suite.
+   * The [[TestSparkSession]] to use for all tests in this suite.
    */
   protected implicit def sqlContext: SQLContext = spark.sqlContext
 
@@ -114,7 +114,7 @@ object SharedSQLContext extends Logging {
   protected implicit def tidbStmt: Statement = _statement
 
   /**
-   * The [[TestSQLContext]] to use for all tests in this suite.
+   * The [[TestSparkSession]] to use for all tests in this suite.
    */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
@@ -217,6 +217,7 @@ object SharedSQLContext extends Logging {
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
+      sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
 
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
       sparkConf.set(DB_PREFIX, dbPrefix)
