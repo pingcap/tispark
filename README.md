@@ -37,7 +37,7 @@ ti.tidbMapDatabase("tpch")
 spark.sql("select count(*) from lineitem").show
 ```
 ## Maven Central
-You can search on The Central Repository with GroupId and ArtifactId [![Maven Search](https://img.shields.io/badge/com.pingcap.tispark-tispark&nbsp;core-green.svg)][mvn-search] for:
+You can search on The Central Repository with GroupId and ArtifactId ![Maven Search](https://img.shields.io/badge/com.pingcap.tispark-tispark&nbsp;core-green.svg) for:
 ```xml
 <dependency>
   <groupId>com.pingcap.tispark</groupId>
@@ -46,7 +46,7 @@ You can search on The Central Repository with GroupId and ArtifactId [![Maven Se
 </dependency>
 ```
 
-Or use TiKV Java client [![Maven Search](https://img.shields.io/badge/com.pingcap.tikv-tikv&nbsp;client-green.svg)][mvn-search] for:
+Or use TiKV Java client ![Maven Search](https://img.shields.io/badge/com.pingcap.tikv-tikv&nbsp;client-green.svg) for:
 ```xml
 <dependency>
   <groupId>com.pingcap.tikv</groupId>
