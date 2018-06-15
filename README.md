@@ -36,7 +36,24 @@ ti.tidbMapDatabase("tpch")
 
 spark.sql("select count(*) from lineitem").show
 ```
+## Maven Central
+You can search on The Central Repository with GroupId and ArtifactId [![Maven Search](https://img.shields.io/badge/com.pingcap.tispark-tispark&nbsp;core-green.svg)][mvn-search] for:
+```xml
+<dependency>
+  <groupId>com.pingcap.tispark</groupId>
+  <artifactId>tispark-core</artifactId>
+  <version>1.0</version>
+</dependency>
+```
 
+Or use TiKV Java client [![Maven Search](https://img.shields.io/badge/com.pingcap.tikv-tikv&nbsp;client-green.svg)][mvn-search] for:
+```xml
+<dependency>
+  <groupId>com.pingcap.tikv</groupId>
+  <artifactId>tikv-client</artifactId>
+  <version>1.0</version>
+</dependency>
+```
 ## Metadata loading
 If you are using spark-shell, you need to manually load schema information as decribed above.
 
