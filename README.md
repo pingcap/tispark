@@ -1,6 +1,28 @@
-## What is TiSpark?
+## TiSpark
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.pingcap.tispark/tispark-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.pingcap.tispark/tispark-core)
+[![Javadocs](http://javadoc.io/badge/com.pingcap.tispark/tispark-core.svg)](http://javadoc.io/doc/com.pingcap.tispark/tispark-core)
+[![License](https://img.shields.io/github/license/pingcap/tispark.svg)](https://github.com/pingcap/tispark/blob/master/LICENSE)
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) to serve as a one-stop solution for online transactions and analysis.
+
+## Getting TiSpark
+The current stable version is 1.0.
+
+If you are using maven, add the following to your pom.xml:
+```xml
+<dependency>
+  <groupId>com.pingcap.tispark</groupId>
+  <artifactId>tispark-core</artifactId>
+  <version>1.0</version>
+</dependency>
+```
+
+If you're using SBT, add the following line to your build file:
+```scala
+libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.0"
+```
+
+For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
 
 ## TiSpark Architecture
 
@@ -17,17 +39,17 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to an
 
 TiSpark depends on the existence of TiKV clusters and PDs. It also needs to setup and use Spark clustering platform. 
 
-A thin layer of TiSpark. Most of the logic is inside tikv-java-client library.
-https://github.com/pingcap/tikv-client-lib-java
+A thin layer of TiSpark. Most of the logic is inside tikv-client library.
+https://github.com/pingcap/tispark/tree/master/tikv-client
 
 
-Uses as below
+## Quick Start
+From Spark-shell:
 ```
 ./bin/spark-shell --jars /wherever-it-is/tispark-${version}-jar-with-dependencies.jar
 ```
 
 ```
-
 import org.apache.spark.sql.TiContext
 val ti = new TiContext(spark) 
 
