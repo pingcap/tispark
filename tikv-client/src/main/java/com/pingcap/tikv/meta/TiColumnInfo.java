@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv.meta;
 
+import static java.util.Objects.requireNonNull;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,12 +27,10 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataType.EncodeType;
 import com.pingcap.tikv.types.DataTypeFactory;
-
+import com.pingcap.tikv.types.IntegerType;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
-
-import static java.util.Objects.requireNonNull;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiColumnInfo implements Serializable {
@@ -43,6 +43,9 @@ public class TiColumnInfo implements Serializable {
   private final boolean isPrimaryKey;
   private final String defaultValue;
   private final String originDefaultValue;
+
+  public static final TiColumnInfo ROW_ID =
+      new TiColumnInfo(-1, "_tidb_rowid", 0, IntegerType.BIGINT, true);
 
   @VisibleForTesting
   private static final int PK_MASK = 0x2;

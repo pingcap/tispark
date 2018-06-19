@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.TableInfo;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -145,6 +144,21 @@ public class TiTableInfo implements Serializable {
       }
     }
     return null;
+  }
+
+  public TiTableInfo copyTableWithRowId() {
+    if (isPkHandle()) {
+      ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
+      newColumns.addAll(getColumns());
+      newColumns.add(TiColumnInfo.ROW_ID);
+      return new TiTableInfo(
+          getId(), CIStr.newCIStr(getName()), getCharset(), getCollate(),
+          isPkHandle(), newColumns.build(), getIndices(),
+          getComment(), getAutoIncId(), getMaxColumnId(),
+          getMaxIndexId(), getOldSchemaId());
+    } else {
+      return this;
+    }
   }
 
   @Override

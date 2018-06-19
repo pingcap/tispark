@@ -216,6 +216,10 @@ object TiUtils {
       val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
       tiConf.setCommandPriority(priority)
     }
+
+    if (conf.contains(TiConfigConst.SHOW_ROWID)) {
+      tiConf.setShowRowId(conf.get(TiConfigConst.SHOW_ROWID).toBoolean)
+    }
     tiConf
   }
 
