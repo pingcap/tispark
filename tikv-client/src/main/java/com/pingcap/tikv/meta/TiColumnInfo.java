@@ -44,8 +44,9 @@ public class TiColumnInfo implements Serializable {
   private final String defaultValue;
   private final String originDefaultValue;
 
-  public static final TiColumnInfo ROW_ID =
-      new TiColumnInfo(-1, "_tidb_rowid", 0, IntegerType.BIGINT, true);
+  public static TiColumnInfo getRowIdColumn(int offset) {
+    return new TiColumnInfo(-1, "_tidb_rowid", offset, IntegerType.ROW_ID_TYPE, true);
+  }
 
   @VisibleForTesting
   private static final int PK_MASK = 0x2;

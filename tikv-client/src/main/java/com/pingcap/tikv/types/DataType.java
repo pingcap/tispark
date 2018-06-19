@@ -15,6 +15,9 @@
 
 package com.pingcap.tikv.types;
 
+import static com.pingcap.tikv.codec.Codec.isNullFlag;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
@@ -23,13 +26,9 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
-
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
-
-import static com.pingcap.tikv.codec.Codec.isNullFlag;
-import static java.util.Objects.requireNonNull;
 
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {
@@ -88,6 +87,16 @@ public abstract class DataType implements Serializable {
     this.decimal = UNSPECIFIED_LEN;
     this.charset = "";
     this.collation = Collation.DEF_COLLATION_CODE;
+  }
+
+  protected DataType(MySQLType type, int flag, int len, int decimal, String charset, int collation) {
+    this.tp = type;
+    this.flag = flag;
+    this.elems = ImmutableList.of();
+    this.length = len;
+    this.decimal = decimal;
+    this.charset = charset;
+    this.collation = collation;
   }
 
   protected abstract Object decodeNotNull(int flag, CodecDataInput cdi);

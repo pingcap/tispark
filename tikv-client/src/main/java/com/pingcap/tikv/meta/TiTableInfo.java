@@ -147,13 +147,13 @@ public class TiTableInfo implements Serializable {
   }
 
   public TiTableInfo copyTableWithRowId() {
-    if (isPkHandle()) {
+    if (!isPkHandle()) {
       ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
       newColumns.addAll(getColumns());
-      newColumns.add(TiColumnInfo.ROW_ID);
+      newColumns.add(TiColumnInfo.getRowIdColumn(getColumns().size()));
       return new TiTableInfo(
           getId(), CIStr.newCIStr(getName()), getCharset(), getCollate(),
-          isPkHandle(), newColumns.build(), getIndices(),
+          true, newColumns.build(), getIndices(),
           getComment(), getAutoIncId(), getMaxColumnId(),
           getMaxIndexId(), getOldSchemaId());
     } else {
