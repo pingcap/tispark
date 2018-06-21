@@ -74,6 +74,40 @@ public class TiColumnInfo implements Serializable {
     this.isPrimaryKey = (type.getFlag() & PK_MASK) > 0;
   }
 
+  public TiColumnInfo(
+      long id,
+      String name,
+      int offset,
+      DataType type,
+      SchemaState schemaState,
+      String originalDefaultValue,
+      String defaultValue,
+      String comment) {
+    this.id = id;
+    this.name = requireNonNull(name, "column name is null").toLowerCase();
+    this.offset = offset;
+    this.type = requireNonNull(type, "data type is null");
+    this.schemaState = schemaState;
+    this.comment = comment;
+    this.defaultValue = defaultValue;
+    this.originDefaultValue = originalDefaultValue;
+    this.isPrimaryKey = (type.getFlag() & PK_MASK) > 0;
+  }
+
+  public TiColumnInfo copyWithoutPrimaryKey() {
+    type.setflag(type.getFlag() & (~TiColumnInfo.PK_MASK));
+    return new TiColumnInfo(
+        this.id,
+        this.name,
+        this.offset,
+        this.type,
+        this.schemaState,
+        this.originDefaultValue,
+        this.defaultValue,
+        this.comment
+    );
+  }
+
   @VisibleForTesting
   public TiColumnInfo(long id, String name, int offset, DataType type, boolean isPrimaryKey) {
     this.id = id;

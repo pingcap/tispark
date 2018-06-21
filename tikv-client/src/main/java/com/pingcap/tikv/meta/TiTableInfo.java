@@ -149,7 +149,8 @@ public class TiTableInfo implements Serializable {
   public TiTableInfo copyTableWithRowId() {
     if (!isPkHandle()) {
       ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
-      newColumns.addAll(getColumns());
+      getColumns().stream()
+                  .forEach(col -> newColumns.add(col.copyWithoutPrimaryKey()));
       newColumns.add(TiColumnInfo.getRowIdColumn(getColumns().size()));
       return new TiTableInfo(
           getId(), CIStr.newCIStr(getName()), getCharset(), getCollate(),

@@ -62,7 +62,7 @@ public abstract class DataType implements Serializable {
   protected final MySQLType tp;
   // Not Encode/Decode flag, this is used to strict mysql type
   // such as not null, timestamp
-  protected final int flag;
+  protected int flag;
   protected final int decimal;
   private final String charset;
   protected final int collation;
@@ -97,6 +97,11 @@ public abstract class DataType implements Serializable {
     this.decimal = decimal;
     this.charset = charset;
     this.collation = collation;
+  }
+
+  // TODO: need a better design
+  public void setflag(int flag) {
+    this.flag = flag;
   }
 
   protected abstract Object decodeNotNull(int flag, CodecDataInput cdi);
