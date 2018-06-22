@@ -23,6 +23,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.TableInfo;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DataTypeFactory;
 import java.io.Serializable;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -149,8 +152,24 @@ public class TiTableInfo implements Serializable {
   public TiTableInfo copyTableWithRowId() {
     if (!isPkHandle()) {
       ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
-      getColumns().stream()
-                  .forEach(col -> newColumns.add(col.copyWithoutPrimaryKey()));
+      for (TiColumnInfo col : getColumns()) {
+        DataType type = col.getType();
+        InternalTypeHolder typeHolder = type.toTypeHolder();
+        typeHolder.setFlag(type.getFlag() & (~DataType.PriKeyFlag));
+        DataType newType = DataTypeFactory.of(typeHolder);
+        TiColumnInfo newCol =
+            new TiColumnInfo(
+                col.getId(),
+                col.getName(),
+                col.getOffset(),
+                newType,
+                col.getSchemaState(),
+                col.getOriginDefaultValue(),
+                col.getDefaultValue(),
+                col.getComment()
+            );
+        newColumns.add(newCol.copyWithoutPrimaryKey());
+      }
       newColumns.add(TiColumnInfo.getRowIdColumn(getColumns().size()));
       return new TiTableInfo(
           getId(), CIStr.newCIStr(getName()), getCharset(), getCollate(),

@@ -95,12 +95,14 @@ public class TiColumnInfo implements Serializable {
   }
 
   public TiColumnInfo copyWithoutPrimaryKey() {
-    type.setflag(type.getFlag() & (~TiColumnInfo.PK_MASK));
+    InternalTypeHolder typeHolder = type.toTypeHolder();
+    typeHolder.setFlag(type.getFlag() & (~TiColumnInfo.PK_MASK));
+    DataType newType = DataTypeFactory.of(typeHolder);
     return new TiColumnInfo(
         this.id,
         this.name,
         this.offset,
-        this.type,
+        newType,
         this.schemaState,
         this.originDefaultValue,
         this.defaultValue,
@@ -157,7 +159,11 @@ public class TiColumnInfo implements Serializable {
     return defaultValue;
   }
 
-  public ByteString getOriginDefaultValue() {
+  public String getOriginDefaultValue() {
+    return originDefaultValue;
+  }
+
+  public ByteString getOriginDefaultValueAsByteString() {
     CodecDataOutput cdo = new CodecDataOutput();
     type.encode(cdo, EncodeType.VALUE, type.getOriginDefaultValue(originDefaultValue));
     return cdo.toByteString();
@@ -165,22 +171,50 @@ public class TiColumnInfo implements Serializable {
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class InternalTypeHolder {
-    private final int tp;
-    private final int flag;
-    private final long flen;
-    private final int decimal;
-    private final String charset;
-    private final String collate;
-    private final String defaultValue;
-    private final String originDefaultValue;
-    private final List<String> elems;
+    private int tp;
+    private int flag;
+    private long flen;
+    private int decimal;
+    private String charset;
+    private String collate;
+    private String defaultValue;
+    private String originDefaultValue;
+    private List<String> elems;
 
-    public String getDefaultValue() {
-      return defaultValue;
+    public void setTp(int tp) {
+      this.tp = tp;
     }
 
-    public String getOriginDefaultValue() {
-      return originDefaultValue;
+    public void setFlag(int flag) {
+      this.flag = flag;
+    }
+
+    public void setFlen(long flen) {
+      this.flen = flen;
+    }
+
+    public void setDecimal(int decimal) {
+      this.decimal = decimal;
+    }
+
+    public void setCharset(String charset) {
+      this.charset = charset;
+    }
+
+    public void setCollate(String collate) {
+      this.collate = collate;
+    }
+
+    public void setDefaultValue(String defaultValue) {
+      this.defaultValue = defaultValue;
+    }
+
+    public void setOriginDefaultValue(String originDefaultValue) {
+      this.originDefaultValue = originDefaultValue;
+    }
+
+    public void setElems(List<String> elems) {
+      this.elems = elems;
     }
 
     interface Builder<E extends DataType> {
@@ -249,6 +283,15 @@ public class TiColumnInfo implements Serializable {
     public List<String> getElems() {
       return elems;
     }
+
+    public String getDefaultValue() {
+      return defaultValue;
+    }
+
+    public String getOriginDefaultValue() {
+      return originDefaultValue;
+    }
+
   }
 
   TiIndexColumn toFakeIndexColumn() {
@@ -273,7 +316,7 @@ public class TiColumnInfo implements Serializable {
         .setColumnLen((int) type.getLength())
         .setDecimal(type.getDecimal())
         .setFlag(type.getFlag())
-        .setDefaultVal(getOriginDefaultValue())
+        .setDefaultVal(getOriginDefaultValueAsByteString())
         .setPkHandle(table.isPkHandle() && isPrimaryKey())
         .addAllElems(type.getElems());
   }
