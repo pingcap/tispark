@@ -3,9 +3,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-      <groupId>org.apache</groupId>
-      <artifactId>apache</artifactId>
-      <version>18</version>
+        <groupId>org.apache</groupId>
+        <artifactId>apache</artifactId>
+        <version>18</version>
     </parent>
 
     <groupId>com.pingcap.tispark</groupId>
@@ -16,15 +16,50 @@
     <url>http://github.copm/pingcap/tispark</url>
 
     <licenses>
-      <license>
-        <name>Apache 2.0 License</name>
-        <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
-        <distribution>repo</distribution>
-      </license>
+        <license>
+            <name>Apache 2.0 License</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+            <distribution>repo</distribution>
+        </license>
     </licenses>
+
     <organization>
         <name>PingCAP</name>
     </organization>
+
+    <developers>
+        <developer>
+            <name>Xiaoyu Ma</name>
+            <email>maxiaoyu@pingcap.com</email>
+            <organization>PingCAP</organization>
+            <organizationUrl>https://www.pingcap.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Yifei Wu</name>
+            <email>birdstorm@pingcap.com</email>
+            <organization>PingCAP</organization>
+            <organizationUrl>https://www.pingcap.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Gansen Hu</name>
+            <email>hugansen@pingcap.com</email>
+            <organization>PingCAP</organization>
+            <organizationUrl>https://www.pingcap.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Zhexuan Yang</name>
+            <email>yangzhexuan@pingcap.com</email>
+            <organization>PingCAP</organization>
+            <organizationUrl>https://www.pingcap.com</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/pingcap/tispark.git</connection>
+        <developerConnection>scm:git:ssh://github.com:pingcap/tispark.git</developerConnection>
+        <url>https://github.com/pingcap/tispark/tree/master</url>
+    </scm>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -33,7 +68,20 @@
         <spark.version>2.1.1</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
+        <gpg.skip>true</gpg.skip>
+        <javadoc.skip>true</javadoc.skip>
     </properties>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
 
     <modules>
         <module>core</module>
