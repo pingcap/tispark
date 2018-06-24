@@ -113,7 +113,9 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     testSelectRowCount(expressions, idx, 46)
   }
 
-  ignore("select tp_int from full_data_type_table_idx where tp_int < 5390653 and tp_int > -46759812") {
+  ignore(
+    "select tp_int from full_data_type_table_idx where tp_int < 5390653 and tp_int > -46759812"
+  ) {
     val indexes = fDataIdxTbl.getIndices
     val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
 
