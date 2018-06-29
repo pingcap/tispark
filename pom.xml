@@ -72,6 +72,20 @@
         <javadoc.skip>true</javadoc.skip>
     </properties>
 
+    <profiles>
+        <profile>
+            <id>spark-2.3</id>
+            <!-- Default spark profile. Use global settings. -->
+        </profile>
+
+        <profile>
+            <id>spark-2.1</id>
+            <properties>
+                <spark.version>2.1.1</spark.version>
+            </properties>
+        </profile>
+    </profiles>
+
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>
