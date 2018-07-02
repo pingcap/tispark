@@ -2,7 +2,7 @@ from setuptools import setup
 setup(
     name = 'pytispark',
     packages = ['pytispark'],
-    version = '1.1-SNAPSHOT',
+    version = '1.1',
     description = 'TiSpark support for python',
     author = 'PingCAP',
     author_email = 'novemser@gmail.com',
@@ -23,5 +23,5 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
-    install_requires = ['pyspark==2.1.2', 'py4j']
+    install_requires = ['pyspark==2.1.2', 'py4j==0.10.4']
 )
