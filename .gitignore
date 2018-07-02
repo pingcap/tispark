@@ -63,3 +63,8 @@ data
 
 # ignore test properties
 core/src/test/resources/tidb_config.properties
+
+# ignore pytispark build
+python/build/
+python/dist/
+python/pytispark.egg-info/
