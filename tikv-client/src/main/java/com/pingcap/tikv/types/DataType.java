@@ -15,6 +15,9 @@
 
 package com.pingcap.tikv.types;
 
+import static com.pingcap.tikv.codec.Codec.isNullFlag;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
@@ -23,33 +26,30 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
-
+import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
-
-import static com.pingcap.tikv.codec.Codec.isNullFlag;
-import static java.util.Objects.requireNonNull;
 
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {
 
   // Flag Information for strict mysql type
-  protected static final int NotNullFlag = 1; /* Field can't be NULL */
-  protected static final int PriKeyFlag = 2; /* Field is part of a primary key */
-  protected static final int UniqueKeyFlag = 4; /* Field is part of a unique key */
-  protected static final int MultipleKeyFlag = 8; /* Field is part of a key */
-  protected static final int BlobFlag = 16; /* Field is a blob */
-  protected static final int UnsignedFlag = 32; /* Field is unsigned */
-  protected static final int ZerofillFlag = 64; /* Field is zerofill */
-  protected static final int BinaryFlag = 128; /* Field is binary   */
-  protected static final int EnumFlag = 256; /* Field is an enum */
-  protected static final int AutoIncrementFlag = 512; /* Field is an auto increment field */
-  protected static final int TimestampFlag = 1024; /* Field is a timestamp */
-  protected static final int SetFlag = 2048; /* Field is a set */
-  protected static final int NoDefaultValueFlag = 4096; /* Field doesn't have a default value */
-  protected static final int OnUpdateNowFlag = 8192; /* Field is set to NOW on UPDATE */
-  protected static final int NumFlag = 32768; /* Field is a num (for clients) */
+  public static final int NotNullFlag = 1; /* Field can't be NULL */
+  public static final int PriKeyFlag = 2; /* Field is part of a primary key */
+  public static final int UniqueKeyFlag = 4; /* Field is part of a unique key */
+  public static final int MultipleKeyFlag = 8; /* Field is part of a key */
+  public static final int BlobFlag = 16; /* Field is a blob */
+  public static final int UnsignedFlag = 32; /* Field is unsigned */
+  public static final int ZerofillFlag = 64; /* Field is zerofill */
+  public static final int BinaryFlag = 128; /* Field is binary   */
+  public static final int EnumFlag = 256; /* Field is an enum */
+  public static final int AutoIncrementFlag = 512; /* Field is an auto increment field */
+  public static final int TimestampFlag = 1024; /* Field is a timestamp */
+  public static final int SetFlag = 2048; /* Field is a set */
+  public static final int NoDefaultValueFlag = 4096; /* Field doesn't have a default value */
+  public static final int OnUpdateNowFlag = 8192; /* Field is set to NOW on UPDATE */
+  public static final int NumFlag = 32768; /* Field is a num (for clients) */
 
   public enum EncodeType {
     KEY,
@@ -88,6 +88,16 @@ public abstract class DataType implements Serializable {
     this.decimal = UNSPECIFIED_LEN;
     this.charset = "";
     this.collation = Collation.DEF_COLLATION_CODE;
+  }
+
+  protected DataType(MySQLType type, int flag, int len, int decimal, String charset, int collation) {
+    this.tp = type;
+    this.flag = flag;
+    this.elems = ImmutableList.of();
+    this.length = len;
+    this.decimal = decimal;
+    this.charset = charset;
+    this.collation = collation;
   }
 
   protected abstract Object decodeNotNull(int flag, CodecDataInput cdi);
@@ -322,5 +332,12 @@ public abstract class DataType implements Serializable {
             * (collation == 0 ? 1 : collation)
             * (length == 0 ? 1 : length)
             * (elems.hashCode()));
+  }
+
+  public InternalTypeHolder toTypeHolder() {
+    return new InternalTypeHolder(
+        getTypeCode(), flag, length, decimal,
+        charset, "", "", Collation.translate(collation), elems
+    );
   }
 }

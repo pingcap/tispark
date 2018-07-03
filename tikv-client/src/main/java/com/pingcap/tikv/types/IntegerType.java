@@ -24,8 +24,8 @@ import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
-
 import java.math.BigDecimal;
 
 public class IntegerType extends DataType {
@@ -36,10 +36,23 @@ public class IntegerType extends DataType {
   public static final IntegerType BIGINT = new IntegerType(MySQLType.TypeLonglong);
   public static final IntegerType BOOLEAN = TINYINT;
 
+  public static final IntegerType ROW_ID_TYPE = new IntegerType(
+      MySQLType.TypeLonglong,
+      PriKeyFlag,
+      20,
+      0
+  );
+
+
+
   public static final MySQLType[] subTypes = new MySQLType[] {
       MySQLType.TypeTiny, MySQLType.TypeShort, MySQLType.TypeInt24,
       MySQLType.TypeLong, MySQLType.TypeLonglong
   };
+
+  protected IntegerType(MySQLType type, int flag, int len, int decimal) {
+    super(type, flag, len, decimal, "", Collation.DEF_COLLATION_CODE);
+  }
 
   protected IntegerType(MySQLType tp) {
     super(tp);
