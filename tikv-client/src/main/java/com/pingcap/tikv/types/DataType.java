@@ -63,7 +63,7 @@ public abstract class DataType implements Serializable {
   protected final MySQLType tp;
   // Not Encode/Decode flag, this is used to strict mysql type
   // such as not null, timestamp
-  protected int flag;
+  protected final int flag;
   protected final int decimal;
   private final String charset;
   protected final int collation;
