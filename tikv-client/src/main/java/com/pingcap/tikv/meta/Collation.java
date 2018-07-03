@@ -27,7 +27,7 @@ public class Collation {
     return code;
   }
 
-  static String translate(int code) {
+  public static String translate(int code) {
     String collation = collationCodeMap.get(code);
     if (collation == null) {
       return "";

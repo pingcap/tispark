@@ -15,26 +15,31 @@
 
 package com.pingcap.tikv.catalog;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import org.apache.log4j.Logger;
-
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import org.apache.log4j.Logger;
 
 public class Catalog implements AutoCloseable {
   private Supplier<Snapshot> snapshotProvider;
   private ScheduledExecutorService service;
   private CatalogCache metaCache;
+  private final boolean showRowId;
   private final Logger logger = Logger.getLogger(this.getClass());
 
   @Override
@@ -110,9 +115,14 @@ public class Catalog implements AutoCloseable {
     }
   }
 
-  public Catalog(Supplier<Snapshot> snapshotProvider, int refreshPeriod, TimeUnit periodUnit) {
+  public Catalog(
+      Supplier<Snapshot> snapshotProvider,
+      int refreshPeriod,
+      TimeUnit periodUnit,
+      boolean showRowId) {
     this.snapshotProvider = Objects.requireNonNull(snapshotProvider,
                                                    "Snapshot Provider is null");
+    this.showRowId = showRowId;
     metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()));
     service = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
     service.scheduleAtFixedRate(() -> {
@@ -123,12 +133,6 @@ public class Catalog implements AutoCloseable {
         logger.warn("Reload Cache failed", e);
       }
     }, refreshPeriod, refreshPeriod, periodUnit);
-  }
-
-  public Catalog(Supplier<Snapshot> snapshotProvider) {
-    this.snapshotProvider = Objects.requireNonNull(snapshotProvider,
-        "Snapshot Provider is null");
-    metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()));
   }
 
   public void reloadCache() {
@@ -146,7 +150,15 @@ public class Catalog implements AutoCloseable {
 
   public List<TiTableInfo> listTables(TiDBInfo database) {
     Objects.requireNonNull(database, "database is null");
-    return metaCache.listTables(database);
+    if (showRowId) {
+      return metaCache
+          .listTables(database)
+          .stream()
+          .map(table -> table.copyTableWithRowId())
+          .collect(Collectors.toList());
+    } else {
+      return metaCache.listTables(database);
+    }
   }
 
   public TiDBInfo getDatabase(String dbName) {
@@ -165,15 +177,25 @@ public class Catalog implements AutoCloseable {
   public TiTableInfo getTable(TiDBInfo database, String tableName) {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
-    return metaCache.getTable(database, tableName);
+    TiTableInfo table = metaCache.getTable(database, tableName);
+    if (showRowId) {
+      return table.copyTableWithRowId();
+    } else {
+      return table;
+    }
   }
 
+  @VisibleForTesting
   public TiTableInfo getTable(TiDBInfo database, long tableId) {
     Objects.requireNonNull(database, "database is null");
     Collection<TiTableInfo> tables = listTables(database);
     for (TiTableInfo table : tables) {
       if (table.getId() == tableId) {
-        return table;
+        if (showRowId) {
+          return table.copyTableWithRowId();
+        } else {
+          return table;
+        }
       }
     }
     return null;

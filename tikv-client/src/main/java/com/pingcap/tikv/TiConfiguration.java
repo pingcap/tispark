@@ -43,6 +43,7 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_TABLE_SCAN_CONCURRENCY = 512;
   private static final CommandPri DEF_COMMAND_PRIORITY = CommandPri.Low;
   private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.RC;
+  private static final boolean DEF_SHOW_ROWID = false;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -58,6 +59,7 @@ public class TiConfiguration implements Serializable {
   private CommandPri commandPriority = DEF_COMMAND_PRIORITY;
   private IsolationLevel isolationLevel = DEF_ISOLATION_LEVEL;
   private int maxRequestKeyRangeSize = MAX_REQUEST_KEY_RANGE_SIZE;
+  private boolean showRowId = DEF_SHOW_ROWID;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -196,5 +198,13 @@ public class TiConfiguration implements Serializable {
       throw new IllegalArgumentException("Key range size cannot be less than 1");
     }
     this.maxRequestKeyRangeSize = maxRequestKeyRangeSize;
+  }
+
+  public void setShowRowId(boolean flag) {
+    this.showRowId = flag;
+  }
+
+  public boolean ifShowRowId() {
+    return showRowId;
   }
 }
