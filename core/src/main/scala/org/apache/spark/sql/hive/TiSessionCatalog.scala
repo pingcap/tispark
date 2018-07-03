@@ -145,8 +145,8 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
           TableIdentifier(name)
         }
       }
-      meta.getTables(database.get).map { db =>
-        TableIdentifier(db.getName, Option(db.getName))
+      meta.getTables(database.get).map { table =>
+        TableIdentifier(table.getName, Option(dbName))
       } ++ localTempViews
     } else {
       super.listTables(db, pattern)
