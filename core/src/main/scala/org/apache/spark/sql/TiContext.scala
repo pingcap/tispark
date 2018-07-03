@@ -135,8 +135,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       new TiTableReference(dbName, tableName),
       meta
     )(sqlContext)
-    val df = sqlContext.baseRelationToDataFrame(tiRelation)
-    df
+    sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
   // tidbMapTable does not do any check any meta information
