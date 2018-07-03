@@ -129,15 +129,25 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     }
   }
 
-  // tidbMapTable does not do any check any meta information
-  // it just register table for later use
-  def tidbMapTable(dbName: String, tableName: String): Unit = {
+  def getDataFrame(dbName: String, tableName: String): DataFrame = {
     val tiRelation = new TiDBRelation(
       tiSession,
       new TiTableReference(dbName, tableName),
       meta
     )(sqlContext)
-    sqlContext.baseRelationToDataFrame(tiRelation).createTempView(tableName)
+    sqlContext.baseRelationToDataFrame(tiRelation)
+  }
+
+  // tidbMapTable does not do any check any meta information
+  // it just register table for later use
+  def tidbMapTable(dbName: String, tableName: String): DataFrame = {
+    val df = getDataFrame(dbName, tableName)
+    df.createOrReplaceTempView(tableName)
+    df
+  }
+
+  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit = {
+    tidbMapDatabase(dbName, dbNameAsPrefix, autoLoad)
   }
 
   def tidbMapDatabase(dbName: String,

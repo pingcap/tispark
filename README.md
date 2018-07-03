@@ -115,6 +115,7 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.plan.downgrade.index_threshold | 10000 | If index scan ranges on one region exceeds this limit in original request, downgrade this region's request to table scan rather than original planned index scan |
 | spark.tispark.type.unsupported_mysql_types |  "time,enum,set,year,json" | A comma separated list of mysql types TiSpark does not support currently, refer to `Unsupported MySQL Type List` below |
 | spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
+| spark.tispark.show_rowid |  Show implicit row Id | If to show implicit row Id if exists |
 
 ## Unsupported MySQL Type List
 
