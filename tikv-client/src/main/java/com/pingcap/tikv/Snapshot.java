@@ -15,6 +15,10 @@
 
 package com.pingcap.tikv;
 
+import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getHandleIterator;
+import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getRowIterator;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
+
 import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -33,14 +37,9 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
-import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getHandleIterator;
-import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getRowIterator;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
@@ -140,8 +139,7 @@ public class Snapshot {
   }
 
   public Iterator<KvPair> scan(ByteString startKey) {
-    return new ScanIterator(
-        startKey, conf.getScanBatchSize(), null, session, session.getRegionManager(), timestamp.getVersion());
+    return new ScanIterator(startKey, session, timestamp.getVersion());
   }
 
   // TODO: Need faster implementation, say concurrent version
