@@ -31,7 +31,6 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   protected final TiSession session;
@@ -41,24 +40,29 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   private List<Kvrpcpb.KvPair> currentCache;
   protected ByteString startKey;
   protected int index = -1;
-  private boolean endOfRegion = false;
+  private boolean endOfScan = false;
 
   public ScanIterator(
       ByteString startKey,
       TiSession session,
       long version) {
     this.startKey = requireNonNull(startKey, "start key is null");
+    if (startKey.isEmpty()) {
+      throw new IllegalArgumentException("start key cannot be empty");
+    }
     this.session = session;
     this.regionCache = session.getRegionManager();
     this.version = version;
   }
 
-  // return false if cache is not loaded or empty
+  // return false if current cache is not loaded or empty
   private boolean loadCache() {
-    if (endOfRegion) {
+    if (endOfScan) {
       return false;
     }
-
+    if (startKey.isEmpty()) {
+      return false;
+    }
     Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByKey(startKey);
     TiRegion region = pair.first;
     Metapb.Store store = pair.second;
@@ -75,9 +79,6 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       if (currentCache.size() < session.getConf().getScanBatchSize()) {
         // Current region done, start new batch from next region
         startKey = region.getEndKey();
-        if (startKey.size() == 0 ) {
-          return false;
-        }
       } else {
         // Start new scan from exact next key in current region
         Key lastKey = Key.toRawKey(currentCache.get(currentCache.size() - 1).getKey());
@@ -97,19 +98,16 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
 
   @Override
   public boolean hasNext() {
-    if (endOfRegion) {
-      return false;
-    }
     if (isCacheDrained() && !loadCache()) {
-      endOfRegion = true;
+      endOfScan = true;
       return false;
     }
     return true;
   }
 
   private Kvrpcpb.KvPair getCurrent() {
-    if (isCacheDrained() && endOfRegion) {
-      throw new NoSuchElementException("end of scan reached");
+    if (isCacheDrained()) {
+      return null;
     }
     if (index < currentCache.size()) {
       return currentCache.get(index++);
