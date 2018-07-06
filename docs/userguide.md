@@ -117,7 +117,7 @@ In this way,  you can use either `Spark-Submit` or `Spark-Shell` to use TiSpark 
 ### Deploy TiSpark without the Spark cluster
 
 
-If you do not have a Spark cluster, we recommend using the standalone mode. To use the Spark Standalone model, you can simply place a compiled version of Spark on each node of the cluster. If you encounter problems, please to refer to its official website* (https://spark.apache.org/docs/latest/spark-standalone.html)*. And you are welcome to [file an issue](https://github.com/pingcap/tispark/issues/new) on our GitHub.
+If you do not have a Spark cluster, we recommend using the Spark Standalone mode by placing a compiled version of Spark on each node on the cluster. If you encounter problems, please to refer to the [official Spark website](https://spark.apache.org/docs/latest/spark-standalone.html). You are also welcome to [file an issue](https://github.com/pingcap/tispark/issues/new) on our GitHub.
 
 
 #### Download and install
