@@ -131,23 +131,20 @@ object SharedSQLContext extends Logging {
    * 'initializeSession' between a 'describe' and an 'it' call than it does to
    * call 'beforeAll'.
    */
-  protected def initializeSession(): Unit = {
+  protected def initializeSession(): Unit =
     if (_spark == null) {
       _spark = _sparkSession
     }
-  }
 
-  private def initializeJDBC(): Unit = {
+  private def initializeJDBC(): Unit =
     if (_sparkJDBC == null) {
       _sparkJDBC = _sparkSession
     }
-  }
 
-  protected def initializeTiContext(): Unit = {
+  protected def initializeTiContext(): Unit =
     if (_spark != null && _ti == null) {
       _ti = new TiContext(_spark)
     }
-  }
 
   private def initStatistics(): Unit = {
     logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
@@ -157,7 +154,7 @@ object SharedSQLContext extends Logging {
     logger.info("Analyzing table finished.")
   }
 
-  private def initializeTiDB(forceNotLoad: Boolean = false): Unit = {
+  private def initializeTiDB(forceNotLoad: Boolean = false): Unit =
     if (_tidbConnection == null) {
       val jdbcUsername = getOrElse(_tidbConf, TiDB_USER, "root")
 
@@ -199,9 +196,8 @@ object SharedSQLContext extends Logging {
         initStatistics()
       }
     }
-  }
 
-  private def initializeConf(): Unit = {
+  private def initializeConf(): Unit =
     if (_tidbConf == null) {
       val confStream = Thread
         .currentThread()
@@ -220,7 +216,6 @@ object SharedSQLContext extends Logging {
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf)
     }
-  }
 
   /**
    * Make sure the [[TestSparkSession]] is initialized before any tests are run.

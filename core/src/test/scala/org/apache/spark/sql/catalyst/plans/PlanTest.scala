@@ -30,7 +30,7 @@ abstract class PlanTest extends SparkFunSuite with PredicateHelper {
    * Since attribute references are given globally unique ids during analysis,
    * we must normalize them to check if two different queries are identical.
    */
-  protected def normalizeExprIds(plan: LogicalPlan): plan.type = {
+  protected def normalizeExprIds(plan: LogicalPlan): plan.type =
     plan transformAllExpressions {
       case s: ScalarSubquery =>
         s.copy(exprId = ExprId(0))
@@ -47,7 +47,6 @@ abstract class PlanTest extends SparkFunSuite with PredicateHelper {
       case ae: AggregateExpression =>
         ae.copy(resultId = ExprId(0))
     }
-  }
 
   /**
    * Normalizes plans:
@@ -57,7 +56,7 @@ abstract class PlanTest extends SparkFunSuite with PredicateHelper {
    * - Sample the seed will replaced by 0L.
    * - Join conditions will be resorted by hashCode.
    */
-  private def normalizePlan(plan: LogicalPlan): LogicalPlan = {
+  private def normalizePlan(plan: LogicalPlan): LogicalPlan =
     plan transform {
       case filter @ Filter(condition: Expression, child: LogicalPlan) =>
         Filter(
@@ -77,7 +76,6 @@ abstract class PlanTest extends SparkFunSuite with PredicateHelper {
             .reduce(And)
         Join(left, right, joinType, Some(newCondition))
     }
-  }
 
   /**
    * Rewrite [[EqualTo]] and [[EqualNullSafe]] operator to keep order. The following cases will be
@@ -106,7 +104,6 @@ abstract class PlanTest extends SparkFunSuite with PredicateHelper {
   }
 
   /** Fails the test if the two expressions do not match */
-  protected def compareExpressions(e1: Expression, e2: Expression): Unit = {
+  protected def compareExpressions(e1: Expression, e2: Expression): Unit =
     comparePlans(Filter(e1, OneRowRelation), Filter(e2, OneRowRelation))
-  }
 }

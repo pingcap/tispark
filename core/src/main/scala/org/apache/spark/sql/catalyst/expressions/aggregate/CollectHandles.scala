@@ -68,9 +68,8 @@ case class CollectHandles(child: Expression,
   // actual order of input rows.
   override def deterministic: Boolean = false
 
-  override def initialize(b: InternalRow): Unit = {
+  override def initialize(b: InternalRow): Unit =
     buffer.clear()
-  }
 
   override def update(b: InternalRow, input: InternalRow): Unit = {
     val value = child.eval(input)
@@ -79,11 +78,9 @@ case class CollectHandles(child: Expression,
     }
   }
 
-  override def merge(buffer: InternalRow, input: InternalRow): Unit = {
+  override def merge(buffer: InternalRow, input: InternalRow): Unit =
     sys.error("Collect cannot be used in partial aggregations.")
-  }
 
-  override def eval(input: InternalRow): Any = {
+  override def eval(input: InternalRow): Any =
     new GenericArrayData(buffer.toArray)
-  }
 }

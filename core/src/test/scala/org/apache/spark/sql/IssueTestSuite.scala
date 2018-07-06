@@ -210,7 +210,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge("select count(c1 + c2) from t")
   }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists t")
       tidbStmt.execute("drop table if exists tmp_debug")
@@ -220,5 +220,4 @@ class IssueTestSuite extends BaseTiSparkSuite {
     } finally {
       super.afterAll()
     }
-  }
 }

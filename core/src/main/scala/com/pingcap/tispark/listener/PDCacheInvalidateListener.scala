@@ -28,7 +28,7 @@ class PDCacheInvalidateListener(accumulator: CacheInvalidateAccumulator,
     extends SparkListener {
   private final val logger: Logger = Logger.getLogger(getClass.getName)
 
-  override def onJobEnd(jobEnd: SparkListenerJobEnd): Unit = {
+  override def onJobEnd(jobEnd: SparkListenerJobEnd): Unit =
     if (accumulator != null && !accumulator.isZero && handler != null) {
       synchronized {
         if (!accumulator.isZero) {
@@ -42,5 +42,4 @@ class PDCacheInvalidateListener(accumulator: CacheInvalidateAccumulator,
         }
       }
     }
-  }
 }

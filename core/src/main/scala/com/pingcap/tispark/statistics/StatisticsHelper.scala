@@ -200,7 +200,7 @@ object StatisticsHelper {
 
   private[statistics] def buildHistogramsRequest(histTable: TiTableInfo,
                                                  targetTblId: Long,
-                                                 startTs: Long): TiDAGRequest = {
+                                                 startTs: Long): TiDAGRequest =
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(histTable)
@@ -213,14 +213,13 @@ object StatisticsHelper {
       )
       .setStartTs(startTs)
       .build(PushDownType.NORMAL)
-  }
 
   private def checkColExists(table: TiTableInfo, column: String): Boolean =
     table.getColumns.exists { _.matchName(column) }
 
   private[statistics] def buildMetaRequest(metaTable: TiTableInfo,
                                            targetTblId: Long,
-                                           startTs: Long): TiDAGRequest = {
+                                           startTs: Long): TiDAGRequest =
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(metaTable)
@@ -231,11 +230,10 @@ object StatisticsHelper {
       .addRequiredCols(metaRequiredCols.filter(checkColExists(metaTable, _)))
       .setStartTs(startTs)
       .build(PushDownType.NORMAL)
-  }
 
   private[statistics] def buildBucketRequest(bucketTable: TiTableInfo,
                                              targetTblId: Long,
-                                             startTs: Long): TiDAGRequest = {
+                                             startTs: Long): TiDAGRequest =
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(bucketTable)
@@ -250,5 +248,4 @@ object StatisticsHelper {
       )
       .setStartTs(startTs)
       .build(PushDownType.NORMAL)
-  }
 }

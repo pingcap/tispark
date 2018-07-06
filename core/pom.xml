@@ -253,7 +253,7 @@
             <plugin>
                 <groupId>org.antipathy</groupId>
                 <artifactId>mvn-scalafmt</artifactId>
-                <version>0.5_1.3.0</version>
+                <version>0.7_1.5.1</version>
                 <configuration>
                     <configLocation>${project.basedir}/scalafmt.conf</configLocation>
                 </configuration>

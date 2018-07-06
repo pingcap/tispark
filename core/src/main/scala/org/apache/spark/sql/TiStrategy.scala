@@ -65,36 +65,31 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     new TypeBlacklist(blacklistString)
   }
 
-  private def allowAggregationPushdown(): Boolean = {
+  private def allowAggregationPushdown(): Boolean =
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
-  }
 
-  private def allowIndexDoubleRead(): Boolean = {
+  private def allowIndexDoubleRead(): Boolean =
     sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "false").toBoolean
-  }
 
-  private def useStreamingProcess(): Boolean = {
+  private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toBoolean
-  }
 
-  private def timeZoneOffset(): Int = {
+  private def timeZoneOffset(): Int =
     sqlConf
       .getConfString(
         TiConfigConst.KV_TIMEZONE_OFFSET,
         String.valueOf(ZonedDateTime.now.getOffset.getTotalSeconds)
       )
       .toInt
-  }
 
-  private def pushDownType(): PushDownType = {
+  private def pushDownType(): PushDownType =
     if (useStreamingProcess()) {
       PushDownType.STREAMING
     } else {
       PushDownType.NORMAL
     }
-  }
 
-  override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
+  override def apply(plan: LogicalPlan): Seq[SparkPlan] =
     plan
       .collectFirst {
         case LogicalRelation(relation: TiDBRelation, _, _) =>
@@ -102,7 +97,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       }
       .toSeq
       .flatten
-  }
 
   private def toCoprocessorRDD(
     source: TiDBRelation,
@@ -394,9 +388,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       case e if e.deterministic => e.canonicalized -> Alias(e, e.toString())()
     }.toMap
 
-    def aliasPushedPartialResult(e: AggregateExpression): Alias = {
+    def aliasPushedPartialResult(e: AggregateExpression): Alias =
       deterministicAggAliases.getOrElse(e.canonicalized, Alias(e, e.toString())())
-    }
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
       // As `aggExpr` is being pushing down to TiKV, we need to replace the original Catalyst
@@ -464,18 +457,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     aggregateExpressions: Seq[AggregateExpression],
     filters: Seq[Expression],
     source: TiDBRelation
-  ): Boolean = {
+  ): Boolean =
     allowAggregationPushdown &&
-    filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) &&
-    groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
-    aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source, blacklist)) &&
-    !aggregateExpressions.exists(_.isDistinct)
-  }
+      filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) &&
+      groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
+      aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source, blacklist)) &&
+      !aggregateExpressions.exists(_.isDistinct)
 
   // We do through similar logic with original Spark as in SparkStrategies.scala
   // Difference is we need to test if a sub-plan can be consumed all together by TiKV
   // and then we don't return (don't planLater) and plan the remaining all at once
-  private def doPlan(source: TiDBRelation, plan: LogicalPlan): Seq[SparkPlan] = {
+  private def doPlan(source: TiDBRelation, plan: LogicalPlan): Seq[SparkPlan] =
     // TODO: This test should be done once for all children
     plan match {
       case logical.ReturnAnswer(rootPlan) =>
@@ -534,7 +526,6 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         )
       case _ => Nil
     }
-  }
 }
 
 object TiAggregation {

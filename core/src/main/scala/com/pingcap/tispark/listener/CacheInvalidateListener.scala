@@ -54,7 +54,7 @@ object CacheInvalidateListener {
    * @param sc            The spark SparkContext used for attaching a cache listener.
    * @param regionManager The RegionManager to invalidate local cache.
    */
-  def initCacheListener(sc: SparkContext, regionManager: RegionManager): Unit = {
+  def initCacheListener(sc: SparkContext, regionManager: RegionManager): Unit =
     if (manager == null) {
       synchronized {
         if (manager == null) {
@@ -67,9 +67,8 @@ object CacheInvalidateListener {
         }
       }
     }
-  }
 
-  def init(sc: SparkContext, regionManager: RegionManager, manager: CacheInvalidateListener): Unit = {
+  def init(sc: SparkContext, regionManager: RegionManager, manager: CacheInvalidateListener): Unit =
     if (sc != null && regionManager != null) {
       sc.register(manager.CACHE_INVALIDATE_ACCUMULATOR, manager.CACHE_ACCUMULATOR_NAME)
       sc.addSparkListener(
@@ -79,5 +78,4 @@ object CacheInvalidateListener {
         )
       )
     }
-  }
 }
