@@ -31,7 +31,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{SparkSession, TiStrategy}
-import org.apache.spark.{SparkConf, sql}
+import org.apache.spark.{sql, SparkConf}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -45,7 +45,7 @@ object TiUtils {
 
   def isSupportedAggregate(aggExpr: AggregateExpression,
                            tiDBRelation: TiDBRelation,
-                           blacklist: ExpressionBlacklist): Boolean = {
+                           blacklist: ExpressionBlacklist): Boolean =
     aggExpr.aggregateFunction match {
       case Average(_) | Sum(_) | PromotedSum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
@@ -53,7 +53,6 @@ object TiUtils {
             .forall(isSupportedBasicExpression(_, tiDBRelation, blacklist))
       case _ => false
     }
-  }
 
   def isSupportedBasicExpression(expr: Expression,
                                  tiDBRelation: TiDBRelation,
@@ -103,9 +102,8 @@ object TiUtils {
 
   def isSupportedFilter(expr: Expression,
                         source: TiDBRelation,
-                        blacklist: ExpressionBlacklist): Boolean = {
+                        blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
-  }
 
   // if contains UDF / functions that cannot be folded
   def isSupportedGroupingExpr(expr: NamedExpression,
@@ -114,7 +112,7 @@ object TiUtils {
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
   // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp: TiDataType): DataType = {
+  def toSparkDataType(tp: TiDataType): DataType =
     tp match {
       case _: StringType => sql.types.StringType
       case _: BytesType  => sql.types.BinaryType
@@ -146,9 +144,8 @@ object TiUtils {
       case _: SetType       => sql.types.LongType
       case _: YearType      => sql.types.LongType
     }
-  }
 
-  def fromSparkType(tp: DataType): TiDataType = {
+  def fromSparkType(tp: DataType): TiDataType =
     tp match {
       case _: sql.types.BinaryType    => BytesType.BLOB
       case _: sql.types.StringType    => StringType.VARCHAR
@@ -158,7 +155,6 @@ object TiUtils {
       case _: sql.types.TimestampType => TimestampType.TIMESTAMP
       case _: sql.types.DateType      => DateType.DATE
     }
-  }
 
   def getSchemaFromTable(table: TiTableInfo): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
@@ -231,11 +227,10 @@ object TiUtils {
     StatisticsManager.initStatisticsManager(tiSession, session)
   }
 
-  def getReqEstCountStr(req: TiDAGRequest): String = {
+  def getReqEstCountStr(req: TiDAGRequest): String =
     if (req.getEstimatedCount > 0) {
       import java.text.DecimalFormat
       val df = new DecimalFormat("#.#")
       s" EstimatedCount:${df.format(req.getEstimatedCount)}"
     } else ""
-  }
 }

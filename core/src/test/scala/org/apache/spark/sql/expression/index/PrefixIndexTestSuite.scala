@@ -49,11 +49,10 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     explainAndTest("select a, b from prefix where b LIKE '%'")
   }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists prefix")
     } finally {
       super.afterAll()
     }
-  }
 }

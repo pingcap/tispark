@@ -26,13 +26,11 @@ abstract class SparkFunSuite extends FunSuite with BeforeAndAfterAll with Loggin
   protected val logger: Logger = log
 
   // helper function
-  protected final def getTestResourceFile(file: String): File = {
+  protected final def getTestResourceFile(file: String): File =
     new File(getClass.getClassLoader.getResource(file).getFile)
-  }
 
-  protected final def getTestResourcePath(file: String): String = {
+  protected final def getTestResourcePath(file: String): String =
     getTestResourceFile(file).getCanonicalPath
-  }
 
   /**
    * Log the suite name and the test name before and after each test.

@@ -231,9 +231,8 @@ class StatisticsManager(tiSession: TiSession) {
       .toSeq
   }
 
-  def getTableStatistics(id: Long): TableStatistics = {
+  def getTableStatistics(id: Long): TableStatistics =
     statisticsMap.getIfPresent(id)
-  }
 
   /**
    * Estimated row count of one table
@@ -259,7 +258,7 @@ class StatisticsManager(tiSession: TiSession) {
 object StatisticsManager {
   private var manager: StatisticsManager = _
 
-  def initStatisticsManager(tiSession: TiSession, session: SparkSession): Unit = {
+  def initStatisticsManager(tiSession: TiSession, session: SparkSession): Unit =
     if (manager == null) {
       synchronized {
         if (manager == null) {
@@ -267,7 +266,6 @@ object StatisticsManager {
         }
       }
     }
-  }
 
   def reset(): Unit = manager = null
 

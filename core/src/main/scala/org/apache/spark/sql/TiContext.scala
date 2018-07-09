@@ -47,9 +47,8 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     conf.getBoolean("spark.tispark.statistics.auto_load", defaultValue = true)
 
   class DebugTool {
-    def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] = {
+    def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] =
       RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
-    }
 
     /**
      * Balance region leaders of a single table.
@@ -146,9 +145,8 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     df
   }
 
-  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit = {
+  def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit =
     tidbMapDatabase(dbName, dbNameAsPrefix, autoLoad)
-  }
 
   def tidbMapDatabase(dbName: String,
                       dbNameAsPrefix: Boolean = false,

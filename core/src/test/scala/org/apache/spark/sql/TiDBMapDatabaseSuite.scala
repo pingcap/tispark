@@ -47,7 +47,7 @@ class TiDBMapDatabaseSuite extends BaseTiSparkSuite {
     judge("select * from `t-a`")
   }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop database if exists `test-a`")
       tidbStmt.execute("drop database if exists `decimals`")
@@ -55,5 +55,4 @@ class TiDBMapDatabaseSuite extends BaseTiSparkSuite {
     } finally {
       super.afterAll()
     }
-  }
 }

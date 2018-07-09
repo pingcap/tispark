@@ -83,11 +83,10 @@ class AlterTableTestSuite extends BaseTiSparkSuite {
     alterTable("blob", "\"0\"", "null", "", defaultNullOnly = true)
   }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists t")
     } finally {
       super.afterAll()
     }
-  }
 }

@@ -169,53 +169,47 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     }
   })
 
-  private def isDoubleRead(executedPlan: SparkPlan): Boolean = {
+  private def isDoubleRead(executedPlan: SparkPlan): Boolean =
     executedPlan
       .find(_.isInstanceOf[HandleRDDExec])
       .isDefined
-  }
 
   /**
    * Extract first Coprocessor tiRdd exec node from the given query
    *
    * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
    */
-  private def extractCoprocessorRDD(executedPlan: SparkPlan): CoprocessorRDD = {
+  private def extractCoprocessorRDD(executedPlan: SparkPlan): CoprocessorRDD =
     executedPlan
       .find(_.isInstanceOf[CoprocessorRDD])
       .get
       .asInstanceOf[CoprocessorRDD]
-  }
 
   /**
    * Extract first handle rdd exec node from the given query
    *
    * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
    */
-  private def extractHandleRDDExec(executedPlan: SparkPlan): HandleRDDExec = {
+  private def extractHandleRDDExec(executedPlan: SparkPlan): HandleRDDExec =
     executedPlan
       .find(_.isInstanceOf[HandleRDDExec])
       .get
       .asInstanceOf[HandleRDDExec]
-  }
 
-  private def extractUsedIndex(coprocessorRDD: CoprocessorRDD): String = {
+  private def extractUsedIndex(coprocessorRDD: CoprocessorRDD): String =
     getIndexName(coprocessorRDD.tiRdd.dagRequest.getIndexInfo)
-  }
 
-  private def extractUsedIndex(handleRDDExec: HandleRDDExec): String = {
+  private def extractUsedIndex(handleRDDExec: HandleRDDExec): String =
     getIndexName(handleRDDExec.tiHandleRDD.dagRequest.getIndexInfo)
-  }
 
-  private def getIndexName(indexInfo: TiIndexInfo): String = {
+  private def getIndexName(indexInfo: TiIndexInfo): String =
     if (indexInfo != null) {
       indexInfo.getName
     } else {
       ""
     }
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     try {
       tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
       tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
@@ -223,5 +217,4 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     } finally {
       super.afterAll()
     }
-  }
 }

@@ -68,10 +68,9 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
     }
   }
 
-  override def verboseString: String = {
+  override def verboseString: String =
     s"TiDB $nodeName{${tiRdd.dagRequest.toString}}" +
       s"${TiUtils.getReqEstCountStr(tiRdd.dagRequest)}"
-  }
 
   override def simpleString: String = verboseString
 }
@@ -119,10 +118,9 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 
   override def output: Seq[Attribute] = attributeRef
 
-  override def verboseString: String = {
+  override def verboseString: String =
     s"TiDB $nodeName{${tiHandleRDD.dagRequest.toString}}" +
       s"${TiUtils.getReqEstCountStr(tiHandleRDD.dagRequest)}"
-  }
 
   override def simpleString: String = verboseString
 }
@@ -260,9 +258,8 @@ case class RegionTaskExec(child: SparkPlan,
            *
            * @return true, the number of handle ranges retrieved exceeds the `downgradeThreshold` after handle merge, false otherwise.
            */
-          def satisfyDowngradeThreshold: Boolean = {
+          def satisfyDowngradeThreshold: Boolean =
             indexTaskRanges.size() > downgradeThreshold
-          }
 
           /**
            * If one task's ranges list exceeds some threshold, we split it into two sub tasks and
@@ -296,22 +293,20 @@ case class RegionTaskExec(child: SparkPlan,
             finalTasks
           }
 
-          def isTaskRangeSizeInvalid(task: RegionTask): Boolean = {
+          def isTaskRangeSizeInvalid(task: RegionTask): Boolean =
             task == null ||
-            task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
-          }
+              task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
 
           def submitTasks(tasks: List[RegionTask], dagRequest: TiDAGRequest): Unit = {
             taskCount += 1
             val task = new Callable[util.Iterator[TiRow]] {
-              override def call(): util.Iterator[TiRow] = {
+              override def call(): util.Iterator[TiRow] =
                 CoprocessIterator.getRowIterator(dagRequest, tasks, session)
-              }
             }
             completionService.submit(task)
           }
 
-          def doIndexScan(): Unit = {
+          def doIndexScan(): Unit =
             while (handleIterator.hasNext) {
               val handleList = feedBatch()
               numHandles += handleList.size()
@@ -343,7 +338,6 @@ case class RegionTaskExec(child: SparkPlan,
               submitTasks(tasks.toList, dagRequest)
               numIndexRangesScanned += taskRange.size
             }
-          }
 
           /**
            * We merge potentially discrete index ranges from `taskRanges` into one large range
@@ -463,9 +457,8 @@ case class RegionTaskExec(child: SparkPlan,
       }
   }
 
-  override def verboseString: String = {
+  override def verboseString: String =
     s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
-  }
 
   override def simpleString: String = verboseString
 }

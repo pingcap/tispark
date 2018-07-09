@@ -116,9 +116,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     initializeTimeZone()
   }
 
-  def setLogLevel(level: String): Unit = {
+  def setLogLevel(level: String): Unit =
     spark.sparkContext.setLogLevel(level)
-  }
 
   /** Rename JDBC tables
    *   - currently we use table names with `_j` suffix for JDBC tests
@@ -144,9 +143,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
     assert(execDBTSAndJudge(str, skipped, checkLimit))
 
-  private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean = {
+  private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
     compSqlResult(sql, querySpark(sql), queryTiDB(sql), checkLimit)
-  }
 
   protected def execDBTSAndJudge(str: String,
                                  skipped: Boolean = false,
@@ -189,7 +187,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
                                   rTiDB: List[List[Any]] = null,
                                   skipJDBC: Boolean = false,
                                   skipTiDB: Boolean = false,
-                                  checkLimit: Boolean = true): Unit = {
+                                  checkLimit: Boolean = true): Unit =
     try {
       explainSpark(qSpark)
       if (qJDBC == null) {
@@ -210,7 +208,6 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     } catch {
       case e: Throwable => fail(e)
     }
-  }
 
   /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
    *    - TiSpark query throws exception
@@ -239,7 +236,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
                         rTiDB: List[List[Any]] = null,
                         skipJDBC: Boolean = false,
                         skipTiDB: Boolean = false,
-                        checkLimit: Boolean = true): Unit = {
+                        checkLimit: Boolean = true): Unit =
     runTestWithoutReplaceTableName(
       qSpark,
       replaceJDBCTableName(qSpark, skipJDBC),
@@ -251,7 +248,6 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       skipTiDB,
       checkLimit
     )
-  }
 
   /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
    *    - TiSpark query throws exception
@@ -340,7 +336,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   private def mapStringList(result: List[Any]): String =
     if (result == null) "null" else "List(" + result.map(mapString).mkString(",") + ")"
 
-  private def mapString(result: Any): String = {
+  private def mapString(result: Any): String =
     if (result == null) "null"
     else
       result match {
@@ -354,5 +350,4 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
         case _ =>
           result.toString
       }
-  }
 }

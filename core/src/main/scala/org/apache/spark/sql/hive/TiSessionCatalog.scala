@@ -49,7 +49,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
 
   val meta: MetaManager = new MetaManager(session.getCatalog)
 
-  override def lookupRelation(tableIdent: TableIdentifier, alias: Option[String]): LogicalPlan = {
+  override def lookupRelation(tableIdent: TableIdentifier, alias: Option[String]): LogicalPlan =
     synchronized {
       val table = formatTableName(tableIdent.table)
       val db = formatDatabaseName(tableIdent.database.getOrElse(currentDb))
@@ -63,7 +63,6 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
         super.lookupRelation(tableIdent, alias)
       }
     }
-  }
 
   override def databaseExists(db: String): Boolean = {
     val dbName = formatDatabaseName(db)
@@ -76,15 +75,13 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     }
   }
 
-  override def listDatabases(): Seq[String] = {
+  override def listDatabases(): Seq[String] =
     meta.getDatabases
       .map(_.getName)
       .union(super.listDatabases())
-  }
 
-  override def listDatabases(pattern: String): Seq[String] = {
+  override def listDatabases(pattern: String): Seq[String] =
     StringUtils.filterPattern(listDatabases(), pattern)
-  }
 
   override def tableExists(name: TableIdentifier): Boolean = synchronized {
     val db = formatDatabaseName(name.database.getOrElse(currentDb))
@@ -98,11 +95,10 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     }
   }
 
-  private def requireDbExists(db: String): Unit = {
+  private def requireDbExists(db: String): Unit =
     if (!databaseExists(db)) {
       throw new NoSuchDatabaseException(db)
     }
-  }
 
   override def getDatabaseMetadata(db: String): CatalogDatabase = {
     val dbName = formatDatabaseName(db)
@@ -153,11 +149,10 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
     }
   }
 
-  def tiDBToCatalogDatabase(db: TiDBInfo): CatalogDatabase = {
+  def tiDBToCatalogDatabase(db: TiDBInfo): CatalogDatabase =
     CatalogDatabase(db.getName, "TiDB Database", null, null)
-  }
 
-  def tiTableToCatalogTable(name: TableIdentifier, tiTable: TiTableInfo): CatalogTable = {
+  def tiTableToCatalogTable(name: TableIdentifier, tiTable: TiTableInfo): CatalogTable =
     CatalogTable(
       name,
       CatalogTableType.EXTERNAL,
@@ -165,5 +160,4 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
       TiUtils.getSchemaFromTable(tiTable),
       Option("TiDB")
     )
-  }
 }
