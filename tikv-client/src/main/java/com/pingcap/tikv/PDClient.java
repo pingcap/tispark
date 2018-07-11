@@ -276,6 +276,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   @Override
   protected PDBlockingStub getBlockingStub() {
+    if (leaderWrapper == null) {
+      throw new GrpcException("pd may not be present");
+    }
     return leaderWrapper
         .getBlockingStub()
         .withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
@@ -284,7 +287,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   @Override
   protected PDStub getAsyncStub() {
     if (leaderWrapper == null) {
-      throw new GrpcException("pd may be not present");
+      throw new GrpcException("pd may be not be present");
     }
     return leaderWrapper
         .getAsyncStub()
