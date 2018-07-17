@@ -23,7 +23,7 @@
         <slf4j.version>1.7.16</slf4j.version>
         <grpc.version>1.7.0</grpc.version>
         <powermock.version>1.6.6</powermock.version>
-        <jackson.version>2.6.6</jackson.version>
+        <jackson.version>2.6.5</jackson.version>
         <trove4j.version>3.0.1</trove4j.version>
         <joda-time.version>2.9.9</joda-time.version>
         <joda-convert.version>1.9.2</joda-convert.version>
@@ -323,22 +323,31 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
                             <relocations>
                                 <relocation>
-                                    <pattern>io.netty</pattern>
-                                    <shadedPattern>io.netty.netty4pingcap</shadedPattern>
+                                    <pattern>com.fasterxml</pattern>
+                                    <shadedPattern>shade.com.fasterxml.jackson</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>io.grpc</pattern>
+                                    <shadedPattern>shade.io.grpc</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>com.google.protobuf</pattern>
-                                    <shadedPattern>com.google.proto4pingcap</shadedPattern>
+                                    <shadedPattern>shade.com.google.protobuf</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>io.netty</pattern>
+                                    <shadedPattern>shade.io.netty</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>com.google.common</pattern>
-                                    <shadedPattern>com.google.guava4pingcap</shadedPattern>
+                                    <shadedPattern>shade.com.google.common</shadedPattern>
                                 </relocation>
                             </relocations>
-                            <createSourcesJar>true</createSourcesJar>
-                            <shadeSourcesContent>true</shadeSourcesContent>
                         </configuration>
                     </execution>
                 </executions>
