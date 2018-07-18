@@ -149,7 +149,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
             ctxRegion.getId(),
             ctxRegion.getLeader().getStoreId()));
 
-        invalidateRegionStoreCache(ctxRegion);
+        this.regionManager.invalidateStore(ctxRegion.getId());
         recv.onStoreNotMatch();
         return true;
       } else if (error.hasStaleEpoch()) {
