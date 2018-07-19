@@ -49,9 +49,28 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     explainAndTest("select a, b from prefix where b LIKE '%'")
   }
 
+  // https://github.com/pingcap/tispark/issues/397
+  test("Prefix index implementation for utf8 string is incorrect") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute(
+      """CREATE TABLE `t1` (
+        |  `name` varchar(12) DEFAULT NULL,
+        |  KEY `pname` (`name`(12))
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      """.stripMargin)
+    tidbStmt.execute("insert into t1 values('借款策略集_网页')")
+    refreshConnections()
+
+    runTest("select * from t1 where name = '借款策略集_网页'")
+    spark.sql("select * from t1 where name = '借款策略集_网页'").show
+    spark.sql("select * from t1 where name < '借款策略集_网页'").show
+    spark.sql("select * from t1 where name = '借款策略集_网页'").explain
+  }
+
   override def afterAll(): Unit =
     try {
-      tidbStmt.execute("drop table if exists prefix")
+      tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
+      tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     } finally {
       super.afterAll()
     }

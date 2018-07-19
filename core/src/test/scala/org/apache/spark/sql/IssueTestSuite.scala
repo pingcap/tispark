@@ -20,6 +20,44 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  test("TISPARK-46 Join plan lost columns") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+    tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
+    tidbStmt.execute("""CREATE TABLE `t1` (
+                       |        `time_version` bigint(20) NOT NULL,
+                       |        `sp_enabled` tinyint NOT NULL,
+                       |        `sp_id` bigint(20) NOT NULL,
+                       |        `orgcode` varchar(32) DEFAULT NULL,
+                       |        `score_sum` int(11) DEFAULT NULL,
+                       |        `level` int(11) DEFAULT NULL,
+                       |        `level_name` varchar(8) DEFAULT NULL,
+                       |        `level_var` decimal(6,2) DEFAULT NULL
+                       |        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+      """.stripMargin)
+    tidbStmt.execute(
+      """CREATE TABLE `t2` (
+        |  `orgcode` text DEFAULT NULL,
+        |  `level_name` text DEFAULT NULL,
+        |  `level` bigint(20) DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+      """.stripMargin
+    )
+    tidbStmt.execute("insert into t1 values(11,1,1,'200qqq', 100, 1, 'A', '0.7')")
+    tidbStmt.execute("insert into t1 values(11,1,2,'200aaa', 110, 2, 'B', '0.6')")
+    tidbStmt.execute("insert into t1 values(11,1,3,'200ccc', 120, 4, 'D', '0.1')")
+    tidbStmt.execute("insert into t2 values('200qqq', 'A', 1)")
+    tidbStmt.execute("insert into t2 values('200aaa', 'B', 2)")
+    tidbStmt.execute("insert into t2 values('200bbb', 'C', 3)")
+    refreshConnections()
+
+    val level_df = spark.sql("select * from t1")
+    val to_db_df = level_df.select("orgcode", "level_name", "level")
+    val full_df = spark.sql("select * from t2")
+
+    to_db_df.join(full_df, Seq("orgcode"), "left_anti").show
+    full_df.join(to_db_df, Seq("orgcode"), "left_anti").show
+  }
+
   test("Test count") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute(
