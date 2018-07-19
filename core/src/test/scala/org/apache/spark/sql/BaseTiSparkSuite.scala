@@ -161,7 +161,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
         // will never be possible, and the following operation holds correct.
         // e.g., for input Seq[t2, t, lt]
         // e.g., select * from t, t2, lt -> select * from t_j, t2_j, lt_j
-        qJDBC = qJDBC.replaceAll(" " + tableName + "[ ,]", " " + tableName + "_j ")
+        qJDBC = qJDBC.replaceAllLiterally(" " + tableName + " ", " " + tableName + "_j ")
+        qJDBC = qJDBC.replaceAllLiterally(" " + tableName + ",", " " + tableName + "_j,")
       }
     }
     qJDBC
