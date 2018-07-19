@@ -322,16 +322,18 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {
         fail(
           s"""Failed with
-             |TiSpark:\t\t${mapStringNestedList(r1)}
-             |Spark With JDBC:${mapStringNestedList(r2)}
-             |TiDB:\t\t\t${mapStringNestedList(r3)}""".stripMargin
+             |TiSpark:\t\t${listToString(r1)}
+             |Spark With JDBC:${listToString(r2)}
+             |TiDB:\t\t\t${listToString(r3)}""".stripMargin
         )
       }
     }
   }
 
-  private def mapStringNestedList(result: List[List[Any]]): String =
-    if (result == null) "null" else result.map(mapStringList).mkString(",")
+  private def listToString(result: List[List[Any]]): String =
+    if (result == null) s"[len: null] = null"
+    else if (result.isEmpty) s"[len: 0] = Empty"
+    else s"[len: ${result.length}] = ${result.map(mapStringList).mkString(",")}"
 
   private def mapStringList(result: List[Any]): String =
     if (result == null) "null" else "List(" + result.map(mapString).mkString(",") + ")"
