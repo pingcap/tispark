@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv.codec;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
@@ -92,8 +93,7 @@ public class MyDecimal {
    *
    * @param precision precision specifies total digits that this decimal will be..
    * @param frac frac specifies how many fraction digits
-   * @param bin bin is binary string which represents a decimal value. TODO: (zhexuany) overflow and
-   *     truncated exception need to be done later.
+   * @param bin bin is binary string which represents a decimal value.
    */
   public int fromBin(int precision, int frac, int[] bin) {
     if (bin.length == 0) {
@@ -134,13 +134,13 @@ public class MyDecimal {
         wordsIntTo = wordBufLen;
         wordsFracTo = 0;
         overflow = true;
+      } else {
+        wordsIntTo = wordsInt;
+        wordsFracTo = wordBufLen - wordsInt;
+        truncated = true;
       }
-      wordsIntTo = wordsInt;
-      wordsFracTo = wordBufLen - wordsInt;
-      truncated = true;
     }
-    wordsIntTo = wordsInt;
-    wordsFracTo = wordsFrac;
+
     if (overflow || truncated) {
       if (wordsIntTo < oldWordsIntTo) {
         binIdx += dig2bytes[leadingDigits] + (wordsInt - wordsIntTo) * wordSize;
@@ -151,8 +151,8 @@ public class MyDecimal {
     }
 
     this.negative = mask != 0;
-    this.digitsInt = wordsInt * digitsPerWord + leadingDigits;
-    this.digitsFrac = wordsFrac * digitsPerWord + trailingDigits;
+    this.digitsInt = (byte)(wordsInt * digitsPerWord + leadingDigits);
+    this.digitsFrac = (byte)(wordsFrac * digitsPerWord + trailingDigits);
 
     int wordIdx = 0;
     if (leadingDigits > 0) {
@@ -268,21 +268,22 @@ public class MyDecimal {
    * @param size is word size which can be used in switch statement.
    * @param start start indicates the where start to read.
    */
-  private int readWord(int[] b, int size, int start) {
+  @VisibleForTesting
+  public static int readWord(int[] b, int size, int start) {
     int x = 0;
     switch (size) {
       case 1:
-        x = b[start];
+        x = (byte)b[start];
         break;
       case 2:
-        x = (b[start] << 8) + b[start + 1];
+        x = (((byte)b[start]) << 8) + (b[start + 1] & 0xFF);
         break;
       case 3:
         int sign = b[start] & 128;
         if (sign > 0) {
-          x = 255 << 24 | (b[start] & 0xFF) << 16 | (b[start + 1] & 0xFF) << 8 | (b[start + 2]);
+          x = 255 << 24 | (b[start] << 16) | (b[start + 1] << 8) | (b[start + 2]);
         } else {
-          x = b[start] << 16 | b[start + 1] << 8 | b[start + 2];
+          x = b[start] << 16 | (b[start + 1] << 8) | b[start + 2];
         }
         break;
       case 4:

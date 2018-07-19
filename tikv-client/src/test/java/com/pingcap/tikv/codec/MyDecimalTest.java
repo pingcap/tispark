@@ -49,26 +49,56 @@ public class MyDecimalTest {
   }
 
   @Test
+  public void readWordTest() throws Exception {
+    assertEquals(MyDecimal.readWord(new int[]{250}, 1, 0), -6);
+    assertEquals(MyDecimal.readWord(new int[]{50}, 1, 0), 50);
+
+    assertEquals(MyDecimal.readWord(new int[]{250, 250}, 2, 0), -1286);
+    assertEquals(MyDecimal.readWord(new int[]{50, 50}, 2, 0), 12850);
+
+    assertEquals(MyDecimal.readWord(new int[]{250, 250, 250}, 3, 0), -328966);
+    assertEquals(MyDecimal.readWord(new int[]{50, 50, 50}, 3, 0), 3289650);
+
+    assertEquals(MyDecimal.readWord(new int[]{250, 250, 250, 250}, 4, 0), -84215046);
+    assertEquals(MyDecimal.readWord(new int[]{50, 50, 50, 50}, 4, 0), 842150450);
+  }
+
+  @Test
   public void toBinToBinFromBinTest() throws Exception {
-    List<MyDecimalTestStruct> test = new ArrayList<>();
-    test.add(new MyDecimalTestStruct("-10.55", "-10.55", 4, 2));
-    test.add(new MyDecimalTestStruct("12345", "12345", 5, 0));
-    test.add(new MyDecimalTestStruct("-12345", "-12345", 5, 0));
-    test.add(new MyDecimalTestStruct("0000000.001", "0.001", 3, 3));
-    test.add(new MyDecimalTestStruct("0.00012345000098765", "0.00012345000098765", 17, 17));
-    test.add(new MyDecimalTestStruct("-0.00012345000098765", "-0.00012345000098765", 17, 17));
-    test.forEach(
-        (a) -> {
-          MyDecimal dec = new MyDecimal();
-          dec.fromString(a.in);
-          assertEquals(a.out, dec.toString());
-          int[] bin = dec.toBin(dec.precision(), dec.frac());
-          dec.clear();
-          dec.fromBin(a.precision, a.frac, bin);
-          assertEquals(a.precision, dec.precision());
-          assertEquals(a.frac, dec.frac());
-          assertEquals(a.out, dec.toString());
-        });
+    List<MyDecimalTestStruct> tests = new ArrayList<>();
+    tests.add(new MyDecimalTestStruct("12345000098765", "12345000098765", 14, 0));
+    tests.add(new MyDecimalTestStruct("-10.55", "-10.55", 4, 2));
+    tests.add(new MyDecimalTestStruct("12345", "12345", 5, 0));
+    tests.add(new MyDecimalTestStruct("-12345", "-12345", 5, 0));
+    tests.add(new MyDecimalTestStruct("0000000.001", "0.001", 3, 3));
+    tests.add(new MyDecimalTestStruct("0.00012345000098765", "0.00012345000098765", 17, 17));
+    tests.add(new MyDecimalTestStruct("-0.00012345000098765", "-0.00012345000098765", 17, 17));
+    for (MyDecimalTestStruct a : tests) {
+      MyDecimal dec = new MyDecimal();
+      dec.fromString(a.in);
+      assertEquals(a.out, dec.toString());
+      int[] bin = dec.toBin(dec.precision(), dec.frac());
+      dec.clear();
+      dec.fromBin(a.precision, a.frac, bin);
+      assertEquals(a.precision, dec.precision());
+      assertEquals(a.frac, dec.frac());
+      assertEquals(a.out, dec.toString());
+    }
+  }
+
+  @Test
+  public void fromBinTest() {
+    MyDecimal dec = new MyDecimal();
+    int[] bin = new int[] {
+        128, 0, 0, 0, 0,
+        16, 244, 71, 6, 159,
+        107, 199, 6, 159, 107,
+        199, 6, 159, 107, 199,
+        6, 159, 107, 199, 6, 159,
+        107, 199, 0, 111
+    };
+    dec.fromBin(65, 30, bin);
+    assertEquals("1111111111111111111111111.111111111111111111111111111111", dec.toString());
   }
 
   @Test
