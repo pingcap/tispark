@@ -28,6 +28,10 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   protected var tidbStmt: Statement = _
 
+  private val defaultTestDatabases: Seq[String] = Seq("tispark_test")
+
+  protected var tableNames: Seq[String] = _
+
   protected def querySpark(query: String): List[List[Any]] = {
     val df = sql(query)
     val schema = df.schema.fields
@@ -77,7 +81,32 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       .load()
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
-  protected def loadTestData(testTables: TestTables = defaultTestTables): Unit = {
+  protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
+    try {
+      tableNames = Seq.empty[String]
+      for (dbName <- databases) {
+        tidbConn.setCatalog(dbName)
+        ti.tidbMapDatabase(dbName)
+        val tableDF = spark.read
+          .format("jdbc")
+          .option(JDBCOptions.JDBC_URL, jdbcUrl)
+          .option(JDBCOptions.JDBC_TABLE_NAME, "information_schema.tables")
+          .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
+          .load()
+          .filter(s"table_schema = '$dbName'")
+          .select("TABLE_NAME")
+        val tables = tableDF.collect().map((row: Row) => row.get(0).toString)
+        tables.foreach(createOrReplaceTempView(dbName, _))
+        tableNames ++= tables
+      }
+      logger.info("reload test data complete")
+    } catch {
+      case e: Exception => logger.warn("reload test data failed", e)
+    } finally {
+      tableNames = tableNames.sorted.reverse
+    }
+
+  protected def loadTestData(testTables: TestTables): Unit = {
     val dbName = testTables.dbName
     tidbConn.setCatalog(dbName)
     ti.tidbMapDatabase(dbName)
@@ -100,9 +129,6 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   }
 
   protected case class TestTables(dbName: String, tables: String*)
-
-  private val defaultTestTables: TestTables =
-    TestTables(dbName = "tispark_test", "full_data_type_table", "full_data_type_table_idx")
 
   protected def refreshConnections(testTables: TestTables): Unit = {
     super.refreshConnections()
@@ -129,12 +155,13 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   private def replaceJDBCTableName(qSpark: String, skipJDBC: Boolean): String = {
     var qJDBC: String = null
     if (!skipJDBC) {
-      if (qSpark.contains("full_data_type_table_idx")) {
-        qJDBC = qSpark.replace("full_data_type_table_idx", "full_data_type_table_idx_j")
-      } else if (qSpark.contains("full_data_type_table")) {
-        qJDBC = qSpark.replace("full_data_type_table", "full_data_type_table_j")
-      } else {
-        qJDBC = qSpark
+      qJDBC = qSpark
+      for (tableName <- tableNames) {
+        // tableNames is guaranteed to be in reverse order, so Seq[t, t2, lt]
+        // will never be possible, and the following operation holds correct.
+        // e.g., for input Seq[t2, t, lt]
+        // e.g., select * from t, t2, lt -> select * from t_j, t2_j, lt_j
+        qJDBC = qJDBC.replaceAll(" " + tableName, " " + tableName + "_j")
       }
     }
     qJDBC
