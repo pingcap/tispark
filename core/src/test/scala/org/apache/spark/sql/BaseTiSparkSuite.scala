@@ -155,13 +155,13 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   private def replaceJDBCTableName(qSpark: String, skipJDBC: Boolean): String = {
     var qJDBC: String = null
     if (!skipJDBC) {
-      qJDBC = qSpark
+      qJDBC = qSpark + " "
       for (tableName <- tableNames) {
         // tableNames is guaranteed to be in reverse order, so Seq[t, t2, lt]
         // will never be possible, and the following operation holds correct.
         // e.g., for input Seq[t2, t, lt]
         // e.g., select * from t, t2, lt -> select * from t_j, t2_j, lt_j
-        qJDBC = qJDBC.replaceAll(" " + tableName, " " + tableName + "_j")
+        qJDBC = qJDBC.replaceAll(" " + tableName + "[ ,]", " " + tableName + "_j ")
       }
     }
     qJDBC
