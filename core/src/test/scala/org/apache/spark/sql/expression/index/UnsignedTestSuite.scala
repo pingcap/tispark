@@ -71,7 +71,7 @@ class UnsignedTestSuite extends BaseTiSparkSuite {
         List(3, 5, 7),
         List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
       ),
-      List(List.empty),
+      List.empty,
       List(
         List(0, unsignedLongMaxValue, LongMinValue),
         List(1, 1, 1),
@@ -84,7 +84,7 @@ class UnsignedTestSuite extends BaseTiSparkSuite {
         List(2, 3, 4),
         List(3, 5, 7)
       ),
-      List(List.empty),
+      List.empty,
       List(
         List(0, unsignedLongMaxValue, LongMinValue),
         List(1, 1, 1),
@@ -99,14 +99,14 @@ class UnsignedTestSuite extends BaseTiSparkSuite {
         List(3, 5, 7),
         List(unsignedLongMaxValue, unsignedLongMaxValue, LongMaxValue)
       ),
-      List(List.empty),
-      List(List.empty),
+      List.empty,
+      List.empty,
       List(List(unsignedLongMaxValue), List(1), List(3), List(5), List(unsignedLongMaxValue)),
       List(List(1), List(3), List(5)),
-      List(List.empty),
+      List.empty,
       List(List(unsignedLongMaxValue), List(1), List(3), List(5), List(unsignedLongMaxValue)),
       List(List(unsignedLongMaxValue), List(1), List(3), List(5), List(unsignedLongMaxValue)),
-      List(List.empty),
+      List.empty,
       List(List(1), List(2), List(3)),
       List(List(0), List(1), List(2), List(3), List(unsignedLongMaxValue))
     )
