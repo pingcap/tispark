@@ -30,23 +30,23 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("ANALYZE TABLE `prefix`")
     refreshConnections()
     // add explain to show if we have actually used prefix index in plan
-    explainAndTest("select a, b from prefix where b < \"bbc\"")
-    explainAndTest("select a, b from prefix where a = 1 and b = \"bbb\"")
-    explainAndTest("select b from prefix where b = \"bbc\"")
-    explainAndTest("select b from prefix where b != \"bbc\"")
-    explainAndTest("select b from prefix where b >= \"bbc\" and b < \"bbd\"")
+    explainAndRunTest("select a, b from prefix where b < \"bbc\"")
+    explainAndRunTest("select a, b from prefix where a = 1 and b = \"bbb\"")
+    explainAndRunTest("select b from prefix where b = \"bbc\"")
+    explainAndRunTest("select b from prefix where b != \"bbc\"")
+    explainAndRunTest("select b from prefix where b >= \"bbc\" and b < \"bbd\"")
     // FIXME: following test results in INDEX range [bb, bb] and TABLE range (-INF, bbc), while the table range should have been [bb, bb]
     // FYI, the predicate is [[b] LESS_THAN "bbc"], Not(IsNull([b])), [[b] EQUAL "bb"]
-    explainAndTest("select c, b from prefix where b = \"bb\" and b < \"bbc\"")
-    explainAndTest("select c, b from prefix where b > \"ÿ\" and b < \"ÿÿc\"")
+    explainAndRunTest("select c, b from prefix where b = \"bb\" and b < \"bbc\"")
+    explainAndRunTest("select c, b from prefix where b > \"ÿ\" and b < \"ÿÿc\"")
     // add LIKE tests for prefix index
-    explainAndTest("select a, b from prefix where b LIKE 'b%'")
-    explainAndTest("select a, b from prefix where b LIKE 'ab%'")
-    explainAndTest("select a, b from prefix where b LIKE 'ÿÿ%'")
-    explainAndTest("select a, b from prefix where b LIKE 'b%b'")
-    explainAndTest("select a, b from prefix where b LIKE 'ÿ%'")
-    explainAndTest("select a, b from prefix where b LIKE '%b'")
-    explainAndTest("select a, b from prefix where b LIKE '%'")
+    explainAndRunTest("select a, b from prefix where b LIKE 'b%'")
+    explainAndRunTest("select a, b from prefix where b LIKE 'ab%'")
+    explainAndRunTest("select a, b from prefix where b LIKE 'ÿÿ%'")
+    explainAndRunTest("select a, b from prefix where b LIKE 'b%b'")
+    explainAndRunTest("select a, b from prefix where b LIKE 'ÿ%'")
+    explainAndRunTest("select a, b from prefix where b LIKE '%b'")
+    explainAndRunTest("select a, b from prefix where b LIKE '%'")
   }
 
   // https://github.com/pingcap/tispark/issues/397
