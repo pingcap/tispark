@@ -69,6 +69,7 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     refreshConnections()
 
     spark.sql("select * from t1").show
+    println(tidbStmt.executeQuery("select * from t1"))
     spark.sql("select * from t1 where name = '借款策略集_网页'").explain
     spark.sql("select * from t1 where name = '借款策略集_网页'").show
     spark.sql("select * from t1 where name < '借款策略集_网页'").show

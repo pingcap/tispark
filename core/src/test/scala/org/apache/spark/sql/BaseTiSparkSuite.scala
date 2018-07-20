@@ -288,6 +288,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     if (r1 == null) {
       try {
         r1 = querySpark(qSpark)
+        println(r1)
       } catch {
         case e: Throwable => fail(e)
       }
@@ -305,6 +306,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     if (!skipJDBC && r2 == null) {
       try {
         r2 = querySpark(qJDBC)
+        println(r2)
       } catch {
         case e: Throwable =>
           logger.warn(s"Spark with JDBC failed when executing:$qJDBC", e) // JDBC failed
@@ -315,6 +317,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       if (!skipTiDB && r3 == null) {
         try {
           r3 = queryTiDB(qSpark)
+          println(r3)
         } catch {
           case e: Throwable => logger.warn(s"TiDB failed when executing:$qSpark", e) // TiDB failed
         }
