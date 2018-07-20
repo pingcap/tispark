@@ -63,8 +63,7 @@ public class MyDecimal {
   public int precision() {
     int frac = this.digitsFrac;
     int digitsInt =
-        this.removeLeadingZeros()[
-            1]; /*this function return an array and the second element is digitsInt*/
+        this.removeLeadingZeros()[1]; /*this function return an array and the second element is digitsInt*/
     int precision = digitsInt + frac;
     // if no precision, it is just 0.
     if (precision == 0) {
@@ -321,7 +320,7 @@ public class MyDecimal {
     // [-, 1, 2, 3]
     // [+, 1, 2, 3]
     // for +/-, we need skip them and record sign information into negative field.
-    switch (str[0]) {
+    switch (str[startIdx]) {
       case '-':
         this.negative = true;
         startIdx++;
@@ -336,8 +335,8 @@ public class MyDecimal {
     }
     // we initialize strIdx in case of sign notation, here we need substract startIdx from strIdx casue strIdx is used for counting the number of digits.
     int digitsInt = strIdx - startIdx;
-    int digitsFrac = 0;
-    int endIdx = 0;
+    int digitsFrac;
+    int endIdx;
     if (strIdx < str.length && str[strIdx] == '.') {
       endIdx = strIdx + 1;
       // detect where is the end index of this char array.
@@ -364,13 +363,12 @@ public class MyDecimal {
         wordsInt = wordBufLen;
         wordsFrac = 0;
         overflow = true;
+      } else {
+        wordsFrac = wordBufLen - wordsInt;
+        truncated = true;
       }
-      // wordsIntTo = wordsInt;
-      wordsFrac = wordBufLen - wordsInt;
-      truncated = true;
+
     }
-    // wordsIntTo = wordsInt;
-    // wordsFracTo = wordsFrac;
 
     if (overflow || truncated) {
       digitsFrac = wordsFrac * digitsPerWord;
@@ -701,7 +699,6 @@ public class MyDecimal {
     int originFracSize = fracSize;
     int[] bin = new int[intSize + fracSize];
     int binIdx = 0;
-    //TODO, overflow and truncated later
     int[] res = this.removeLeadingZeros();
     int wordIdxFrom = res[0];
     int digitsIntFrom = res[1];
