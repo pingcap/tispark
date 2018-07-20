@@ -52,7 +52,7 @@ class ComprehensiveSuite extends BaseTiSparkSuite {
   )
 
   allCases foreach { query =>
-    test(query) {
+    ignore(query) {
       runTest(query)
     }
   }

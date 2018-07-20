@@ -39,13 +39,13 @@ class LikeTestSuite extends BaseTiSparkSuite {
   )
 
   tableScanCases foreach { query =>
-    test(query) {
+    ignore(query) {
       explainAndRunTest(query)
     }
   }
 
   indexScanCases foreach { query =>
-    test(query) {
+    ignore(query) {
       explainAndRunTest(query)
     }
   }

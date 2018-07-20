@@ -36,7 +36,7 @@ class OtherTestSuite extends BaseTiSparkSuite {
 
   cases foreach { query =>
     {
-      test(query) {
+      ignore(query) {
         runTest(query)
       }
     }

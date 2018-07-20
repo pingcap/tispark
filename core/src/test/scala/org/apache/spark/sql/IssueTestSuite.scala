@@ -20,7 +20,7 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
-  test("Test count") {
+  ignore("Test count") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute(
       """CREATE TABLE `t` (
@@ -41,7 +41,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge("select count(1) from (select * from t limit 10) e", checkLimit = false)
   }
 
-  test("Test sql with limit without order by") {
+  ignore("Test sql with limit without order by") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute(
       """CREATE TABLE `t` (
@@ -63,7 +63,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     })
   }
 
-  test("Test index task downgrade") {
+  ignore("Test index task downgrade") {
     val sqlConf = ti.session.sqlContext.conf
     val prevRegionIndexScanDowngradeThreshold =
       sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000")
@@ -76,7 +76,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     )
   }
 
-  test("Test index task batch size") {
+  ignore("Test index task batch size") {
     val tiConf = ti.tiConf
     val prevIndexScanBatchSize = tiConf.getIndexScanBatchSize
     tiConf.setIndexScanBatchSize(5)
@@ -85,7 +85,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tiConf.setIndexScanBatchSize(prevIndexScanBatchSize)
   }
 
-  test("TISPARK-21 count(1) when single read results in DAGRequestException") {
+  ignore("TISPARK-21 count(1) when single read results in DAGRequestException") {
     tidbStmt.execute("DROP TABLE IF EXISTS `single_read`")
     tidbStmt.execute(
       """CREATE TABLE `single_read` (
@@ -112,7 +112,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge("select c3, c4 from single_read")
   }
 
-  test("TISPARK-16 fix excessive dag column") {
+  ignore("TISPARK-16 fix excessive dag column") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
     tidbStmt.execute(
@@ -151,7 +151,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
   }
 
   // https://github.com/pingcap/tispark/issues/262
-  test("NPE when decoding datetime,date,timestamp") {
+  ignore("NPE when decoding datetime,date,timestamp") {
     tidbStmt.execute("DROP TABLE IF EXISTS `tmp_debug`")
     tidbStmt.execute(
       "CREATE TABLE `tmp_debug` (\n  `tp_datetime` datetime DEFAULT NULL, `tp_date` date DEFAULT NULL, `tp_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
@@ -164,7 +164,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
   }
 
   // https://github.com/pingcap/tispark/issues/255
-  test("Group by with first") {
+  ignore("Group by with first") {
     ti.tidbMapDatabase("tpch_test")
     val q1 =
       """
@@ -192,7 +192,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
   }
 
   // https://github.com/pingcap/tispark/issues/162
-  test("select count(something + constant) reveals NPE on master branch") {
+  ignore("select count(something + constant) reveals NPE on master branch") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(c1 int not null)")
     tidbStmt.execute("insert into t values(1)")

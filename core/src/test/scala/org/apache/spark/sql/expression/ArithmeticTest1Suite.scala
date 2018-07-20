@@ -210,7 +210,7 @@ class ArithmeticTest1Suite extends BaseTiSparkSuite {
 
   allCases foreach { query =>
     {
-      test(query) {
+      ignore(query) {
         runTest(query)
       }
     }
