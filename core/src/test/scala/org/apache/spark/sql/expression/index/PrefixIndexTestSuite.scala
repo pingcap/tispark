@@ -68,10 +68,11 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into t1 values('借款策略集_网页')")
     refreshConnections()
 
-    runTest("select * from t1 where name = '借款策略集_网页'", skipJDBC = true)
+    spark.sql("select * from t1").show
     spark.sql("select * from t1 where name = '借款策略集_网页'").explain
     spark.sql("select * from t1 where name = '借款策略集_网页'").show
     spark.sql("select * from t1 where name < '借款策略集_网页'").show
+    runTest("select * from t1 where name = '借款策略集_网页'", skipJDBC = true)
   }
 
   override def afterAll(): Unit =
