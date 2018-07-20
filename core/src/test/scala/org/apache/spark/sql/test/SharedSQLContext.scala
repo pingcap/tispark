@@ -165,7 +165,7 @@ object SharedSQLContext extends Logging {
       val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toBoolean
 
       jdbcUrl =
-        s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&useUnicode=true&characterEncoding=UTF8&zeroDateTimeBehavior=convertToNull"
+        s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull"
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, "")
       _statement = _tidbConnection.createStatement()

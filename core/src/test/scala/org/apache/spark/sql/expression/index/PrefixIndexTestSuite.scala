@@ -27,6 +27,7 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute(
       "INSERT INTO `prefix` VALUES(0, \"b\", 2), (1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7), (7, \"ÿÿ\", 8), (8, \"ÿÿ0\", 9), (9, \"ÿÿÿ\", 10)"
     )
+    println("INSERT INTO `prefix` VALUES(0, \"b\", 2), (1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7), (7, \"ÿÿ\", 8), (8, \"ÿÿ0\", 9), (9, \"ÿÿÿ\", 10)")
     tidbStmt.execute("ANALYZE TABLE `prefix`")
     refreshConnections()
     // add explain to show if we have actually used prefix index in plan
@@ -68,6 +69,7 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into t1 values('借款策略集_网页')")
     refreshConnections()
 
+    println("insert into t1 values('借款策略集_网页')")
     spark.sql("select * from t1").show
     println(tidbStmt.executeQuery("select * from t1"))
     spark.sql("select * from t1 where name = '借款策略集_网页'").explain
