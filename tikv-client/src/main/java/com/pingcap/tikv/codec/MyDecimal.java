@@ -59,6 +59,7 @@ public class MyDecimal {
   /*
    * Returns total precision of this decimal. Basically, it is sum of digitsInt and digitsFrac. But there
    * are some special cases need to be token care of such as 000.001.
+   * Precision reflects the actual effective precision without leading zero
    */
   public int precision() {
     int frac = this.digitsFrac;
@@ -73,7 +74,10 @@ public class MyDecimal {
     return precision;
   }
 
-  /** Returns fraction digits that counts how many digits after ".". */
+  /**
+   * Returns fraction digits that counts how many digits after ".".
+   * frac() reflects the actual effective fraction without trailing zero
+   */
   public int frac() {
     return digitsFrac;
   }
@@ -264,7 +268,7 @@ public class MyDecimal {
   /**
    * Reads a word from a array at given size.
    *
-   * @param b b is source data.
+   * @param b b is source data of unsigned byte as int[]
    * @param size is word size which can be used in switch statement.
    * @param start start indicates the where start to read.
    */
@@ -281,7 +285,7 @@ public class MyDecimal {
       case 3:
         int sign = b[start] & 128;
         if (sign > 0) {
-          x = 255 << 24 | (b[start] << 16) | (b[start + 1] << 8) | (b[start + 2]);
+          x = 0xFF << 24 | (b[start] << 16) | (b[start + 1] << 8) | (b[start + 2]);
         } else {
           x = b[start] << 16 | (b[start + 1] << 8) | b[start + 2];
         }
@@ -291,6 +295,12 @@ public class MyDecimal {
         break;
     }
     return x;
+  }
+
+  public static void main(String args[]) {
+    int[] b = new int[]{250,250,250};
+    int x = 255 << 24 | (b[0] << 16) | (b[0 + 1] << 8) | (b[0 + 2]);
+    System.out.println(x);
   }
 
   /**

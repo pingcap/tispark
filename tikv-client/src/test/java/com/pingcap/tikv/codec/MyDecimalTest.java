@@ -66,6 +66,8 @@ public class MyDecimalTest {
   @Test
   public void toBinToBinFromBinTest() throws Exception {
     List<MyDecimalTestStruct> tests = new ArrayList<>();
+    String decValStr = "11111111111111111111111111111111111.111111111111111111111111111111";
+    tests.add(new MyDecimalTestStruct(decValStr, decValStr, 65, 30));
     tests.add(new MyDecimalTestStruct("12345000098765", "12345000098765", 14, 0));
     tests.add(new MyDecimalTestStruct("-10.55", "-10.55", 4, 2));
     tests.add(new MyDecimalTestStruct("12345", "12345", 5, 0));
@@ -84,21 +86,6 @@ public class MyDecimalTest {
       assertEquals(a.frac, dec.frac());
       assertEquals(a.out, dec.toString());
     }
-  }
-
-  @Test
-  public void fromBinTest() {
-    MyDecimal dec = new MyDecimal();
-    int[] bin = new int[] {
-        128, 0, 0, 0, 0,
-        16, 244, 71, 6, 159,
-        107, 199, 6, 159, 107,
-        199, 6, 159, 107, 199,
-        6, 159, 107, 199, 6, 159,
-        107, 199, 0, 111
-    };
-    dec.fromBin(65, 30, bin);
-    assertEquals("1111111111111111111111111.111111111111111111111111111111", dec.toString());
   }
 
   @Test
