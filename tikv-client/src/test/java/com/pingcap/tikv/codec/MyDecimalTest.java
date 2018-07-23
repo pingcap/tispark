@@ -27,25 +27,28 @@ import org.junit.Test;
 public class MyDecimalTest {
   @Test
   public void fromStringTest() throws Exception {
-    List<MyDecimalTestStruct> test = new ArrayList<>();
-    test.add(new MyDecimalTestStruct("12345", "12345", 5, 0));
-    test.add(new MyDecimalTestStruct("12345.", "12345", 5, 0));
-    test.add(new MyDecimalTestStruct("123.45", "123.45", 5, 2));
-    test.add(new MyDecimalTestStruct("-123.45", "-123.45", 5, 2));
-    test.add(new MyDecimalTestStruct(".00012345000098765", "0.00012345000098765", 17, 17));
-    test.add(new MyDecimalTestStruct(".12345000098765", "0.12345000098765", 14, 14));
-    test.add(
+    List<MyDecimalTestStruct> tests = new ArrayList<>();
+    tests.add(new MyDecimalTestStruct("1111111111111111111111111.111111111111111111111111111111",
+        "1111111111111111111111111.111111111111111111111111111111", 65, 30));
+    tests.add(new MyDecimalTestStruct("12345", "12345", 5, 0));
+    tests.add(new MyDecimalTestStruct("12345.", "12345", 5, 0));
+    tests.add(new MyDecimalTestStruct("123.45", "123.45", 5, 2));
+    tests.add(new MyDecimalTestStruct("-123.45", "-123.45", 5, 2));
+    tests.add(new MyDecimalTestStruct(".00012345000098765", "0.00012345000098765", 17, 17));
+    tests.add(new MyDecimalTestStruct(".12345000098765", "0.12345000098765", 14, 14));
+    tests.add(
         new MyDecimalTestStruct("-.000000012345000098765", "-0.000000012345000098765", 21, 21));
-    test.add(new MyDecimalTestStruct("0000000.001", "0.001", 3, 3));
-    test.add(new MyDecimalTestStruct("1234500009876.5", "1234500009876.5", 14, 1));
-    test.forEach(
-        (a) -> {
-          MyDecimal dec = new MyDecimal();
-          dec.fromString(a.in);
-          assertEquals(a.precision, dec.precision());
-          assertEquals(a.frac, dec.frac());
-          assertEquals(a.out, dec.toString());
-        });
+    tests.add(
+        new MyDecimalTestStruct("-.000000012345000098765", "-0.000000012345000098765", 2, 21));
+     tests.add(
+        new MyDecimalTestStruct("-.000000012345000098765", "-0.000000012345000098765", 21, 2));
+    tests.add(new MyDecimalTestStruct("0000000.001", "0.001", 3, 3));
+    tests.add(new MyDecimalTestStruct("1234500009876.5", "1234500009876.5", 14, 1));
+    for(MyDecimalTestStruct t : tests) {
+           MyDecimal dec = new MyDecimal();
+          dec.fromString(t.in);
+          assertEquals(t.out, dec.toString());
+    }
   }
 
   @Test
@@ -64,8 +67,10 @@ public class MyDecimalTest {
   }
 
   @Test
-  public void toBinToBinFromBinTest() throws Exception {
+  public void toBinFromBinTest() throws Exception {
     List<MyDecimalTestStruct> tests = new ArrayList<>();
+    tests.add(new MyDecimalTestStruct("1111111111111111111111111.111111111111111111111111111111",
+        "1111111111111111111111111.111111111111111111111111111111", 65, 30));
     tests.add(new MyDecimalTestStruct("12345000098765", "12345000098765", 14, 0));
     tests.add(new MyDecimalTestStruct("-10.55", "-10.55", 4, 2));
     tests.add(new MyDecimalTestStruct("12345", "12345", 5, 0));
@@ -77,11 +82,9 @@ public class MyDecimalTest {
       MyDecimal dec = new MyDecimal();
       dec.fromString(a.in);
       assertEquals(a.out, dec.toString());
-      int[] bin = dec.toBin(dec.precision(), dec.frac());
+      int[] bin = dec.toBin(a.precision, a.frac);
       dec.clear();
       dec.fromBin(a.precision, a.frac, bin);
-      assertEquals(a.precision, dec.precision());
-      assertEquals(a.frac, dec.frac());
       assertEquals(a.out, dec.toString());
     }
   }
@@ -110,7 +113,6 @@ public class MyDecimalTest {
         new int[] {
           0x7E, 0xF2, 0x04, 0xC7, 0x2D, 0xFB, 0x2D,
         };
-    // something wrong with toBin and fromBin
     assertArrayEquals(expected, data);
   }
 
