@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv.codec;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
@@ -58,12 +59,12 @@ public class MyDecimal {
   /*
    * Returns total precision of this decimal. Basically, it is sum of digitsInt and digitsFrac. But there
    * are some special cases need to be token care of such as 000.001.
+   * Precision reflects the actual effective precision without leading zero
    */
   public int precision() {
     int frac = this.digitsFrac;
     int digitsInt =
-        this.removeLeadingZeros()[
-            1]; /*this function return an array and the second element is digitsInt*/
+        this.removeLeadingZeros()[1]; /*this function return an array and the second element is digitsInt*/
     int precision = digitsInt + frac;
     // if no precision, it is just 0.
     if (precision == 0) {
@@ -72,7 +73,10 @@ public class MyDecimal {
     return precision;
   }
 
-  /** Returns fraction digits that counts how many digits after ".". */
+  /**
+   * Returns fraction digits that counts how many digits after ".".
+   * frac() reflects the actual effective fraction without trailing zero
+   */
   public int frac() {
     return digitsFrac;
   }
@@ -92,8 +96,7 @@ public class MyDecimal {
    *
    * @param precision precision specifies total digits that this decimal will be..
    * @param frac frac specifies how many fraction digits
-   * @param bin bin is binary string which represents a decimal value. TODO: (zhexuany) overflow and
-   *     truncated exception need to be done later.
+   * @param bin bin is binary string which represents a decimal value.
    */
   public int fromBin(int precision, int frac, int[] bin) {
     if (bin.length == 0) {
@@ -134,13 +137,13 @@ public class MyDecimal {
         wordsIntTo = wordBufLen;
         wordsFracTo = 0;
         overflow = true;
+      } else {
+        wordsIntTo = wordsInt;
+        wordsFracTo = wordBufLen - wordsInt;
+        truncated = true;
       }
-      wordsIntTo = wordsInt;
-      wordsFracTo = wordBufLen - wordsInt;
-      truncated = true;
     }
-    wordsIntTo = wordsInt;
-    wordsFracTo = wordsFrac;
+
     if (overflow || truncated) {
       if (wordsIntTo < oldWordsIntTo) {
         binIdx += dig2bytes[leadingDigits] + (wordsInt - wordsIntTo) * wordSize;
@@ -151,8 +154,8 @@ public class MyDecimal {
     }
 
     this.negative = mask != 0;
-    this.digitsInt = wordsInt * digitsPerWord + leadingDigits;
-    this.digitsFrac = wordsFrac * digitsPerWord + trailingDigits;
+    this.digitsInt = (byte)(wordsInt * digitsPerWord + leadingDigits);
+    this.digitsFrac = (byte)(wordsFrac * digitsPerWord + trailingDigits);
 
     int wordIdx = 0;
     if (leadingDigits > 0) {
@@ -264,25 +267,26 @@ public class MyDecimal {
   /**
    * Reads a word from a array at given size.
    *
-   * @param b b is source data.
+   * @param b b is source data of unsigned byte as int[]
    * @param size is word size which can be used in switch statement.
    * @param start start indicates the where start to read.
    */
-  private int readWord(int[] b, int size, int start) {
+  @VisibleForTesting
+  public static int readWord(int[] b, int size, int start) {
     int x = 0;
     switch (size) {
       case 1:
-        x = b[start];
+        x = (byte)b[start];
         break;
       case 2:
-        x = (b[start] << 8) + b[start + 1];
+        x = (((byte)b[start]) << 8) + (b[start + 1] & 0xFF);
         break;
       case 3:
         int sign = b[start] & 128;
         if (sign > 0) {
-          x = 255 << 24 | (b[start] & 0xFF) << 16 | (b[start + 1] & 0xFF) << 8 | (b[start + 2]);
+          x = 0xFF << 24 | (b[start] << 16) | (b[start + 1] << 8) | (b[start + 2]);
         } else {
-          x = b[start] << 16 | b[start + 1] << 8 | b[start + 2];
+          x = b[start] << 16 | (b[start + 1] << 8) | b[start + 2];
         }
         break;
       case 4:
@@ -290,6 +294,12 @@ public class MyDecimal {
         break;
     }
     return x;
+  }
+
+  public static void main(String args[]) {
+    int[] b = new int[]{250,250,250};
+    int x = 255 << 24 | (b[0] << 16) | (b[0 + 1] << 8) | (b[0 + 2]);
+    System.out.println(x);
   }
 
   /**
@@ -320,7 +330,7 @@ public class MyDecimal {
     // [-, 1, 2, 3]
     // [+, 1, 2, 3]
     // for +/-, we need skip them and record sign information into negative field.
-    switch (str[0]) {
+    switch (str[startIdx]) {
       case '-':
         this.negative = true;
         startIdx++;
@@ -335,8 +345,8 @@ public class MyDecimal {
     }
     // we initialize strIdx in case of sign notation, here we need substract startIdx from strIdx casue strIdx is used for counting the number of digits.
     int digitsInt = strIdx - startIdx;
-    int digitsFrac = 0;
-    int endIdx = 0;
+    int digitsFrac;
+    int endIdx;
     if (strIdx < str.length && str[strIdx] == '.') {
       endIdx = strIdx + 1;
       // detect where is the end index of this char array.
@@ -363,13 +373,12 @@ public class MyDecimal {
         wordsInt = wordBufLen;
         wordsFrac = 0;
         overflow = true;
+      } else {
+        wordsFrac = wordBufLen - wordsInt;
+        truncated = true;
       }
-      // wordsIntTo = wordsInt;
-      wordsFrac = wordBufLen - wordsInt;
-      truncated = true;
+
     }
-    // wordsIntTo = wordsInt;
-    // wordsFracTo = wordsFrac;
 
     if (overflow || truncated) {
       digitsFrac = wordsFrac * digitsPerWord;
@@ -700,7 +709,6 @@ public class MyDecimal {
     int originFracSize = fracSize;
     int[] bin = new int[intSize + fracSize];
     int binIdx = 0;
-    //TODO, overflow and truncated later
     int[] res = this.removeLeadingZeros();
     int wordIdxFrom = res[0];
     int digitsIntFrom = res[1];
