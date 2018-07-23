@@ -296,12 +296,6 @@ public class MyDecimal {
     return x;
   }
 
-  public static void main(String args[]) {
-    int[] b = new int[]{250,250,250};
-    int x = 255 << 24 | (b[0] << 16) | (b[0 + 1] << 8) | (b[0 + 2]);
-    System.out.println(x);
-  }
-
   /**
    * parser a decimal value from a string.
    *
