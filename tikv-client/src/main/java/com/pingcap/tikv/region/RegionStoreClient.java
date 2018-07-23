@@ -388,5 +388,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     ManagedChannel channel = getSession().getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
+    if (region.getLeader().getStoreId() != store.getId()) {
+      logger.info("store_not_match may occur? " + region + store.getId());
+    }
   }
 }
