@@ -559,8 +559,8 @@ public class MyDecimal {
     return digitsInt + digitsFrac + 3;
   }
 
-  public int toInt() {
-    int x = 0;
+  public long toInt() {
+    long x = 0;
     int wordIdx = 0;
     for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
       /*
@@ -569,32 +569,34 @@ public class MyDecimal {
         because |LONGLONG_MIN| > LONGLONG_MAX
         so we can convert -9223372036854775808 correctly
       */
-      x = x * wordBase - this.wordBuf[wordIdx];
+      long y = x;
+      x = x * wordBase - (long)this.wordBuf[wordIdx];
       wordIdx++;
-      //            if (y < Integer.MIN_VALUE/wordBase || x > y) {
-      /*
-        the decimal is bigger than any possible integer
-        return border integer depending on the sign
-      */
-      //                if (this.negative){
-      // TODO throw overflow exception
-      // return math.Integer.MIN_VALUE, ErrOverflow
-      //                }
-      // return math.MaxInt64, ErrOverflow
-      //            }
+      if (y < Long.MIN_VALUE/wordBase || x > y) {
+        	  /*
+			        the decimal is bigger than any possible integer
+			        return border integer depending on the sign
+			      */
+        	 if (this.negative) {
+        	   return Long.MIN_VALUE;
+           }
+           return Long.MAX_VALUE;
+      }
     }
+
     /* boundary case: 9223372036854775808 */
-    if (!this.negative && x == Integer.MIN_VALUE) {
-      //         return math.MaxInt64, ErrOverflow
+    if (!this.negative && x == Long.MIN_VALUE) {
+               return Long.MAX_VALUE;
     }
+
     if (!this.negative) {
       x = -x;
     }
     for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
-      //            if (this.wordBuf[wordIdx] != 0){
-      // return x, ErrTruncated
-      //            }
-      //            wordIdx++;
+                  if (this.wordBuf[wordIdx] != 0){
+                    return x;
+                  }
+                  wordIdx++;
     }
     return x;
   }
