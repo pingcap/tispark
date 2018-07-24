@@ -441,7 +441,7 @@ public class MyDecimal {
   }
 
   // parser a string to a int.
-  private int strToInt(String str) {
+  private int strToLong(String str) {
     str = str.trim();
     if (str.isEmpty()) {
       return 0;
@@ -467,11 +467,6 @@ public class MyDecimal {
       r = -r;
     }
     return r;
-  }
-
-  // TODO throw overflow or truncated
-  private int[] fixWordCntError(int wordsIntTo, int WordsFracTo) {
-    return null;
   }
 
   // Returns a decimal string.
@@ -559,7 +554,7 @@ public class MyDecimal {
     return digitsInt + digitsFrac + 3;
   }
 
-  public long toInt() {
+  public long toLong() {
     long x = 0;
     int wordIdx = 0;
     for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
