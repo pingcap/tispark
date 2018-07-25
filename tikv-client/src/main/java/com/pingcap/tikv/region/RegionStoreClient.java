@@ -381,15 +381,18 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
   @Override
   public void onStoreNotMatch() {
-    Pair<TiRegion, Store> regionStorePair =
-        regionManager.getRegionStorePairByRegionId(region.getId());
-    Store store = regionStorePair.second;
+//    Pair<TiRegion, Store> regionStorePair =
+//        regionManager.getRegionStorePairByRegionId(region.getId());
+//    Store store = regionStorePair.second;
+    long storeId = region.getLeader().getStoreId();
+    Store store = regionManager.getStoreById(storeId);
     String addressStr = store.getAddress();
     ManagedChannel channel = getSession().getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
     if (region.getLeader().getStoreId() != store.getId()) {
-      logger.info("store_not_match may occur? " + region + ", original store id = " + store.getId());
+      logger.info("store_not_match may occur? " + region + ", original store id = " + store.getId() + " address = " + addressStr);
     }
+//    region.switchPeer(store.getId());
   }
 }

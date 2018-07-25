@@ -27,6 +27,7 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Region;
+import org.apache.log4j.Logger;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -35,6 +36,7 @@ import java.util.Objects;
 import java.util.Set;
 
 public class TiRegion implements Serializable {
+  private static final Logger logger = Logger.getLogger(TiRegion.class);
   private final Region meta;
   private final Set<Long> unreachableStores;
   private Peer peer;
@@ -52,6 +54,7 @@ public class TiRegion implements Serializable {
     } else {
       this.peer = peer;
     }
+    logger.info("set " + this.peer);
     this.unreachableStores = new HashSet<>();
     this.isolationLevel = isolationLevel;
     this.commandPri = commandPri;
@@ -101,6 +104,7 @@ public class TiRegion implements Serializable {
     Kvrpcpb.Context.Builder builder = Kvrpcpb.Context.newBuilder();
     builder.setIsolationLevel(this.isolationLevel);
     builder.setPriority(this.commandPri);
+    logger.info("context = " + this.peer);
     builder.setRegionId(meta.getId()).setPeer(this.peer).setRegionEpoch(this.meta.getRegionEpoch());
     return builder.build();
   }
@@ -117,6 +121,7 @@ public class TiRegion implements Serializable {
     for (Peer p : peers) {
       if (p.getStoreId() == leaderStoreID) {
         this.peer = p;
+        logger.info("to " + p);
         return true;
       }
     }
