@@ -232,7 +232,6 @@ public class RegionManager {
   }
 
   public void invalidateStore(long storeId) {
-    logger.info("invalidate store #" + storeId);
     cache.invalidateStore(storeId);
   }
 
