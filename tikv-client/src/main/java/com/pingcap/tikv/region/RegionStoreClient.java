@@ -369,10 +369,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   @Override
-  public void onNotLeader(TiRegion newRegion, Store newStore) {
+  public void onNotLeader(Store newStore) {
     String addressStr = newStore.getAddress();
     ManagedChannel channel = getSession().getChannel(addressStr);
-    if (!newRegion.switchPeer(newStore.getId())) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(region + ", newRegion = " + regionManager.getRegionById(region.getId()) + ", new leader = " + newStore.getId());
+    }
+    if (!region.switchPeer(newStore.getId())) {
       throw new TiClientInternalException("Failed to switch leader");
     }
     blockingStub = TikvGrpc.newBlockingStub(channel);
@@ -380,19 +383,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   @Override
-  public void onStoreNotMatch() {
-//    Pair<TiRegion, Store> regionStorePair =
-//        regionManager.getRegionStorePairByRegionId(region.getId());
-//    Store store = regionStorePair.second;
-    long storeId = region.getLeader().getStoreId();
-    Store store = regionManager.getStoreById(storeId);
+  public void onStoreNotMatch(Store store) {
     String addressStr = store.getAddress();
     ManagedChannel channel = getSession().getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
-    if (region.getLeader().getStoreId() != store.getId()) {
-      logger.info("store_not_match may occur? " + region + ", original store id = " + store.getId() + " address = " + addressStr);
+    if (logger.isDebugEnabled() && region.getLeader().getStoreId() != store.getId()) {
+      logger.debug("store_not_match may occur? " + region + ", original store = " + store.getId() + " address = " + addressStr);
     }
-//    region.switchPeer(store.getId());
   }
 }

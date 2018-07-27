@@ -100,6 +100,17 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     }
   }
 
+  private void notifyStoreCacheInvalidate(long storeId) {
+    if (cacheInvalidateCallBack != null) {
+      cacheInvalidateCallBack.apply(new CacheInvalidateEvent(
+          0, storeId,
+          false, true,
+          CacheInvalidateEvent.CacheType.REGION_STORE));
+    } else {
+      logger.warn("Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
+    }
+  }
+
   // Referenced from TiDB
   // store/tikv/region_request.go - onRegionError
   @Override
@@ -132,8 +143,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
               newStoreId,
               CacheInvalidateEvent.CacheType.LEADER
           );
-          recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
-              this.regionManager.getStoreById(newStoreId));
+          recv.onNotLeader(this.regionManager.getStoreById(newStoreId));
 
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
@@ -145,12 +155,12 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
         return true;
       } else if (error.hasStoreNotMatch()) {
-        logger.warn(String.format("Store Not Match happened with region id %d, store id %d",
-            ctxRegion.getId(),
-            ctxRegion.getLeader().getStoreId()));
+        long storeId = ctxRegion.getLeader().getStoreId();
+        logger.warn(String.format("Store Not Match happened with region id %d, store id %d", ctxRegion.getId(), storeId));
 
-        this.regionManager.invalidateStore(ctxRegion.getLeader().getStoreId());
-        recv.onStoreNotMatch();
+        this.regionManager.invalidateStore(storeId);
+        recv.onStoreNotMatch(this.regionManager.getStoreById(storeId));
+        notifyStoreCacheInvalidate(storeId);
         return true;
       } else if (error.hasStaleEpoch()) {
         logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion));
