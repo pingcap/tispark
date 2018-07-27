@@ -27,7 +27,6 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Region;
-import org.apache.log4j.Logger;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -36,7 +35,6 @@ import java.util.Objects;
 import java.util.Set;
 
 public class TiRegion implements Serializable {
-  private static final Logger logger = Logger.getLogger(TiRegion.class);
   private final Region meta;
   private final Set<Long> unreachableStores;
   private Peer peer;

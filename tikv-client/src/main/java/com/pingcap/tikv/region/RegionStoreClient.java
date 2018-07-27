@@ -59,7 +59,6 @@ import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
 import java.util.Iterator;
