@@ -59,7 +59,6 @@ import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
 import java.util.Iterator;
@@ -369,10 +368,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   @Override
-  public void onNotLeader(TiRegion newRegion, Store newStore) {
+  public void onNotLeader(Store newStore) {
     String addressStr = newStore.getAddress();
     ManagedChannel channel = getSession().getChannel(addressStr);
-    if (!newRegion.switchPeer(newStore.getId())) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(region + ", newRegion = " + regionManager.getRegionById(region.getId()) + ", new leader = " + newStore.getId());
+    }
+    if (!region.switchPeer(newStore.getId())) {
       throw new TiClientInternalException("Failed to switch leader");
     }
     blockingStub = TikvGrpc.newBlockingStub(channel);
@@ -380,13 +382,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   @Override
-  public void onStoreNotMatch() {
-    Pair<TiRegion, Store> regionStorePair =
-        regionManager.getRegionStorePairByRegionId(region.getId());
-    Store store = regionStorePair.second;
+  public void onStoreNotMatch(Store store) {
     String addressStr = store.getAddress();
     ManagedChannel channel = getSession().getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
+    if (logger.isDebugEnabled() && region.getLeader().getStoreId() != store.getId()) {
+      logger.debug("store_not_match may occur? " + region + ", original store = " + store.getId() + " address = " + addressStr);
+    }
   }
 }
