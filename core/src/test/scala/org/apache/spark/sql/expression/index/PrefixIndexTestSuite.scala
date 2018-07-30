@@ -16,21 +16,17 @@
 package org.apache.spark.sql.expression.index
 
 import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.catalyst.util.resourceToString
 
 class PrefixIndexTestSuite extends BaseTiSparkSuite {
   // https://github.com/pingcap/tispark/issues/272
   test("Prefix index read does not work correctly") {
-    tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
     tidbStmt.execute(
-      "CREATE TABLE `prefix` (\n  `a` int(11) NOT NULL,\n  `b` varchar(55) DEFAULT NULL,\n  `c` int(11) DEFAULT NULL,\n  PRIMARY KEY (`a`),\n  KEY `prefix_index` (`b`(2)),\n KEY `prefix_complex` (`a`, `b`(2))\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
+      resourceToString(
+        s"prefix-index/PrefixTest.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
     )
-    tidbStmt.execute(
-      "INSERT INTO `prefix` VALUES(0, \"b\", 2), (1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7), (7, \"ÿÿ\", 8), (8, \"ÿÿ0\", 9), (9, \"ÿÿÿ\", 10)"
-    )
-    println(
-      "INSERT INTO `prefix` VALUES(0, \"b\", 2), (1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7), (7, \"ÿÿ\", 8), (8, \"ÿÿ0\", 9), (9, \"ÿÿÿ\", 10)"
-    )
-    tidbStmt.execute("ANALYZE TABLE `prefix`")
     refreshConnections()
     // add explain to show if we have actually used prefix index in plan
     explainAndRunTest("select a, b from prefix where b < \"bbc\"")
@@ -62,21 +58,15 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
 
   // https://github.com/pingcap/tispark/issues/397
   test("Prefix index implementation for utf8 string is incorrect") {
-    tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-    tidbStmt.execute("""CREATE TABLE `t1` (
-                       |  `name` varchar(12) DEFAULT NULL,
-                       |  KEY `pname` (`name`(12))
-                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-      """.stripMargin)
-    tidbStmt.execute("insert into t1 values('借款策略集_网页')")
+    tidbStmt.execute(
+      resourceToString(
+        s"prefix-index/UTF8Test.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
+    )
     refreshConnections()
 
-    println("insert into t1 values('借款策略集_网页')")
     spark.sql("select * from t1").show
-    println(tidbStmt.executeQuery("select * from t1"))
-    spark.sql("select * from t1 where name = '借款策略集_网页'").explain
-    spark.sql("select * from t1 where name = '借款策略集_网页'").show
-    spark.sql("select * from t1 where name < '借款策略集_网页'").show
     runTest("select * from t1 where name = '借款策略集_网页'", skipJDBC = true)
   }
 
@@ -84,6 +74,7 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     try {
       tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
       tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+      tidbStmt.execute("DROP DATABASE IF EXISTS `prefix_index`")
     } finally {
       super.afterAll()
     }
