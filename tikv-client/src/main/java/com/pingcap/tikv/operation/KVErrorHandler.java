@@ -100,6 +100,17 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     }
   }
 
+  private void notifyStoreCacheInvalidate(long storeId) {
+    if (cacheInvalidateCallBack != null) {
+      cacheInvalidateCallBack.apply(new CacheInvalidateEvent(
+          0, storeId,
+          false, true,
+          CacheInvalidateEvent.CacheType.REGION_STORE));
+    } else {
+      logger.warn("Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
+    }
+  }
+
   // Referenced from TiDB
   // store/tikv/region_request.go - onRegionError
   @Override
@@ -114,6 +125,10 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     Errorpb.Error error = getRegionError(resp);
     if (error != null) {
       if (error.hasNotLeader()) {
+        // this error is reported from raftstore:
+        // peer of current request is not leader, the following might be its causes:
+        // 1. cache is outdated, region has changed its leader, can be solved by re-fetching from PD
+        // 2. leader of current region is missing, need to wait and then fetch region info from PD
         long newStoreId = error.getNotLeader().getLeader().getStoreId();
 
         // update Leader here
@@ -132,8 +147,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
               newStoreId,
               CacheInvalidateEvent.CacheType.LEADER
           );
-          recv.onNotLeader(this.regionManager.getRegionById(ctxRegion.getId()),
-              this.regionManager.getStoreById(newStoreId));
+          recv.onNotLeader(this.regionManager.getStoreById(newStoreId));
 
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
@@ -145,30 +159,42 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
         return true;
       } else if (error.hasStoreNotMatch()) {
-        logger.warn(String.format("Store Not Match happened with region id %d, store id %d",
-            ctxRegion.getId(),
-            ctxRegion.getLeader().getStoreId()));
+        // this error is reported from raftstore:
+        // store_id requested at the moment is inconsistent with that expected
+        // Solution：re-fetch from PD
+        long storeId = ctxRegion.getLeader().getStoreId();
+        logger.warn(String.format("Store Not Match happened with region id %d, store id %d", ctxRegion.getId(), storeId));
 
-        invalidateRegionStoreCache(ctxRegion);
-        recv.onStoreNotMatch();
+        this.regionManager.invalidateStore(storeId);
+        recv.onStoreNotMatch(this.regionManager.getStoreById(storeId));
+        notifyStoreCacheInvalidate(storeId);
         return true;
       } else if (error.hasStaleEpoch()) {
+        // this error is reported from raftstore:
+        // region has outdated version，please try later.
         logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion));
         this.regionManager.onRegionStale(ctxRegion.getId());
         notifyRegionCacheInvalidate(ctxRegion.getId());
         return false;
       } else if (error.hasServerIsBusy()) {
+        // this error is reported from kv:
+        // will occur when write pressure is high. Please try later.
         logger.warn(String.format("Server is busy for region [%s], reason: %s", ctxRegion, error.getServerIsBusy().getReason()));
         backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoServerBusy,
             new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString())));
         return true;
       } else if (error.hasStaleCommand()) {
+        // this error is reported from raftstore:
+        // command outdated, please try later
         logger.warn(String.format("Stale command for region [%s]", ctxRegion));
         return true;
       } else if (error.hasRaftEntryTooLarge()) {
         logger.warn(String.format("Raft too large for region [%s]", ctxRegion));
         throw new StatusRuntimeException(Status.fromCode(Status.Code.UNAVAILABLE).withDescription(error.toString()));
       } else if (error.hasKeyNotInRegion()) {
+        // this error is reported from raftstore:
+        // key requested is not in current region
+        // should not happen here.
         ByteString invalidKey = error.getKeyNotInRegion().getKey();
         logger.error(String.format("Key not in region [%s] for key [%s], this error should not happen here.", ctxRegion, KeyUtils.formatBytes(invalidKey)));
         throw new StatusRuntimeException(Status.UNKNOWN.withDescription(error.toString()));
