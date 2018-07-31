@@ -28,7 +28,6 @@ import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.List;
 
 /** Base Type for encoding and decoding TiDB row information. */
@@ -170,19 +169,27 @@ public abstract class DataType implements Serializable {
    *
    * @param cdo destination of data.
    * @param value value to be encoded.
+   * @param type data value type.
    * @param prefixLength specifies prefix length of value to be encoded.
    *                     When prefixLength is DataType.UNSPECIFIED_LEN,
    *                     encode full length of value.
    */
-  public void encodeKey(CodecDataOutput cdo, Object value, int prefixLength) {
+  public void encodeKey(CodecDataOutput cdo, Object value, DataType type, int prefixLength) {
     requireNonNull(cdo, "cdo is null");
     if (value == null) {
       encodeNull(cdo);
     } else if (prefixLength == DataType.UNSPECIFIED_LEN) {
       encodeKey(cdo, value);
     } else if (isPrefixIndexSupported()) {
-        byte[] bytes = Converter.convertToBytes(value);
-        Codec.BytesCodec.writeBytesFully(cdo, Arrays.copyOf(bytes, prefixLength));
+      byte[] bytes;
+      // When charset is utf8/utf8mb4, prefix length should be the number of utf8 characters
+      // rather than length of its encoded byte value.
+      if (type.getCharset().equalsIgnoreCase("utf8") || type.getCharset().equalsIgnoreCase("utf8mb4")) {
+        bytes = Converter.convertUtf8ToBytes(value, prefixLength);
+      } else {
+        bytes = Converter.convertToBytes(value, prefixLength);
+      }
+      Codec.BytesCodec.writeBytesFully(cdo, bytes);
     } else {
       throw new TypeException("Data type can not encode with prefix");
     }

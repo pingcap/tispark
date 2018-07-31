@@ -15,43 +15,68 @@
 
 package org.apache.spark.sql.expression.index
 
+import java.nio.charset.Charset
+
 import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.catalyst.util.resourceToString
 
 class PrefixIndexTestSuite extends BaseTiSparkSuite {
   // https://github.com/pingcap/tispark/issues/272
   test("Prefix index read does not work correctly") {
-    tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
     tidbStmt.execute(
-      "CREATE TABLE `prefix` (\n  `a` int(11) NOT NULL,\n  `b` varchar(55) DEFAULT NULL,\n  `c` int(11) DEFAULT NULL,\n  PRIMARY KEY (`a`),\n  KEY `prefix_index` (`b`(2)),\n KEY `prefix_complex` (`a`, `b`(2))\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
+      resourceToString(
+        s"prefix-index/PrefixTest.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
     )
-    tidbStmt.execute(
-      "INSERT INTO `prefix` VALUES(0, \"b\", 2), (1, \"bbb\", 3), (2, \"bbc\", 4), (3, \"bbb\", 5), (4, \"abc\", 6), (5, \"abc\", 7), (6, \"abc\", 7), (7, \"ÿÿ\", 8), (8, \"ÿÿ0\", 9), (9, \"ÿÿÿ\", 10)"
-    )
-    tidbStmt.execute("ANALYZE TABLE `prefix`")
     refreshConnections()
     // add explain to show if we have actually used prefix index in plan
-    explainAndTest("select a, b from prefix where b < \"bbc\"")
-    explainAndTest("select a, b from prefix where a = 1 and b = \"bbb\"")
-    explainAndTest("select b from prefix where b = \"bbc\"")
-    explainAndTest("select b from prefix where b != \"bbc\"")
-    explainAndTest("select b from prefix where b >= \"bbc\" and b < \"bbd\"")
+    explainAndRunTest("select a, b from prefix where b < \"bbc\"")
+    explainAndRunTest("select a, b from prefix where a = 1 and b = \"bbb\"")
+    explainAndRunTest("select b from prefix where b = \"bbc\"")
+    explainAndRunTest("select b from prefix where b != \"bbc\"")
+    explainAndRunTest("select b from prefix where b >= \"bbc\" and b < \"bbd\"")
     // FIXME: following test results in INDEX range [bb, bb] and TABLE range (-INF, bbc), while the table range should have been [bb, bb]
     // FYI, the predicate is [[b] LESS_THAN "bbc"], Not(IsNull([b])), [[b] EQUAL "bb"]
-    explainAndTest("select c, b from prefix where b = \"bb\" and b < \"bbc\"")
-    explainAndTest("select c, b from prefix where b > \"ÿ\" and b < \"ÿÿc\"")
+    explainAndRunTest("select c, b from prefix where b = \"bb\" and b < \"bbc\"")
+    println(Charset.defaultCharset())
+    explainAndRunTest(
+      "select c, b from prefix where b > \"ÿ\" and b < \"ÿÿc\"",
+      skipJDBC = true,
+      rTiDB = List(List(8, "ÿÿ"), List(9, "ÿÿ0"))
+    )
     // add LIKE tests for prefix index
-    explainAndTest("select a, b from prefix where b LIKE 'b%'")
-    explainAndTest("select a, b from prefix where b LIKE 'ab%'")
-    explainAndTest("select a, b from prefix where b LIKE 'ÿÿ%'")
-    explainAndTest("select a, b from prefix where b LIKE 'b%b'")
-    explainAndTest("select a, b from prefix where b LIKE 'ÿ%'")
-    explainAndTest("select a, b from prefix where b LIKE '%b'")
-    explainAndTest("select a, b from prefix where b LIKE '%'")
+    explainAndRunTest("select a, b from prefix where b LIKE 'b%'")
+    explainAndRunTest("select a, b from prefix where b LIKE 'ab%'")
+    explainAndRunTest(
+      "select a, b from prefix where b LIKE 'ÿÿ%'",
+      skipJDBC = true,
+      rTiDB = List(List(7, "ÿÿ"), List(8, "ÿÿ0"), List(9, "ÿÿÿ"))
+    )
+    explainAndRunTest("select a, b from prefix where b LIKE 'b%b'")
+    explainAndRunTest("select a, b from prefix where b LIKE 'ÿ%'", skipJDBC = true)
+    explainAndRunTest("select a, b from prefix where b LIKE '%b'")
+    explainAndRunTest("select a, b from prefix where b LIKE '%'")
+  }
+
+  // https://github.com/pingcap/tispark/issues/397
+  test("Prefix index implementation for utf8 string is incorrect") {
+    tidbStmt.execute(
+      resourceToString(
+        s"prefix-index/UTF8Test.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
+    )
+    refreshConnections()
+
+    spark.sql("select * from t1").show
+    runTest("select * from t1 where name = '借款策略集_网页'", skipJDBC = true)
   }
 
   override def afterAll(): Unit =
     try {
-      tidbStmt.execute("drop table if exists prefix")
+      tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
+      tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     } finally {
       super.afterAll()
     }
