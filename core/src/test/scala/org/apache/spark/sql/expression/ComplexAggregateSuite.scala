@@ -31,7 +31,7 @@ class ComplexAggregateSuite extends BaseTiSparkSuite {
 
   allCases.map { _.replace(")", " / tp_int)") } ++ allCases.map { _.replace(")", " / tp_double)") } ++ allCases
     .map { _.replace(")", " + tp_float * 2)") } foreach { query =>
-    ignore(query) {
+    test(query) {
       runTest(query)
     }
   }

@@ -19,7 +19,7 @@ package org.apache.spark.sql
 
 class TiDBMapDatabaseSuite extends BaseTiSparkSuite {
 
-  ignore("TiDBMapDatabase fails when Decimal length exceeding 38") {
+  test("TiDBMapDatabase fails when Decimal length exceeding 38") {
     tidbStmt.execute("drop database if exists decimals")
     tidbStmt.execute("create database decimals")
     tidbStmt.execute("use decimals")
@@ -36,7 +36,7 @@ class TiDBMapDatabaseSuite extends BaseTiSparkSuite {
     spark.sql("select a, b from high_decimal_precision").show(false)
   }
 
-  ignore("tidbMapDatabase fails") {
+  test("tidbMapDatabase fails") {
     tidbStmt.execute("drop database if exists `test-a`")
     tidbStmt.execute("create database `test-a`")
     tidbStmt.execute("use `test-a`")

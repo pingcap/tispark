@@ -47,7 +47,7 @@ class CartesianTypeTestCases2Suite extends BaseTiSparkSuite {
 
   allCases foreach { query =>
     {
-      ignore(query) {
+      test(query) {
         runTest(query)
       }
     }

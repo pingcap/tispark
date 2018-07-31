@@ -19,7 +19,7 @@ import org.apache.spark.sql.BaseTiSparkSuite
 
 class UnsignedTestSuite extends BaseTiSparkSuite {
 
-  ignore("Unsigned Index Tests for TISPARK-28 and TISPARK-29") {
+  test("Unsigned Index Tests for TISPARK-28 and TISPARK-29") {
     tidbStmt.execute("DROP TABLE IF EXISTS `unsigned_test`")
     tidbStmt.execute(
       """CREATE TABLE `unsigned_test` (

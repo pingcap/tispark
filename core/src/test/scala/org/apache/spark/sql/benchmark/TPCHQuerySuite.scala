@@ -102,7 +102,7 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
   }
 
   tpchQueries.foreach { name =>
-    ignore(name) {
+    test(name) {
       // We need to make sure `tidbMapDatabase` happens before JDBC tables mapping,
       // because calling `tidbMapDatabase` will only try to `createTempView` in spark,
       // so it will not replace existing tables with the same name, as a consequence,

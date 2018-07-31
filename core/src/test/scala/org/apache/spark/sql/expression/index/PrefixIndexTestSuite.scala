@@ -15,6 +15,8 @@
 
 package org.apache.spark.sql.expression.index
 
+import java.nio.charset.Charset
+
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.catalyst.util.resourceToString
 
@@ -37,6 +39,7 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     // FIXME: following test results in INDEX range [bb, bb] and TABLE range (-INF, bbc), while the table range should have been [bb, bb]
     // FYI, the predicate is [[b] LESS_THAN "bbc"], Not(IsNull([b])), [[b] EQUAL "bb"]
     explainAndRunTest("select c, b from prefix where b = \"bb\" and b < \"bbc\"")
+    println(Charset.defaultCharset())
     explainAndRunTest(
       "select c, b from prefix where b > \"ÿ\" and b < \"ÿÿc\"",
       skipJDBC = true,
@@ -74,7 +77,6 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     try {
       tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
       tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
-      tidbStmt.execute("DROP DATABASE IF EXISTS `prefix_index`")
     } finally {
       super.afterAll()
     }
