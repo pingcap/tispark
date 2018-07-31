@@ -59,7 +59,7 @@ public class TypedKey extends Key {
 
   private static byte[] encodeKey(Object val, DataType type, int prefixLength) {
     CodecDataOutput cdo = new CodecDataOutput();
-    type.encodeKey(cdo, val, prefixLength);
+    type.encodeKey(cdo, val, type, prefixLength);
     return cdo.toBytes();
   }
 
