@@ -50,6 +50,7 @@ abstract class QueryTest extends PlanTest {
       case d: java.math.BigDecimal => d.doubleValue()
       case d: BigDecimal           => d.bigDecimal.doubleValue()
       case d: Number               => d.doubleValue()
+      case d: String               => BigDecimal(d).doubleValue()
       case _                       => 0.0
     }
 
@@ -98,6 +99,8 @@ abstract class QueryTest extends PlanTest {
         true
       } else if (lhs == null || rhs == null) {
         false
+      } else if (lhs.length != rhs.length) {
+        false
       } else {
         !lhs.zipWithIndex.exists {
           case (value, i) => !compValue(value, rhs(i))
@@ -113,13 +116,22 @@ abstract class QueryTest extends PlanTest {
 
     if (lhs != null && rhs != null) {
       try {
-        if (!isOrdered) {
+        if (lhs.length != rhs.length) {
+          false
+        } else if (!isOrdered) {
           comp(
             lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
             rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
           )
         } else {
-          comp(lhs, rhs)
+          implicit object NullableListOrdering extends Ordering[List[Any]] {
+            override def compare(p1: List[Any], p2: List[Any]): Int =
+              p1.contains(null).compareTo(p2.contains(null))
+          }
+          comp(
+            lhs.sortBy[List[Any]](x => x),
+            rhs.sortBy[List[Any]](x => x)
+          )
         }
       } catch {
         // TODO:Remove this temporary exception handling

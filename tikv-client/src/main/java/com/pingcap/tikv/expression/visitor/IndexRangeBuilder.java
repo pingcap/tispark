@@ -140,6 +140,9 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
           ranges.add(Range.singleton(literal));
           break;
         case NOT_EQUAL:
+          // Should return full range because prefix index predicate for NOT_EQUAL
+          // will be split into an NOT_EQUAL filter and a full range scan
+          ranges.add(Range.all());
           break;
         default:
           throwOnError(node);

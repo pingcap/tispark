@@ -18,6 +18,7 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.exception.TypeException;
+import org.apache.spark.unsafe.types.UTF8String;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -27,6 +28,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.Arrays;
 
 import static java.util.Objects.requireNonNull;
 
@@ -62,6 +64,26 @@ public class Converter {
       return (byte[])val;
     } else if (val instanceof String) {
       return ((String) val).getBytes();
+    }
+    throw new TypeException(String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
+  }
+
+  static byte[] convertToBytes(Object val, int prefixLength) {
+    requireNonNull(val, "val is null");
+    if (val instanceof byte[]) {
+      return Arrays.copyOf((byte[])val, prefixLength);
+    } else if (val instanceof String) {
+      return Arrays.copyOf(((String) val).getBytes(), prefixLength);
+    }
+    throw new TypeException(String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
+  }
+
+  static byte[] convertUtf8ToBytes(Object val, int prefixLength) {
+    requireNonNull(val, "val is null");
+    if (val instanceof byte[]) {
+      return UTF8String.fromBytes(((byte[]) val)).substring(0, prefixLength).getBytes();
+    } else if (val instanceof String) {
+      return UTF8String.fromString(((String) val)).substring(0, prefixLength).getBytes();
     }
     throw new TypeException(String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
   }
