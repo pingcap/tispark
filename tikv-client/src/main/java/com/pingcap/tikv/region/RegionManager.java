@@ -211,14 +211,16 @@ public class RegionManager {
     cache.invalidateRegion(regionId);
   }
 
-  public void updateLeader(long regionId, long storeId) {
-    TiRegion r = cache.getRegionById(regionId);
+  public boolean updateLeader(long regionId, long storeId) {
+    TiRegion r = cache.regionCache.get(regionId);
     if (r != null) {
       if (!r.switchPeer(storeId)) {
         // drop region cache using verId
         cache.invalidateRegion(regionId);
+        return false;
       }
     }
+    return true;
   }
 
   /**

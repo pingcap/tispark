@@ -95,6 +95,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
           regionId, 0,
           true, false,
           CacheInvalidateEvent.CacheType.REGION_STORE));
+      logger.info("Accumulating cache invalidation info to driver:regionId=" + regionId + ",type=" +
+          CacheInvalidateEvent.CacheType.REGION_STORE.name());
     } else {
       logger.warn("Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
     }
@@ -130,6 +132,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         // 1. cache is outdated, region has changed its leader, can be solved by re-fetching from PD
         // 2. leader of current region is missing, need to wait and then fetch region info from PD
         long newStoreId = error.getNotLeader().getLeader().getStoreId();
+        boolean retry = true;
 
         // update Leader here
         logger.warn(String.format("NotLeader Error with region id %d and store id %d, new store id %d",
@@ -141,13 +144,15 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         // if there's current no leader, we do not trigger update pd cache logic
         // since issuing store = NO_LEADER_STORE_ID requests to pd will definitely fail.
         if (newStoreId != NO_LEADER_STORE_ID) {
-          regionManager.updateLeader(ctxRegion.getId(), newStoreId);
+          if (!this.regionManager.updateLeader(ctxRegion.getId(), newStoreId)) {
+            retry = false;
+          }
+          recv.onNotLeader(this.regionManager.getStoreById(newStoreId));
           notifyRegionStoreCacheInvalidate(
               ctxRegion.getId(),
               newStoreId,
               CacheInvalidateEvent.CacheType.LEADER
           );
-          recv.onNotLeader(this.regionManager.getStoreById(newStoreId));
 
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
@@ -157,7 +162,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
         backOffer.doBackOff(backOffFuncType, new GrpcException(error.toString()));
 
-        return true;
+        return retry;
       } else if (error.hasStoreNotMatch()) {
         // this error is reported from raftstore:
         // store_id requested at the moment is inconsistent with that expected

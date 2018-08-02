@@ -375,7 +375,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       logger.debug(region + ", newRegion = " + regionManager.getRegionById(region.getId()) + ", new leader = " + newStore.getId());
     }
     if (!region.switchPeer(newStore.getId())) {
-      throw new TiClientInternalException("Failed to switch leader");
+      // failed to switch leader, possibly region is outdated, we need to drop region cache from regionCache
+      logger.warn("Cannot find peer when updating leader (" + region.getId() + "," + newStore.getId() + ")");
     }
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
