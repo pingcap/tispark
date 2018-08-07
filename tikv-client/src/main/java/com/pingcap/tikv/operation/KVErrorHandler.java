@@ -145,14 +145,24 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         // since issuing store = NO_LEADER_STORE_ID requests to pd will definitely fail.
         if (newStoreId != NO_LEADER_STORE_ID) {
           if (!this.regionManager.updateLeader(ctxRegion.getId(), newStoreId)) {
+            // If update leader fails, we need to fetch new region info from pd,
+            // and re-split key range for new region. Setting retry to false will
+            // stop retry and enter handleCopResponse logic, which would use RegionMiss
+            // backOff strategy to wait, fetch new region and re-split key range.
             retry = false;
+          } else {
+            // onNotLeader is only needed when updateLeader succeeds, thus switch
+            // to a new store address.
+            recv.onNotLeader(this.regionManager.getStoreById(newStoreId));
           }
-          recv.onNotLeader(this.regionManager.getStoreById(newStoreId));
           notifyRegionStoreCacheInvalidate(
               ctxRegion.getId(),
               newStoreId,
               CacheInvalidateEvent.CacheType.LEADER
           );
+          if (!retry) {
+            return false;
+          }
 
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
@@ -162,7 +172,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
         backOffer.doBackOff(backOffFuncType, new GrpcException(error.toString()));
 
-        return retry;
+        return true;
       } else if (error.hasStoreNotMatch()) {
         // this error is reported from raftstore:
         // store_id requested at the moment is inconsistent with that expected

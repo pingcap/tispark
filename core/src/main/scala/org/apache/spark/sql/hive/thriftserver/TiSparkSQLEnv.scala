@@ -47,7 +47,8 @@ private[hive] object TiSparkSQLEnv extends Logging {
         )
 
       // Injection point for TiSparkSession
-      val sparkSession = TiSparkSession.builder()
+      val sparkSession = TiSparkSession
+        .builder()
         .config(sparkConf)
         .enableHiveSupport()
         .getOrCreate()
