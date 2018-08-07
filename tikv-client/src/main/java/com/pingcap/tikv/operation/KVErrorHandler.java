@@ -159,9 +159,6 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
               newStoreId,
               CacheInvalidateEvent.CacheType.LEADER
           );
-          if (!retry) {
-            return false;
-          }
 
           backOffFuncType = BackOffFunction.BackOffFuncType.BoUpdateLeader;
         } else {
@@ -171,7 +168,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
         backOffer.doBackOff(backOffFuncType, new GrpcException(error.toString()));
 
-        return true;
+        return retry;
       } else if (error.hasStoreNotMatch()) {
         // this error is reported from raftstore:
         // store_id requested at the moment is inconsistent with that expected
