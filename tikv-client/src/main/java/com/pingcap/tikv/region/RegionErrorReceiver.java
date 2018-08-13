@@ -21,6 +21,6 @@ package com.pingcap.tikv.region;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 
 public interface RegionErrorReceiver {
-  void onNotLeader(Store store);
+  boolean onNotLeader(Store store);
   void onStoreNotMatch(Store store);
 }

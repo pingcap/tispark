@@ -367,18 +367,30 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return asyncStub.withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
   }
 
+  /**
+   * onNotLeader deals with NotLeaderError and returns whether re-splitting key range is needed
+   *
+   * @param newStore the new store presented by NotLeader Error
+   * @return false when re-split is needed.
+   */
   @Override
-  public void onNotLeader(Store newStore) {
+  public boolean onNotLeader(Store newStore) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(region + ", new leader = " + newStore.getId());
+    }
+    TiRegion cachedRegion = regionManager.getRegionById(region.getId());
+    // When switch leader fails or the region changed its key range,
+    // it would be necessary to re-split task's key range for new region.
+    if (!region.switchPeer(newStore.getId()) ||
+        !region.getStartKey().equals(cachedRegion.getStartKey()) ||
+        !region.getEndKey().equals(cachedRegion.getEndKey())) {
+      return false;
+    }
     String addressStr = newStore.getAddress();
     ManagedChannel channel = getSession().getChannel(addressStr);
-    if (logger.isDebugEnabled()) {
-      logger.debug(region + ", newRegion = " + regionManager.getRegionById(region.getId()) + ", new leader = " + newStore.getId());
-    }
-    if (!region.switchPeer(newStore.getId())) {
-      throw new TiClientInternalException("Failed to switch leader");
-    }
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
+    return true;
   }
 
   @Override
