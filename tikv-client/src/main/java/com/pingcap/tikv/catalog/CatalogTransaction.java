@@ -44,6 +44,7 @@ public class CatalogTransaction {
   protected static final Logger logger = Logger.getLogger(Catalog.class);
   private final Snapshot snapshot;
   private final byte[] prefix;
+  private final String dbPrefix;
 
   private static final byte[] META_PREFIX = new byte[] {'m'};
 
@@ -54,11 +55,12 @@ public class CatalogTransaction {
   private static ByteString KEY_TABLE = ByteString.copyFromUtf8("Table");
   private static ByteString KEY_SCHEMA_VERSION =  ByteString.copyFromUtf8("SchemaVersionKey");
 
-  private static final String DB_PREFIX = "DB";
+  private static final String ENCODED_DB_PREFIX = "DB";
 
-  public CatalogTransaction(Snapshot snapshot) {
+  public CatalogTransaction(Snapshot snapshot, String dbPrefix) {
     this.snapshot = snapshot;
     this.prefix = META_PREFIX;
+    this.dbPrefix = dbPrefix;
   }
 
   private void encodeStringDataKey(CodecDataOutput cdo, byte[] key) {
@@ -124,7 +126,7 @@ public class CatalogTransaction {
   }
 
   private static ByteString encodeDatabaseID(long id) {
-    return ByteString.copyFrom(String.format("%s:%d", DB_PREFIX, id).getBytes());
+    return ByteString.copyFrom(String.format("%s:%d", ENCODED_DB_PREFIX, id).getBytes());
   }
 
   public long getLatestSchemaVersion() {
@@ -179,5 +181,9 @@ public class CatalogTransaction {
     } catch (Exception e1) {
       throw new TiClientInternalException("Error parsing Json", e1);
     }
+  }
+
+  public String getDBPrefix() {
+    return dbPrefix;
   }
 }

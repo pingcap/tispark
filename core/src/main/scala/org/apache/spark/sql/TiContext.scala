@@ -36,6 +36,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+  val defaultDBPrefix: String = tiConf.getDBPrefix
 
   val debug: DebugTool = new DebugTool
 

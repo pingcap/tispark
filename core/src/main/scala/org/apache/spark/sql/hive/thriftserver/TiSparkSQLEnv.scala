@@ -45,6 +45,7 @@ private[hive] object TiSparkSQLEnv extends Logging {
         .setAppName(
           maybeAppName.getOrElse(s"SparkSQL::${Utils.localHostName()}")
         )
+        .set("spark.tispark.db_prefix", "tidb")
 
       // Injection point for TiSparkSession
       val sparkSession = TiSparkSession

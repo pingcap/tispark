@@ -39,4 +39,5 @@ object TiConfigConst {
   val ENABLE_AUTO_LOAD_STATISTICS: String = "spark.tispark.statistics.auto_load"
   val CACHE_EXPIRE_AFTER_ACCESS: String = "spark.tispark.statistics.expire_after_access"
   val SHOW_ROWID: String = "spark.tispark.show_rowid"
+  val DB_PREFIX: String = "spark.tispark.db_prefix"
 }

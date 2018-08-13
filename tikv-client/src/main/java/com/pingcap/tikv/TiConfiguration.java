@@ -44,6 +44,7 @@ public class TiConfiguration implements Serializable {
   private static final CommandPri DEF_COMMAND_PRIORITY = CommandPri.Low;
   private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.RC;
   private static final boolean DEF_SHOW_ROWID = false;
+  private static final String DEF_DB_PREFIX = "";
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -60,6 +61,7 @@ public class TiConfiguration implements Serializable {
   private IsolationLevel isolationLevel = DEF_ISOLATION_LEVEL;
   private int maxRequestKeyRangeSize = MAX_REQUEST_KEY_RANGE_SIZE;
   private boolean showRowId = DEF_SHOW_ROWID;
+  private String dbPrefix = DEF_DB_PREFIX;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -206,5 +208,13 @@ public class TiConfiguration implements Serializable {
 
   public boolean ifShowRowId() {
     return showRowId;
+  }
+
+  public String getDBPrefix() {
+    return dbPrefix;
+  }
+
+  public void setDBPrefix(String dbPrefix) {
+    this.dbPrefix = dbPrefix;
   }
 }
