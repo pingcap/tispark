@@ -4,6 +4,8 @@ tidb.addr=127.0.0.1
 tidb.port=4000
 # TiDB login user
 tidb.user=root
+# TiDB login password
+tidb.password=
 # TPCH database name, if you already have a tpch database in TiDB, specify the db name so that TPCH tests will run on this database
 tpch.db=tpch_test
 # Placement Driver address:port

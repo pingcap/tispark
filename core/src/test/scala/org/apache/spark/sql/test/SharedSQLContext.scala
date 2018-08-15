@@ -158,6 +158,8 @@ object SharedSQLContext extends Logging {
     if (_tidbConnection == null) {
       val jdbcUsername = getOrElse(_tidbConf, TiDB_USER, "root")
 
+      val jdbcPassword = getOrElse(_tidbConf, TiDB_PASSWORD, "")
+
       val jdbcHostname = getOrElse(_tidbConf, TiDB_ADDRESS, "127.0.0.1")
 
       val jdbcPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
@@ -167,7 +169,7 @@ object SharedSQLContext extends Logging {
       jdbcUrl =
         s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull"
 
-      _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, "")
+      _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
       _statement = _tidbConnection.createStatement()
 
       if (loadData && !forceNotLoad) {

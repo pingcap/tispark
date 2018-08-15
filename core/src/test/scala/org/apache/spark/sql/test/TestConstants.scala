@@ -21,6 +21,7 @@ object TestConstants {
   val TiDB_ADDRESS = "tidb.addr"
   val TiDB_PORT = "tidb.port"
   val TiDB_USER = "tidb.user"
+  val TiDB_PASSWORD = "tidb.password"
   val TPCH_DB_NAME = "tpch.db"
   val SHOULD_LOAD_DATA = "test.data.load"
   val SHOULD_SKIP_TEST = "test.skip"
