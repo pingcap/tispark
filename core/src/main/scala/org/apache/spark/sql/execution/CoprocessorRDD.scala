@@ -295,7 +295,7 @@ case class RegionTaskExec(child: SparkPlan,
               logger.info("Single batch handles size:" + handleList.size())
               // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
               // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
-              val indexTask =
+              val indexTasks =
                 RangeSplitter
                   .newSplitter(session.getRegionManager)
                   .splitAndSortHandlesByRegion(
@@ -303,20 +303,22 @@ case class RegionTaskExec(child: SparkPlan,
                     new TLongArrayList(handleList)
                   )
 
-              indexTask.foreach { task =>
+              indexTasks.foreach { task =>
                 val taskRange = task.getRanges
                 val tasks = splitTasks(task)
                 numIndexScanTasks += tasks.size
 
-                logger.info(s"Single batch RegionTask size:${tasks.size}")
-                tasks.foreach(task => {
-                  logger.info(
-                    s"Single batch RegionTask={Host:${task.getHost}," +
-                      s"Region:${task.getRegion}," +
-                      s"Store:{id=${task.getStore.getId},address=${task.getStore.getAddress}}, " +
-                      s"RangesListSize:${task.getRanges.size}}"
-                  )
-                })
+                if (logger.isDebugEnabled) {
+                  logger.debug(s"Single batch RegionTask size:${tasks.size}")
+                  tasks.foreach(task => {
+                    logger.debug(
+                      s"Single batch RegionTask={Host:${task.getHost}," +
+                        s"Region:${task.getRegion}," +
+                        s"Store:{id=${task.getStore.getId},address=${task.getStore.getAddress}}, " +
+                        s"RangesListSize:${task.getRanges.size}}"
+                    )
+                  })
+                }
 
                 submitTasks(tasks.toList, dagRequest)
                 numIndexRangesScanned += taskRange.size
