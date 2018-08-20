@@ -242,7 +242,7 @@ insert into t values  ('null'),
     // upgrade it to 5.1.40 and uncomment the next line
     // tidbStmt.execute("insert into t values ('\"中文\"')")
     refreshConnections()
-    judge("select json_doc from t")
+    runTest("select json_doc from t")
   }
 
   override def afterAll(): Unit =
