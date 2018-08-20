@@ -239,7 +239,36 @@ class IssueTestSuite extends BaseTiSparkSuite {
     )
     refreshConnections()
 
-    runTest("select json_doc from t")
+    runTest(
+      "select json_doc from t",
+      skipJDBC = true,
+      rTiDB = List(
+        List("null"),
+        List(true),
+        List(false),
+        List(0),
+        List(1),
+        List(-1),
+        List(2147483647),
+        List(-2147483648),
+        List(9223372036854775807L),
+        List(-9223372036854775808L),
+        List(0.5),
+        List(-0.5),
+        List("\"\""),
+        List("\"a\""),
+        List("\"\\t\""),
+        List("\"\\n\""),
+        List("\"\\\"\""),
+        List("\"\\u0001\""),
+        List("[]"),
+        List("\"中文\""),
+        List("[null,false,true,0,0.5,\"hello\",[\"nested_array\"],{\"nested\":\"object\"}]"),
+        List(
+          "{\"a\":null,\"b\":true,\"c\":false,\"d\":0,\"e\":0.5,\"f\":\"hello\",\"nested_array\":[1,2,3],\"nested_object\":{\"hello\":1}}"
+        )
+      )
+    )
   }
 
   override def afterAll(): Unit =
