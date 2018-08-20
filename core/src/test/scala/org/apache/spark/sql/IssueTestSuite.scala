@@ -210,6 +210,67 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge("select count(c1 + c2) from t")
   }
 
+  test("json support") {
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("create table t(json_doc json)")
+    tidbStmt.execute(
+      """insert into t values  ('null'),
+          ('true'),
+          ('false'),
+          ('0'),
+          ('1'),
+          ('-1'),
+          ('2147483647'),
+          ('-2147483648'),
+          ('9223372036854775807'),
+          ('-9223372036854775808'),
+          ('0.5'),
+          ('-0.5'),
+          ('""'),
+          ('"a"'),
+          ('"\\t"'),
+          ('"\\n"'),
+          ('"\\""'),
+          ('"\\u0001"'),
+          ('[]'),
+          ('"中文"'),
+          (JSON_ARRAY(null, false, true, 0, 0.5, "hello", JSON_ARRAY("nested_array"), JSON_OBJECT("nested", "object"))),
+          (JSON_OBJECT("a", null, "b", true, "c", false, "d", 0, "e", 0.5, "f", "hello", "nested_array", JSON_ARRAY(1, 2, 3), "nested_object", JSON_OBJECT("hello", 1)))"""
+    )
+    refreshConnections()
+
+    runTest(
+      "select json_doc from t",
+      skipJDBC = true,
+      rTiDB = List(
+        List("null"),
+        List(true),
+        List(false),
+        List(0),
+        List(1),
+        List(-1),
+        List(2147483647),
+        List(-2147483648),
+        List(9223372036854775807L),
+        List(-9223372036854775808L),
+        List(0.5),
+        List(-0.5),
+        List("\"\""),
+        List("\"a\""),
+        List("\"\\t\""),
+        List("\"\\n\""),
+        List("\"\\\"\""),
+        List("\"\\u0001\""),
+        List("[]"),
+        List("\"中文\""),
+        List("[null,false,true,0,0.5,\"hello\",[\"nested_array\"],{\"nested\":\"object\"}]"),
+        List(
+          "{\"a\":null,\"b\":true,\"c\":false,\"d\":0,\"e\":0.5,\"f\":\"hello\",\"nested_array\":[1,2,3],\"nested_object\":{\"hello\":1}}"
+        )
+      )
+    )
+  }
+
   override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists t")

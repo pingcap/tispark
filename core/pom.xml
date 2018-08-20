@@ -17,7 +17,7 @@
     <properties>
         <scalatest.version>3.0.4</scalatest.version>
         <scalaj.version>2.3.0</scalaj.version>
-        <mysql.connector.version>5.1.18</mysql.connector.version>
+        <mysql.connector.version>5.1.44</mysql.connector.version>
         <play.version>2.6.8</play.version>
     </properties>
     <dependencies>
