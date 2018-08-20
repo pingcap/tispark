@@ -79,8 +79,21 @@ abstract class QueryTest extends PlanTest {
     def toString(value: Any): String =
       new SimpleDateFormat("yy-MM-dd HH:mm:ss").format(value)
 
+    def compNull(l: Any, r: Any): Boolean = {
+      if (l == null) {
+        if (r == null || r.toString.equalsIgnoreCase("null")) {
+          return true
+        }
+      } else if (l.toString.equalsIgnoreCase("null")) {
+        if (r == null || r.toString.equalsIgnoreCase("null")) {
+          return true
+        }
+      }
+      false
+    }
+
     def compValue(lhs: Any, rhs: Any): Boolean =
-      if (lhs == rhs || lhs.toString == rhs.toString) {
+      if (lhs == rhs || compNull(lhs, rhs) || lhs.toString == rhs.toString) {
         true
       } else
         lhs match {
