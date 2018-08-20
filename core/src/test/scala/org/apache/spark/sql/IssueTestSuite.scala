@@ -214,34 +214,31 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(json_doc json)")
     tidbStmt.execute(
-      """
-insert into t values  ('null'),
-  ('true'),
-  ('false'),
-  ('0'),
-  ('1'),
-  ('-1'),
-  ('2147483647'),
-  ('-2147483648'),
-  ('9223372036854775807'),
-  ('-9223372036854775808'),
-  ('0.5'),
-  ('-0.5'),
-  ('""'),
-  ('"a"'),
-  ('"\\t"'),
-  ('"\\n"'),
-  ('"\\""'),
-  ('"\\u0001"'),
-  ('[]'),
-  ('[null, false, true, 0, 0.5, "hello", ["nested_array"], {"nested": "object"}]'),
-  ('{"a": null, "b": true, "c": false, "d": 0, "e": 0.5, "f": "hello", "nested_array": [1, 2, 3], "nested_object": {"hello": 1}}')
-"""
+      """insert into t values  ('null'),
+          ('true'),
+          ('false'),
+          ('0'),
+          ('1'),
+          ('-1'),
+          ('2147483647'),
+          ('-2147483648'),
+          ('9223372036854775807'),
+          ('-9223372036854775808'),
+          ('0.5'),
+          ('-0.5'),
+          ('""'),
+          ('"a"'),
+          ('"\\t"'),
+          ('"\\n"'),
+          ('"\\""'),
+          ('"\\u0001"'),
+          ('[]'),
+          ('"中文"'),
+          (JSON_ARRAY(null, false, true, 0, 0.5, "hello", JSON_ARRAY("nested_array"), JSON_OBJECT("nested", "object"))),
+          (JSON_OBJECT("a", null, "b", true, "c", false, "d", 0, "e", 0.5, "f", "hello", "nested_array", JSON_ARRAY(1, 2, 3), "nested_object", JSON_OBJECT("hello", 1)))"""
     )
-    // mysql-connector-java:5.1.18 has issue on handle json contains chinese characters
-    // upgrade it to 5.1.40 and uncomment the next line
-    // tidbStmt.execute("insert into t values ('\"中文\"')")
     refreshConnections()
+
     runTest("select json_doc from t")
   }
 
