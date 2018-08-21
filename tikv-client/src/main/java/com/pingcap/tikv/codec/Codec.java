@@ -21,6 +21,7 @@ import gnu.trove.list.array.TIntArrayList;
 import org.joda.time.*;
 
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -453,6 +454,17 @@ public class Codec {
           localDateTime.getMillisOfSecond() * 1000);
     }
 
+    /**
+     * Encode a UTC Date to a packed long converting to specific timezone
+     *
+     * @param date date that need to be encoded.
+     * @param tz timezone used for converting to localDate
+     * @return a packed long.
+     */
+    static long toPackedLong(Date date, DateTimeZone tz) {
+      return toPackedLong(date.getTime(), tz);
+    }
+
     static long toPackedLong(long utcMillsTs, DateTimeZone tz) {
       LocalDate date = new LocalDate(utcMillsTs, tz);
       return toPackedLong(date);
@@ -543,6 +555,31 @@ public class Codec {
      */
     public static void writeDateTimeProto(CodecDataOutput cdo, DateTime dateTime, DateTimeZone tz) {
       long val = DateTimeCodec.toPackedLong(dateTime, tz);
+      IntegerCodec.writeULong(cdo, val);
+    }
+
+    /**
+     * Encode Date as packed long converting into specified timezone
+     * All timezone conversion should be done beforehand
+     * @param cdo encoding output
+     * @param date value to encode
+     * @param tz timezone used to converting local time
+     */
+    public static void writeDateFully(CodecDataOutput cdo, Date date, DateTimeZone tz) {
+      long val = DateTimeCodec.toPackedLong(date, tz);
+      IntegerCodec.writeULongFully(cdo, val, true);
+    }
+
+    /**
+     * Encode Date as packed long converting into specified timezone
+     * All timezone conversion should be done beforehand
+     * The encoded value has no data type flag
+     * @param cdo encoding output
+     * @param date value to encode
+     * @param tz timezone used to converting local time
+     */
+    public static void writeDateProto(CodecDataOutput cdo, Date date, DateTimeZone tz) {
+      long val = DateTimeCodec.toPackedLong(date, tz);
       IntegerCodec.writeULong(cdo, val);
     }
 

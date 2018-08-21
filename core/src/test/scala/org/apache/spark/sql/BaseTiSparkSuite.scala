@@ -86,6 +86,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       tableNames = Seq.empty[String]
       for (dbName <- databases) {
         tidbConn.setCatalog(dbName)
+        initializeTimeZone()
         ti.tidbMapDatabase(dbName)
         val tableDF = spark.read
           .format("jdbc")
@@ -109,6 +110,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   protected def loadTestData(testTables: TestTables): Unit = {
     val dbName = testTables.dbName
     tidbConn.setCatalog(dbName)
+    initializeTimeZone()
     ti.tidbMapDatabase(dbName)
     for (tableName <- testTables.tables) {
       createOrReplaceTempView(dbName, tableName)
@@ -119,12 +121,11 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     super.beforeAll()
     setLogLevel("WARN")
     loadTestData()
-    initializeTimeZone()
   }
 
   protected def initializeTimeZone(): Unit = {
     tidbStmt = tidbConn.createStatement()
-    // Set default time zone to GMT+8
+    // Set default time zone to GMT-7
     tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
@@ -133,13 +134,11 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   protected def refreshConnections(testTables: TestTables): Unit = {
     super.refreshConnections()
     loadTestData(testTables)
-    initializeTimeZone()
   }
 
   override protected def refreshConnections(): Unit = {
     super.refreshConnections()
     loadTestData()
-    initializeTimeZone()
   }
 
   def setLogLevel(level: String): Unit =

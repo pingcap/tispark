@@ -17,9 +17,10 @@
 
 package com.pingcap.tikv.types;
 
+import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 import java.sql.Date;
@@ -50,11 +51,29 @@ public class DateType extends AbstractDateTimeType {
    * {@inheritDoc}
    */
   @Override
+  protected void encodeKey(CodecDataOutput cdo, Object value) {
+    Date dt = Converter.convertToDate(value);
+    Codec.DateTimeCodec.writeDateFully(cdo, dt, getTimezone());
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  protected void encodeProto(CodecDataOutput cdo, Object value) {
+    Date dt = Converter.convertToDate(value);
+    Codec.DateTimeCodec.writeDateProto(cdo, dt, getTimezone());
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   protected Date decodeNotNull(int flag, CodecDataInput cdi) {
-    DateTime dateTime = decodeDateTime(flag, cdi);
-    if (dateTime == null) {
+    Date date = decodeDate(flag, cdi);
+    if (date == null) {
       return null;
     }
-    return new Date(dateTime.getMillis());
+    return date;
   }
 }

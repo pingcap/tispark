@@ -11,6 +11,8 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
+import java.sql.Date;
+
 public abstract class AbstractDateTimeType extends DataType {
   protected AbstractDateTimeType(InternalTypeHolder holder) {
     super(holder);
@@ -39,6 +41,19 @@ public abstract class AbstractDateTimeType extends DataType {
       throw new InvalidCodecFormatException("Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
     }
     return dateTime;
+  }
+
+  /**
+   * Decode Date from packed long value
+   */
+  protected Date decodeDate(int flag, CodecDataInput cdi) {
+    DateTime dateTime;
+    if (flag == Codec.UVARINT_FLAG) {
+      dateTime = DateTimeCodec.readFromUVarInt(cdi, getTimezone());
+    } else {
+      throw new InvalidCodecFormatException("Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
+    }
+    return new Date(dateTime.getMillis());
   }
 
   /**
