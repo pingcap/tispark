@@ -50,8 +50,13 @@ public abstract class AbstractDateTimeType extends DataType {
     DateTime dateTime;
     if (flag == Codec.UVARINT_FLAG) {
       dateTime = DateTimeCodec.readFromUVarInt(cdi, getTimezone());
+    } else if (flag == Codec.UINT_FLAG) {
+      dateTime = DateTimeCodec.readFromUInt(cdi, getTimezone());
     } else {
       throw new InvalidCodecFormatException("Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
+    }
+    if (dateTime == null) {
+      return null;
     }
     return new Date(dateTime.getMillis());
   }
