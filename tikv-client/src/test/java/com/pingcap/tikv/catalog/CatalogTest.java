@@ -87,7 +87,7 @@ public class CatalogTest {
     Catalog cat = session.getCatalog();
     TiDBInfo db = cat.getDatabase("gLObal_temp");
     List<TiTableInfo> tables = cat.listTables(db);
-    List<String> names = tables.stream().map(table -> table.getName()).sorted().collect(Collectors.toList());
+    List<String> names = tables.stream().map(TiTableInfo::getName).sorted().collect(Collectors.toList());
     assertEquals(2, tables.size());
     assertEquals("test", names.get(0));
     assertEquals("test1", names.get(1));
@@ -103,7 +103,7 @@ public class CatalogTest {
     wrapper.call("reloadCache");
 
     tables = cat.listTables(db);
-    names = tables.stream().map(table -> table.getName()).sorted().collect(Collectors.toList());
+    names = tables.stream().map(TiTableInfo::getName).sorted().collect(Collectors.toList());
     assertEquals(3, tables.size());
     assertEquals("other", names.get(0));
     assertEquals("test", names.get(1));
