@@ -20,25 +20,6 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
-  val tableNum = 5000
-
-  test("Test multiple tables across regions") {
-    for (x <- 1 to tableNum) {
-      tidbStmt.execute(s"DROP TABLE IF EXISTS `test$x`")
-      tidbStmt.execute(
-        s"""CREATE TABLE `test$x` (
-          |  `a` int(11) DEFAULT NULL
-          |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
-        """.stripMargin
-      )
-    }
-    refreshConnections()
-
-    for (x <- 1 to tableNum) {
-      ti.tidbMapTable("tispark_test", s"test$tableNum")
-    }
-  }
-
   test("Test count") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute(
@@ -297,9 +278,6 @@ class IssueTestSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists t1")
       tidbStmt.execute("drop table if exists t2")
       tidbStmt.execute("drop table if exists single_read")
-      for (x <- 1 to tableNum) {
-        tidbStmt.execute(s"DROP TABLE IF EXISTS `test$x`")
-      }
     } finally {
       super.afterAll()
     }
