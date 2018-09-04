@@ -100,7 +100,7 @@ status-port = 10080
 metrics-addr = "pushgateway:9091"
 
 # Prometheus client push interval in second, set \"0\" to disable prometheus push.
-metrics-interval = 15
+metrics-interval = 0
 
 [performance]
 # Set keep alive option for tcp connection.
