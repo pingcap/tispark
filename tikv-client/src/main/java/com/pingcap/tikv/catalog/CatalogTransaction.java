@@ -44,7 +44,6 @@ public class CatalogTransaction {
   protected static final Logger logger = Logger.getLogger(Catalog.class);
   private final Snapshot snapshot;
   private final byte[] prefix;
-  private final String dbPrefix;
 
   private static final byte[] META_PREFIX = new byte[] {'m'};
 
@@ -60,13 +59,6 @@ public class CatalogTransaction {
   public CatalogTransaction(Snapshot snapshot) {
     this.snapshot = snapshot;
     this.prefix = META_PREFIX;
-    this.dbPrefix = "";
-  }
-
-  public CatalogTransaction(Snapshot snapshot, String dbPrefix) {
-    this.snapshot = snapshot;
-    this.prefix = META_PREFIX;
-    this.dbPrefix = dbPrefix;
   }
 
   private void encodeStringDataKey(CodecDataOutput cdo, byte[] key) {
@@ -189,7 +181,4 @@ public class CatalogTransaction {
     }
   }
 
-  public String getDBPrefix() {
-    return dbPrefix;
-  }
 }
