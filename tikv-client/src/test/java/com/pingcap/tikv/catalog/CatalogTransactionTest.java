@@ -55,7 +55,7 @@ public class CatalogTransactionTest {
     helper.preparePDForRegionRead();
     helper.setSchemaVersion(666);
     TiSession session = TiSession.create(conf);
-    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot(), "");
+    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
     assertEquals(666, trx.getLatestSchemaVersion());
   }
 
@@ -67,7 +67,7 @@ public class CatalogTransactionTest {
     helper.addDatabase(264, "TPCH_001");
 
     TiSession session = TiSession.create(conf);
-    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot(), "");
+    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
     List<TiDBInfo> dbs = trx.getDatabases();
     assertEquals(2, dbs.size());
     assertEquals(130, dbs.get(0).getId());
@@ -89,7 +89,7 @@ public class CatalogTransactionTest {
     helper.addTable(130, 43, "test1");
 
     TiSession session = TiSession.create(conf);
-    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot(), "");
+    CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
     List<TiTableInfo> tables = trx.getTables(130);
     assertEquals(2, tables.size());
     assertEquals("test", tables.get(0).getName());

@@ -57,6 +57,12 @@ public class CatalogTransaction {
 
   private static final String ENCODED_DB_PREFIX = "DB";
 
+  public CatalogTransaction(Snapshot snapshot) {
+    this.snapshot = snapshot;
+    this.prefix = META_PREFIX;
+    this.dbPrefix = "";
+  }
+
   public CatalogTransaction(Snapshot snapshot, String dbPrefix) {
     this.snapshot = snapshot;
     this.prefix = META_PREFIX;

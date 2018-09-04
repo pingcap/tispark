@@ -113,7 +113,7 @@ public class Catalog implements AutoCloseable {
       HashMap<String, TiDBInfo> newDBCache = new HashMap<>();
 
       List<TiDBInfo> databases = transaction.getDatabases();
-      databases.forEach(db -> newDBCache.put(dbPrefix + db.getName(), db));
+      databases.forEach(db -> newDBCache.put(db.getName(), db));
       return newDBCache;
     }
   }
