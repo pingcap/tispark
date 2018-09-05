@@ -30,7 +30,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 class TiSparkSession(
   @transient override val sparkContext: SparkContext,
-  @transient private val existingSharedState: Option[SharedState]
+  @transient private val tiExistingSharedState: Option[SharedState]
 ) extends SparkSession(sparkContext) {
 
   private[sql] def this(sc: SparkContext) {
@@ -38,10 +38,12 @@ class TiSparkSession(
   }
 
   @transient
-  override lazy val sharedState: SharedState = new SharedState(sparkContext)
+  override lazy val sessionState: SessionState = new TiSessionState(this)
 
   @transient
-  override lazy val sessionState: SessionState = new TiSessionState(this)
+  override private[sql] lazy val sharedState: SharedState = {
+    tiExistingSharedState.getOrElse(new SharedState(sparkContext))
+  }
 
   override def newSession(): SparkSession = new TiSparkSession(sparkContext, Some(sharedState))
 
