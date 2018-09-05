@@ -53,6 +53,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def tpchDBName: String = SharedSQLContext.tpchDBName
 
+  protected def dbPrefix: String = SharedSQLContext.dbPrefix
+
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
@@ -99,6 +101,7 @@ object SharedSQLContext extends Logging {
   private var _sparkJDBC: SparkSession = _
   protected var jdbcUrl: String = _
   protected var tpchDBName: String = _
+  protected var dbPrefix: String = _
 
   protected lazy val sql = spark.sql _
 
@@ -213,11 +216,15 @@ object SharedSQLContext extends Logging {
         prop.load(confStream)
       }
 
-      tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
-      sparkConf.set(DB_PREFIX, getOrElse(prop, DB_PREFIX, "tidb_"))
+
+      dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
+      sparkConf.set(DB_PREFIX, dbPrefix)
+
+      tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
+
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf)
     }

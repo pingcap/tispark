@@ -87,7 +87,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       for (dbName <- databases) {
         tidbConn.setCatalog(dbName)
         initializeTimeZone()
-        ti.tidbMapDatabase(dbName)
+        ti.tidbMapDatabase(dbPrefix + dbName)
         val tableDF = spark.read
           .format("jdbc")
           .option(JDBCOptions.JDBC_URL, jdbcUrl)
@@ -111,7 +111,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     val dbName = testTables.dbName
     tidbConn.setCatalog(dbName)
     initializeTimeZone()
-    ti.tidbMapDatabase(dbName)
+    ti.tidbMapDatabase(dbPrefix + dbName)
     for (tableName <- testTables.tables) {
       createOrReplaceTempView(dbName, tableName)
     }
