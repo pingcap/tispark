@@ -68,7 +68,7 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   }
 
   override def verboseString: String =
-    s"TiDB $nodeName{${tiRdd.dagRequest.toString}}" +
+    s"TiSpark $nodeName{${tiRdd.dagRequest.toString}}" +
       s"${TiUtils.getReqEstCountStr(tiRdd.dagRequest)}"
 
   override def simpleString: String = verboseString

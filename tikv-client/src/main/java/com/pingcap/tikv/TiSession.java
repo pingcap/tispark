@@ -85,7 +85,8 @@ public class TiSession implements AutoCloseable {
           catalog = new Catalog(() -> createSnapshot(),
               conf.getMetaReloadPeriod(),
               conf.getMetaReloadPeriodUnit(),
-              conf.ifShowRowId()
+              conf.ifShowRowId(),
+              conf.getDBPrefix()
           );
         }
         res = catalog;

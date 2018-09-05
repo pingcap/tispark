@@ -169,7 +169,7 @@ object SharedSQLContext extends Logging {
       val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toBoolean
 
       jdbcUrl =
-        s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false"
+        s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
       _statement = _tidbConnection.createStatement()
@@ -182,21 +182,21 @@ object SharedSQLContext extends Logging {
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Loading IndexTest.sql successfully.")
+        logger.warn("Load IndexTest.sql successfully.")
         // Load expression test data
         queryString = resourceToString(
           s"tispark-test/TiSparkTest.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Loading TiSparkTest.sql successfully.")
+        logger.warn("Load TiSparkTest.sql successfully.")
         // Load tpch test data
         queryString = resourceToString(
           s"tispark-test/TPCHData.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Loading TPCHData.sql successfully.")
+        logger.warn("Load TPCHData.sql successfully.")
         initStatistics()
       }
     }
@@ -217,6 +217,7 @@ object SharedSQLContext extends Logging {
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
+      sparkConf.set(DB_PREFIX, getOrElse(prop, DB_PREFIX, "tidb_"))
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf)
     }
