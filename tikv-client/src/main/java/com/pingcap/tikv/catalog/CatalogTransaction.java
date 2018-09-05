@@ -54,7 +54,7 @@ public class CatalogTransaction {
   private static ByteString KEY_TABLE = ByteString.copyFromUtf8("Table");
   private static ByteString KEY_SCHEMA_VERSION =  ByteString.copyFromUtf8("SchemaVersionKey");
 
-  private static final String DB_PREFIX = "DB";
+  private static final String ENCODED_DB_PREFIX = "DB";
 
   public CatalogTransaction(Snapshot snapshot) {
     this.snapshot = snapshot;
@@ -124,7 +124,7 @@ public class CatalogTransaction {
   }
 
   private static ByteString encodeDatabaseID(long id) {
-    return ByteString.copyFrom(String.format("%s:%d", DB_PREFIX, id).getBytes());
+    return ByteString.copyFrom(String.format("%s:%d", ENCODED_DB_PREFIX, id).getBytes());
   }
 
   public long getLatestSchemaVersion() {
@@ -180,4 +180,5 @@ public class CatalogTransaction {
       throw new TiClientInternalException("Error parsing Json", e1);
     }
   }
+
 }

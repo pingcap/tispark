@@ -20,6 +20,13 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  test("test") {
+    ti.tidbMapTable("tidb_tispark_test", "full_data_type_table", dbNameAsPrefix = true)
+    val df = spark.sql("select count(*) from tidb_tispark_test_full_data_type_table")
+    df.explain()
+    df.show
+  }
+
   test("Test count") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute(
