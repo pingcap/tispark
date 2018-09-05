@@ -6,20 +6,20 @@
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) to serve as a one-stop solution for online transactions and analysis.
 
 ## Getting TiSpark
-The current stable version is 1.0.1.
+The current stable version is 1.1.
 
 If you are using maven, add the following to your pom.xml:
 ```xml
 <dependency>
   <groupId>com.pingcap.tispark</groupId>
   <artifactId>tispark-core</artifactId>
-  <version>1.0.1</version>
+  <version>1.1</version>
 </dependency>
 ```
 
 If you're using SBT, add the following line to your build file:
 ```scala
-libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.0.1"
+libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.1"
 ```
 
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
