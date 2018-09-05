@@ -25,7 +25,12 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge(
       "select tp_date, tp_datetime from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt"
     )
-    judge("select tp_date, tp_datetime, tp_timestamp from full_data_type_table_idx order by id_dt")
+    judge(
+      "select tp_date, tp_datetime, tp_timestamp from full_data_type_table_idx where tp_date < date '2017-11-02' order by id_dt"
+    )
+    judge(
+      "select cast(tp_datetime as date) cast_datetime, date(tp_datetime) date_datetime, tp_datetime from full_data_type_table where tp_date < date '2017-11-02'"
+    )
   }
 
   test("test db prefix") {
