@@ -20,9 +20,9 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
-  test("test") {
-    ti.tidbMapTable("tidb_tispark_test", "full_data_type_table", dbNameAsPrefix = true)
-    val df = spark.sql("select count(*) from tidb_tispark_test_full_data_type_table")
+  test("test db prefix") {
+    ti.tidbMapTable(s"${dbPrefix}tispark_test", "full_data_type_table", dbNameAsPrefix = true)
+    val df = spark.sql(s"select count(*) from ${dbPrefix}tispark_test_full_data_type_table")
     df.explain()
     df.show
   }
@@ -172,7 +172,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
 
   // https://github.com/pingcap/tispark/issues/255
   test("Group by with first") {
-    ti.tidbMapDatabase("tpch_test")
+    ti.tidbMapDatabase(dbPrefix + "tpch_test")
     val q1 =
       """
         |select
