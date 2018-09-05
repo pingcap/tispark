@@ -19,6 +19,8 @@ import org.apache.spark.sql.SparkSession
 
 class TiSessionState(sparkSession: SparkSession) extends HiveSessionState(sparkSession) {
 
+  self =>
+
   /**
    * Internal catalog for managing table and database states.
    */

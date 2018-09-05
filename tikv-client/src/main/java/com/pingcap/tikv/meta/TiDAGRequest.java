@@ -20,6 +20,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.*;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
@@ -178,6 +179,7 @@ public class TiDAGRequest implements Serializable {
   private final List<Expression> filters = new ArrayList<>();
   private final List<ByItem> groupByItems = new ArrayList<>();
   private final List<ByItem> orderByItems = new ArrayList<>();
+  private List<Expression> pushdownFilters = null;
   // System like Spark has different type promotion rules
   // we need a cast to target when given
   private final List<Pair<Expression, DataType>> aggregates = new ArrayList<>();
@@ -765,29 +767,47 @@ public class TiDAGRequest implements Serializable {
       sb.append(String.format("[Index: %s] ", indexInfo.getName()));
     }
 
-    if (getFields().size() != 0) {
+    if (!getFields().isEmpty()) {
       sb.append(", Columns: ");
-      sb.append(Joiner.on(", ").skipNulls().join(getFields()));
+      Joiner.on(", ").skipNulls().appendTo(sb, getFields());
     }
 
-    if (getFilters().size() != 0) {
-      sb.append(", Filter: ");
-      sb.append(Joiner.on(", ").skipNulls().join(getFilters()));
+    if (!getDowngradeFilters().isEmpty()) {
+      // should be called after all parameters are set
+      if (pushdownFilters == null) {
+        pushdownFilters = new ArrayList<>(getDowngradeFilters());
+        pushdownFilters.removeAll(new HashSet<>(getFilters()));
+      }
+      if (!pushdownFilters.isEmpty()) {
+        sb.append(", Pushdown Filter: ");
+        Joiner.on(", ").skipNulls().appendTo(sb, pushdownFilters);
+      }
     }
 
-    if (getAggregates().size() != 0) {
+    if (!getFilters().isEmpty()) {
+      sb.append(", Residual Filter: ");
+      Joiner.on(", ").skipNulls().appendTo(sb, getFilters());
+    }
+
+    // Key ranges might be also useful
+    if (!getRanges().isEmpty()) {
+      sb.append(", KeyRange: ");
+      getRanges().forEach(x -> sb.append(KeyUtils.formatBytes(x)));
+    }
+
+    if (!getAggregates().isEmpty()) {
       sb.append(", Aggregates: ");
-      sb.append(Joiner.on(", ").skipNulls().join(getAggregates()));
+      Joiner.on(", ").skipNulls().appendTo(sb, getAggregates());
     }
 
-    if (getGroupByItems().size() != 0) {
+    if (!getGroupByItems().isEmpty()) {
       sb.append(", Group By: ");
-      sb.append(Joiner.on(", ").skipNulls().join(getGroupByItems()));
+      Joiner.on(", ").skipNulls().appendTo(sb, getGroupByItems());
     }
 
-    if (getOrderByItems().size() != 0) {
+    if (!getOrderByItems().isEmpty()) {
       sb.append(", Order By: ");
-      sb.append(Joiner.on(", ").skipNulls().join(getOrderByItems()));
+      Joiner.on(", ").skipNulls().appendTo(sb, getOrderByItems());
     }
 
     if (getLimit() != 0) {

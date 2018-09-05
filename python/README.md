@@ -86,7 +86,7 @@ spark.sql("select count(*) from customer").show()
 
 2. Prepare your TiSpark environment as above and execute
 ```bash
-./bin/spark-submit --jars /where-ever-it-is/tispark-core-1.0.1-jar-with-dependencies.jar test.py
+./bin/spark-submit --jars /where-ever-it-is/tispark-core-1.1-jar-with-dependencies.jar test.py
 ```
 
 3. Result:

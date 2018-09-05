@@ -6,20 +6,20 @@
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) to serve as a one-stop solution for online transactions and analysis.
 
 ## Getting TiSpark
-The current stable version is 1.0.1.
+The current stable version is 1.1.
 
 If you are using maven, add the following to your pom.xml:
 ```xml
 <dependency>
   <groupId>com.pingcap.tispark</groupId>
   <artifactId>tispark-core</artifactId>
-  <version>1.0.1</version>
+  <version>1.1</version>
 </dependency>
 ```
 
 If you're using SBT, add the following line to your build file:
 ```scala
-libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.0.1"
+libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.1"
 ```
 
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
@@ -113,9 +113,10 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.coprocess.streaming |  false | Whether to use streaming for response fetching |
 | spark.tispark.plan.unsupported_pushdown_exprs |  "" | A comma separated list of expressions. In case you have very old version of TiKV, you might disable some of the expression push-down if not supported |
 | spark.tispark.plan.downgrade.index_threshold | 10000 | If index scan ranges on one region exceeds this limit in original request, downgrade this region's request to table scan rather than original planned index scan |
-| spark.tispark.type.unsupported_mysql_types |  "time,enum,set,year,json" | A comma separated list of mysql types TiSpark does not support currently, refer to `Unsupported MySQL Type List` below |
+| spark.tispark.type.unsupported_mysql_types |  "time,enum,set,year" | A comma separated list of mysql types TiSpark does not support currently, refer to `Unsupported MySQL Type List` below |
 | spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
-| spark.tispark.show_rowid |  Show implicit row Id | If to show implicit row Id if exists |
+| spark.tispark.show_rowid |  true | If to show implicit row Id if exists |
+| spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
 
 ## Unsupported MySQL Type List
 
@@ -125,7 +126,6 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | enum |
 | set  |
 | year |
-| json |
 
 ## Statistics information
 If you want to know how TiSpark could benefit from TiDB's statistic information, read more [here](./docs/userguide.md).

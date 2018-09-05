@@ -219,6 +219,10 @@ object TiUtils {
     if (conf.contains(TiConfigConst.SHOW_ROWID)) {
       tiConf.setShowRowId(conf.get(TiConfigConst.SHOW_ROWID).toBoolean)
     }
+
+    if (conf.contains(TiConfigConst.DB_PREFIX)) {
+      tiConf.setDBPrefix(conf.get(TiConfigConst.DB_PREFIX))
+    }
     tiConf
   }
 

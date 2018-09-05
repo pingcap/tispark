@@ -23,7 +23,7 @@
 # Enter posix mode for bash
 set -o posix
 
-TISPARK_JAR=tispark-core-1.0.1-jar-with-dependencies.jar
+TISPARK_JAR=tispark-core-1.1-jar-with-dependencies.jar
 
 if [ -z "${SPARK_HOME}" ]; then
   export SPARK_HOME="$(cd "`dirname "$0"`"/..; pwd)"
