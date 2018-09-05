@@ -100,10 +100,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
     val conf = sparkSession.conf
     val keyWithRegionTasks = RangeSplitter
       .newSplitter(session.getRegionManager)
-      .splitRangeByRegion(
-        dagRequest.getRanges,
-        conf.get(TiConfigConst.TABLE_SCAN_SPLIT_FACTOR, "1").toInt
-      )
+      .splitRangeByRegion(dagRequest.getRanges)
 
     val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]

@@ -15,6 +15,10 @@
 
 package com.pingcap.tikv.util;
 
+import static com.pingcap.tikv.key.Key.toRawKey;
+import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.ByteString;
@@ -29,16 +33,11 @@ import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongObjectHashMap;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static com.pingcap.tikv.key.Key.toRawKey;
-import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 
 public class RangeSplitter {
   public static class RegionTask implements Serializable {
@@ -223,27 +222,6 @@ public class RangeSplitter {
         RowKey.toRowKey(tableId, endHandle + 1).toByteString())
     );
     regionTasks.add(new RegionTask(regionStorePair.first, regionStorePair.second, newKeyRanges));
-  }
-
-  public List<RegionTask> splitRangeByRegion(List<KeyRange> keyRanges, int splitFactor) {
-    List<RegionTask> tempResult = splitRangeByRegion(keyRanges);
-    // rule out query within one region
-    if (tempResult.size() <= 1) {
-      return tempResult;
-    }
-
-    ImmutableList.Builder<RegionTask> splitTasks = ImmutableList.builder();
-    for (RegionTask task : tempResult) {
-      // rule out queries already split
-      if (task.getRanges().size() != 1) {
-        continue;
-      }
-      List<KeyRange> splitRange = KeyRangeUtils.split(task.getRanges().get(0), splitFactor);
-      for (KeyRange range : splitRange) {
-        splitTasks.add(new RegionTask(task.getRegion(), task.getStore(), ImmutableList.of(range)));
-      }
-    }
-    return splitTasks.build();
   }
 
   /**
