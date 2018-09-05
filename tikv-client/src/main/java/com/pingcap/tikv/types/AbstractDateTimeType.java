@@ -4,17 +4,17 @@ package com.pingcap.tikv.types;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
+import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-
-import java.sql.Date;
+import org.joda.time.LocalDate;
 
 public abstract class AbstractDateTimeType extends DataType {
-  protected AbstractDateTimeType(InternalTypeHolder holder) {
+  AbstractDateTimeType(InternalTypeHolder holder) {
     super(holder);
   }
 
@@ -31,7 +31,7 @@ public abstract class AbstractDateTimeType extends DataType {
    * Decode DateTime from packed long value
    * In TiDB / MySQL, timestamp type is converted to UTC and stored
    */
-  protected DateTime decodeDateTime(int flag, CodecDataInput cdi) {
+  DateTime decodeDateTime(int flag, CodecDataInput cdi) {
     DateTime dateTime;
     if (flag == Codec.UVARINT_FLAG) {
       dateTime = DateTimeCodec.readFromUVarInt(cdi, getTimezone());
@@ -46,19 +46,16 @@ public abstract class AbstractDateTimeType extends DataType {
   /**
    * Decode Date from packed long value
    */
-  protected Date decodeDate(int flag, CodecDataInput cdi) {
-    DateTime dateTime;
+  LocalDate decodeDate(int flag, CodecDataInput cdi) {
+    LocalDate date;
     if (flag == Codec.UVARINT_FLAG) {
-      dateTime = DateTimeCodec.readFromUVarInt(cdi, getTimezone());
+      date = DateCodec.readFromUVarInt(cdi);
     } else if (flag == Codec.UINT_FLAG) {
-      dateTime = DateTimeCodec.readFromUInt(cdi, getTimezone());
+      date = DateCodec.readFromUInt(cdi);
     } else {
       throw new InvalidCodecFormatException("Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
     }
-    if (dateTime == null) {
-      return null;
-    }
-    return new Date(dateTime.getMillis());
+    return date;
   }
 
   /**

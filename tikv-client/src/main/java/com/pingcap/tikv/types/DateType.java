@@ -22,6 +22,7 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import org.joda.time.DateTimeZone;
+import org.joda.time.LocalDate;
 
 import java.sql.Date;
 
@@ -53,7 +54,7 @@ public class DateType extends AbstractDateTimeType {
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     Date dt = Converter.convertToDate(value);
-    Codec.DateTimeCodec.writeDateFully(cdo, dt, getTimezone());
+    Codec.DateCodec.writeDateFully(cdo, dt, getTimezone());
   }
 
   /**
@@ -62,7 +63,7 @@ public class DateType extends AbstractDateTimeType {
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     Date dt = Converter.convertToDate(value);
-    Codec.DateTimeCodec.writeDateProto(cdo, dt, getTimezone());
+    Codec.DateCodec.writeDateProto(cdo, dt, getTimezone());
   }
 
   /**
@@ -70,10 +71,10 @@ public class DateType extends AbstractDateTimeType {
    */
   @Override
   protected Date decodeNotNull(int flag, CodecDataInput cdi) {
-    Date date = decodeDate(flag, cdi);
+    LocalDate date = decodeDate(flag, cdi);
     if (date == null) {
       return null;
     }
-    return date;
+    return new Date(date.toDate().getTime());
   }
 }
