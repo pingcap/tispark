@@ -20,6 +20,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.*;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
@@ -788,14 +789,11 @@ public class TiDAGRequest implements Serializable {
       Joiner.on(", ").skipNulls().appendTo(sb, getFilters());
     }
 
-    // Key ranges might be also useful? Possibly they should be output while an extra option was set
-//    if (!getRanges().isEmpty()) {
-//      sb.append(", KeyRange: ");
-//      getRanges().forEach(x ->
-//          sb.append(String.format("[%s, %s] ",
-//              Arrays.toString(x.getStart().toByteArray()),
-//              Arrays.toString(x.getEnd().toByteArray()))));
-//    }
+    // Key ranges might be also useful
+    if (!getRanges().isEmpty()) {
+      sb.append(", KeyRange: ");
+      getRanges().forEach(x -> sb.append(KeyUtils.formatBytes(x)));
+    }
 
     if (!getAggregates().isEmpty()) {
       sb.append(", Aggregates: ");

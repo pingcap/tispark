@@ -22,12 +22,12 @@ import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiDBInfo {
-  private long id;
-  private String name;
-  private String charset;
-  private String collate;
-  private List<TiTableInfo> tables;
-  private SchemaState schemaState;
+  private final long id;
+  private final String name;
+  private final String charset;
+  private final String collate;
+  private final List<TiTableInfo> tables;
+  private final SchemaState schemaState;
 
   @JsonCreator
   public TiDBInfo(
@@ -43,6 +43,19 @@ public class TiDBInfo {
     this.collate = collate;
     this.tables = tables;
     this.schemaState = SchemaState.fromValue(schemaState);
+  }
+
+  private TiDBInfo(long id, String name, String charset, String collate, List<TiTableInfo> tables, SchemaState schemaState) {
+    this.id = id;
+    this.name = name;
+    this.charset = charset;
+    this.collate = collate;
+    this.tables = tables;
+    this.schemaState = schemaState;
+  }
+
+  public TiDBInfo rename(String newName) {
+    return new TiDBInfo(id, newName, charset, collate, tables, schemaState);
   }
 
   public long getId() {

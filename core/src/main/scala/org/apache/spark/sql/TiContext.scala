@@ -138,11 +138,19 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
 
+  // add backtick for table name in case it contains, e.g., a minus sign
+  private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =
+    "`" + (if (dbNameAsPrefix) dbName + "_" + tableName else tableName) + "`"
+
   // tidbMapTable does not do any check any meta information
   // it just register table for later use
-  def tidbMapTable(dbName: String, tableName: String): DataFrame = {
+  def tidbMapTable(dbName: String,
+                   tableName: String,
+                   dbNameAsPrefix: Boolean = false): DataFrame = {
     val df = getDataFrame(dbName, tableName)
-    df.createOrReplaceTempView(tableName)
+    val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
+    df.createOrReplaceTempView(viewName)
+    logInfo("Registered table [" + tableName + "] as [" + viewName + "]")
     df
   }
 
@@ -158,23 +166,26 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       table <- meta.getTables(db)
     } {
       var sizeInBytes = Long.MaxValue
+      val tableName = table.getName
       if (autoLoadStatistics) {
         statisticsManager.loadStatisticsInfo(table)
-        sizeInBytes = statisticsManager.estimateTableSize(table)
       }
+      sizeInBytes = statisticsManager.estimateTableSize(table)
 
-      val rel: TiDBRelation = new TiDBRelation(
-        tiSession,
-        new TiTableReference(dbName, table.getName, sizeInBytes),
-        meta
-      )(sqlContext)
+      if (!sqlContext.sparkSession.catalog.tableExists(tableName)) {
+        val rel: TiDBRelation = new TiDBRelation(
+          tiSession,
+          new TiTableReference(dbName, tableName, sizeInBytes),
+          meta
+        )(sqlContext)
 
-      if (!sqlContext.sparkSession.catalog.tableExists(table.getName)) {
-        // add backtick for table name in case it contains, e.g., a minus sign
-        val tableName = "`" + (if (dbNameAsPrefix) db.getName + "_" + table.getName
-                               else table.getName) + "`"
-        sqlContext.baseRelationToDataFrame(rel).createTempView(tableName)
-        logInfo("Registered table " + table.getName)
+        val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
+        sqlContext.baseRelationToDataFrame(rel).createTempView(viewName)
+        logInfo("Registered table [" + tableName + "] as [" + viewName + "]")
+      } else {
+        logInfo(
+          "Duplicate table [" + tableName + "] exist in catalog, you might want to set dbNameAsPrefix = true"
+        )
       }
     }
 }

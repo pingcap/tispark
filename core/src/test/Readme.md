@@ -21,4 +21,6 @@ spark.tispark.pd.addresses=127.0.0.1:2379
 spark.tispark.plan.allow_index_read=true
 # Whether to load test data before running tests. If you haven't load tispark_test or tpch_test data, set this to true. The next time you run tests, you can set this to false.
 test.data.load=false
+# DB prefix for tidb tables in case it conflicts with hive database
+spark.tispark.db_prefix=tidb_
 ```

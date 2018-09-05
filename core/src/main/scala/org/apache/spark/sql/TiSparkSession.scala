@@ -31,14 +31,11 @@ import org.apache.spark.{SparkConf, SparkContext}
 class TiSparkSession(
   @transient override val sparkContext: SparkContext,
   @transient private val existingSharedState: Option[SharedState]
-) extends SparkSession(sparkContext) {
+) extends SparkSession(sparkContext) { self =>
 
   private[sql] def this(sc: SparkContext) {
     this(sc, None)
   }
-
-  @transient
-  override lazy val sharedState: SharedState = new SharedState(sparkContext)
 
   @transient
   override lazy val sessionState: SessionState = new TiSessionState(this)
@@ -186,7 +183,7 @@ object TiSparkSession {
       }
 
       // Global synchronization so we will only set the default session once.
-      SparkSession.synchronized {
+      TiSparkSession.synchronized {
         // If the current thread does not have an active session, get it from the global session.
         session = defaultSession.get()
         if ((session ne null) && !session.sparkContext.isStopped) {
