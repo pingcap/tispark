@@ -694,7 +694,7 @@ public class MyDecimal {
     int wordsFracFrom = this.digitsFrac / digitsPerWord;
     int trailingDigitsFrom = this.digitsFrac - wordsFracFrom * digitsPerWord;
     int intSize = wordsInt * wordSize + dig2bytes[leadingDigits];
-    int fracSize = wordsFracFrom * wordSize + dig2bytes[trailingDigits];
+    int fracSize = wordsFrac * wordSize + dig2bytes[trailingDigits];
     int fracSizeFrom = wordsFracFrom * wordSize + dig2bytes[trailingDigitsFrom];
     int originIntSize = intSize;
     int originFracSize = fracSize;
