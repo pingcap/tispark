@@ -111,12 +111,13 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.index.scan_concurrency |  5 | Maximal threads for index scan retrieving row keys (shared among tasks inside each JVM) |
 | spark.tispark.table.scan_concurrency |  512 | Maximal threads for table scan (shared among tasks inside each JVM) |
 | spark.tispark.request.command.priority |  "Low" | "Low", "Normal", "High" which impacts resource to get in TiKV. Low is recommended for not disturbing OLTP workload |
-| spark.tispark.coprocess.streaming |  false | Whether to use streaming for response fetching |
+| spark.tispark.coprocess.streaming |  false | Whether to use streaming for response fetching (Experimental) |
 | spark.tispark.plan.unsupported_pushdown_exprs |  "" | A comma separated list of expressions. In case you have very old version of TiKV, you might disable some of the expression push-down if not supported |
 | spark.tispark.plan.downgrade.index_threshold | 10000 | If index scan ranges on one region exceeds this limit in original request, downgrade this region's request to table scan rather than original planned index scan |
-| spark.tispark.type.unsupported_mysql_types |  "time,enum,set,year,json" | A comma separated list of mysql types TiSpark does not support currently, refer to `Unsupported MySQL Type List` below |
+| spark.tispark.type.unsupported_mysql_types |  "time,enum,set,year" | A comma separated list of mysql types TiSpark does not support currently, refer to `Unsupported MySQL Type List` below |
 | spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
-| spark.tispark.show_rowid |  Show implicit row Id | If to show implicit row Id if exists |
+| spark.tispark.show_rowid |  true | If to show implicit row Id if exists |
+| spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
 
 ## Unsupported MySQL Type List
 
@@ -126,7 +127,6 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | enum |
 | set  |
 | year |
-| json |
 
 ## Statistics information
 If you want to know how TiSpark could benefit from TiDB's statistic information, read more [here](./docs/userguide.md).

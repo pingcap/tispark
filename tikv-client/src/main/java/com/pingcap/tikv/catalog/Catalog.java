@@ -40,6 +40,7 @@ public class Catalog implements AutoCloseable {
   private ScheduledExecutorService service;
   private CatalogCache metaCache;
   private final boolean showRowId;
+  private final String dbPrefix;
   private final Logger logger = Logger.getLogger(this.getClass());
 
   @Override
@@ -50,8 +51,10 @@ public class Catalog implements AutoCloseable {
   }
 
   private static class CatalogCache {
-    private CatalogCache(CatalogTransaction transaction) {
+
+    private CatalogCache(CatalogTransaction transaction, String dbPrefix) {
       this.transaction = transaction;
+      this.dbPrefix = dbPrefix;
       this.dbCache = loadDatabases();
       this.tableCache = new ConcurrentHashMap<>();
       this.currentVersion = transaction.getLatestSchemaVersion();
@@ -61,6 +64,7 @@ public class Catalog implements AutoCloseable {
     private final ConcurrentHashMap<TiDBInfo, Map<String, TiTableInfo>> tableCache;
     private CatalogTransaction transaction;
     private long currentVersion;
+    private final String dbPrefix;
 
     public CatalogTransaction getTransaction() {
       return transaction;
@@ -110,7 +114,10 @@ public class Catalog implements AutoCloseable {
       HashMap<String, TiDBInfo> newDBCache = new HashMap<>();
 
       List<TiDBInfo> databases = transaction.getDatabases();
-      databases.forEach(db -> newDBCache.put(db.getName(), db));
+      databases.forEach(db -> {
+        TiDBInfo newDBInfo = db.rename(dbPrefix + db.getName());
+        newDBCache.put(newDBInfo.getName(), newDBInfo);
+      });
       return newDBCache;
     }
   }
@@ -119,11 +126,13 @@ public class Catalog implements AutoCloseable {
       Supplier<Snapshot> snapshotProvider,
       int refreshPeriod,
       TimeUnit periodUnit,
-      boolean showRowId) {
+      boolean showRowId,
+      String dbPrefix) {
     this.snapshotProvider = Objects.requireNonNull(snapshotProvider,
                                                    "Snapshot Provider is null");
     this.showRowId = showRowId;
-    metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()));
+    this.dbPrefix = dbPrefix;
+    metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix);
     service = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
     service.scheduleAtFixedRate(() -> {
       // Wrap this with a try catch block in case schedule update fails
@@ -140,7 +149,7 @@ public class Catalog implements AutoCloseable {
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     long latestVersion = newTrx.getLatestSchemaVersion();
     if (latestVersion > metaCache.getVersion()) {
-      metaCache = new CatalogCache(newTrx);
+      metaCache = new CatalogCache(newTrx, dbPrefix);
     }
   }
 
@@ -154,7 +163,7 @@ public class Catalog implements AutoCloseable {
       return metaCache
           .listTables(database)
           .stream()
-          .map(table -> table.copyTableWithRowId())
+          .map(TiTableInfo::copyTableWithRowId)
           .collect(Collectors.toList());
     } else {
       return metaCache.listTables(database);

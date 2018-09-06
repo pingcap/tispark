@@ -53,6 +53,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def tpchDBName: String = SharedSQLContext.tpchDBName
 
+  protected def dbPrefix: String = SharedSQLContext.dbPrefix
+
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
@@ -97,6 +99,7 @@ object SharedSQLContext extends Logging {
   private var _sparkJDBC: SparkSession = _
   protected var jdbcUrl: String = _
   protected var tpchDBName: String = _
+  protected var dbPrefix: String = _
 
   protected lazy val sql = spark.sql _
 
@@ -167,7 +170,7 @@ object SharedSQLContext extends Logging {
       val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toBoolean
 
       jdbcUrl =
-        s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false"
+        s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
       _statement = _tidbConnection.createStatement()
@@ -180,21 +183,21 @@ object SharedSQLContext extends Logging {
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Loading IndexTest.sql successfully.")
+        logger.warn("Load IndexTest.sql successfully.")
         // Load expression test data
         queryString = resourceToString(
           s"tispark-test/TiSparkTest.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Loading TiSparkTest.sql successfully.")
+        logger.warn("Load TiSparkTest.sql successfully.")
         // Load tpch test data
         queryString = resourceToString(
           s"tispark-test/TPCHData.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Loading TPCHData.sql successfully.")
+        logger.warn("Load TPCHData.sql successfully.")
         initStatistics()
       }
     }
@@ -211,10 +214,15 @@ object SharedSQLContext extends Logging {
         prop.load(confStream)
       }
 
-      tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
+
+      dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
+      sparkConf.set(DB_PREFIX, dbPrefix)
+
+      tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
+
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf)
     }

@@ -123,12 +123,16 @@ class DefaultTableSizeEstimator(statisticsManager: StatisticsManager)
    * @return estimated table size of this table
    */
   override def estimatedTableSize(table: TiTableInfo): Long = {
-    val colWidth = estimatedRowSize(table)
     val tblCount = estimatedCount(table)
-    if (Long.MaxValue / colWidth > tblCount) {
-      colWidth * tblCount
-    } else {
+    if (tblCount == Long.MaxValue) {
       Long.MaxValue
+    } else {
+      val colWidth = estimatedRowSize(table)
+      if (Long.MaxValue / colWidth > tblCount) {
+        colWidth * tblCount
+      } else {
+        Long.MaxValue
+      }
     }
   }
 }

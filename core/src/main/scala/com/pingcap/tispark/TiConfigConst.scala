@@ -25,7 +25,6 @@ object TiConfigConst {
   val INDEX_SCAN_CONCURRENCY: String = "spark.tispark.index.scan_concurrency"
   val TABLE_SCAN_CONCURRENCY: String = "spark.tispark.table.scan_concurrency"
   val ALLOW_AGG_PUSHDOWN: String = "spark.tispark.plan.allow_agg_pushdown"
-  val TABLE_SCAN_SPLIT_FACTOR: String = "spark.tispark.table.scan_split_factor"
   val TASK_PER_SPLIT: String = "spark.tispark.task_per_split"
   val PD_CLUSTER_ID: String = "spark.tispark.pd.clusterid"
   val REQUEST_COMMAND_PRIORITY: String = "spark.tispark.request.command.priority"
@@ -39,4 +38,5 @@ object TiConfigConst {
   val ENABLE_AUTO_LOAD_STATISTICS: String = "spark.tispark.statistics.auto_load"
   val CACHE_EXPIRE_AFTER_ACCESS: String = "spark.tispark.statistics.expire_after_access"
   val SHOW_ROWID: String = "spark.tispark.show_rowid"
+  val DB_PREFIX: String = "spark.tispark.db_prefix"
 }

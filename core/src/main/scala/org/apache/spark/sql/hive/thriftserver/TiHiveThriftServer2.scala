@@ -18,7 +18,6 @@ package org.apache.spark.sql.hive.thriftserver
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
-import org.apache.commons.logging.LogFactory
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars
 import org.apache.hive.service.cli.thrift.{ThriftBinaryCLIService, ThriftHttpCLIService}
@@ -33,9 +32,6 @@ import org.apache.spark.sql.hive.thriftserver.ui.ThriftServerTab
 import org.apache.spark.util.{ShutdownHookManager, Utils}
 
 object TiHiveThriftServer2 extends Logging {
-  var LOG = LogFactory.getLog(classOf[HiveServer2])
-  var uiTab: Option[ThriftServerTab] = None
-  var listener: HiveThriftServer2Listener = _
 
   /**
    * :: DeveloperApi ::
@@ -86,7 +82,7 @@ object TiHiveThriftServer2 extends Logging {
       server.start()
       logInfo("TiHiveThriftServer2 started")
       listener = new HiveThriftServer2Listener(server, TiSparkSQLEnv.sqlContext.conf)
-      HiveThriftServer2.listener = listener
+//      HiveThriftServer2.listener = listener
 
       TiSparkSQLEnv.sparkContext.addSparkListener(listener)
       uiTab =
@@ -120,7 +116,7 @@ private[hive] class TiHiveThriftServer2(sqlContext: SQLContext)
   private val started = new AtomicBoolean(false)
 
   override def init(hiveConf: HiveConf) {
-    val sparkSqlCliService = new TiSparkSQLCLIService(this, sqlContext)
+    val sparkSqlCliService = new SparkSQLCLIService(this, sqlContext)
     setSuperField(this, "cliService", sparkSqlCliService)
     addService(sparkSqlCliService)
 
