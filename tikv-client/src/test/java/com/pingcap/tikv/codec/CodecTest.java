@@ -25,6 +25,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.TimeZone;
 
@@ -462,7 +463,7 @@ public class CodecTest {
   @Test
   public void readNWriteDateTimeTest() {
     DateTimeZone otherTz = DateTimeZone.forOffsetHours(-8);
-    DateTime time = new DateTime(2007, 3, 11, 2, 0, 0, 0);
+    DateTime time = new DateTime(2007, 3, 11, 2, 0, 0, 0, DateTimeZone.UTC);
 
     CodecDataOutput cdo = new CodecDataOutput();
     DateTimeCodec.writeDateTimeFully(cdo, time, otherTz);
@@ -473,22 +474,23 @@ public class CodecTest {
             (byte) 0x4,
             (byte) 0x19,
             (byte) 0x7b,
-            (byte) 0x94,
-            (byte) 0xa0,
+            (byte) 0x95,
+            (byte) 0x20,
             (byte) 0x00,
             (byte) 0x00,
             (byte) 0x00,
             (byte) 0x00,
             (byte) 0x19,
             (byte) 0x7b,
-            (byte) 0x94,
-            (byte) 0xa0,
+            (byte) 0x95,
+            (byte) 0x20,
             (byte) 0x00,
             (byte) 0x00,
             (byte) 0x00,
             (byte) 0x00,
         },
         cdo.toBytes());
+
 
     CodecDataInput cdi = new CodecDataInput(cdo.toBytes());
     assertEquals(UINT_FLAG, cdi.readByte());
