@@ -68,8 +68,8 @@
         <spark.version>2.1.1</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.8</scala.version>
-        <gpg.skip>true</gpg.skip>
-        <javadoc.skip>true</javadoc.skip>
+        <gpg.skip>false</gpg.skip>
+        <javadoc.skip>false</javadoc.skip>
     </properties>
 
     <distributionManagement>
