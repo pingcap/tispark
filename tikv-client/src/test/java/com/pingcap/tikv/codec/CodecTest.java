@@ -25,6 +25,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.TimeZone;
 
@@ -489,6 +490,7 @@ public class CodecTest {
             (byte) 0x00,
         },
         cdo.toBytes());
+
 
     CodecDataInput cdi = new CodecDataInput(cdo.toBytes());
     assertEquals(UINT_FLAG, cdi.readByte());
