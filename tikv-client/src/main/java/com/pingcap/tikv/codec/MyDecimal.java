@@ -56,6 +56,9 @@ public class MyDecimal {
   private boolean negative;
   private int[] wordBuf = new int[maxWordBufLen];
 
+  // Integer limit values
+  private static final int maxInt32 = 1 << 31 - 1;
+
   /*
    * Returns total precision of this decimal. Basically, it is sum of digitsInt and digitsFrac. But there
    * are some special cases need to be token care of such as 000.001.
@@ -87,7 +90,7 @@ public class MyDecimal {
    * @param value an double value
    */
   public void fromDecimal(double value) {
-    String s = Double.toString(value);
+    String s = value + "";
     this.fromString(s);
   }
 
@@ -316,7 +319,8 @@ public class MyDecimal {
       }
     }
 
-    if (str.length == 0) {
+    // prevent empty string
+    if (str.length == 0 || startIdx >= str.length) {
       throw new IllegalArgumentException("BadNumber");
     }
 
@@ -423,6 +427,27 @@ public class MyDecimal {
     }
     if (innerIdx != 0) {
       this.wordBuf[wordIdx] = word * powers10[digitsPerWord - innerIdx];
+    }
+
+    // for e & E of double
+    if (endIdx + 1 <= str.length && (str[endIdx] == 'e' || str[endIdx] == 'E')) {
+      int exponent = strToLong(String.valueOf(str).substring(endIdx + 1));
+      // TODO TruncateError here
+      if (exponent > maxInt32 / 2) {
+          boolean negative = this.negative;
+          maxDecimal(wordBufLen * digitsPerWord, 0);
+          this.negative = negative;
+          overflow = true;
+      }
+
+      if (exponent < minInt32 / 2 && !overflow) {
+        this.clear();
+        truncated = true;
+      }
+
+      if (!overflow) {
+
+      }
     }
 
     // this is -0000 is just 0.
