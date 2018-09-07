@@ -155,11 +155,13 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>1.5</version>
                 <configuration>
+                    <keyname>Gansen Hu</keyname>
                     <skip>${gpg.skip}</skip>
                 </configuration>
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
+                        <phase>deploy</phase>
                         <goals>
                             <goal>sign</goal>
                         </goals>
