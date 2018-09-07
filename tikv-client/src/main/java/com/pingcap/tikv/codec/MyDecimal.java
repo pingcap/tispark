@@ -301,6 +301,7 @@ public class MyDecimal {
    *
    * @param s s is a decimal in string form.
    */
+  @VisibleForTesting
   public void fromString(String s) {
     char[] sCharArray = s.toCharArray();
     fromCharArray(sCharArray);
@@ -694,7 +695,7 @@ public class MyDecimal {
     int wordsFracFrom = this.digitsFrac / digitsPerWord;
     int trailingDigitsFrom = this.digitsFrac - wordsFracFrom * digitsPerWord;
     int intSize = wordsInt * wordSize + dig2bytes[leadingDigits];
-    int fracSize = wordsFracFrom * wordSize + dig2bytes[trailingDigits];
+    int fracSize = wordsFrac * wordSize + dig2bytes[trailingDigits];
     int fracSizeFrom = wordsFracFrom * wordSize + dig2bytes[trailingDigitsFrom];
     int originIntSize = intSize;
     int originFracSize = fracSize;
@@ -728,7 +729,7 @@ public class MyDecimal {
     } else if (intSize > iSizeFrom) {
       for (; intSize > iSizeFrom; ) {
         intSize--;
-        bin[binIdx] = mask;
+        bin[binIdx] = mask & 0xff;
         binIdx++;
       }
     }
@@ -786,7 +787,7 @@ public class MyDecimal {
       int binIdxEnd = originIntSize + originFracSize;
       for (; fracSize > fracSizeFrom && binIdx < binIdxEnd; ) {
         fracSize--;
-        bin[binIdx] = mask;
+        bin[binIdx] = mask & 0xff;
         binIdx++;
       }
     }

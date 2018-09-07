@@ -25,6 +25,8 @@ import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Calendar;
 import java.util.TimeZone;
 
 import static com.pingcap.tikv.codec.Codec.*;
@@ -46,9 +48,46 @@ public class CodecTest {
     assertEquals(206.0, u, 0.0001);
 
     cdo.reset();
-    DecimalCodec.writeDecimal(cdo, BigDecimal.valueOf(206.0));
+    RealCodec.writeDouble(cdo, 0);
+    u = RealCodec.readDouble(new CodecDataInput(cdo.toBytes()));
+    assertEquals(0, u, 0.0001);
+
+    cdo.reset();
+    RealCodec.writeDouble(cdo, -0.01);
+    u = RealCodec.readDouble(new CodecDataInput(cdo.toBytes()));
+    assertEquals(-0.01, u, 0.0001);
+
+    cdo.reset();
+    RealCodec.writeDouble(cdo, -206.0);
+    u = RealCodec.readDouble(new CodecDataInput(cdo.toBytes()));
+    assertEquals(-206.0, u, 0.0001);
+  }
+
+  @Test
+  public void readNWriteDecimalTest() throws Exception {
+    CodecDataOutput cdo = new CodecDataOutput();
+    DecimalCodec.writeDecimal(cdo, BigDecimal.valueOf(0));
     BigDecimal bigDec = DecimalCodec.readDecimal(new CodecDataInput(cdo.toBytes()));
-    assertEquals(206.0, bigDec.doubleValue(), 0.0001);
+    assertEquals(0, bigDec.doubleValue(), 0.0001);
+
+    cdo.reset();
+    DecimalCodec.writeDecimal(cdo, BigDecimal.valueOf(206.01));
+    bigDec = DecimalCodec.readDecimal(new CodecDataInput(cdo.toBytes()));
+    assertEquals(206.01, bigDec.doubleValue(), 0.0001);
+
+    cdo.reset();
+    DecimalCodec.writeDecimal(cdo, BigDecimal.valueOf(-206.01));
+    bigDec = DecimalCodec.readDecimal(new CodecDataInput(cdo.toBytes()));
+    assertEquals(-206.01, bigDec.doubleValue(), 0.0001);
+
+    byte[] wrongData = new byte[] {(byte) 0x8};
+    CodecDataInput cdi = new CodecDataInput(wrongData);
+    try {
+      DecimalCodec.readDecimal(cdi);
+      fail();
+    } catch (Exception e) {
+      assertTrue(true);
+    }
   }
 
   @Test
@@ -141,7 +180,38 @@ public class CodecTest {
       IntegerCodec.readUVarLong(cdi);
       fail();
     } catch (Exception e) {
-      assertTrue(true);
+      assertEquals("readUVarLong encountered unfinished data", e.getMessage());
+    }
+
+    // the following two tests are for overflow readUVarLong
+    wrongData =
+        new byte[] {
+            (byte) 0x9, (byte) 0x80, (byte) 0x80, (byte) 0x80,
+            (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80,
+            (byte) 0x80, (byte) 0x80, (byte) 0x02
+        };
+    cdi = new CodecDataInput(wrongData);
+    try {
+      cdi.skipBytes(1);
+      IntegerCodec.readUVarLong(cdi);
+      fail();
+    } catch (Exception e) {
+      assertEquals("readUVarLong overflow", e.getMessage());
+    }
+
+    wrongData =
+        new byte[] {
+            (byte) 0x9, (byte) 0x80, (byte) 0x80, (byte) 0x80,
+            (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x80,
+            (byte) 0x80, (byte) 0x80, (byte) 0x80, (byte) 0x01
+        };
+    cdi = new CodecDataInput(wrongData);
+    try {
+      cdi.skipBytes(1);
+      IntegerCodec.readUVarLong(cdi);
+      fail();
+    } catch (Exception e) {
+      assertEquals("readUVarLong overflow", e.getMessage());
     }
   }
 
@@ -162,10 +232,52 @@ public class CodecTest {
     assertArrayEquals(expected, result);
 
     cdo.reset();
+    Codec.BytesCodec.writeBytes(cdo, "abcdefghijk".getBytes());
+    result = BytesCodec.readBytes(new CodecDataInput(cdo.toBytes()));
+    expected = toBytes(new int[]{97,98,99,100,101,102,103,104,105,106,107});
+    assertArrayEquals(expected, result);
+
+    cdo.reset();
     Codec.BytesCodec.writeBytes(cdo, "fYfSp".getBytes());
     result = cdo.toBytes();
     expected = toBytes(new int[]{102,89,102,83,112,0,0,0,252});
     assertArrayEquals(expected, result);
+
+    cdo.reset();
+    Codec.BytesCodec.writeBytesRaw(cdo, "fYfSp".getBytes());
+    result = cdo.toBytes();
+    expected = toBytes(new int[]{102,89,102,83,112});
+    assertArrayEquals(expected, result);
+  }
+
+  @Test
+  public void readBytesTest() {
+    // TODO: How to test private
+    byte[] data =
+        new byte[] {
+            (byte) 0x61,
+            (byte) 0x62,
+            (byte) 0x63,
+            (byte) 0x64,
+            (byte) 0x65,
+            (byte) 0x66,
+            (byte) 0x67,
+            (byte) 0x68,
+            (byte) 0xff,
+            (byte) 0x69,
+            (byte) 0x6a,
+            (byte) 0x6b,
+            (byte) 0x00,
+            (byte) 0x00,
+            (byte) 0x00,
+            (byte) 0x00,
+            (byte) 0x00,
+            (byte) 0xfa
+        };
+    CodecDataInput cdi = new CodecDataInput(data);
+    // byte[] result = BytesCodec.readBytes(cdi, false);
+
+
   }
 
   @Test
@@ -289,6 +401,15 @@ public class CodecTest {
     long time11 = DateTimeCodec.toPackedLong(date1, otherTz);
     DateTime time12 = requireNonNull(DateTimeCodec.fromPackedLong(time11, otherTz));
     assertEquals(time12.getMillis(), date1.getMillis());
+
+    Calendar cal = Calendar.getInstance(otherTz.toTimeZone());
+    cal.set(Calendar.HOUR_OF_DAY, 0);
+    cal.set(Calendar.MINUTE, 0);
+    cal.set(Calendar.SECOND, 0);
+    cal.set(Calendar.MILLISECOND, 0);
+    long millis = cal.getTimeInMillis();
+    DateTime time14 = requireNonNull(DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(millis, otherTz), otherTz));
+    assertEquals(millis, time14.getMillis());
   }
 
   @Test
@@ -337,5 +458,52 @@ public class CodecTest {
 
     TimeZone.setDefault(defaultTimeZone);
     DateTimeZone.setDefault(defaultDateTimeZone);
+  }
+
+  @Test
+  public void readNWriteDateTimeTest() {
+    DateTimeZone otherTz = DateTimeZone.forOffsetHours(-8);
+    DateTime time = new DateTime(2007, 3, 11, 2, 0, 0, 0, DateTimeZone.UTC);
+
+    CodecDataOutput cdo = new CodecDataOutput();
+    DateTimeCodec.writeDateTimeFully(cdo, time, otherTz);
+    DateTimeCodec.writeDateTimeProto(cdo, time, otherTz);
+
+    assertArrayEquals(
+        new byte[] {
+            (byte) 0x4,
+            (byte) 0x19,
+            (byte) 0x7b,
+            (byte) 0x95,
+            (byte) 0x20,
+            (byte) 0x00,
+            (byte) 0x00,
+            (byte) 0x00,
+            (byte) 0x00,
+            (byte) 0x19,
+            (byte) 0x7b,
+            (byte) 0x95,
+            (byte) 0x20,
+            (byte) 0x00,
+            (byte) 0x00,
+            (byte) 0x00,
+            (byte) 0x00,
+        },
+        cdo.toBytes());
+
+
+    CodecDataInput cdi = new CodecDataInput(cdo.toBytes());
+    assertEquals(UINT_FLAG, cdi.readByte());
+    DateTime time2 = DateTimeCodec.readFromUInt(cdi, otherTz);
+    assertEquals(time.getMillis(), time2.getMillis());
+    time2 = DateTimeCodec.readFromUInt(cdi, otherTz);
+    assertEquals(time.getMillis(), time2.getMillis());
+
+    cdo.reset();
+    IntegerCodec.writeULongFully(cdo, DateTimeCodec.toPackedLong(time, otherTz), false);
+    cdi = new CodecDataInput(cdo.toBytes());
+    assertEquals(UVARINT_FLAG, cdi.readByte());
+    time2 = DateTimeCodec.readFromUVarInt(cdi, otherTz);
+    assertEquals(time.getMillis(), time2.getMillis());
   }
 }
