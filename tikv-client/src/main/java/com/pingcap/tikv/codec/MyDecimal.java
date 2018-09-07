@@ -729,7 +729,7 @@ public class MyDecimal {
     } else if (intSize > iSizeFrom) {
       for (; intSize > iSizeFrom; ) {
         intSize--;
-        bin[binIdx] = mask;
+        bin[binIdx] = mask & 0xff;
         binIdx++;
       }
     }
@@ -787,7 +787,7 @@ public class MyDecimal {
       int binIdxEnd = originIntSize + originFracSize;
       for (; fracSize > fracSizeFrom && binIdx < binIdxEnd; ) {
         fracSize--;
-        bin[binIdx] = mask;
+        bin[binIdx] = mask & 0xff;
         binIdx++;
       }
     }
