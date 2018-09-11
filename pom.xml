@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.1-spark-2.3-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -64,10 +64,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <scalatest.version>3.0.4</scalatest.version>
-        <spark.version>2.3.0</spark.version>
+        <spark.version>2.3.1</spark.version>
         <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.8</scala.version>
+        <scala.version>2.11</scala.version>
+        <scalatest.version>3.0.4</scalatest.version>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
     </properties>

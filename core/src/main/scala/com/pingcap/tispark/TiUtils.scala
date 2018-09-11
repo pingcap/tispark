@@ -32,7 +32,7 @@ import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
-import org.apache.spark.sql.{SparkSession, TiStrategy}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.{sql, SparkConf}
 
 import scala.collection.JavaConversions._
@@ -227,7 +227,6 @@ object TiUtils {
   }
 
   def sessionInitialize(session: SparkSession, tiSession: TiSession): Unit = {
-    session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
     session.udf.register("ti_version", () => TiSparkVersion.version)
     CacheInvalidateListener.initCacheListener(session.sparkContext, tiSession.getRegionManager)
     tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())

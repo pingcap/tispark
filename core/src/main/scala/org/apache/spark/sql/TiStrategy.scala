@@ -49,8 +49,10 @@ import scala.collection.mutable
 // a re-extract needed for pushdown since
 // a plan tree might have Join which causes a single tree
 // have multiple plan to pushdown
-class TiStrategy(context: SQLContext) extends Strategy with Logging {
-  val sqlConf: SQLConf = context.conf
+case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
+    extends Strategy
+    with Logging {
+  val sqlConf: SQLConf = sparkSession.sqlContext.conf
   type TiExpression = com.pingcap.tikv.expression.Expression
   type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
 

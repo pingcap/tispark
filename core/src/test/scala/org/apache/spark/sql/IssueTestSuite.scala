@@ -20,6 +20,10 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  test("test") {
+    spark.sql(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table").show
+  }
+
   test("test db prefix") {
     ti.tidbMapTable(s"${dbPrefix}tispark_test", "full_data_type_table", dbNameAsPrefix = true)
     val df = spark.sql(s"select count(*) from ${dbPrefix}tispark_test_full_data_type_table")

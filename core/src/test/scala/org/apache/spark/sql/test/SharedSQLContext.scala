@@ -25,7 +25,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
-import org.apache.spark.sql.{SQLContext, SparkSession, TiContext}
+import org.apache.spark.sql.{SQLContext, SparkSession, TiContext, TiExtensions}
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.BeforeAndAfterAll
@@ -226,6 +226,7 @@ object SharedSQLContext extends Logging {
 
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf)
+      (new TiExtensions)(_sparkSession.extensions)
     }
 
   /**
