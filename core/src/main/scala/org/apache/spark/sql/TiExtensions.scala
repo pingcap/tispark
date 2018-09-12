@@ -6,15 +6,6 @@ import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
 
 class TiExtensions extends (SparkSessionExtensions => Unit) {
-  override def apply(e: SparkSessionExtensions): Unit = {
-    e.injectParser(TiParser(TiExtensions.getOrCreateTiContext))
-    e.injectResolutionRule(TiDDLRule)
-    e.injectResolutionRule(TiResolutionRule(TiExtensions.getOrCreateTiContext))
-    e.injectPlannerStrategy(TiStrategy(TiExtensions.getOrCreateTiContext))
-  }
-}
-
-object TiExtensions {
   private var tiContext: TiContext = _
 
   def getOrCreateTiContext(sparkSession: SparkSession): TiContext = {
@@ -27,5 +18,12 @@ object TiExtensions {
       tiContext.tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
     }
     tiContext
+  }
+
+  override def apply(e: SparkSessionExtensions): Unit = {
+    e.injectParser(TiParser(getOrCreateTiContext))
+    e.injectResolutionRule(TiDDLRule(getOrCreateTiContext))
+    e.injectResolutionRule(TiResolutionRule(getOrCreateTiContext))
+    e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
 }
