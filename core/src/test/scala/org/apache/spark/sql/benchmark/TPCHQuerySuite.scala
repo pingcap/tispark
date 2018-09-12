@@ -53,7 +53,6 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
   private lazy val tiSparkRes = {
     val result = mutable.Map[String, List[List[Any]]]()
     // We do not use statistic information here due to conflict of netty versions when physical plan has broadcast nodes.
-    ti.tidbMapDatabase(dbPrefix + tpchDBName, autoLoadStatistics = false)
     tpchQueries.foreach { name =>
       val queryString = resourceToString(
         s"tpch-sql/$name.sql",

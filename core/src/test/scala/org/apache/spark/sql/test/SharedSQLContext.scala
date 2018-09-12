@@ -146,7 +146,7 @@ object SharedSQLContext extends Logging {
 
   protected def initializeTiContext(): Unit =
     if (_spark != null && _ti == null) {
-      _ti = new TiContext(_spark)
+      _ti = TiExtensions.getOrCreateTiContext(_spark)
     }
 
   private def initStatistics(): Unit = {
@@ -261,12 +261,8 @@ object SharedSQLContext extends Logging {
       _tidbConnection = null
     }
 
-    if (_ti != null) {
-      _ti.tiSession.close()
-      // Reset statisticsManager in case it use older version of TiContext
-      StatisticsManager.reset()
-      _ti = null
-    }
+    // Reset statisticsManager in case it use older version of TiContext
+    StatisticsManager.reset()
 
     if (_tidbConf != null) {
       _tidbConf = null
