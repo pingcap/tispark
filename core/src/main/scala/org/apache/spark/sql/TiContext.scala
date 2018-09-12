@@ -23,6 +23,7 @@ import com.pingcap.tispark._
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.catalyst.catalog._
 import play.api.libs.json._
 
 import scala.collection.JavaConverters._
@@ -31,18 +32,23 @@ import scala.collection.mutable
 import scalaj.http.Http
 
 class TiContext(val session: SparkSession) extends Serializable with Logging {
-  val sqlContext: SQLContext = session.sqlContext
+  lazy val sqlContext: SQLContext = session.sqlContext
   val conf: SparkConf = session.sparkContext.conf
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
-  val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+  lazy val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+
+  lazy val tiConcreteCatalog: TiSessionCatalog =
+    new TiConcreteSessionCatalog(this)(new TiExternalCatalog(this))
+
+  lazy val legacyCatalog: SessionCatalog = sqlContext.sessionState.catalog
+
+  lazy val tiCatalog: TiSessionCatalog = new TiCompositeSessionCatalog(this)
 
   val debug: DebugTool = new DebugTool
 
-  TiUtils.sessionInitialize(session, tiSession)
-
   final val version: String = TiSparkVersion.version
-  val statisticsManager: StatisticsManager = StatisticsManager.getInstance()
+  lazy val statisticsManager: StatisticsManager = StatisticsManager.getInstance()
   private val autoLoad =
     conf.getBoolean("spark.tispark.statistics.auto_load", defaultValue = true)
 
@@ -128,6 +134,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     }
   }
 
+  @Deprecated
   def getDataFrame(dbName: String, tableName: String): DataFrame = {
     val tiRelation = new TiDBRelation(
       tiSession,
@@ -143,6 +150,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
 
   // tidbMapTable does not do any check any meta information
   // it just register table for later use
+  @Deprecated
   def tidbMapTable(dbName: String,
                    tableName: String,
                    dbNameAsPrefix: Boolean = false): DataFrame = {
@@ -153,9 +161,11 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     df
   }
 
+  @Deprecated
   def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit =
     tidbMapDatabase(dbName, dbNameAsPrefix, autoLoad)
 
+  @Deprecated
   def tidbMapDatabase(dbName: String,
                       dbNameAsPrefix: Boolean = false,
                       autoLoadStatistics: Boolean = autoLoad): Unit =

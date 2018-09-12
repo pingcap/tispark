@@ -6,28 +6,35 @@ import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
+import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
 ) extends Rule[LogicalPlan] {
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
-  protected val meta: MetaManager = tiContext.meta
+  protected def meta: MetaManager = tiContext.meta
+  private def tiCatalog = tiContext.tiCatalog
+  private def tiSession = tiContext.tiSession
+  private def sqlContext = tiContext.sqlContext
 
-  protected def resolveTiDBRelation(tableIdentifier: TableIdentifier,
-                                    databaseName: String): TiDBRelation =
-    new TiDBRelation(
-      tiContext.tiSession,
-      new TiTableReference(databaseName, tableIdentifier.table),
-      meta
-    )(tiContext.sqlContext)
+  // TODO: Eliminate duplicate usage of getDatabaseFromIdentifier
+  private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
+    tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
 
-  private def getDatabaseName(tableIdentifier: TableIdentifier): String =
-    tableIdentifier.database.getOrElse(sparkSession.catalog.currentDatabase)
+  protected val resolveTiDBRelation: TableIdentifier => TiDBRelation =
+    (tableIdentifier: TableIdentifier) =>
+      new TiDBRelation(
+        tiSession,
+        new TiTableReference(getDatabaseFromIdentifier(tableIdentifier), tableIdentifier.table),
+        meta
+      )(sqlContext)
 
   override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     case UnresolvedRelation(tableIdentifier)
-        if meta.getDatabase(getDatabaseName(tableIdentifier)).isDefined =>
-      LogicalRelation(resolveTiDBRelation(tableIdentifier, getDatabaseName(tableIdentifier)))
+        if tiCatalog
+          .catalogOf(Option.apply(getDatabaseFromIdentifier(tableIdentifier)))
+          .exists(_.isInstanceOf[TiSessionCatalog]) =>
+      LogicalRelation(resolveTiDBRelation(tableIdentifier))
   }
 }
