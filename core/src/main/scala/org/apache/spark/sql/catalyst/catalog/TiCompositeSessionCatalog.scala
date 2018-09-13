@@ -19,6 +19,7 @@ trait CompositeCatalogPolicy {
   val primaryCatalog: SessionCatalog
   val secondaryCatalog: SessionCatalog
   val tiConcreteCatalog: TiSessionCatalog
+  val legacyCatalog: SessionCatalog
 }
 
 /**
@@ -29,6 +30,7 @@ case class IdentityPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
   override val primaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
   override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
   override val tiConcreteCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
+  override val legacyCatalog: SessionCatalog = tiContext.legacyCatalog
 }
 
 /**
@@ -39,6 +41,7 @@ case class LegacyFirstPolicy(tiContext: TiContext) extends CompositeCatalogPolic
   override val primaryCatalog: SessionCatalog = tiContext.legacyCatalog
   override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
   override val tiConcreteCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
+  override val legacyCatalog: SessionCatalog = tiContext.legacyCatalog
 }
 
 /**
@@ -58,9 +61,10 @@ class TiCompositeSessionCatalog(tiContext: TiContext)
   override val primaryCatalog: SessionCatalog = policy.primaryCatalog
   override val secondaryCatalog: SessionCatalog = policy.secondaryCatalog
   override val tiConcreteCatalog: TiSessionCatalog = policy.tiConcreteCatalog
+  override val legacyCatalog: SessionCatalog = policy.legacyCatalog
 
   // Used to manage catalog change by setting current database.
-  var currentCatalog: SessionCatalog = primaryCatalog
+  private var currentCatalog: SessionCatalog = primaryCatalog
 
   // Following are routed to Ti catalog.
   override def catalogOf(database: Option[String]): Option[SessionCatalog] = synchronized {
@@ -166,15 +170,19 @@ class TiCompositeSessionCatalog(tiContext: TiContext)
       .getOrElse(throw new NoSuchDatabaseException(name.database.getOrElse(getCurrentDatabase)))
       .lookupRelation(name)
 
-  override def listTables(db: String): Seq[TableIdentifier] =
-    catalogOf(Some(db))
-      .getOrElse(throw new NoSuchDatabaseException(db))
-      .listTables(db)
+  override def listTables(db: String): Seq[TableIdentifier] = listTables(db, "*")
 
-  override def listTables(db: String, pattern: String): Seq[TableIdentifier] =
-    catalogOf(Some(db))
-      .getOrElse(throw new NoSuchDatabaseException(db))
-      .listTables(db, pattern)
+  override def listTables(db: String, pattern: String): Seq[TableIdentifier] = {
+    val currentSessionCatalog = catalogOf(Some(db)).getOrElse(throw new NoSuchDatabaseException(db))
+    val tables = currentSessionCatalog.listTables(db, pattern)
+    // list tempViews if catalog matches CH Catalog
+    val extraLocalTempViews = currentSessionCatalog match {
+      case _: TiConcreteSessionCatalog =>
+        legacyCatalog.listTables(legacyCatalog.getCurrentDatabase, pattern).filter(_.database.isEmpty)
+      case _ => Seq()
+    }
+    tables ++ extraLocalTempViews
+  }
 
   // Following are all routed to primary catalog.
   override def createDatabase(dbDefinition: CatalogDatabase, ignoreIfExists: Boolean): Unit =

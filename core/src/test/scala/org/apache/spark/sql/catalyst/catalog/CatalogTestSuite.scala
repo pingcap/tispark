@@ -17,11 +17,11 @@ class CatalogTestSuite extends BaseTiSparkSuite {
 
   test("test show databases/tables") {
     spark.sql("show databases").show(false)
-    spark.sql(s"show databases like '$dbPrefix%'").show(false)
+    spark.sql(s"show databases like '$dbPrefix*'").show(false)
     setCurrentDatabase("tispark_test")
     spark.sql("show tables").show(false)
-    spark.sql("show tables like '%_idx'").show(false)
-    spark.sql("show tables like '%_j'").show(false)
+    spark.sql("show tables like '*_idx'").show(false)
+    spark.sql("show tables like '*_j'").show(false)
     spark.sql(s"show tables from $dbPrefix$tpchDBName").show(false)
   }
 }
