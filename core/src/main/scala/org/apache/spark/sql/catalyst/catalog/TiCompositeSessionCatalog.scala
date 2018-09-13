@@ -65,9 +65,7 @@ class TiCompositeSessionCatalog(tiContext: TiContext)
   // Following are routed to Ti catalog.
   override def catalogOf(database: Option[String]): Option[SessionCatalog] = synchronized {
     database
-      .map(db => {
-        Seq(primaryCatalog, secondaryCatalog).find(_.databaseExists(db))
-      })
+      .map(db => Seq(primaryCatalog, secondaryCatalog).find(_.databaseExists(db)))
       .getOrElse(Some(currentCatalog))
   }
 

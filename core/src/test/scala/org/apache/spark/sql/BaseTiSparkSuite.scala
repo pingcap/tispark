@@ -19,6 +19,8 @@ package org.apache.spark.sql
 
 import java.sql.Statement
 
+import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
+import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.test.SharedSQLContext
 
@@ -31,6 +33,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   private val defaultTestDatabases: Seq[String] = Seq("tispark_test")
 
   protected var tableNames: Seq[String] = _
+
+  private def tiCatalog = ti.tiCatalog
 
   protected def querySpark(query: String): List[List[Any]] = {
     val df = sql(query)
@@ -81,11 +85,27 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       .load()
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
+  protected def setCurrentDatabase(dbName: String): Unit = {
+    if (tiCatalog
+      .catalogOf(Option.apply(dbPrefix + dbName))
+      .exists(_.isInstanceOf[TiSessionCatalog])) {
+      tidbConn.setCatalog(dbName)
+      spark.sql(s"use $dbPrefix$dbName")
+    } else {
+      // should be an existing database in hive/meta_store
+      try {
+        spark.sql(s"use $dbName")
+      } catch {
+        case e: NoSuchDatabaseException => fail(e)
+      }
+    }
+  }
+
   protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
     try {
       tableNames = Seq.empty[String]
       for (dbName <- databases) {
-        tidbConn.setCatalog(dbName)
+        setCurrentDatabase(dbName)
         val tableDF = spark.read
           .format("jdbc")
           .option(JDBCOptions.JDBC_URL, jdbcUrl)
@@ -107,7 +127,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   protected def loadTestData(testTables: TestTables): Unit = {
     val dbName = testTables.dbName
-    tidbConn.setCatalog(dbName)
+    setCurrentDatabase(dbName)
     for (tableName <- testTables.tables) {
       createOrReplaceTempView(dbName, tableName)
     }

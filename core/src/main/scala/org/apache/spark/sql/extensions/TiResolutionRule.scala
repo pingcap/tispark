@@ -18,23 +18,26 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   private def tiSession = tiContext.tiSession
   private def sqlContext = tiContext.sqlContext
 
-  // TODO: Eliminate duplicate usage of getDatabaseFromIdentifier
   private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
     tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
 
-  protected val resolveTiDBRelation: TableIdentifier => TiDBRelation =
-    (tableIdentifier: TableIdentifier) =>
+  protected val resolveTiDBRelation: (TableIdentifier, String) => TiDBRelation =
+    (tableIdentifier: TableIdentifier, dbName: String) =>
       new TiDBRelation(
         tiSession,
-        new TiTableReference(getDatabaseFromIdentifier(tableIdentifier), tableIdentifier.table),
+        new TiTableReference(dbName, tableIdentifier.table),
         meta
       )(sqlContext)
 
   override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
-    case UnresolvedRelation(tableIdentifier)
-        if tiCatalog
-          .catalogOf(Option.apply(getDatabaseFromIdentifier(tableIdentifier)))
-          .exists(_.isInstanceOf[TiSessionCatalog]) =>
-      LogicalRelation(resolveTiDBRelation(tableIdentifier))
+    case rel@ UnresolvedRelation(tableIdentifier)
+         =>
+      val dbName = getDatabaseFromIdentifier(tableIdentifier)
+      if (tiCatalog.catalogOf(Option.apply(dbName)).exists(_.isInstanceOf[TiSessionCatalog])) {
+        LogicalRelation(resolveTiDBRelation(tableIdentifier, dbName))
+      } else {
+        rel
+      }
+
   }
 }

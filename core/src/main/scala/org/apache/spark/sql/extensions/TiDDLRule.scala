@@ -14,5 +14,7 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
       new TiShowDatabasesCommand(tiContext, databasePattern)
     case SetDatabaseCommand(databaseName) =>
       TiSetDatabaseCommand(tiContext, databaseName)
+    case ShowTablesCommand(databaseName, tableIdentifierPattern, isExtended, partitionSpec) =>
+      new TiShowTablesCommand(tiContext, databaseName, tableIdentifierPattern, isExtended, partitionSpec)
   }
 }

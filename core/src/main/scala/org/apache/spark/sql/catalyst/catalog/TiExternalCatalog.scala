@@ -13,7 +13,7 @@ import org.apache.spark.sql.types.StructType
 class TiExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
   private def meta = tiContext.meta
 
-  // Following are routed to CH catalog.
+  // Following are routed to TiSpark Catalog.
   override def databaseExists(db: String): Boolean =
     meta.getDatabase(db).isDefined
 
