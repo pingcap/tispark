@@ -23,7 +23,11 @@ import com.pingcap.tispark._
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
-import play.api.libs.json._
+import org.json4s.DefaultFormats
+import org.json4s.JsonAST._
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods
+import org.json4s.jackson.JsonMethods._
 
 import scala.collection.JavaConverters._
 import scala.collection.JavaConversions._
@@ -47,6 +51,8 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     conf.getBoolean("spark.tispark.statistics.auto_load", defaultValue = true)
 
   class DebugTool {
+    implicit val formats = DefaultFormats
+
     def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] =
       RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
 
@@ -84,13 +90,13 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
         .flatMap(_._2)
         .foreach((regionId: lang.Long) => {
           val resStr = Http(s"$pdAddr/$regionIDPrefix/$regionId").asString
-          val json: JsValue = Json.parse(resStr.body)
-          val leader = json("leader").as[JsObject]
-          val peers = json("peers").as[JsArray].value
-          val leaderStoreId = leader("store_id").as[JsNumber].value.toLong
+          val json: JValue = JsonMethods.parse(resStr.body)
+          val leader = (json \ "leader").extract[JObject]
+          val peers = (json \ "peers").extract[JArray].arr
+          val leaderStoreId = (leader \ "store_id").extract[Long]
 
           val targetLeaders = peers
-            .map(_("store_id").as[JsNumber].value.toLong)
+            .map(x => (x \ "store_id").extract[Long])
             .filterNot(_ == leaderStoreId)
             .filter(
               id =>
@@ -101,13 +107,11 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
 
           if (targetLeaders.nonEmpty && transCount < maxTrans) {
             val toStore = targetLeaders.minBy(storeRegionCount(_))
-            val req = Json.obj(
-              "name" -> "transfer-leader",
-              "region_id" -> JsNumber(BigDecimal(regionId)),
-              "to_store_id" -> JsNumber(BigDecimal(toStore))
-            )
+            val req = ("name" -> "transfer-leader") ~ ("region_id" -> JDecimal(
+              BigDecimal(regionId)
+            )) ~ ("to_store_id" -> JDecimal(BigDecimal(toStore)))
             val resp = Http(s"$pdAddr/$operatorsPrefix")
-              .postData(req.toString())
+              .postData(compact(render(req)))
               .header("content-type", "application/json")
               .asString
             if (resp.isSuccess) {
