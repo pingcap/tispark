@@ -37,21 +37,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>com.typesafe.play</groupId>
-            <artifactId>play-json_${scala.binary.version}</artifactId>
-            <version>${play.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.scala-lang</groupId>
-                    <artifactId>scala-library</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.scala-lang</groupId>
-                    <artifactId>scala-reflect</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
         <!-- For tests -->
         <dependency>
             <groupId>org.scalatest</groupId>
