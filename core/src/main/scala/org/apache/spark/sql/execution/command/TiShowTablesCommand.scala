@@ -8,7 +8,7 @@ class TiShowTablesCommand(val tiContext: TiContext,
                           tableIdentifierPattern: Option[String],
                           isExtended: Boolean,
                           partitionSpec: Option[TablePartitionSpec])
-  extends ShowTablesCommand(databaseName, tableIdentifierPattern, isExtended, partitionSpec)
+    extends ShowTablesCommand(databaseName, tableIdentifierPattern, isExtended, partitionSpec)
     with TiCommand {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val db = databaseName.getOrElse(tiCatalog.getCurrentDatabase)

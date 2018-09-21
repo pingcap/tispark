@@ -178,7 +178,9 @@ class TiCompositeSessionCatalog(tiContext: TiContext)
     // list tempViews if catalog matches CH Catalog
     val extraLocalTempViews = currentSessionCatalog match {
       case _: TiConcreteSessionCatalog =>
-        legacyCatalog.listTables(legacyCatalog.getCurrentDatabase, pattern).filter(_.database.isEmpty)
+        legacyCatalog
+          .listTables(legacyCatalog.getCurrentDatabase, pattern)
+          .filter(_.database.isEmpty)
       case _ => Seq()
     }
     tables ++ extraLocalTempViews

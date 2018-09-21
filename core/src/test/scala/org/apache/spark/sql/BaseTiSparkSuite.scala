@@ -85,10 +85,10 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       .load()
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
-  protected def setCurrentDatabase(dbName: String): Unit = {
+  protected def setCurrentDatabase(dbName: String): Unit =
     if (tiCatalog
-      .catalogOf(Option.apply(dbPrefix + dbName))
-      .exists(_.isInstanceOf[TiSessionCatalog])) {
+          .catalogOf(Option.apply(dbPrefix + dbName))
+          .exists(_.isInstanceOf[TiSessionCatalog])) {
       tidbConn.setCatalog(dbName)
       spark.sql(s"use $dbPrefix$dbName")
     } else {
@@ -99,7 +99,6 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
         case e: NoSuchDatabaseException => fail(e)
       }
     }
-  }
 
   protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
     try {
