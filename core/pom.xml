@@ -25,7 +25,7 @@
         <dependency>
             <groupId>com.pingcap.tikv</groupId>
             <artifactId>tikv-client</artifactId>
-            <version>${parent.version}</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.scalaj</groupId>
@@ -54,11 +54,11 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>src/main/scala</sourceDirectory>
-        <testSourceDirectory>src/test/scala</testSourceDirectory>
+        <sourceDirectory>${tispark.sourceDirectory}</sourceDirectory>
+        <testSourceDirectory>${tispark.testSourceDirectory}</testSourceDirectory>
         <resources>
             <resource>
-                <directory>src/main/resources</directory>
+                <directory>${tispark.resourcesDirectory}</directory>
             </resource>
         </resources>
         <extensions>
