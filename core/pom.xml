@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.pingcap.tispark</groupId>
         <artifactId>tispark-parent</artifactId>
-        <version>1.1-spark-2.3-SNAPSHOT</version>
+        <version>1.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -13,17 +13,19 @@
     <packaging>jar</packaging>
     <name>TiSpark Project Core</name>
     <url>http://github.copm/pingcap/tispark</url>
+    <version>${tispark.version}</version>
 
     <properties>
         <scalaj.version>2.3.0</scalaj.version>
         <mysql.connector.version>5.1.44</mysql.connector.version>
         <play.version>2.6.8</play.version>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.pingcap.tikv</groupId>
             <artifactId>tikv-client</artifactId>
-            <version>${project.version}</version>
+            <version>${parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.scalaj</groupId>

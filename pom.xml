@@ -10,7 +10,7 @@
 
     <groupId>com.pingcap.tispark</groupId>
     <artifactId>tispark-parent</artifactId>
-    <version>1.1-spark-2.3-SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>TiSpark Project Parent POM</name>
     <url>http://github.copm/pingcap/tispark</url>
@@ -65,6 +65,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
         <spark.version>2.3.1</spark.version>
+        <tispark.version>${parent.version}-spark-2.3</tispark.version>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11</scala.version>
         <scalatest.version>3.0.4</scalatest.version>
@@ -76,12 +77,16 @@
         <profile>
             <id>spark-2.3</id>
             <!-- Default spark profile. Use global settings. -->
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
         </profile>
 
         <profile>
             <id>spark-2.1</id>
             <properties>
                 <spark.version>2.1.1</spark.version>
+                <tispark.version>${parent.version}-spark-2.1</tispark.version>
             </properties>
         </profile>
     </profiles>
