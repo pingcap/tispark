@@ -32,7 +32,9 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     case rel @ UnresolvedRelation(tableIdentifier) =>
       val dbName = getDatabaseFromIdentifier(tableIdentifier)
-      if (tiCatalog.catalogOf(Option.apply(dbName)).exists(_.isInstanceOf[TiSessionCatalog])) {
+      if (!tiCatalog.isTemporaryTable(tableIdentifier) && tiCatalog
+            .catalogOf(Option.apply(dbName))
+            .exists(_.isInstanceOf[TiSessionCatalog])) {
         LogicalRelation(resolveTiDBRelation(tableIdentifier, dbName))
       } else {
         rel

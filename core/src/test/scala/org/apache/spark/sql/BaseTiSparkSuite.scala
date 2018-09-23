@@ -90,11 +90,11 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
           .catalogOf(Option.apply(dbPrefix + dbName))
           .exists(_.isInstanceOf[TiSessionCatalog])) {
       tidbConn.setCatalog(dbName)
-      spark.sql(s"use $dbPrefix$dbName")
+      spark.sql(s"use `$dbPrefix$dbName`")
     } else {
       // should be an existing database in hive/meta_store
       try {
-        spark.sql(s"use $dbName")
+        spark.sql(s"use `$dbName`")
       } catch {
         case e: NoSuchDatabaseException => fail(e)
       }

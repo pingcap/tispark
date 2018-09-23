@@ -103,7 +103,7 @@ public class Catalog implements AutoCloseable {
       List<TiTableInfo> tables = transaction.getTables(db.getId());
       ImmutableMap.Builder<String, TiTableInfo> builder = ImmutableMap.builder();
       for (TiTableInfo table : tables) {
-        builder.put(table.getName(), table);
+        builder.put(table.getName().toLowerCase(), table);
       }
       Map<String, TiTableInfo> tableMap = builder.build();
       tableCache.put(db, tableMap);
@@ -116,7 +116,7 @@ public class Catalog implements AutoCloseable {
       List<TiDBInfo> databases = transaction.getDatabases();
       databases.forEach(db -> {
         TiDBInfo newDBInfo = db.rename(dbPrefix + db.getName());
-        newDBCache.put(newDBInfo.getName(), newDBInfo);
+        newDBCache.put(newDBInfo.getName().toLowerCase(), newDBInfo);
       });
       return newDBCache;
     }
