@@ -70,7 +70,7 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
         s"tpch-sql/$name.sql",
         classLoader = Thread.currentThread().getContextClassLoader
       )
-      sql(queryString).queryExecution.executedPlan.foreach {
+      spark.sql(queryString).queryExecution.executedPlan.foreach {
         case scan: DataSourceScanExec =>
           scan.relation match {
             case _: JDBCRelation =>
@@ -95,7 +95,7 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
         s"tpch-sql/$name.sql",
         classLoader = Thread.currentThread().getContextClassLoader
       )
-      sql(queryString).queryExecution.executedPlan.foreach {
+      spark.sql(queryString).queryExecution.executedPlan.foreach {
         case _: CoprocessorRDD =>
           fail("JDBC plan should not use CoprocessorRDD as data source node!")
         case _ =>

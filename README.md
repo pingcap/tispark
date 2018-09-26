@@ -4,10 +4,12 @@
 [![codecov.io](https://codecov.io/gh/pingcap/tispark/coverage.svg?branch=master)](https://codecov.io/gh/pingcap/tispark?branch=master)
 [![License](https://img.shields.io/github/license/pingcap/tispark.svg)](https://github.com/pingcap/tispark/blob/master/LICENSE)
 
-TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) to serve as a one-stop solution for online transactions and analysis.
+TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster while seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP), and serves as a one-stop solution for online transactions and analysis.
 
 ## Getting TiSpark
 The current stable version is 1.0.
+
+You may download the latest binary build of TiSpark from [here](http://download.pingcap.org/tispark-latest-linux-amd64.tar.gz).
 
 If you are using maven, add the following to your pom.xml:
 ```xml
@@ -17,7 +19,6 @@ If you are using maven, add the following to your pom.xml:
   <version>1.0</version>
 </dependency>
 ```
-
 If you're using SBT, add the following line to your build file:
 ```scala
 libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.0"
@@ -51,46 +52,12 @@ From Spark-shell:
 ```
 
 ```
-import org.apache.spark.sql.TiContext
-val ti = new TiContext(spark) 
-
-// Map all TiDB tables from database tpch as Spark SQL tables
-ti.tidbMapDatabase("tpch")
+spark.sql("use tpch_test")
 
 spark.sql("select count(*) from lineitem").show
 ```
 
-## Metadata loading
-If you are using spark-shell, you need to manually load schema information as decribed above.
-
-If you have too many tables, you might choose to disable histogram preparison and loading will be faster.
-
-```
-ti.tidbMapDatabase("tpch", autoLoadStatistics = true)
-```
-
-If you have two tables with same name in different databases, you might choose to append database name as prefix for table name:
-
-```
-ti.tidbMapDatabase("tpch", dbNameAsPrefix = true)
-```
-
-If you have too many tables and use only some of them, to speed up meta loading process, you might manually load only tables you use:
-
-```
-ti.tidbTable("tpch", "lineitem")
-```
-
-If you have newly created table which is not yet synchronized into TiSpark between refresh period, you can manually refresh schema metadata:
-```
-ti.meta.reloadMeta
-```
-
 ## Current Version
-```
-ti.version
-```
-or
 ```
 spark.sql("select ti_version()").show
 ```
@@ -136,8 +103,14 @@ If you want to know how TiSpark could benefit from TiDB's statistic information,
 Read the [Quick Start](./docs/userguide.md).
 
 ## How to build
-To build all TiSpark modules :
+TiSpark supports both Spark 2.3 and Spark 2.1. However, the version for Spark 2.1 will no longer be maintained.
+
+To build all TiSpark modules:
 ```
+For Spark 2.1:
+mvn clean install -P spark-2.1 -Dmaven.test.skip=true
+
+For Spark 2.3: (-P spark-2.3 is optional)
 mvn clean install -Dmaven.test.skip=true
 ```
 Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.

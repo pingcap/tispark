@@ -101,8 +101,6 @@ object SharedSQLContext extends Logging {
   protected var tpchDBName: String = _
   protected var dbPrefix: String = _
 
-  protected lazy val sql = spark.sql _
-
   protected implicit def spark: SparkSession = _spark
 
   protected implicit def ti: TiContext = _ti
@@ -149,6 +147,7 @@ object SharedSQLContext extends Logging {
       _ti = _spark.sessionState.planner.extraPlanningStrategies.head
         .asInstanceOf[TiStrategy]
         .getOrCreateTiContext(_spark)
+      _ti.meta.reloadMeta()
     }
 
   private def initStatistics(): Unit = {
