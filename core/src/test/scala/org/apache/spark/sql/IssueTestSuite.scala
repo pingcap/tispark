@@ -165,6 +165,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
 
   // https://github.com/pingcap/tispark/issues/255
   test("Group by with first") {
+    setCurrentDatabase(tpchDBName)
     val q1 =
       """
         |select

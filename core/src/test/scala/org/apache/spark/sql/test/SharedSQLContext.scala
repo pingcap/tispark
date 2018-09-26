@@ -147,7 +147,7 @@ object SharedSQLContext extends Logging {
       _ti = _spark.sessionState.planner.extraPlanningStrategies.head
         .asInstanceOf[TiStrategy]
         .getOrCreateTiContext(_spark)
-      _ti.meta.reloadMeta()
+      _ti.meta.reloadAllMeta()
     }
 
   private def initStatistics(): Unit = {

@@ -52,10 +52,10 @@ public class Catalog implements AutoCloseable {
 
   private static class CatalogCache {
 
-    private CatalogCache(CatalogTransaction transaction, String dbPrefix) {
+    private CatalogCache(CatalogTransaction transaction, String dbPrefix, boolean loadTables) {
       this.transaction = transaction;
       this.dbPrefix = dbPrefix;
-      this.dbCache = loadDatabases();
+      this.dbCache = loadDatabases(loadTables);
       this.tableCache = new ConcurrentHashMap<>();
       this.currentVersion = transaction.getLatestSchemaVersion();
     }
@@ -110,13 +110,16 @@ public class Catalog implements AutoCloseable {
       return tableMap;
     }
 
-    private Map<String, TiDBInfo> loadDatabases() {
+    private Map<String, TiDBInfo> loadDatabases(boolean loadTables) {
       HashMap<String, TiDBInfo> newDBCache = new HashMap<>();
 
       List<TiDBInfo> databases = transaction.getDatabases();
       databases.forEach(db -> {
         TiDBInfo newDBInfo = db.rename(dbPrefix + db.getName());
         newDBCache.put(newDBInfo.getName().toLowerCase(), newDBInfo);
+        if (loadTables) {
+          loadTables(newDBInfo);
+        }
       });
       return newDBCache;
     }
@@ -132,24 +135,24 @@ public class Catalog implements AutoCloseable {
                                                    "Snapshot Provider is null");
     this.showRowId = showRowId;
     this.dbPrefix = dbPrefix;
-    metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix);
+    metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, false);
     service = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
     service.scheduleAtFixedRate(() -> {
       // Wrap this with a try catch block in case schedule update fails
       try {
-        reloadCache();
+        reloadCache(false);
       } catch (Exception e) {
         logger.warn("Reload Cache failed", e);
       }
     }, refreshPeriod, refreshPeriod, periodUnit);
   }
 
-  public void reloadCache() {
+  public void reloadCache(boolean loadTables) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     long latestVersion = newTrx.getLatestSchemaVersion();
     if (latestVersion > metaCache.getVersion()) {
-      metaCache = new CatalogCache(newTrx, dbPrefix);
+      metaCache = new CatalogCache(newTrx, dbPrefix, loadTables);
     }
   }
 
