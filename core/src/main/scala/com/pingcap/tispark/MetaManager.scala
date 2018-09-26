@@ -27,7 +27,7 @@ class MetaManager(catalog: Catalog) {
     catalog.reloadCache(true)
 
   def reloadDBMeta(): Unit =
-    catalog.reloadCache(false)
+    catalog.reloadCache()
 
   def getDatabases: List[TiDBInfo] =
     catalog.listDatabases().toList

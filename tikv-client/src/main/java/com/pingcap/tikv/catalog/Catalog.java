@@ -140,7 +140,7 @@ public class Catalog implements AutoCloseable {
     service.scheduleAtFixedRate(() -> {
       // Wrap this with a try catch block in case schedule update fails
       try {
-        reloadCache(false);
+        reloadCache();
       } catch (Exception e) {
         logger.warn("Reload Cache failed", e);
       }

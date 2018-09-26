@@ -147,7 +147,6 @@ object SharedSQLContext extends Logging {
       _ti = _spark.sessionState.planner.extraPlanningStrategies.head
         .asInstanceOf[TiStrategy]
         .getOrCreateTiContext(_spark)
-      _ti.meta.reloadAllMeta()
     }
 
   private def initStatistics(): Unit = {
@@ -249,6 +248,12 @@ object SharedSQLContext extends Logging {
       _spark.sessionState.catalog.reset()
       _spark.stop()
       _spark = null
+    }
+
+    if (_ti != null) {
+      _ti.session.sessionState.catalog.reset()
+      _ti.session.stop()
+      _ti = null
     }
 
     if (_sparkJDBC != null) {
