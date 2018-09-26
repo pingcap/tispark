@@ -50,76 +50,64 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
     "q22"
   )
 
-  private lazy val tiSparkRes = {
-    val result = mutable.Map[String, (List[List[Any]], Throwable)]()
-    setCurrentDatabase(tpchDBName)
-    // We do not use statistic information here due to conflict of netty versions when physical plan has broadcast nodes.
-    tpchQueries.foreach { name =>
-      try {
-        val queryString = resourceToString(
-          s"tpch-sql/$name.sql",
-          classLoader = Thread.currentThread().getContextClassLoader
-        )
-        sql(queryString).queryExecution.executedPlan.foreach {
-          case scan: DataSourceScanExec =>
-            scan.relation match {
-              case _: JDBCRelation =>
-                fail("Coprocessor plan should not use JDBC Scan as data source node!")
-              case _ =>
-            }
-          case _ =>
-        }
-        result(name) = (querySpark(queryString), null)
-        println(s"TiSpark finished $name")
-      } catch {
-        case e: Throwable => result(name) = (null, e)
-      }
-    }
-    result
-  }
+  private val tpchTables = Seq(
+    "lineitem",
+    "orders",
+    "customer",
+    "nation",
+    "customer",
+    "partsupp",
+    "part",
+    "region",
+    "supplier"
+  )
 
-  private lazy val jdbcRes = {
-    val result = mutable.Map[String, (List[List[Any]], Throwable)]()
-    createOrReplaceTempView(tpchDBName, "lineitem", "")
-    createOrReplaceTempView(tpchDBName, "orders", "")
-    createOrReplaceTempView(tpchDBName, "customer", "")
-    createOrReplaceTempView(tpchDBName, "nation", "")
-    createOrReplaceTempView(tpchDBName, "customer", "")
-    createOrReplaceTempView(tpchDBName, "part", "")
-    createOrReplaceTempView(tpchDBName, "partsupp", "")
-    createOrReplaceTempView(tpchDBName, "region", "")
-    createOrReplaceTempView(tpchDBName, "supplier", "")
-    tpchQueries.foreach { name =>
-      try {
-        val queryString = resourceToString(
-          s"tpch-sql/$name.sql",
-          classLoader = Thread.currentThread().getContextClassLoader
-        )
-        result(name) = (querySpark(queryString), null)
-        sql(queryString).queryExecution.executedPlan.foreach {
-          case _: CoprocessorRDD =>
-            fail("JDBC plan should not use CoprocessorRDD as data source node!")
-          case _ =>
-        }
-        spark.sql(name).explain()
-        println(s"Spark JDBC finished $name")
-      } catch {
-        case e: Throwable => result(name) = (null, e)
+  private def tiSparkRes(name: String) =
+    try {
+      setCurrentDatabase(tpchDBName)
+      // We do not use statistic information here due to conflict of netty versions when physical plan has broadcast nodes.
+      val queryString = resourceToString(
+        s"tpch-sql/$name.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
+      sql(queryString).queryExecution.executedPlan.foreach {
+        case scan: DataSourceScanExec =>
+          scan.relation match {
+            case _: JDBCRelation =>
+              fail("Coprocessor plan should not use JDBC Scan as data source node!")
+            case _ =>
+          }
+        case _ =>
       }
+      val res = querySpark(queryString)
+      println(s"TiSpark finished $name")
+      res
+    } catch {
+      case e: Throwable =>
+        println(s"TiSpark failed $name")
+        throw e
     }
-    result
-  }
 
-  private def check(tisparkResult: (List[List[Any]], Throwable),
-                    jdbcResult: (List[List[Any]], Throwable)): Unit = {
-    if (tisparkResult._2 != null) {
-      throw tisparkResult._2
+  private def jdbcRes(name: String) =
+    try {
+      tpchTables.foreach(createOrReplaceTempView(tpchDBName, _, ""))
+      val queryString = resourceToString(
+        s"tpch-sql/$name.sql",
+        classLoader = Thread.currentThread().getContextClassLoader
+      )
+      sql(queryString).queryExecution.executedPlan.foreach {
+        case _: CoprocessorRDD =>
+          fail("JDBC plan should not use CoprocessorRDD as data source node!")
+        case _ =>
+      }
+      val res = querySpark(queryString)
+      println(s"Spark JDBC finished $name")
+      res
+    } catch {
+      case e: Throwable =>
+        println(s"Spark JDBC failed $name")
+        throw e
     }
-    if (jdbcResult._2 != null) {
-      throw jdbcResult._2
-    }
-    assertResult(tisparkResult._1)(jdbcResult._1)
-  }
 
   tpchQueries.foreach { name =>
     test(name) {
@@ -130,7 +118,7 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
       // using JDBC views to run TiSpark test.
       // Reversing the order of two will not result in such problem since JDBC database
       // mapping will replace original table views.
-      check(tiSparkRes(name), jdbcRes(name))
+      assertResult(tiSparkRes(name))(jdbcRes(name))
     }
   }
 }

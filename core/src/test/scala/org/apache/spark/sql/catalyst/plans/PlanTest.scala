@@ -16,24 +16,9 @@
 package org.apache.spark.sql.catalyst.plans
 
 import org.apache.spark.SparkFunSuite
-import org.apache.spark.sql.catalyst.expressions.{EqualNullSafe, EqualTo, Expression, PredicateHelper}
+import org.apache.spark.sql.catalyst.expressions.PredicateHelper
 
 /**
  * Provides helper methods for comparing plans.
  */
-abstract class PlanTest extends SparkFunSuite with PredicateHelper {
-
-  /**
-   * Rewrite [[EqualTo]] and [[EqualNullSafe]] operator to keep order. The following cases will be
-   * equivalent:
-   * 1. (a = b), (b = a);
-   * 2. (a <=> b), (b <=> a).
-   */
-  private def rewriteEqual(condition: Expression): Expression = condition match {
-    case _ @EqualTo(l: Expression, r: Expression) =>
-      Seq(l, r).sortBy(_.hashCode()).reduce(EqualTo)
-    case _ @EqualNullSafe(l: Expression, r: Expression) =>
-      Seq(l, r).sortBy(_.hashCode()).reduce(EqualNullSafe)
-    case _ => condition // Don't reorder.
-  }
-}
+abstract class PlanTest extends SparkFunSuite with PredicateHelper {}

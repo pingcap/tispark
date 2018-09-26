@@ -1,10 +1,12 @@
 package org.apache.spark.sql.extensions
+
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.expressions.{Exists, Expression, ListQuery, NamedExpression, ScalarSubquery}
 import org.apache.spark.sql.catalyst.parser._
-import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan, Project}
+import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.execution.SparkSqlParser
+import org.apache.spark.sql.execution.command.CreateViewCommand
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{SparkSession, TiContext}
 
@@ -22,12 +24,9 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
    */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier)
-        if tiContext.tiCatalog.tableExists(
-          TableIdentifier(
-            tableIdentifier.table,
-            Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase))
-          )
-        ) =>
+        if tableIdentifier.database.isEmpty && tiContext.legacyCatalog
+          .getTempView(tableIdentifier.table)
+          .isEmpty =>
       r.copy(
         TableIdentifier(
           tableIdentifier.table,
@@ -35,15 +34,29 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
         )
       )
     case f @ Filter(condition, _) =>
-      f.copy(condition = condition.transform {
-        case e @ Exists(plan, _, _)         => e.copy(plan = plan.transform(qualifyTableIdentifier))
-        case ls @ ListQuery(plan, _, _, _)  => ls.copy(plan = plan.transform(qualifyTableIdentifier))
-        case s @ ScalarSubquery(plan, _, _) => s.copy(plan = plan.transform(qualifyTableIdentifier))
-      })
+      f.copy(
+        condition = condition.transform {
+          case e @ Exists(plan, _, _) => e.copy(plan = plan.transform(qualifyTableIdentifier))
+          case ls @ ListQuery(plan, _, _, _) =>
+            ls.copy(plan = plan.transform(qualifyTableIdentifier))
+          case s @ ScalarSubquery(plan, _, _) =>
+            s.copy(plan = plan.transform(qualifyTableIdentifier))
+        }
+      )
     case p @ Project(projectList, _) =>
-      p.copy(projectList = projectList.map(_.transform {
-        case s @ ScalarSubquery(plan, _, _) => s.copy(plan = plan.transform(qualifyTableIdentifier))
-      }.asInstanceOf[NamedExpression]))
+      p.copy(
+        projectList = projectList.map(_.transform {
+          case s @ ScalarSubquery(plan, _, _) =>
+            s.copy(plan = plan.transform(qualifyTableIdentifier))
+        }.asInstanceOf[NamedExpression])
+      )
+    case w @ With(_, cteRelations) =>
+      w.copy(
+        cteRelations = cteRelations
+          .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias]))
+      )
+    case cv @ CreateViewCommand(_, _, _, _, _, child, _, _, _) =>
+      cv.copy(child = child.transform(qualifyTableIdentifier))
   }
 
   override def parsePlan(sqlText: String): LogicalPlan =

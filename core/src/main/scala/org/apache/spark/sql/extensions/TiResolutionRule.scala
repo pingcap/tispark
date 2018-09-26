@@ -39,6 +39,5 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
       } else {
         rel
       }
-
   }
 }
