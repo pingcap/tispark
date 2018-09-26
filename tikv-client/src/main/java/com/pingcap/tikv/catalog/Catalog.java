@@ -156,6 +156,11 @@ public class Catalog implements AutoCloseable {
     }
   }
 
+  @VisibleForTesting
+  public void reloadCache() {
+    reloadCache(false);
+  }
+
   public List<TiDBInfo> listDatabases() {
     return metaCache.listDatabases();
   }
