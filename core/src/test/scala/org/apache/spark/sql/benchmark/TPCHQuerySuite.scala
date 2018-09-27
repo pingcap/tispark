@@ -22,8 +22,6 @@ import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation
 import org.apache.spark.sql.execution.{CoprocessorRDD, DataSourceScanExec}
 
-import scala.collection.mutable
-
 class TPCHQuerySuite extends BaseTiSparkSuite {
   private val tpchQueries = Seq(
     "q1",
@@ -74,7 +72,9 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
         case scan: DataSourceScanExec =>
           scan.relation match {
             case _: JDBCRelation =>
-              fail("Coprocessor plan should not use JDBC Scan as data source node!")
+              throw new AssertionError(
+                "Coprocessor plan should not use JDBC Scan as data source node!"
+              )
             case _ =>
           }
         case _ =>
@@ -85,7 +85,7 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
     } catch {
       case e: Throwable =>
         println(s"TiSpark failed $name")
-        throw e
+        fail(e)
     }
 
   private def jdbcRes(name: String) =
@@ -97,7 +97,7 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
       )
       spark.sql(queryString).queryExecution.executedPlan.foreach {
         case _: CoprocessorRDD =>
-          fail("JDBC plan should not use CoprocessorRDD as data source node!")
+          throw new AssertionError("JDBC plan should not use CoprocessorRDD as data source node!")
         case _ =>
       }
       val res = querySpark(queryString)
@@ -106,18 +106,13 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
     } catch {
       case e: Throwable =>
         println(s"Spark JDBC failed $name")
-        throw e
+        fail(e)
+    } finally {
+      tpchTables.foreach(spark.sqlContext.dropTempTable)
     }
 
   tpchQueries.foreach { name =>
     test(name) {
-      // We need to make sure `tidbMapDatabase` happens before JDBC tables mapping,
-      // because calling `tidbMapDatabase` will only try to `createTempView` in spark,
-      // so it will not replace existing tables with the same name, as a consequence,
-      // calling JDBC database mapping before `tidbMapDatabase` may result in unexpectedly
-      // using JDBC views to run TiSpark test.
-      // Reversing the order of two will not result in such problem since JDBC database
-      // mapping will replace original table views.
       assertResult(tiSparkRes(name))(jdbcRes(name))
     }
   }

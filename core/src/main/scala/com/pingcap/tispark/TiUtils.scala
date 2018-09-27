@@ -229,25 +229,4 @@ object TiUtils {
       val df = new DecimalFormat("#.#")
       s" EstimatedCount:${df.format(req.getEstimatedCount)}"
     } else ""
-
-  /**
-   * Migrant from Spark 2.1.1 to support non-partial aggregate
-   */
-  def planAggregateWithoutPartial(groupingExpressions: Seq[NamedExpression],
-                                  aggregateExpressions: Seq[AggregateExpression],
-                                  resultExpressions: Seq[NamedExpression],
-                                  child: SparkPlan): SparkPlan = {
-
-    val completeAggregateExpressions = aggregateExpressions.map(_.copy(mode = Complete))
-    val completeAggregateAttributes = completeAggregateExpressions.map(_.resultAttribute)
-    SortAggregateExec(
-      requiredChildDistributionExpressions = Some(groupingExpressions),
-      groupingExpressions = groupingExpressions,
-      aggregateExpressions = completeAggregateExpressions,
-      aggregateAttributes = completeAggregateAttributes,
-      initialInputBufferOffset = 0,
-      resultExpressions = resultExpressions,
-      child = child
-    )
-  }
 }
