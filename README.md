@@ -6,10 +6,12 @@
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster while seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP), and serves as a one-stop solution for online transactions and analysis.
 
-## Getting TiSpark
-The current stable version is 1.0.
+## Quick start
 
-You may download the latest binary build of TiSpark from [here](http://download.pingcap.org/tispark-latest-linux-amd64.tar.gz).
+Read the [Quick Start](./docs/userguide.md).
+
+## Getting TiSpark
+The current stable version is 1.0 which is compatible with Spark 2.1.0+.
 
 If you are using maven, add the following to your pom.xml:
 ```xml
@@ -25,6 +27,22 @@ libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.0"
 ```
 
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
+
+To build from sources that is compatible with Spark 2.3.0+, please follow the next section. 
+
+## How to build from sources
+TiSpark now supports Spark 2.3.0+. The previous version for Spark 2.1.0+ will only contain bug fixes in future, you may still get Spark2.1 support until release 1.1.
+```
+git clone https://github.com/pingcap/tispark.git
+```
+To build all TiSpark modules from sources, please run command under TiSpark root directory:
+```
+mvn clean install -Dmaven.test.skip=true
+```
+Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.
+
+## How to migrate from Spark 2.1 to Spark 2.3
+For users using Spark 2.1 who wish to migrate to latest TiSpark on Spark 2.3, please download or install Spark 2.3+ following instructions on [Apache Spark Site](http://spark.apache.org/downloads.html) and overwrite the old spark version in $SPARK_HOME.
 
 ## TiSpark Architecture
 
@@ -85,6 +103,7 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
 | spark.tispark.show_rowid |  true | If to show implicit row Id if exists |
 | spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
+| spark.tispark.catalog_policy |  "LegacyFirst" | must be one of "LegacyFirst" and "TiDBFirst", it determines which database to use when database name conflict in TiDB and Hive, the corresponding database not chosen will be hidden |
 
 ## Unsupported MySQL Type List
 
@@ -97,23 +116,6 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 
 ## Statistics information
 If you want to know how TiSpark could benefit from TiDB's statistic information, read more [here](./docs/userguide.md).
-
-## Quick start
-
-Read the [Quick Start](./docs/userguide.md).
-
-## How to build
-TiSpark supports both Spark 2.3 and Spark 2.1. However, the version for Spark 2.1 will no longer be maintained.
-
-To build all TiSpark modules:
-```
-For Spark 2.1:
-mvn clean install -P spark-2.1 -Dmaven.test.skip=true
-
-For Spark 2.3: (-P spark-2.3 is optional)
-mvn clean install -Dmaven.test.skip=true
-```
-Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.
 
 ## How to test
 We use [docker-compose](https://docs.docker.com/compose/) to provide tidb cluster service which allows you to run test across different platforms. It is recommended to install docker in order to test locally, or you can set up your own TiDB cluster locally as you wish.
