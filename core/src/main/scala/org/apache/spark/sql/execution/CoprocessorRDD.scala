@@ -125,14 +125,14 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 }
 
 /**
- * RegionTaskExec is used for issuing requests which are generated based on handles retrieved from
- * [[HandleRDDExec]] aggregated by a [[org.apache.spark.sql.execution.aggregate.SortAggregateExec]]
- * with [[org.apache.spark.sql.catalyst.expressions.aggregate.CollectHandles]] as aggregate function.
+ * RegionTaskExec is used for issuing requests which are generated based
+ * on handles retrieved from [[HandleRDDExec]] aggregated by a SortAggregateExec with
+ * [[org.apache.spark.sql.catalyst.expressions.aggregate.CollectHandles]] as aggregate function.
  *
  * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
  * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
  *
- * Refer to code in [[TiDBRelation]] and [[CoprocessorRDD]] for further details.
+ * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[CoprocessorRDD]] for further details.
  *
  */
 case class RegionTaskExec(child: SparkPlan,
@@ -232,11 +232,10 @@ case class RegionTaskExec(child: SparkPlan,
 
           val indexTaskRanges = indexTasks.flatMap { _.getRanges }
 
-          /**
-           * Checks whether the number of handle ranges retrieved from TiKV exceeds the `downgradeThreshold` after handle merge.
-           *
-           * @return true, the number of handle ranges retrieved exceeds the `downgradeThreshold` after handle merge, false otherwise.
-           */
+          // Checks whether the number of handle ranges retrieved from TiKV
+          // exceeds the `downgradeThreshold` after handle merge.
+          // returns true if the number of handle ranges retrieved exceeds
+          // the `downgradeThreshold` after handle merge, false otherwise.
           def satisfyDowngradeThreshold: Boolean =
             indexTaskRanges.size() > downgradeThreshold
 
@@ -249,13 +248,8 @@ case class RegionTaskExec(child: SparkPlan,
             completionService.submit(task)
           }
 
-          /**
-           * If one task's ranges list exceeds some threshold, we split it into two sub tasks and
-           * each has half of the original ranges.
-           *
-           * @param task task to examine
-           * @return split task list
-           */
+          // If one task's ranges list exceeds some threshold, we split it into two sub tasks and
+          // each has half of the original ranges.
           def splitTasks(task: RegionTask): mutable.Seq[RegionTask] = {
             val finalTasks = mutable.ListBuffer[RegionTask]()
             val queue = mutable.Queue[RegionTask]()
@@ -325,13 +319,10 @@ case class RegionTaskExec(child: SparkPlan,
               }
             }
 
-          /**
-           * We merge potentially discrete index ranges from `taskRanges` into one large range
-           * and create a new [[RegionTask]] for the downgraded plan to execute. Should add
-           * filters for DAG request.
-           *
-           * @param taskRanges the index scan ranges
-           */
+          // We merge potentially discrete index ranges from `taskRanges` into one large range
+          // and create a new RegionTask for the downgraded plan to execute. Should add
+          // filters for DAG request.
+          // taskRanges defines the index scan ranges
           def doDowngradeScan(taskRanges: List[KeyRange]): Unit = {
             // Restore original filters to perform downgraded table scan logic
             // TODO: Maybe we can optimize splitRangeByRegion if we are sure the key ranges are in the same region?

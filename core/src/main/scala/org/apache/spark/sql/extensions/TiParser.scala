@@ -24,7 +24,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
    */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier)
-        if tableIdentifier.database.isEmpty && tiContext.legacyCatalog
+        if tableIdentifier.database.isEmpty && tiContext.sessionCatalog
           .getTempView(tableIdentifier.table)
           .isEmpty =>
       r.copy(

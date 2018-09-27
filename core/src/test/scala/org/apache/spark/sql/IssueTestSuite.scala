@@ -64,7 +64,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
   }
 
   test("Test index task downgrade") {
-    val sqlConf = ti.session.sqlContext.conf
+    val sqlConf = ti.sparkSession.sqlContext.conf
     val prevRegionIndexScanDowngradeThreshold =
       sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000")
     sqlConf.setConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10")

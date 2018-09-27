@@ -19,7 +19,6 @@ import gnu.trove.list.linked.TLongLinkedList
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression}
 import org.apache.spark.sql.catalyst.util.GenericArrayData
-import org.apache.spark.sql.execution.RegionTaskExec
 import org.apache.spark.sql.types._
 
 /**
@@ -27,9 +26,7 @@ import org.apache.spark.sql.types._
  * and merge() functions which operate on Row-based aggregation buffers.
  *
  * This [[CollectHandles]] is used for collecting handles from TiKV to a list and serves as an
- * aggregation function used in [[RegionTaskExec]]
- *
- * @see [[ImperativeAggregate]]
+ * aggregation function used in [[org.apache.spark.sql.execution.RegionTaskExec]]
  */
 case class CollectHandles(child: Expression,
                           mutableAggBufferOffset: Int = 0,

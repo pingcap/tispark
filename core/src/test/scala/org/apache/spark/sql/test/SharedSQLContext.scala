@@ -219,6 +219,9 @@ object SharedSQLContext extends Logging {
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
       sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
 
+      // set policy to LegacyFirst for tests
+      sparkConf.set(CATALOG_POLICY, "LegacyFirst")
+
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
       sparkConf.set(DB_PREFIX, dbPrefix)
 
@@ -251,8 +254,8 @@ object SharedSQLContext extends Logging {
     }
 
     if (_ti != null) {
-      _ti.session.sessionState.catalog.reset()
-      _ti.session.stop()
+      _ti.sparkSession.sessionState.catalog.reset()
+      _ti.sparkSession.stop()
       _ti = null
     }
 

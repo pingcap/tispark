@@ -3,6 +3,7 @@ package org.apache.spark.sql.catalyst.catalog
 import java.net.URI
 import java.util.concurrent.Callable
 
+import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.{AnalysisException, TiContext}
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, QualifiedTableName, TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.{EmptyFunctionRegistry, NoSuchDatabaseException}
@@ -19,18 +20,7 @@ trait CompositeCatalogPolicy {
   val primaryCatalog: SessionCatalog
   val secondaryCatalog: SessionCatalog
   val tiConcreteCatalog: TiSessionCatalog
-  val legacyCatalog: SessionCatalog
-}
-
-/**
- * Identical Ti catalog policy.
- * @param tiContext
- */
-case class IdentityPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
-  override val primaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
-  override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
-  override val tiConcreteCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
-  override val legacyCatalog: SessionCatalog = tiContext.legacyCatalog
+  val sessionCatalog: SessionCatalog
 }
 
 /**
@@ -38,17 +28,28 @@ case class IdentityPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
  * @param tiContext
  */
 case class LegacyFirstPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
-  override val primaryCatalog: SessionCatalog = tiContext.legacyCatalog
+  override val primaryCatalog: SessionCatalog = tiContext.sessionCatalog
   override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
   override val tiConcreteCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
-  override val legacyCatalog: SessionCatalog = tiContext.legacyCatalog
+  override val sessionCatalog: SessionCatalog = tiContext.sessionCatalog
+}
+
+/**
+ * TiCatalog first policy.
+ * @param tiContext
+ */
+case class TiDBFirstPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
+  override val primaryCatalog: SessionCatalog = tiContext.sessionCatalog
+  override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
+  override val tiConcreteCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
+  override val sessionCatalog: SessionCatalog = tiContext.sessionCatalog
 }
 
 /**
  * A composition of two catalogs that behaves as a concrete catalog.
  * @param tiContext
  */
-class TiCompositeSessionCatalog(tiContext: TiContext)
+class TiCompositeSessionCatalog(val tiContext: TiContext)
     extends SessionCatalog(
       tiContext.tiConcreteCatalog.externalCatalog,
       EmptyFunctionRegistry,
@@ -56,12 +57,25 @@ class TiCompositeSessionCatalog(tiContext: TiContext)
     )
     with CompositeCatalogPolicy
     with TiSessionCatalog {
-  // TODO: configuration for policy choosing.
-  val policy: CompositeCatalogPolicy = LegacyFirstPolicy(tiContext)
+
+  val policy: CompositeCatalogPolicy = {
+    val catalogPolicy =
+      tiContext.sqlContext.conf.getConfString(TiConfigConst.CATALOG_POLICY, "LegacyFirst")
+    if (catalogPolicy.equalsIgnoreCase("LegacyFirst")) {
+      LegacyFirstPolicy(tiContext)
+    } else if (catalogPolicy.equalsIgnoreCase("TiDBFirst")) {
+      TiDBFirstPolicy(tiContext)
+    } else {
+      throw new RuntimeException(
+        s"Invalid catalog policy: $catalogPolicy, valid options are 'LegacyFirst' and 'TiDBFirst'."
+      )
+    }
+  }
+
   override val primaryCatalog: SessionCatalog = policy.primaryCatalog
   override val secondaryCatalog: SessionCatalog = policy.secondaryCatalog
   override val tiConcreteCatalog: TiSessionCatalog = policy.tiConcreteCatalog
-  override val legacyCatalog: SessionCatalog = policy.legacyCatalog
+  override val sessionCatalog: SessionCatalog = policy.sessionCatalog
 
   // Used to manage catalog change by setting current database.
   private var currentCatalog: SessionCatalog = primaryCatalog
@@ -69,7 +83,15 @@ class TiCompositeSessionCatalog(tiContext: TiContext)
   // Following are routed to Ti catalog.
   override def catalogOf(database: Option[String]): Option[SessionCatalog] = synchronized {
     database
-      .map(db => Seq(primaryCatalog, secondaryCatalog).find(_.databaseExists(db)))
+      .map(
+        db =>
+          // Global temp db is special, route to session catalog.
+          if (db == globalTempDB) {
+            Some(sessionCatalog)
+          } else {
+            Seq(primaryCatalog, secondaryCatalog).find(_.databaseExists(db))
+        }
+      )
       .getOrElse(Some(currentCatalog))
   }
 
@@ -178,8 +200,8 @@ class TiCompositeSessionCatalog(tiContext: TiContext)
     // list tempViews if catalog matches CH Catalog
     val extraLocalTempViews = currentSessionCatalog match {
       case _: TiConcreteSessionCatalog =>
-        legacyCatalog
-          .listTables(legacyCatalog.getCurrentDatabase, pattern)
+        sessionCatalog
+          .listTables(sessionCatalog.getCurrentDatabase, pattern)
           .filter(_.database.isEmpty)
       case _ => Seq()
     }

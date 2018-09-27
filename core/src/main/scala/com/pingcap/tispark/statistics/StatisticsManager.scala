@@ -56,7 +56,8 @@ private[statistics] case class StatisticsResult(histId: Long,
  *
  * Statistics information is useful for index selection and broadcast join support in TiSpark currently,
  * and these are arranged follows:
- * `statisticsMap` contains `tableId`->[[TableStatistics]] data, each table(id) will have a [[TableStatistics]]
+ *
+ * `statisticsMap` contains `tableId`->TableStatistics data, each table(id) will have a TableStatistics
  * if you have loaded statistics information successfully.
  *
  * @param tiSession TiSession used for selecting statistics information from TiKV
