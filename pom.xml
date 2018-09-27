@@ -76,27 +76,6 @@
         <javadoc.skip>true</javadoc.skip>
     </properties>
 
-    <profiles>
-        <profile>
-            <id>spark-2.3</id>
-            <!-- Default spark profile. Use global settings. -->
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-        </profile>
-
-        <profile>
-            <id>spark-2.1</id>
-            <properties>
-                <spark.version>2.1.1</spark.version>
-                <tispark.version>${project.parent.version}-spark-2.1</tispark.version>
-                <tispark.sourceDirectory>src/main/spark-2.1/scala</tispark.sourceDirectory>
-                <tispark.testSourceDirectory>src/test/spark-2.1/scala</tispark.testSourceDirectory>
-                <tispark.resourcesDirectory>src/main/spark-2.1/resources</tispark.resourcesDirectory>
-            </properties>
-        </profile>
-    </profiles>
-
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>

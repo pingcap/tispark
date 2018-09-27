@@ -59,9 +59,6 @@
         <resources>
             <resource>
                 <directory>${tispark.resourcesDirectory}</directory>
-                <excludes>
-                    <exclude>src/main/resources</exclude>
-                </excludes>
             </resource>
         </resources>
         <extensions>
