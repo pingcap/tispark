@@ -20,6 +20,7 @@ import java.lang
 import com.pingcap.tikv.tools.RegionUtils
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
+import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
@@ -40,6 +41,12 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   lazy val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+
+  StatisticsManager.initStatisticsManager(tiSession, sparkSession)
+  sparkSession.udf.register("ti_version", () => TiSparkVersion.version)
+  CacheInvalidateListener
+    .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
+  tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
 
   lazy val tiConcreteCatalog: TiSessionCatalog =
     new TiConcreteSessionCatalog(this)(new TiExternalCatalog(this))
