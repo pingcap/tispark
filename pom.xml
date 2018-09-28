@@ -65,7 +65,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
         <spark.version>2.3.1</spark.version>
-        <tispark.version>${project.parent.version}-spark-2.3</tispark.version>
+        <tispark.version>${project.parent.version}</tispark.version>
         <tispark.sourceDirectory>src/main/scala</tispark.sourceDirectory>
         <tispark.testSourceDirectory>src/test/scala</tispark.testSourceDirectory>
         <tispark.resourcesDirectory>src/main/resources</tispark.resourcesDirectory>

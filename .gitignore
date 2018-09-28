@@ -63,7 +63,6 @@ data
 
 # ignore test properties
 core/src/test/resources/tidb_config.properties
-core/src/test/spark-2.1/resources/tidb_config.properties
 
 # ignore pytispark build
 python/build/
