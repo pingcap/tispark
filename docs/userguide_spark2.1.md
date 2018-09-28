@@ -1,6 +1,6 @@
-# TiSpark (with version <= 1.1) User Guide
+# TiSpark (with version < 2.0) User Guide
 
-**Note: This is a user guide for TiSpark version <= 1.1. If you are using version > 1.1, please refer to [Document for Spark 2.3](./userguide.md)**
+**Note: This is a user guide for TiSpark version < 2.0. If you are using version >= 2.0, please refer to [Document for Spark 2.3](./userguide.md)**
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) solution to serve as a one-stop solution for online transactions and analysis.
 

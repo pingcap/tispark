@@ -1,6 +1,6 @@
-# TiSpark (version > 1.1) User Guide
+# TiSpark (version >= 2.0) User Guide
 
-**Note: This is a user guide for TiSpark version > 1.1. If you are using version <= 1.1, please refer to [Document for Spark 2.1](./userguide_spark2.1.md)**
+**Note: This is a user guide for TiSpark version >= 2.0. If you are using version before 2.0, please refer to [Document for Spark 2.1](./userguide_spark2.1.md)**
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) solution to serve as a one-stop solution for online transactions and analysis.
 
@@ -285,7 +285,7 @@ TiSpark could use TiDB's statistic information for
 
 If you would like TiSpark to use statistic information, first you need to make sure that concerning tables have already been analyzed. Read more about how to analyze tables [here](https://github.com/pingcap/docs/blob/master/sql/statistics.md).
 
-Since TiSpark 1.1+, statistics information will be default to auto load.
+Since TiSpark 2.0, statistics information will be default to auto load.
 
 Note that table statistics will be cached in your spark driver node's memory, so you need to make sure that your memory should be enough for your statistics information.
 Currently you could adjust these configs in your spark.conf file.
