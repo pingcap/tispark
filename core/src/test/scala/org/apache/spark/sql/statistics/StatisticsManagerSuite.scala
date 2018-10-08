@@ -40,11 +40,13 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
   }
 
   private def initTable(): Unit = {
-    fDataIdxTbl = ti.meta.getTable("tispark_test", "full_data_type_table_idx").get
-    fDataTbl = ti.meta.getTable("tispark_test", "full_data_type_table").get
+    fDataTbl = ti.meta.getTable(s"${dbPrefix}tispark_test", "full_data_type_table").get
+    fDataIdxTbl = ti.meta.getTable(s"${dbPrefix}tispark_test", "full_data_type_table_idx").get
+    StatisticsManager.getInstance().loadStatisticsInfo(fDataTbl)
+    StatisticsManager.getInstance().loadStatisticsInfo(fDataIdxTbl)
   }
 
-  ignore("Test fixed table size estimation") {
+  test("Test fixed table size estimation") {
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
@@ -89,9 +91,9 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     tidbStmt.execute("analyze table `tb_fixed_float`")
     tidbStmt.execute("analyze table `tb_fixed_time`")
     refreshConnections()
-    val tbFixedInt = ti.meta.getTable("tispark_test", "tb_fixed_int").get
-    val tbFixedFloat = ti.meta.getTable("tispark_test", "tb_fixed_float").get
-    val tbFixedTime = ti.meta.getTable("tispark_test", "tb_fixed_time").get
+    val tbFixedInt = ti.meta.getTable(s"${dbPrefix}tispark_test", "tb_fixed_int").get
+    val tbFixedFloat = ti.meta.getTable(s"${dbPrefix}tispark_test", "tb_fixed_float").get
+    val tbFixedTime = ti.meta.getTable(s"${dbPrefix}tispark_test", "tb_fixed_time").get
     val intBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedInt)
     val floatBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedFloat)
     val timeBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedTime)
@@ -100,7 +102,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     assert(timeBytes >= 19 * 2)
   }
 
-  ignore("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
+  test("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
     val indexes = fDataIdxTbl.getIndices
     val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
 
@@ -113,7 +115,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     testSelectRowCount(expressions, idx, 46)
   }
 
-  ignore(
+  test(
     "select tp_int from full_data_type_table_idx where tp_int < 5390653 and tp_int > -46759812"
   ) {
     val indexes = fDataIdxTbl.getIndices
@@ -154,7 +156,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
   indexSelectionCases.foreach((t: (String, String)) => {
     val query = t._1
     val idxName = t._2
-    ignore(query) {
+    test(query) {
       val executedPlan = spark.sql(query).queryExecution.executedPlan
       val usedIdxName = {
         if (isDoubleRead(executedPlan)) {

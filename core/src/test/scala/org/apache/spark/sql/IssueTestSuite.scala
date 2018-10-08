@@ -36,9 +36,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
     assert(spark.sql("select * from t limit 10").count() == 5)
     assert(spark.sql("select a from t limit 10").count() == 5)
 
-    judge("select count(1) from (select a from t limit 10) e", checkLimit = false)
-    judge("select count(a) from (select a from t limit 10) e", checkLimit = false)
-    judge("select count(1) from (select * from t limit 10) e", checkLimit = false)
+    judge("select count(1) from (select a from t order by a limit 10) e", checkLimit = false)
+    judge("select count(a) from (select a from t order by a limit 10) e", checkLimit = false)
+    judge("select count(1) from (select * from t order by a limit 10) e", checkLimit = false)
   }
 
   test("Test sql with limit without order by") {

@@ -40,7 +40,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   val conf: SparkConf = sparkSession.sparkContext.conf
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
-  lazy val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+  val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
   StatisticsManager.initStatisticsManager(tiSession, sparkSession)
   sparkSession.udf.register("ti_version", () => TiSparkVersion.version)
@@ -59,11 +59,11 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
 
   final val version: String = TiSparkVersion.version
   lazy val statisticsManager: StatisticsManager = StatisticsManager.getInstance()
-  private val autoLoad =
-    conf.getBoolean("spark.tispark.statistics.auto_load", defaultValue = true)
+  val autoLoad: Boolean =
+    conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
 
   class DebugTool {
-    implicit val formats = DefaultFormats
+    implicit val formats: DefaultFormats = DefaultFormats
 
     def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] =
       RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
@@ -76,13 +76,13 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
      * This method call will try to balance table `lineitem`'s leader distribution by
      * transforming those leaders reside in a single heavily used TiKV to other TiKVs.
      *
-     * @param pdAddr    The PD address
+     * @param pdAddress    The PD address
      * @param dbName    Database name
      * @param tableName Table name
      * @param maxTrans  Maximum number of transformations this function can perform
      * @return The re-distributed information of original table
      */
-    def balanceRegionByTable(pdAddr: String,
+    def balanceRegionByTable(pdAddress: String,
                              dbName: String,
                              tableName: String,
                              maxTrans: Int = 50): Map[String, Integer] = {
@@ -101,7 +101,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
       storeRegionId.asScala
         .flatMap(_._2)
         .foreach((regionId: lang.Long) => {
-          val resStr = Http(s"$pdAddr/$regionIDPrefix/$regionId").asString
+          val resStr = Http(s"$pdAddress/$regionIDPrefix/$regionId").asString
           val json: JValue = parse(resStr.body)
           val leader = (json \ "leader").extract[JObject]
           val peers = (json \ "peers").extract[JArray].arr
@@ -122,7 +122,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
             val req = ("name" -> "transfer-leader") ~ ("region_id" -> JDecimal(
               BigDecimal(regionId)
             )) ~ ("to_store_id" -> JDecimal(BigDecimal(toStore)))
-            val resp = Http(s"$pdAddr/$operatorsPrefix")
+            val resp = Http(s"$pdAddress/$operatorsPrefix")
               .postData(compact(render(req)))
               .header("content-type", "application/json")
               .asString

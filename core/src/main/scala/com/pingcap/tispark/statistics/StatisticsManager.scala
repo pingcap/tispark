@@ -65,6 +65,7 @@ private[statistics] case class StatisticsResult(histId: Long,
 class StatisticsManager(tiSession: TiSession) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
+  private lazy val dbPrefix = tiSession.getConf.getDBPrefix
   // An estimator used to calculate table size.
   private var tableSizeEstimator: TableSizeEstimator = new DefaultTableSizeEstimator(this)
   // Statistics information table columns explanation:
@@ -88,9 +89,9 @@ class StatisticsManager(tiSession: TiSession) {
   //
   // More explanation could be found here
   // https://github.com/pingcap/docs/blob/master/sql/statistics.md
-  private[statistics] lazy val metaTable = catalog.getTable("mysql", "stats_meta")
-  private[statistics] lazy val histTable = catalog.getTable("mysql", "stats_histograms")
-  private[statistics] lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
+  private[statistics] lazy val metaTable = catalog.getTable(s"${dbPrefix}mysql", "stats_meta")
+  private[statistics] lazy val histTable = catalog.getTable(s"${dbPrefix}mysql", "stats_histograms")
+  private[statistics] lazy val bucketTable = catalog.getTable(s"${dbPrefix}mysql", "stats_buckets")
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private final val statisticsMap = CacheBuilder
     .newBuilder()
@@ -217,7 +218,7 @@ class StatisticsManager(tiSession: TiSession) {
     // Group by hist_id(column_id)
     rows.toList
       .groupBy { _.getLong(7) }
-      .flatMap { (t: (Long, List[Row])) =>
+      .flatMap { t: (Long, List[Row]) =>
         val histId = t._1
         val rowsById = t._2
         // split bucket rows into index rows / non-index rows

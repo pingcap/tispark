@@ -147,6 +147,7 @@ object SharedSQLContext extends Logging {
       _ti = _spark.sessionState.planner.extraPlanningStrategies.head
         .asInstanceOf[TiStrategy]
         .getOrCreateTiContext(_spark)
+      StatisticsManager.initStatisticsManager(_ti.tiSession, spark)
     }
 
   private def initStatistics(): Unit = {
@@ -217,6 +218,7 @@ object SharedSQLContext extends Logging {
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
+      sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
       sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
 
       // set policy to LegacyFirst for tests
