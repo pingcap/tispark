@@ -31,7 +31,7 @@ For other build tools, you can visit search.maven.org and search with GroupId [!
 To build from sources that is compatible with Spark 2.3.0+, please follow the next section. 
 
 ## How to build from sources
-TiSpark now supports Spark 2.3.0+. The previous version for Spark 2.1.0+ will only contain bug fixes in future, you may still get Spark2.1 support until release 1.1.
+TiSpark now supports Spark 2.3.0+. The previous version for Spark 2.1.0+ will only contain bug fixes in future, you may still get Spark 2.1 support until release 1.1.
 ```
 git clone https://github.com/pingcap/tispark.git
 ```
@@ -103,7 +103,6 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
 | spark.tispark.show_rowid |  true | If to show implicit row Id if exists |
 | spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
-| spark.tispark.catalog_policy |  "LegacyFirst" | must be one of "LegacyFirst" and "TiDBFirst", it determines which database to use when database name conflict in TiDB and Hive, the corresponding database not chosen will be hidden |
 
 ## Unsupported MySQL Type List
 
