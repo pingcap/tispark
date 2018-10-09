@@ -14,7 +14,6 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
 ) extends Rule[LogicalPlan] {
   protected lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
-  private def statisticsManager: StatisticsManager = tiContext.statisticsManager
   private def autoLoad = tiContext.autoLoad
   protected def meta: MetaManager = tiContext.meta
   private def tiCatalog = tiContext.tiCatalog
@@ -31,10 +30,9 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
         throw new NoSuchTableException(dbName, tableName)
       }
       if (autoLoad) {
-        statisticsManager.loadStatisticsInfo(table.get)
+        StatisticsManager.loadStatisticsInfo(table.get)
       }
-      val sizeInBytes = statisticsManager.estimateTableSize(table.get)
-      println(sizeInBytes + " bytes in " + tableName)
+      val sizeInBytes = StatisticsManager.estimateTableSize(table.get)
       new TiDBRelation(
         tiSession,
         new TiTableReference(dbName, tableName, sizeInBytes),

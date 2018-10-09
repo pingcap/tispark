@@ -21,7 +21,7 @@ import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.types.MySQLType._
 import com.pingcap.tispark.statistics.StatisticsManager
 
-abstract class TableSizeEstimator(statisticsManager: StatisticsManager) {
+trait TableSizeEstimator {
 
   /**
    * Returns the estimated size of a row.
@@ -53,8 +53,7 @@ abstract class TableSizeEstimator(statisticsManager: StatisticsManager) {
  * and
  * https://dev.mysql.com/doc/refman/5.7/en/storage-requirements.html
  */
-class DefaultTableSizeEstimator(statisticsManager: StatisticsManager)
-    extends TableSizeEstimator(statisticsManager) {
+object DefaultTableSizeEstimator extends TableSizeEstimator {
 
   /**
    * Returns Pseudo Table Size calculated roughly.
@@ -108,7 +107,7 @@ class DefaultTableSizeEstimator(statisticsManager: StatisticsManager)
    * @return estimated rows ins this table
    */
   override def estimatedCount(table: TiTableInfo): Long = {
-    val tblStats = statisticsManager.getTableStatistics(table.getId)
+    val tblStats = StatisticsManager.getTableStatistics(table.getId)
     if (tblStats != null) {
       tblStats.getCount
     } else {

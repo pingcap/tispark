@@ -147,7 +147,6 @@ object SharedSQLContext extends Logging {
       _ti = _spark.sessionState.planner.extraPlanningStrategies.head
         .asInstanceOf[TiStrategy]
         .getOrCreateTiContext(_spark)
-      StatisticsManager.initStatisticsManager(_ti.tiSession, spark)
     }
 
   private def initStatistics(): Unit = {
@@ -231,7 +230,7 @@ object SharedSQLContext extends Logging {
 
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf)
-      (new TiExtensions)(_sparkSession.extensions)
+      (new TiExtensions).apply(_sparkSession.extensions)
     }
 
   /**
@@ -273,7 +272,7 @@ object SharedSQLContext extends Logging {
     }
 
     // Reset statisticsManager in case it use older version of TiContext
-    StatisticsManager.reset()
+//    StatisticsManager.reset()
 
     if (_tidbConf != null) {
       _tidbConf = null

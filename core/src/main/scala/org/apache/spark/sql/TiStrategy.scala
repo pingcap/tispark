@@ -242,7 +242,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
-    val tblStatistics = StatisticsManager.getInstance().getTableStatistics(source.table.getId)
+    val tblStatistics = StatisticsManager.getTableStatistics(source.table.getId)
 
     val tableScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)

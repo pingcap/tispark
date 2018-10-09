@@ -58,10 +58,10 @@ object StatisticsHelper {
     "hist_id"
   )
 
-  private[statistics] def isManagerReady(manager: StatisticsManager): Boolean =
-    manager.metaTable != null &&
-      manager.bucketTable != null &&
-      manager.histTable != null
+  private[statistics] def isManagerReady: Boolean =
+    StatisticsManager.metaTable != null &&
+      StatisticsManager.bucketTable != null &&
+      StatisticsManager.histTable != null
 
   private[statistics] def extractStatisticsDTO(row: Row,
                                                table: TiTableInfo,

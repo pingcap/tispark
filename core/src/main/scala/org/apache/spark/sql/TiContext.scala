@@ -42,7 +42,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
-  StatisticsManager.initStatisticsManager(tiSession, sparkSession)
+  StatisticsManager.initStatisticsManager(tiSession)
   sparkSession.udf.register("ti_version", () => TiSparkVersion.version)
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
@@ -58,7 +58,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   val debug: DebugTool = new DebugTool
 
   final val version: String = TiSparkVersion.version
-  lazy val statisticsManager: StatisticsManager = StatisticsManager.getInstance()
+
   val autoLoad: Boolean =
     conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
 
@@ -186,9 +186,9 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
       var sizeInBytes = Long.MaxValue
       val tableName = table.getName
       if (autoLoadStatistics) {
-        statisticsManager.loadStatisticsInfo(table)
+        StatisticsManager.loadStatisticsInfo(table)
       }
-      sizeInBytes = statisticsManager.estimateTableSize(table)
+      sizeInBytes = StatisticsManager.estimateTableSize(table)
 
       if (!sqlContext.sparkSession.catalog.tableExists("`" + tableName + "`")) {
         val rel: TiDBRelation = new TiDBRelation(

@@ -21,7 +21,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 /**
  * A special [[SparkSession]] prepared for testing.
  */
-class TestSparkSession(sc: SparkContext) extends SparkSession(sc) { self =>
+private[spark] class TestSparkSession(sc: SparkContext) extends SparkSession(sc) { self =>
   def this(sparkConf: SparkConf) {
     this(
       new SparkContext(
@@ -35,4 +35,7 @@ class TestSparkSession(sc: SparkContext) extends SparkSession(sc) { self =>
   def this() {
     this(new SparkConf)
   }
+
+  SparkSession.setDefaultSession(this)
+  SparkSession.setActiveSession(this)
 }
