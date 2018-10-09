@@ -57,6 +57,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
+  protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
+
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
 
   /**
@@ -79,9 +81,9 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 }
 
 object SharedSQLContext extends Logging {
-  private val timeZoneOffset = "+0:00"
-  // Timezone is fixed to Asia/Shanghai for those timezone sensitive tests (timestamp_*, date_*, etc)
-  private val timeZone = TimeZone.getTimeZone(s"GMT$timeZoneOffset")
+  private val timeZoneOffset = "-7:00"
+  // Timezone is fixed to a random GMT-7 for those timezone sensitive tests (timestamp_*, date_*, etc)
+  private val timeZone = TimeZone.getTimeZone("GMT-7")
   // JDK time zone
   TimeZone.setDefault(timeZone)
   // Joda time zone
