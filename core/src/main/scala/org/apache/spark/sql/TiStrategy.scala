@@ -46,9 +46,9 @@ import scala.collection.mutable
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
 // We cannot pass context around during planning so
-// a re-extract needed for pushdown since
-// a plan tree might have Join which causes a single tree
-// have multiple plan to pushdown
+// a re-extract needed for push-down since
+// a plan tree might contain Join which causes a single tree
+// have multiple plans to push-down
 case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Strategy
     with Logging {
