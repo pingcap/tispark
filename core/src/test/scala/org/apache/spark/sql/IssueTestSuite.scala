@@ -20,6 +20,26 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
 
+  test("test date") {
+    judge("select tp_date from full_data_type_table where tp_date >= date '2065-04-19'")
+    judge(
+      "select tp_date, tp_datetime from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt"
+    )
+    judge(
+      "select tp_date, tp_datetime, tp_timestamp from full_data_type_table_idx where tp_date < date '2017-11-02' order by id_dt"
+    )
+    judge(
+      "select cast(tp_datetime as date) cast_datetime, date(tp_datetime) date_datetime, tp_datetime from full_data_type_table where tp_date < date '2017-11-02'"
+    )
+  }
+
+  test("test db prefix") {
+    ti.tidbMapTable(s"${dbPrefix}tispark_test", "full_data_type_table", dbNameAsPrefix = true)
+    val df = spark.sql(s"select count(*) from ${dbPrefix}tispark_test_full_data_type_table")
+    df.explain()
+    df.show
+  }
+
   test("Test count") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute(

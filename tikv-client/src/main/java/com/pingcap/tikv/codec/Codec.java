@@ -21,6 +21,7 @@ import gnu.trove.list.array.TIntArrayList;
 import org.joda.time.*;
 
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -115,7 +116,7 @@ public class Codec {
      * @param cdo For outputting data in bytes array
      * @param value The data to encode
      */
-    public static void writeVarLong(CodecDataOutput cdo, long value) {
+    static void writeVarLong(CodecDataOutput cdo, long value) {
       long ux = value << 1;
       if (value < 0) {
         ux = ~ux;
@@ -129,7 +130,7 @@ public class Codec {
      * @param cdo For outputting data in bytes array
      * @param value The data to encode
      */
-    public static void writeUVarLong(CodecDataOutput cdo, long value) {
+    static void writeUVarLong(CodecDataOutput cdo, long value) {
       while ((value - 0x80) >= 0) {
         cdo.writeByte((byte) value | 0x80);
         value >>>= 7;
@@ -253,7 +254,7 @@ public class Codec {
      * @param cdo destination of data.
      * @param data is value that will be written into cdo.
      */
-    public static void writeCompactBytes(CodecDataOutput cdo, byte[] data) {
+    static void writeCompactBytes(CodecDataOutput cdo, byte[] data) {
       int length = data.length;
       IntegerCodec.writeVarLong(cdo, length);
       cdo.write(data);
@@ -453,20 +454,6 @@ public class Codec {
           localDateTime.getMillisOfSecond() * 1000);
     }
 
-    static long toPackedLong(long utcMillsTs, DateTimeZone tz) {
-      LocalDate date = new LocalDate(utcMillsTs, tz);
-      return toPackedLong(date);
-    }
-
-    static long toPackedLong(LocalDate date) {
-      return Codec.DateTimeCodec.toPackedLong(
-          date.getYear(),
-          date.getMonthOfYear(),
-          date.getDayOfMonth(),
-          0, 0, 0, 0
-      );
-    }
-
     /**
      * Encode a date/time parts to a packed long.
      *
@@ -569,6 +556,106 @@ public class Codec {
      */
     public static DateTime readFromUInt(CodecDataInput cdi, DateTimeZone tz) {
       return DateTimeCodec.fromPackedLong(IntegerCodec.readULong(cdi), tz);
+    }
+  }
+
+  public static class DateCodec {
+
+    /**
+     * Encode a UTC Date to a packed long converting to specific timezone
+     *
+     * @param date date that need to be encoded.
+     * @param tz timezone used for converting to localDate
+     * @return a packed long.
+     */
+    static long toPackedLong(Date date, DateTimeZone tz) {
+      return toPackedLong(date.getTime(), tz);
+    }
+
+    static long toPackedLong(long utcMillsTs, DateTimeZone tz) {
+      LocalDate date = new LocalDate(utcMillsTs, tz);
+      return toPackedLong(date);
+    }
+
+    static long toPackedLong(LocalDate date) {
+      return Codec.DateCodec.toPackedLong(
+          date.getYear(),
+          date.getMonthOfYear(),
+          date.getDayOfMonth()
+      );
+    }
+
+    /**
+     * Encode a date part to a packed long.
+     *
+     * @return a packed long.
+     */
+    static long toPackedLong(int year, int month, int day) {
+      long ymd = (year * 13 + month) << 5 | day;
+      return ymd << 41;
+    }
+
+    static LocalDate fromPackedLong(long packed) {
+      // TODO: As for JDBC behavior, it can be configured to "round" or "toNull"
+      // for now we didn't pass in session so we do a toNull behavior
+      if (packed == 0) {
+        return null;
+      }
+      long ymd = packed >> 41;
+      int day = (int) (ymd & ((1 << 5) - 1));
+      long ym = ymd >> 5;
+      int month = (int) (ym % 13);
+      int year = (int) (ym / 13);
+
+      return new LocalDate(year, month, day, null);
+    }
+
+    /**
+     * Encode Date as packed long converting into specified timezone
+     * All timezone conversion should be done beforehand
+     * @param cdo encoding output
+     * @param date value to encode
+     * @param tz timezone used to converting local time
+     */
+    public static void writeDateFully(CodecDataOutput cdo, Date date, DateTimeZone tz) {
+      long val = DateCodec.toPackedLong(date, tz);
+      IntegerCodec.writeULongFully(cdo, val, true);
+    }
+
+    /**
+     * Encode Date as packed long converting into specified timezone
+     * All timezone conversion should be done beforehand
+     * The encoded value has no data type flag
+     * @param cdo encoding output
+     * @param date value to encode
+     * @param tz timezone used to converting local time
+     */
+    public static void writeDateProto(CodecDataOutput cdo, Date date, DateTimeZone tz) {
+      long val = DateCodec.toPackedLong(date, tz);
+      IntegerCodec.writeULong(cdo, val);
+    }
+
+    /**
+     * Read date from packed Long encoded as unsigned var-len integer
+     * converting into specified timezone
+     * @see DateCodec#fromPackedLong(long)
+     *
+     * @param cdi codec buffer input
+     * @return decoded DateTime using provided timezone
+     */
+    public static LocalDate readFromUVarInt(CodecDataInput cdi) {
+      return DateCodec.fromPackedLong(IntegerCodec.readUVarLong(cdi));
+    }
+
+    /**
+     * Read date from packed Long as unsigned fixed-len integer
+     * @see DateCodec#fromPackedLong(long)
+     *
+     * @param cdi codec buffer input
+     * @return decoded DateTime using provided timezone
+     */
+    public static LocalDate readFromUInt(CodecDataInput cdi) {
+      return DateCodec.fromPackedLong(IntegerCodec.readULong(cdi));
     }
   }
 }

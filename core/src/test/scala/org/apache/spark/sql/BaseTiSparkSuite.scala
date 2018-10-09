@@ -90,6 +90,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
           .catalogOf(Option.apply(dbPrefix + dbName))
           .exists(_.isInstanceOf[TiSessionCatalog])) {
       tidbConn.setCatalog(dbName)
+      initializeTimeZone()
       spark.sql(s"use `$dbPrefix$dbName`")
     } else {
       // should be an existing database in hive/meta_store
@@ -136,12 +137,11 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     super.beforeAll()
     setLogLevel("WARN")
     loadTestData()
-    initializeTimeZone()
   }
 
   protected def initializeTimeZone(): Unit = {
     tidbStmt = tidbConn.createStatement()
-    // Set default time zone to GMT+8
+    // Set default time zone to GMT-7
     tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
@@ -150,13 +150,11 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   protected def refreshConnections(testTables: TestTables): Unit = {
     super.refreshConnections()
     loadTestData(testTables)
-    initializeTimeZone()
   }
 
   override protected def refreshConnections(): Unit = {
     super.refreshConnections()
     loadTestData()
-    initializeTimeZone()
   }
 
   def setLogLevel(level: String): Unit =
