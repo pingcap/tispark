@@ -202,9 +202,9 @@ object StatisticsManager {
     if (rows.isEmpty) return
 
     val row = rows.next()
-    tableStatistics.setCount { row.getUnsignedLong(1) }
+    tableStatistics.setVersion { row.getUnsignedLong(0) }
     tableStatistics.setModifyCount { row.getLong(2) }
-    tableStatistics.setVersion { row.getUnsignedLong(3) }
+    tableStatistics.setCount { row.getUnsignedLong(3) }
   }
 
   private def statisticsResultFromStorage(tableId: Long,
@@ -216,12 +216,12 @@ object StatisticsManager {
     if (rows.isEmpty) return Nil
     // Group by hist_id(column_id)
     rows.toList
-      .groupBy { _.getLong(7) }
+      .groupBy { _.getLong(2) }
       .flatMap { t: (Long, List[Row]) =>
         val histId = t._1
         val rowsById = t._2
         // split bucket rows into index rows / non-index rows
-        val (idxRows, colRows) = rowsById.partition { _.getLong(6) > 0 }
+        val (idxRows, colRows) = rowsById.partition { _.getLong(1) > 0 }
         val (idxReq, colReq) = requests.partition { _.isIndex > 0 }
         Array(
           StatisticsHelper.extractStatisticResult(histId, idxRows.iterator, idxReq),

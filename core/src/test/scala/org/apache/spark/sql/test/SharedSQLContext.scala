@@ -57,6 +57,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
+  protected def initStatistics(): Unit = SharedSQLContext.initStatistics()
+
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
 
   /**
@@ -147,9 +149,12 @@ object SharedSQLContext extends Logging {
       _ti = _spark.sessionState.planner.extraPlanningStrategies.head
         .asInstanceOf[TiStrategy]
         .getOrCreateTiContext(_spark)
+      StatisticsManager.initStatisticsManager(_ti.tiSession)
     }
 
-  private def initStatistics(): Unit = {
+  protected def initStatistics(): Unit = {
+    _tidbConnection.setCatalog("tispark_test")
+    _statement = _tidbConnection.createStatement()
     logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
     _statement.execute("analyze table tispark_test.full_data_type_table_idx")
     logger.info("Analyzing table tispark_test.full_data_type_table...")
@@ -219,9 +224,6 @@ object SharedSQLContext extends Logging {
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
       sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
       sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
-
-      // set policy to LegacyFirst for tests
-      sparkConf.set(CATALOG_POLICY, "LegacyFirst")
 
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
       sparkConf.set(DB_PREFIX, dbPrefix)

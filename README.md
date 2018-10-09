@@ -13,6 +13,10 @@ Read the [Quick Start](./docs/userguide.md).
 ## Getting TiSpark
 The current stable version is 1.0 which is compatible with Spark 2.1.0+.
 
+**When using Spark 2.1.0+, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
+
+**When using Spark 2.3.0+, please follow the [document for Spark 2.3](./docs/userguide.md)**
+
 If you are using maven, add the following to your pom.xml:
 ```xml
 <dependency>
@@ -42,7 +46,7 @@ mvn clean install -Dmaven.test.skip=true
 Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.
 
 ## How to migrate from Spark 2.1 to Spark 2.3
-For users using Spark 2.1 who wish to migrate to latest TiSpark on Spark 2.3, please download or install Spark 2.3+ following instructions on [Apache Spark Site](http://spark.apache.org/downloads.html) and overwrite the old spark version in $SPARK_HOME.
+For users using Spark 2.1 who wish to migrate to latest TiSpark on Spark 2.3, please download or install Spark 2.3+ following instructions on [Apache Spark Site](http://spark.apache.org/downloads.html) and overwrite the old spark version in `$SPARK_HOME`.
 
 ## TiSpark Architecture
 
@@ -68,9 +72,17 @@ From Spark-shell:
 ```
 ./bin/spark-shell --jars /wherever-it-is/tispark-${version}-jar-with-dependencies.jar
 ```
-
+For TiSpark version >= 2.0:
 ```
 spark.sql("use tpch_test")
+
+spark.sql("select count(*) from lineitem").show
+```
+For TiSpark version < 2.0:
+```
+import org.apache.spark.sql.TiContext
+val ti = new TiContext (spark)
+ti.tidbMapDatabase ("tpch_test")
 
 spark.sql("select count(*) from lineitem").show
 ```

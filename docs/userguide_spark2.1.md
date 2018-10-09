@@ -24,7 +24,7 @@ TiSpark Architecture
 
 ## Environment Setup
 
-+ The current version of TiSpark supports Spark 2.1. For Spark 2.0 and Spark 2.2, it has not been fully tested yet . It does not support any versions earlier than 2.0.
++ The current version of TiSpark supports Spark 2.1. For Spark 2.0, it has not been fully tested yet. It does not support any versions earlier than 2.0, or later than 2.2.
 + TiSpark requires JDK 1.8+ and Scala 2.11 (Spark2.0 + default Scala version).
 + TiSpark runs in any Spark mode such as YARN, Mesos, and Standalone.
 
@@ -189,7 +189,6 @@ In the Spark-Shell, enter the following command:
 import org.apache.spark.sql.TiContext
 val ti = new TiContext (spark)
 ti.tidbMapDatabase ("tpch")
-
 ```
 After that you can call Spark SQL directly:
 

@@ -24,7 +24,7 @@ TiSpark Architecture
 
 ## Environment Setup
 
-+ The current version of TiSpark supports Spark 2.1. For Spark 2.0 and Spark 2.2, it has not been fully tested yet . It does not support any versions earlier than 2.0.
++ The current version of TiSpark supports Spark 2.3+. It does not support any versions earlier than 2.3.
 + TiSpark requires JDK 1.8+ and Scala 2.11 (Spark2.0 + default Scala version).
 + TiSpark runs in any Spark mode such as YARN, Mesos, and Standalone.
 
@@ -136,7 +136,7 @@ You can download [Apache Spark](https://spark.apache.org/downloads.html)
 
 For the Standalone mode without Hadoop support, use Spark **2.3.x** and any version of Pre-build with Apache Hadoop 2.x with Hadoop dependencies. 
 
-If you need to use the Hadoop cluster, please choose the corresponding Hadoop version. You can also choose to build Spark from the [source code](https://spark.apache.org/docs/2.1.0/building-spark.html) to match the previous version of the official Hadoop 2.6.
+If you need to use the Hadoop cluster, please choose the corresponding Hadoop version. You can also choose to build Spark from the [source code](https://spark.apache.org/docs/2.3.0/building-spark.html) to match the previous version of the official Hadoop 2.6.
 
 **Please confirm the Spark version your TiSpark version supports.**
 

@@ -35,17 +35,6 @@ case class LegacyFirstPolicy(tiContext: TiContext) extends CompositeCatalogPolic
 }
 
 /**
- * TiCatalog first policy.
- * @param tiContext
- */
-case class TiDBFirstPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
-  override val primaryCatalog: SessionCatalog = tiContext.sessionCatalog
-  override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
-  override val tiConcreteCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
-  override val sessionCatalog: SessionCatalog = tiContext.sessionCatalog
-}
-
-/**
  * A composition of two catalogs that behaves as a concrete catalog.
  * @param tiContext
  */
@@ -58,19 +47,7 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
     with CompositeCatalogPolicy
     with TiSessionCatalog {
 
-  val policy: CompositeCatalogPolicy = {
-    val catalogPolicy =
-      tiContext.sqlContext.conf.getConfString(TiConfigConst.CATALOG_POLICY, "LegacyFirst")
-    if (catalogPolicy.equalsIgnoreCase("LegacyFirst")) {
-      LegacyFirstPolicy(tiContext)
-    } else if (catalogPolicy.equalsIgnoreCase("TiDBFirst")) {
-      TiDBFirstPolicy(tiContext)
-    } else {
-      throw new RuntimeException(
-        s"Invalid catalog policy: $catalogPolicy, valid options are 'LegacyFirst' and 'TiDBFirst'."
-      )
-    }
-  }
+  val policy: CompositeCatalogPolicy = LegacyFirstPolicy(tiContext)
 
   override val primaryCatalog: SessionCatalog = policy.primaryCatalog
   override val secondaryCatalog: SessionCatalog = policy.secondaryCatalog

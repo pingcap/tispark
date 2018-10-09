@@ -137,6 +137,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     val result = ScanAnalyzer.extractConditions(expressions, fDataIdxTbl, idx)
     val irs =
       expressionToIndexRanges(result.getPointPredicates, result.getRangePredicate, fDataIdxTbl, idx)
+    initTable()
     val tblStatistics = StatisticsManager.getTableStatistics(fDataIdxTbl.getId)
     val idxStatistics = tblStatistics.getIndexHistMap.get(idx.getId)
     val rc = idxStatistics.getRowCount(irs).toLong
