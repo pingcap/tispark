@@ -272,7 +272,7 @@ object SharedSQLContext extends Logging {
     }
 
     // Reset statisticsManager in case it use older version of TiContext
-//    StatisticsManager.reset()
+    StatisticsManager.reset()
 
     if (_tidbConf != null) {
       _tidbConf = null
