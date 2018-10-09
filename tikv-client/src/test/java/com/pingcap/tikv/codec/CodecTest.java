@@ -408,7 +408,7 @@ public class CodecTest {
     cal.set(Calendar.SECOND, 0);
     cal.set(Calendar.MILLISECOND, 0);
     long millis = cal.getTimeInMillis();
-    DateTime time14 = requireNonNull(DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(millis, otherTz), otherTz));
+    DateTime time14 = requireNonNull(DateTimeCodec.fromPackedLong(DateCodec.toPackedLong(millis, otherTz), otherTz));
     assertEquals(millis, time14.getMillis());
   }
 
