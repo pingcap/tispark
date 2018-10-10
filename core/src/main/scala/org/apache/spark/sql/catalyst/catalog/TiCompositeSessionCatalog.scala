@@ -3,7 +3,6 @@ package org.apache.spark.sql.catalyst.catalog
 import java.net.URI
 import java.util.concurrent.Callable
 
-import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.{AnalysisException, TiContext}
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, QualifiedTableName, TableIdentifier}
 import org.apache.spark.sql.catalyst.analysis.{EmptyFunctionRegistry, NoSuchDatabaseException}
@@ -12,27 +11,6 @@ import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.expressions.{Expression, ExpressionInfo}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.types.StructType
-
-/**
- * Policy of operating composite catalog, with one Ti catalog being either primary or secondary catalog.
- */
-trait CompositeCatalogPolicy {
-  val primaryCatalog: SessionCatalog
-  val secondaryCatalog: SessionCatalog
-  val tiConcreteCatalog: TiSessionCatalog
-  val sessionCatalog: SessionCatalog
-}
-
-/**
- * Legacy catalog first policy.
- * @param tiContext
- */
-case class LegacyFirstPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
-  override val primaryCatalog: SessionCatalog = tiContext.sessionCatalog
-  override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
-  override val tiConcreteCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
-  override val sessionCatalog: SessionCatalog = tiContext.sessionCatalog
-}
 
 /**
  * A composition of two catalogs that behaves as a concrete catalog.
@@ -44,15 +22,35 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
       EmptyFunctionRegistry,
       tiContext.sqlContext.conf
     )
-    with CompositeCatalogPolicy
     with TiSessionCatalog {
+
+  /**
+   * Policy of operating composite catalog, with one Ti catalog being either primary or secondary catalog.
+   */
+  trait CompositeCatalogPolicy {
+    val primaryCatalog: SessionCatalog
+    val secondaryCatalog: SessionCatalog
+    val tiConcreteCatalog: TiSessionCatalog
+    val sessionCatalog: SessionCatalog
+  }
+
+  /**
+   * Legacy catalog first policy.
+   * @param tiContext
+   */
+  case class LegacyFirstPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
+    override val primaryCatalog: SessionCatalog = tiContext.sessionCatalog
+    override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
+    override val tiConcreteCatalog: TiSessionCatalog = tiContext.tiConcreteCatalog
+    override val sessionCatalog: SessionCatalog = tiContext.sessionCatalog
+  }
 
   val policy: CompositeCatalogPolicy = LegacyFirstPolicy(tiContext)
 
-  override val primaryCatalog: SessionCatalog = policy.primaryCatalog
-  override val secondaryCatalog: SessionCatalog = policy.secondaryCatalog
-  override val tiConcreteCatalog: TiSessionCatalog = policy.tiConcreteCatalog
-  override val sessionCatalog: SessionCatalog = policy.sessionCatalog
+  val primaryCatalog: SessionCatalog = policy.primaryCatalog
+  val secondaryCatalog: SessionCatalog = policy.secondaryCatalog
+  val tiConcreteCatalog: TiSessionCatalog = policy.tiConcreteCatalog
+  val sessionCatalog: SessionCatalog = policy.sessionCatalog
 
   // Used to manage catalog change by setting current database.
   private var currentCatalog: SessionCatalog = primaryCatalog

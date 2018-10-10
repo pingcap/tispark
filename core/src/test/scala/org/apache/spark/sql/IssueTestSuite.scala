@@ -209,6 +209,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     // Should not throw any exception
     runTest(q1, skipTiDB = true)
     runTest(q2, skipTiDB = true)
+    setCurrentDatabase("tispark_test")
   }
 
   // https://github.com/pingcap/tispark/issues/162
