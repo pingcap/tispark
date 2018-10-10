@@ -20,13 +20,14 @@ import java.lang
 import com.pingcap.tikv.tools.RegionUtils
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
+import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.catalyst.catalog._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods
 import org.json4s.jackson.JsonMethods._
 
 import scala.collection.JavaConverters._
@@ -34,24 +35,35 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scalaj.http.Http
 
-class TiContext(val session: SparkSession) extends Serializable with Logging {
-  val sqlContext: SQLContext = session.sqlContext
-  val conf: SparkConf = session.sparkContext.conf
+class TiContext(val sparkSession: SparkSession) extends Serializable with Logging {
+  lazy val sqlContext: SQLContext = sparkSession.sqlContext
+  val conf: SparkConf = sparkSession.sparkContext.conf
   val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
+  StatisticsManager.initStatisticsManager(tiSession)
+  sparkSession.udf.register("ti_version", () => TiSparkVersion.version)
+  CacheInvalidateListener
+    .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
+  tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
+
+  lazy val tiConcreteCatalog: TiSessionCatalog =
+    new TiConcreteSessionCatalog(this)(new TiExternalCatalog(this))
+
+  lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
+
+  lazy val tiCatalog: TiSessionCatalog = new TiCompositeSessionCatalog(this)
+
   val debug: DebugTool = new DebugTool
 
-  TiUtils.sessionInitialize(session, tiSession)
-
   final val version: String = TiSparkVersion.version
-  val statisticsManager: StatisticsManager = StatisticsManager.getInstance()
-  private val autoLoad =
-    conf.getBoolean("spark.tispark.statistics.auto_load", defaultValue = true)
+
+  val autoLoad: Boolean =
+    conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
 
   class DebugTool {
-    implicit val formats = DefaultFormats
+    implicit val formats: DefaultFormats = DefaultFormats
 
     def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] =
       RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
@@ -64,13 +76,13 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
      * This method call will try to balance table `lineitem`'s leader distribution by
      * transforming those leaders reside in a single heavily used TiKV to other TiKVs.
      *
-     * @param pdAddr    The PD address
+     * @param pdAddress    The PD address
      * @param dbName    Database name
      * @param tableName Table name
      * @param maxTrans  Maximum number of transformations this function can perform
      * @return The re-distributed information of original table
      */
-    def balanceRegionByTable(pdAddr: String,
+    def balanceRegionByTable(pdAddress: String,
                              dbName: String,
                              tableName: String,
                              maxTrans: Int = 50): Map[String, Integer] = {
@@ -89,8 +101,8 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       storeRegionId.asScala
         .flatMap(_._2)
         .foreach((regionId: lang.Long) => {
-          val resStr = Http(s"$pdAddr/$regionIDPrefix/$regionId").asString
-          val json: JValue = JsonMethods.parse(resStr.body)
+          val resStr = Http(s"$pdAddress/$regionIDPrefix/$regionId").asString
+          val json: JValue = parse(resStr.body)
           val leader = (json \ "leader").extract[JObject]
           val peers = (json \ "peers").extract[JArray].arr
           val leaderStoreId = (leader \ "store_id").extract[Long]
@@ -110,7 +122,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
             val req = ("name" -> "transfer-leader") ~ ("region_id" -> JDecimal(
               BigDecimal(regionId)
             )) ~ ("to_store_id" -> JDecimal(BigDecimal(toStore)))
-            val resp = Http(s"$pdAddr/$operatorsPrefix")
+            val resp = Http(s"$pdAddress/$operatorsPrefix")
               .postData(compact(render(req)))
               .header("content-type", "application/json")
               .asString
@@ -132,6 +144,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     }
   }
 
+  @Deprecated
   def getDataFrame(dbName: String, tableName: String): DataFrame = {
     val tiRelation = new TiDBRelation(
       tiSession,
@@ -147,6 +160,7 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
 
   // tidbMapTable does not do any check any meta information
   // it just register table for later use
+  @Deprecated
   def tidbMapTable(dbName: String,
                    tableName: String,
                    dbNameAsPrefix: Boolean = false): DataFrame = {
@@ -157,9 +171,11 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     df
   }
 
+  @Deprecated
   def tidbMapDatabase(dbName: String, dbNameAsPrefix: Boolean): Unit =
     tidbMapDatabase(dbName, dbNameAsPrefix, autoLoad)
 
+  @Deprecated
   def tidbMapDatabase(dbName: String,
                       dbNameAsPrefix: Boolean = false,
                       autoLoadStatistics: Boolean = autoLoad): Unit =
@@ -170,11 +186,11 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
       var sizeInBytes = Long.MaxValue
       val tableName = table.getName
       if (autoLoadStatistics) {
-        statisticsManager.loadStatisticsInfo(table)
+        StatisticsManager.loadStatisticsInfo(table)
       }
-      sizeInBytes = statisticsManager.estimateTableSize(table)
+      sizeInBytes = StatisticsManager.estimateTableSize(table)
 
-      if (!sqlContext.sparkSession.catalog.tableExists(tableName)) {
+      if (!sqlContext.sparkSession.catalog.tableExists("`" + tableName + "`")) {
         val rel: TiDBRelation = new TiDBRelation(
           tiSession,
           new TiTableReference(dbName, tableName, sizeInBytes),

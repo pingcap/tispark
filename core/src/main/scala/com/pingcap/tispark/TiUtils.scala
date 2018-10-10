@@ -24,13 +24,12 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
-import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.statistics.StatisticsManager
+import com.pingcap.tikv.TiConfiguration
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.aggregate.SortAggregateExec
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
-import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.{sql, SparkConf}
 
 import scala.collection.JavaConversions._
@@ -224,18 +223,30 @@ object TiUtils {
     tiConf
   }
 
-  def sessionInitialize(session: SparkSession, tiSession: TiSession): Unit = {
-    session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
-    session.udf.register("ti_version", () => TiSparkVersion.version)
-    CacheInvalidateListener.initCacheListener(session.sparkContext, tiSession.getRegionManager)
-    tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
-    StatisticsManager.initStatisticsManager(tiSession, session)
-  }
-
   def getReqEstCountStr(req: TiDAGRequest): String =
     if (req.getEstimatedCount > 0) {
       import java.text.DecimalFormat
       val df = new DecimalFormat("#.#")
       s" EstimatedCount:${df.format(req.getEstimatedCount)}"
     } else ""
+
+  /**
+   * Migrant from Spark 2.1.1 to support non-partial aggregate
+   */
+  def planAggregateWithoutPartial(groupingExpressions: Seq[NamedExpression],
+                                  aggregateExpressions: Seq[AggregateExpression],
+                                  resultExpressions: Seq[NamedExpression],
+                                  child: SparkPlan): SparkPlan = {
+    val completeAggregateExpressions = aggregateExpressions.map(_.copy(mode = Complete))
+    val completeAggregateAttributes = completeAggregateExpressions.map(_.resultAttribute)
+    SortAggregateExec(
+      requiredChildDistributionExpressions = Some(groupingExpressions),
+      groupingExpressions = groupingExpressions,
+      aggregateExpressions = completeAggregateExpressions,
+      aggregateAttributes = completeAggregateAttributes,
+      initialInputBufferOffset = 0,
+      resultExpressions = resultExpressions,
+      child = child
+    )
+  }
 }

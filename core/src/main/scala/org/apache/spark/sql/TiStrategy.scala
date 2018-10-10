@@ -46,11 +46,13 @@ import scala.collection.mutable
 // TODO: Too many hacks here since we hijack the planning
 // but we don't have full control over planning stage
 // We cannot pass context around during planning so
-// a re-extract needed for pushdown since
-// a plan tree might have Join which causes a single tree
-// have multiple plan to pushdown
-class TiStrategy(context: SQLContext) extends Strategy with Logging {
-  val sqlConf: SQLConf = context.conf
+// a re-extract needed for push-down since
+// a plan tree might contain Join which causes a single tree
+// have multiple plans to push-down
+case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
+    extends Strategy
+    with Logging {
+  val sqlConf: SQLConf = sparkSession.sqlContext.conf
   type TiExpression = com.pingcap.tikv.expression.Expression
   type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
 
@@ -92,7 +94,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   override def apply(plan: LogicalPlan): Seq[SparkPlan] =
     plan
       .collectFirst {
-        case LogicalRelation(relation: TiDBRelation, _, _) =>
+        case LogicalRelation(relation: TiDBRelation, _, _, _) =>
           doPlan(relation, plan)
       }
       .toSeq
@@ -240,7 +242,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
-    val tblStatistics = StatisticsManager.getInstance().getTableStatistics(source.table.getId)
+    val tblStatistics = StatisticsManager.getTableStatistics(source.table.getId)
 
     val tableScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)
@@ -294,7 +296,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def collectLimit(limit: Int, child: LogicalPlan): SparkPlan = child match {
-    case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+    case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
         if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
       pruneTopNFilterProject(limit, projectList, filters, source, Nil)
     case _ => planLater(child)
@@ -312,7 +314,7 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
 
     child match {
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
           if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
         execution.TakeOrderedAndProjectExec(
           limit,
@@ -492,7 +494,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         takeOrderedAndProject(limit, order, child, projectList) :: Nil
 
       // Collapse filters and projections and push plan directly
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
+      case PhysicalOperation(
+          projectList,
+          filters,
+          LogicalRelation(source: TiDBRelation, _, _, _)
+          ) =>
         pruneFilterProject(projectList, filters, source) :: Nil
 
       // Basic logic of original Spark's aggregation plan is:
@@ -582,7 +588,7 @@ object TiAggregationProjection {
   def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
     // Only push down aggregates projection when all filters can be applied and
     // all projection expressions are column references
-    case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _))
+    case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _, _))
         if projects.forall(_.isInstanceOf[Attribute]) =>
       Some((filters, rel, source, projects))
     case _ => Option.empty[ReturnType]

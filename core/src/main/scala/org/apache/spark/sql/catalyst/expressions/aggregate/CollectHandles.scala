@@ -19,7 +19,6 @@ import gnu.trove.list.linked.TLongLinkedList
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression}
 import org.apache.spark.sql.catalyst.util.GenericArrayData
-import org.apache.spark.sql.execution.RegionTaskExec
 import org.apache.spark.sql.types._
 
 /**
@@ -27,9 +26,7 @@ import org.apache.spark.sql.types._
  * and merge() functions which operate on Row-based aggregation buffers.
  *
  * This [[CollectHandles]] is used for collecting handles from TiKV to a list and serves as an
- * aggregation function used in [[RegionTaskExec]]
- *
- * @see [[ImperativeAggregate]]
+ * aggregation function used in [[org.apache.spark.sql.execution.RegionTaskExec]]
  */
 case class CollectHandles(child: Expression,
                           mutableAggBufferOffset: Int = 0,
@@ -54,10 +51,6 @@ case class CollectHandles(child: Expression,
 
   override def dataType: DataType = ArrayType(LongType)
 
-  override def inputTypes: Seq[AbstractDataType] = Seq(AnyDataType)
-
-  override def supportsPartial: Boolean = false
-
   override def aggBufferAttributes: Seq[AttributeReference] = Nil
 
   override def aggBufferSchema: StructType = StructType.fromAttributes(aggBufferAttributes)
@@ -66,7 +59,7 @@ case class CollectHandles(child: Expression,
 
   // `CollectHandles` is non-deterministic since it's result depends on the
   // actual order of input rows.
-  override def deterministic: Boolean = false
+  override lazy val deterministic: Boolean = false
 
   override def initialize(b: InternalRow): Unit =
     buffer.clear()

@@ -13,24 +13,29 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql.hive
+package org.apache.spark.sql.test
 
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.{SparkConf, SparkContext}
 
-class TiSessionState(sparkSession: SparkSession) extends HiveSessionState(sparkSession) {
+/**
+ * A special [[SparkSession]] prepared for testing.
+ */
+private[spark] class TestSparkSession(sc: SparkContext) extends SparkSession(sc) { self =>
+  def this(sparkConf: SparkConf) {
+    this(
+      new SparkContext(
+        "local[2]",
+        "tispark-integration-test",
+        sparkConf.set("spark.sql.testkey", "true")
+      )
+    )
+  }
 
-  self =>
+  def this() {
+    this(new SparkConf)
+  }
 
-  /**
-   * Internal catalog for managing table and database states.
-   */
-  override lazy val catalog = new TiSessionCatalog(
-    sparkSession.sharedState.externalCatalog.asInstanceOf[HiveExternalCatalog],
-    sparkSession.sharedState.globalTempViewManager,
-    sparkSession,
-    functionResourceLoader,
-    functionRegistry,
-    conf,
-    newHadoopConf()
-  )
+  SparkSession.setDefaultSession(this)
+  SparkSession.setActiveSession(this)
 }

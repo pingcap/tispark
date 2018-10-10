@@ -56,9 +56,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
     assert(spark.sql("select * from t limit 10").count() == 5)
     assert(spark.sql("select a from t limit 10").count() == 5)
 
-    judge("select count(1) from (select a from t limit 10) e", checkLimit = false)
-    judge("select count(a) from (select a from t limit 10) e", checkLimit = false)
-    judge("select count(1) from (select * from t limit 10) e", checkLimit = false)
+    judge("select count(1) from (select a from t order by a limit 10) e", checkLimit = false)
+    judge("select count(a) from (select a from t order by a limit 10) e", checkLimit = false)
+    judge("select count(1) from (select * from t order by a limit 10) e", checkLimit = false)
   }
 
   test("Test sql with limit without order by") {
@@ -84,7 +84,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
   }
 
   test("Test index task downgrade") {
-    val sqlConf = ti.session.sqlContext.conf
+    val sqlConf = ti.sparkSession.sqlContext.conf
     val prevRegionIndexScanDowngradeThreshold =
       sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000")
     sqlConf.setConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10")
@@ -185,7 +185,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
 
   // https://github.com/pingcap/tispark/issues/255
   test("Group by with first") {
-    ti.tidbMapDatabase(dbPrefix + "tpch_test")
+    setCurrentDatabase(tpchDBName)
     val q1 =
       """
         |select
@@ -209,6 +209,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     // Should not throw any exception
     runTest(q1, skipTiDB = true)
     runTest(q2, skipTiDB = true)
+    setCurrentDatabase("tispark_test")
   }
 
   // https://github.com/pingcap/tispark/issues/162

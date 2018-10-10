@@ -25,7 +25,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
-import org.apache.spark.sql.{SQLContext, SparkSession, TiContext}
+import org.apache.spark.sql._
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.BeforeAndAfterAll
@@ -57,12 +57,14 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
+  protected def initStatistics(): Unit = SharedSQLContext.initStatistics()
+
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
 
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
 
   /**
-   * The [[TestSQLContext]] to use for all tests in this suite.
+   * The [[TestSparkSession]] to use for all tests in this suite.
    */
   protected implicit def sqlContext: SQLContext = spark.sqlContext
 
@@ -103,8 +105,6 @@ object SharedSQLContext extends Logging {
   protected var tpchDBName: String = _
   protected var dbPrefix: String = _
 
-  protected lazy val sql = spark.sql _
-
   protected implicit def spark: SparkSession = _spark
 
   protected implicit def ti: TiContext = _ti
@@ -116,7 +116,7 @@ object SharedSQLContext extends Logging {
   protected implicit def tidbStmt: Statement = _statement
 
   /**
-   * The [[TestSQLContext]] to use for all tests in this suite.
+   * The [[TestSparkSession]] to use for all tests in this suite.
    */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
@@ -148,10 +148,15 @@ object SharedSQLContext extends Logging {
 
   protected def initializeTiContext(): Unit =
     if (_spark != null && _ti == null) {
-      _ti = new TiContext(_spark)
+      _ti = _spark.sessionState.planner.extraPlanningStrategies.head
+        .asInstanceOf[TiStrategy]
+        .getOrCreateTiContext(_spark)
+      StatisticsManager.initStatisticsManager(_ti.tiSession)
     }
 
-  private def initStatistics(): Unit = {
+  protected def initStatistics(): Unit = {
+    _tidbConnection.setCatalog("tispark_test")
+    _statement = _tidbConnection.createStatement()
     logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
     _statement.execute("analyze table tispark_test.full_data_type_table_idx")
     logger.info("Analyzing table tispark_test.full_data_type_table...")
@@ -219,6 +224,8 @@ object SharedSQLContext extends Logging {
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
+      sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
+      sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
 
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
       sparkConf.set(DB_PREFIX, dbPrefix)
@@ -227,6 +234,7 @@ object SharedSQLContext extends Logging {
 
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf)
+      (new TiExtensions).apply(_sparkSession.extensions)
     }
 
   /**
@@ -250,6 +258,13 @@ object SharedSQLContext extends Logging {
       _spark = null
     }
 
+    if (_ti != null) {
+      _ti.sparkSession.sessionState.catalog.reset()
+      _ti.sparkSession.stop()
+      _ti.tiSession.close()
+      _ti = null
+    }
+
     if (_sparkJDBC != null) {
       _sparkJDBC.sessionState.catalog.reset()
       _sparkJDBC.stop()
@@ -261,12 +276,8 @@ object SharedSQLContext extends Logging {
       _tidbConnection = null
     }
 
-    if (_ti != null) {
-      _ti.tiSession.close()
-      // Reset statisticsManager in case it use older version of TiContext
-      StatisticsManager.reset()
-      _ti = null
-    }
+    // Reset statisticsManager in case it use older version of TiContext
+    StatisticsManager.reset()
 
     if (_tidbConf != null) {
       _tidbConf = null

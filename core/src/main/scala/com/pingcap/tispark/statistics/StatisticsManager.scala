@@ -18,14 +18,14 @@
 package com.pingcap.tispark.statistics
 
 import com.google.common.cache.CacheBuilder
-import com.pingcap.tikv.TiSession
+import com.pingcap.tikv.catalog.Catalog
+import com.pingcap.tikv.{Snapshot, TiSession}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
 import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
-import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -56,16 +56,17 @@ private[statistics] case class StatisticsResult(histId: Long,
  *
  * Statistics information is useful for index selection and broadcast join support in TiSpark currently,
  * and these are arranged follows:
- * `statisticsMap` contains `tableId`->[[TableStatistics]] data, each table(id) will have a [[TableStatistics]]
- * if you have loaded statistics information successfully.
  *
- * @param tiSession TiSession used for selecting statistics information from TiKV
+ * `statisticsMap` contains `tableId`->TableStatistics data, each table(id) will have a TableStatistics
+ * if you have loaded statistics information successfully.
  */
-class StatisticsManager(tiSession: TiSession) {
-  private lazy val snapshot = tiSession.createSnapshot()
-  private lazy val catalog = tiSession.getCatalog
+object StatisticsManager {
+
+  private var snapshot: Snapshot = _
+  private var catalog: Catalog = _
+  private var dbPrefix: String = _
   // An estimator used to calculate table size.
-  private var tableSizeEstimator: TableSizeEstimator = new DefaultTableSizeEstimator(this)
+  private var tableSizeEstimator: TableSizeEstimator = _
   // Statistics information table columns explanation:
   // stats_meta:
   //       Version       | A time stamp assigned by pd, updates along with DDL updates.
@@ -87,9 +88,9 @@ class StatisticsManager(tiSession: TiSession) {
   //
   // More explanation could be found here
   // https://github.com/pingcap/docs/blob/master/sql/statistics.md
-  private[statistics] lazy val metaTable = catalog.getTable("mysql", "stats_meta")
-  private[statistics] lazy val histTable = catalog.getTable("mysql", "stats_histograms")
-  private[statistics] lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
+  private[statistics] var metaTable: TiTableInfo = _
+  private[statistics] var histTable: TiTableInfo = _
+  private[statistics] var bucketTable: TiTableInfo = _
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private final val statisticsMap = CacheBuilder
     .newBuilder()
@@ -104,7 +105,7 @@ class StatisticsManager(tiSession: TiSession) {
    */
   def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit = synchronized {
     require(table != null, "TableInfo should not be null")
-    if (!StatisticsHelper.isManagerReady(this)) {
+    if (!StatisticsHelper.isManagerReady) {
       logger.warn(
         "Some of the statistics information table are not loaded properly, " +
           "make sure you have executed analyze table command before these information could be used by TiSpark."
@@ -201,9 +202,9 @@ class StatisticsManager(tiSession: TiSession) {
     if (rows.isEmpty) return
 
     val row = rows.next()
-    tableStatistics.setCount { row.getUnsignedLong(1) }
+    tableStatistics.setVersion { row.getUnsignedLong(0) }
     tableStatistics.setModifyCount { row.getLong(2) }
-    tableStatistics.setVersion { row.getUnsignedLong(3) }
+    tableStatistics.setCount { row.getUnsignedLong(3) }
   }
 
   private def statisticsResultFromStorage(tableId: Long,
@@ -215,12 +216,12 @@ class StatisticsManager(tiSession: TiSession) {
     if (rows.isEmpty) return Nil
     // Group by hist_id(column_id)
     rows.toList
-      .groupBy { _.getLong(7) }
-      .flatMap { (t: (Long, List[Row])) =>
+      .groupBy { _.getLong(2) }
+      .flatMap { t: (Long, List[Row]) =>
         val histId = t._1
         val rowsById = t._2
         // split bucket rows into index rows / non-index rows
-        val (idxRows, colRows) = rowsById.partition { _.getLong(6) > 0 }
+        val (idxRows, colRows) = rowsById.partition { _.getLong(1) > 0 }
         val (idxReq, colReq) = requests.partition { _.isIndex > 0 }
         Array(
           StatisticsHelper.extractStatisticResult(histId, idxRows.iterator, idxReq),
@@ -249,30 +250,31 @@ class StatisticsManager(tiSession: TiSession) {
    */
   def estimateTableSize(table: TiTableInfo): Long = tableSizeEstimator.estimatedTableSize(table)
 
-  def setEstimator(estimator: TableSizeEstimator): StatisticsManager = {
-    this.tableSizeEstimator = estimator
-    this
+  def setEstimator(estimator: TableSizeEstimator): Unit = tableSizeEstimator = estimator
+
+  protected var initialized: Boolean = false
+
+  protected def initialize(tiSession: TiSession): Unit = {
+    snapshot = tiSession.createSnapshot()
+    catalog = tiSession.getCatalog
+    dbPrefix = tiSession.getConf.getDBPrefix
+    // An estimator used to calculate table size.
+    tableSizeEstimator = DefaultTableSizeEstimator
+    metaTable = catalog.getTable(s"${dbPrefix}mysql", "stats_meta")
+    histTable = catalog.getTable(s"${dbPrefix}mysql", "stats_histograms")
+    bucketTable = catalog.getTable(s"${dbPrefix}mysql", "stats_buckets")
+    statisticsMap.invalidateAll()
   }
-}
 
-object StatisticsManager {
-  private var manager: StatisticsManager = _
-
-  def initStatisticsManager(tiSession: TiSession, session: SparkSession): Unit =
-    if (manager == null) {
+  def initStatisticsManager(tiSession: TiSession): Unit =
+    if (!initialized) {
       synchronized {
-        if (manager == null) {
-          manager = new StatisticsManager(tiSession)
+        if (!initialized) {
+          initialize(tiSession)
+          initialized = true
         }
       }
     }
 
-  def reset(): Unit = manager = null
-
-  def getInstance(): StatisticsManager = {
-    if (manager == null) {
-      throw new RuntimeException("StatisticsManager has not been initialized properly.")
-    }
-    manager
-  }
+  def reset(): Unit = initialized = false
 }

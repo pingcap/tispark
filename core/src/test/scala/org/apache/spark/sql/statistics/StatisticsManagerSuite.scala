@@ -40,8 +40,10 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
   }
 
   private def initTable(): Unit = {
-    fDataIdxTbl = ti.meta.getTable("tispark_test", "full_data_type_table_idx").get
-    fDataTbl = ti.meta.getTable("tispark_test", "full_data_type_table").get
+    fDataTbl = ti.meta.getTable(s"${dbPrefix}tispark_test", "full_data_type_table").get
+    fDataIdxTbl = ti.meta.getTable(s"${dbPrefix}tispark_test", "full_data_type_table_idx").get
+    StatisticsManager.loadStatisticsInfo(fDataTbl)
+    StatisticsManager.loadStatisticsInfo(fDataIdxTbl)
   }
 
   ignore("Test fixed table size estimation") {
@@ -89,12 +91,12 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     tidbStmt.execute("analyze table `tb_fixed_float`")
     tidbStmt.execute("analyze table `tb_fixed_time`")
     refreshConnections()
-    val tbFixedInt = ti.meta.getTable("tispark_test", "tb_fixed_int").get
-    val tbFixedFloat = ti.meta.getTable("tispark_test", "tb_fixed_float").get
-    val tbFixedTime = ti.meta.getTable("tispark_test", "tb_fixed_time").get
-    val intBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedInt)
-    val floatBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedFloat)
-    val timeBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedTime)
+    val tbFixedInt = ti.meta.getTable(s"${dbPrefix}tispark_test", "tb_fixed_int").get
+    val tbFixedFloat = ti.meta.getTable(s"${dbPrefix}tispark_test", "tb_fixed_float").get
+    val tbFixedTime = ti.meta.getTable(s"${dbPrefix}tispark_test", "tb_fixed_time").get
+    val intBytes = StatisticsManager.estimateTableSize(tbFixedInt)
+    val floatBytes = StatisticsManager.estimateTableSize(tbFixedFloat)
+    val timeBytes = StatisticsManager.estimateTableSize(tbFixedTime)
     assert(intBytes >= 18 * 4)
     assert(floatBytes >= 22 * 4)
     assert(timeBytes >= 19 * 2)
@@ -135,7 +137,8 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     val result = ScanAnalyzer.extractConditions(expressions, fDataIdxTbl, idx)
     val irs =
       expressionToIndexRanges(result.getPointPredicates, result.getRangePredicate, fDataIdxTbl, idx)
-    val tblStatistics = StatisticsManager.getInstance().getTableStatistics(fDataIdxTbl.getId)
+    initTable()
+    val tblStatistics = StatisticsManager.getTableStatistics(fDataIdxTbl.getId)
     val idxStatistics = tblStatistics.getIndexHistMap.get(idx.getId)
     val rc = idxStatistics.getRowCount(irs).toLong
     assert(rc == expectedCount)

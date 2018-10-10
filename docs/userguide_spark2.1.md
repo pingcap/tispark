@@ -1,6 +1,6 @@
-# TiSpark (version >= 2.0) User Guide
+# TiSpark (with version < 2.0) User Guide
 
-**Note: This is a user guide for TiSpark version >= 2.0. If you are using version before 2.0, please refer to [Document for Spark 2.1](./userguide_spark2.1.md)**
+**Note: This is a user guide for TiSpark version < 2.0. If you are using version >= 2.0, please refer to [Document for Spark 2.3](./userguide.md)**
 
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) solution to serve as a one-stop solution for online transactions and analysis.
 
@@ -24,7 +24,7 @@ TiSpark Architecture
 
 ## Environment Setup
 
-+ The current version of TiSpark supports Spark 2.3+. It does not support any versions earlier than 2.3.
++ The current version of TiSpark supports Spark 2.1. For Spark 2.0, it has not been fully tested yet. It does not support any versions earlier than 2.0, or later than 2.2.
 + TiSpark requires JDK 1.8+ and Scala 2.11 (Spark2.0 + default Scala version).
 + TiSpark runs in any Spark mode such as YARN, Mesos, and Standalone.
 
@@ -89,15 +89,6 @@ SPARK_WORKER_MEMORY = 32g
 SPARK_WORKER_CORES = 8
 ```
 
-In the spark-defaults.conf, you should add following lines:
-```
-spark.tispark.pd.addresses $your_pd_servers
-spark.sql.extensions org.apache.spark.sql.TiExtensions
-```
-`your_pd_servers` should be comma-separated pd addresses, each in the format of `$your_pd_address:$port`
-
-For example, `10.16.20.1:2379,10.16.20.2:2379,10.16.20.3:2379` when you have multiple PD servers on 10.16.20.1,10.16.20.2,10.16.20.3 with port 2379.
-
 #### Hybrid deployment configuration for the TiSpark and TiKV cluster
 
 For the  hybrid deployment of TiSpark and TiKV, add the TiSpark required resources to the TiKV reserved resources, and allocate 25% of the memory for the system.
@@ -105,20 +96,21 @@ For the  hybrid deployment of TiSpark and TiKV, add the TiSpark required resourc
 
 ## Deploy TiSpark
 
-Download the TiSpark's jar package [here](http://download.pingcap.org/tispark-latest-linux-amd64.tar.gz).
+Download the TiSpark's jar package [here](http://download.pingcap.org/tispark-core-${version}-jar-with-dependencies.jar).
 
 ### Deploy TiSpark on the existing Spark cluster
 
 Running TiSpark on an existing Spark cluster does not require a reboot of the cluster. You can use Spark's `--jars` parameter to introduce TiSpark as a dependency:
 
 ```
-spark-shell --jars $your_path_to/tispark-core-${version}-jar-with-dependencies.jar
+Spark-shell --jars $ PATH / tispark-core-${version}-jar-with-dependencies.jar
 ```
 
 If you want to deploy TiSpark as a default component, simply place the TiSpark jar package into the jars path for each node of the Spark cluster and restart the Spark cluster:
 
 ```
-cp $your_path_to/tispark-core-${version}-jar-with-dependencies.jar $SPARK_HOME/jars
+$ {SPARK_INSTALL_PATH} / jars
+
 ```
 
 In this way,  you can use either `Spark-Submit` or `Spark-Shell` to use TiSpark directly.
@@ -134,20 +126,16 @@ If you do not have a Spark cluster, we recommend using the Spark Standalone mode
 
 You can download [Apache Spark](https://spark.apache.org/downloads.html)
 
-For the Standalone mode without Hadoop support, use Spark **2.3.x** and any version of Pre-build with Apache Hadoop 2.x with Hadoop dependencies. 
-
-If you need to use the Hadoop cluster, please choose the corresponding Hadoop version. You can also choose to build Spark from the [source code](https://spark.apache.org/docs/2.3.0/building-spark.html) to match the previous version of the official Hadoop 2.6.
-
-**Please confirm the Spark version your TiSpark version supports.**
-
-Suppose you already have a Spark binaries, and the current PATH is `SPARKPATH`, please copy the TiSpark jar package to the `$SPARKPATH/jars` directory.
+For the Standalone mode without Hadoop support, use Spark 2.1.x and any version of Pre-build with Apache Hadoop 2.x with Hadoop dependencies. If you need to use the Hadoop cluster, please choose the corresponding Hadoop version. You can also choose to build from the [source code](https://spark.apache.org/docs/2.1.0/building-spark.html) to match the previous version of the official Hadoop 2.6. Please note that TiSpark currently only supports Spark 2.1.x version.
+ 
+Suppose you already have a Spark binaries, and the current PATH is `SPARKPATH`, please copy the TiSpark jar package to the `$ {SPARKPATH} / jars` directory.
 
 #### Starting a Master node
 
 Execute the following command on the selected Spark Master node:
  
 ```
-cd $SPARKPATH
+cd $ SPARKPATH
 
 ./sbin/start-master.sh  
 ```
@@ -160,14 +148,29 @@ After the above step is completed, a log file will be printed on the screen. Che
 Similarly, you can start a Spark-Slave node with the following command:
 
 ```
-./sbin/start-slave.sh spark://spark-master-hostname:7077
+./sbin/start-slave.sh spark: // spark-master-hostname: 7077
 ```
 
 After the command returns, you can see if the Slave node is joined to the Spark cluster correctly from the panel as well. Repeat the above command at all Slave nodes. After all Slaves are connected to the master, you have a Standalone mode Spark cluster.
 
 #### Spark SQL shell and JDBC Server
 
-Now that TiSpark supports Spark 2.3, you can use Spark's ThriftServer and SparkSQL directly.
+If you want to use JDBC server and interactive SQL shell, please copy `start-tithriftserver.sh stop-tithriftserver.sh` to your Spark's sbin folder and `tispark-sql` to bin folder. 
+
+To start interactive shell:
+```
+./bin/tispark-sql
+```
+
+To use Thrift Server, you can start it similar way as default Spark Thrift Server:
+```
+./sbin/start-tithriftserver.sh
+```
+
+And stop it like below:
+```
+./sbin/stop-tithriftserver.sh
+```
 
 
 ## Demo
@@ -177,18 +180,20 @@ Assuming you have successfully started the TiSpark cluster as described above, h
 Add 
 ```
 spark.tispark.pd.addresses 192.168.1.100:2379
-spark.sql.extensions org.apache.spark.sql.TiExtensions
 ```
 entry in your ./conf/spark-defaults.conf, assuming that your PD node is located at `192.168.1.100`, port `2379`:
 
 In the Spark-Shell, enter the following command:
+
 ```
-spark.sql("use tpch")
+import org.apache.spark.sql.TiContext
+val ti = new TiContext (spark)
+ti.tidbMapDatabase ("tpch")
 ```
 After that you can call Spark SQL directly:
 
 ```
-spark.sql("select count (*) from lineitem")
+spark.sql ("select count (*) from lineitem")
 ```
 
 The result is:
@@ -285,15 +290,37 @@ TiSpark could use TiDB's statistic information for
 
 If you would like TiSpark to use statistic information, first you need to make sure that concerning tables have already been analyzed. Read more about how to analyze tables [here](https://github.com/pingcap/docs/blob/master/sql/statistics.md).
 
-Since TiSpark 2.0, statistics information will be default to auto load.
+Then load statistics information from your storage
+```scala
+val ti = new TiContext(spark)
 
+// ... map databases needed to use
+// You can specify whether to load statistics information automatically during database mapping in your config file described as below.
+// Statistics information will be loaded automatically by default, which is recommended in most cases.
+ti.tidbMapDatabase("db_name")
+  
+// Another option is manually load by yourself, yet this is not the recommended way.
+  
+// Firstly, get the table that you want to load statistics information from.
+val table = ti.meta.getTable("db_name", "tb_name").get
+  
+// If you want to load statistics information for all the columns, use
+ti.statisticsManager.loadStatisticsInfo(table)
+  
+// If you just want to use some of the columns' statistics information, use
+ti.statisticsManager.loadStatisticsInfo(table, "col1", "col2", "col3") // You could specify required columns by vararg
+  
+// Collect other tables' statistic information...
+  
+// Then you could query as usual, TiSpark will use statistic information collect to optimized index selection and broadcast join.
+```
 Note that table statistics will be cached in your spark driver node's memory, so you need to make sure that your memory should be enough for your statistics information.
 Currently you could adjust these configs in your spark.conf file.
   
 | Property Name | Default | Description
 | --------   | -----:   | :----: |
 | spark.tispark.statistics.auto_load | true | Whether to load statistics info automatically during database mapping. |
-
+  
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?

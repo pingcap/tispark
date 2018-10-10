@@ -33,35 +33,35 @@ import scala.collection.mutable
 object StatisticsHelper {
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private val metaRequiredCols = Seq(
+    "version",
     "table_id",
-    "count",
     "modify_count",
-    "version"
+    "count"
   )
   private val histRequiredCols = Seq(
     "table_id",
     "is_index",
     "hist_id",
     "distinct_count",
-    "version",
     "null_count",
+    "version",
     "cm_sketch"
   )
   private val bucketRequiredCols = Seq(
+    "table_id",
+    "is_index",
+    "hist_id",
+    "bucket_id",
     "count",
     "repeats",
     "lower_bound",
-    "upper_bound",
-    "bucket_id",
-    "table_id",
-    "is_index",
-    "hist_id"
+    "upper_bound"
   )
 
-  private[statistics] def isManagerReady(manager: StatisticsManager): Boolean =
-    manager.metaTable != null &&
-      manager.bucketTable != null &&
-      manager.histTable != null
+  private[statistics] def isManagerReady: Boolean =
+    StatisticsManager.metaTable != null &&
+      StatisticsManager.bucketTable != null &&
+      StatisticsManager.histTable != null
 
   private[statistics] def extractStatisticsDTO(row: Row,
                                                table: TiTableInfo,
@@ -72,8 +72,8 @@ object StatisticsHelper {
     val isIndex = row.getLong(1) > 0
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
-    val histVer = row.getUnsignedLong(4)
-    val nullCount = row.getLong(5)
+    val nullCount = row.getLong(4)
+    val histVer = row.getUnsignedLong(5)
     val cMSketch = if (checkColExists(histTable, "cm_sketch")) row.getBytes(6) else null
     // get index/col info for StatisticsDTO
     val indexInfos = table.getIndices
@@ -149,17 +149,17 @@ object StatisticsHelper {
       val buckets = mutable.ArrayBuffer[Bucket]()
       while (rows.hasNext) {
         val row = rows.next()
-        val isRowIndex = if (row.getLong(6) > 0) true else false
+        val isRowIndex = if (row.getLong(1) > 0) true else false
         val isRequestIndex = matched.isIndex > 0
         // if required DTO type(index/non index) is the same with the row
         if (isRequestIndex == isRowIndex) {
-          val count = row.getLong(0)
-          val repeats = row.getLong(1)
+          val count = row.getLong(4)
+          val repeats = row.getLong(5)
           var lowerBound: Key = null
           var upperBound: Key = null
           // all bounds are stored as blob in bucketTable currently, decode using blob type
-          lowerBound = TypedKey.toTypedKey(row.getBytes(2), DataTypeFactory.of(MySQLType.TypeBlob))
-          upperBound = TypedKey.toTypedKey(row.getBytes(3), DataTypeFactory.of(MySQLType.TypeBlob))
+          lowerBound = TypedKey.toTypedKey(row.getBytes(6), DataTypeFactory.of(MySQLType.TypeBlob))
+          upperBound = TypedKey.toTypedKey(row.getBytes(7), DataTypeFactory.of(MySQLType.TypeBlob))
           totalCount += count
           buckets += new Bucket(totalCount, repeats, lowerBound, upperBound)
         }

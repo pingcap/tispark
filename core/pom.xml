@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.pingcap.tispark</groupId>
         <artifactId>tispark-parent</artifactId>
-        <version>1.1-SNAPSHOT</version>
+        <version>2.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -13,18 +13,19 @@
     <packaging>jar</packaging>
     <name>TiSpark Project Core</name>
     <url>http://github.copm/pingcap/tispark</url>
+    <version>${tispark.version}</version>
 
     <properties>
-        <scalatest.version>3.0.4</scalatest.version>
         <scalaj.version>2.3.0</scalaj.version>
         <mysql.connector.version>5.1.44</mysql.connector.version>
         <play.version>2.6.8</play.version>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.pingcap.tikv</groupId>
             <artifactId>tikv-client</artifactId>
-            <version>${project.version}</version>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.scalaj</groupId>
@@ -53,11 +54,11 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>src/main/scala</sourceDirectory>
-        <testSourceDirectory>src/test/scala</testSourceDirectory>
+        <sourceDirectory>${tispark.sourceDirectory}</sourceDirectory>
+        <testSourceDirectory>${tispark.testSourceDirectory}</testSourceDirectory>
         <resources>
             <resource>
-                <directory>src/main/resources</directory>
+                <directory>${tispark.resourcesDirectory}</directory>
             </resource>
         </resources>
         <extensions>

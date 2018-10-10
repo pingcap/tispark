@@ -82,7 +82,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (catalog == null) {
-          catalog = new Catalog(() -> createSnapshot(),
+          catalog = new Catalog(this::createSnapshot,
               conf.getMetaReloadPeriod(),
               conf.getMetaReloadPeriodUnit(),
               conf.ifShowRowId(),
