@@ -1,7 +1,7 @@
 package org.apache.spark.sql.extensions
 
 import com.pingcap.tispark.statistics.StatisticsManager
-import org.apache.spark.sql._
+import org.apache.spark.sql.{AnalysisException, _}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchTableException, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -27,7 +27,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     (dbName: String, tableName: String) => {
       val table = meta.getTable(dbName, tableName)
       if (table.isEmpty) {
-        throw new NoSuchTableException(dbName, tableName)
+        throw new AnalysisException(s"Table or view '$tableName' not found in database '$dbName'")
       }
       if (autoLoad) {
         StatisticsManager.loadStatisticsInfo(table.get)

@@ -6,7 +6,7 @@ import org.apache.spark.sql.catalyst.parser._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.execution.SparkSqlParser
-import org.apache.spark.sql.execution.command.CreateViewCommand
+import org.apache.spark.sql.execution.command.{CreateViewCommand, ExplainCommand}
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{SparkSession, TiContext}
 
@@ -57,6 +57,8 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       )
     case cv @ CreateViewCommand(_, _, _, _, _, child, _, _, _) =>
       cv.copy(child = child.transform(qualifyTableIdentifier))
+    case e @ ExplainCommand(logicalPlan, _, _, _) =>
+      e.copy(logicalPlan = logicalPlan.transform(qualifyTableIdentifier))
   }
 
   override def parsePlan(sqlText: String): LogicalPlan =
