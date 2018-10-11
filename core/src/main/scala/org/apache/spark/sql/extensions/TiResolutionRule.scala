@@ -3,7 +3,7 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.{AnalysisException, _}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.{NoSuchTableException, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
@@ -14,11 +14,11 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
 ) extends Rule[LogicalPlan] {
   protected lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
-  private def autoLoad = tiContext.autoLoad
-  protected def meta: MetaManager = tiContext.meta
-  private def tiCatalog = tiContext.tiCatalog
-  private def tiSession = tiContext.tiSession
-  private def sqlContext = tiContext.sqlContext
+  private lazy val autoLoad = tiContext.autoLoad
+  protected lazy val meta: MetaManager = tiContext.meta
+  private lazy val tiCatalog = tiContext.tiCatalog
+  private lazy val tiSession = tiContext.tiSession
+  private lazy val sqlContext = tiContext.sqlContext
 
   private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
     tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)

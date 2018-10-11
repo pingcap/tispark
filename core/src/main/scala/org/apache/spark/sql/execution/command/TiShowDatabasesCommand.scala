@@ -2,13 +2,12 @@ package org.apache.spark.sql.execution.command
 
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
-class TiShowDatabasesCommand(val tiContext: TiContext, databasePattern: Option[String])
-    extends ShowDatabasesCommand(databasePattern)
-    with TiCommand {
+case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowDatabasesCommand)
+    extends TiDelegateCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val databases =
       // Not leveraging catalog-specific db pattern, at least Hive and Spark behave different than each other.
-      databasePattern
+      delegate.databasePattern
         .map(tiCatalog.listDatabases)
         .getOrElse(tiCatalog.listDatabases())
     databases.map { d =>

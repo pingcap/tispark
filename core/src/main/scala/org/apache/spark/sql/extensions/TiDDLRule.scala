@@ -11,17 +11,11 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
 
   override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     // TODO: support other commands that may concern TiSpark catalog.
-    case ShowDatabasesCommand(databasePattern) =>
-      new TiShowDatabasesCommand(tiContext, databasePattern)
-    case SetDatabaseCommand(databaseName) =>
-      TiSetDatabaseCommand(tiContext, databaseName)
-    case ShowTablesCommand(databaseName, tableIdentifierPattern, isExtended, partitionSpec) =>
-      new TiShowTablesCommand(
-        tiContext,
-        databaseName,
-        tableIdentifierPattern,
-        isExtended,
-        partitionSpec
-      )
+    case sd: ShowDatabasesCommand =>
+      TiShowDatabasesCommand(tiContext, sd)
+    case sd: SetDatabaseCommand =>
+      TiSetDatabaseCommand(tiContext, sd)
+    case st: ShowTablesCommand =>
+      TiShowTablesCommand(tiContext, st)
   }
 }
