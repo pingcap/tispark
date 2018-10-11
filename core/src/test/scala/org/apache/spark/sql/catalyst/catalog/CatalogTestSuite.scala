@@ -24,4 +24,22 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     spark.sql("show tables like '*_j'").show(false)
     spark.sql(s"show tables from $dbPrefix$tpchDBName").show(false)
   }
+
+  test("test explain") {
+    setCurrentDatabase("tispark_test")
+    assert(
+      spark
+        .sql("explain select id_dt from full_data_type_table1")
+        .head
+        .getString(0)
+        .contains("AnalysisException")
+    )
+    assert(
+      !spark
+        .sql("explain select id_dt from full_data_type_table")
+        .head
+        .getString(0)
+        .contains("AnalysisException")
+    )
+  }
 }
