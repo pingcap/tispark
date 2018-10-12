@@ -43,6 +43,10 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
   StatisticsManager.initStatisticsManager(tiSession)
+  // TISPARK-51/#459 the extra strategy is only added to fix broken pySpark
+  sparkSession.experimental.extraStrategies ++= Seq(
+    TiStrategy((new TiExtensions).getOrCreateTiContext(_))(sparkSession)
+  )
   sparkSession.udf.register("ti_version", () => TiSparkVersion.version)
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
