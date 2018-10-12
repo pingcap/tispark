@@ -148,9 +148,7 @@ object SharedSQLContext extends Logging {
 
   protected def initializeTiContext(): Unit =
     if (_spark != null && _ti == null) {
-      _ti = _spark.sessionState.planner.extraPlanningStrategies.head
-        .asInstanceOf[TiStrategy]
-        .getOrCreateTiContext(_spark)
+      _ti = new TiContext(_spark)
       StatisticsManager.initStatisticsManager(_ti.tiSession)
     }
 
@@ -234,7 +232,6 @@ object SharedSQLContext extends Logging {
 
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf)
-      (new TiExtensions).apply(_sparkSession.extensions)
     }
 
   /**
@@ -278,6 +275,7 @@ object SharedSQLContext extends Logging {
 
     // Reset statisticsManager in case it use older version of TiContext
     StatisticsManager.reset()
+    TiExtensions.reset()
 
     if (_tidbConf != null) {
       _tidbConf = null
