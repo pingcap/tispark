@@ -1,5 +1,4 @@
-## TiSpark (version >= 2.0) on PySpark:
-**Note: If you are using TiSpark version less than 2.0, please read [this document](./README_spark2.1.md) instead**
+## TiSpark (version < 2.0) on PySpark:
 ### Usage
 There are currently three ways to use TiSpark on Python:
 #### Directly via pyspark
@@ -22,18 +21,12 @@ from pyspark.context import SparkContext
 gw = SparkContext._gateway
 
 java_import(gw.jvm, "org.apache.spark.sql.TiContext")
+ 
+# Create a TiContext
+ti = gw.jvm.TiContext(spark._jsparkSession)
 
-# Initializing TiContext
-gw.jvm.TiContext(spark._jsparkSession)
-
-# Show databases
-sql("show databases").show()
-
-# Select database
-sql("use tpch_test")
-
-# Show tables
-sql("show tables").show()
+# Map database
+ti.tidbMapDatabase("tpch_test", False, True)
 
 # Query as usual
 sql("select count(*) from customer").show()
@@ -60,9 +53,9 @@ This way is generally the same as the first way, but more readable.
 ```python
 import pytispark.pytispark as pti
 
-TiContext(spark)
+ti = pti.TiContext(spark)
 
-sql("use tpch_test")
+ti.tidbMapDatabase("tpch")
 
 sql("select count(*) from customer").show()
 
@@ -86,7 +79,7 @@ spark = SparkSession.builder.master("Your master url").appName("Your app name").
 
 ti = pti.TiContext(spark)
 
-spark.sql("use tpch_test")
+ti.tidbMapDatabase("tpch")
 
 spark.sql("select count(*) from customer").show()
 ```
