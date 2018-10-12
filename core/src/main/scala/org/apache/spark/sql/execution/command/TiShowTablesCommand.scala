@@ -3,7 +3,7 @@ package org.apache.spark.sql.execution.command
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
 case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand)
-    extends TiDelegateCommand(delegate) {
+    extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val db = delegate.databaseName.getOrElse(tiCatalog.getCurrentDatabase)
     // Show the information of tables.
