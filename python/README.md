@@ -21,10 +21,11 @@ from pyspark.context import SparkContext
 # We get a referenct to py4j Java Gateway
 gw = SparkContext._gateway
 
-java_import(gw.jvm, "org.apache.spark.sql.TiContext")
+# Import TiExtensions
+java_import(gw.jvm, "org.apache.spark.sql.TiExtensions")
 
-# Initializing TiContext
-gw.jvm.TiContext(spark._jsparkSession)
+# Inject TiExtensions
+ti = gw.jvm.TiExtensions.getInstance(spark._jsparkSession).getOrCreateTiContext(spark._jsparkSession)
 
 # Show databases
 sql("show databases").show()

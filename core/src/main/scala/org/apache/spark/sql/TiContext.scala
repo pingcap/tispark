@@ -42,8 +42,6 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
-  TiExtensions.getInstance(sparkSession)
-
   StatisticsManager.initStatisticsManager(tiSession)
   sparkSession.udf.register("ti_version", () => TiSparkVersion.version)
   CacheInvalidateListener

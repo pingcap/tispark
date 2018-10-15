@@ -3,7 +3,7 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.{AnalysisException, _}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.{NoSuchTableException, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
