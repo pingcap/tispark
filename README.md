@@ -68,6 +68,8 @@ https://github.com/pingcap/tispark/tree/master/tikv-client
 
 
 ## Quick Start
+**Before everything starts, you must add `spark.sql.extensions  org.apache.spark.sql.TiExtensions` in spark-defaults.conf**
+
 From Spark-shell:
 ```
 ./bin/spark-shell --jars /wherever-it-is/tispark-${version}-jar-with-dependencies.jar
