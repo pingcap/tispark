@@ -18,9 +18,9 @@ This is the simplest way, just a decent Spark environment should be enough.
 5. To use TiSpark, run these commands:
 ```python
 # Query as you are in spark-shell
-spark.sql("show databases").show()
-spark.sql("use tpch_test")
-spark.sql("show tables").show()
+sql("show databases").show()
+sql("use tpch_test")
+sql("show tables").show()
 sql("select count(*) from customer").show()
 
 # Result
@@ -50,7 +50,7 @@ java_import(gw.jvm, "org.apache.spark.sql.TiExtensions")
 # Inject TiExtensions, and get a TiContext
 ti = gw.jvm.TiExtensions.getInstance(spark._jsparkSession).getOrCreateTiContext(spark._jsparkSession)
 
-# Map database
+# Map database as old api does
 ti.tidbMapDatabase("tpch_test", False, True)
 
 # sql("use tpch_test")
