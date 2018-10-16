@@ -27,14 +27,8 @@ java_import(gw.jvm, "org.apache.spark.sql.TiExtensions")
 # Inject TiExtensions
 ti = gw.jvm.TiExtensions.getInstance(spark._jsparkSession).getOrCreateTiContext(spark._jsparkSession)
 
-# Show databases
-sql("show databases").show()
-
-# Select database
-sql("use tpch_test")
-
-# Show tables
-sql("show tables").show()
+# Map database
+ti.tidbMapDatabase("tpch_test")
 
 # Query as usual
 sql("select count(*) from customer").show()
@@ -61,9 +55,13 @@ This way is generally the same as the first way, but more readable.
 ```python
 import pytispark.pytispark as pti
 
-TiContext(spark)
+# Import TiExtensions
+java_import(gw.jvm, "org.apache.spark.sql.TiExtensions")
 
-sql("use tpch_test")
+# Inject TiExtensions
+ti = gw.jvm.TiExtensions.getInstance(spark._jsparkSession).getOrCreateTiContext(spark._jsparkSession)
+
+ti.tidbMapDatabase("tpch_test")
 
 sql("select count(*) from customer").show()
 
@@ -83,7 +81,7 @@ This way is useful when you want to execute your own Python scripts.
 from pyspark.sql import SparkSession
 import pytispark.pytispark as pti
 
-spark = SparkSession.builder.master("Your master url").appName("Your app name").getOrCreate()
+spark = SparkSession.builder.master("Your master url").appName("Your app name").config(...).getOrCreate()
 
 ti = pti.TiContext(spark)
 
