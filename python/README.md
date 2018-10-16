@@ -1,7 +1,9 @@
 ## TiSpark (version >= 2.0) on PySpark:
 **Note: If you are using TiSpark version less than 2.0, please read [this document](./README_spark2.1.md) instead**
+
+pytispark will not be necessary since TiSpark version >= 2.0.
 ### Usage
-There are currently three ways to use TiSpark on Python:
+There are currently two ways to use TiSpark on Python:
 #### Directly via pyspark
 This is the simplest way, just a decent Spark environment should be enough.
 1. Make sure you have the latest version of [TiSpark](https://github.com/pingcap/tispark) and a `jar` with all TiSpark's dependencies.
