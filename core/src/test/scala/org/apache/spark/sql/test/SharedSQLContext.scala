@@ -28,7 +28,7 @@ import org.apache.spark.sql.test.Utils._
 import org.apache.spark.sql._
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.joda.time.DateTimeZone
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
 

@@ -24,7 +24,7 @@ import org.apache.spark.SparkConf
 private[spark] class TestSparkSession(sparkConf: SparkConf) { self =>
   private val spark = SparkSession
     .builder()
-    .master("local[2]")
+    .master("local[*]")
     .appName("tispark-integration-test")
     .config(sparkConf.set("spark.sql.testkey", "true"))
     .getOrCreate()
