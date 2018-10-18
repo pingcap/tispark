@@ -16,26 +16,20 @@
 package org.apache.spark.sql.test
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.SparkConf
 
 /**
  * A special [[SparkSession]] prepared for testing.
  */
-private[spark] class TestSparkSession(sc: SparkContext) extends SparkSession(sc) { self =>
-  def this(sparkConf: SparkConf) {
-    this(
-      new SparkContext(
-        "local[2]",
-        "tispark-integration-test",
-        sparkConf.set("spark.sql.testkey", "true")
-      )
-    )
-  }
+private[spark] class TestSparkSession(sparkConf: SparkConf) { self =>
+  private val spark = SparkSession
+    .builder()
+    .master("local[2]")
+    .appName("tispark-integration-test")
+    .config(sparkConf.set("spark.sql.testkey", "true"))
+    .getOrCreate()
+  SparkSession.setDefaultSession(spark)
+  SparkSession.setActiveSession(spark)
 
-  def this() {
-    this(new SparkConf)
-  }
-
-  SparkSession.setDefaultSession(this)
-  SparkSession.setActiveSession(this)
+  def session: SparkSession = spark
 }

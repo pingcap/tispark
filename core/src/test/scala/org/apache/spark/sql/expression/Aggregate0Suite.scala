@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class Aggregate0Suite extends BaseTiSparkSuite {
+class Aggregate0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select tp_mediumtext from full_data_type_table  group by (tp_mediumtext)  order by tp_mediumtext ",
     "select tp_double from full_data_type_table  group by (tp_double)  order by tp_double ",

@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class ArithmeticTest1Suite extends BaseTiSparkSuite {
+class ArithmeticTest1Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select tp_mediumint / 127 from full_data_type_table  order by id_dt  limit 10",
     "select tp_mediumint / -128 from full_data_type_table  order by id_dt  limit 10",

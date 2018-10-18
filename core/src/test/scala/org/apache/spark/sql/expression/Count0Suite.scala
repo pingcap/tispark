@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class Count0Suite extends BaseTiSparkSuite {
+class Count0Suite extends BaseInitialOnceSuite {
   private val countCases = Seq[String](
     "select count(tp_int) from full_data_type_table ",
     "select count(tp_date) from full_data_type_table ",

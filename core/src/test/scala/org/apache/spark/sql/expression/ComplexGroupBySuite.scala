@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class ComplexGroupBySuite extends BaseTiSparkSuite {
+class ComplexGroupBySuite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select tp_int + 1 from full_data_type_table  group by (tp_int + 1)",
     "select tp_float * 2 from full_data_type_table  group by (tp_float * 2)",

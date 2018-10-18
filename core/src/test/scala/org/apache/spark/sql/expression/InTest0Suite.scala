@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class InTest0Suite extends BaseTiSparkSuite {
+class InTest0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select tp_int from full_data_type_table  where tp_int in (2333, 601508558, 4294967296, 4294967295)",
     "select tp_bigint from full_data_type_table  where tp_bigint in (122222, -2902580959275580308, 9223372036854775807, 9223372036854775808)",
