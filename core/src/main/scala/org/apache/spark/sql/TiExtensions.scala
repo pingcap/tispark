@@ -19,3 +19,21 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
 }
+
+object TiExtensions {
+  private var tiExtensions: TiExtensions = _
+
+  def getInstance(sparkSession: SparkSession): TiExtensions = {
+    if (tiExtensions == null) {
+      synchronized {
+        if (tiExtensions == null) {
+          tiExtensions = new TiExtensions
+          tiExtensions.apply(sparkSession.extensions)
+        }
+      }
+    }
+    tiExtensions
+  }
+
+  def reset(): Unit = tiExtensions = null
+}

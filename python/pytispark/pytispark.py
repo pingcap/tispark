@@ -27,8 +27,8 @@ class TiContext:
     def __init__(self, sparkSession):
         SparkContext._ensure_initialized()
         gw = SparkContext._gateway
-        java_import(gw.jvm, "org.apache.spark.sql.TiContext")
-        self.ti = gw.jvm.TiContext(sparkSession._jsparkSession)
+        java_import(gw.jvm, "org.apache.spark.sql.TiExtensions")
+        self.ti = gw.jvm.TiExtensions.getInstance(sparkSession._jsparkSession).getOrCreateTiContext(sparkSession._jsparkSession)
 
     """
     Get the TiContext java representation
