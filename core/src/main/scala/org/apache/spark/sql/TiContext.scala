@@ -146,9 +146,9 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
 
   @Deprecated
   def getDataFrame(dbName: String, tableName: String): DataFrame = {
-    val tiRelation = new TiDBRelation(
+    val tiRelation = TiDBRelation(
       tiSession,
-      new TiTableReference(dbName, tableName),
+      TiTableReference(dbName, tableName),
       meta
     )(sqlContext)
     sqlContext.baseRelationToDataFrame(tiRelation)
@@ -191,9 +191,9 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
       sizeInBytes = StatisticsManager.estimateTableSize(table)
 
       if (!sqlContext.sparkSession.catalog.tableExists("`" + tableName + "`")) {
-        val rel: TiDBRelation = new TiDBRelation(
+        val rel: TiDBRelation = TiDBRelation(
           tiSession,
-          new TiTableReference(dbName, tableName, sizeInBytes),
+          TiTableReference(dbName, tableName, sizeInBytes),
           meta
         )(sqlContext)
 
