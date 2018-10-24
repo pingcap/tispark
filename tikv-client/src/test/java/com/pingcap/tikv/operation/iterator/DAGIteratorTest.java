@@ -19,11 +19,7 @@ import static junit.framework.TestCase.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.GrpcUtils;
-import com.pingcap.tikv.KVMockServer;
-import com.pingcap.tikv.PDMockServer;
-import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.*;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -48,7 +44,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class DAGIteratorTest {
+public class DAGIteratorTest extends MockServerTest {
   private KVMockServer server;
   private PDMockServer pdServer;
   private static final String LOCAL_ADDR = "127.0.0.1";
@@ -64,51 +60,6 @@ public class DAGIteratorTest {
         .addColumn("c2", StringType.VARCHAR)
         .build();
   }
-
-  @Before
-  public void setUp() throws Exception {
-    pdServer = new PDMockServer();
-    pdServer.start(CLUSTER_ID);
-    pdServer.addGetMemberResp(
-        GrpcUtils.makeGetMembersResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + pdServer.port),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 1)),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
-
-    Metapb.Region r =
-        Metapb.Region.newBuilder()
-            .setRegionEpoch(Metapb.RegionEpoch.newBuilder().setConfVer(1).setVersion(2))
-            .setId(233)
-            .setStartKey(ByteString.EMPTY)
-            .setEndKey(ByteString.EMPTY)
-            .addPeers(Metapb.Peer.newBuilder().setId(11).setStoreId(13))
-            .build();
-
-    region = new TiRegion(r, r.getPeers(0), IsolationLevel.RC, CommandPri.Low);
-    server = new KVMockServer();
-    port = server.start(region);
-    // No PD needed in this test
-    TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
-    session = TiSession.create(conf);
-  }
-
-  private RegionStoreClient createClient() {
-    Metapb.Store store =
-        Metapb.Store.newBuilder()
-            .setAddress(LOCAL_ADDR + ":" + port)
-            .setId(1)
-            .setState(Metapb.StoreState.Up)
-            .build();
-
-    return RegionStoreClient.create(region, store, session);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    server.stop();
-  }
-
 
   @Test
   public void staleEpochTest() throws Exception {
@@ -139,15 +90,10 @@ public class DAGIteratorTest {
     server.put("key1", cdo.toByteString());
     List<RegionTask> tasks = ImmutableList.of(RegionTask.newInstance(region, store, keyRanges));
     CoprocessIterator<Row> iter = CoprocessIterator.getRowIterator(req, tasks, session);
-    iter.hasNext();
+    assert iter.hasNext();
     Row r = iter.next();
     SchemaInfer infer = SchemaInfer.create(req);
     assertEquals(r.get(0, infer.getType(0)), 666L);
     assertEquals(r.get(1, infer.getType(1)), "value1");
-  }
-
-
-  private static KeyRange createByteStringRange(ByteString sKey, ByteString eKey) {
-    return KeyRange.newBuilder().setStart(sKey).setEnd(eKey).build();
   }
 }

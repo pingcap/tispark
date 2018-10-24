@@ -27,6 +27,8 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
@@ -46,6 +48,8 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteRequest;
 import com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteResponse;
 import com.pingcap.tikv.kvproto.Kvrpcpb.RawGetRequest;
 import com.pingcap.tikv.kvproto.Kvrpcpb.RawGetResponse;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawScanRequest;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawScanResponse;
 import com.pingcap.tikv.kvproto.Kvrpcpb.RawPutRequest;
 import com.pingcap.tikv.kvproto.Kvrpcpb.RawPutResponse;
 import com.pingcap.tikv.kvproto.Kvrpcpb.ScanRequest;
@@ -104,17 +108,17 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return getHelper(resp);
   }
 
-  public void rawPut(BackOffer backOffer, ByteString key, ByteString value, Context context) {
+  public void rawPut(BackOffer backOffer, ByteString key, ByteString value) {
     Supplier<RawPutRequest> factory = () ->
         RawPutRequest.newBuilder().setContext(region.getContext()).setKey(key).setValue(value).build();
 
     KVErrorHandler<RawPutResponse> handler =
         new KVErrorHandler<>(
             regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawPutResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_PUT, factory, handler);
+    callWithRetry(backOffer, TikvGrpc.METHOD_RAW_PUT, factory, handler);
   }
 
-  public ByteString rawGet(BackOffer backOffer, ByteString key, Context context) {
+  public ByteString rawGet(BackOffer backOffer, ByteString key) {
     Supplier<RawGetRequest> factory = () ->
         RawGetRequest.newBuilder().setContext(region.getContext()).setKey(key).build();
     KVErrorHandler<RawGetResponse> handler =
@@ -122,6 +126,26 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     RawGetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_GET, factory, handler);
     return rawGetHelper(resp);
+  }
+
+    public List<KvPair> rawScan(BackOffer backOffer, ByteString key) {
+        return rawScan(backOffer, key, false);
+    }
+
+  private List<KvPair> rawScan(BackOffer backOffer, ByteString key, boolean keyOnly) {
+    Supplier<RawScanRequest> factory = () ->
+        RawScanRequest.newBuilder()
+            .setContext(region.getContext())
+            .setStartKey(key)
+            .setKeyOnly(keyOnly)
+            .setLimit(getConf().getScanBatchSize())
+            .build();
+
+    KVErrorHandler<RawScanResponse> handler =
+        new KVErrorHandler<>(
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RawScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_SCAN, factory, handler);
+    return rawScanHelper(resp);
   }
 
   private ByteString rawGetHelper(RawGetResponse resp) {
@@ -134,6 +158,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
     return resp.getValue();
   }
+
+    private List<KvPair> rawScanHelper(RawScanResponse resp) {
+        if (resp.hasRegionError()) {
+            throw new RegionException(resp.getRegionError());
+        }
+        return resp.getKvsList();
+    }
 
   public void rawDelete(BackOffer backOffer, ByteString key, Context context) {
     Supplier<RawDeleteRequest> factory = () ->

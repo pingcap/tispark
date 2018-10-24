@@ -38,42 +38,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
-public class RegionStoreClientTest {
-  private KVMockServer server;
-  private PDMockServer pdServer;
-  private static final String LOCAL_ADDR = "127.0.0.1";
-  private static final long CLUSTER_ID = 1024;
-  private int port;
-  private TiSession session;
-  private TiRegion region;
-
-  @Before
-  public void setUp() throws Exception {
-    pdServer = new PDMockServer();
-    pdServer.start(CLUSTER_ID);
-    pdServer.addGetMemberResp(
-        GrpcUtils.makeGetMembersResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + pdServer.port),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 1)),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
-
-    Metapb.Region r =
-        Metapb.Region.newBuilder()
-            .setRegionEpoch(Metapb.RegionEpoch.newBuilder().setConfVer(1).setVersion(2))
-            .setId(233)
-            .setStartKey(ByteString.EMPTY)
-            .setEndKey(ByteString.EMPTY)
-            .addPeers(Metapb.Peer.newBuilder().setId(11).setStoreId(13))
-            .build();
-
-    region = new TiRegion(r, r.getPeers(0), IsolationLevel.RC, CommandPri.Low);
-    server = new KVMockServer();
-    port = server.start(region);
-    // No PD needed in this test
-    TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
-    session = TiSession.create(conf);
-  }
+public class RegionStoreClientTest extends MockServerTest {
 
   private RegionStoreClient createClient() {
     Metapb.Store store =
@@ -86,33 +51,22 @@ public class RegionStoreClientTest {
     return RegionStoreClient.create(region, store, session);
   }
 
-  @After
-  public void tearDown() throws Exception {
-    server.stop();
-  }
-
   @Test
   public void rawGetTest() throws Exception {
     RegionStoreClient client = createClient();
     server.put("key1", "value1");
-    Kvrpcpb.Context context =
-        Kvrpcpb.Context.newBuilder()
-            .setRegionId(region.getId())
-            .setRegionEpoch(region.getRegionEpoch())
-            .setPeer(region.getLeader())
-            .build();
-    ByteString value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"), context);
+    ByteString value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"));
     assertEquals(ByteString.copyFromUtf8("value1"), value);
 
     server.putError("error1", KVMockServer.NOT_LEADER);
     // since not_leader is retryable, so the result should be correct.
-    value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"), context);
+    value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"));
     assertEquals(ByteString.copyFromUtf8("value1"), value);
 
     server.putError("failure", KVMockServer.STALE_EPOCH);
     try {
-      // since stale epoch is not retrable, so the test should fail.
-      client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("failure"), context);
+      // since stale epoch is not retryable, so the test should fail.
+      client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("failure"));
       fail();
     } catch (Exception e) {
       assertTrue(true);
@@ -194,12 +148,8 @@ public class RegionStoreClientTest {
     client.close();
   }
 
-  private static KeyRange createByteStringRange(ByteString sKey, ByteString eKey) {
-    return KeyRange.newBuilder().setStart(sKey).setEnd(eKey).build();
-  }
-
   @Test
-  public void coprocessTest() throws Exception {
+  public void coprocessorTest() throws Exception {
     RegionStoreClient client = createClient();
 
     server.put("key1", "value1");

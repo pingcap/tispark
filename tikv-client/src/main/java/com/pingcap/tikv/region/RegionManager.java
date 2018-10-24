@@ -26,6 +26,8 @@ import com.google.common.collect.TreeRangeMap;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
@@ -66,7 +68,7 @@ public class RegionManager {
       this.pdClient = pdClient;
     }
 
-    public synchronized TiRegion getRegionByKey(ByteString key) {
+    synchronized TiRegion getRegionByKey(ByteString key) {
       Long regionId;
       regionId = keyToRegionIdCache.get(Key.toRawKey(key));
       if (logger.isDebugEnabled()) {
@@ -87,6 +89,12 @@ public class RegionManager {
       }
 
       return region;
+    }
+
+    synchronized TiRegion getRegionByRawKey(ByteString key) {
+      CodecDataOutput cdo = new CodecDataOutput();
+      Codec.BytesCodec.writeBytes(cdo, key.toByteArray());
+      return getRegionByKey(cdo.toByteString());
     }
 
     private synchronized boolean putRegion(TiRegion region) {
@@ -176,12 +184,29 @@ public class RegionManager {
     return cache.getRegionByKey(key);
   }
 
+  public TiRegion getRegionByRawKey(ByteString key) {
+    return cache.getRegionByRawKey(key);
+  }
+
   public TiRegion getRegionById(long regionId) {
     return cache.getRegionById(regionId);
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key) {
     TiRegion region = cache.getRegionByKey(key);
+    if (region == null) {
+      throw new TiClientInternalException("Region not exist for key:" + formatBytes(key));
+    }
+    if (!region.isValid()) {
+      throw new TiClientInternalException("Region invalid: " + region.toString());
+    }
+    Peer leader = region.getLeader();
+    long storeId = leader.getStoreId();
+    return Pair.create(region, cache.getStoreById(storeId));
+  }
+
+  public Pair<TiRegion, Store> getRegionStorePairByRawKey(ByteString key) {
+    TiRegion region = cache.getRegionByRawKey(key);
     if (region == null) {
       throw new TiClientInternalException("Region not exist for key:" + formatBytes(key));
     }
