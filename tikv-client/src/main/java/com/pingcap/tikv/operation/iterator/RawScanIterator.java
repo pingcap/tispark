@@ -33,11 +33,7 @@ public class RawScanIterator extends ScanIterator {
       ByteString startKey,
       ByteString endKey,
       TiSession session) {
-    super(startKey, session);
-    this.endKey = Key.toRawKey(requireNonNull(endKey, "end key cannot be empty"));
-    if (endKey.isEmpty()) {
-      throw new IllegalArgumentException("end key cannot be empty");
-    }
+    super(startKey, endKey, session);
   }
 
   TiRegion loadCurrentRegionToCache() throws Exception {

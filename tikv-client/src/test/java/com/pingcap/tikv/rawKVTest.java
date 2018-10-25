@@ -5,6 +5,7 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.util.FastByteComparisons;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
@@ -59,13 +60,17 @@ public class rawKVTest {
     return KVRawClient.rawValue(key);
   }
 
-  @Test
-  public void simpleTest() {
+  @Before
+  public void setClient() {
     try {
       client = new KVRawClient();
     } catch (Exception e) {
       System.out.println("Cannot initialize raw client. Test skipped.");
     }
+  }
+
+  @Test
+  public void simpleTest() {
     ByteString key = rawKey("key");
     ByteString key1 = rawKey("key1");
     ByteString key2 = rawKey("key2");

@@ -40,11 +40,12 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   protected Key endKey;
   protected boolean lastBatch = false;
 
-  ScanIterator(ByteString startKey, TiSession session) {
+  ScanIterator(ByteString startKey, ByteString endKey, TiSession session) {
     this.startKey = requireNonNull(startKey, "start key is null");
     if (startKey.isEmpty()) {
       throw new IllegalArgumentException("start key cannot be empty");
     }
+    this.endKey = Key.toRawKey(requireNonNull(endKey, "end key is null"));
     this.session = session;
     this.regionCache = session.getRegionManager();
   }
@@ -62,18 +63,27 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     try {
       TiRegion region = loadCurrentRegionToCache();
       ByteString curRegionEndKey = region.getEndKey();
+      // currentCache is null means no keys found, whereas currentCache is empty means no values found
+      // the difference lies in whether to continue scanning, because chances are that the same key is
+      // split in another region because of pending entries, region split, e.t.c.
+      // See https://github.com/pingcap/tispark/issues/393 for details
       if (currentCache == null) {
         return true;
       }
       index = 0;
       Key lastKey = Key.EMPTY;
+      // Session should be single-threaded itself
+      // so that we don't worry about conf change in the middle
+      // of a transaction. Otherwise below code might lose data
       if (currentCache.size() < session.getConf().getScanBatchSize()) {
         startKey = curRegionEndKey;
       } else {
+        // Start new scan from exact next key in current region
         lastKey = Key.toRawKey(currentCache.get(currentCache.size() - 1).getKey());
         startKey = lastKey.next().toByteString();
       }
-      if (endKey != null && lastKey.compareTo(endKey) > 0) {
+      // notify last batch if lastKey is greater than or equal to endKey
+      if (lastKey.compareTo(endKey) >= 0) {
         lastBatch = true;
         startKey = null;
       }

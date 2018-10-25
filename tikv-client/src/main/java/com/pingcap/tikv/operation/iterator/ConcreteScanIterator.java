@@ -31,7 +31,8 @@ public class ConcreteScanIterator extends ScanIterator {
       ByteString startKey,
       TiSession session,
       long version) {
-    super(startKey, session);
+    // Passing endKey as ByteString.EMPTY means that endKey is +INF by default,
+    super(startKey, ByteString.EMPTY, session);
     this.version = version;
   }
 
