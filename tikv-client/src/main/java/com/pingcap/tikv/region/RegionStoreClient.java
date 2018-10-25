@@ -27,8 +27,6 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.codec.Codec;
-import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
@@ -65,10 +63,12 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.function.Supplier;
+
 import org.apache.log4j.Logger;
 
 // RegionStore itself is not thread-safe
@@ -128,9 +128,9 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return rawGetHelper(resp);
   }
 
-    public List<KvPair> rawScan(BackOffer backOffer, ByteString key) {
-        return rawScan(backOffer, key, false);
-    }
+  public List<KvPair> rawScan(BackOffer backOffer, ByteString key) {
+    return rawScan(backOffer, key, false);
+  }
 
   private List<KvPair> rawScan(BackOffer backOffer, ByteString key, boolean keyOnly) {
     Supplier<RawScanRequest> factory = () ->
@@ -159,12 +159,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return resp.getValue();
   }
 
-    private List<KvPair> rawScanHelper(RawScanResponse resp) {
-        if (resp.hasRegionError()) {
-            throw new RegionException(resp.getRegionError());
-        }
-        return resp.getKvsList();
+  private List<KvPair> rawScanHelper(RawScanResponse resp) {
+    if (resp.hasRegionError()) {
+      throw new RegionException(resp.getRegionError());
     }
+    return resp.getKvsList();
+  }
 
   public void rawDelete(BackOffer backOffer, ByteString key, Context context) {
     Supplier<RawDeleteRequest> factory = () ->

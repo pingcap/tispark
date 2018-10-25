@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2018 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,8 @@
 
 package com.pingcap.tikv.operation.iterator;
 
-import static java.util.Objects.requireNonNull;
-
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
@@ -27,40 +24,25 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 
-public class RawScanIterator extends ScanIterator {
+public class ConcreteScanIterator extends ScanIterator {
+  private final long version;
 
-  public RawScanIterator(
+  public ConcreteScanIterator(
       ByteString startKey,
-      ByteString endKey,
-      TiSession session) {
+      TiSession session,
+      long version) {
     super(startKey, session);
-    this.endKey = Key.toRawKey(requireNonNull(endKey, "end key cannot be empty"));
-    if (endKey.isEmpty()) {
-      throw new IllegalArgumentException("end key cannot be empty");
-    }
+    this.version = version;
   }
 
   TiRegion loadCurrentRegionToCache() throws Exception {
-    Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByRawKey(startKey);
+    Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByKey(startKey);
     TiRegion region = pair.first;
     Metapb.Store store = pair.second;
     try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
       BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
-      currentCache = client.rawScan(backOffer, startKey);
+      currentCache = client.scan(backOffer, startKey, version);
       return region;
     }
-  }
-
-  private boolean notEndOfScan() {
-    return !(lastBatch && (index >= currentCache.size() || Key.toRawKey(currentCache.get(index).getKey()).compareTo(endKey) >= 0));
-  }
-
-  @Override
-  public boolean hasNext() {
-    if (isCacheDrained() && cacheLoadFails()) {
-      endOfScan = true;
-      return false;
-    }
-    return notEndOfScan();
   }
 }

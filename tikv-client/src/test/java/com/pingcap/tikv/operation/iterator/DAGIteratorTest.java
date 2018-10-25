@@ -25,33 +25,21 @@ import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
-import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
-import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.operation.SchemaInfer;
-import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.List;
-import org.junit.After;
-import org.junit.Before;
+
 import org.junit.Test;
 
 public class DAGIteratorTest extends MockServerTest {
-  private KVMockServer server;
-  private PDMockServer pdServer;
-  private static final String LOCAL_ADDR = "127.0.0.1";
-  private static final long CLUSTER_ID = 1024;
-  private int port;
-  private TiSession session;
-  private TiRegion region;
 
   private static TiTableInfo createTable() {
     return new MetaUtils.TableBuilder()

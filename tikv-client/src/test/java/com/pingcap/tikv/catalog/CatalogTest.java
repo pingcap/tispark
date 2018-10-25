@@ -14,8 +14,10 @@ import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.ReflectionWrapper;
+
 import java.util.List;
 import java.util.stream.Collectors;
+
 import org.junit.Before;
 import org.junit.Test;
 

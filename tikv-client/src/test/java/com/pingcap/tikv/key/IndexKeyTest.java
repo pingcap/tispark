@@ -27,9 +27,9 @@ public class IndexKeyTest {
 
   @Test
   public void createTest() throws Exception {
-    Key k1 = Key.toRawKey(new byte[] {1,2,3,4});
-    Key k2 = Key.toRawKey(new byte[] {5,6,7,8});
-    Key k3 = Key.toRawKey(new byte[] {5,6,7,9});
+    Key k1 = Key.toRawKey(new byte[]{1, 2, 3, 4});
+    Key k2 = Key.toRawKey(new byte[]{5, 6, 7, 8});
+    Key k3 = Key.toRawKey(new byte[]{5, 6, 7, 9});
     IndexKey ik1 = IndexKey.toIndexKey(666, 777, k1, k2);
     IndexKey ik2 = IndexKey.toIndexKey(666, 777, k1, k2);
     IndexKey ik3 = IndexKey.toIndexKey(666, 777, k1, k3);
@@ -43,12 +43,13 @@ public class IndexKeyTest {
     try {
       IndexKey.toIndexKey(0, 0, k1, null, k2);
       fail();
-    } catch (Exception e) {}
+    } catch (Exception e) {
+    }
   }
 
   @Test
   public void toStringTest() throws Exception {
-    Key k1 = Key.toRawKey(new byte[] {1,2,3,4});
+    Key k1 = Key.toRawKey(new byte[]{1, 2, 3, 4});
     TypedKey k2 = TypedKey.toTypedKey(666, IntegerType.INT);
     IndexKey ik = IndexKey.toIndexKey(0, 0, k1, Key.NULL, k2);
     assertEquals("[{1,2,3,4},null,666]", ik.toString());

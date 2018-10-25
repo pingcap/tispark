@@ -55,8 +55,8 @@ public class RegionManager {
   }
 
   public static class RegionCache {
-    private final Map<Long, TiRegion>             regionCache;
-    private final Map<Long, Store>                storeCache;
+    private final Map<Long, TiRegion> regionCache;
+    private final Map<Long, Store> storeCache;
     private final RangeMap<Key, Long> keyToRegionIdCache;
     private final ReadOnlyPDClient pdClient;
 
@@ -139,7 +139,7 @@ public class RegionManager {
     public synchronized void invalidateAllRegionForStore(long storeId) {
       List<TiRegion> regionToRemove = new ArrayList<>();
       for (TiRegion r : regionCache.values()) {
-        if(r.getLeader().getStoreId() == storeId) {
+        if (r.getLeader().getStoreId() == storeId) {
           if (logger.isDebugEnabled()) {
             logger.debug(String.format("invalidateAllRegionForStore Region[%s]", r));
           }
@@ -252,8 +252,9 @@ public class RegionManager {
 
   /**
    * Clears all cache when a TiKV server does not respond
+   *
    * @param regionId region's id
-   * @param storeId TiKV store's id
+   * @param storeId  TiKV store's id
    */
   public void onRequestFail(long regionId, long storeId) {
     cache.invalidateRegion(regionId);

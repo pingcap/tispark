@@ -27,7 +27,9 @@ import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.region.TiRegion;
+
 import java.util.List;
+
 import org.junit.Before;
 import org.junit.Test;
 

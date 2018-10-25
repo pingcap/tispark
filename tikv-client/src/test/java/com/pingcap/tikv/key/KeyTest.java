@@ -24,18 +24,20 @@ import com.google.common.primitives.UnsignedBytes;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
+
 import java.util.Arrays;
 import java.util.function.Function;
+
 import org.junit.Test;
 
 public class KeyTest {
   @Test
   public void toKeyTest() throws Exception {
     // compared as unsigned
-    testBytes(new byte[] {1, 2, -1, 10}, new byte[] {1, 2, 0, 10}, x -> x > 0);
-    testBytes(new byte[] {1, 2, 0, 10}, new byte[] {1, 2, 0, 10}, x -> x == 0);
-    testBytes(new byte[] {1, 2, 0, 10}, new byte[] {1, 2, 1, 10}, x -> x < 0);
-    testBytes(new byte[] {1, 2, 0, 10}, new byte[] {1, 2, 0}, x -> x > 0);
+    testBytes(new byte[]{1, 2, -1, 10}, new byte[]{1, 2, 0, 10}, x -> x > 0);
+    testBytes(new byte[]{1, 2, 0, 10}, new byte[]{1, 2, 0, 10}, x -> x == 0);
+    testBytes(new byte[]{1, 2, 0, 10}, new byte[]{1, 2, 1, 10}, x -> x < 0);
+    testBytes(new byte[]{1, 2, 0, 10}, new byte[]{1, 2, 0}, x -> x > 0);
 
     testLiteral(1, 2, IntegerType.INT, x -> x < 0);
     testLiteral(13, 13, IntegerType.INT, x -> x == 0);
@@ -67,8 +69,8 @@ public class KeyTest {
 
   @Test
   public void nextTest() throws Exception {
-    Key k1 = toRawKey(new byte[]{1,2,3});
-    assertEquals(toRawKey(new byte[]{1,2,4}), k1.next());
+    Key k1 = toRawKey(new byte[]{1, 2, 3});
+    assertEquals(toRawKey(new byte[]{1, 2, 4}), k1.next());
 
     k1 = toRawKey(new byte[]{UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE});
     assertEquals(toRawKey(new byte[]{UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE, 0}), k1.next());
@@ -81,8 +83,8 @@ public class KeyTest {
     Key k = toRawKey(new byte[]{1});
     Key kMax = Key.MAX;
     Key kInf = toRawKey(new byte[0], false);
-    Key[] keys = new Key[] {kInf, kMax, k, kMin, kNegInf};
+    Key[] keys = new Key[]{kInf, kMax, k, kMin, kNegInf};
     Arrays.sort(keys);
-    assertArrayEquals(new Key[] {kNegInf, kMin, k, kMax, kInf}, keys);
+    assertArrayEquals(new Key[]{kNegInf, kMin, k, kMax, kInf}, keys);
   }
 }

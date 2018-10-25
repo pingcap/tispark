@@ -28,7 +28,7 @@ import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
-import com.pingcap.tikv.operation.iterator.ScanIterator;
+import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.row.Row;
@@ -139,7 +139,7 @@ public class Snapshot {
   }
 
   public Iterator<KvPair> scan(ByteString startKey) {
-    return new ScanIterator(startKey, session, timestamp.getVersion());
+    return new ConcreteScanIterator(startKey, session, timestamp.getVersion());
   }
 
   // TODO: Need faster implementation, say concurrent version

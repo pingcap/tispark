@@ -26,13 +26,13 @@ public class CompoundKeyTest {
 
   @Test
   public void concatTest() throws Exception {
-    Key k1 = Key.toRawKey(new byte[]{1,2,3});
-    Key k2 = Key.toRawKey(new byte[]{4,5,6});
+    Key k1 = Key.toRawKey(new byte[]{1, 2, 3});
+    Key k2 = Key.toRawKey(new byte[]{4, 5, 6});
     CompoundKey cpk1 = CompoundKey.concat(k1, k2);
     Key k3 = Key.toRawKey(new byte[]{4});
-    Key k4 = Key.toRawKey(new byte[]{5,6});
+    Key k4 = Key.toRawKey(new byte[]{5, 6});
 
-    assertEquals(Key.toRawKey(new byte[]{1,2,3,4,5,6}), cpk1);
+    assertEquals(Key.toRawKey(new byte[]{1, 2, 3, 4, 5, 6}), cpk1);
 
     CompoundKey cpk2 = CompoundKey.concat(k1, k3);
     CompoundKey cpk3 = CompoundKey.concat(cpk2, k4);
@@ -41,9 +41,9 @@ public class CompoundKeyTest {
 
   @Test
   public void getKeysTest() throws Exception {
-    Key k1 = Key.toRawKey(new byte[]{1,2,3});
-    Key k2 = Key.toRawKey(new byte[]{4,5,6});
-    Key k3 = Key.toRawKey(new byte[]{7,8,9});
+    Key k1 = Key.toRawKey(new byte[]{1, 2, 3});
+    Key k2 = Key.toRawKey(new byte[]{4, 5, 6});
+    Key k3 = Key.toRawKey(new byte[]{7, 8, 9});
     CompoundKey.Builder b1 = CompoundKey.newBuilder();
     CompoundKey cpk1 = b1.append(k1).append(k2).build();
     assertEquals(2, cpk1.getKeys().size());
