@@ -249,7 +249,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
     if (response.hasLocked()) {
       LockInfo lockError = response.getLocked();
-      // TODO: Handle lock error in other PRs
+      // logger.debug(String.format("Coprocessor encounters lock, message: %s", lockError));
     }
 
     String otherError = response.getOtherError();

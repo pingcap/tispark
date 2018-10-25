@@ -105,6 +105,23 @@ public class TiRegion implements Serializable {
     return builder.build();
   }
 
+  public class RegionVerID {
+    public long id;
+    public long confVer;
+    public long ver;
+
+    public RegionVerID(long id, long confVer, long ver) {
+      this.id = id;
+      this.confVer = confVer;
+      this.ver = ver;
+    }
+  }
+
+  // getVerID returns the Region's RegionVerID.
+  public RegionVerID getVerID() {
+    return new RegionVerID(meta.getId(), meta.getRegionEpoch().getConfVer(), meta.getRegionEpoch().getVersion());
+  }
+
   /**
    * switches current peer to the one on specific store. It return false if no peer matches the
    * storeID.

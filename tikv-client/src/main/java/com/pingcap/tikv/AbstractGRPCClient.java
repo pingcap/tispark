@@ -52,7 +52,7 @@ public abstract class AbstractGRPCClient<
   }
 
   // TODO: Seems a little bit messy for lambda part
-  protected <ReqT, RespT> RespT callWithRetry(BackOffer backOffer,
+  public <ReqT, RespT> RespT callWithRetry(BackOffer backOffer,
                                               MethodDescriptor<ReqT, RespT> method,
                                               Supplier<ReqT> requestFactory,
                                               ErrorHandler<RespT> handler) {
