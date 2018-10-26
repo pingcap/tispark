@@ -47,9 +47,10 @@ public class RowTransformer {
   public static class Builder {
     private final List<Projection> projections = new ArrayList<>();
     private final List<DataType> sourceTypes = new ArrayList<>();
+    private final List<Boolean> castTypes = new ArrayList<>();
 
     public RowTransformer build() {
-      return new RowTransformer(sourceTypes, projections);
+      return new RowTransformer(sourceTypes, projections, castTypes);
     }
 
     public Builder addProjection(Projection projection) {
@@ -76,15 +77,23 @@ public class RowTransformer {
       this.sourceTypes.addAll(fieldTypes);
       return this;
     }
+
+    public Builder addCastFieldTypes(List<Boolean> dataTypes) {
+      this.castTypes.addAll(dataTypes);
+      return this;
+    }
   }
 
   private final List<Projection> projections;
 
   private final List<DataType> sourceFieldTypes;
 
-  private RowTransformer(List<DataType> sourceTypes, List<Projection> projections) {
+  private final List<Boolean> castFieldTypes;
+
+  private RowTransformer(List<DataType> sourceTypes, List<Projection> projections, List<Boolean> castFieldTypes) {
     this.sourceFieldTypes = ImmutableList.copyOf(requireNonNull(sourceTypes));
     this.projections = ImmutableList.copyOf(requireNonNull(projections));
+    this.castFieldTypes = ImmutableList.copyOf(requireNonNull(castFieldTypes));
   }
 
   /**
@@ -101,7 +110,13 @@ public class RowTransformer {
 
     int offset = 0;
     for (int i = 0; i < inRow.fieldCount(); i++) {
-      Object inVal = inRow.get(i, sourceFieldTypes.get(i));
+      DataType tp = sourceFieldTypes.get(i);
+      Object inVal;
+      if (!inRow.isNull(i) && castFieldTypes.get(i)) {
+        inVal = inRow.get(i, tp).toString();
+      } else {
+        inVal = inRow.get(i, tp);
+      }
       Projection p = getProjection(i);
       p.set(inVal, outRow, offset);
       offset += p.size();

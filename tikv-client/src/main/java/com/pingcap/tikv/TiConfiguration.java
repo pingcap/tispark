@@ -19,6 +19,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.DataTypeFactory;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -45,6 +47,8 @@ public class TiConfiguration implements Serializable {
   private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.RC;
   private static final boolean DEF_SHOW_ROWID = false;
   private static final String DEF_DB_PREFIX = "";
+  private static final List<DataType> DEF_DATA_TYPE_LIST_TO_STRING = new ArrayList<>();
+  private static final String REFLECT_DATA_TYPE_PACKAGE_NAME = "com.pingcap.tikv.types.";
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -62,6 +66,7 @@ public class TiConfiguration implements Serializable {
   private int maxRequestKeyRangeSize = MAX_REQUEST_KEY_RANGE_SIZE;
   private boolean showRowId = DEF_SHOW_ROWID;
   private String dbPrefix = DEF_DB_PREFIX;
+  private List<DataType> dataTypeListToString = DEF_DATA_TYPE_LIST_TO_STRING;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -216,5 +221,20 @@ public class TiConfiguration implements Serializable {
 
   public void setDBPrefix(String dbPrefix) {
     this.dbPrefix = dbPrefix;
+  }
+
+  public List<DataType> getDataTypesTreatedAsString() {
+    return dataTypeListToString;
+  }
+
+  public void setDataTypesTreatedAsString(List<String> dataTypes) {
+    List<DataType> result = new ArrayList<>();
+    dataTypes.forEach(x -> {
+      try {
+        result.add(((DataType) Class.forName(REFLECT_DATA_TYPE_PACKAGE_NAME + x).getField(x.toUpperCase().substring(0, x.length() - 4)).get(DataTypeFactory.class)));
+      } catch(Exception e) {
+      }
+    });
+    this.dataTypeListToString = result;
   }
 }

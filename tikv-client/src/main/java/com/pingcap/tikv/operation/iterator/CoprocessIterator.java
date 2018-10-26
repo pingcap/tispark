@@ -67,7 +67,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
         req.buildScan(req.isIndexScan() && !req.isDoubleRead()),
         regionTasks,
         session,
-        SchemaInfer.create(req),
+        SchemaInfer.create(req, session),
         req.getPushDownType()
     ) {
       @Override
@@ -88,7 +88,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
         req.buildScan(true),
         regionTasks,
         session,
-        SchemaInfer.create(req),
+        SchemaInfer.create(req, session),
         req.getPushDownType()
     ) {
       @Override

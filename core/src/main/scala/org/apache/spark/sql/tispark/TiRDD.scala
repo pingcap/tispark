@@ -46,7 +46,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
     initializeSchema()
 
   def initializeSchema(): (List[DataType], RowTransformer) = {
-    val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
+    val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest, TiSession.create(tiConf))
     val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
     (schemaInferrer.getTypes.toList, rowTransformer)
   }

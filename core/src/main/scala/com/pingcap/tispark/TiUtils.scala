@@ -27,10 +27,12 @@ import com.pingcap.tikv.types._
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
+import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.execution.SparkPlan
+import org.apache.spark.sql.execution.aggregate.SortAggregateExec
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
-import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.{sql, SparkConf}
 
 import scala.collection.JavaConversions._
@@ -41,7 +43,7 @@ object TiUtils {
   type TiExpression = com.pingcap.tikv.expression.Expression
 
   private final val logger = Logger.getLogger(getClass.getName)
-  private final val MAX_PRECISION = sql.types.DecimalType.MAX_PRECISION
+  final val MAX_PRECISION = sql.types.DecimalType.MAX_PRECISION
 
   def isSupportedAggregate(aggExpr: AggregateExpression,
                            tiDBRelation: TiDBRelation,
@@ -112,10 +114,11 @@ object TiUtils {
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
   // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp: TiDataType): DataType =
+  def toSparkDataType(tp: TiDataType, dataTypeList: java.util.List[TiDataType]): DataType =
     tp match {
-      case _: StringType => sql.types.StringType
-      case _: BytesType  => sql.types.BinaryType
+      case e if dataTypeList.exists(e.getClass equals _.getClass) => sql.types.StringType
+      case _: StringType                                          => sql.types.StringType
+      case _: BytesType                                           => sql.types.BinaryType
       case _: IntegerType =>
         if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
           DataTypes.createDecimalType(20, 0)
@@ -157,8 +160,9 @@ object TiUtils {
       case _: sql.types.DateType      => DateType.DATE
     }
 
-  def getSchemaFromTable(table: TiTableInfo): StructType = {
+  def getSchemaFromTable(table: TiTableInfo, session: TiSession): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
+    val dataTypeList = session.getConf.getDataTypesTreatedAsString
     for (i <- 0 until table.getColumns.size()) {
       val col = table.getColumns.get(i)
       val notNull = col.getType.isNotNull
@@ -167,7 +171,7 @@ object TiUtils {
         .build()
       fields(i) = StructField(
         col.getName,
-        TiUtils.toSparkDataType(col.getType),
+        TiUtils.toSparkDataType(col.getType, dataTypeList),
         nullable = !notNull,
         metadata
       )
@@ -220,6 +224,12 @@ object TiUtils {
 
     if (conf.contains(TiConfigConst.DB_PREFIX)) {
       tiConf.setDBPrefix(conf.get(TiConfigConst.DB_PREFIX))
+    }
+
+    if (conf.contains(TiConfigConst.DATA_TYPES_TREATED_AS_STRING)) {
+      tiConf.setDataTypesTreatedAsString(
+        conf.get(TiConfigConst.DATA_TYPES_TREATED_AS_STRING).split(",").toList
+      )
     }
     tiConf
   }

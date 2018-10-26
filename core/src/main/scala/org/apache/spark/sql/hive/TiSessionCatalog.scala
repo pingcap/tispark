@@ -157,7 +157,7 @@ class TiSessionCatalog(externalCatalog: HiveExternalCatalog,
       name,
       CatalogTableType.EXTERNAL,
       CatalogStorageFormat.empty,
-      TiUtils.getSchemaFromTable(tiTable),
+      TiUtils.getSchemaFromTable(tiTable, session),
       Option("TiDB")
     )
 }

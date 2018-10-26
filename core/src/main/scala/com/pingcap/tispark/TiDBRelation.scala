@@ -34,7 +34,7 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new TiClientInternalException("Table not exist"))
 
-  override lazy val schema: StructType = TiUtils.getSchemaFromTable(table)
+  override lazy val schema: StructType = TiUtils.getSchemaFromTable(table, session)
 
   override def sizeInBytes: Long = tableRef.sizeInBytes
 

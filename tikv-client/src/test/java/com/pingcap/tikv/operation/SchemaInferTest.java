@@ -22,6 +22,8 @@ import static com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer.inferTyp
 import static org.junit.Assert.assertEquals;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.catalog.CatalogTransaction;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
@@ -48,6 +50,7 @@ public class SchemaInferTest {
   private Expression sum = AggregateFunction.newCall(FunctionType.Sum, number);
   private ByItem simpleGroupBy = ByItem.create(name, false);
   private ByItem complexGroupBy = ByItem.create(plus(name, Constant.create("1", StringType.VARCHAR)), false);
+  private TiSession session = TiSession.create(TiConfiguration.createDefault("127.0.0.1:2379"));
 
   @Test
   public void simpleSelectSchemaInferTest() throws Exception {
@@ -56,7 +59,7 @@ public class SchemaInferTest {
     tiDAGRequest.getFields().add(name);
     tiDAGRequest.setTableInfo(table);
     tiDAGRequest.resolve();
-    List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
+    List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest, session).getTypes();
     assertEquals(1, dataTypes.size());
     assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(0).getClass());
   }
@@ -68,7 +71,7 @@ public class SchemaInferTest {
     tiDAGRequest.addAggregate(sum, inferType(sum));
     tiDAGRequest.setTableInfo(table);
     tiDAGRequest.resolve();
-    List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
+    List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest, session).getTypes();
     assertEquals(1, dataTypes.size());
     assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
   }
@@ -82,7 +85,7 @@ public class SchemaInferTest {
     dagRequest.addAggregate(sum, inferType(sum));
     dagRequest.getGroupByItems().add(simpleGroupBy);
     dagRequest.resolve();
-    List<DataType> dataTypes = SchemaInfer.create(dagRequest).getTypes();
+    List<DataType> dataTypes = SchemaInfer.create(dagRequest, session).getTypes();
     assertEquals(2, dataTypes.size());
     assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
     assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(1).getClass());
@@ -97,7 +100,7 @@ public class SchemaInferTest {
     dagRequest.addAggregate(sum, inferType(sum));
     dagRequest.getGroupByItems().add(complexGroupBy);
     dagRequest.resolve();
-    List<DataType> dataTypes = SchemaInfer.create(dagRequest).getTypes();
+    List<DataType> dataTypes = SchemaInfer.create(dagRequest, session).getTypes();
     assertEquals(2, dataTypes.size());
     assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
     assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(1).getClass());

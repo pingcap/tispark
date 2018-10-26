@@ -141,7 +141,7 @@ public class DAGIteratorTest {
     CoprocessIterator<Row> iter = CoprocessIterator.getRowIterator(req, tasks, session);
     iter.hasNext();
     Row r = iter.next();
-    SchemaInfer infer = SchemaInfer.create(req);
+    SchemaInfer infer = SchemaInfer.create(req, session);
     assertEquals(r.get(0, infer.getType(0)), 666L);
     assertEquals(r.get(1, infer.getType(1)), "value1");
   }

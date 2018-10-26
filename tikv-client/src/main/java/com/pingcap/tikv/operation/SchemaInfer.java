@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv.operation;
 
+import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiDAGRequest;
@@ -23,10 +25,12 @@ import com.pingcap.tikv.operation.transformer.NoOp;
 import com.pingcap.tikv.operation.transformer.RowTransformer;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.util.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * SchemaInfer extract row's type after query is executed. It is pretty rough version. Optimization
@@ -40,15 +44,15 @@ public class SchemaInfer {
   private List<DataType> types;
   private RowTransformer rt;
 
-  public static SchemaInfer create(TiDAGRequest dagRequest) {
-    return new SchemaInfer(dagRequest);
+  public static SchemaInfer create(TiDAGRequest dagRequest, TiSession session) {
+    return new SchemaInfer(dagRequest, session);
   }
 
-  protected SchemaInfer(TiDAGRequest dagRequest) {
+  protected SchemaInfer(TiDAGRequest dagRequest, TiSession session) {
     types = new ArrayList<>();
     extractFieldTypes(dagRequest);
     extractHandleType(dagRequest);
-    buildTransform(dagRequest);
+    buildTransform(dagRequest, session);
   }
 
   private void extractHandleType(TiDAGRequest dagRequest) {
@@ -58,7 +62,7 @@ public class SchemaInfer {
     }
   }
 
-  private void buildTransform(TiDAGRequest dagRequest) {
+  private void buildTransform(TiDAGRequest dagRequest, TiSession session) {
     RowTransformer.Builder rowTrans = RowTransformer.newBuilder();
     // Update:
     // Switching to DAG mode will eliminate first blob
@@ -85,6 +89,8 @@ public class SchemaInfer {
       }
     }
     rowTrans.addSourceFieldTypes(types);
+    List<DataType> dataTypeList = session.getConf().getDataTypesTreatedAsString();
+    rowTrans.addCastFieldTypes(types.stream().map(x -> dataTypeList.stream().anyMatch(y -> x.getClass().equals(y.getClass()))).collect(Collectors.toList()));
     rt = rowTrans.build();
   }
 
