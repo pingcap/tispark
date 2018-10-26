@@ -85,10 +85,13 @@ public class rawKVTest {
     checkPut(key1, value1);
     checkPut(key2, value2);
     List<Kvrpcpb.KvPair> result = new ArrayList<>();
+    List<Kvrpcpb.KvPair> result2 = new ArrayList<>();
     result.add(kv1);
     result.add(kv2);
     checkScan(key, key3, result);
     checkScan(key1, key3, result);
+    result2.add(kv1);
+    checkScan(key, key2, result2);
     checkDelete(key1);
     checkDelete(key2);
 
@@ -98,6 +101,7 @@ public class rawKVTest {
     checkPutUtf8("key2", "value2");
     checkScanUtf8("key", "key3", result);
     checkScanUtf8("key1", "key3", result);
+    checkScanUtf8("key", "key2", result2);
     checkDeleteUtf8("key1");
     checkDeleteUtf8("key2");
   }
