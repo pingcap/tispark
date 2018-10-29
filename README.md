@@ -90,7 +90,7 @@ ti.tidbMapDatabase ("tpch_test")
 spark.sql("select count(*) from lineitem").show
 ```
 
-**Please Note: For now even if you use TiSpark 2.0+, for spark-submit, tidbMapDatabase is still required and TiExtension is not supported yet. We are working on it.
+**Please Note: For now even if you use TiSpark 2.0+, for spark-submit on pyspark, tidbMapDatabase is still required and TiExtension is not supported yet. We are working on it.
 
 ## Current Version
 ```
