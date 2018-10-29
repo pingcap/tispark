@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class PlaceHolderTest0Suite extends BaseTiSparkSuite {
+class PlaceHolderTest0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select  id_dt  from full_data_type_table  where tp_char = null",
     "select  id_dt  from full_data_type_table  where tp_char = 'PingCAP'",

@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class PlaceHolder2Suite extends BaseTiSparkSuite {
+class PlaceHolder2Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select tp_decimal from full_data_type_table_idx  where tp_decimal != null",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal != 'PingCAP'",
