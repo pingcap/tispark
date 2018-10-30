@@ -126,17 +126,16 @@ object TiUtils {
       // we need to make sure that tp.getLength does not result in negative number when casting.
       // Decimal precision cannot exceed MAX_PRECISION.
       case _: DecimalType =>
-        var len = tp.getLength
-        if (len > MAX_PRECISION) {
+        var precision = tp.getLength.asInstanceOf[Int]
+        var scale = tp.getDecimal
+        if (precision > MAX_PRECISION) {
           logger.warning(
             "Decimal precision exceeding MAX_PRECISION=" + MAX_PRECISION + ", value will be truncated"
           )
-          len = MAX_PRECISION
+          scale -= precision - MAX_PRECISION
+          precision = MAX_PRECISION
         }
-        DataTypes.createDecimalType(
-          len.asInstanceOf[Int],
-          tp.getDecimal
-        )
+        DataTypes.createDecimalType(precision, scale)
       case _: DateTimeType  => sql.types.TimestampType
       case _: TimestampType => sql.types.TimestampType
       case _: DateType      => sql.types.DateType
