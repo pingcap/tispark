@@ -13,6 +13,13 @@ import java.util.stream.Collectors;
 
 public class rawKVTest {
   private KVRawClient client;
+  private List<ByteString> keys;
+  private List<ByteString> values;
+  private TreeMap<ByteString, ByteString> data;
+  private boolean initialized = false;
+  private static final int KEY_POOL_SIZE = 100000;
+  private Random r = new Random(1234);
+
 
   private void checkPut(ByteString key, ByteString value) {
     client.rawPut(key, value);
@@ -22,6 +29,16 @@ public class rawKVTest {
   private void checkScan(ByteString startKey, ByteString endKey, List<Kvrpcpb.KvPair> ans) {
     List<Kvrpcpb.KvPair> result = client.rawScan(startKey, endKey);
     assert result.equals(ans);
+  }
+
+  private void checkScan(ByteString startKey, ByteString endKey, TreeMap<ByteString, ByteString> data) {
+    Comparator<ByteString> bcmp = new ByteStringComparator();
+    if (bcmp.compare(startKey, endKey) > 0) {
+      ByteString tmp = startKey;
+      startKey = endKey;
+      endKey = tmp;
+    }
+    checkScan(startKey, endKey, data.subMap(startKey, endKey).entrySet().stream().map(kvPair -> Kvrpcpb.KvPair.newBuilder().setKey(kvPair.getKey()).setValue(kvPair.getValue()).build()).collect(Collectors.toList()));
   }
 
   private void checkDelete(ByteString key) {
@@ -64,6 +81,14 @@ public class rawKVTest {
   public void setClient() {
     try {
       client = new KVRawClient();
+      keys = new ArrayList<>();
+      values = new ArrayList<>();
+      data = new TreeMap<>(new ByteStringComparator());
+      for (int i = 0; i < KEY_POOL_SIZE; i++) {
+        keys.add(getRandomRawKey());
+        values.add(getRandomValue());
+      }
+      initialized = true;
     } catch (Exception e) {
       System.out.println("Cannot initialize raw client. Test skipped.");
     }
@@ -71,6 +96,7 @@ public class rawKVTest {
 
   @Test
   public void simpleTest() {
+    if (!initialized) return;
     ByteString key = rawKey("key");
     ByteString key1 = rawKey("key1");
     ByteString key2 = rawKey("key2");
@@ -125,56 +151,138 @@ public class rawKVTest {
     return ByteString.copyFrom(getRandomString().getBytes());
   }
 
-  private void checkScan(ByteString startKey, ByteString endKey, TreeMap<ByteString, ByteString> data) {
-    Comparator<ByteString> bcmp = new ByteStringComparator();
-    if (bcmp.compare(startKey, endKey) > 0) {
-      ByteString tmp = startKey;
-      startKey = endKey;
-      endKey = tmp;
-    }
-    checkScan(startKey, endKey, data.subMap(startKey, endKey).entrySet().stream().map(kvPair -> Kvrpcpb.KvPair.newBuilder().setKey(kvPair.getKey()).setValue(kvPair.getValue()).build()).collect(Collectors.toList()));
-  }
-
   private List<Kvrpcpb.KvPair> rawKeys() {
     return client.rawScan(rawKey(""), Key.toRawKey(rawKey("")).next().toByteString());
   }
 
   @Test
-  public void test() {
-    List<ByteString> keys = new ArrayList<>();
-    List<ByteString> values = new ArrayList<>();
-    TreeMap<ByteString, ByteString> data = new TreeMap<>(new ByteStringComparator());
+  public void testCorrectness() {
+    if (!initialized) return;
+    test(100, 100, 1000, 100, false);
+  }
+
+  @Test
+  public void testSpeed() {
+    if (!initialized) return;
+    test(10000, 10000, 100, 5000, true);
+  }
+
+  public void test(int putCases, int getCases, int scanCases, int deleteCases, boolean speedTest) {
+    if (putCases > KEY_POOL_SIZE) {
+      System.out.println("Number of distinct keys required exceeded pool size " + KEY_POOL_SIZE);
+      return;
+    }
+    if (deleteCases > putCases) {
+      System.out.println("Number of keys to delete is more than total number of keys");
+      return;
+    }
 
     System.out.println("Initializing test");
     rawKeys().forEach(kvPair -> checkDelete(kvPair.getKey()));
 
-    for (int i = 0; i < 100; i++) {
-      keys.add(getRandomRawKey());
-      values.add(getRandomValue());
-    }
-    Random r = new Random(1234);
-    System.out.println("rawPut testing");
-    for (int i = 0; i < 100; i++) {
-      ByteString key = keys.get(i), value = values.get(r.nextInt(100));
-      if (!data.containsKey(key)) {
-        data.put(key, value);
-        checkPut(key, value);
-      }
-    }
-    System.out.println("rawScan testing");
-    for (int i = 0; i < 1000; i++) {
-      ByteString startKey = keys.get(r.nextInt(100)), endKey = keys.get(r.nextInt(100));
-      checkScan(startKey, endKey, data);
-    }
-    for (int i = 0; i < 100; i++) {
-      ByteString startKey = getRandomRawKey(), endKey = getRandomRawKey();
-      checkScan(startKey, endKey, data);
-    }
-    System.out.println("rawDelete testing");
+    rawPutTest(putCases, speedTest);
+    rawGetTest(getCases, speedTest);
+    rawScanTest(scanCases, speedTest);
+    rawDeleteTest(deleteCases, speedTest);
+
     for (ByteString key : data.keySet()) {
       checkDelete(key);
     }
     System.out.println(rawKeys().isEmpty() ? "ok, test done" : "no, something is wrong");
+  }
+
+  public void rawPutTest(int putCases, boolean speedTest) {
+    System.out.println("rawPut testing");
+    if (speedTest) {
+      long start, end, time = 0;
+
+      for (int i = 0; i < putCases; ) {
+        ByteString key = keys.get(i), value = values.get(r.nextInt(KEY_POOL_SIZE));
+        if (!data.containsKey(key)) {
+          data.put(key, value);
+          start = System.currentTimeMillis();
+          client.rawPut(key, value);
+          end = System.currentTimeMillis();
+          time += end - start;
+          i++;
+        }
+      }
+      System.out.println(putCases + " rawPut: " + time / 1000.0 + "s");
+    } else {
+      for (int i = 0; i < putCases; i++) {
+        ByteString key = keys.get(i), value = values.get(r.nextInt(KEY_POOL_SIZE));
+        if (!data.containsKey(key)) {
+          data.put(key, value);
+          checkPut(key, value);
+        }
+      }
+    }
+  }
+
+  public void rawScanTest(int scanCases, boolean speedTest) {
+    System.out.println("rawScan testing");
+    if (speedTest) {
+      long start, end, time = 0;
+      for (int i = 0; i < scanCases; i++) {
+        ByteString startKey = keys.get(r.nextInt(KEY_POOL_SIZE)), endKey = keys.get(r.nextInt(KEY_POOL_SIZE));
+        start = System.currentTimeMillis();
+        client.rawScan(startKey, endKey);
+        end = System.currentTimeMillis();
+        time += end - start;
+      }
+      System.out.println(scanCases + " rawScan: " + time / 1000.0 + "s");
+    } else {
+      for (int i = 0; i < scanCases; i++) {
+        ByteString startKey = keys.get(r.nextInt(KEY_POOL_SIZE)), endKey = keys.get(r.nextInt(KEY_POOL_SIZE));
+        checkScan(startKey, endKey, data);
+      }
+    }
+  }
+
+  public void rawGetTest(int getCases, boolean speedTest) {
+    System.out.println("rawGet testing");
+    int i = 0;
+    if (speedTest) {
+      long start, end, time = 0;
+      for (ByteString key : data.keySet()) {
+        start = System.currentTimeMillis();
+        client.rawGet(key);
+        end = System.currentTimeMillis();
+        time += end - start;
+        i++;
+        if (i >= getCases) {
+          break;
+        }
+      }
+      System.out.println(getCases + " rawGet: " + time / 1000.0 + "s");
+    }
+  }
+
+  public void rawDeleteTest(int deleteCases, boolean speedTest) {
+    System.out.println("rawDelete testing");
+    int i = 0;
+    if (speedTest) {
+      long start, end, time = 0;
+      for (ByteString key : data.keySet()) {
+        start = System.currentTimeMillis();
+        client.rawDelete(key);
+        end = System.currentTimeMillis();
+        time += end - start;
+        i++;
+        if (i >= deleteCases) {
+          break;
+        }
+      }
+      System.out.println(deleteCases + " rawDelete: " + time / 1000.0 + "s");
+    } else {
+      for (ByteString key : data.keySet()) {
+        checkDelete(key);
+        i++;
+        if (i >= deleteCases) {
+          break;
+        }
+      }
+    }
   }
 
 }
