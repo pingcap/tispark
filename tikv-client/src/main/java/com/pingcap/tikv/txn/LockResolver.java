@@ -26,6 +26,7 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.ResolveLockRequest;
 import com.pingcap.tikv.kvproto.Kvrpcpb.ResolveLockResponse;
 import com.pingcap.tikv.kvproto.TikvGrpc;
 import com.pingcap.tikv.operation.KVErrorHandler;
+import com.pingcap.tikv.region.RegionSender;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.region.TiRegion.RegionVerID;
@@ -62,13 +63,13 @@ public class LockResolver {
   private final Map<Long, Long> resolved;
   // the list is chain of txn for O(1) lru cache
   private final LinkedList<Long> recentResolved;
-  private final RegionStoreClient store;
+  private final RegionSender sender;
 
-  public LockResolver(RegionStoreClient regionClient) {
+  public LockResolver(RegionSender sender) {
     resolved = new HashMap<>();
     recentResolved = new LinkedList<>();
     readWriteLock = new ReentrantReadWriteLock();
-    store = regionClient;
+    this.sender = sender;
   }
 
   private void SaveResolved(long txnID, long status) {
@@ -106,14 +107,14 @@ public class LockResolver {
     }
 
     // do we need add the BackOffer
-    TiRegion region = store.getSession().getRegionManager().getRegionByKey(primary);
+    TiRegion region = sender.getSession().getRegionManager().getRegionByKey(primary);
 
     Supplier<CleanupRequest> factory = () ->
         CleanupRequest.newBuilder().setContext(region.getContext()).setKey(primary).setStartVersion(txnID).build();
     KVErrorHandler<CleanupResponse> handler =
         new KVErrorHandler<>(
-            store.getSession().getRegionManager(), store, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    CleanupResponse resp = store.callWithRetry(bo, TikvGrpc.METHOD_KV_CLEANUP, factory, handler);
+            sender.getSession().getRegionManager(), sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    CleanupResponse resp = sender.callWithRetry(bo, TikvGrpc.METHOD_KV_CLEANUP, factory, handler);
 
     return getTxnStatusHelper(resp, txnID);
   }
@@ -182,7 +183,7 @@ public class LockResolver {
   private void resolveLock(BackOffer bo, Lock lock, long txnStatus, Map<RegionVerID, Object> cleanRegion) {
     // TODO: how to deal with while
     // do we need add the BackOffer
-    TiRegion region = store.getSession().getRegionManager().getRegionByKey(lock.getKey());
+    TiRegion region = sender.getSession().getRegionManager().getRegionByKey(lock.getKey());
 
     Supplier<ResolveLockRequest> factory;
 
@@ -199,8 +200,8 @@ public class LockResolver {
 
     KVErrorHandler<ResolveLockResponse> handler =
         new KVErrorHandler<>(
-            store.getSession().getRegionManager(), store, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    ResolveLockResponse resp = store.callWithRetry(bo, TikvGrpc.METHOD_KV_RESOLVE_LOCK, factory, handler);
+            sender.getSession().getRegionManager(), sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    ResolveLockResponse resp = sender.callWithRetry(bo, TikvGrpc.METHOD_KV_RESOLVE_LOCK, factory, handler);
 
     resolveLockHelper(resp, cleanRegion, region, lock);
   }

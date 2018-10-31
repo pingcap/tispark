@@ -100,12 +100,12 @@ public class LockResolverTest {
     KVErrorHandler<PrewriteResponse> handler =
         new KVErrorHandler<>(
             session.getRegionManager(),
-            client,
+            client.getSender(),
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null
         );
 
-    PrewriteResponse resp = client.callWithRetry(backOffer, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
+    PrewriteResponse resp = client.getSender().callWithRetry(backOffer, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
 
     if (resp.hasRegionError()) {
       return prewrite(mutations, startTS, primary);
@@ -186,12 +186,12 @@ public class LockResolverTest {
     KVErrorHandler<CommitResponse> handler =
         new KVErrorHandler<>(
             session.getRegionManager(),
-            client,
+            client.getSender(),
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null
         );
 
-    CommitResponse resp = client.callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
+    CommitResponse resp = client.getSender().callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
 
     if (resp.hasRegionError()) {
       return commit(startTS, commitTS, keys);

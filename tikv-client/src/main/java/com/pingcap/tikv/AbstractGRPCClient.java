@@ -121,7 +121,7 @@ public abstract class AbstractGRPCClient<
     return observer;
   }
 
-  protected <ReqT, RespT> StreamingResponse callServerStreamingWithRetry(
+  public <ReqT, RespT> StreamingResponse callServerStreamingWithRetry(
       BackOffer backOffer,
       MethodDescriptor<ReqT, RespT> method,
       Supplier<ReqT> requestFactory,
@@ -152,5 +152,4 @@ public abstract class AbstractGRPCClient<
   protected abstract BlockingStubT getBlockingStub();
 
   protected abstract StubT getAsyncStub();
-
 }
