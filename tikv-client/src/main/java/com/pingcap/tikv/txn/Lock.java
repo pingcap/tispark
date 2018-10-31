@@ -25,12 +25,13 @@ public class Lock {
   private long ttl;
   private ByteString key;
   private ByteString primary;
+  private static final long defaultLockTTL = 3000;
 
   public Lock(Kvrpcpb.LockInfo l) {
     txnID = l.getLockVersion();
     key = l.getKey();
     primary = l.getPrimaryLock();
-    ttl = l.getLockTtl();
+    ttl = l.getLockTtl() == 0 ? defaultLockTTL : l.getLockTtl();
   }
 
   public long getTxnID() {
