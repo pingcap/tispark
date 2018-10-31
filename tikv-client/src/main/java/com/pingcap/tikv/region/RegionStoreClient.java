@@ -20,6 +20,7 @@ package com.pingcap.tikv.region;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
+import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -109,16 +110,20 @@ public class RegionStoreClient implements AutoCloseable{
         if (resp.getError().hasLocked()) {
           Lock lock = new Lock(resp.getError().getLocked());
           boolean ok = lockResolver.ResolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
-          if (ok) {
-            // do things different from what tidb does
-            // we just throw exception, and let helper do
-            // somethings for us, maybe better?
-            continue;
+          if (!ok) {
+            backOffer.doBackOff(BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
           }
+          continue;
+        } else {
+          // we should retry the all txn, because we have no txn in tispark
+          // we just throw an error and the user may need start it again
+          // TODO: we should do better
+          throw new KeyException(resp.getError());
         }
-        continue;
       }
+
       if (resp.hasRegionError()) {
+        // should never happen
         throw new RegionException(resp.getRegionError());
       }
 
@@ -180,6 +185,7 @@ public class RegionStoreClient implements AutoCloseable{
     KVErrorHandler<BatchGetResponse> handler =
         new KVErrorHandler<>(
             regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    // TODO: error in batchGet
     BatchGetResponse resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
     return batchGetHelper(resp, backOffer);
   }

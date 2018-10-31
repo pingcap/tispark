@@ -20,6 +20,7 @@ import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Kvrpcpb.Op;
 import com.pingcap.tikv.kvproto.Kvrpcpb.KeyError;
@@ -34,6 +35,7 @@ import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
@@ -43,6 +45,7 @@ import org.junit.Test;
 import java.util.*;
 import java.util.function.Supplier;
 
+import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
 
@@ -50,6 +53,7 @@ public class LockResolverTest {
   private TiSession session;
   private static final String LOCAL_ADDR = "127.0.0.1";
   private static final String port = "20160";
+  private static final int DefaultTTL = 10;
   private BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
   private ReadOnlyPDClient pdClient;
 
@@ -67,63 +71,56 @@ public class LockResolverTest {
     if (mutations.size() == 0)
       return true;
 
-    Map<TiRegion, List<Mutation>> batchs = new HashMap<>();
-    Store store = null;
-
     for (Mutation m: mutations) {
       Pair<TiRegion, Store> pair = session.getRegionManager().
           getRegionStorePairByKey(m.getKey());
-      store = pair.second;
-      batchs.putIfAbsent(pair.first, new ArrayList<>());
-      batchs.get(pair.first).add(m);
+
+      RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, session);
+
+      Supplier<PrewriteRequest> factory = () ->
+          PrewriteRequest.newBuilder()
+              .addAllMutations(Arrays.asList(m))
+              .setPrimaryLock(primary.getKey())
+              .setStartVersion(startTS)
+              .setLockTtl(DefaultTTL)
+              .setContext(pair.first.getContext()).build();
+
+      KVErrorHandler<PrewriteResponse> handler =
+          new KVErrorHandler<>(
+              session.getRegionManager(),
+              client.getSender(),
+              pair.first,
+              resp -> resp.hasRegionError() ? resp.getRegionError() : null
+          );
+
+      PrewriteResponse resp = client.getSender().callWithRetry(backOffer, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
+
+      if (resp.hasRegionError()) {
+        prewrite(Arrays.asList(m), startTS, primary);
+      }
+
+      if (resp.getErrorsCount() == 0) {
+        continue;
+      }
+
+      List<Lock> locks = new ArrayList<>();
+      for (KeyError err : resp.getErrorsList()) {
+        if (err.hasLocked()) {
+          Lock lock = new Lock(err.getLocked());
+          locks.add(lock);
+        } else {
+          throw new KeyException(err);
+        }
+      }
+
+      if (!client.lockResolver.ResolveLocks(backOffer, locks)) {
+        backOffer.doBackOff(BoTxnLock, new KeyException(resp.getErrorsList().get(0)));
+      }
+
+      prewrite(Arrays.asList(m), startTS, primary);
     }
 
-    for (TiRegion r: batchs.keySet()) {
-      if (!prewriteBatch(batchs.get(r), startTS, primary, r, store)) {
-        return false;
-      }
-    }
     return true;
-  }
-
-  public boolean prewriteBatch(List<Mutation> mutations, long startTS, Mutation primary, TiRegion region, Store store) {
-    RegionStoreClient client = RegionStoreClient.create(region, store, session);
-
-    Supplier<PrewriteRequest> factory = () ->
-        PrewriteRequest.newBuilder()
-            .addAllMutations(mutations)
-            .setPrimaryLock(primary.getKey())
-            .setStartVersion(startTS)
-            .setLockTtl(3000)
-            .setContext(region.getContext()).build();
-
-    KVErrorHandler<PrewriteResponse> handler =
-        new KVErrorHandler<>(
-            session.getRegionManager(),
-            client.getSender(),
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null
-        );
-
-    PrewriteResponse resp = client.getSender().callWithRetry(backOffer, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
-
-    if (resp.hasRegionError()) {
-      return prewrite(mutations, startTS, primary);
-    }
-
-    if (resp.getErrorsCount() == 0) {
-      return true;
-    }
-
-    List<Lock> locks = new ArrayList<>();
-    for (KeyError err : resp.getErrorsList()) {
-      if (err.hasLocked()) {
-        Lock lock = new Lock(err.getLocked());
-        locks.add(lock);
-      }
-    }
-
-    return client.lockResolver.ResolveLocks(backOffer, locks);
   }
 
   public boolean lockKey(String key, String value, String primaryKey,
@@ -149,58 +146,37 @@ public class LockResolverTest {
     if (keys.size() == 0)
       return true;
 
-    Map<TiRegion, List<ByteString>> batchs = new HashMap<>();
-    Store store = null;
-
     for (ByteString k: keys) {
       Pair<TiRegion, Store> pair = session.getRegionManager().
           getRegionStorePairByKey(k);
-      store = pair.second;
-      List<ByteString> batch = batchs.get(pair.first);
-      if (batch == null) {
-        batch = new ArrayList<>();
-        batchs.put(pair.first, batch);
+
+      RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, session);
+      Supplier<CommitRequest> factory = () ->
+          CommitRequest.newBuilder()
+              .setStartVersion(startTS)
+              .setCommitVersion(commitTS)
+              .addAllKeys(Arrays.asList(k))
+              .setContext(pair.first.getContext())
+              .build();
+
+      KVErrorHandler<CommitResponse> handler =
+          new KVErrorHandler<>(
+              session.getRegionManager(),
+              client.getSender(),
+              pair.first,
+              resp -> resp.hasRegionError() ? resp.getRegionError() : null
+          );
+
+      CommitResponse resp = client.getSender().callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
+
+      if (resp.hasRegionError()) {
+        commit(startTS, commitTS, Arrays.asList(k));
       }
 
-      batch.add(k);
-    }
-
-    for (TiRegion r: batchs.keySet()) {
-      if (!commitBatch(startTS, commitTS, batchs.get(r), r, store)) {
-        return false;
+      if (resp.hasError()) {
+        throw new KeyException(resp.getError());
       }
     }
-    return true;
-  }
-
-  public boolean commitBatch(long startTS, long commitTS, List<ByteString> keys, TiRegion region, Store store) {
-    RegionStoreClient client = RegionStoreClient.create(region, store, session);
-    Supplier<CommitRequest> factory = () ->
-        CommitRequest.newBuilder()
-            .setStartVersion(startTS)
-            .setCommitVersion(commitTS)
-            .addAllKeys(keys)
-            .setContext(region.getContext())
-            .build();
-
-    KVErrorHandler<CommitResponse> handler =
-        new KVErrorHandler<>(
-            session.getRegionManager(),
-            client.getSender(),
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null
-        );
-
-    CommitResponse resp = client.getSender().callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
-
-    if (resp.hasRegionError()) {
-      return commit(startTS, commitTS, keys);
-    }
-
-    if (resp.hasError()) {
-      return false;
-    }
-
     return true;
   }
 
