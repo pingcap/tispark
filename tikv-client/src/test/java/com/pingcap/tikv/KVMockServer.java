@@ -39,12 +39,7 @@ import io.grpc.ServerBuilder;
 import io.grpc.Status;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class KVMockServer extends TikvGrpc.TikvImplBase {
@@ -54,6 +49,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   private TiRegion region;
   private TreeMap<Key, ByteString> dataMap = new TreeMap<>();
   private Map<ByteString, Integer> errorMap = new HashMap<>();
+  private Map<Key, Key> lockMap = new HashMap<>();
+  private Map<Long, List<Key>> txnMap = new HashMap<>();
 
   // for KV error
   public static final int ABORT = 1;
@@ -85,6 +82,20 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
         ByteString.copyFromUtf8(value));
   }
 
+  // put for transactions
+  public void put(ArrayList<String> key, ArrayList<String> value, Long txnID) {
+    assert(key.size() == value.size() && key.size() > 0);
+
+    txnMap.put(txnID,
+        key.stream().map((String k) ->
+            toRawKey(ByteString.copyFromUtf8(k))).collect(Collectors.toList()));
+
+    for (int i = 0; i < key.size(); i++) {
+      lockMap.put(toRawKey(ByteString.copyFromUtf8(key.get(i))),
+          toRawKey(ByteString.copyFromUtf8(key.get(0))));
+    }
+  }
+
   public void put(String key, ByteString data) {
     put(ByteString.copyFromUtf8(key), data);
   }
@@ -96,6 +107,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   public void clearAllMap() {
     dataMap.clear();
     errorMap.clear();
+    lockMap.clear();
   }
 
   private void verifyContext(Context context) throws Exception {
@@ -220,9 +232,20 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
         }
         builder.setError(errBuilder);
       } else {
-        ByteString value = dataMap.get(toRawKey(key));
-        builder.setValue(value);
+        Key primary = lockMap.get(toRawKey(key));
+        if (primary.equals(toRawKey(key)) || lockMap.containsKey(toRawKey(key))) {
+          // means primary are now in process
+          // we just kill it
+          if (!primary.equals(toRawKey(key)))
+            lockMap.remove(primary);
+          lockMap.remove(toRawKey(key));
+        }
       }
+
+
+      ByteString value = dataMap.get(toRawKey(key));
+      builder.setValue(value);
+
       responseObserver.onNext(builder.build());
       responseObserver.onCompleted();
     } catch (Exception e) {
