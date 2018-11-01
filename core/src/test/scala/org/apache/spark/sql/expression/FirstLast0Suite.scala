@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class FirstLast0Suite extends BaseTiSparkSuite {
+class FirstLast0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select first(tp_char) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",
     "select last(tp_double) from full_data_type_table  group by (tp_nvarchar)   order by tp_nvarchar ",

@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class Distinct0Suite extends BaseTiSparkSuite {
+class Distinct0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select  distinct(tp_binary)  from full_data_type_table  order by tp_binary ",
     "select  distinct(tp_nvarchar)  from full_data_type_table  order by tp_nvarchar ",
