@@ -15,8 +15,6 @@
 
 package com.pingcap.tikv.txn;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.*;
 import com.pingcap.tikv.PDClient;
@@ -48,7 +46,6 @@ import org.junit.Test;
 
 import java.util.*;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
 import static junit.framework.TestCase.*;
@@ -444,96 +441,4 @@ public class LockResolverTest {
   private static Coprocessor.KeyRange createByteStringRange(ByteString sKey, ByteString eKey) {
     return Coprocessor.KeyRange.newBuilder().setStart(sKey).setEnd(eKey).build();
   }
-
-//  @Test
-//  public void SICoprocessorTest() {
-//
-//    while (true) {
-//      session.getConf().setIsolationLevel(IsolationLevel.SI);
-//
-//      putAlphabet();
-//
-//      for (int i = 0; i < 26; i++) {
-//        long startTs = pdClient.getTimestamp(backOffer).getVersion();
-//        long endTs = pdClient.getTimestamp(backOffer).getVersion();
-//        lockKey(String.valueOf((char)('a' + i)), String.valueOf((char)('a' + i + 1)),
-//            String.valueOf((char)('a' + i)), String.valueOf((char)('a' + i + 1)), false, startTs, endTs);
-//      }
-//
-//      int index = 1;
-//
-//      TiRegion r = session.getRegionManager().getRegionByKey((ByteString.copyFromUtf8("a")));
-//      for (; index < 26; index++) {
-//        ByteString k = ByteString.copyFromUtf8(String.valueOf((char)('a' + index)));
-//        if (!r.contains(k)) {
-//          break;
-//        }
-//      }
-//
-//      TiTimestamp startTs = pdClient.getTimestamp(backOffer);
-//
-//      DAGRequest.Builder builder = DAGRequest.newBuilder();
-//      builder.setStartTs(startTs.getVersion());
-//      builder.addExecutors(
-//          Executor.newBuilder()
-//              .setTp(ExecType.TypeTableScan)
-//              .build()
-//      );
-//
-//      List<Coprocessor.KeyRange> keyRanges =
-//          ImmutableList.of(
-//              createByteStringRange(ByteString.copyFromUtf8("a"),
-//                  ByteString.copyFromUtf8(String.valueOf((char)('a' + index)))));
-//
-//      SelectResponse resp;
-//      Pair<TiRegion, Store> pair = session.getRegionManager().
-//          getRegionStorePairByKey(ByteString.copyFromUtf8(String.valueOf((char)('a'))));
-//      RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, session);
-//      try {
-//        resp = coprocess(client, builder.build(), keyRanges);
-//      } catch (RetryException e) {
-//        continue;
-//      }
-//
-//      assertEquals(index, resp.getChunksCount());
-//
-//      for (int i = 0; i < 26; i++) {
-//        Pair<TiRegion, Store> p = session.getRegionManager().
-//            getRegionStorePairByKey(ByteString.copyFromUtf8(String.valueOf((char)('a' + i))));
-//        RegionStoreClient c = RegionStoreClient.create(p.first, p.second, session);
-//        ByteString v = c.get(backOffer,
-//            ByteString.copyFromUtf8(String.valueOf((char)('a' + i))), pdClient.getTimestamp(backOffer).getVersion());
-//        assertEquals(v.toStringUtf8(), String.valueOf((char)('a' + i)));
-//      }
-//
-//      session.getConf().setIsolationLevel(IsolationLevel.RC);
-//    }
-//  }
-//
-//  @Test
-//  public void RCCoprocessorTest() {
-//    session.getConf().setIsolationLevel(IsolationLevel.RC);
-//    TiTimestamp startTs = pdClient.getTimestamp(backOffer);
-//    TiTimestamp endTs = pdClient.getTimestamp(backOffer);
-//
-//    putKV("a", "a", startTs.getVersion(), endTs.getVersion());
-//
-//    startTs = pdClient.getTimestamp(backOffer);
-//    endTs = pdClient.getTimestamp(backOffer);
-//
-//    lockKey("a", "aa", "a", "aa", false, startTs.getVersion(), endTs.getVersion());
-//
-//    Pair<TiRegion, Store> pair = session.getRegionManager().
-//        getRegionStorePairByKey(ByteString.copyFromUtf8(String.valueOf((char)('a'))));
-//    RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, session);
-//    ByteString v = client.get(backOffer,
-//        ByteString.copyFromUtf8(String.valueOf((char)('a'))), pdClient.getTimestamp(backOffer).getVersion());
-//    assertEquals(v.toStringUtf8(), String.valueOf((char)('a')));
-//
-//    try {
-//      commit(startTs.getVersion(), endTs.getVersion(), Arrays.asList(ByteString.copyFromUtf8("a")));
-//    } catch (KeyException e) {
-//      fail();
-//    }
-//  }
 }
