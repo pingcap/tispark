@@ -27,7 +27,6 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.ResolveLockResponse;
 import com.pingcap.tikv.kvproto.TikvGrpc;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.RegionSender;
-import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.region.TiRegion.RegionVerID;
 import com.pingcap.tikv.util.BackOffer;
@@ -39,7 +38,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
-// TODO: metrics for lock resolver
+import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
+
 // LockResolver resolves locks and also caches resolved txn status.
 public class LockResolver {
   // ResolvedCacheSize is max number of cached txn status.
@@ -99,24 +99,43 @@ public class LockResolver {
     }
   }
 
-  private Long getTxnStatus(BackOffer bo, Long txnID, ByteString primary) {
+  public Long getTxnStatus(BackOffer bo, Long txnID, ByteString primary) {
     Long status = getResolved(txnID);
 
     if (status != null) {
       return status;
     }
 
-    // do we need add the BackOffer
-    TiRegion region = sender.getSession().getRegionManager().getRegionByKey(primary);
+    while (true) {
+      // refresh region
+      TiRegion region = sender.getSession().getRegionManager().getRegionByKey(primary);
 
-    Supplier<CleanupRequest> factory = () ->
-        CleanupRequest.newBuilder().setContext(region.getContext()).setKey(primary).setStartVersion(txnID).build();
-    KVErrorHandler<CleanupResponse> handler =
-        new KVErrorHandler<>(
-            sender.getSession().getRegionManager(), sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    CleanupResponse resp = sender.callWithRetry(bo, TikvGrpc.METHOD_KV_CLEANUP, factory, handler);
+      Supplier<CleanupRequest> factory = () ->
+          CleanupRequest.newBuilder().setContext(region.getContext()).setKey(primary).setStartVersion(txnID).build();
+      KVErrorHandler<CleanupResponse> handler =
+          new KVErrorHandler<>(
+              sender.getSession().getRegionManager(), sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
-    return getTxnStatusHelper(resp, txnID);
+      CleanupResponse resp = sender.callWithRetry(bo, TikvGrpc.METHOD_KV_CLEANUP, factory, handler);
+
+      status = 0L;
+      if (resp.hasRegionError()) {
+        bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
+        continue;
+      }
+
+      if (resp.hasError()) {
+        logger.error(String.format("unexpected cleanup err: %s, tid: %d", resp.getError(), txnID));
+        throw new KeyException(resp.getError());
+      }
+
+      if (resp.getCommitVersion() != 0) {
+        status = resp.getCommitVersion();
+      }
+
+      SaveResolved(txnID, status);
+      return status;
+    }
   }
 
   // ResolveLocks tries to resolve Locks. The resolving process is in 3 steps:
@@ -146,15 +165,12 @@ public class LockResolver {
 
     // TxnID -> []Region, record resolved Regions.
     // TODO: Maybe put it in LockResolver and share by all txns.
-    Map<Long, Map<RegionVerID, Object>> cleanTxns = new HashMap<>();
+    Map<Long, Set<RegionVerID>> cleanTxns = new HashMap<>();
     for (Lock l: expiredLocks) {
       Long status = getTxnStatus(bo, l.getTxnID(), l.getPrimary());
 
-      Map<RegionVerID, Object> cleanRegion = cleanTxns.get(l.getTxnID());
-      if (cleanRegion == null) {
-        cleanRegion = new HashMap<>();
-        cleanTxns.put(l.getTxnID(), cleanRegion);
-      }
+      cleanTxns.putIfAbsent(l.getTxnID(), new HashSet<>());
+      Set<RegionVerID> cleanRegion = cleanTxns.get(l.getTxnID());
 
       resolveLock(bo, l, status, cleanRegion);
     }
@@ -162,62 +178,47 @@ public class LockResolver {
     return expiredLocks.size() == locks.size();
   }
 
-  private Long getTxnStatusHelper(CleanupResponse resp, Long txnID) {
-    long status = 0L;
-    if (resp.hasError()) {
-      logger.error(String.format("unexpected cleanup err: %s, tid: %d", resp.getError(), txnID));
-      throw new KeyException(resp.getError());
+  private void resolveLock(BackOffer bo, Lock lock, long txnStatus, Set<RegionVerID> cleanRegion) {
+
+    while (true) {
+      TiRegion region = sender.getSession().getRegionManager().getRegionByKey(lock.getKey());
+
+      if (cleanRegion.contains(region.getVerID())) {
+        return ;
+      }
+
+      Supplier<ResolveLockRequest> factory;
+
+      if (txnStatus > 0) {
+        // txn is commited with commitTS txnStatus
+        factory = () ->
+            ResolveLockRequest.newBuilder().setContext(region.getContext()).
+                setStartVersion(lock.getTxnID()).setCommitVersion(txnStatus).build();
+      } else {
+        factory = () ->
+            ResolveLockRequest.newBuilder().setContext(region.getContext()).
+                setStartVersion(lock.getTxnID()).build();
+      }
+
+      KVErrorHandler<ResolveLockResponse> handler =
+          new KVErrorHandler<>(
+              sender.getSession().getRegionManager(), sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+
+      ResolveLockResponse resp = sender.callWithRetry(bo, TikvGrpc.METHOD_KV_RESOLVE_LOCK, factory, handler);
+
+      if (resp.hasError()) {
+        logger.error(String.format("unexpected resolveLock err: %s, lock: %s", resp.getError(), lock));
+        throw new KeyException(resp.getError());
+      }
+
+      if (resp.hasRegionError()) {
+        bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
+        continue;
+      }
+
+      cleanRegion.add(region.getVerID());
+      return ;
     }
-    if (resp.hasRegionError()) {
-      throw new RegionException(resp.getRegionError());
-    }
-
-    if (resp.getCommitVersion() != 0) {
-      status = resp.getCommitVersion();
-    }
-
-    SaveResolved(txnID, status);
-    return status;
-  }
-
-  private void resolveLock(BackOffer bo, Lock lock, long txnStatus, Map<RegionVerID, Object> cleanRegion) {
-    // TODO: how to deal with while
-    // do we need add the BackOffer
-    TiRegion region = sender.getSession().getRegionManager().getRegionByKey(lock.getKey());
-
-    Supplier<ResolveLockRequest> factory;
-
-    // txn is commited with commitTS txnStatus
-    if (txnStatus > 0) {
-      factory = () ->
-          ResolveLockRequest.newBuilder().setContext(region.getContext()).
-              setStartVersion(lock.getTxnID()).setCommitVersion(txnStatus).build();
-    } else {
-      factory = () ->
-          ResolveLockRequest.newBuilder().setContext(region.getContext()).
-              setStartVersion(lock.getTxnID()).build();
-    }
-
-    KVErrorHandler<ResolveLockResponse> handler =
-        new KVErrorHandler<>(
-            sender.getSession().getRegionManager(), sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    ResolveLockResponse resp = sender.callWithRetry(bo, TikvGrpc.METHOD_KV_RESOLVE_LOCK, factory, handler);
-
-    resolveLockHelper(resp, cleanRegion, region, lock);
-  }
-
-  private void resolveLockHelper(ResolveLockResponse resp, Map<RegionVerID, Object> cleanRegion, TiRegion region, Lock lock) {
-    if (resp.hasError()) {
-      logger.error(String.format("unexpected resolveLock err: %s, lock: %s", resp.getError(), lock));
-      throw new KeyException(resp.getError());
-    }
-    if (resp.hasRegionError()) {
-      // TODO: how to do with region exception
-      throw new RegionException(resp.getRegionError());
-    }
-
-    // TODO: should we get rid of Object?
-    cleanRegion.put(region.getVerID(), new Object());
   }
 }
 

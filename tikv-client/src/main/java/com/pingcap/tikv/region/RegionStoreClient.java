@@ -20,13 +20,13 @@ package com.pingcap.tikv.region;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
+import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
-import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
@@ -66,6 +66,8 @@ import io.grpc.ManagedChannel;
 
 import java.util.*;
 import java.util.function.Supplier;
+
+import org.apache.hadoop.hive.ql.lockmgr.LockException;
 import org.apache.log4j.Logger;
 
 // RegionStore itself is not thread-safe
@@ -97,6 +99,9 @@ public class RegionStoreClient implements AutoCloseable{
 
   public ByteString get(BackOffer backOffer, ByteString key, long version) {
     while (true) {
+      // we should refresh region
+      region = regionManager.getRegionByKey(key);
+
       Supplier<GetRequest> factory = () ->
           GetRequest.newBuilder().setContext(region.getContext()).setKey(key).setVersion(version).build();
 
@@ -106,25 +111,25 @@ public class RegionStoreClient implements AutoCloseable{
 
       GetResponse resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
 
+      if (resp.hasRegionError()) {
+        backOffer.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
+        continue;
+      }
+
       if (resp.hasError()) {
         if (resp.getError().hasLocked()) {
           Lock lock = new Lock(resp.getError().getLocked());
           boolean ok = lockResolver.ResolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
           if (!ok) {
+            // if not resolve all locks, we wait and retry
             backOffer.doBackOff(BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
           }
+
           continue;
         } else {
-          // we should retry the all txn, because we have no txn in tispark
-          // we just throw an error and the user may need start it again
-          // TODO: we should do better
+          // retryable or abort
           throw new KeyException(resp.getError());
         }
-      }
-
-      if (resp.hasRegionError()) {
-        // should never happen
-        throw new RegionException(resp.getRegionError());
       }
 
       return resp.getValue();
@@ -175,6 +180,7 @@ public class RegionStoreClient implements AutoCloseable{
     }
   }
 
+  // TODO: batch get should consider key range split
   public List<KvPair> batchGet(BackOffer backOffer, Iterable<ByteString> keys, long version) {
     Supplier<BatchGetRequest> request = () ->
         BatchGetRequest.newBuilder()
@@ -185,11 +191,11 @@ public class RegionStoreClient implements AutoCloseable{
     KVErrorHandler<BatchGetResponse> handler =
         new KVErrorHandler<>(
             regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    // TODO: error in batchGet
     BatchGetResponse resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
     return batchGetHelper(resp, backOffer);
   }
 
+  // TODO: deal with resolve locks and region errors
   private List<KvPair> batchGetHelper(BatchGetResponse resp, BackOffer bo) {
     List<Lock> locks = new ArrayList<>();
 
@@ -269,7 +275,7 @@ public class RegionStoreClient implements AutoCloseable{
   }
 
   /**
-   * Execute a and retrieve the response from TiKV server.
+   * Execute and retrieve the response from TiKV server.
    *
    * @param req    Select request to process
    * @param ranges Key range list
@@ -291,6 +297,7 @@ public class RegionStoreClient implements AutoCloseable{
             .addAllRanges(ranges)
             .build();
 
+    // we should handle the region error ourselves
     KVErrorHandler<Coprocessor.Response> handler =
         new KVErrorHandler<>(
             regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
@@ -298,6 +305,10 @@ public class RegionStoreClient implements AutoCloseable{
     return handleCopResponse(backOffer, resp, ranges, responseQueue);
   }
 
+  // handleCopResponse checks coprocessor Response for region split and lock,
+  // returns more tasks when that happens, or handles the response if no error.
+  // if we're handling streaming coprocessor response, lastRange is the range of last
+  // successful response, otherwise it's nil.
   private List<RangeSplitter.RegionTask> handleCopResponse(BackOffer backOffer, Coprocessor.Response response, List<KeyRange> ranges, Queue<SelectResponse> responseQueue) {
     if (response.hasRegionError()) {
       Errorpb.Error regionError = response.getRegionError();
@@ -309,15 +320,17 @@ public class RegionStoreClient implements AutoCloseable{
           .splitRangeByRegion(ranges);
     }
 
-    // TODO: how to deal with it
     if (response.hasLocked()) {
+      logger.debug(String.format("coprocessor encounters locks: %s", response.getLocked()));
       Lock lock = new Lock(response.getLocked());
       boolean ok = lockResolver.ResolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
-      if (ok) {
-        return RangeSplitter
-            .newSplitter(session.getRegionManager())
-            .splitRangeByRegion(ranges);
+      if (!ok) {
+        backOffer.doBackOff(BoTxnLockFast, new LockException());
       }
+      // Split ranges
+      return RangeSplitter
+          .newSplitter(session.getRegionManager())
+          .splitRangeByRegion(ranges);
     }
 
     String otherError = response.getOtherError();
