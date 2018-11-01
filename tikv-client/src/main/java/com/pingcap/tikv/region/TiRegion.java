@@ -141,8 +141,8 @@ public class TiRegion implements Serializable {
   }
 
   public boolean contains(ByteString key) {
-    return meta.getStartKey().equals(key)
-        && (meta.getEndKey().equals(key) || meta.getEndKey().isEmpty());
+    return meta.getStartKey().toStringUtf8().compareTo(key.toStringUtf8()) <=0
+        && (meta.getEndKey().toStringUtf8().compareTo(key.toStringUtf8()) >= 0 || meta.getEndKey().isEmpty());
   }
 
   public boolean isValid() {

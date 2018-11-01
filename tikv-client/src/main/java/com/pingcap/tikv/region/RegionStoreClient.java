@@ -213,12 +213,16 @@ public class RegionStoreClient implements AutoCloseable{
     if (locks.size() > 0) {
       boolean ok = lockResolver.ResolveLocks(bo, locks);
       if (!ok) {
-        // TODO: can we do better?
-        throw new KeyException(resp.getPairsList().get(0).getError());
+        // if not resolve all locks, we wait and retry
+        bo.doBackOff(BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
       }
+
+      // TODO: we should retry
+      // fix me
     }
 
     if (resp.hasRegionError()) {
+      // TODO, we should redo the split and redo the batchGet
       throw new RegionException(resp.getRegionError());
     }
     return resp.getPairsList();
@@ -263,14 +267,18 @@ public class RegionStoreClient implements AutoCloseable{
     if (locks.size() > 0) {
       boolean ok = lockResolver.ResolveLocks(bo, locks);
       if (!ok) {
-        throw new KeyException(resp.getPairsList().get(0).getError());
+        // if not resolve all locks, we wait and retry
+        bo.doBackOff(BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
       }
+
+      // TODO: we should retry
+      // fix me
     }
 
     if (resp.hasRegionError()) {
+      // TODO, we should redo the split and redo the batchGet
       throw new RegionException(resp.getRegionError());
     }
-
     return resp.getPairsList();
   }
 
@@ -288,7 +296,6 @@ public class RegionStoreClient implements AutoCloseable{
       throw new IllegalArgumentException("Invalid coprocess argument!");
     }
 
-    logger.warn("start coprocess");
     Supplier<Coprocessor.Request> reqToSend = () ->
         Coprocessor.Request.newBuilder()
             .setContext(region.getContext())
@@ -343,6 +350,7 @@ public class RegionStoreClient implements AutoCloseable{
     return null;
   }
 
+  // TODO: wait for future fix
   public Iterator<SelectResponse> coprocessStreaming(DAGRequest req, List<KeyRange> ranges) {
     Supplier<Coprocessor.Request> reqToSend = () ->
         Coprocessor.Request.newBuilder()
