@@ -16,7 +16,7 @@ import java.util.Iterator;
 import java.util.List;
 
 public class KVRawClient {
-  private static final String RAW_PREFIX = "raw_";
+  static final String RAW_PREFIX = "raw_";
   private static final String DEFAULT_PD_ADDRESS = "127.0.0.1:2379";
   private final TiSession session;
   private final RegionManager regionManager;
@@ -33,10 +33,10 @@ public class KVRawClient {
   /**
    * Put a raw key-value pair to TiKV
    *
-   * @param key raw key
+   * @param key   raw key
    * @param value raw value
    */
-  public void rawPut(ByteString key, ByteString value) {
+  public void put(ByteString key, ByteString value) {
     Pair<TiRegion, Metapb.Store> pair = regionManager.getRegionStorePairByRawKey(key);
     RegionStoreClient client =
         RegionStoreClient.create(pair.first, pair.second, session);
@@ -49,7 +49,7 @@ public class KVRawClient {
    * @param key raw key
    * @return a ByteString value if key exists, ByteString.EMPTY if key does not exist
    */
-  public ByteString rawGet(ByteString key) {
+  public ByteString get(ByteString key) {
     Pair<TiRegion, Metapb.Store> pair = regionManager.getRegionStorePairByRawKey(key);
     RegionStoreClient client =
         RegionStoreClient.create(pair.first, pair.second, session);
@@ -57,11 +57,25 @@ public class KVRawClient {
   }
 
   /**
+   * Scan raw key-value pairs from TiKV in range [startKey, endKey)
+   *
+   * @param startKey raw start key, inclusive
+   * @param endKey   raw end key, exclusive
+   * @return list of key-value pairs in range
+   */
+  public List<Kvrpcpb.KvPair> scan(ByteString startKey, ByteString endKey) {
+    Iterator<Kvrpcpb.KvPair> iterator = rawScanIterator(startKey, endKey);
+    List<Kvrpcpb.KvPair> result = new ArrayList<>();
+    iterator.forEachRemaining(result::add);
+    return result;
+  }
+
+  /**
    * Delete a raw key-value pair from TiKV if key exists
    *
    * @param key raw key to be deleted
    */
-  public void rawDelete(ByteString key) {
+  public void delete(ByteString key) {
     TiRegion region = regionManager.getRegionByRawKey(key);
     Kvrpcpb.Context context =
         Kvrpcpb.Context.newBuilder()
@@ -76,27 +90,13 @@ public class KVRawClient {
   }
 
   /**
-   * Scan raw key-value pairs from TiKV in range [startKey, endKey)
-   *
-   * @param startKey raw start key, inclusive
-   * @param endKey raw end key, exclusive
-   * @return list of key-value pairs in range
-   */
-  public List<Kvrpcpb.KvPair> rawScan(ByteString startKey, ByteString endKey) {
-    Iterator<Kvrpcpb.KvPair> iterator = rawScanIterator(startKey, endKey);
-    List<Kvrpcpb.KvPair> result = new ArrayList<>();
-    iterator.forEachRemaining(result::add);
-    return result;
-  }
-
-  /**
    * Put a raw key-value pair with RAW_PREFIX into TiKV
    *
-   * @param key utf-8 key
+   * @param key   utf-8 key
    * @param value utf-8 value
    */
   public void rawPutUtf8(String key, String value) {
-    rawPut(rawKey(key), rawValue(value));
+    put(rawKey(key), rawValue(value));
   }
 
   /**
@@ -106,7 +106,7 @@ public class KVRawClient {
    * @return value of key-value pair with key (RAW_PREFIX + key)
    */
   public ByteString rawGetUtf8(String key) {
-    return rawGet(rawKey(key));
+    return get(rawKey(key));
   }
 
   /**
@@ -115,7 +115,7 @@ public class KVRawClient {
    * @param key utf-8 key
    */
   public void rawDeleteUtf8(String key) {
-    rawDelete(rawKey(key));
+    delete(rawKey(key));
   }
 
   /**
@@ -126,7 +126,7 @@ public class KVRawClient {
    * @return
    */
   public List<Kvrpcpb.KvPair> rawScanUtf8(String startKey, String endKey) {
-    return rawScan(rawKey(startKey), rawKey(endKey));
+    return scan(rawKey(startKey), rawKey(endKey));
   }
 
   private Iterator<Kvrpcpb.KvPair> rawScanIterator(ByteString startKey, ByteString endKey) {

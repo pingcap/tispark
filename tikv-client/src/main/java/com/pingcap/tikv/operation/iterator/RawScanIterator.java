@@ -15,8 +15,6 @@
 
 package com.pingcap.tikv.operation.iterator;
 
-import static java.util.Objects.requireNonNull;
-
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.key.Key;
@@ -42,7 +40,7 @@ public class RawScanIterator extends ScanIterator {
     Metapb.Store store = pair.second;
     try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
       BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
-      currentCache = client.rawScan(backOffer, startKey);
+      currentCache = client.rawBatchScan(backOffer, startKey);
       return region;
     }
   }

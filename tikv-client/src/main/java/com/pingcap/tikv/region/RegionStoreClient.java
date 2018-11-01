@@ -17,41 +17,18 @@
 
 package com.pingcap.tikv.region;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
-
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.exception.KeyException;
-import com.pingcap.tikv.exception.RegionException;
-import com.pingcap.tikv.exception.SelectException;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.*;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.kvproto.Errorpb;
-import com.pingcap.tikv.kvproto.Kvrpcpb.BatchGetRequest;
-import com.pingcap.tikv.kvproto.Kvrpcpb.BatchGetResponse;
-import com.pingcap.tikv.kvproto.Kvrpcpb.Context;
-import com.pingcap.tikv.kvproto.Kvrpcpb.GetRequest;
-import com.pingcap.tikv.kvproto.Kvrpcpb.GetResponse;
-import com.pingcap.tikv.kvproto.Kvrpcpb.KvPair;
-import com.pingcap.tikv.kvproto.Kvrpcpb.LockInfo;
-import com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteRequest;
-import com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteResponse;
-import com.pingcap.tikv.kvproto.Kvrpcpb.RawGetRequest;
-import com.pingcap.tikv.kvproto.Kvrpcpb.RawGetResponse;
-import com.pingcap.tikv.kvproto.Kvrpcpb.RawScanRequest;
-import com.pingcap.tikv.kvproto.Kvrpcpb.RawScanResponse;
-import com.pingcap.tikv.kvproto.Kvrpcpb.RawPutRequest;
-import com.pingcap.tikv.kvproto.Kvrpcpb.RawPutResponse;
-import com.pingcap.tikv.kvproto.Kvrpcpb.ScanRequest;
-import com.pingcap.tikv.kvproto.Kvrpcpb.ScanResponse;
+import com.pingcap.tikv.kvproto.Kvrpcpb;
+import com.pingcap.tikv.kvproto.Kvrpcpb.*;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.TikvGrpc;
 import com.pingcap.tikv.kvproto.TikvGrpc.TikvBlockingStub;
@@ -63,13 +40,16 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
+import org.apache.log4j.Logger;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.function.Supplier;
 
-import org.apache.log4j.Logger;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
 
 // RegionStore itself is not thread-safe
 public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, TikvStub> implements RegionErrorReceiver {
@@ -97,6 +77,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private TikvStub asyncStub;
   private final RegionManager regionManager;
 
+  // APIs for KV Scan/Put/Get/Delete
+
   public ByteString get(BackOffer backOffer, ByteString key, long version) {
     Supplier<GetRequest> factory = () ->
         GetRequest.newBuilder().setContext(region.getContext()).setKey(key).setVersion(version).build();
@@ -106,77 +88,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     GetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
     return getHelper(resp);
-  }
-
-  public void rawPut(BackOffer backOffer, ByteString key, ByteString value) {
-    Supplier<RawPutRequest> factory = () ->
-        RawPutRequest.newBuilder().setContext(region.getContext()).setKey(key).setValue(value).build();
-
-    KVErrorHandler<RawPutResponse> handler =
-        new KVErrorHandler<>(
-            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    callWithRetry(backOffer, TikvGrpc.METHOD_RAW_PUT, factory, handler);
-  }
-
-  public ByteString rawGet(BackOffer backOffer, ByteString key) {
-    Supplier<RawGetRequest> factory = () ->
-        RawGetRequest.newBuilder().setContext(region.getContext()).setKey(key).build();
-    KVErrorHandler<RawGetResponse> handler =
-        new KVErrorHandler<>(
-            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawGetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_GET, factory, handler);
-    return rawGetHelper(resp);
-  }
-
-  public List<KvPair> rawScan(BackOffer backOffer, ByteString key) {
-    return rawScan(backOffer, key, false);
-  }
-
-  private List<KvPair> rawScan(BackOffer backOffer, ByteString key, boolean keyOnly) {
-    Supplier<RawScanRequest> factory = () ->
-        RawScanRequest.newBuilder()
-            .setContext(region.getContext())
-            .setStartKey(key)
-            .setKeyOnly(keyOnly)
-            .setLimit(getConf().getScanBatchSize())
-            .build();
-
-    KVErrorHandler<RawScanResponse> handler =
-        new KVErrorHandler<>(
-            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_SCAN, factory, handler);
-    return rawScanHelper(resp);
-  }
-
-  private ByteString rawGetHelper(RawGetResponse resp) {
-    String error = resp.getError();
-    if (error != null && !error.isEmpty()) {
-      throw new KeyException(resp.getError());
-    }
-    if (resp.hasRegionError()) {
-      throw new RegionException(resp.getRegionError());
-    }
-    return resp.getValue();
-  }
-
-  private List<KvPair> rawScanHelper(RawScanResponse resp) {
-    if (resp.hasRegionError()) {
-      throw new RegionException(resp.getRegionError());
-    }
-    return resp.getKvsList();
-  }
-
-  public void rawDelete(BackOffer backOffer, ByteString key, Context context) {
-    Supplier<RawDeleteRequest> factory = () ->
-        RawDeleteRequest.newBuilder().setContext(context).setKey(key).build();
-
-    KVErrorHandler<RawDeleteResponse> handler =
-        new KVErrorHandler<>(
-            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawDeleteResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_DELETE, factory, handler);
-    if (resp == null) {
-      this.regionManager.onRequestFail(context.getRegionId(), context.getPeer().getStoreId());
-    }
   }
 
   private ByteString getHelper(GetResponse resp) {
@@ -210,10 +121,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return resp.getPairsList();
   }
 
-  public List<KvPair> scan(BackOffer backOffer, ByteString startKey, long version) {
-    return scan(backOffer, startKey, version, false);
-  }
-
   public List<KvPair> scan(BackOffer backOffer, ByteString startKey, long version, boolean keyOnly) {
     Supplier<ScanRequest> request = () ->
         ScanRequest.newBuilder()
@@ -231,11 +138,124 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return scanHelper(resp);
   }
 
+  public List<KvPair> scan(BackOffer backOffer, ByteString startKey, long version) {
+    return scan(backOffer, startKey, version, false);
+  }
+
   private List<KvPair> scanHelper(ScanResponse resp) {
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
     }
     return resp.getPairsList();
+  }
+
+  // APIs for Raw Scan/Put/Get/Delete
+
+  /**
+   * put a raw key to tikv
+   *
+   * @param backOffer
+   * @param key
+   * @param value
+   */
+  public void rawPut(BackOffer backOffer, ByteString key, ByteString value) {
+    Supplier<RawPutRequest> factory = () ->
+        RawPutRequest.newBuilder().setContext(region.getContext()).setKey(key).setValue(value).build();
+
+    KVErrorHandler<RawPutResponse> handler =
+        new KVErrorHandler<>(
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    callWithRetry(backOffer, TikvGrpc.METHOD_RAW_PUT, factory, handler);
+  }
+
+  public ByteString rawGet(BackOffer backOffer, ByteString key) {
+    Supplier<RawGetRequest> factory = () ->
+        RawGetRequest.newBuilder().setContext(region.getContext()).setKey(key).build();
+    KVErrorHandler<RawGetResponse> handler =
+        new KVErrorHandler<>(
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RawGetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_GET, factory, handler);
+    return rawGetHelper(resp);
+  }
+
+  private ByteString rawGetHelper(RawGetResponse resp) {
+    String error = resp.getError();
+    if (error != null && !error.isEmpty()) {
+      throw new KeyException(resp.getError());
+    }
+    if (resp.hasRegionError()) {
+      throw new RegionException(resp.getRegionError());
+    }
+    return resp.getValue();
+  }
+
+  /**
+   * Return a batch KvPair list containing limited key-value pairs starting from `key`,
+   * which are in the same region
+   *
+   * @param backOffer BackOffer
+   * @param key startKey
+   * @param keyOnly true if value of KvPair is not needed
+   * @return KvPair list
+   */
+  private List<KvPair> rawBatchScan(BackOffer backOffer, ByteString key, boolean keyOnly) {
+    Supplier<RawScanRequest> factory = () ->
+        RawScanRequest.newBuilder()
+            .setContext(region.getContext())
+            .setStartKey(key)
+            .setKeyOnly(keyOnly)
+            .setLimit(getConf().getScanBatchSize())
+            .build();
+
+    KVErrorHandler<RawScanResponse> handler =
+        new KVErrorHandler<>(
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RawScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_SCAN, factory, handler);
+    return rawBatchScanHelper(resp);
+  }
+
+  public List<KvPair> rawBatchScan(BackOffer backOffer, ByteString key) {
+    return rawBatchScan(backOffer, key, false);
+  }
+
+  private List<KvPair> rawBatchScanHelper(RawScanResponse resp) {
+    if (resp.hasRegionError()) {
+      throw new RegionException(resp.getRegionError());
+    }
+    return resp.getKvsList();
+  }
+
+  public void rawDelete(BackOffer backOffer, ByteString key, Context context) {
+    Supplier<RawDeleteRequest> factory = () ->
+        RawDeleteRequest.newBuilder().setContext(context).setKey(key).build();
+
+    KVErrorHandler<RawDeleteResponse> handler =
+        new KVErrorHandler<>(
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RawDeleteResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_DELETE, factory, handler);
+    if (resp == null) {
+      this.regionManager.onRequestFail(context.getRegionId(), context.getPeer().getStoreId());
+    }
+  }
+
+  public void rawBatchDeleteRange(BackOffer backOffer, ByteString startKey, ByteString endKey, Context context) {
+    Supplier<Kvrpcpb.RawDeleteRangeRequest> factory = () ->
+        RawDeleteRangeRequest.newBuilder()
+            .setContext(context)
+            .setStartKey(startKey)
+            .setEndKey(endKey)
+            .build();
+
+    KVErrorHandler<RawDeleteRangeResponse> handler =
+        new KVErrorHandler<>(
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RawDeleteRangeResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_DELETE_RANGE, factory, handler);
+    if (resp == null) {
+      this.regionManager.onRequestFail(context.getRegionId(), context.getPeer().getStoreId());
+      System.out.println("impossible");
+    } else if (resp.hasRegionError()) {
+      System.out.println("???");
+    }
   }
 
   /**
