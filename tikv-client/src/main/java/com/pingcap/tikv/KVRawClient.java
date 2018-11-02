@@ -21,13 +21,21 @@ public class KVRawClient {
   private final TiSession session;
   private final RegionManager regionManager;
 
-  public KVRawClient(String addresses) {
+  private KVRawClient(String addresses) {
     session = TiSession.create(TiConfiguration.createDefault(addresses));
     regionManager = session.getRegionManager();
   }
 
-  public KVRawClient() {
+  private KVRawClient() {
     this(DEFAULT_PD_ADDRESS);
+  }
+
+  public static KVRawClient create() {
+    return new KVRawClient();
+  }
+
+  public static KVRawClient create(String address) {
+    return new KVRawClient(address);
   }
 
   /**
@@ -121,9 +129,9 @@ public class KVRawClient {
   /**
    * Scan a list of key-value pair from TiKV in range [RAW_PREFIX + startKey, RAW_PREFIX + endKey)
    *
-   * @param startKey
-   * @param endKey
-   * @return
+   * @param startKey startKey
+   * @param endKey   endKey
+   * @return result key-value list
    */
   public List<Kvrpcpb.KvPair> rawScanUtf8(String startKey, String endKey) {
     return scan(rawKey(startKey), rawKey(endKey));

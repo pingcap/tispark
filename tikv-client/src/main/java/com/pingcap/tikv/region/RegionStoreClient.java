@@ -151,13 +151,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
   // APIs for Raw Scan/Put/Get/Delete
 
-  /**
-   * put a raw key to tikv
-   *
-   * @param backOffer
-   * @param key
-   * @param value
-   */
   public void rawPut(BackOffer backOffer, ByteString key, ByteString value) {
     Supplier<RawPutRequest> factory = () ->
         RawPutRequest.newBuilder().setContext(region.getContext()).setKey(key).setValue(value).build();
@@ -194,8 +187,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
    * which are in the same region
    *
    * @param backOffer BackOffer
-   * @param key startKey
-   * @param keyOnly true if value of KvPair is not needed
+   * @param key       startKey
+   * @param keyOnly   true if value of KvPair is not needed
    * @return KvPair list
    */
   private List<KvPair> rawBatchScan(BackOffer backOffer, ByteString key, boolean keyOnly) {
@@ -235,6 +228,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     RawDeleteResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_DELETE, factory, handler);
     if (resp == null) {
       this.regionManager.onRequestFail(context.getRegionId(), context.getPeer().getStoreId());
+    } else if (resp.hasRegionError()) {
+      throw new RegionException(resp.getRegionError());
     }
   }
 
@@ -252,9 +247,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     RawDeleteRangeResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_DELETE_RANGE, factory, handler);
     if (resp == null) {
       this.regionManager.onRequestFail(context.getRegionId(), context.getPeer().getStoreId());
-      System.out.println("impossible");
     } else if (resp.hasRegionError()) {
-      System.out.println("???");
+      throw new RegionException(resp.getRegionError());
     }
   }
 

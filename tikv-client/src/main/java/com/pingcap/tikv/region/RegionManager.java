@@ -18,9 +18,6 @@
 package com.pingcap.tikv.region;
 
 
-import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
-
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
 import com.google.protobuf.ByteString;
@@ -30,16 +27,21 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import com.pingcap.tikv.key.Key;
-
-import java.util.*;
-
 import org.apache.log4j.Logger;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
 
 public class RegionManager {

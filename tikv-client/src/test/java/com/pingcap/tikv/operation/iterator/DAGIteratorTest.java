@@ -15,11 +15,11 @@
 
 package com.pingcap.tikv.operation.iterator;
 
-import static junit.framework.TestCase.assertEquals;
-
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.*;
+import com.pingcap.tikv.GrpcUtils;
+import com.pingcap.tikv.KVMockServer;
+import com.pingcap.tikv.MockServerTest;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -35,9 +35,11 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import org.junit.Test;
+
 import java.util.List;
 
-import org.junit.Test;
+import static junit.framework.TestCase.assertEquals;
 
 public class DAGIteratorTest extends MockServerTest {
 

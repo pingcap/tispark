@@ -22,15 +22,10 @@ import com.pingcap.tidb.tipb.*;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
-import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
-import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
