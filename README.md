@@ -54,6 +54,15 @@ mvn clean install -Dmaven.test.skip=true -Pspark-2.3.2
 **Please note that after Spark v2.3 you need to specify minor version of Spark as above switching dependency.**
 Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.
 
+Assure that you are using the same maven profile as your spark version.
+
+| Available maven profiles |
+| ---- |
+| spark-2.3.0 |
+| spark-2.3.1 |
+| spark-2.3.2 |
+| spark-2.4.0 |
+
 ## How to migrate from Spark 2.1 to Spark 2.3
 For users using Spark 2.1 who wish to migrate to latest TiSpark on Spark 2.3, please download or install Spark 2.3+ following instructions on [Apache Spark Site](http://spark.apache.org/downloads.html) and overwrite the old spark version in `$SPARK_HOME`.
 

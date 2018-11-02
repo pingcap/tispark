@@ -55,12 +55,12 @@ public class DataTypeFactory {
       ImmutableMap.Builder<MySQLType, DataType> instBuilder) {
     for (MySQLType type : types) {
       try {
-        Constructor ctorByHolder = cls.getDeclaredConstructor(InternalTypeHolder.class);
-        Constructor ctorByType = cls.getDeclaredConstructor(MySQLType.class);
+        Constructor<? extends DataType> ctorByHolder = cls.getDeclaredConstructor(InternalTypeHolder.class);
+        Constructor<? extends DataType> ctorByType = cls.getDeclaredConstructor(MySQLType.class);
         ctorByHolder.setAccessible(true);
         ctorByType.setAccessible(true);
         holderBuilder.put(type, ctorByHolder);
-        instBuilder.put(type, (DataType) ctorByType.newInstance(type));
+        instBuilder.put(type, ctorByType.newInstance(type));
       } catch (Exception e) {
         throw new TypeException(
             String.format("Type %s does not have a proper constructor", cls.getName()), e);

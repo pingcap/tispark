@@ -93,6 +93,12 @@
                 <spark.version>2.3.0</spark.version>
             </properties>
         </profile>
+        <profile>
+            <id>spark-2.4.0</id>
+            <properties>
+                <spark.version>2.4.0</spark.version>
+            </properties>
+        </profile>
     </profiles>
 
     <distributionManagement>
