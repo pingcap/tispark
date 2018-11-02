@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 import static com.pingcap.tikv.KVRawClient.*;
 
-public class rawKVTest {
+public class KVRawClientTest {
   private static final int KEY_POOL_SIZE = 1000000;
   private static final int TEST_CASES = 10000;
   private static final int WORKER_CNT = 100;
