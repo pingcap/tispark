@@ -27,6 +27,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
+import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
@@ -57,7 +58,7 @@ import com.pingcap.tikv.kvproto.TikvGrpc.TikvStub;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.txn.Lock;
-import com.pingcap.tikv.txn.LockResolver;
+import com.pingcap.tikv.txn.LockResolverClient;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
@@ -71,7 +72,7 @@ import org.apache.hadoop.hive.ql.lockmgr.LockException;
 import org.apache.log4j.Logger;
 
 // RegionStore itself is not thread-safe
-public class RegionStoreClient implements AutoCloseable{
+public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, TikvStub> implements RegionErrorReceiver {
   public enum RequestTypes {
     REQ_TYPE_SELECT(101),
     REQ_TYPE_INDEX(102),
@@ -94,8 +95,9 @@ public class RegionStoreClient implements AutoCloseable{
   private TiRegion region;
   private final RegionManager regionManager;
   private final TiSession session;
-  public final LockResolver lockResolver;
-  private final RegionSender sender;
+  public final LockResolverClient lockResolverClient;
+  private TikvBlockingStub blockingStub;
+  private TikvStub asyncStub;
 
   public ByteString get(BackOffer backOffer, ByteString key, long version) {
     while (true) {
@@ -107,9 +109,9 @@ public class RegionStoreClient implements AutoCloseable{
 
       KVErrorHandler<GetResponse> handler =
           new KVErrorHandler<>(
-              regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+              regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
-      GetResponse resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
+      GetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
 
       if (resp.hasRegionError()) {
         backOffer.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
@@ -119,7 +121,7 @@ public class RegionStoreClient implements AutoCloseable{
       if (resp.hasError()) {
         if (resp.getError().hasLocked()) {
           Lock lock = new Lock(resp.getError().getLocked());
-          boolean ok = lockResolver.ResolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
+          boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
           if (!ok) {
             // if not resolve all locks, we wait and retry
             backOffer.doBackOff(BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
@@ -142,8 +144,8 @@ public class RegionStoreClient implements AutoCloseable{
 
     KVErrorHandler<RawPutResponse> handler =
         new KVErrorHandler<>(
-            regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawPutResponse resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_RAW_PUT, factory, handler);
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RawPutResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_PUT, factory, handler);
   }
 
   public ByteString rawGet(BackOffer backOffer, ByteString key, Context context) {
@@ -151,8 +153,8 @@ public class RegionStoreClient implements AutoCloseable{
         RawGetRequest.newBuilder().setContext(region.getContext()).setKey(key).build();
     KVErrorHandler<RawGetResponse> handler =
         new KVErrorHandler<>(
-            regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawGetResponse resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_RAW_GET, factory, handler);
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RawGetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_GET, factory, handler);
     return rawGetHelper(resp);
   }
 
@@ -173,8 +175,8 @@ public class RegionStoreClient implements AutoCloseable{
 
     KVErrorHandler<RawDeleteResponse> handler =
         new KVErrorHandler<>(
-            regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawDeleteResponse resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_RAW_DELETE, factory, handler);
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RawDeleteResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_DELETE, factory, handler);
     if (resp == null) {
       this.regionManager.onRequestFail(context.getRegionId(), context.getPeer().getStoreId());
     }
@@ -190,8 +192,8 @@ public class RegionStoreClient implements AutoCloseable{
             .build();
     KVErrorHandler<BatchGetResponse> handler =
         new KVErrorHandler<>(
-            regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    BatchGetResponse resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    BatchGetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
     return batchGetHelper(resp, backOffer);
   }
 
@@ -211,7 +213,7 @@ public class RegionStoreClient implements AutoCloseable{
     }
 
     if (locks.size() > 0) {
-      boolean ok = lockResolver.ResolveLocks(bo, locks);
+      boolean ok = lockResolverClient.resolveLocks(bo, locks);
       if (!ok) {
         // if not resolve all locks, we wait and retry
         bo.doBackOff(BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
@@ -244,8 +246,8 @@ public class RegionStoreClient implements AutoCloseable{
 
     KVErrorHandler<ScanResponse> handler =
         new KVErrorHandler<>(
-            regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    ScanResponse resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
     return scanHelper(resp, backOffer);
   }
 
@@ -265,7 +267,7 @@ public class RegionStoreClient implements AutoCloseable{
     }
 
     if (locks.size() > 0) {
-      boolean ok = lockResolver.ResolveLocks(bo, locks);
+      boolean ok = lockResolverClient.resolveLocks(bo, locks);
       if (!ok) {
         // if not resolve all locks, we wait and retry
         bo.doBackOff(BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
@@ -307,8 +309,8 @@ public class RegionStoreClient implements AutoCloseable{
     // we should handle the region error ourselves
     KVErrorHandler<Coprocessor.Response> handler =
         new KVErrorHandler<>(
-            regionManager, sender, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    Coprocessor.Response resp = sender.callWithRetry(backOffer, TikvGrpc.METHOD_COPROCESSOR, reqToSend, handler);
+            regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    Coprocessor.Response resp = callWithRetry(backOffer, TikvGrpc.METHOD_COPROCESSOR, reqToSend, handler);
     return handleCopResponse(backOffer, resp, ranges, responseQueue);
   }
 
@@ -330,7 +332,7 @@ public class RegionStoreClient implements AutoCloseable{
     if (response.hasLocked()) {
       logger.debug(String.format("coprocessor encounters locks: %s", response.getLocked()));
       Lock lock = new Lock(response.getLocked());
-      boolean ok = lockResolver.ResolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
+      boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
       if (!ok) {
         backOffer.doBackOff(BoTxnLockFast, new LockException());
       }
@@ -351,6 +353,8 @@ public class RegionStoreClient implements AutoCloseable{
   }
 
   // TODO: wait for future fix
+  // coprocessStreaming doesn't handle split error
+  // future work should handle it and
   public Iterator<SelectResponse> coprocessStreaming(DAGRequest req, List<KeyRange> ranges) {
     Supplier<Coprocessor.Request> reqToSend = () ->
         Coprocessor.Request.newBuilder()
@@ -364,12 +368,12 @@ public class RegionStoreClient implements AutoCloseable{
     KVErrorHandler<StreamingResponse> handler =
         new KVErrorHandler<>(
             regionManager,
-            sender,
+            this,
             region,
             StreamingResponse::getFirstRegionError//TODO: handle all errors in streaming respinse
         );
 
-    StreamingResponse responseIterator = sender.callServerStreamingWithRetry(
+    StreamingResponse responseIterator = this.callServerStreamingWithRetry(
         ConcreteBackOffer.newCopNextMaxBackOff(),
         TikvGrpc.METHOD_COPROCESSOR_STREAM,
         reqToSend,
@@ -414,10 +418,6 @@ public class RegionStoreClient implements AutoCloseable{
     return session;
   }
 
-  public RegionSender getSender() {
-    return sender;
-  }
-
   public static RegionStoreClient create(
       TiRegion region, Store store, TiSession session) {
     RegionStoreClient client;
@@ -440,17 +440,66 @@ public class RegionStoreClient implements AutoCloseable{
       TiSession session,
       TikvBlockingStub blockingStub,
       TikvStub asyncStub) {
+    super(session);
     checkNotNull(region, "Region is empty");
     checkNotNull(region.getLeader(), "Leader Peer is null");
     checkArgument(region.getLeader() != null, "Leader Peer is null");
     this.session = session;
     this.regionManager = session.getRegionManager();
-    this.sender = new RegionSender(session, blockingStub, asyncStub, region, regionManager);
     this.region = region;
-    this.lockResolver = new LockResolver(sender);
+    this.blockingStub = blockingStub;
+    this.asyncStub = asyncStub;
+    this.lockResolverClient = new LockResolverClient(session, this.blockingStub, this.asyncStub);
+  }
+
+  @Override
+  protected TikvBlockingStub getBlockingStub() {
+    return blockingStub.withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
+  }
+
+  @Override
+  protected TikvStub getAsyncStub() {
+    return asyncStub.withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
   }
 
   @Override
   public void close() throws Exception {
+  }
+
+  /**
+   * onNotLeader deals with NotLeaderError and returns whether re-splitting key range is needed
+   *
+   * @param newStore the new store presented by NotLeader Error
+   * @return false when re-split is needed.
+   */
+  @Override
+  public boolean onNotLeader(Store newStore) {
+    if (logger.isDebugEnabled()) {
+      logger.debug(region + ", new leader = " + newStore.getId());
+    }
+    TiRegion cachedRegion = regionManager.getRegionById(region.getId());
+    // When switch leader fails or the region changed its key range,
+    // it would be necessary to re-split task's key range for new region.
+    if (!region.switchPeer(newStore.getId()) ||
+        !region.getStartKey().equals(cachedRegion.getStartKey()) ||
+        !region.getEndKey().equals(cachedRegion.getEndKey())) {
+      return false;
+    }
+    String addressStr = newStore.getAddress();
+    ManagedChannel channel = session.getChannel(addressStr);
+    blockingStub = TikvGrpc.newBlockingStub(channel);
+    asyncStub = TikvGrpc.newStub(channel);
+    return true;
+  }
+
+  @Override
+  public void onStoreNotMatch(Store store) {
+    String addressStr = store.getAddress();
+    ManagedChannel channel = session.getChannel(addressStr);
+    blockingStub = TikvGrpc.newBlockingStub(channel);
+    asyncStub = TikvGrpc.newStub(channel);
+    if (logger.isDebugEnabled() && region.getLeader().getStoreId() != store.getId()) {
+      logger.debug("store_not_match may occur? " + region + ", original store = " + store.getId() + " address = " + addressStr);
+    }
   }
 }

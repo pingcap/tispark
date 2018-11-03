@@ -21,10 +21,10 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
 
 public class Lock {
-  private long txnID;
-  private long ttl;
-  private ByteString key;
-  private ByteString primary;
+  private final long txnID;
+  private final long ttl;
+  private final ByteString key;
+  private final ByteString primary;
   private static final long defaultLockTTL = 3000;
 
   public Lock(Kvrpcpb.LockInfo l) {
@@ -38,31 +38,15 @@ public class Lock {
     return txnID;
   }
 
-  public void setTxnID(long txnID) {
-    this.txnID = txnID;
-  }
-
   public long getTtl() {
     return ttl;
-  }
-
-  public void setTtl(long ttl) {
-    this.ttl = ttl;
   }
 
   public ByteString getKey() {
     return key;
   }
 
-  public void setKey(ByteString key) {
-    this.key = key;
-  }
-
   public ByteString getPrimary() {
     return primary;
-  }
-
-  public void setPrimary(ByteString primary) {
-    this.primary = primary;
   }
 }

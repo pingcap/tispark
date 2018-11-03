@@ -87,12 +87,12 @@ public class LockResolverTest {
       KVErrorHandler<PrewriteResponse> handler =
           new KVErrorHandler<>(
               session.getRegionManager(),
-              client.getSender(),
+              client,
               pair.first,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null
           );
 
-      PrewriteResponse resp = client.getSender().callWithRetry(backOffer, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
+      PrewriteResponse resp = client.callWithRetry(backOffer, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
 
       if (resp.hasRegionError()) {
         throw new RegionException(resp.getRegionError());
@@ -112,7 +112,7 @@ public class LockResolverTest {
         }
       }
 
-      if (!client.lockResolver.ResolveLocks(backOffer, locks)) {
+      if (!client.lockResolverClient.resolveLocks(backOffer, locks)) {
         backOffer.doBackOff(BoTxnLock, new KeyException(resp.getErrorsList().get(0)));
       }
 
@@ -169,12 +169,12 @@ public class LockResolverTest {
       KVErrorHandler<CommitResponse> handler =
           new KVErrorHandler<>(
               session.getRegionManager(),
-              client.getSender(),
+              client,
               pair.first,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null
           );
 
-      CommitResponse resp = client.getSender().callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
+      CommitResponse resp = client.lockResolverClient.callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
 
       if (resp.hasRegionError()) {
         throw new RegionException(resp.getRegionError());
@@ -353,7 +353,7 @@ public class LockResolverTest {
     Pair<TiRegion, Store> pair = session.getRegionManager().
         getRegionStorePairByKey(ByteString.copyFromUtf8(String.valueOf((char)('a'))));
     RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, session);
-    long status = client.lockResolver.getTxnStatus(backOffer,
+    long status = client.lockResolverClient.getTxnStatus(backOffer,
         startTs.getVersion(), ByteString.copyFromUtf8(String.valueOf((char)('a'))));
     assertEquals(status, endTs.getVersion());
 
@@ -364,7 +364,7 @@ public class LockResolverTest {
     pair = session.getRegionManager().
         getRegionStorePairByKey(ByteString.copyFromUtf8(String.valueOf((char)('a'))));
     client = RegionStoreClient.create(pair.first, pair.second, session);
-    status = client.lockResolver.getTxnStatus(backOffer,
+    status = client.lockResolverClient.getTxnStatus(backOffer,
         startTs.getVersion(), ByteString.copyFromUtf8(String.valueOf((char)('a'))));
     assertEquals(status, endTs.getVersion());
 
@@ -375,7 +375,7 @@ public class LockResolverTest {
     pair = session.getRegionManager().
         getRegionStorePairByKey(ByteString.copyFromUtf8(String.valueOf((char)('a'))));
     client = RegionStoreClient.create(pair.first, pair.second, session);
-    status = client.lockResolver.getTxnStatus(backOffer,
+    status = client.lockResolverClient.getTxnStatus(backOffer,
         startTs.getVersion(), ByteString.copyFromUtf8(String.valueOf((char)('a'))));
     assertNotSame(status, endTs.getVersion());
 

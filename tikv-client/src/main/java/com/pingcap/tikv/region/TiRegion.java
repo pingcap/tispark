@@ -27,6 +27,7 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Region;
+import com.pingcap.tikv.util.FastByteComparisons;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -129,7 +130,7 @@ public class TiRegion implements Serializable {
    * @param leaderStoreID is leader peer id.
    * @return false if no peers matches the store id.
    */
-  boolean switchPeer(long leaderStoreID) {
+  public boolean switchPeer(long leaderStoreID) {
     List<Peer> peers = meta.getPeersList();
     for (Peer p : peers) {
       if (p.getStoreId() == leaderStoreID) {
@@ -141,8 +142,11 @@ public class TiRegion implements Serializable {
   }
 
   public boolean contains(ByteString key) {
-    return (meta.getStartKey().toStringUtf8().compareTo(key.toStringUtf8()) <=0 || meta.getStartKey().isEmpty())
-        && (meta.getEndKey().toStringUtf8().compareTo(key.toStringUtf8()) >= 0 || meta.getEndKey().isEmpty());
+
+    return (meta.getStartKey().isEmpty() || FastByteComparisons.compareTo(meta.getStartKey().toByteArray(),
+        0, meta.getStartKey().size(), key.toByteArray(), 0, key.size()) < 0)
+        && (meta.getEndKey().isEmpty() || FastByteComparisons.compareTo(meta.getEndKey().toByteArray(),
+        0, meta.getEndKey().size(), key.toByteArray(), 0, key.size()) > 0);
   }
 
   public boolean isValid() {
