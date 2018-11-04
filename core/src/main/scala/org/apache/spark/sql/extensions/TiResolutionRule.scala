@@ -33,9 +33,9 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
         StatisticsManager.loadStatisticsInfo(table.get)
       }
       val sizeInBytes = StatisticsManager.estimateTableSize(table.get)
-      new TiDBRelation(
+      TiDBRelation(
         tiSession,
-        new TiTableReference(dbName, tableName, sizeInBytes),
+        TiTableReference(dbName, tableName, sizeInBytes),
         meta
       )(sqlContext)
     }
