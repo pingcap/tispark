@@ -1,11 +1,19 @@
 package org.apache.spark.sql.txn
 
-import java.sql.DriverManager
+import java.sql.{DriverManager, SQLException}
 
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.catalyst.util.resourceToString
 
+// TODO: this test is not so useful,
+// what I do is to construct a very long-running write operation
+// , a very long-running read operation and corresponding
+// two quick write and read operation. While the txns' prewrite
+// and commit finishes very quickly and almost synchronously.
+// What makes the resolveLock almost doesn't happen. What I think
+// the most useful is to implement a mock kv, which delay the time
+// between prewrite and commit which cause the txn to rollback
 class TxnTest extends BaseTiSparkSuite {
   protected final val sumString = resourceToString(
     s"resolveLock-test/sum_account.sql",
@@ -33,152 +41,182 @@ class TxnTest extends BaseTiSparkSuite {
   )
   protected final val rnd = new scala.util.Random
 
-  protected def queryTIDBTxn(query: Seq[String]): Unit = {
+  /**
+    * query to tidb with jdbc and txn style
+    *
+    * @param query all querys run in the txn
+    * @param wait whether wait every 2 seconds
+    * @return Unit
+    */
+  protected def queryTIDBTxn(query: Seq[String], wait: Boolean): Unit = {
     val conn = DriverManager.getConnection(jdbcUrl, "root", "")
     try {
       //Assume a valid connection object conn
       conn.setAutoCommit(false)
       val stmt = conn.createStatement()
       query.foreach {
-        case q => {
+        case q: String =>
           stmt.executeUpdate(q)
-          Thread.sleep(rnd.nextInt(2000))
-        }
+          if (wait)
+            Thread.sleep(2000)
       }
       conn.commit()
     } catch {
-      case e => {
+      case e: SQLException =>
+        logger.info("rollback1" + e.getMessage)
         conn.rollback()
         throw e
+    }
+  }
+
+  /**
+    * get Spark query thread using q1 query
+    *
+    * @param i the query number
+    * @return thread
+    */
+  protected def firstQueryThread(i: Int): Thread = {
+    new Thread {
+      override def run {
+        var ok = true
+        while (ok) {
+          try {
+            querySpark(q1String)
+            logger.info("query1 " + i.toString + " success!")
+            ok = false
+          } catch {
+            case _: SQLException =>
+              Thread.sleep(1000 + rnd.nextInt(3000))
+              ok = true
+          }
+        }
       }
     }
   }
 
-  protected def queryTIDBTxnWithPercentage(query: Seq[String], per: Double, id: String): Unit = {
-    val conn = DriverManager.getConnection(jdbcUrl, "root", "")
-
-    try {
-      //Assume a valid connection object conn
-      conn.setAutoCommit(false)
-      val stmt = conn.createStatement()
-      val res = stmt.executeQuery(accountString.replace("$1", id))
-      val ans = toOutput(res.getObject(1), res.getMetaData.getColumnTypeName(1)).asInstanceOf[Int]
-      query.foreach {
-        case q => {
-          stmt.executeUpdate(q.replace("$1", (ans * per).toString))
-          Thread.sleep(rnd.nextInt(2000))
+  /**
+    * get Tidb txn thread using 2 transactions(A => B, A - x and B + x)
+    *
+    * @param i the query number
+    * @return thread
+    */
+  protected def firstTxnThread(i: Int): Thread = {
+    new Thread {
+      override def run {
+        var ok = true
+        while (ok) {
+          try {
+            val num = rnd.nextInt(600).toString
+            val id1 = (1 + rnd.nextInt(150)).toString
+            val id2 = (1 + rnd.nextInt(150)).toString
+            val querys = Seq[String](
+              giveString.replace("$1", num).replace("$2", id1),
+              getString.replace("$1", num).replace("$2", id2)
+            )
+            queryTIDBTxn(querys, true)
+            logger.info("txn1 " + i.toString + " success!")
+            ok = false
+          } catch {
+            case _: SQLException =>
+              Thread.sleep(1000 + rnd.nextInt(3000))
+          }
         }
       }
-      conn.commit()
-    } catch {
-      case e =>
-        conn.rollback ()
-        throw e
+    }
+  }
+
+  /**
+    * get Spark query thread using q2 query, a long running transaction
+    *
+    * @param i the query number
+    * @return thread
+    */
+  protected def secondQueryThread(i: Int): Thread = {
+    new Thread {
+      override def run {
+        var ok = true
+        while (ok) {
+          try {
+            querySpark(q2String)
+            logger.info("query2 " + i.toString + " success!")
+            ok = false
+          } catch {
+            case _: SQLException =>
+              Thread.sleep(1000 + rnd.nextInt(3000))
+              ok = true
+          }
+        }
+      }
+    }
+  }
+
+  /**
+    * get Tidb txn thread using 100 transactions(A => B, A - x and B + x)
+    *
+    * @param i the query number
+    * @return thread
+    */
+  protected def secondTxnThread(i: Int): Thread = {
+    new Thread {
+      override def run {
+        var ok = true
+        while (ok) {
+          try {
+            val array = (1 to 100).map(
+              _ => {
+                val num = rnd.nextInt(600)
+                val id1 = (1 + rnd.nextInt(150)).toString
+                val id2 = (1 + rnd.nextInt(150)).toString
+                (
+                  giveString.replace("$1", num.toString).replace("$2", id1),
+                  getString.replace("$1", num.toString).replace("$2", id2)
+                )
+              }
+            )
+
+            val querys = array.map(_._1) ++ array.map(_._2)
+
+            queryTIDBTxn(querys, false)
+            logger.info("txn2 " + i.toString + " success!")
+            ok = false
+          } catch {
+            case _: SQLException =>
+              Thread.sleep(1000 + rnd.nextInt(3000))
+              ok = true
+          }
+        }
+      }
     }
   }
 
   test("resolveLock concurrent test") {
     ti.tiConf.setIsolationLevel(IsolationLevel.SI)
-    var threads = Seq[Thread]()
     setCurrentDatabase("resolveLock_test")
 
     val start = queryTiDB(sumString).head.head
 
-    for (i <- 1 to 100) {
-      val thread = new Thread {
-        override def run {
-          var ok = true
-          while (ok) {
-            try {
-              querySpark(q1String)
-              logger.info("query " + i.toString + " success!")
-              ok = false
-            } catch {
-              case e =>
-                Thread.sleep(1000 + rnd.nextInt(10000))
-                ok = true
+    var threads =
+      scala.util.Random.shuffle(
+        (0 to 239).map (
+          i => {
+            i / 100 match {
+              case 0 =>
+                firstQueryThread(i)
+              case 1 =>
+                firstTxnThread(i)
+              case 2 =>
+                (i - 200) / 20 match {
+                  case 0 =>
+                    secondQueryThread(i)
+                  case 1 =>
+                    secondTxnThread(i)
+                }
             }
           }
-        }
-      }
+        )
+      )
 
-      threads = threads :+ thread
-    }
-
-    for (i <- 1 to 100) {
-      val thread = new Thread {
-        override def run {
-          var ok = true
-          while (ok) {
-            try {
-              val num = rnd.nextInt(600).toString
-              val id1 = (1 + rnd.nextInt(150)).toString
-              val id2 = (1 + rnd.nextInt(150)).toString
-              val querys = Seq[String](
-                giveString.replace("$1", num).replace("$2", id1),
-                getString.replace("$1", num).replace("$2", id2)
-              )
-              queryTIDBTxn(querys)
-              logger.info("txn " + i.toString + " success!")
-              ok = false
-            } catch {
-              case e =>
-                Thread.sleep(1000 + rnd.nextInt(10000))
-            }
-          }
-        }
-      }
-
-      threads = threads :+ thread
-    }
-
-    for (i <- 1 to 100) {
-      val thread = new Thread {
-        override def run {
-          var ok = true
-          while (ok) {
-            try {
-              querySpark(q2String)
-              logger.info("query " + i.toString + " success!")
-            } catch {
-              case e =>
-                Thread.sleep(1000 + rnd.nextInt(10000))
-                ok = true
-            }
-          }
-        }
-      }
-
-      threads = threads :+ thread
-    }
-
-    for (i <- 1 to 100) {
-      val thread = new Thread {
-        override def run {
-          var ok = true
-          while (ok) {
-            try {
-              val id1 = (1 + rnd.nextInt(150)).toString
-              val id2 = (1 + rnd.nextInt(150)).toString
-              val querys = Seq[String](
-                giveString.replace("$2", id1),
-                getString.replace("$2", id2)
-              )
-              queryTIDBTxnWithPercentage(querys, 0.5, id1)
-              logger.info("txn " + i.toString + " success!")
-              ok = false
-            } catch {
-              case e =>
-                Thread.sleep(1000 + rnd.nextInt(10000))
-                ok = true
-            }
-          }
-        }
-      }
-      threads = threads :+ thread
-    }
-
-    threads = scala.util.Random.shuffle(threads)
+    assert(threads.size == 240)
 
     threads.foreach {
       t =>
