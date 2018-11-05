@@ -1,20 +1,20 @@
 package org.apache.spark.sql.txn
 
 import java.sql.{DriverManager, SQLException}
-
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.catalyst.util.resourceToString
 
-// TODO: this test is not so useful,
+// TODO: this test is not so useful at all
 // what I do is to construct a very long-running write operation
 // , a very long-running read operation and corresponding
-// two quick write and read operation. While the txns' prewrite
+// two quick write and read operation run multiple times(20-100)
+// concurrently with multithreading. While the txns' prewrite
 // and commit finishes very quickly and almost synchronously.
 // What makes the resolveLock almost doesn't happen. What I think
-// the most useful is to implement a mock kv, which delay the time
+// the most useful way is to implement a mock kv, which delay the time
 // between prewrite and commit which cause the txn to rollback
-class TxnTest extends BaseTiSparkSuite {
+class TxnTestSuite extends BaseTiSparkSuite {
   protected final val sumString = resourceToString(
     s"resolveLock-test/sum_account.sql",
     classLoader = Thread.currentThread().getContextClassLoader

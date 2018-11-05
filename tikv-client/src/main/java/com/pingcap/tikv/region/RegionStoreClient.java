@@ -95,6 +95,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private TiRegion region;
   private final RegionManager regionManager;
   private final TiSession session;
+  // TODO: change from public to private
+  // because our test needs to implement the
+  // prewrite and commit which needs to use
+  // lockResolverClient, after implements the
+  // write implementation of tispark, we can change
+  // it to private
   public final LockResolverClient lockResolverClient;
   private TikvBlockingStub blockingStub;
   private TikvStub asyncStub;
@@ -251,7 +257,10 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return scanHelper(resp, backOffer);
   }
 
-  // same as BatchGet Helper, can we optimize it?
+  // TODO: remove helper and change to while style
+  // needs to be fixed as batchGet
+  // which we shoule retry not throw
+  // exception
   private List<KvPair> scanHelper(ScanResponse resp, BackOffer bo) {
     List<Lock> locks = new ArrayList<>();
 
@@ -354,7 +363,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
   // TODO: wait for future fix
   // coprocessStreaming doesn't handle split error
-  // future work should handle it and
+  // future work should handle it and do the resolve
+  // locks correspondingly
   public Iterator<SelectResponse> coprocessStreaming(DAGRequest req, List<KeyRange> ranges) {
     Supplier<Coprocessor.Request> reqToSend = () ->
         Coprocessor.Request.newBuilder()
