@@ -1,4 +1,4 @@
 select
   sum(C_ACCTBAL)
 from
-  CUSTOMER;
+  tidb_resolveLock_test.CUSTOMER

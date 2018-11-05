@@ -42,12 +42,12 @@ class TxnTest extends BaseTiSparkSuite {
   protected final val rnd = new scala.util.Random
 
   /**
-    * query to tidb with jdbc and txn style
-    *
-    * @param query all querys run in the txn
-    * @param wait whether wait every 2 seconds
-    * @return Unit
-    */
+   * query to tidb with jdbc and txn style
+   *
+   * @param query all querys run in the txn
+   * @param wait whether wait every 2 seconds
+   * @return Unit
+   */
   protected def queryTIDBTxn(query: Seq[String], wait: Boolean): Unit = {
     val conn = DriverManager.getConnection(jdbcUrl, "root", "")
     try {
@@ -70,12 +70,12 @@ class TxnTest extends BaseTiSparkSuite {
   }
 
   /**
-    * get Spark query thread using q1 query
-    *
-    * @param i the query number
-    * @return thread
-    */
-  protected def firstQueryThread(i: Int): Thread = {
+   * get Spark query thread using q1 query
+   *
+   * @param i the query number
+   * @return thread
+   */
+  protected def firstQueryThread(i: Int): Thread =
     new Thread {
       override def run {
         var ok = true
@@ -92,15 +92,14 @@ class TxnTest extends BaseTiSparkSuite {
         }
       }
     }
-  }
 
   /**
-    * get Tidb txn thread using 2 transactions(A => B, A - x and B + x)
-    *
-    * @param i the query number
-    * @return thread
-    */
-  protected def firstTxnThread(i: Int): Thread = {
+   * get Tidb txn thread using 2 transactions(A => B, A - x and B + x)
+   *
+   * @param i the query number
+   * @return thread
+   */
+  protected def firstTxnThread(i: Int): Thread =
     new Thread {
       override def run {
         var ok = true
@@ -123,15 +122,14 @@ class TxnTest extends BaseTiSparkSuite {
         }
       }
     }
-  }
 
   /**
-    * get Spark query thread using q2 query, a long running transaction
-    *
-    * @param i the query number
-    * @return thread
-    */
-  protected def secondQueryThread(i: Int): Thread = {
+   * get Spark query thread using q2 query, a long running transaction
+   *
+   * @param i the query number
+   * @return thread
+   */
+  protected def secondQueryThread(i: Int): Thread =
     new Thread {
       override def run {
         var ok = true
@@ -148,15 +146,14 @@ class TxnTest extends BaseTiSparkSuite {
         }
       }
     }
-  }
 
   /**
-    * get Tidb txn thread using 100 transactions(A => B, A - x and B + x)
-    *
-    * @param i the query number
-    * @return thread
-    */
-  protected def secondTxnThread(i: Int): Thread = {
+   * get Tidb txn thread using 100 transactions(A => B, A - x and B + x)
+   *
+   * @param i the query number
+   * @return thread
+   */
+  protected def secondTxnThread(i: Int): Thread =
     new Thread {
       override def run {
         var ok = true
@@ -187,17 +184,15 @@ class TxnTest extends BaseTiSparkSuite {
         }
       }
     }
-  }
 
   test("resolveLock concurrent test") {
     ti.tiConf.setIsolationLevel(IsolationLevel.SI)
-    setCurrentDatabase("resolveLock_test")
 
-    val start = queryTiDB(sumString).head.head
+    val start = querySpark(sumString).head.head
 
     var threads =
       scala.util.Random.shuffle(
-        (0 to 239).map (
+        (0 to 239).map(
           i => {
             i / 100 match {
               case 0 =>
@@ -218,24 +213,21 @@ class TxnTest extends BaseTiSparkSuite {
 
     assert(threads.size == 240)
 
-    threads.foreach {
-      t =>
-        t.start()
+    threads.foreach { t =>
+      t.start()
     }
 
-    threads.foreach {
-      t =>
-        t.join()
+    threads.foreach { t =>
+      t.join()
     }
 
-    val end = queryTiDB(sumString).head.head
+    val end = querySpark(sumString).head.head
     if (start != end) {
-      fail(
-        s"""Failed With
-           | error transaction
-           | lost or more balance
-           | with start $start
-           | with end $end
+      fail(s"""Failed With
+              | error transaction
+              | lost or more balance
+              | with start $start
+              | with end $end
          """.stripMargin)
     }
   }

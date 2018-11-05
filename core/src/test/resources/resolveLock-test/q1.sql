@@ -1,6 +1,6 @@
 select
   sum(C_ACCTBAL)
 from
-  CUSTOMER
+  tidb_resolveLock_test.CUSTOMER
 where
   C_ACCTBAL % 2 == 0
