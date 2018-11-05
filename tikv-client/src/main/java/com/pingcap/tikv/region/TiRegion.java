@@ -107,9 +107,9 @@ public class TiRegion implements Serializable {
   }
 
   public class RegionVerID {
-    public long id;
-    public long confVer;
-    public long ver;
+    public final long id;
+    public final long confVer;
+    public final long ver;
 
     public RegionVerID(long id, long confVer, long ver) {
       this.id = id;
