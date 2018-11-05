@@ -54,14 +54,14 @@ class TxnTest extends BaseTiSparkSuite {
     }
   }
 
-  protected def queryTIDBTxnWithPercentage(query: Seq[String], per: Double): Unit = {
+  protected def queryTIDBTxnWithPercentage(query: Seq[String], per: Double, id: String): Unit = {
     val conn = DriverManager.getConnection(jdbcUrl, "root", "")
 
     try {
       //Assume a valid connection object conn
       conn.setAutoCommit(false)
       val stmt = conn.createStatement()
-      val res = stmt.executeQuery(accountString)
+      val res = stmt.executeQuery(accountString.replace("$1", id))
       val ans = toOutput(res.getObject(1), res.getMetaData.getColumnTypeName(1)).asInstanceOf[Int]
       query.foreach {
         case q => {
@@ -164,7 +164,7 @@ class TxnTest extends BaseTiSparkSuite {
                 giveString.replace("$2", id1),
                 getString.replace("$2", id2)
               )
-              queryTIDBTxnWithPercentage(querys, 0.5)
+              queryTIDBTxnWithPercentage(querys, 0.5, id1)
               logger.info("txn " + i.toString + " success!")
               ok = false
             } catch {
