@@ -1,6 +1,6 @@
 select
-  *
+  sum(C_ACCTBAL)
 from
-  resolveLock_test.CUSTOMER
+  CUSTOMER
 where
-  C_ACCTBAL % 2 == 1
+  C_ACCTBAL % 9 == 1

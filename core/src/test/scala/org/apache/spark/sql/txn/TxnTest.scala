@@ -2,6 +2,7 @@ package org.apache.spark.sql.txn
 
 import java.sql.DriverManager
 
+import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.catalyst.util.resourceToString
 
@@ -32,38 +33,77 @@ class TxnTest extends BaseTiSparkSuite {
   )
   protected final val rnd = new scala.util.Random
 
-  protected def queryTIDBTxn(query: Seq[String]): Boolean = {
-    val jdbcUsername = "root"
-
-    val jdbcPassword = ""
-
-    val conn = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
-
+  protected def queryTIDBTxn(query: Seq[String]): Unit = {
+    val conn = DriverManager.getConnection(jdbcUrl, "root", "")
     try {
-      //Assume a valid connection object conn//Assume a valid connection object conn
-
+      //Assume a valid connection object conn
       conn.setAutoCommit(false)
       val stmt = conn.createStatement()
-
       query.foreach {
-        case q =>
+        case q => {
           stmt.executeUpdate(q)
+          Thread.sleep(rnd.nextInt(2000))
+        }
       }
-
       conn.commit()
+    } catch {
+      case e => {
+        conn.rollback()
+        throw e
+      }
+    }
+  }
 
-      return true
+  protected def queryTIDBTxnWithPercentage(query: Seq[String], per: Double): Unit = {
+    val conn = DriverManager.getConnection(jdbcUrl, "root", "")
+
+    try {
+      //Assume a valid connection object conn
+      conn.setAutoCommit(false)
+      val stmt = conn.createStatement()
+      val res = stmt.executeQuery(accountString)
+      val ans = toOutput(res.getObject(1), res.getMetaData.getColumnTypeName(1)).asInstanceOf[Int]
+      query.foreach {
+        case q => {
+          stmt.executeUpdate(q.replace("$1", (ans * per).toString))
+          Thread.sleep(rnd.nextInt(2000))
+        }
+      }
+      conn.commit()
     } catch {
       case e =>
         conn.rollback ()
+        throw e
     }
-    false
   }
 
   test("resolveLock concurrent test") {
-    spark.conf.set("spark.tispark.request.isolation.level", 0)
-    createOrReplaceTempView("resolveLock_test", "CUSTOMER", "")
+    ti.tiConf.setIsolationLevel(IsolationLevel.SI)
     var threads = Seq[Thread]()
+    setCurrentDatabase("resolveLock_test")
+
+    val start = queryTiDB(sumString).head.head
+
+    for (i <- 1 to 100) {
+      val thread = new Thread {
+        override def run {
+          var ok = true
+          while (ok) {
+            try {
+              querySpark(q1String)
+              logger.info("query " + i.toString + " success!")
+              ok = false
+            } catch {
+              case e =>
+                Thread.sleep(1000 + rnd.nextInt(10000))
+                ok = true
+            }
+          }
+        }
+      }
+
+      threads = threads :+ thread
+    }
 
     for (i <- 1 to 100) {
       val thread = new Thread {
@@ -79,28 +119,86 @@ class TxnTest extends BaseTiSparkSuite {
                 getString.replace("$1", num).replace("$2", id2)
               )
               queryTIDBTxn(querys)
-              println("txn " + i.toString + " success!")
+              logger.info("txn " + i.toString + " success!")
               ok = false
             } catch {
               case e =>
-                Thread.sleep(1000)
+                Thread.sleep(1000 + rnd.nextInt(10000))
+            }
+          }
+        }
+      }
+
+      threads = threads :+ thread
+    }
+
+    for (i <- 1 to 100) {
+      val thread = new Thread {
+        override def run {
+          var ok = true
+          while (ok) {
+            try {
+              querySpark(q2String)
+              logger.info("query " + i.toString + " success!")
+            } catch {
+              case e =>
+                Thread.sleep(1000 + rnd.nextInt(10000))
                 ok = true
             }
           }
         }
       }
-      thread.start()
 
       threads = threads :+ thread
     }
 
-    println(threads.size)
+    for (i <- 1 to 100) {
+      val thread = new Thread {
+        override def run {
+          var ok = true
+          while (ok) {
+            try {
+              val id1 = (1 + rnd.nextInt(150)).toString
+              val id2 = (1 + rnd.nextInt(150)).toString
+              val querys = Seq[String](
+                giveString.replace("$2", id1),
+                getString.replace("$2", id2)
+              )
+              queryTIDBTxnWithPercentage(querys, 0.5)
+              logger.info("txn " + i.toString + " success!")
+              ok = false
+            } catch {
+              case e =>
+                Thread.sleep(1000 + rnd.nextInt(10000))
+                ok = true
+            }
+          }
+        }
+      }
+      threads = threads :+ thread
+    }
+
+    threads = scala.util.Random.shuffle(threads)
+
+    threads.foreach {
+      t =>
+        t.start()
+    }
 
     threads.foreach {
       t =>
         t.join()
     }
 
-    println(querySpark(sumString))
+    val end = queryTiDB(sumString).head.head
+    if (start != end) {
+      fail(
+        s"""Failed With
+           | error transaction
+           | lost or more balance
+           | with start $start
+           | with end $end
+         """.stripMargin)
+    }
   }
 }

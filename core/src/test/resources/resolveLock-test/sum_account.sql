@@ -1,4 +1,4 @@
 select
-sum (C_ACCTBAL)
+  sum(C_ACCTBAL)
 from
-resolveLock_test.CUSTOMER
+  CUSTOMER;

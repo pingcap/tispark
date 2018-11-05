@@ -49,7 +49,7 @@ import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss
 // LockResolver resolves locks and also caches resolved txn status.
 public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, TikvStub> implements RegionErrorReceiver {
   // ResolvedCacheSize is max number of cached txn status.
-  private static final long ResolvedTxnCacheSize = 2048;
+  private static final long resolvedTxnCacheSize = 2048;
   // By default, locks after 3000ms is considered unusual (the client created the
   // lock might be dead). Other client may cleanup this kind of lock.
   // For locks created recently, we will do backoff and retry.
@@ -92,7 +92,7 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
 
       resolved.put(txnID, status);
       recentResolved.addLast(txnID);
-      if (recentResolved.size() > ResolvedTxnCacheSize) {
+      if (recentResolved.size() > resolvedTxnCacheSize) {
         Long front = recentResolved.removeLast();
         resolved.remove(front);
       }
