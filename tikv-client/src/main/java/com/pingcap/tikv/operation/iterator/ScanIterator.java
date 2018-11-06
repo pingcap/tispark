@@ -35,17 +35,21 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   protected List<Kvrpcpb.KvPair> currentCache;
   protected ByteString startKey;
   protected int index = -1;
+  protected int limit;
   protected boolean endOfScan = false;
 
   protected Key endKey;
+  protected boolean hasEndKey;
   protected boolean lastBatch = false;
 
-  ScanIterator(ByteString startKey, ByteString endKey, TiSession session) {
+  ScanIterator(ByteString startKey, ByteString endKey, int limit, TiSession session) {
     this.startKey = requireNonNull(startKey, "start key is null");
     if (startKey.isEmpty()) {
       throw new IllegalArgumentException("start key cannot be empty");
     }
     this.endKey = Key.toRawKey(requireNonNull(endKey, "end key is null"));
+    this.hasEndKey = !endKey.equals(ByteString.EMPTY);
+    this.limit = limit;
     this.session = session;
     this.regionCache = session.getRegionManager();
   }
@@ -83,7 +87,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
         startKey = lastKey.next().toByteString();
       }
       // notify last batch if lastKey is greater than or equal to endKey
-      if (lastKey.compareTo(endKey) >= 0) {
+      if (hasEndKey && lastKey.compareTo(endKey) >= 0) {
         lastBatch = true;
         startKey = null;
       }
@@ -95,6 +99,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
 
   boolean isCacheDrained() {
     return currentCache == null
+        || limit <= 0
         || index >= currentCache.size()
         || index == -1;
   }
@@ -113,6 +118,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       return null;
     }
     if (index < currentCache.size()) {
+      --limit;
       return currentCache.get(index++);
     }
     return null;

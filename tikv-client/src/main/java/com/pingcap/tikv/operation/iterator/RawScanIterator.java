@@ -18,6 +18,7 @@ package com.pingcap.tikv.operation.iterator;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
@@ -30,8 +31,9 @@ public class RawScanIterator extends ScanIterator {
   public RawScanIterator(
       ByteString startKey,
       ByteString endKey,
+      int limit,
       TiSession session) {
-    super(startKey, endKey, session);
+    super(startKey, endKey, limit, session);
   }
 
   TiRegion loadCurrentRegionToCache() throws Exception {
@@ -40,13 +42,17 @@ public class RawScanIterator extends ScanIterator {
     Metapb.Store store = pair.second;
     try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
       BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
-      currentCache = client.rawBatchScan(backOffer, startKey);
+      if (limit <= 0) {
+        currentCache = null;
+      } else {
+        currentCache = client.rawBatchScan(backOffer, startKey, limit);
+      }
       return region;
     }
   }
 
   private boolean notEndOfScan() {
-    return !(lastBatch && (index >= currentCache.size() || Key.toRawKey(currentCache.get(index).getKey()).compareTo(endKey) >= 0));
+    return limit > 0 && !(lastBatch && (index >= currentCache.size() || Key.toRawKey(currentCache.get(index).getKey()).compareTo(endKey) >= 0));
   }
 
   @Override

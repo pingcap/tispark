@@ -79,6 +79,20 @@ public class KVRawClient {
   }
 
   /**
+   * Scan raw key-value pairs from TiKV in range [startKey, endKey)
+   *
+   * @param startKey raw start key, inclusive
+   * @param limit    limit of key-value pairs
+   * @return list of key-value pairs in range
+   */
+  public List<Kvrpcpb.KvPair> scan(ByteString startKey, int limit) {
+    Iterator<Kvrpcpb.KvPair> iterator = rawScanIterator(startKey, limit);
+    List<Kvrpcpb.KvPair> result = new ArrayList<>();
+    iterator.forEachRemaining(result::add);
+    return result;
+  }
+
+  /**
    * Delete a raw key-value pair from TiKV if key exists
    *
    * @param key raw key to be deleted
@@ -138,7 +152,11 @@ public class KVRawClient {
   }
 
   private Iterator<Kvrpcpb.KvPair> rawScanIterator(ByteString startKey, ByteString endKey) {
-    return new RawScanIterator(startKey, endKey, session);
+    return new RawScanIterator(startKey, endKey, Integer.MAX_VALUE, session);
+  }
+
+  private Iterator<Kvrpcpb.KvPair> rawScanIterator(ByteString startKey, int limit) {
+    return new RawScanIterator(startKey, ByteString.EMPTY, limit, session);
   }
 
   private BackOffer defaultBackOff() {
