@@ -19,7 +19,6 @@ import com.google.common.collect.Range;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
 
-
 public class IndexRange {
   private Key accessKey;
   private Range<TypedKey> range;

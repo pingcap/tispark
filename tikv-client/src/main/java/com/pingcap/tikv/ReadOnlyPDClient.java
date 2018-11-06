@@ -20,7 +20,6 @@ import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
-
 import java.util.concurrent.Future;
 
 /** Readonly PD client including only reading related interface Supposed for TiDB-like use cases */
@@ -62,10 +61,7 @@ public interface ReadOnlyPDClient {
 
   Future<Store> getStoreAsync(BackOffer backOffer, long storeId);
 
-  /**
-   * Close underlining resources
-   *
-   */
+  /** Close underlining resources */
   void close() throws InterruptedException;
 
   /** Get associated session * @return the session associated to client */

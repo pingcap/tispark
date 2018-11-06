@@ -89,7 +89,8 @@ public abstract class DataType implements Serializable {
     this.collation = Collation.DEF_COLLATION_CODE;
   }
 
-  protected DataType(MySQLType type, int flag, int len, int decimal, String charset, int collation) {
+  protected DataType(
+      MySQLType type, int flag, int len, int decimal, String charset, int collation) {
     this.tp = type;
     this.flag = flag;
     this.elems = ImmutableList.of();
@@ -161,7 +162,9 @@ public abstract class DataType implements Serializable {
   }
 
   protected abstract void encodeKey(CodecDataOutput cdo, Object value);
+
   protected abstract void encodeValue(CodecDataOutput cdo, Object value);
+
   protected abstract void encodeProto(CodecDataOutput cdo, Object value);
 
   /**
@@ -170,9 +173,8 @@ public abstract class DataType implements Serializable {
    * @param cdo destination of data.
    * @param value value to be encoded.
    * @param type data value type.
-   * @param prefixLength specifies prefix length of value to be encoded.
-   *                     When prefixLength is DataType.UNSPECIFIED_LEN,
-   *                     encode full length of value.
+   * @param prefixLength specifies prefix length of value to be encoded. When prefixLength is
+   *     DataType.UNSPECIFIED_LEN, encode full length of value.
    */
   public void encodeKey(CodecDataOutput cdo, Object value, DataType type, int prefixLength) {
     requireNonNull(cdo, "cdo is null");
@@ -184,7 +186,8 @@ public abstract class DataType implements Serializable {
       byte[] bytes;
       // When charset is utf8/utf8mb4, prefix length should be the number of utf8 characters
       // rather than length of its encoded byte value.
-      if (type.getCharset().equalsIgnoreCase("utf8") || type.getCharset().equalsIgnoreCase("utf8mb4")) {
+      if (type.getCharset().equalsIgnoreCase("utf8")
+          || type.getCharset().equalsIgnoreCase("utf8mb4")) {
         bytes = Converter.convertUtf8ToBytes(value, prefixLength);
       } else {
         bytes = Converter.convertToBytes(value, prefixLength);
@@ -208,13 +211,14 @@ public abstract class DataType implements Serializable {
 
   /**
    * get origin default value
+   *
    * @param value a int value represents in string
    * @return a int object
    */
   public abstract Object getOriginDefaultValueNonNull(String value);
 
   public Object getOriginDefaultValue(String value) {
-    if(value == null) return null;
+    if (value == null) return null;
     return getOriginDefaultValueNonNull(value);
   }
 
@@ -331,7 +335,8 @@ public abstract class DataType implements Serializable {
 
   @Override
   public int hashCode() {
-    return (int) (31
+    return (int)
+        (31
             * (tp.getTypeCode() == 0 ? 1 : tp.getTypeCode())
             * (flag == 0 ? 1 : flag)
             * (decimal == 0 ? 1 : decimal)
@@ -343,8 +348,14 @@ public abstract class DataType implements Serializable {
 
   public InternalTypeHolder toTypeHolder() {
     return new InternalTypeHolder(
-        getTypeCode(), flag, length, decimal,
-        charset, "", "", Collation.translate(collation), elems
-    );
+        getTypeCode(),
+        flag,
+        length,
+        decimal,
+        charset,
+        "",
+        "",
+        Collation.translate(collation),
+        elems);
   }
 }

@@ -24,7 +24,6 @@ import com.pingcap.tikv.operation.transformer.RowTransformer;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.Pair;
-
 import java.util.ArrayList;
 import java.util.List;
 

@@ -34,7 +34,7 @@ public class MyDecimalTest {
     tests.add(new MyDecimalTestStruct("-9223372036854775809", "-9223372036854775808"));
     tests.add(new MyDecimalTestStruct("18446744073709551615", "9223372036854775807"));
 
-    for(MyDecimalTestStruct t : tests) {
+    for (MyDecimalTestStruct t : tests) {
       MyDecimal dec = new MyDecimal();
       dec.fromString(t.in);
       String result = dec.toLong() + "";
@@ -45,8 +45,12 @@ public class MyDecimalTest {
   @Test
   public void fromStringTest() throws Exception {
     List<MyDecimalTestStruct> tests = new ArrayList<>();
-    tests.add(new MyDecimalTestStruct("1111111111111111111111111.111111111111111111111111111111",
-        "1111111111111111111111111.111111111111111111111111111111", 65, 30));
+    tests.add(
+        new MyDecimalTestStruct(
+            "1111111111111111111111111.111111111111111111111111111111",
+            "1111111111111111111111111.111111111111111111111111111111",
+            65,
+            30));
     tests.add(new MyDecimalTestStruct("12345", "12345", 5, 0));
     tests.add(new MyDecimalTestStruct("12345.", "12345", 5, 0));
     tests.add(new MyDecimalTestStruct("123.45", "123.45", 5, 2));
@@ -57,30 +61,30 @@ public class MyDecimalTest {
         new MyDecimalTestStruct("-.000000012345000098765", "-0.000000012345000098765", 21, 21));
     tests.add(
         new MyDecimalTestStruct("-.000000012345000098765", "-0.000000012345000098765", 2, 21));
-     tests.add(
+    tests.add(
         new MyDecimalTestStruct("-.000000012345000098765", "-0.000000012345000098765", 21, 2));
     tests.add(new MyDecimalTestStruct("0000000.001", "0.001", 3, 3));
     tests.add(new MyDecimalTestStruct("1234500009876.5", "1234500009876.5", 14, 1));
-    for(MyDecimalTestStruct t : tests) {
-           MyDecimal dec = new MyDecimal();
-          dec.fromString(t.in);
-          assertEquals(t.out, dec.toString());
+    for (MyDecimalTestStruct t : tests) {
+      MyDecimal dec = new MyDecimal();
+      dec.fromString(t.in);
+      assertEquals(t.out, dec.toString());
     }
   }
 
   @Test
   public void readWordTest() throws Exception {
-    assertEquals(MyDecimal.readWord(new int[]{250}, 1, 0), -6);
-    assertEquals(MyDecimal.readWord(new int[]{50}, 1, 0), 50);
+    assertEquals(MyDecimal.readWord(new int[] {250}, 1, 0), -6);
+    assertEquals(MyDecimal.readWord(new int[] {50}, 1, 0), 50);
 
-    assertEquals(MyDecimal.readWord(new int[]{250, 250}, 2, 0), -1286);
-    assertEquals(MyDecimal.readWord(new int[]{50, 50}, 2, 0), 12850);
+    assertEquals(MyDecimal.readWord(new int[] {250, 250}, 2, 0), -1286);
+    assertEquals(MyDecimal.readWord(new int[] {50, 50}, 2, 0), 12850);
 
-    assertEquals(MyDecimal.readWord(new int[]{250, 250, 250}, 3, 0), -328966);
-    assertEquals(MyDecimal.readWord(new int[]{50, 50, 50}, 3, 0), 3289650);
+    assertEquals(MyDecimal.readWord(new int[] {250, 250, 250}, 3, 0), -328966);
+    assertEquals(MyDecimal.readWord(new int[] {50, 50, 50}, 3, 0), 3289650);
 
-    assertEquals(MyDecimal.readWord(new int[]{250, 250, 250, 250}, 4, 0), -84215046);
-    assertEquals(MyDecimal.readWord(new int[]{50, 50, 50, 50}, 4, 0), 842150450);
+    assertEquals(MyDecimal.readWord(new int[] {250, 250, 250, 250}, 4, 0), -84215046);
+    assertEquals(MyDecimal.readWord(new int[] {50, 50, 50, 50}, 4, 0), 842150450);
   }
 
   @Test
@@ -125,11 +129,11 @@ public class MyDecimalTest {
     int precision;
     int frac;
 
-
     MyDecimalTestStruct(String in, String out) {
       this.in = in;
       this.out = out;
     }
+
     MyDecimalTestStruct(String in, String out, int precision, int frac) {
       this.in = in;
       this.out = out;

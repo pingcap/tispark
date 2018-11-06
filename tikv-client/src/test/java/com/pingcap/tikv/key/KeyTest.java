@@ -58,7 +58,8 @@ public class KeyTest {
     assertTrue(tester.apply(lhsComp.compareTo(rhsComp)));
   }
 
-  private void testLiteral(Object lhs, Object rhs, DataType type, Function<Integer, Boolean> tester) {
+  private void testLiteral(
+      Object lhs, Object rhs, DataType type, Function<Integer, Boolean> tester) {
     Key lhsComp = TypedKey.toTypedKey(lhs, type);
     Key rhsComp = TypedKey.toTypedKey(rhs, type);
 
@@ -67,18 +68,19 @@ public class KeyTest {
 
   @Test
   public void nextTest() throws Exception {
-    Key k1 = toRawKey(new byte[]{1,2,3});
-    assertEquals(toRawKey(new byte[]{1,2,4}), k1.next());
+    Key k1 = toRawKey(new byte[] {1, 2, 3});
+    assertEquals(toRawKey(new byte[] {1, 2, 4}), k1.next());
 
-    k1 = toRawKey(new byte[]{UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE});
-    assertEquals(toRawKey(new byte[]{UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE, 0}), k1.next());
+    k1 = toRawKey(new byte[] {UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE});
+    assertEquals(
+        toRawKey(new byte[] {UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE, 0}), k1.next());
   }
 
   @Test
   public void compareToTest() throws Exception {
     Key kNegInf = toRawKey(new byte[0], true);
     Key kMin = Key.MIN;
-    Key k = toRawKey(new byte[]{1});
+    Key k = toRawKey(new byte[] {1});
     Key kMax = Key.MAX;
     Key kInf = toRawKey(new byte[0], false);
     Key[] keys = new Key[] {kInf, kMax, k, kMin, kNegInf};

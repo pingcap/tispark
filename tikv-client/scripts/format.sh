@@ -16,7 +16,7 @@
 
 if hash google-java-format 2>/dev/null; then 
 	files_need_format=()
-	files=$(find ../src -name "*.java")
+	files=$(find src -name "*.java")
 	for file in "${files[@]}";do
 		echo "formatting..."
 		#google-java-format -r ("${file}")

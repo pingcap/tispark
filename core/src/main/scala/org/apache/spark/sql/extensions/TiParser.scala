@@ -23,7 +23,10 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase))
     )
 
-  private def notTempView(tableIdentifier: TableIdentifier) = tableIdentifier.database.isEmpty && tiContext.sessionCatalog.getTempView(tableIdentifier.table).isEmpty
+  private def notTempView(tableIdentifier: TableIdentifier) =
+    tableIdentifier.database.isEmpty && tiContext.sessionCatalog
+      .getTempView(tableIdentifier.table)
+      .isEmpty
 
   /**
    * WAR to lead Spark to consider this relation being on local files.
@@ -66,8 +69,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       c.copy(qualifyTableIdentifierInternal(tableIdentifier))
     case c @ CacheTableCommand(_, plan, _) if plan.isDefined =>
       c.copy(plan = Some(plan.get.transform(qualifyTableIdentifier)))
-    case u @ UncacheTableCommand(tableIdentifier, _)
-      if notTempView(tableIdentifier) =>
+    case u @ UncacheTableCommand(tableIdentifier, _) if notTempView(tableIdentifier) =>
       // Uncaching an unqualified catalog table.
       u.copy(qualifyTableIdentifierInternal(tableIdentifier))
   }

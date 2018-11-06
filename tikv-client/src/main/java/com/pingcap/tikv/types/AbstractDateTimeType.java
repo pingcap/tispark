@@ -1,10 +1,9 @@
 package com.pingcap.tikv.types;
 
-
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
-import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.Codec.DateCodec;
+import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
@@ -22,14 +21,12 @@ public abstract class AbstractDateTimeType extends DataType {
     super(tp);
   }
 
-  /**
-   * Return timezone used for encoding and decoding
-   */
+  /** Return timezone used for encoding and decoding */
   protected abstract DateTimeZone getTimezone();
 
   /**
-   * Decode DateTime from packed long value
-   * In TiDB / MySQL, timestamp type is converted to UTC and stored
+   * Decode DateTime from packed long value In TiDB / MySQL, timestamp type is converted to UTC and
+   * stored
    */
   DateTime decodeDateTime(int flag, CodecDataInput cdi) {
     DateTime dateTime;
@@ -38,14 +35,13 @@ public abstract class AbstractDateTimeType extends DataType {
     } else if (flag == Codec.UINT_FLAG) {
       dateTime = DateTimeCodec.readFromUInt(cdi, getTimezone());
     } else {
-      throw new InvalidCodecFormatException("Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
+      throw new InvalidCodecFormatException(
+          "Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
     }
     return dateTime;
   }
 
-  /**
-   * Decode Date from packed long value
-   */
+  /** Decode Date from packed long value */
   LocalDate decodeDate(int flag, CodecDataInput cdi) {
     LocalDate date;
     if (flag == Codec.UVARINT_FLAG) {
@@ -53,31 +49,26 @@ public abstract class AbstractDateTimeType extends DataType {
     } else if (flag == Codec.UINT_FLAG) {
       date = DateCodec.readFromUInt(cdi);
     } else {
-      throw new InvalidCodecFormatException("Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
+      throw new InvalidCodecFormatException(
+          "Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
     }
     return date;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     DateTime dt = Converter.convertToDateTime(value);
     DateTimeCodec.writeDateTimeFully(cdo, dt, getTimezone());
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
     encodeKey(cdo, value);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     DateTime dt = Converter.convertToDateTime(value);

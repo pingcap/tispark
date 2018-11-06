@@ -166,16 +166,23 @@ public class TiTableInfo implements Serializable {
                 col.getSchemaState(),
                 col.getOriginDefaultValue(),
                 col.getDefaultValue(),
-                col.getComment()
-            );
+                col.getComment());
         newColumns.add(newCol.copyWithoutPrimaryKey());
       }
       newColumns.add(TiColumnInfo.getRowIdColumn(getColumns().size()));
       return new TiTableInfo(
-          getId(), CIStr.newCIStr(getName()), getCharset(), getCollate(),
-          true, newColumns.build(), getIndices(),
-          getComment(), getAutoIncId(), getMaxColumnId(),
-          getMaxIndexId(), getOldSchemaId());
+          getId(),
+          CIStr.newCIStr(getName()),
+          getCharset(),
+          getCollate(),
+          true,
+          newColumns.build(),
+          getIndices(),
+          getComment(),
+          getAutoIncId(),
+          getMaxColumnId(),
+          getMaxIndexId(),
+          getOldSchemaId());
     } else {
       return this;
     }

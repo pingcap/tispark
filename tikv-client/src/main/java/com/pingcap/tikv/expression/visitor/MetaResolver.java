@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv.expression.visitor;
 
-
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiTableInfo;

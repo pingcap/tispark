@@ -46,7 +46,8 @@ public class RangeSplitter {
     private final List<KeyRange> ranges;
     private final String host;
 
-    public static RegionTask newInstance(TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
+    public static RegionTask newInstance(
+        TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
       return new RegionTask(region, store, ranges);
     }
 
@@ -57,7 +58,8 @@ public class RangeSplitter {
       String host = null;
       try {
         host = HostAndPort.fromString(store.getAddress()).getHostText();
-      } catch (Exception ignored) {}
+      } catch (Exception ignored) {
+      }
       this.host = host;
     }
 
@@ -111,7 +113,8 @@ public class RangeSplitter {
    * @param handles Handle list
    * @return <RegionId, HandleList> map
    */
-  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(long tableId, TLongArrayList handles) {
+  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(
+      long tableId, TLongArrayList handles) {
     TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
     handles.sort();
 
@@ -120,13 +123,15 @@ public class RangeSplitter {
     while (startPos < handles.size()) {
       long curHandle = handles.get(startPos);
       RowKey key = RowKey.toRowKey(tableId, curHandle);
-      Pair<TiRegion, Metapb.Store> regionStorePair = regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes()));
+      Pair<TiRegion, Metapb.Store> regionStorePair =
+          regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes()));
       byte[] endKey = regionStorePair.first.getEndKey().toByteArray();
       RowKey.tryDecodeRowKey(tableId, endKey, decodeResult);
       if (decodeResult.status == Status.MIN) {
         throw new TiExpressionException("EndKey is less than current rowKey");
       } else if (decodeResult.status == Status.MAX || decodeResult.status == Status.UNKNOWN_INF) {
-        result.put(regionStorePair.first.getId(), createHandleList(startPos, handles.size(), handles));
+        result.put(
+            regionStorePair.first.getId(), createHandleList(startPos, handles.size(), handles));
         break;
       }
 
@@ -145,7 +150,7 @@ public class RangeSplitter {
         // found handle and then further consider decode status
         // End key decode to a value v: regionEndHandle < v < regionEndHandle + 1
         // handle at pos included
-        pos ++;
+        pos++;
       }
       result.put(regionStorePair.first.getId(), createHandleList(startPos, pos, handles));
       // pos equals to start leads to an dead loop
@@ -161,11 +166,7 @@ public class RangeSplitter {
     return result;
   }
 
-  private TLongArrayList createHandleList(
-      int startPos,
-      int endPos,
-      TLongArrayList handles
-  ) {
+  private TLongArrayList createHandleList(int startPos, int endPos, TLongArrayList handles) {
     TLongArrayList result = new TLongArrayList();
     for (int i = startPos; i < endPos; i++) {
       result.add(handles.get(i));
@@ -175,6 +176,7 @@ public class RangeSplitter {
 
   /**
    * Build region tasks from handles split by region, handles will be sorted.
+   *
    * @param tableId Table ID
    * @param handles Handle list
    * @return A list of region tasks
@@ -183,13 +185,16 @@ public class RangeSplitter {
     // Max value for current index handle range
     ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
 
-    TLongObjectHashMap<TLongArrayList> regionHandlesMap = groupByAndSortHandlesByRegionId(tableId, handles);
+    TLongObjectHashMap<TLongArrayList> regionHandlesMap =
+        groupByAndSortHandlesByRegionId(tableId, handles);
 
-    regionHandlesMap.forEachEntry((k, v) -> {
-      Pair<TiRegion, Metapb.Store> regionStorePair = regionManager.getRegionStorePairByRegionId(k);
-      createTask(0, v.size(), tableId, v, regionStorePair, regionTasks);
-      return true;
-    });
+    regionHandlesMap.forEachEntry(
+        (k, v) -> {
+          Pair<TiRegion, Metapb.Store> regionStorePair =
+              regionManager.getRegionStorePairByRegionId(k);
+          createTask(0, v.size(), tableId, v, regionStorePair, regionTasks);
+          return true;
+        });
 
     return regionTasks.build();
   }
@@ -209,18 +214,18 @@ public class RangeSplitter {
       if (endHandle + 1 == curHandle) {
         endHandle = curHandle;
       } else {
-        newKeyRanges.add(makeCoprocRange(
-            RowKey.toRowKey(tableId, startHandle).toByteString(),
-            RowKey.toRowKey(tableId, endHandle + 1).toByteString())
-        );
+        newKeyRanges.add(
+            makeCoprocRange(
+                RowKey.toRowKey(tableId, startHandle).toByteString(),
+                RowKey.toRowKey(tableId, endHandle + 1).toByteString()));
         startHandle = curHandle;
         endHandle = startHandle;
       }
     }
-    newKeyRanges.add(makeCoprocRange(
-        RowKey.toRowKey(tableId, startHandle).toByteString(),
-        RowKey.toRowKey(tableId, endHandle + 1).toByteString())
-    );
+    newKeyRanges.add(
+        makeCoprocRange(
+            RowKey.toRowKey(tableId, startHandle).toByteString(),
+            RowKey.toRowKey(tableId, endHandle + 1).toByteString()));
     regionTasks.add(new RegionTask(regionStorePair.first, regionStorePair.second, newKeyRanges));
   }
 
@@ -245,7 +250,8 @@ public class RangeSplitter {
           regionManager.getRegionStorePairByKey(range.getStart());
 
       if (regionStorePair == null) {
-        throw new NullPointerException("fail to get region/store pair by key " + formatByteString(range.getStart()));
+        throw new NullPointerException(
+            "fail to get region/store pair by key " + formatByteString(range.getStart()));
       }
       TiRegion region = regionStorePair.first;
       idToRegion.putIfAbsent(region.getId(), regionStorePair);
@@ -278,8 +284,7 @@ public class RangeSplitter {
     for (Map.Entry<Long, List<KeyRange>> entry : idToRange.entrySet()) {
       Pair<TiRegion, Metapb.Store> regionStorePair = idToRegion.get(entry.getKey());
       resultBuilder.add(
-          new RegionTask(regionStorePair.first, regionStorePair.second, entry.getValue())
-      );
+          new RegionTask(regionStorePair.first, regionStorePair.second, entry.getValue()));
     }
     return resultBuilder.build();
   }
@@ -305,7 +310,8 @@ public class RangeSplitter {
 
     int i = 0;
     KeyRange range = mergedKeyRanges.get(i++);
-    Pair<TiRegion, Metapb.Store> baseRegionStorePair = regionManager.getRegionStorePairByKey(range.getStart());
+    Pair<TiRegion, Metapb.Store> baseRegionStorePair =
+        regionManager.getRegionStorePairByKey(range.getStart());
     TiRegion region = baseRegionStorePair.first;
     Key regionEndKey = toRawKey(region.getEndKey());
     long regionId = region.getId();
@@ -317,7 +323,8 @@ public class RangeSplitter {
           regionManager.getRegionStorePairByKey(range.getStart());
 
       if (startKeyRegionStorePair == null) {
-        throw new NullPointerException("fail to get region/store pair by key " + formatByteString(range.getStart()));
+        throw new NullPointerException(
+            "fail to get region/store pair by key " + formatByteString(range.getStart()));
       }
       if (startKeyRegionStorePair.first.getId() != regionId) {
         throw new RuntimeException("Something went wrong: key range not in current region");
@@ -338,8 +345,7 @@ public class RangeSplitter {
     // since all ranges are guaranteed to be in same region,
     // current range is covered by region
     resultBuilder.add(
-        new RegionTask(baseRegionStorePair.first, baseRegionStorePair.second, ranges.build())
-    );
+        new RegionTask(baseRegionStorePair.first, baseRegionStorePair.second, ranges.build()));
 
     return resultBuilder.build();
   }

@@ -36,19 +36,17 @@ public class IntegerType extends DataType {
   public static final IntegerType BIGINT = new IntegerType(MySQLType.TypeLonglong);
   public static final IntegerType BOOLEAN = TINYINT;
 
-  public static final IntegerType ROW_ID_TYPE = new IntegerType(
-      MySQLType.TypeLonglong,
-      PriKeyFlag,
-      20,
-      0
-  );
+  public static final IntegerType ROW_ID_TYPE =
+      new IntegerType(MySQLType.TypeLonglong, PriKeyFlag, 20, 0);
 
-
-
-  public static final MySQLType[] subTypes = new MySQLType[] {
-      MySQLType.TypeTiny, MySQLType.TypeShort, MySQLType.TypeInt24,
-      MySQLType.TypeLong, MySQLType.TypeLonglong
-  };
+  public static final MySQLType[] subTypes =
+      new MySQLType[] {
+        MySQLType.TypeTiny,
+        MySQLType.TypeShort,
+        MySQLType.TypeInt24,
+        MySQLType.TypeLong,
+        MySQLType.TypeLonglong
+      };
 
   protected IntegerType(MySQLType type, int flag, int len, int decimal) {
     super(type, flag, len, decimal, "", Collation.DEF_COLLATION_CODE);
@@ -62,9 +60,7 @@ public class IntegerType extends DataType {
     return new BigDecimal(UnsignedLong.fromLongBits(x).bigIntegerValue());
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     long ret;
@@ -90,9 +86,7 @@ public class IntegerType extends DataType {
     return ret;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     long longVal = Converter.convertToLong(value);
@@ -103,9 +97,7 @@ public class IntegerType extends DataType {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
     long longVal = Converter.convertToLong(value);
@@ -116,9 +108,7 @@ public class IntegerType extends DataType {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     long longVal = Converter.convertToLong(value);
@@ -131,7 +121,7 @@ public class IntegerType extends DataType {
 
   @Override
   public ExprType getProtoExprType() {
-    return isUnsigned() ?  ExprType.Uint64 : ExprType.Int64;
+    return isUnsigned() ? ExprType.Uint64 : ExprType.Int64;
   }
 
   public boolean isUnsignedLong() {
@@ -141,9 +131,7 @@ public class IntegerType extends DataType {
   public boolean isUnsigned() {
     return (flag & UnsignedFlag) > 0;
   }
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
     return Integer.parseInt(value);
@@ -152,5 +140,4 @@ public class IntegerType extends DataType {
   protected IntegerType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
-
 }

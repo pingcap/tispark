@@ -28,7 +28,7 @@ public class Blacklist {
 
   Blacklist(String string) {
     if (string != null) {
-      String [] some = string.split(",");
+      String[] some = string.split(",");
       for (String one : some) {
         String trimmedExprName = one.trim();
         if (!trimmedExprName.isEmpty()) {

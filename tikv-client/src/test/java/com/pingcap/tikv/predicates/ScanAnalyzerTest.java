@@ -15,6 +15,11 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static java.util.Objects.requireNonNull;
+import static org.junit.Assert.*;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
@@ -26,14 +31,8 @@ import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.meta.*;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.*;
-import org.junit.Test;
-
 import java.util.*;
-
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static java.util.Objects.requireNonNull;
-import static org.junit.Assert.*;
+import org.junit.Test;
 
 public class ScanAnalyzerTest {
   private static TiTableInfo createTable() {
@@ -87,7 +86,9 @@ public class ScanAnalyzerTest {
     List<Expression> exprs = ImmutableList.of(eq1);
 
     ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, pkIndex);
-    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, pkIndex);
+    List<IndexRange> irs =
+        expressionToIndexRanges(
+            result.getPointPredicates(), result.getRangePredicate(), table, pkIndex);
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
@@ -97,8 +98,14 @@ public class ScanAnalyzerTest {
 
     Coprocessor.KeyRange keyRange = keyRanges.get(0);
 
-    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,114,0,0,0,0,0,0,0,0}), keyRange.getStart());
-    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,115,0,0,0,0,0,0,0,0}), keyRange.getEnd());
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 114, 0, 0, 0, 0, 0, 0, 0, 0}),
+        keyRange.getStart());
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 115, 0, 0, 0, 0, 0, 0, 0, 0}),
+        keyRange.getEnd());
   }
 
   @Test
@@ -112,7 +119,9 @@ public class ScanAnalyzerTest {
     List<Expression> exprs = ImmutableList.of(eq1);
 
     ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
-    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
+    List<IndexRange> irs =
+        expressionToIndexRanges(
+            result.getPointPredicates(), result.getRangePredicate(), table, index);
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
@@ -122,13 +131,27 @@ public class ScanAnalyzerTest {
 
     Coprocessor.KeyRange keyRange = keyRanges.get(0);
 
-    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0}), keyRange.getStart());
-    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,1}), keyRange.getEnd());
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {
+              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
+              0, 0, 0, 0
+            }),
+        keyRange.getStart());
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {
+              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
+              0, 0, 0, 1
+            }),
+        keyRange.getEnd());
 
     exprs = ImmutableList.of(eq1, eq2);
     result = ScanAnalyzer.extractConditions(exprs, table, index);
 
-    irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
+    irs =
+        expressionToIndexRanges(
+            result.getPointPredicates(), result.getRangePredicate(), table, index);
 
     keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs);
 
@@ -136,8 +159,20 @@ public class ScanAnalyzerTest {
 
     keyRange = keyRanges.get(0);
 
-    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,0}), keyRange.getStart());
-    assertEquals(ByteString.copyFrom(new byte[]{116,-128,0,0,0,0,0,0,6,95,105,-128,0,0,0,0,0,0,5,3,-128,0,0,0,0,0,0,0,1,119,116,102,0,0,0,0,0,-5}), keyRange.getEnd());
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {
+              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
+              0, 0, 0, 0, 0
+            }),
+        keyRange.getStart());
+    assertEquals(
+        ByteString.copyFrom(
+            new byte[] {
+              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
+              0, 0, 0, 0, 1, 119, 116, 102, 0, 0, 0, 0, 0, -5
+            }),
+        keyRange.getEnd());
   }
 
   @Test
@@ -146,10 +181,13 @@ public class ScanAnalyzerTest {
     TiIndexInfo index = table.getIndices().get(0);
 
     Expression eq1 = equal(ColumnRef.create("c1", table), Constant.create(0, IntegerType.INT));
-    Expression eq2 = equal(ColumnRef.create("c2", table), Constant.create("test", StringType.VARCHAR));
-    Expression le1 = lessEqual(ColumnRef.create("c3", table), Constant.create("fxxx", StringType.VARCHAR));
+    Expression eq2 =
+        equal(ColumnRef.create("c2", table), Constant.create("test", StringType.VARCHAR));
+    Expression le1 =
+        lessEqual(ColumnRef.create("c3", table), Constant.create("fxxx", StringType.VARCHAR));
     // Last one should be pushed back
-    Expression eq3 = equal(ColumnRef.create("c4", table), Constant.create("fxxx", StringType.VARCHAR));
+    Expression eq3 =
+        equal(ColumnRef.create("c4", table), Constant.create("fxxx", StringType.VARCHAR));
 
     List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 
@@ -171,10 +209,13 @@ public class ScanAnalyzerTest {
     TiIndexInfo index = table.getIndices().get(0);
 
     Expression eq1 = equal(ColumnRef.create("c1", table), Constant.create(0, IntegerType.INT));
-    Expression eq2 = equal(ColumnRef.create("c2", table), Constant.create("test", StringType.VARCHAR));
-    Expression le1 = lessEqual(ColumnRef.create("c3", table), Constant.create("fxxx", StringType.VARCHAR));
+    Expression eq2 =
+        equal(ColumnRef.create("c2", table), Constant.create("test", StringType.VARCHAR));
+    Expression le1 =
+        lessEqual(ColumnRef.create("c3", table), Constant.create("fxxx", StringType.VARCHAR));
     // Last one should be pushed back
-    Expression eq3 = equal(ColumnRef.create("c4", table), Constant.create("fxxx", StringType.VARCHAR));
+    Expression eq3 =
+        equal(ColumnRef.create("c4", table), Constant.create("fxxx", StringType.VARCHAR));
 
     List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
     Set<Expression> baselineSet = ImmutableSet.of(eq2, le1, eq3);
@@ -199,10 +240,13 @@ public class ScanAnalyzerTest {
     assertEquals("c1", index.getIndexColumns().get(0).getName());
 
     Expression eq1 = equal(ColumnRef.create("c1", table), Constant.create(0, IntegerType.INT));
-    Expression eq2 = equal(ColumnRef.create("c2", table), Constant.create("test", StringType.VARCHAR));
-    Expression le1 = lessEqual(ColumnRef.create("c3", table), Constant.create("fxxx", StringType.VARCHAR));
+    Expression eq2 =
+        equal(ColumnRef.create("c2", table), Constant.create("test", StringType.VARCHAR));
+    Expression le1 =
+        lessEqual(ColumnRef.create("c3", table), Constant.create("fxxx", StringType.VARCHAR));
     // Last one should be pushed back
-    Expression eq3 = equal(ColumnRef.create("c4", table), Constant.create("fxxx", StringType.VARCHAR));
+    Expression eq3 =
+        equal(ColumnRef.create("c4", table), Constant.create("fxxx", StringType.VARCHAR));
 
     List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 
@@ -223,7 +267,8 @@ public class ScanAnalyzerTest {
     TiTableInfo table = createTableWithPrefix();
     TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanAnalyzer scanBuilder = new ScanAnalyzer();
-    ScanAnalyzer.ScanPlan scanPlan = scanBuilder.buildScan(ImmutableList.of(), ImmutableList.of(), index, table, null);
+    ScanAnalyzer.ScanPlan scanPlan =
+        scanBuilder.buildScan(ImmutableList.of(), ImmutableList.of(), index, table, null);
 
     ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
     ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();
@@ -266,6 +311,7 @@ public class ScanAnalyzerTest {
       private String[] indexNames;
       private int[] indexLens;
       private boolean isCovering;
+
       private test(String[] col, String[] idx, int[] idxLen, boolean result) {
         columnNames = col;
         indexNames = idx;
@@ -287,45 +333,52 @@ public class ScanAnalyzerTest {
     }
 
     final test[] tests = {
-        new test(new String[]{"a"}, new String[]{"a"}, new int[]{-1}, true),
-        new test(new String[]{"a"}, new String[]{"a", "b"}, new int[]{-1, -1}, true),
-        new test(new String[]{"a", "b"}, new String[]{"b", "a"}, new int[]{-1, -1}, true),
-        new test(new String[]{"a", "b"}, new String[]{"b", "c"}, new int[]{-1, -1}, false),
-        new test(new String[]{"holder", "b"}, new String[]{"holder", "b"}, new int[]{50, -1}, false),
-        new test(new String[]{"a", "b"}, new String[]{"a", "c"}, new int[]{-1, -1}, false),
-        new test(new String[]{"id", "a"}, new String[]{"a", "b"}, new int[]{-1, -1}, true)
+      new test(new String[] {"a"}, new String[] {"a"}, new int[] {-1}, true),
+      new test(new String[] {"a"}, new String[] {"a", "b"}, new int[] {-1, -1}, true),
+      new test(new String[] {"a", "b"}, new String[] {"b", "a"}, new int[] {-1, -1}, true),
+      new test(new String[] {"a", "b"}, new String[] {"b", "c"}, new int[] {-1, -1}, false),
+      new test(
+          new String[] {"holder", "b"}, new String[] {"holder", "b"}, new int[] {50, -1}, false),
+      new test(new String[] {"a", "b"}, new String[] {"a", "c"}, new int[] {-1, -1}, false),
+      new test(new String[] {"id", "a"}, new String[] {"a", "b"}, new int[] {-1, -1}, true)
     };
 
     ScanAnalyzer scanBuilder = new ScanAnalyzer();
 
-    for (test t: tests) {
+    for (test t : tests) {
       List<TiColumnInfo> columns = new ArrayList<>();
       List<TiIndexColumn> indexCols = new ArrayList<>();
       boolean pkIsHandle = false;
-      for (int i = 0; i < t.getColumnNames().length; i ++) {
+      for (int i = 0; i < t.getColumnNames().length; i++) {
         String colName = t.getColumnNames()[i];
         if (colName.equals("id")) {
           pkIsHandle = true;
         }
-        columns.add(new TiColumnInfo(offsetMap.get(colName), colName, i, dataTypeMap.get(colName), colName.equals("id")));
+        columns.add(
+            new TiColumnInfo(
+                offsetMap.get(colName),
+                colName,
+                i,
+                dataTypeMap.get(colName),
+                colName.equals("id")));
       }
-      for (int i = 0; i < t.getIndexNames().length; i ++) {
+      for (int i = 0; i < t.getIndexNames().length; i++) {
         String idxName = t.getIndexNames()[i];
         int idxLen = t.getIndexLens()[i];
         indexCols.add(new TiIndexColumn(CIStr.newCIStr(idxName), offsetMap.get(idxName), idxLen));
       }
-      TiIndexInfo indexInfo = new TiIndexInfo(
-          1,
-          CIStr.newCIStr("test_idx"),
-          CIStr.newCIStr("testTable"),
-          ImmutableList.copyOf(indexCols),
-          false,
-          false,
-          SchemaState.StatePublic.getStateCode(),
-          "Test Index",
-          IndexType.IndexTypeBtree.getTypeCode(),
-          false
-      );
+      TiIndexInfo indexInfo =
+          new TiIndexInfo(
+              1,
+              CIStr.newCIStr("test_idx"),
+              CIStr.newCIStr("testTable"),
+              ImmutableList.copyOf(indexCols),
+              false,
+              false,
+              SchemaState.StatePublic.getStateCode(),
+              "Test Index",
+              IndexType.IndexTypeBtree.getTypeCode(),
+              false);
       boolean isCovering = scanBuilder.isCoveringIndex(columns, indexInfo, pkIsHandle);
       assertEquals(isCovering, t.isCovering);
     }

@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv.expression.visitor;
 
-
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -27,12 +26,10 @@ import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
 
 public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> {
 
@@ -117,7 +114,8 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     // b(2) <= "b" -> (-∞, "b"]
     //
     // For varchar, `b`(2) will take first two characters(bytes) as prefix index.
-    // TODO: Note that TiDB only supports UTF-8, we need to check if prefix index behave differently under other encoding methods
+    // TODO: Note that TiDB only supports UTF-8, we need to check if prefix index behave differently
+    // under other encoding methods
     int prefixLen = lengths.getOrDefault(predicate.getColumnRef(), DataType.UNSPECIFIED_LEN);
     TypedKey literal = predicate.getTypedLiteral(prefixLen);
     RangeSet<TypedKey> ranges = TreeRangeSet.create();
@@ -184,7 +182,8 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     // when the predicate is `c1` LIKE 'abc%', the index range should be ['ab', 'ab'].
     // when the predicate is `c1` LIKE 'a%', the index range should be ['a', 'b').
     // for varchar, `c1`(2) will take first two characters(bytes) as prefix index.
-    // TODO: Note that TiDB only supports UTF-8, we need to check if prefix index behave differently under other encoding methods
+    // TODO: Note that TiDB only supports UTF-8, we need to check if prefix index behave differently
+    // under other encoding methods
     int prefixLen = lengths.getOrDefault(columnRef, DataType.UNSPECIFIED_LEN);
     TypedKey literal = node.getTypedLiteral(prefixLen);
     RangeSet<TypedKey> ranges = TreeRangeSet.create();

@@ -21,14 +21,13 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.sql.Date;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 
-import java.sql.Date;
-
 public class DateType extends AbstractDateTimeType {
   public static final DateType DATE = new DateType(MySQLType.TypeDate);
-  public static final MySQLType[] subTypes = new MySQLType[] { MySQLType.TypeDate };
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeDate};
 
   private DateType(MySQLType tp) {
     super(tp);
@@ -48,27 +47,21 @@ public class DateType extends AbstractDateTimeType {
     return Converter.convertToDate(value);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     Date dt = Converter.convertToDate(value);
     Codec.DateCodec.writeDateFully(cdo, dt, getTimezone());
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     Date dt = Converter.convertToDate(value);
     Codec.DateCodec.writeDateProto(cdo, dt, getTimezone());
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Date decodeNotNull(int flag, CodecDataInput cdi) {
     LocalDate date = decodeDate(flag, cdi);

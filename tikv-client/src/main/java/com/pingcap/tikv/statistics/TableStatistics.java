@@ -23,16 +23,15 @@ import java.util.Map;
 /**
  * A TableStatistics Java plain object.
  *
- * Usually each table will have two types of statistics information:
- *  1. Meta info
- *    (tableId, count, modifyCount, version)
- *  2. Column/Index histogram info
- *    (columnsHistMap, indexHistMap)
+ * <p>Usually each table will have two types of statistics information: 1. Meta info (tableId,
+ * count, modifyCount, version) 2. Column/Index histogram info (columnsHistMap, indexHistMap)
  */
 public class TableStatistics {
   private final long tableId; // Which table it belongs to
-  private final Map<Long, ColumnStatistics> columnsHistMap = new HashMap<>(); // ColumnId -> ColumnStatistics map
-  private final Map<Long, IndexStatistics> indexHistMap = new HashMap<>(); // IndexId -> IndexStatistics map
+  private final Map<Long, ColumnStatistics> columnsHistMap =
+      new HashMap<>(); // ColumnId -> ColumnStatistics map
+  private final Map<Long, IndexStatistics> indexHistMap =
+      new HashMap<>(); // IndexId -> IndexStatistics map
   private long count; // Total row count in a table.
   private long modifyCount; // Total modify count in a table.
   private long version; // Version of this statistics info

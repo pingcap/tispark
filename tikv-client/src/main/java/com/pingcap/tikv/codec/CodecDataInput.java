@@ -16,7 +16,6 @@
 package com.pingcap.tikv.codec;
 
 import com.google.protobuf.ByteString;
-
 import java.io.*;
 
 public class CodecDataInput implements DataInput {
@@ -84,6 +83,7 @@ public class CodecDataInput implements DataInput {
     public int available() {
       return count - pos;
     }
+
     public boolean markSupported() {
       return true;
     }
@@ -96,9 +96,9 @@ public class CodecDataInput implements DataInput {
       pos = mark;
     }
 
-    public void close() throws IOException {
-    }
+    public void close() throws IOException {}
   }
+
   private final DataInputStream inputStream;
   private final UnSyncByteArrayInputStream backingStream;
   private final byte[] backingBuffer;
@@ -235,14 +235,14 @@ public class CodecDataInput implements DataInput {
     try {
       byte readBuffer[] = new byte[8];
       inputStream.read(readBuffer, 0, 8);
-      return (((long) readBuffer[0] << 56) +
-          ((long) (readBuffer[1] & 255) << 48) +
-          ((long) (readBuffer[2] & 255) << 40) +
-          ((long) (readBuffer[3] & 255) << 32) +
-          ((long) (readBuffer[4] & 255) << 24) +
-          ((readBuffer[5] & 255) << 16) +
-          ((readBuffer[6] & 255) << 8) +
-          ((readBuffer[7] & 255) << 0));
+      return (((long) readBuffer[0] << 56)
+          + ((long) (readBuffer[1] & 255) << 48)
+          + ((long) (readBuffer[2] & 255) << 40)
+          + ((long) (readBuffer[3] & 255) << 32)
+          + ((long) (readBuffer[4] & 255) << 24)
+          + ((readBuffer[5] & 255) << 16)
+          + ((readBuffer[6] & 255) << 8)
+          + ((readBuffer[7] & 255) << 0));
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

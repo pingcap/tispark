@@ -83,22 +83,29 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     BytesCodec.writeBytes(cdo, key.toByteArray());
     ByteString encodedKey = cdo.toByteString();
 
-    Supplier<GetRegionRequest> request = () ->
-        GetRegionRequest.newBuilder().setHeader(header).setRegionKey(encodedKey).build();
+    Supplier<GetRegionRequest> request =
+        () -> GetRegionRequest.newBuilder().setHeader(header).setRegionKey(encodedKey).build();
 
     PDErrorHandler<GetRegionResponse> handler =
         new PDErrorHandler<>(r -> r.getHeader().hasError() ? r.getHeader().getError() : null, this);
 
     GetRegionResponse resp = callWithRetry(backOffer, PDGrpc.METHOD_GET_REGION, request, handler);
-    return new TiRegion(resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
+    return new TiRegion(
+        resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
   }
 
   @Override
   public Future<TiRegion> getRegionByKeyAsync(BackOffer backOffer, ByteString key) {
     FutureObserver<TiRegion, GetRegionResponse> responseObserver =
-        new FutureObserver<>(resp -> new TiRegion(resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority()));
-    Supplier<GetRegionRequest> request = () ->
-        GetRegionRequest.newBuilder().setHeader(header).setRegionKey(key).build();
+        new FutureObserver<>(
+            resp ->
+                new TiRegion(
+                    resp.getRegion(),
+                    resp.getLeader(),
+                    conf.getIsolationLevel(),
+                    conf.getCommandPriority()));
+    Supplier<GetRegionRequest> request =
+        () -> GetRegionRequest.newBuilder().setHeader(header).setRegionKey(key).build();
 
     PDErrorHandler<GetRegionResponse> handler =
         new PDErrorHandler<>(r -> r.getHeader().hasError() ? r.getHeader().getError() : null, this);
@@ -109,34 +116,43 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   @Override
   public TiRegion getRegionByID(BackOffer backOffer, long id) {
-    Supplier<GetRegionByIDRequest> request = () ->
-        GetRegionByIDRequest.newBuilder().setHeader(header).setRegionId(id).build();
+    Supplier<GetRegionByIDRequest> request =
+        () -> GetRegionByIDRequest.newBuilder().setHeader(header).setRegionId(id).build();
     PDErrorHandler<GetRegionResponse> handler =
         new PDErrorHandler<>(r -> r.getHeader().hasError() ? r.getHeader().getError() : null, this);
 
-    GetRegionResponse resp = callWithRetry(backOffer, PDGrpc.METHOD_GET_REGION_BY_ID, request, handler);
+    GetRegionResponse resp =
+        callWithRetry(backOffer, PDGrpc.METHOD_GET_REGION_BY_ID, request, handler);
     // Instead of using default leader instance, explicitly set no leader to null
-    return new TiRegion(resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
+    return new TiRegion(
+        resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
   }
 
   @Override
   public Future<TiRegion> getRegionByIDAsync(BackOffer backOffer, long id) {
     FutureObserver<TiRegion, GetRegionResponse> responseObserver =
-        new FutureObserver<>(resp -> new TiRegion(resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority()));
+        new FutureObserver<>(
+            resp ->
+                new TiRegion(
+                    resp.getRegion(),
+                    resp.getLeader(),
+                    conf.getIsolationLevel(),
+                    conf.getCommandPriority()));
 
-    Supplier<GetRegionByIDRequest> request = () ->
-        GetRegionByIDRequest.newBuilder().setHeader(header).setRegionId(id).build();
+    Supplier<GetRegionByIDRequest> request =
+        () -> GetRegionByIDRequest.newBuilder().setHeader(header).setRegionId(id).build();
     PDErrorHandler<GetRegionResponse> handler =
         new PDErrorHandler<>(r -> r.getHeader().hasError() ? r.getHeader().getError() : null, this);
 
-    callAsyncWithRetry(backOffer, PDGrpc.METHOD_GET_REGION_BY_ID, request, responseObserver, handler);
+    callAsyncWithRetry(
+        backOffer, PDGrpc.METHOD_GET_REGION_BY_ID, request, responseObserver, handler);
     return responseObserver.getFuture();
   }
 
   @Override
   public Store getStore(BackOffer backOffer, long storeId) {
-    Supplier<GetStoreRequest> request = () ->
-        GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
+    Supplier<GetStoreRequest> request =
+        () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
     PDErrorHandler<GetStoreResponse> handler =
         new PDErrorHandler<>(r -> r.getHeader().hasError() ? r.getHeader().getError() : null, this);
 
@@ -149,8 +165,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     FutureObserver<Store, GetStoreResponse> responseObserver =
         new FutureObserver<>(GetStoreResponse::getStore);
 
-    Supplier<GetStoreRequest> request = () ->
-        GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
+    Supplier<GetStoreRequest> request =
+        () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
     PDErrorHandler<GetStoreResponse> handler =
         new PDErrorHandler<>(r -> r.getHeader().hasError() ? r.getHeader().getError() : null, this);
 
@@ -215,8 +231,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       return createTime;
     }
 
-    void close() {
-    }
+    void close() {}
   }
 
   public GetMembersResponse getMembers(HostAndPort url) {
@@ -280,7 +295,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         return;
       }
     }
-    throw new TiClientInternalException("already tried all address on file, but not leader found yet.");
+    throw new TiClientInternalException(
+        "already tried all address on file, but not leader found yet.");
   }
 
   @Override
@@ -322,15 +338,21 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     tsoReq = TsoRequest.newBuilder().setHeader(header).build();
     this.pdAddrs = pdAddrs;
     createLeaderWrapper(resp.getLeader().getClientUrls(0));
-    service = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
-    service.scheduleAtFixedRate(() -> {
-      // Wrap this with a try catch block in case schedule update fails
-      try {
-        updateLeader();
-      } catch (Exception e) {
-        logger.warn("Update leader failed", e);
-      }
-    }, 1, 1, TimeUnit.MINUTES);
+    service =
+        Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder().setDaemon(true).build());
+    service.scheduleAtFixedRate(
+        () -> {
+          // Wrap this with a try catch block in case schedule update fails
+          try {
+            updateLeader();
+          } catch (Exception e) {
+            logger.warn("Update leader failed", e);
+          }
+        },
+        1,
+        1,
+        TimeUnit.MINUTES);
   }
 
   static PDClient createRaw(TiSession session) {

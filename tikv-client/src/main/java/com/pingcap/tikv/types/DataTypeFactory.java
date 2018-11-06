@@ -20,7 +20,6 @@ package com.pingcap.tikv.types;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
-
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Map;
@@ -30,7 +29,8 @@ public class DataTypeFactory {
   private static final Map<MySQLType, DataType> dataTypeInstanceMap;
 
   static {
-    ImmutableMap.Builder<MySQLType, Constructor<? extends DataType>> builder = ImmutableMap.builder();
+    ImmutableMap.Builder<MySQLType, Constructor<? extends DataType>> builder =
+        ImmutableMap.builder();
     ImmutableMap.Builder<MySQLType, DataType> instBuilder = ImmutableMap.builder();
     extractTypeMap(BitType.subTypes, BitType.class, builder, instBuilder);
     extractTypeMap(StringType.subTypes, StringType.class, builder, instBuilder);
@@ -61,9 +61,10 @@ public class DataTypeFactory {
         ctorByHolder.setAccessible(true);
         ctorByType.setAccessible(true);
         holderBuilder.put(type, ctorByHolder);
-        instBuilder.put(type, (DataType)ctorByType.newInstance(type));
+        instBuilder.put(type, (DataType) ctorByType.newInstance(type));
       } catch (Exception e) {
-        throw new TypeException(String.format("Type %s does not have a proper constructor", cls.getName()), e);
+        throw new TypeException(
+            String.format("Type %s does not have a proper constructor", cls.getName()), e);
       }
     }
   }
@@ -78,12 +79,12 @@ public class DataTypeFactory {
 
   // Convert non-binary to string type
   private static MySQLType convertType(MySQLType type, InternalTypeHolder holder) {
-    if (Arrays.asList(BytesType.subTypes).contains(type) &&
-        !Charset.CharsetBin.equals(holder.getCharset())) {
+    if (Arrays.asList(BytesType.subTypes).contains(type)
+        && !Charset.CharsetBin.equals(holder.getCharset())) {
       return MySQLType.TypeVarchar;
     }
-    if (Arrays.asList(StringType.subTypes).contains(type) &&
-        Charset.CharsetBin.equals(holder.getCharset())) {
+    if (Arrays.asList(StringType.subTypes).contains(type)
+        && Charset.CharsetBin.equals(holder.getCharset())) {
       return MySQLType.TypeBlob;
     }
     return type;

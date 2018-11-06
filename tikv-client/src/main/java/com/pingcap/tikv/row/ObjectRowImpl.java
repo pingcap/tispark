@@ -18,7 +18,6 @@
 package com.pingcap.tikv.row;
 
 import com.pingcap.tikv.types.DataType;
-
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;

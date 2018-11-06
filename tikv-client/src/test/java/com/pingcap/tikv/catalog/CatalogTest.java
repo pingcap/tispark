@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Test;
 
-
 public class CatalogTest {
   private KVMockServer kvServer;
   private PDMockServer pdServer;
@@ -31,8 +30,12 @@ public class CatalogTest {
     pdServer = new PDMockServer();
     pdServer.start(CLUSTER_ID);
     kvServer = new KVMockServer();
-    kvServer.start(new TiRegion(MetaMockHelper.region, MetaMockHelper.region.getPeers(0), IsolationLevel.RC,
-        CommandPri.Low));
+    kvServer.start(
+        new TiRegion(
+            MetaMockHelper.region,
+            MetaMockHelper.region.getPeers(0),
+            IsolationLevel.RC,
+            CommandPri.Low));
     // No PD needed in this test
     conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
   }
@@ -87,7 +90,8 @@ public class CatalogTest {
     Catalog cat = session.getCatalog();
     TiDBInfo db = cat.getDatabase("gLObal_temp");
     List<TiTableInfo> tables = cat.listTables(db);
-    List<String> names = tables.stream().map(TiTableInfo::getName).sorted().collect(Collectors.toList());
+    List<String> names =
+        tables.stream().map(TiTableInfo::getName).sorted().collect(Collectors.toList());
     assertEquals(2, tables.size());
     assertEquals("test", names.get(0));
     assertEquals("test1", names.get(1));
