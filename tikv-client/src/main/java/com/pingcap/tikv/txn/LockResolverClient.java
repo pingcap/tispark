@@ -152,7 +152,7 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
   // ResolveLocks tries to resolve Locks. The resolving process is in 3 steps:
   // 1) Use the `lockTTL` to pick up all expired locks. Only locks that are old
   //    enough are considered orphan locks and will be handled later. If all locks
-  //    are expired then all locks will be resolved so tru will be returned, otherwise
+  //    are expired then all locks will be resolved so true will be returned, otherwise
   //    caller should sleep a while before retry.
   // 2) For each lock, query the primary key to get txn(which left the lock)'s
   //    commit status.
