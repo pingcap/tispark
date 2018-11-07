@@ -319,7 +319,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     checkNotNull(resp, "Failed to init client for PD cluster.");
     long clusterId = resp.getHeader().getClusterId();
     header = RequestHeader.newBuilder().setClusterId(clusterId).build();
-    tsoReq = TsoRequest.newBuilder().setHeader(header).build();
+    tsoReq = TsoRequest.newBuilder().setHeader(header).setCount(1).build();
     this.pdAddrs = pdAddrs;
     createLeaderWrapper(resp.getLeader().getClientUrls(0));
     service = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
