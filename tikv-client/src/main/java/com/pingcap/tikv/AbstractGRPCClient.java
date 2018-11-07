@@ -18,7 +18,6 @@ package com.pingcap.tikv;
 import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.policy.RetryMaxMs.Builder;
 import com.pingcap.tikv.policy.RetryPolicy;
-import com.pingcap.tikv.region.RegionErrorReceiver;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.util.BackOffer;
 import io.grpc.MethodDescriptor;

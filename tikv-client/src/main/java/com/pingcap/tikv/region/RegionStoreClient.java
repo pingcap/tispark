@@ -250,7 +250,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             .setStartKey(startKey)
             .setVersion(version)
             .setKeyOnly(keyOnly)
-            .setLimit(session.getConf().getScanBatchSize())
+            .setLimit(getConf().getScanBatchSize())
             .build();
 
     KVErrorHandler<ScanResponse> handler =

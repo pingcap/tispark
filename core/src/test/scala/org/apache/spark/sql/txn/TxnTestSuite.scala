@@ -4,6 +4,8 @@ import java.sql.{DriverManager, SQLException}
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.catalyst.util.resourceToString
+import org.apache.spark.sql.test.Utils.getOrElse
+import org.apache.spark.sql.test.TestConstants.{TiDB_PASSWORD, TiDB_USER}
 
 // TODO: this test is not so useful at all
 // what I do is to construct a very long-running write operation
@@ -44,12 +46,16 @@ class TxnTestSuite extends BaseTiSparkSuite {
   /**
    * query to tidb with jdbc and txn style
    *
-   * @param query all querys run in the txn
+   * @param query all queries run in the txn
    * @param wait whether wait every 2 seconds
    * @return Unit
    */
   protected def queryTIDBTxn(query: Seq[String], wait: Boolean): Unit = {
-    val conn = DriverManager.getConnection(jdbcUrl, "root", "")
+    val jdbcUsername = getOrElse(paramConf(), TiDB_USER, "root")
+
+    val jdbcPassword = getOrElse(paramConf(), TiDB_PASSWORD, "")
+
+    val conn = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
     try {
       //Assume a valid connection object conn
       conn.setAutoCommit(false)
@@ -75,21 +81,18 @@ class TxnTestSuite extends BaseTiSparkSuite {
    * @param i the query number
    * @return thread
    */
-  protected def firstQueryThread(i: Int): Thread =
+  protected def firstQueryThread(i: Int, query: String): Thread =
     new Thread {
-      override def run {
-        var ok = true
-        while (ok) {
-          try {
-            querySpark(q1String)
-            logger.info("query1 " + i.toString + " success!")
-            ok = false
-          } catch {
-            case _: SQLException =>
-              Thread.sleep(1000 + rnd.nextInt(3000))
-              ok = true
-          }
-        }
+      override def run() {
+        while (try {
+                 querySpark(query)
+                 logger.info("query " + i.toString + " success!")
+                 false
+               } catch {
+                 case _: SQLException =>
+                   Thread.sleep(1000 + rnd.nextInt(3000))
+                   true
+               }) {}
       }
     }
 
@@ -101,49 +104,23 @@ class TxnTestSuite extends BaseTiSparkSuite {
    */
   protected def firstTxnThread(i: Int): Thread =
     new Thread {
-      override def run {
-        var ok = true
-        while (ok) {
-          try {
-            val num = rnd.nextInt(600).toString
-            val id1 = (1 + rnd.nextInt(150)).toString
-            val id2 = (1 + rnd.nextInt(150)).toString
-            val querys = Seq[String](
-              giveString.replace("$1", num).replace("$2", id1),
-              getString.replace("$1", num).replace("$2", id2)
-            )
-            queryTIDBTxn(querys, true)
-            logger.info("txn1 " + i.toString + " success!")
-            ok = false
-          } catch {
-            case _: SQLException =>
-              Thread.sleep(1000 + rnd.nextInt(3000))
-          }
-        }
-      }
-    }
-
-  /**
-   * get Spark query thread using q2 query, a long running transaction
-   *
-   * @param i the query number
-   * @return thread
-   */
-  protected def secondQueryThread(i: Int): Thread =
-    new Thread {
-      override def run {
-        var ok = true
-        while (ok) {
-          try {
-            querySpark(q2String)
-            logger.info("query2 " + i.toString + " success!")
-            ok = false
-          } catch {
-            case _: SQLException =>
-              Thread.sleep(1000 + rnd.nextInt(3000))
-              ok = true
-          }
-        }
+      override def run() {
+        while (try {
+                 val num = rnd.nextInt(600).toString
+                 val id1 = (1 + rnd.nextInt(150)).toString
+                 val id2 = (1 + rnd.nextInt(150)).toString
+                 val queries = Seq[String](
+                   giveString.replace("$1", num).replace("$2", id1),
+                   getString.replace("$1", num).replace("$2", id2)
+                 )
+                 queryTIDBTxn(queries, true)
+                 logger.info("txn1 " + i.toString + " success!")
+                 false
+               } catch {
+                 case _: SQLException =>
+                   Thread.sleep(1000 + rnd.nextInt(3000))
+                   true
+               }) {}
       }
     }
 
@@ -155,33 +132,30 @@ class TxnTestSuite extends BaseTiSparkSuite {
    */
   protected def secondTxnThread(i: Int): Thread =
     new Thread {
-      override def run {
-        var ok = true
-        while (ok) {
-          try {
-            val array = (1 to 100).map(
-              _ => {
-                val num = rnd.nextInt(600)
-                val id1 = (1 + rnd.nextInt(150)).toString
-                val id2 = (1 + rnd.nextInt(150)).toString
-                (
-                  giveString.replace("$1", num.toString).replace("$2", id1),
-                  getString.replace("$1", num.toString).replace("$2", id2)
-                )
-              }
-            )
+      override def run() {
+        while (try {
+                 val array = (1 to 100).map(
+                   _ => {
+                     val num = rnd.nextInt(600)
+                     val id1 = (1 + rnd.nextInt(150)).toString
+                     val id2 = (1 + rnd.nextInt(150)).toString
+                     (
+                       giveString.replace("$1", num.toString).replace("$2", id1),
+                       getString.replace("$1", num.toString).replace("$2", id2)
+                     )
+                   }
+                 )
 
-            val querys = array.map(_._1) ++ array.map(_._2)
+                 val queries = array.map(_._1) ++ array.map(_._2)
 
-            queryTIDBTxn(querys, false)
-            logger.info("txn2 " + i.toString + " success!")
-            ok = false
-          } catch {
-            case _: SQLException =>
-              Thread.sleep(1000 + rnd.nextInt(3000))
-              ok = true
-          }
-        }
+                 queryTIDBTxn(queries, false)
+                 logger.info("txn2 " + i.toString + " success!")
+                 false
+               } catch {
+                 case _: SQLException =>
+                   Thread.sleep(1000 + rnd.nextInt(3000))
+                   true
+               }) {}
       }
     }
 
@@ -190,19 +164,19 @@ class TxnTestSuite extends BaseTiSparkSuite {
 
     val start = querySpark(sumString).head.head
 
-    var threads =
+    val threads =
       scala.util.Random.shuffle(
         (0 to 239).map(
           i => {
             i / 100 match {
               case 0 =>
-                firstQueryThread(i)
+                firstQueryThread(i, q1String)
               case 1 =>
                 firstTxnThread(i)
               case 2 =>
                 (i - 200) / 20 match {
                   case 0 =>
-                    secondQueryThread(i)
+                    firstQueryThread(i, q2String)
                   case 1 =>
                     secondTxnThread(i)
                 }

@@ -49,14 +49,14 @@ import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss
 // LockResolver resolves locks and also caches resolved txn status.
 public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, TikvStub> implements RegionErrorReceiver {
   // ResolvedCacheSize is max number of cached txn status.
-  private static final long resolvedTxnCacheSize = 2048;
+  private static final long RESOLVED_TXN_CACHE_SIZE = 2048;
   // By default, locks after 3000ms is considered unusual (the client created the
   // lock might be dead). Other client may cleanup this kind of lock.
   // For locks created recently, we will do backoff and retry.
-  private static final long defaultLockTTL = 3000;
-  private static final long maxLockTTL = 120000;
+  private static final long DEFAULT_LOCK_TTL = 3000;
+  private static final long MAX_LOCK_TTL = 120000;
   // ttl = ttlFactor * sqrt(writeSizeInMiB)
-  private static final long ttlFactor = 6000;
+  private static final long TTL_FACTOR = 6000;
   private static final Logger logger = Logger.getLogger(LockResolverClient.class);
 
   private final ReadWriteLock readWriteLock;
@@ -67,7 +67,7 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
   // if TxnStatus > 0, means the commit ts, otherwise abort
   private final Map<Long, Long> resolved;
   // the list is chain of txn for O(1) lru cache
-  private final LinkedList<Long> recentResolved;
+  private final Queue<Long> recentResolved;
   private TikvBlockingStub blockingStub;
   private TikvStub asyncStub;
   private TiRegion region;
@@ -91,9 +91,9 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
       }
 
       resolved.put(txnID, status);
-      recentResolved.addLast(txnID);
-      if (recentResolved.size() > resolvedTxnCacheSize) {
-        Long front = recentResolved.removeLast();
+      recentResolved.add(txnID);
+      if (recentResolved.size() > RESOLVED_TXN_CACHE_SIZE) {
+        Long front = recentResolved.remove();
         resolved.remove(front);
       }
     } finally {
@@ -159,7 +159,7 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
   // 3) Send `ResolveLock` cmd to the lock's region to resolve all locks belong to
   //    the same transaction.
   public boolean resolveLocks(BackOffer bo, List<Lock> locks) {
-    if (locks.size() == 0) {
+    if (locks.isEmpty()) {
       return true;
     }
 
@@ -170,7 +170,7 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
       }
     }
 
-    if (expiredLocks.size() == 0) {
+    if (expiredLocks.isEmpty()) {
       return false;
     }
 

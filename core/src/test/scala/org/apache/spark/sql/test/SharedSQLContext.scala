@@ -63,6 +63,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
 
+  protected def paramConf(): Properties = SharedSQLContext._tidbConf
+
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
    */

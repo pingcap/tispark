@@ -44,6 +44,7 @@ import com.pingcap.tikv.util.Pair;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.Supplier;
 
@@ -112,7 +113,19 @@ public class LockResolverTest {
         }
       }
 
-      if (!client.lockResolverClient.resolveLocks(backOffer, locks)) {
+      LockResolverClient resolver = null;
+      try {
+        Field field = RegionStoreClient.class.getDeclaredField("lockResolverClient");
+        assert (field != null);
+        field.setAccessible(true);
+        resolver = (LockResolverClient) (field.get(client));
+      } catch (Exception e) {
+        fail();
+      }
+
+      assertNotNull(resolver);
+
+      if (!resolver.resolveLocks(backOffer, locks)) {
         backOffer.doBackOff(BoTxnLock, new KeyException(resp.getErrorsList().get(0)));
       }
 

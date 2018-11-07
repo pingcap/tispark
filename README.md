@@ -118,7 +118,7 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
 | spark.tispark.show_rowid |  true | If to show implicit row Id if exists |
 | spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
-| spark.tispark.request.isolation.level |  1(RC) | Isolation level means whether do the resolve lock for the underlying tidb clusters. When you use the 1(RC), you will get the newest version of record smaller than your tso and ignore the locks. And if you use 0(SI), you will resolve the locks and get the records according whether resolved lock is committed or aborted  |
+| spark.tispark.request.isolation.level |  "RC" | Isolation level means whether do the resolve lock for the underlying tidb clusters. When you use the "RC", you will get the newest version of record smaller than your tso and ignore the locks. And if you use "SI", you will resolve the locks and get the records according whether resolved lock is committed or aborted  |
 
 ## Unsupported MySQL Type List
 
