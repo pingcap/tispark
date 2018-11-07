@@ -68,6 +68,7 @@ import io.grpc.ManagedChannel;
 import java.util.*;
 import java.util.function.Supplier;
 
+import jline.internal.TestAccessible;
 import org.apache.hadoop.hive.ql.lockmgr.LockException;
 import org.apache.log4j.Logger;
 
@@ -101,6 +102,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   // lockResolverClient, after implements the
   // write implementation of tispark, we can change
   // it to private
+  @TestAccessible
   public final LockResolverClient lockResolverClient;
   private TikvBlockingStub blockingStub;
   private TikvStub asyncStub;
@@ -135,7 +137,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
           continue;
         } else {
-          // retryable or abort
+          // retriable or abort
+          // this should trigger Spark to retry the txn
           throw new KeyException(resp.getError());
         }
       }

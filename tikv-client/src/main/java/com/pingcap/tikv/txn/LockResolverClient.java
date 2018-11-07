@@ -175,7 +175,7 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
     }
 
     // TxnID -> []Region, record resolved Regions.
-    // TODO: Maybe put it in LockResolver and share by all txns.
+    // TODO: Maybe put it in all LockResolverClient and share by all txns.
     Map<Long, Set<RegionVerID>> cleanTxns = new HashMap<>();
     for (Lock l: expiredLocks) {
       Long status = getTxnStatus(bo, l.getTxnID(), l.getPrimary());
@@ -201,7 +201,7 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
       Supplier<ResolveLockRequest> factory;
 
       if (txnStatus > 0) {
-        // txn is commited with commitTS txnStatus
+        // txn is committed with commitTS txnStatus
         factory = () ->
             ResolveLockRequest.newBuilder().setContext(region.getContext()).
                 setStartVersion(lock.getTxnID()).setCommitVersion(txnStatus).build();
