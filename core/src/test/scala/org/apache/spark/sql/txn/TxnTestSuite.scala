@@ -76,80 +76,18 @@ class TxnTestSuite extends BaseTiSparkSuite {
   }
 
   /**
-   * get Spark query thread using q1 query
+   * get Spark query thread using corresponding doQuery operation
    *
    * @param i the query number
+   * @param doQuery the query operation
    * @return thread
    */
-  protected def firstQueryThread(i: Int, query: String): Thread =
+  protected def doThread(i: Int, doQuery: () => Unit): Thread =
     new Thread {
       override def run() {
         while (try {
-                 querySpark(query)
+                 doQuery
                  logger.info("query " + i.toString + " success!")
-                 false
-               } catch {
-                 case _: SQLException =>
-                   Thread.sleep(1000 + rnd.nextInt(3000))
-                   true
-               }) {}
-      }
-    }
-
-  /**
-   * get Tidb txn thread using 2 transactions(A => B, A - x and B + x)
-   *
-   * @param i the query number
-   * @return thread
-   */
-  protected def firstTxnThread(i: Int): Thread =
-    new Thread {
-      override def run() {
-        while (try {
-                 val num = rnd.nextInt(600).toString
-                 val id1 = (1 + rnd.nextInt(150)).toString
-                 val id2 = (1 + rnd.nextInt(150)).toString
-                 val queries = Seq[String](
-                   giveString.replace("$1", num).replace("$2", id1),
-                   getString.replace("$1", num).replace("$2", id2)
-                 )
-                 queryTIDBTxn(queries, true)
-                 logger.info("txn1 " + i.toString + " success!")
-                 false
-               } catch {
-                 case _: SQLException =>
-                   Thread.sleep(1000 + rnd.nextInt(3000))
-                   true
-               }) {}
-      }
-    }
-
-  /**
-   * get Tidb txn thread using 100 transactions(A => B, A - x and B + x)
-   *
-   * @param i the query number
-   * @return thread
-   */
-  protected def secondTxnThread(i: Int): Thread =
-    new Thread {
-      override def run() {
-        while (try {
-                 val array = (1 to 100).map(
-                   _ => {
-                     val num = rnd.nextInt(600)
-                     val id1 = (1 + rnd.nextInt(150)).toString
-                     val id2 = (1 + rnd.nextInt(150)).toString
-                     (
-                       giveString.replace("$1", num.toString).replace("$2", id1),
-                       getString.replace("$1", num.toString).replace("$2", id2)
-                     )
-                   }
-                 )
-
-                 val queries = array.map(_._1) ++ array.map(_._2)
-
-                 queryTIDBTxn(queries, false)
-                 logger.info("txn2 " + i.toString + " success!")
                  false
                } catch {
                  case _: SQLException =>
@@ -170,15 +108,49 @@ class TxnTestSuite extends BaseTiSparkSuite {
           i => {
             i / 100 match {
               case 0 =>
-                firstQueryThread(i, q1String)
+                doThread(i,
+                  () => {
+                    querySpark(q1String)
+                  })
               case 1 =>
-                firstTxnThread(i)
+                doThread(i,
+                  () => {
+                    val num = rnd.nextInt(600).toString
+                    val id1 = (1 + rnd.nextInt(150)).toString
+                    val id2 = (1 + rnd.nextInt(150)).toString
+                    val queries = Seq[String](
+                      giveString.replace("$1", num).replace("$2", id1),
+                      getString.replace("$1", num).replace("$2", id2)
+                    )
+                    queryTIDBTxn(queries, true)
+                  }
+                )
               case 2 =>
                 (i - 200) / 20 match {
                   case 0 =>
-                    firstQueryThread(i, q2String)
+                    doThread(i,
+                      () => {
+                        querySpark(q2String)
+                      })
                   case 1 =>
-                    secondTxnThread(i)
+                    doThread(i,
+                      () => {
+                        val array = (1 to 100).map(
+                          _ => {
+                            val num = rnd.nextInt(600)
+                            val id1 = (1 + rnd.nextInt(150)).toString
+                            val id2 = (1 + rnd.nextInt(150)).toString
+                            (
+                              giveString.replace("$1", num.toString).replace("$2", id1),
+                              getString.replace("$1", num.toString).replace("$2", id2)
+                            )
+                          }
+                        )
+
+                        val queries = array.map(_._1) ++ array.map(_._2)
+
+                        queryTIDBTxn(queries, false)
+                      })
                 }
             }
           }
