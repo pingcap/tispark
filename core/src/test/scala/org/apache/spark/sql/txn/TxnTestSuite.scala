@@ -108,12 +108,12 @@ class TxnTestSuite extends BaseTiSparkSuite {
           i => {
             i / 100 match {
               case 0 =>
-                doThread(i,
-                  () => {
-                    querySpark(q1String)
-                  })
+                doThread(i, () => {
+                  querySpark(q1String)
+                })
               case 1 =>
-                doThread(i,
+                doThread(
+                  i,
                   () => {
                     val num = rnd.nextInt(600).toString
                     val id1 = (1 + rnd.nextInt(150)).toString
@@ -128,12 +128,12 @@ class TxnTestSuite extends BaseTiSparkSuite {
               case 2 =>
                 (i - 200) / 20 match {
                   case 0 =>
-                    doThread(i,
-                      () => {
-                        querySpark(q2String)
-                      })
+                    doThread(i, () => {
+                      querySpark(q2String)
+                    })
                   case 1 =>
-                    doThread(i,
+                    doThread(
+                      i,
                       () => {
                         val array = (1 to 100).map(
                           _ => {
@@ -150,7 +150,8 @@ class TxnTestSuite extends BaseTiSparkSuite {
                         val queries = array.map(_._1) ++ array.map(_._2)
 
                         queryTIDBTxn(queries, false)
-                      })
+                      }
+                    )
                 }
             }
           }
