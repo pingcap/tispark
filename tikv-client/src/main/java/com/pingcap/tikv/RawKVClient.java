@@ -15,27 +15,26 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class KVRawClient {
-  static final String RAW_PREFIX = "raw_";
+public class RawKVClient {
   private static final String DEFAULT_PD_ADDRESS = "127.0.0.1:2379";
   private final TiSession session;
   private final RegionManager regionManager;
 
-  private KVRawClient(String addresses) {
+  private RawKVClient(String addresses) {
     session = TiSession.create(TiConfiguration.createDefault(addresses));
     regionManager = session.getRegionManager();
   }
 
-  private KVRawClient() {
+  private RawKVClient() {
     this(DEFAULT_PD_ADDRESS);
   }
 
-  public static KVRawClient create() {
-    return new KVRawClient();
+  public static RawKVClient create() {
+    return new RawKVClient();
   }
 
-  public static KVRawClient create(String address) {
-    return new KVRawClient(address);
+  public static RawKVClient create(String address) {
+    return new RawKVClient(address);
   }
 
   /**
@@ -111,46 +110,6 @@ public class KVRawClient {
     client.rawDelete(defaultBackOff(), key, context);
   }
 
-  /**
-   * Put a raw key-value pair with RAW_PREFIX into TiKV
-   *
-   * @param key   utf-8 key
-   * @param value utf-8 value
-   */
-  public void rawPutUtf8(String key, String value) {
-    put(rawKey(key), rawValue(value));
-  }
-
-  /**
-   * Get a raw key-value pair from TiKV using utf-8 key with RAW_PREFIX
-   *
-   * @param key utf-8 key
-   * @return value of key-value pair with key (RAW_PREFIX + key)
-   */
-  public ByteString rawGetUtf8(String key) {
-    return get(rawKey(key));
-  }
-
-  /**
-   * Delete a raw key-value pair from TiKV using utf-8 key with RAW_PREFIX
-   *
-   * @param key utf-8 key
-   */
-  public void rawDeleteUtf8(String key) {
-    delete(rawKey(key));
-  }
-
-  /**
-   * Scan a list of key-value pair from TiKV in range [RAW_PREFIX + startKey, RAW_PREFIX + endKey)
-   *
-   * @param startKey startKey
-   * @param endKey   endKey
-   * @return result key-value list
-   */
-  public List<Kvrpcpb.KvPair> rawScanUtf8(String startKey, String endKey) {
-    return scan(rawKey(startKey), rawKey(endKey));
-  }
-
   private Iterator<Kvrpcpb.KvPair> rawScanIterator(ByteString startKey, ByteString endKey) {
     return new RawScanIterator(startKey, endKey, Integer.MAX_VALUE, session);
   }
@@ -161,13 +120,5 @@ public class KVRawClient {
 
   private BackOffer defaultBackOff() {
     return ConcreteBackOffer.newCustomBackOff(1000);
-  }
-
-  static ByteString rawKey(String key) {
-    return ByteString.copyFromUtf8(RAW_PREFIX + key);
-  }
-
-  static ByteString rawValue(String value) {
-    return ByteString.copyFromUtf8(value);
   }
 }

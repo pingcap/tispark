@@ -144,7 +144,7 @@ public class RegionStoreClientTest extends MockServerTest {
   }
 
   @Test
-  public void coprocessorTest() throws Exception {
+  public void coprocessTest() throws Exception {
     RegionStoreClient client = createClient();
 
     server.put("key1", "value1");

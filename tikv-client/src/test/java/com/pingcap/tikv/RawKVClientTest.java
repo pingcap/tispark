@@ -12,15 +12,14 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-import static com.pingcap.tikv.KVRawClient.*;
-
-public class KVRawClientTest {
+public class RawKVClientTest {
+  private static final String RAW_PREFIX = "raw_";
   private static final int KEY_POOL_SIZE = 1000000;
   private static final int TEST_CASES = 10000;
   private static final int WORKER_CNT = 100;
   private static final ByteString RAW_START_KEY = ByteString.copyFromUtf8(RAW_PREFIX);
   private static final ByteString RAW_END_KEY = Key.toRawKey(RAW_START_KEY).next().toByteString();
-  private KVRawClient client;
+  private RawKVClient client;
   private static final List<ByteString> orderedKeys;
   private static final List<ByteString> randomKeys;
   private static final List<ByteString> values;
@@ -59,7 +58,7 @@ public class KVRawClientTest {
     try {
       initialized = false;
       if (client == null) {
-        client = KVRawClient.create();
+        client = RawKVClient.create();
       }
       data = new TreeMap<>(bsc);
       initialized = true;
@@ -94,16 +93,6 @@ public class KVRawClientTest {
     checkScan(key, key2, result2);
     checkDelete(key1);
     checkDelete(key2);
-
-    checkEmptyUtf8("key1");
-    checkEmptyUtf8("key2");
-    checkPutUtf8("key1", "value1");
-    checkPutUtf8("key2", "value2");
-    checkScanUtf8("key", "key3", result);
-    checkScanUtf8("key1", "key3", result);
-    checkScanUtf8("key", "key2", result2);
-    checkDeleteUtf8("key1");
-    checkDeleteUtf8("key2");
   }
 
   private List<Kvrpcpb.KvPair> rawKeys() {
@@ -119,12 +108,13 @@ public class KVRawClientTest {
   /**
    * Example of benchmarking base test
    */
+  @Test
   public void benchmark() {
     if (!initialized) return;
-    baseTest(TEST_CASES, TEST_CASES, 100, 5000, true);
+    baseTest(TEST_CASES, TEST_CASES, 200, 5000, true);
   }
 
-  public void baseTest(int putCases, int getCases, int scanCases, int deleteCases, boolean speedTest) {
+  private void baseTest(int putCases, int getCases, int scanCases, int deleteCases, boolean benchmark) {
     if (putCases > KEY_POOL_SIZE) {
       System.out.println("Number of distinct orderedKeys required exceeded pool size " + KEY_POOL_SIZE);
       return;
@@ -136,10 +126,10 @@ public class KVRawClientTest {
 
     prepare();
 
-    rawPutTest(putCases, speedTest);
-    rawGetTest(getCases, speedTest);
-    rawScanTest(scanCases, speedTest);
-    rawDeleteTest(deleteCases, speedTest);
+    rawPutTest(putCases, benchmark);
+    rawGetTest(getCases, benchmark);
+    rawScanTest(scanCases, benchmark);
+    rawDeleteTest(deleteCases, benchmark);
 
     prepare();
     System.out.println("ok, test done");
@@ -178,9 +168,9 @@ public class KVRawClientTest {
     }
   }
 
-  private void rawPutTest(int putCases, boolean speedTest) {
+  private void rawPutTest(int putCases, boolean benchmark) {
     System.out.println("put testing");
-    if (speedTest) {
+    if (benchmark) {
       for (int i = 0; i < putCases; i++) {
         ByteString key = orderedKeys.get(i), value = values.get(i);
         data.put(key, value);
@@ -211,9 +201,9 @@ public class KVRawClientTest {
     }
   }
 
-  private void rawGetTest(int getCases, boolean speedTest) {
+  private void rawGetTest(int getCases, boolean benchmark) {
     System.out.println("get testing");
-    if (speedTest) {
+    if (benchmark) {
       long start = System.currentTimeMillis();
       int base = getCases / WORKER_CNT;
       for (int cnt = 0; cnt < WORKER_CNT; cnt++) {
@@ -242,9 +232,9 @@ public class KVRawClientTest {
     }
   }
 
-  private void rawScanTest(int scanCases, boolean speedTest) {
-    System.out.println("rawBatchScan testing");
-    if (speedTest) {
+  private void rawScanTest(int scanCases, boolean benchmark) {
+    System.out.println("rawScan testing");
+    if (benchmark) {
       long start = System.currentTimeMillis();
       int base = scanCases / WORKER_CNT;
       for (int cnt = 0; cnt < WORKER_CNT; cnt++) {
@@ -279,9 +269,9 @@ public class KVRawClientTest {
     }
   }
 
-  private void rawDeleteTest(int deleteCases, boolean speedTest) {
+  private void rawDeleteTest(int deleteCases, boolean benchmark) {
     System.out.println("delete testing");
-    if (speedTest) {
+    if (benchmark) {
       long start = System.currentTimeMillis();
       int base = deleteCases / WORKER_CNT;
       for (int cnt = 0; cnt < WORKER_CNT; cnt++) {
@@ -340,23 +330,12 @@ public class KVRawClientTest {
     assert client.get(key).isEmpty();
   }
 
-  private void checkPutUtf8(String key, String value) {
-    client.rawPutUtf8(key, value);
-    assert client.rawGetUtf8(key).toStringUtf8().equals(value);
+  private static ByteString rawKey(String key) {
+    return ByteString.copyFromUtf8(RAW_PREFIX + key);
   }
 
-  private void checkScanUtf8(String startKey, String endKey, List<Kvrpcpb.KvPair> ans) {
-    List<Kvrpcpb.KvPair> result = client.rawScanUtf8(startKey, endKey);
-    assert result.equals(ans);
-  }
-
-  private void checkDeleteUtf8(String key) {
-    client.rawDeleteUtf8(key);
-    checkEmptyUtf8(key);
-  }
-
-  private void checkEmptyUtf8(String key) {
-    assert client.rawGetUtf8(key).isEmpty();
+  private static ByteString rawValue(String value) {
+    return ByteString.copyFromUtf8(value);
   }
 
   private static class ByteStringComparator implements Comparator<ByteString> {

@@ -18,7 +18,6 @@ package com.pingcap.tikv.operation.iterator;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
@@ -45,7 +44,7 @@ public class RawScanIterator extends ScanIterator {
       if (limit <= 0) {
         currentCache = null;
       } else {
-        currentCache = client.rawBatchScan(backOffer, startKey, limit);
+        currentCache = client.rawScan(backOffer, startKey, limit);
       }
       return region;
     }
