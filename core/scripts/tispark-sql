@@ -17,7 +17,7 @@
 # limitations under the License.
 #
 
-TISPARK_JAR=tispark-1.1-jar-with-dependencies.jar
+TISPARK_JAR=tispark-1.2-jar-with-dependencies.jar
 
 if [ -z "${SPARK_HOME}" ]; then
   source "$(dirname "$0")"/find-spark-home
