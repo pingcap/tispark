@@ -63,6 +63,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
 
+  protected def paramConf(): Properties = SharedSQLContext._tidbConf
+
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
    */
@@ -161,6 +163,9 @@ object SharedSQLContext extends Logging {
     logger.info("Analyzing table tispark_test.full_data_type_table...")
     _statement.execute("analyze table tispark_test.full_data_type_table")
     logger.info("Analyzing table finished.")
+    logger.info("Analyzing table resolveLock_test.CUSTOMER...")
+    _statement.execute("analyze table resolveLock_test.CUSTOMER")
+    logger.info("Analyzing table finished.")
   }
 
   private def initializeTiDB(forceNotLoad: Boolean = false): Unit =
@@ -204,6 +209,13 @@ object SharedSQLContext extends Logging {
         )
         _statement.execute(queryString)
         logger.warn("Load TPCHData.sql successfully.")
+        // Load resolveLock test data
+        queryString = resourceToString(
+          s"resolveLock-test/ddl.sql",
+          classLoader = Thread.currentThread().getContextClassLoader
+        )
+        _statement.execute(queryString)
+        logger.warn("Load resolveLock-test.ddl.sql successfully.")
         initStatistics()
       }
     }
