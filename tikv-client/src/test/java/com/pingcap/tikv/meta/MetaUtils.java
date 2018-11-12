@@ -119,8 +119,9 @@ public class MetaUtils {
         name = "Table" + tid;
       }
       return new TiTableInfo(
-          tid, CIStr.newCIStr(name), "", "", pkHandle, columns, indices, "", 0, 0, 0, 0,
-          partitionInfo);
+          tid, CIStr.newCIStr(name), "", "", pkHandle, columns,
+          indices, "", 0, 0, 0
+          , 0, null);
     }
   }
 
