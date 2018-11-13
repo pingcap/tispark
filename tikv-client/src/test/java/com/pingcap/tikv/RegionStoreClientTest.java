@@ -27,6 +27,7 @@ import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
+import com.pingcap.tikv.kvproto.Pdpb;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
@@ -67,6 +68,7 @@ public class RegionStoreClientTest {
             .build();
 
     region = new TiRegion(r, r.getPeers(0), IsolationLevel.RC, CommandPri.Low);
+    pdServer.addGetRegionResp(Pdpb.GetRegionResponse.newBuilder().setRegion(r).build());
     server = new KVMockServer();
     port = server.start(region);
     // No PD needed in this test

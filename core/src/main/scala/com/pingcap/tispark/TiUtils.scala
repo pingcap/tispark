@@ -204,8 +204,13 @@ object TiUtils {
     }
 
     if (conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
-      val isolationLevel = IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL))
-      tiConf.setIsolationLevel(isolationLevel)
+      val isolationLevel =
+        IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL)).asInstanceOf[String]
+      if (isolationLevel.equals(TiConfigConst.SNAPSHOT_ISOLATION_LEVEL)) {
+        tiConf.setIsolationLevel(IsolationLevel.SI)
+      } else {
+        tiConf.setIsolationLevel(IsolationLevel.RC)
+      }
     }
 
     if (conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {

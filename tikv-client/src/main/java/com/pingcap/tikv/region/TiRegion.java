@@ -27,6 +27,8 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Region;
+import com.pingcap.tikv.util.FastByteComparisons;
+
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
@@ -105,6 +107,23 @@ public class TiRegion implements Serializable {
     return builder.build();
   }
 
+  public class RegionVerID {
+    public final long id;
+    public final long confVer;
+    public final long ver;
+
+    public RegionVerID(long id, long confVer, long ver) {
+      this.id = id;
+      this.confVer = confVer;
+      this.ver = ver;
+    }
+  }
+
+  // getVerID returns the Region's RegionVerID.
+  public RegionVerID getVerID() {
+    return new RegionVerID(meta.getId(), meta.getRegionEpoch().getConfVer(), meta.getRegionEpoch().getVersion());
+  }
+
   /**
    * switches current peer to the one on specific store. It return false if no peer matches the
    * storeID.
@@ -112,7 +131,7 @@ public class TiRegion implements Serializable {
    * @param leaderStoreID is leader peer id.
    * @return false if no peers matches the store id.
    */
-  boolean switchPeer(long leaderStoreID) {
+  public boolean switchPeer(long leaderStoreID) {
     List<Peer> peers = meta.getPeersList();
     for (Peer p : peers) {
       if (p.getStoreId() == leaderStoreID) {
@@ -124,8 +143,10 @@ public class TiRegion implements Serializable {
   }
 
   public boolean contains(ByteString key) {
-    return meta.getStartKey().equals(key)
-        && (meta.getEndKey().equals(key) || meta.getEndKey().isEmpty());
+    return (FastByteComparisons.compareTo(meta.getStartKey().toByteArray(),
+        0, meta.getStartKey().size(), key.toByteArray(), 0, key.size()) <= 0)
+        && (meta.getEndKey().isEmpty() || FastByteComparisons.compareTo(meta.getEndKey().toByteArray(),
+        0, meta.getEndKey().size(), key.toByteArray(), 0, key.size()) > 0);
   }
 
   public boolean isValid() {

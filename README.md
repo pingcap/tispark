@@ -11,7 +11,7 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to an
 Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
-The current stable version is 1.0 which is compatible with Spark 2.1.0+.
+The current stable version is 1.1 which is compatible with Spark 2.1.0+.
 
 **When using Spark 2.1.0+, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
@@ -19,15 +19,23 @@ The current stable version is 1.0 which is compatible with Spark 2.1.0+.
 
 If you are using maven, add the following to your pom.xml:
 ```xml
-<dependency>
-  <groupId>com.pingcap.tispark</groupId>
-  <artifactId>tispark-core</artifactId>
-  <version>1.0</version>
-</dependency>
+<dependencies>
+    <dependency>
+      <groupId>com.pingcap.tispark</groupId>
+      <artifactId>tispark-core</artifactId>
+      <version>1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.pingcap.tikv</groupId>
+      <artifactId>tikv-client</artifactId>
+      <version>1.1</version>
+    </dependency>
+</dependencies>
 ```
 If you're using SBT, add the following line to your build file:
 ```scala
-libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.0"
+libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.1"
+libraryDependencies += "com.pingcap.tikv" % "tikv-client" % "1.1"
 ```
 
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
@@ -120,6 +128,7 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
 | spark.tispark.show_rowid |  true | If to show implicit row Id if exists |
 | spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
+| spark.tispark.request.isolation.level |  "RC" | Isolation level means whether do the resolve lock for the underlying tidb clusters. When you use the "RC", you will get the newest version of record smaller than your tso and ignore the locks. And if you use "SI", you will resolve the locks and get the records according whether resolved lock is committed or aborted  |
 
 ## Unsupported MySQL Type List
 

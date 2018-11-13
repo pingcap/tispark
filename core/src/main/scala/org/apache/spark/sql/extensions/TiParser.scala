@@ -64,7 +64,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
     case e @ ExplainCommand(logicalPlan, _, _, _) =>
       e.copy(logicalPlan = logicalPlan.transform(qualifyTableIdentifier))
     case c @ CacheTableCommand(tableIdentifier, plan, _)
-      if plan.isEmpty && notTempView(tableIdentifier) =>
+        if plan.isEmpty && notTempView(tableIdentifier) =>
       // Caching an unqualified catalog table.
       c.copy(qualifyTableIdentifierInternal(tableIdentifier))
     case c @ CacheTableCommand(_, plan, _) if plan.isDefined =>
