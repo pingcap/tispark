@@ -19,8 +19,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.StringType;
 import java.io.*;
 import org.junit.Test;
 
@@ -188,14 +188,10 @@ public class TiTableInfoTest {
   }
 
   @Test
-  public void testPartitionInfo() throws Exception {
-
-  }
+  public void testPartitionInfo() throws Exception {}
 
   @Test
-  public void testPartitionDef() throws Exception {
-
-  }
+  public void testPartitionDef() throws Exception {}
 
   @Test
   public void testSerializable() throws Exception {

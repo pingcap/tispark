@@ -1,7 +1,6 @@
 package com.pingcap.tikv.util;
 
 import com.pingcap.tikv.exception.GrpcException;
-
 import java.util.concurrent.ThreadLocalRandom;
 
 public class BackOffFunction {

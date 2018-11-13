@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv;
 
+import static org.junit.Assert.*;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
@@ -30,14 +32,11 @@ import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static org.junit.Assert.*;
 
 public class RegionStoreClientTest {
   private KVMockServer server;
@@ -150,8 +149,10 @@ public class RegionStoreClientTest {
     server.put("key4", "value4");
     server.put("key5", "value5");
     List<Kvrpcpb.KvPair> kvs =
-        client.batchGet(defaultBackOff(),
-            ImmutableList.of(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key2")), 1);
+        client.batchGet(
+            defaultBackOff(),
+            ImmutableList.of(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key2")),
+            1);
     assertEquals(2, kvs.size());
     kvs.forEach(
         kv ->
@@ -160,8 +161,10 @@ public class RegionStoreClientTest {
 
     server.putError("error1", KVMockServer.ABORT);
     try {
-      client.batchGet(defaultBackOff(),
-          ImmutableList.of(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("error1")), 1);
+      client.batchGet(
+          defaultBackOff(),
+          ImmutableList.of(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("error1")),
+          1);
       fail();
     } catch (Exception e) {
       assertTrue(true);
@@ -212,11 +215,7 @@ public class RegionStoreClientTest {
     server.put("key7", "value7");
     DAGRequest.Builder builder = DAGRequest.newBuilder();
     builder.setStartTs(1);
-    builder.addExecutors(
-        Executor.newBuilder()
-            .setTp(ExecType.TypeTableScan)
-            .build()
-    );
+    builder.addExecutors(Executor.newBuilder().setTp(ExecType.TypeTableScan).build());
     List<KeyRange> keyRanges =
         ImmutableList.of(
             createByteStringRange(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key4")),
@@ -254,7 +253,8 @@ public class RegionStoreClientTest {
     client.close();
   }
 
-  private SelectResponse coprocess(RegionStoreClient client, DAGRequest request, List<Coprocessor.KeyRange> ranges) {
+  private SelectResponse coprocess(
+      RegionStoreClient client, DAGRequest request, List<Coprocessor.KeyRange> ranges) {
     BackOffer backOffer = defaultBackOff();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
 
@@ -268,9 +268,7 @@ public class RegionStoreClientTest {
       }
     }
 
-    return SelectResponse.newBuilder()
-        .addAllChunks(resultChunk)
-        .build();
+    return SelectResponse.newBuilder().addAllChunks(resultChunk).build();
   }
 
   private BackOffer defaultBackOff() {

@@ -19,12 +19,11 @@ package com.pingcap.tikv.util;
 
 import com.google.common.base.Preconditions;
 import com.pingcap.tikv.exception.GrpcException;
-import org.apache.log4j.Logger;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.log4j.Logger;
 
 public class ConcreteBackOffer implements BackOffer {
   private int maxSleep;
@@ -70,8 +69,7 @@ public class ConcreteBackOffer implements BackOffer {
 
   /**
    * Creates a back off func which implements exponential back off with optional jitters according
-   * to different back off strategies.
-   * See http://www.awsarchitectureblog.com/2015/03/backoff.html
+   * to different back off strategies. See http://www.awsarchitectureblog.com/2015/03/backoff.html
    */
   private BackOffFunction createBackOffFunc(BackOffFunction.BackOffFuncType funcType) {
     BackOffFunction backOffFunction = null;
@@ -103,15 +101,20 @@ public class ConcreteBackOffer implements BackOffer {
 
   @Override
   public void doBackOff(BackOffFunction.BackOffFuncType funcType, Exception err) {
-    BackOffFunction backOffFunction = backOffFunctionMap
-        .computeIfAbsent(funcType, this::createBackOffFunc);
+    BackOffFunction backOffFunction =
+        backOffFunctionMap.computeIfAbsent(funcType, this::createBackOffFunc);
 
     // Back off will be done here
     totalSleep += backOffFunction.doBackOff();
-    logger.debug(String.format("%s, retry later(totalSleep %dms, maxSleep %dms)", err.getMessage(), totalSleep, maxSleep));
+    logger.debug(
+        String.format(
+            "%s, retry later(totalSleep %dms, maxSleep %dms)",
+            err.getMessage(), totalSleep, maxSleep));
     errors.add(err);
     if (maxSleep > 0 && totalSleep >= maxSleep) {
-      StringBuilder errMsg = new StringBuilder(String.format("backoffer.maxSleep %dms is exceeded, errors:", maxSleep));
+      StringBuilder errMsg =
+          new StringBuilder(
+              String.format("backoffer.maxSleep %dms is exceeded, errors:", maxSleep));
       for (int i = 0; i < errors.size(); i++) {
         Exception curErr = errors.get(i);
         // Print only last 3 errors for non-DEBUG log levels.

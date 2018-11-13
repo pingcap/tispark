@@ -48,8 +48,7 @@ public class TiColumnInfo implements Serializable {
     return new TiColumnInfo(-1, "_tidb_rowid", offset, IntegerType.ROW_ID_TYPE, true);
   }
 
-  @VisibleForTesting
-  private static final int PK_MASK = 0x2;
+  @VisibleForTesting private static final int PK_MASK = 0x2;
 
   @JsonCreator
   public TiColumnInfo(
@@ -106,8 +105,7 @@ public class TiColumnInfo implements Serializable {
         this.schemaState,
         this.originDefaultValue,
         this.defaultValue,
-        this.comment
-    );
+        this.comment);
   }
 
   @VisibleForTesting
@@ -291,7 +289,6 @@ public class TiColumnInfo implements Serializable {
     public String getOriginDefaultValue() {
       return originDefaultValue;
     }
-
   }
 
   TiIndexColumn toFakeIndexColumn() {
@@ -331,21 +328,19 @@ public class TiColumnInfo implements Serializable {
       return false;
     }
 
-    TiColumnInfo col = (TiColumnInfo)other;
-    return Objects.equals(id, col.id) &&
-        Objects.equals(name, col.name) &&
-        Objects.equals(type, col.type) &&
-        Objects.equals(schemaState, col.schemaState) &&
-        isPrimaryKey == col.isPrimaryKey &&
-        Objects.equals(defaultValue, col.defaultValue) &&
-        Objects.equals(originDefaultValue, col.originDefaultValue);
+    TiColumnInfo col = (TiColumnInfo) other;
+    return Objects.equals(id, col.id)
+        && Objects.equals(name, col.name)
+        && Objects.equals(type, col.type)
+        && Objects.equals(schemaState, col.schemaState)
+        && isPrimaryKey == col.isPrimaryKey
+        && Objects.equals(defaultValue, col.defaultValue)
+        && Objects.equals(originDefaultValue, col.originDefaultValue);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(
-        id, name, type,
-        schemaState, isPrimaryKey,
-        defaultValue, originDefaultValue);
+        id, name, type, schemaState, isPrimaryKey, defaultValue, originDefaultValue);
   }
 }

@@ -18,7 +18,6 @@
 package com.pingcap.tikv.row;
 
 import com.pingcap.tikv.types.DataType;
-
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;

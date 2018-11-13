@@ -1,6 +1,6 @@
 package com.pingcap.tikv.util;
 
-final public class TsoUtils {
+public final class TsoUtils {
   private static final long physicalShiftBits = 18;
 
   public static boolean isExpired(long lockTS, long ttl) {

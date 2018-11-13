@@ -22,17 +22,13 @@ import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 /**
- * TODO: Support Enum Type
- * EnumType class is set now only to indicate this type exists,
- * so that we could throw UnsupportedTypeException when encountered.
- * Its logic is not yet implemented.
+ * TODO: Support Enum Type EnumType class is set now only to indicate this type exists, so that we
+ * could throw UnsupportedTypeException when encountered. Its logic is not yet implemented.
  */
 public class EnumType extends DataType {
   public static final EnumType ENUM = new EnumType(MySQLType.TypeEnum);
 
-  public static final MySQLType[] subTypes = new MySQLType[] {
-      MySQLType.TypeEnum
-  };
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeEnum};
 
   private EnumType(MySQLType tp) {
     super(tp);
@@ -42,35 +38,25 @@ public class EnumType extends DataType {
     super(holder);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     throw new UnsupportedTypeException("Enum type not supported");
   }
 
-  /**
-   * {@inheritDoc}
-   * Enum is encoded as unsigned int64 with its 0-based value.
-   */
+  /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     throw new UnsupportedTypeException("Enum type not supported");
   }
 
-  /**
-   * {@inheritDoc}
-   * Enum is encoded as unsigned int64 with its 0-based value.
-   */
+  /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
     throw new UnsupportedTypeException("Enum type not supported");
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     throw new UnsupportedTypeException("Enum type not supported");
@@ -81,9 +67,7 @@ public class EnumType extends DataType {
     return ExprType.MysqlEnum;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
     return value;

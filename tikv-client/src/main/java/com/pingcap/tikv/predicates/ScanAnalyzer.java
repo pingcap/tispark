@@ -15,6 +15,11 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
@@ -34,17 +39,10 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.types.DataType;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
-import static java.util.Objects.requireNonNull;
-
 
 public class ScanAnalyzer {
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;
@@ -52,7 +50,13 @@ public class ScanAnalyzer {
   private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
 
   public static class ScanPlan {
-    ScanPlan(List<KeyRange> keyRanges, Set<Expression> filters, TiIndexInfo index, double cost, boolean isDoubleRead, double estimatedRowCount) {
+    ScanPlan(
+        List<KeyRange> keyRanges,
+        Set<Expression> filters,
+        TiIndexInfo index,
+        double cost,
+        boolean isDoubleRead,
+        double estimatedRowCount) {
       this.filters = filters;
       this.keyRanges = keyRanges;
       this.cost = cost;
@@ -92,15 +96,22 @@ public class ScanAnalyzer {
       return index;
     }
 
-    public boolean isDoubleRead() { return isDoubleRead; }
+    public boolean isDoubleRead() {
+      return isDoubleRead;
+    }
   }
 
-  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
+  public ScanPlan buildScan(
+      List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
     return buildScan(columnList, conditions, table, null);
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
+  public ScanPlan buildScan(
+      List<TiColumnInfo> columnList,
+      List<Expression> conditions,
+      TiTableInfo table,
+      TableStatistics tableStatistics) {
     ScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
@@ -113,12 +124,18 @@ public class ScanAnalyzer {
     return minPlan;
   }
 
-  public ScanPlan buildTableScan(List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
+  public ScanPlan buildTableScan(
+      List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     return buildScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
   }
 
-  public ScanPlan buildScan(List<TiColumnInfo> columnList, List<Expression> conditions, TiIndexInfo index, TiTableInfo table, TableStatistics tableStatistics) {
+  public ScanPlan buildScan(
+      List<TiColumnInfo> columnList,
+      List<Expression> conditions,
+      TiIndexInfo index,
+      TiTableInfo table,
+      TableStatistics tableStatistics) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
@@ -128,7 +145,9 @@ public class ScanAnalyzer {
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
-    List<IndexRange> irs = expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
+    List<IndexRange> irs =
+        expressionToIndexRanges(
+            result.getPointPredicates(), result.getRangePredicate(), table, index);
 
     List<KeyRange> keyRanges;
     boolean isDoubleRead = false;
@@ -138,7 +157,7 @@ public class ScanAnalyzer {
 
     if (index == null || index.isFakePrimaryKey()) {
       if (tableStatistics != null) {
-        cost = 100.0;// Full table scan cost
+        cost = 100.0; // Full table scan cost
         // TODO: Fine-grained statistics usage
       }
       keyRanges = buildTableScanKeyRange(table, irs);
@@ -169,7 +188,8 @@ public class ScanAnalyzer {
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
 
-    return new ScanPlan(keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead, estimatedRowCount);
+    return new ScanPlan(
+        keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead, estimatedRowCount);
   }
 
   @VisibleForTesting
@@ -182,7 +202,8 @@ public class ScanAnalyzer {
       Key startKey;
       Key endKey;
       if (ir.hasAccessKey()) {
-        checkArgument(!ir.hasRange(), "Table scan must have one and only one access condition / point");
+        checkArgument(
+            !ir.hasRange(), "Table scan must have one and only one access condition / point");
 
         Key key = ir.getAccessKey();
         checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
@@ -190,7 +211,8 @@ public class ScanAnalyzer {
         startKey = RowKey.toRowKey(table.getId(), typedKey);
         endKey = startKey.next();
       } else if (ir.hasRange()) {
-        checkArgument(!ir.hasAccessKey(), "Table scan must have one and only one access condition / point");
+        checkArgument(
+            !ir.hasAccessKey(), "Table scan must have one and only one access condition / point");
         Range<TypedKey> r = ir.getRange();
 
         if (!r.hasLowerBound()) {
@@ -283,8 +305,9 @@ public class ScanAnalyzer {
     return ranges;
   }
 
-  boolean isCoveringIndex(List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
-    for (TiColumnInfo colInfo: columns) {
+  boolean isCoveringIndex(
+      List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
+    for (TiColumnInfo colInfo : columns) {
       if (pkIsHandle && colInfo.isPrimaryKey()) {
         continue;
       }
@@ -292,9 +315,10 @@ public class ScanAnalyzer {
         continue;
       }
       boolean isIndexColumn = false;
-      for (TiIndexColumn indexCol: indexColumns.getIndexColumns()) {
-        boolean isFullLength = indexCol.getLength() == DataType.UNSPECIFIED_LEN ||
-            indexCol.getLength() == colInfo.getType().getLength();
+      for (TiIndexColumn indexCol : indexColumns.getIndexColumns()) {
+        boolean isFullLength =
+            indexCol.getLength() == DataType.UNSPECIFIED_LEN
+                || indexCol.getLength() == colInfo.getType().getLength();
         if (colInfo.getName().equalsIgnoreCase(indexCol.getName()) && isFullLength) {
           isIndexColumn = true;
           break;
@@ -310,7 +334,8 @@ public class ScanAnalyzer {
   @VisibleForTesting
   public static ScanSpec extractConditions(
       List<Expression> conditions, TiTableInfo table, TiIndexInfo index) {
-    // 0. Different than TiDB implementation, here logic has been unified for TableScan and IndexScan by
+    // 0. Different than TiDB implementation, here logic has been unified for TableScan and
+    // IndexScan by
     // adding fake index on clustered table's pk
     // 1. Generate access point based on equal conditions
     // 2. Cut access point condition if index is not continuous

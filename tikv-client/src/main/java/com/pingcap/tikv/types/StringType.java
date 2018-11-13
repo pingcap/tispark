@@ -26,10 +26,8 @@ public class StringType extends BytesType {
   public static final StringType BINARY = new StringType(MySQLType.TypeString);
   public static final StringType CHAR = new StringType(MySQLType.TypeString);
 
-  public static final MySQLType[] subTypes = new MySQLType[] {
-      MySQLType.TypeVarchar,
-      MySQLType.TypeString
-  };
+  public static final MySQLType[] subTypes =
+      new MySQLType[] {MySQLType.TypeVarchar, MySQLType.TypeString};
 
   protected StringType(MySQLType tp) {
     super(tp);
@@ -39,11 +37,9 @@ public class StringType extends BytesType {
     super(holder);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    return new String((byte[])super.decodeNotNull(flag, cdi), StandardCharsets.UTF_8);
+    return new String((byte[]) super.decodeNotNull(flag, cdi), StandardCharsets.UTF_8);
   }
 }

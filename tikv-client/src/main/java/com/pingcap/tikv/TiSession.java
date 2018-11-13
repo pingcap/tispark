@@ -24,14 +24,12 @@ import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-
 
 public class TiSession implements AutoCloseable {
   private static final Map<String, ManagedChannel> connPool = new HashMap<>();
@@ -82,12 +80,13 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (catalog == null) {
-          catalog = new Catalog(this::createSnapshot,
-              conf.getMetaReloadPeriod(),
-              conf.getMetaReloadPeriodUnit(),
-              conf.ifShowRowId(),
-              conf.getDBPrefix()
-          );
+          catalog =
+              new Catalog(
+                  this::createSnapshot,
+                  conf.getMetaReloadPeriod(),
+                  conf.getMetaReloadPeriodUnit(),
+                  conf.ifShowRowId(),
+                  conf.getDBPrefix());
         }
         res = catalog;
       }
@@ -120,11 +119,12 @@ public class TiSession implements AutoCloseable {
 
       // Channel should be lazy without actual connection until first call
       // So a coarse grain lock is ok here
-      channel = ManagedChannelBuilder.forAddress(address.getHostText(), address.getPort())
-          .maxInboundMessageSize(conf.getMaxFrameSize())
-          .usePlaintext(true)
-          .idleTimeout(60, TimeUnit.SECONDS)
-          .build();
+      channel =
+          ManagedChannelBuilder.forAddress(address.getHostText(), address.getPort())
+              .maxInboundMessageSize(conf.getMaxFrameSize())
+              .usePlaintext(true)
+              .idleTimeout(60, TimeUnit.SECONDS)
+              .build();
       connPool.put(addressStr, channel);
     }
     return channel;
@@ -135,9 +135,10 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (indexScanThreadPool == null) {
-          indexScanThreadPool = Executors.newFixedThreadPool(
-              conf.getIndexScanConcurrency(),
-              new ThreadFactoryBuilder().setDaemon(true).build());
+          indexScanThreadPool =
+              Executors.newFixedThreadPool(
+                  conf.getIndexScanConcurrency(),
+                  new ThreadFactoryBuilder().setDaemon(true).build());
         }
         res = indexScanThreadPool;
       }
@@ -150,9 +151,10 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (tableScanThreadPool == null) {
-          tableScanThreadPool = Executors.newFixedThreadPool(
-              conf.getTableScanConcurrency(),
-              new ThreadFactoryBuilder().setDaemon(true).build());
+          tableScanThreadPool =
+              Executors.newFixedThreadPool(
+                  conf.getTableScanConcurrency(),
+                  new ThreadFactoryBuilder().setDaemon(true).build());
         }
         res = tableScanThreadPool;
       }
@@ -170,6 +172,7 @@ public class TiSession implements AutoCloseable {
 
   /**
    * This is used for setting call back function to invalidate cache information
+   *
    * @param callBackFunc callback function
    */
   public void injectCallBackFunc(Function<CacheInvalidateEvent, Void> callBackFunc) {

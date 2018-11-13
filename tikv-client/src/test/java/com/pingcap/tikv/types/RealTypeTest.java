@@ -31,7 +31,7 @@ public class RealTypeTest {
     double originalVal = 666.66;
     byte[] encodedKey = encode(originalVal, EncodeType.KEY, type);
     Object val = decode(encodedKey, type);
-    assertEquals(originalVal, (double)val, 0.01);
+    assertEquals(originalVal, (double) val, 0.01);
 
     encodedKey = encode(null, EncodeType.KEY, type);
     val = decode(encodedKey, type);

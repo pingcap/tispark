@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv.expression;
 
-
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.*;
 import static java.util.Objects.requireNonNull;
 
@@ -84,7 +83,6 @@ public class ArithmeticBinaryExpression implements Expression {
     return compType;
   }
 
-
   @Override
   public List<Expression> getChildren() {
     return ImmutableList.of(left, right);
@@ -94,7 +92,6 @@ public class ArithmeticBinaryExpression implements Expression {
   public <R, C> R accept(Visitor<R, C> visitor, C context) {
     return visitor.visit(this, context);
   }
-
 
   @Override
   public boolean equals(Object other) {
@@ -106,9 +103,9 @@ public class ArithmeticBinaryExpression implements Expression {
     }
 
     ArithmeticBinaryExpression that = (ArithmeticBinaryExpression) other;
-    return (compType == that.compType) &&
-        Objects.equals(left, that.left) &&
-        Objects.equals(right, that.right);
+    return (compType == that.compType)
+        && Objects.equals(left, that.left)
+        && Objects.equals(right, that.right);
   }
 
   @Override

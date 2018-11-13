@@ -3,7 +3,6 @@
 
 package com.pingcap.tikv.expression;
 
-
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -71,9 +70,9 @@ public class LogicalBinaryExpression implements Expression {
     }
 
     LogicalBinaryExpression that = (LogicalBinaryExpression) other;
-    return (compType == that.compType) &&
-        Objects.equals(left, that.left) &&
-        Objects.equals(right, that.right);
+    return (compType == that.compType)
+        && Objects.equals(left, that.left)
+        && Objects.equals(right, that.right);
   }
 
   @Override

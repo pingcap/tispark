@@ -15,6 +15,9 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiExpressionException;
@@ -28,11 +31,7 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-
 import java.util.*;
-
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
-import static java.util.Objects.requireNonNull;
 
 public class PredicateUtils {
   public static Expression mergeCNFExpressions(List<Expression> exprs) {
@@ -45,13 +44,14 @@ public class PredicateUtils {
 
   public static Set<ColumnRef> extractColumnRefFromExpression(Expression expr) {
     Set<ColumnRef> columnRefs = new HashSet<>();
-    Visitor<Void, Set<ColumnRef>> visitor = new DefaultVisitor<Void, Set<ColumnRef>>() {
-      @Override
-      protected Void visit(ColumnRef node, Set<ColumnRef> context) {
-        context.add(node);
-        return null;
-      }
-    };
+    Visitor<Void, Set<ColumnRef>> visitor =
+        new DefaultVisitor<Void, Set<ColumnRef>>() {
+          @Override
+          protected Void visit(ColumnRef node, Set<ColumnRef> context) {
+            context.add(node);
+            return null;
+          }
+        };
 
     expr.accept(visitor, columnRefs);
     return columnRefs;
@@ -109,7 +109,8 @@ public class PredicateUtils {
    * @param pointPredicates expressions that convertible to access points
    * @return access points for each index
    */
-  private static List<Key> expressionToPoints(List<Expression> pointPredicates, TiTableInfo table, TiIndexInfo index) {
+  private static List<Key> expressionToPoints(
+      List<Expression> pointPredicates, TiTableInfo table, TiIndexInfo index) {
     requireNonNull(pointPredicates, "pointPredicates cannot be null");
 
     List<Key> resultKeys = new ArrayList<>();
@@ -123,7 +124,8 @@ public class PredicateUtils {
         List<Key> points = rangesToPoint(ranges);
         resultKeys = joinKeys(resultKeys, points);
       } catch (Exception e) {
-        throw new TiExpressionException(String.format("Error converting access points %s", predicate), e);
+        throw new TiExpressionException(
+            String.format("Error converting access points %s", predicate), e);
       }
     }
     return resultKeys;
@@ -135,9 +137,9 @@ public class PredicateUtils {
     ImmutableList.Builder<Key> builder = ImmutableList.builder();
     for (Range<TypedKey> range : ranges) {
       // test if range is a point
-      if (range.hasLowerBound() &&
-          range.hasUpperBound() &&
-          range.lowerEndpoint().equals(range.upperEndpoint())) {
+      if (range.hasLowerBound()
+          && range.hasUpperBound()
+          && range.lowerEndpoint().equals(range.upperEndpoint())) {
         builder.add(range.lowerEndpoint());
       } else {
         throw new TiExpressionException("Cannot convert range to point");

@@ -15,6 +15,9 @@
 
 package com.pingcap.tikv;
 
+import static io.grpc.stub.ClientCalls.asyncBidiStreamingCall;
+import static io.grpc.stub.ClientCalls.blockingServerStreamingCall;
+
 import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.policy.RetryMaxMs.Builder;
 import com.pingcap.tikv.policy.RetryPolicy;
@@ -24,15 +27,11 @@ import io.grpc.MethodDescriptor;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.ClientCalls;
 import io.grpc.stub.StreamObserver;
+import java.util.function.Supplier;
 import org.apache.log4j.Logger;
 
-import java.util.function.Supplier;
-
-import static io.grpc.stub.ClientCalls.asyncBidiStreamingCall;
-import static io.grpc.stub.ClientCalls.blockingServerStreamingCall;
-
 public abstract class AbstractGRPCClient<
-    BlockingStubT extends AbstractStub<BlockingStubT>, StubT extends AbstractStub<StubT>>
+        BlockingStubT extends AbstractStub<BlockingStubT>, StubT extends AbstractStub<StubT>>
     implements AutoCloseable {
   protected final Logger logger = Logger.getLogger(this.getClass());
   protected TiSession session;
@@ -52,24 +51,25 @@ public abstract class AbstractGRPCClient<
   }
 
   // TODO: Seems a little bit messy for lambda part
-  public <ReqT, RespT> RespT callWithRetry(BackOffer backOffer,
-                                              MethodDescriptor<ReqT, RespT> method,
-                                              Supplier<ReqT> requestFactory,
-                                              ErrorHandler<RespT> handler) {
+  public <ReqT, RespT> RespT callWithRetry(
+      BackOffer backOffer,
+      MethodDescriptor<ReqT, RespT> method,
+      Supplier<ReqT> requestFactory,
+      ErrorHandler<RespT> handler) {
     if (logger.isTraceEnabled()) {
       logger.trace(String.format("Calling %s...", method.getFullMethodName()));
     }
     RetryPolicy.Builder<RespT> builder = new Builder<>(backOffer);
     RespT resp =
-        builder.create(handler)
+        builder
+            .create(handler)
             .callWithRetry(
                 () -> {
                   BlockingStubT stub = getBlockingStub();
                   return ClientCalls.blockingUnaryCall(
                       stub.getChannel(), method, stub.getCallOptions(), requestFactory.get());
                 },
-                method.getFullMethodName()
-            );
+                method.getFullMethodName());
 
     if (logger.isTraceEnabled()) {
       logger.trace(String.format("leaving %s...", method.getFullMethodName()));
@@ -86,7 +86,8 @@ public abstract class AbstractGRPCClient<
     logger.debug(String.format("Calling %s...", method.getFullMethodName()));
 
     RetryPolicy.Builder<RespT> builder = new Builder<>(backOffer);
-    builder.create(handler)
+    builder
+        .create(handler)
         .callWithRetry(
             () -> {
               StubT stub = getAsyncStub();
@@ -109,7 +110,8 @@ public abstract class AbstractGRPCClient<
 
     RetryPolicy.Builder<StreamObserver<ReqT>> builder = new Builder<>(backOffer);
     StreamObserver<ReqT> observer =
-        builder.create(handler)
+        builder
+            .create(handler)
             .callWithRetry(
                 () -> {
                   StubT stub = getAsyncStub();
@@ -128,21 +130,16 @@ public abstract class AbstractGRPCClient<
       ErrorHandler<StreamingResponse> handler) {
     logger.debug(String.format("Calling %s...", method.getFullMethodName()));
 
-    RetryPolicy.Builder<StreamingResponse> builder =
-        new Builder<>(backOffer);
+    RetryPolicy.Builder<StreamingResponse> builder = new Builder<>(backOffer);
     StreamingResponse response =
-        builder.create(handler)
+        builder
+            .create(handler)
             .callWithRetry(
                 () -> {
                   BlockingStubT stub = getBlockingStub();
                   return new StreamingResponse(
                       blockingServerStreamingCall(
-                          stub.getChannel(),
-                          method,
-                          stub.getCallOptions(),
-                          requestFactory.get()
-                      )
-                  );
+                          stub.getChannel(), method, stub.getCallOptions(), requestFactory.get()));
                 },
                 method.getFullMethodName());
     logger.debug(String.format("leaving %s...", method.getFullMethodName()));

@@ -50,6 +50,4 @@ public class SupportedExpressionValidator extends DefaultVisitor<Boolean, Expres
     }
     return true;
   }
-
-
 }

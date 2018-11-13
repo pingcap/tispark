@@ -15,15 +15,14 @@
 
 package com.pingcap.tikv.streaming;
 
+import static java.util.Objects.requireNonNull;
+
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Errorpb;
-
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
-import static java.util.Objects.requireNonNull;
+import javax.annotation.Nonnull;
 
 public class StreamingResponse implements Iterable {
   private Iterator<Coprocessor.Response> resultIterator;
