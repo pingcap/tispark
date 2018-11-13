@@ -10,7 +10,6 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -40,13 +39,12 @@ public class RawKVClient {
   /**
    * Put a raw key-value pair to TiKV
    *
-   * @param key   raw key
+   * @param key raw key
    * @param value raw value
    */
   public void put(ByteString key, ByteString value) {
     Pair<TiRegion, Metapb.Store> pair = regionManager.getRegionStorePairByRawKey(key);
-    RegionStoreClient client =
-        RegionStoreClient.create(pair.first, pair.second, session);
+    RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, session);
     client.rawPut(defaultBackOff(), key, value);
   }
 
@@ -58,8 +56,7 @@ public class RawKVClient {
    */
   public ByteString get(ByteString key) {
     Pair<TiRegion, Metapb.Store> pair = regionManager.getRegionStorePairByRawKey(key);
-    RegionStoreClient client =
-        RegionStoreClient.create(pair.first, pair.second, session);
+    RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, session);
     return client.rawGet(defaultBackOff(), key);
   }
 
@@ -67,7 +64,7 @@ public class RawKVClient {
    * Scan raw key-value pairs from TiKV in range [startKey, endKey)
    *
    * @param startKey raw start key, inclusive
-   * @param endKey   raw end key, exclusive
+   * @param endKey raw end key, exclusive
    * @return list of key-value pairs in range
    */
   public List<Kvrpcpb.KvPair> scan(ByteString startKey, ByteString endKey) {
@@ -81,7 +78,7 @@ public class RawKVClient {
    * Scan raw key-value pairs from TiKV in range [startKey, endKey)
    *
    * @param startKey raw start key, inclusive
-   * @param limit    limit of key-value pairs
+   * @param limit limit of key-value pairs
    * @return list of key-value pairs in range
    */
   public List<Kvrpcpb.KvPair> scan(ByteString startKey, int limit) {
@@ -105,8 +102,7 @@ public class RawKVClient {
             .setPeer(region.getLeader())
             .build();
     Pair<TiRegion, Metapb.Store> pair = regionManager.getRegionStorePairByRawKey(key);
-    RegionStoreClient client =
-        RegionStoreClient.create(pair.first, pair.second, session);
+    RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, session);
     client.rawDelete(defaultBackOff(), key, context);
   }
 

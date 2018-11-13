@@ -4,13 +4,12 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.util.FastByteComparisons;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.junit.Before;
+import org.junit.Test;
 
 public class RawKVClientTest {
   private static final String RAW_PREFIX = "raw_";
@@ -28,7 +27,8 @@ public class RawKVClientTest {
   private Random r = new Random(1234);
   private static final ByteStringComparator bsc = new ByteStringComparator();
   private static final ExecutorService executors = Executors.newFixedThreadPool(WORKER_CNT);
-  private final ExecutorCompletionService<Object> completionService = new ExecutorCompletionService<>(executors);
+  private final ExecutorCompletionService<Object> completionService =
+      new ExecutorCompletionService<>(executors);
 
   static {
     orderedKeys = new ArrayList<>();
@@ -105,22 +105,22 @@ public class RawKVClientTest {
     baseTest(100, 100, 100, 100, false);
   }
 
-  /**
-   * Example of benchmarking base test
-   */
-  @Test
+  /** Example of benchmarking base test */
   public void benchmark() {
     if (!initialized) return;
     baseTest(TEST_CASES, TEST_CASES, 200, 5000, true);
   }
 
-  private void baseTest(int putCases, int getCases, int scanCases, int deleteCases, boolean benchmark) {
+  private void baseTest(
+      int putCases, int getCases, int scanCases, int deleteCases, boolean benchmark) {
     if (putCases > KEY_POOL_SIZE) {
-      System.out.println("Number of distinct orderedKeys required exceeded pool size " + KEY_POOL_SIZE);
+      System.out.println(
+          "Number of distinct orderedKeys required exceeded pool size " + KEY_POOL_SIZE);
       return;
     }
     if (deleteCases > putCases) {
-      System.out.println("Number of orderedKeys to delete is more than total number of orderedKeys");
+      System.out.println(
+          "Number of orderedKeys to delete is more than total number of orderedKeys");
       return;
     }
 
@@ -144,11 +144,11 @@ public class RawKVClientTest {
     remainingKeys.forEach(kvPair -> checkDelete(kvPair.getKey()));
     for (int cnt = 0; cnt < WORKER_CNT; cnt++) {
       int i = cnt;
-      completionService.submit(() -> {
-        for (int j = 0; j < base; j++)
-          checkDelete(remainingKeys.get(i * base + j).getKey());
-        return null;
-      });
+      completionService.submit(
+          () -> {
+            for (int j = 0; j < base; j++) checkDelete(remainingKeys.get(i * base + j).getKey());
+            return null;
+          });
     }
     awaitTimeOut(base / 100);
   }
@@ -180,18 +180,26 @@ public class RawKVClientTest {
       int base = putCases / WORKER_CNT;
       for (int cnt = 0; cnt < WORKER_CNT; cnt++) {
         int i = cnt;
-        completionService.submit(() -> {
-          for (int j = 0; j < base; j++) {
-            int num = i * base + j;
-            ByteString key = orderedKeys.get(num), value = values.get(num);
-            client.put(key, value);
-          }
-          return null;
-        });
+        completionService.submit(
+            () -> {
+              for (int j = 0; j < base; j++) {
+                int num = i * base + j;
+                ByteString key = orderedKeys.get(num), value = values.get(num);
+                client.put(key, value);
+              }
+              return null;
+            });
       }
       awaitTimeOut(100);
       long end = System.currentTimeMillis();
-      System.out.println(putCases + " put: " + (end - start) / 1000.0 + "s workers=" + WORKER_CNT + " put=" + rawKeys().size());
+      System.out.println(
+          putCases
+              + " put: "
+              + (end - start) / 1000.0
+              + "s workers="
+              + WORKER_CNT
+              + " put="
+              + rawKeys().size());
     } else {
       for (int i = 0; i < putCases; i++) {
         ByteString key = randomKeys.get(i), value = values.get(r.nextInt(KEY_POOL_SIZE));
@@ -208,14 +216,15 @@ public class RawKVClientTest {
       int base = getCases / WORKER_CNT;
       for (int cnt = 0; cnt < WORKER_CNT; cnt++) {
         int i = cnt;
-        completionService.submit(() -> {
-          for (int j = 0; j < base; j++) {
-            int num = i * base + j;
-            ByteString key = orderedKeys.get(num);
-            client.get(key);
-          }
-          return null;
-        });
+        completionService.submit(
+            () -> {
+              for (int j = 0; j < base; j++) {
+                int num = i * base + j;
+                ByteString key = orderedKeys.get(num);
+                client.get(key);
+              }
+              return null;
+            });
       }
       awaitTimeOut(200);
       long end = System.currentTimeMillis();
@@ -239,26 +248,28 @@ public class RawKVClientTest {
       int base = scanCases / WORKER_CNT;
       for (int cnt = 0; cnt < WORKER_CNT; cnt++) {
         int i = cnt;
-        completionService.submit(() -> {
-          for (int j = 0; j < base; j++) {
-            int num = i * base + j;
-            ByteString startKey = randomKeys.get(num), endKey = randomKeys.get(num + 1);
-            if (bsc.compare(startKey, endKey) > 0) {
-              ByteString tmp = startKey;
-              startKey = endKey;
-              endKey = tmp;
-            }
-            client.scan(startKey, endKey);
-          }
-          return null;
-        });
+        completionService.submit(
+            () -> {
+              for (int j = 0; j < base; j++) {
+                int num = i * base + j;
+                ByteString startKey = randomKeys.get(num), endKey = randomKeys.get(num + 1);
+                if (bsc.compare(startKey, endKey) > 0) {
+                  ByteString tmp = startKey;
+                  startKey = endKey;
+                  endKey = tmp;
+                }
+                client.scan(startKey, endKey);
+              }
+              return null;
+            });
       }
       awaitTimeOut(200);
       long end = System.currentTimeMillis();
       System.out.println(scanCases + " scan: " + (end - start) / 1000.0 + "s");
     } else {
       for (int i = 0; i < scanCases; i++) {
-        ByteString startKey = randomKeys.get(r.nextInt(KEY_POOL_SIZE)), endKey = randomKeys.get(r.nextInt(KEY_POOL_SIZE));
+        ByteString startKey = randomKeys.get(r.nextInt(KEY_POOL_SIZE)),
+            endKey = randomKeys.get(r.nextInt(KEY_POOL_SIZE));
         if (bsc.compare(startKey, endKey) > 0) {
           ByteString tmp = startKey;
           startKey = endKey;
@@ -276,14 +287,15 @@ public class RawKVClientTest {
       int base = deleteCases / WORKER_CNT;
       for (int cnt = 0; cnt < WORKER_CNT; cnt++) {
         int i = cnt;
-        completionService.submit(() -> {
-          for (int j = 0; j < base; j++) {
-            int num = i * base + j;
-            ByteString key = orderedKeys.get(num);
-            client.delete(key);
-          }
-          return null;
-        });
+        completionService.submit(
+            () -> {
+              for (int j = 0; j < base; j++) {
+                int num = i * base + j;
+                ByteString key = orderedKeys.get(num);
+                client.delete(key);
+              }
+              return null;
+            });
       }
       awaitTimeOut(100);
       long end = System.currentTimeMillis();
@@ -310,15 +322,21 @@ public class RawKVClientTest {
     assert result.equals(ans);
   }
 
-  private void checkScan(ByteString startKey, ByteString endKey, TreeMap<ByteString, ByteString> data) {
+  private void checkScan(
+      ByteString startKey, ByteString endKey, TreeMap<ByteString, ByteString> data) {
     checkScan(
-        startKey, endKey,
+        startKey,
+        endKey,
         data.subMap(startKey, endKey)
             .entrySet()
             .stream()
-            .map(kvPair -> Kvrpcpb.KvPair.newBuilder().setKey(kvPair.getKey()).setValue(kvPair.getValue()).build())
-            .collect(Collectors.toList())
-    );
+            .map(
+                kvPair ->
+                    Kvrpcpb.KvPair.newBuilder()
+                        .setKey(kvPair.getKey())
+                        .setValue(kvPair.getValue())
+                        .build())
+            .collect(Collectors.toList()));
   }
 
   private void checkDelete(ByteString key) {
@@ -344,5 +362,4 @@ public class RawKVClientTest {
       return FastByteComparisons.compareTo(startKey.toByteArray(), endKey.toByteArray());
     }
   }
-
 }

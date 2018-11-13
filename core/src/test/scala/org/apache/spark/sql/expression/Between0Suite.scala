@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class Between0Suite extends BaseTiSparkSuite {
+class Between0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select tp_int from full_data_type_table  where tp_int between -1202333 and 601508558",
     "select tp_bigint from full_data_type_table  where tp_bigint between -2902580959275580308 and 9223372036854775807",

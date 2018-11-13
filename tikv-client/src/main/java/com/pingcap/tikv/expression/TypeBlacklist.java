@@ -17,12 +17,11 @@
 
 package com.pingcap.tikv.expression;
 
-import com.pingcap.tikv.types.MySQLType;
+import static com.pingcap.tikv.types.MySQLType.*;
 
+import com.pingcap.tikv.types.MySQLType;
 import java.util.HashMap;
 import java.util.Map;
-
-import static com.pingcap.tikv.types.MySQLType.*;
 
 public class TypeBlacklist extends Blacklist {
   private static final Map<MySQLType, String> typeToMySQLMap = initialTypeMap();

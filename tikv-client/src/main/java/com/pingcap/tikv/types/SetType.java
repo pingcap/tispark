@@ -22,19 +22,15 @@ import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 /**
- * TODO: Support Set Type
- * SetType class is set now only to indicate this type exists,
- * so that we could throw UnsupportedTypeException when encountered.
- * Its logic is not yet implemented.
+ * TODO: Support Set Type SetType class is set now only to indicate this type exists, so that we
+ * could throw UnsupportedTypeException when encountered. Its logic is not yet implemented.
  *
- * Set is encoded as unsigned int64 with its 0-based value.
+ * <p>Set is encoded as unsigned int64 with its 0-based value.
  */
 public class SetType extends DataType {
   public static final SetType SET = new SetType(MySQLType.TypeSet);
 
-  public static final MySQLType[] subTypes = new MySQLType[] {
-      MySQLType.TypeSet
-  };
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeSet};
 
   private SetType(MySQLType tp) {
     super(tp);
@@ -44,33 +40,25 @@ public class SetType extends DataType {
     super(holder);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     throw new UnsupportedTypeException("Set type not supported");
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     throw new UnsupportedTypeException("Set type not supported");
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
     throw new UnsupportedTypeException("Set type not supported");
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     throw new UnsupportedTypeException("Set type not supported");
@@ -81,9 +69,7 @@ public class SetType extends DataType {
     return ExprType.MysqlSet;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
     return value;

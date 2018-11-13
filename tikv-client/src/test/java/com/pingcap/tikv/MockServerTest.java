@@ -5,6 +5,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.kvproto.Metapb;
+import com.pingcap.tikv.kvproto.Pdpb;
 import com.pingcap.tikv.region.TiRegion;
 import org.junit.After;
 import org.junit.Before;
@@ -39,6 +40,7 @@ public class MockServerTest {
             .build();
 
     region = new TiRegion(r, r.getPeers(0), Kvrpcpb.IsolationLevel.RC, Kvrpcpb.CommandPri.Low);
+    pdServer.addGetRegionResp(Pdpb.GetRegionResponse.newBuilder().setRegion(r).build());
     server = new KVMockServer();
     port = server.start(region);
     // No PD needed in this test

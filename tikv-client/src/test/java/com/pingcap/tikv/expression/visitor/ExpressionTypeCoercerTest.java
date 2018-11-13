@@ -86,7 +86,8 @@ public class ExpressionTypeCoercerTest {
     try {
       inf.infer(log2);
       fail();
-    } catch (Exception e) {}
+    } catch (Exception e) {
+    }
   }
 
   @Test

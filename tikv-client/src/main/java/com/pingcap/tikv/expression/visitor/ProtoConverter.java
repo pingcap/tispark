@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv.expression.visitor;
 
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.Expr;
@@ -28,11 +29,8 @@ import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.types.*;
 import com.pingcap.tikv.types.DataType.EncodeType;
-
 import java.util.IdentityHashMap;
 import java.util.Map;
-
-import static java.util.Objects.requireNonNull;
 
 public class ProtoConverter extends Visitor<Expr, Object> {
   // All concrete data type should be hooked to a type name
@@ -59,12 +57,13 @@ public class ProtoConverter extends Visitor<Expr, Object> {
   /**
    * Instantiate a {{@code ProtoConverter}} using a typeMap.
    *
-   * @param typeMap             the type map
-   * @param validateColPosition whether to consider column position in this converter. By default, a {{@code TiDAGRequest}}
-   *                            should check whether a {{@code ColumnRef}}'s position is correct in it's executors. Can ignore
-   *                            this validation if `validateColPosition` is set to false.
+   * @param typeMap the type map
+   * @param validateColPosition whether to consider column position in this converter. By default, a
+   *     {{@code TiDAGRequest}} should check whether a {{@code ColumnRef}}'s position is correct in
+   *     it's executors. Can ignore this validation if `validateColPosition` is set to false.
    */
-  public ProtoConverter(IdentityHashMap<Expression, DataType> typeMap, boolean validateColPosition) {
+  public ProtoConverter(
+      IdentityHashMap<Expression, DataType> typeMap, boolean validateColPosition) {
     this.typeMap = typeMap;
     this.validateColPosition = validateColPosition;
   }
@@ -105,10 +104,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     builder.setTp(ExprType.ScalarFunc);
 
     // Return type
-    builder.setFieldType(
-        FieldType.newBuilder()
-            .setTp(getType(node).getTypeCode())
-            .build());
+    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
 
     for (Expression child : node.getChildren()) {
       Expr exprProto = child.accept(this, context);
@@ -132,7 +128,8 @@ public class ProtoConverter extends Visitor<Expr, Object> {
         protoSig = ScalarFuncSig.LogicalXor;
         break;
       default:
-        throw new TiExpressionException(String.format("Unknown comparison type %s", node.getCompType()));
+        throw new TiExpressionException(
+            String.format("Unknown comparison type %s", node.getCompType()));
     }
     Expr.Builder builder = scalaToPartialProto(node, context);
     builder.setSig(protoSig);
@@ -146,7 +143,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     String typeSignature = getTypeSignature(child);
     ScalarFuncSig protoSig;
     switch (node.getCompType()) {
-      // TODO: Add test for bitwise push down
+        // TODO: Add test for bitwise push down
       case BIT_AND:
         protoSig = ScalarFuncSig.BitAndSig;
         break;
@@ -169,7 +166,8 @@ public class ProtoConverter extends Visitor<Expr, Object> {
         protoSig = ScalarFuncSig.valueOf("Plus" + typeSignature);
         break;
       default:
-        throw new TiExpressionException(String.format("Unknown comparison type %s", node.getCompType()));
+        throw new TiExpressionException(
+            String.format("Unknown comparison type %s", node.getCompType()));
     }
     Expr.Builder builder = scalaToPartialProto(node, context);
     builder.setSig(protoSig);
@@ -202,7 +200,8 @@ public class ProtoConverter extends Visitor<Expr, Object> {
         protoSig = ScalarFuncSig.valueOf("NE" + typeSignature);
         break;
       default:
-        throw new TiExpressionException(String.format("Unknown comparison type %s", node.getComparisonType()));
+        throw new TiExpressionException(
+            String.format("Unknown comparison type %s", node.getComparisonType()));
     }
     Expr.Builder builder = scalaToPartialProto(node, context);
     builder.setSig(protoSig);
@@ -235,7 +234,9 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     if (validateColPosition) {
       requireNonNull(context, "Context of a ColumnRef should not be null");
       Map<ColumnRef, Integer> colIdOffsetMap = (Map<ColumnRef, Integer>) context;
-      position = requireNonNull(colIdOffsetMap.get(node), "Required column position info is not in a valid context.");
+      position =
+          requireNonNull(
+              colIdOffsetMap.get(node), "Required column position info is not in a valid context.");
     }
     Expr.Builder builder = Expr.newBuilder();
     builder.setTp(ExprType.ColumnRef);

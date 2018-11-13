@@ -1,43 +1,36 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * <p>http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
+ * <p>Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package com.pingcap.tikv.util;
 
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;
-import sun.misc.Unsafe;
-
 import java.lang.reflect.Field;
 import java.nio.ByteOrder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import sun.misc.Unsafe;
 
 /**
- * Utility code to do optimized byte-array comparison.
- * This is borrowed from Apache Cassandra which was borrowed from Guava in turn with minor change
+ * Utility code to do optimized byte-array comparison. This is borrowed from Apache Cassandra which
+ * was borrowed from Guava in turn with minor change
  */
 public abstract class FastByteComparisons {
 
-  /**
-   * Lexicographically compare two byte arrays.
-   */
+  /** Lexicographically compare two byte arrays. */
   public static int compareTo(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
-    return LexicographicalComparerHolder.BEST_COMPARER.compareTo(
-        b1, s1, l1, b2, s2, l2);
+    return LexicographicalComparerHolder.BEST_COMPARER.compareTo(b1, s1, l1, b2, s2, l2);
   }
 
   public static int compareTo(byte[] b1, byte[] b2) {
@@ -46,21 +39,19 @@ public abstract class FastByteComparisons {
   }
 
   private interface Comparer<T> {
-    int compareTo(T buffer1, int offset1, int length1,
-        T buffer2, int offset2, int length2);
+    int compareTo(T buffer1, int offset1, int length1, T buffer2, int offset2, int length2);
   }
 
   private static Comparer<byte[]> lexicographicalComparerJavaImpl() {
     return LexicographicalComparerHolder.PureJavaComparer.INSTANCE;
   }
 
-
   /**
-   * Provides a lexicographical comparer implementation; either a Java
-   * implementation or a faster implementation based on {@link Unsafe}.
+   * Provides a lexicographical comparer implementation; either a Java implementation or a faster
+   * implementation based on {@link Unsafe}.
    *
-   * <p>Uses reflection to gracefully fall back to the Java implementation if
-   * {@code Unsafe} isn't available.
+   * <p>Uses reflection to gracefully fall back to the Java implementation if {@code Unsafe} isn't
+   * available.
    */
   private static class LexicographicalComparerHolder {
     static final String UNSAFE_COMPARER_NAME =
@@ -68,8 +59,8 @@ public abstract class FastByteComparisons {
 
     static final Comparer<byte[]> BEST_COMPARER = getBestComparer();
     /**
-     * Returns the Unsafe-using Comparer, or falls back to the pure-Java
-     * implementation if unable to do so.
+     * Returns the Unsafe-using Comparer, or falls back to the pure-Java implementation if unable to
+     * do so.
      */
     static Comparer<byte[]> getBestComparer() {
       try {
@@ -77,8 +68,7 @@ public abstract class FastByteComparisons {
 
         // yes, UnsafeComparer does implement Comparer<byte[]>
         @SuppressWarnings("unchecked")
-        Comparer<byte[]> comparer =
-            (Comparer<byte[]>) theClass.getEnumConstants()[0];
+        Comparer<byte[]> comparer = (Comparer<byte[]>) theClass.getEnumConstants()[0];
         return comparer;
       } catch (Throwable t) { // ensure we really catch *everything*
         return lexicographicalComparerJavaImpl();
@@ -89,12 +79,10 @@ public abstract class FastByteComparisons {
       INSTANCE;
 
       @Override
-      public int compareTo(byte[] buffer1, int offset1, int length1,
-          byte[] buffer2, int offset2, int length2) {
+      public int compareTo(
+          byte[] buffer1, int offset1, int length1, byte[] buffer2, int offset2, int length2) {
         // Short circuit equal case
-        if (buffer1 == buffer2 &&
-            offset1 == offset2 &&
-            length1 == length2) {
+        if (buffer1 == buffer2 && offset1 == offset2 && length1 == length2) {
           return 0;
         }
         int end1 = offset1 + length1;
@@ -120,23 +108,25 @@ public abstract class FastByteComparisons {
       static final int BYTE_ARRAY_BASE_OFFSET;
 
       static {
-        theUnsafe = (Unsafe) AccessController.doPrivileged(
-            new PrivilegedAction<Object>() {
-              @Override
-              public Object run() {
-                try {
-                  Field f = Unsafe.class.getDeclaredField("theUnsafe");
-                  f.setAccessible(true);
-                  return f.get(null);
-                } catch (NoSuchFieldException e) {
-                  // It doesn't matter what we throw;
-                  // it's swallowed in getBestComparer().
-                  throw new Error();
-                } catch (IllegalAccessException e) {
-                  throw new Error();
-                }
-              }
-            });
+        theUnsafe =
+            (Unsafe)
+                AccessController.doPrivileged(
+                    new PrivilegedAction<Object>() {
+                      @Override
+                      public Object run() {
+                        try {
+                          Field f = Unsafe.class.getDeclaredField("theUnsafe");
+                          f.setAccessible(true);
+                          return f.get(null);
+                        } catch (NoSuchFieldException e) {
+                          // It doesn't matter what we throw;
+                          // it's swallowed in getBestComparer().
+                          throw new Error();
+                        } catch (IllegalAccessException e) {
+                          throw new Error();
+                        }
+                      }
+                    });
 
         BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
 
@@ -146,13 +136,9 @@ public abstract class FastByteComparisons {
         }
       }
 
-      static final boolean littleEndian =
-          ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
+      static final boolean littleEndian = ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
 
-      /**
-       * Returns true if x1 is less than x2, when both values are treated as
-       * unsigned.
-       */
+      /** Returns true if x1 is less than x2, when both values are treated as unsigned. */
       static boolean lessThanUnsigned(long x1, long x2) {
         return (x1 + Long.MIN_VALUE) < (x2 + Long.MIN_VALUE);
       }
@@ -169,12 +155,10 @@ public abstract class FastByteComparisons {
        * @return 0 if equal, < 0 if left is less than right, etc.
        */
       @Override
-      public int compareTo(byte[] buffer1, int offset1, int length1,
-          byte[] buffer2, int offset2, int length2) {
+      public int compareTo(
+          byte[] buffer1, int offset1, int length1, byte[] buffer2, int offset2, int length2) {
         // Short circuit equal case
-        if (buffer1 == buffer2 &&
-            offset1 == offset2 &&
-            length1 == length2) {
+        if (buffer1 == buffer2 && offset1 == offset2 && length1 == length2) {
           return 0;
         }
         int minLength = Math.min(length1, length2);
@@ -223,9 +207,7 @@ public abstract class FastByteComparisons {
 
         // The epilogue to cover the last (minLength % 8) elements.
         for (int i = minWords * Longs.BYTES; i < minLength; i++) {
-          int result = UnsignedBytes.compare(
-              buffer1[offset1 + i],
-              buffer2[offset2 + i]);
+          int result = UnsignedBytes.compare(buffer1[offset1 + i], buffer2[offset2 + i]);
           if (result != 0) {
             return result;
           }

@@ -21,7 +21,6 @@ import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
-
 import java.util.List;
 import java.util.Objects;
 
@@ -32,7 +31,8 @@ public class ColumnRef implements Expression {
         return new ColumnRef(columnInfo.getName(), columnInfo, table);
       }
     }
-    throw new TiExpressionException(String.format("Column name %s not found in table %s", name, table));
+    throw new TiExpressionException(
+        String.format("Column name %s not found in table %s", name, table));
   }
 
   public static ColumnRef create(String name) {
@@ -67,7 +67,8 @@ public class ColumnRef implements Expression {
       }
     }
     if (columnInfo == null) {
-      throw new TiExpressionException(String.format("No Matching column %s from table %s", name, table.getName()));
+      throw new TiExpressionException(
+          String.format("No Matching column %s from table %s", name, table.getName()));
     }
 
     if (columnInfo.getId() == 0) {
@@ -106,8 +107,8 @@ public class ColumnRef implements Expression {
     if (another instanceof ColumnRef) {
       ColumnRef that = (ColumnRef) another;
       if (isResolved() && that.isResolved()) {
-        return Objects.equals(columnInfo, that.columnInfo) &&
-            Objects.equals(tableInfo, that.tableInfo);
+        return Objects.equals(columnInfo, that.columnInfo)
+            && Objects.equals(tableInfo, that.tableInfo);
       } else {
         return name.equalsIgnoreCase(that.name);
       }

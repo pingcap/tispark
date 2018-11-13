@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class CoveringIndex0Suite extends BaseTiSparkSuite {
+class CoveringIndex0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     // cover index tests with count(*)
     "select count(*) from full_data_type_table_idx where tp_varchar < 'a1c9e581-470a-4594-a72d-55ce40dd6ec3'",
@@ -480,7 +480,7 @@ class CoveringIndex0Suite extends BaseTiSparkSuite {
     "select tp_int + 500 from full_data_type_table_idx where tp_real + 0.5 > 0.7",
     "select 1 + tp_int, tp_real / 3.14 from full_data_type_table_idx where id_dt * tp_real > 20",
     "select id_dt, tp_int - id_dt from full_data_type_table_idx where tp_real between tp_int and 0.7",
-    "select avg(tp_int/1000), last(id_dt) from full_data_type_table_idx where 2333 <= tp_int group by tp_tinyint order by tp_tinyint desc limit 20",
+    "select avg(tp_int/1000), sum(id_dt) from full_data_type_table_idx where 2333 <= tp_int group by tp_tinyint order by tp_tinyint desc limit 20",
     // index double read:
     "select tp_int, tp_bigint from full_data_type_table_idx where tp_real > 0.7",
     "select tp_int, tp_real from full_data_type_table_idx where id_dt > 40 and tp_bigint < 0",

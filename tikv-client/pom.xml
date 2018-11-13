@@ -295,6 +295,7 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>1.5</version>
                 <configuration>
+                    <keyname>Yifei Wu</keyname>
                     <skip>${gpg.skip}</skip>
                 </configuration>
                 <executions>
@@ -380,6 +381,28 @@
                     </formats>
                     <check />
                 </configuration>
+            </plugin>
+            <!-- Google-java-format -->
+            <plugin>
+                <groupId>com.coveo</groupId>
+                <artifactId>fmt-maven-plugin</artifactId>
+                <version>2.6.0</version>
+                <configuration>
+                    <sourceDirectory>src/main/java</sourceDirectory>
+                    <testSourceDirectory>src/test/java</testSourceDirectory>
+                    <verbose>true</verbose>
+                    <filesNamePattern>.*\.java</filesNamePattern>
+                    <skip>false</skip>
+                    <skipSortingImports>false</skipSortingImports>
+                    <style>google</style>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

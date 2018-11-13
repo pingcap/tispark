@@ -15,17 +15,15 @@
 
 package com.pingcap.tikv.expression;
 
+import static com.pingcap.tikv.expression.StringRegExpression.Type.*;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
-
 import java.util.List;
 import java.util.Objects;
-
-import static com.pingcap.tikv.expression.StringRegExpression.Type.*;
-import static java.util.Objects.requireNonNull;
 
 public class StringRegExpression implements Expression {
   public enum Type {
@@ -36,17 +34,20 @@ public class StringRegExpression implements Expression {
   }
 
   public static StringRegExpression startsWith(Expression left, Expression right) {
-    Expression reg = Constant.create(((Constant) right).getValue() + "%", ((Constant) right).getType());
+    Expression reg =
+        Constant.create(((Constant) right).getValue() + "%", ((Constant) right).getType());
     return new StringRegExpression(STARTS_WITH, left, right, reg);
   }
 
   public static StringRegExpression contains(Expression left, Expression right) {
-    Expression reg = Constant.create("%" + ((Constant) right).getValue() + "%", ((Constant) right).getType());
+    Expression reg =
+        Constant.create("%" + ((Constant) right).getValue() + "%", ((Constant) right).getType());
     return new StringRegExpression(CONTAINS, left, right, reg);
   }
 
   public static StringRegExpression endsWith(Expression left, Expression right) {
-    Expression reg = Constant.create("%" + ((Constant) right).getValue(), ((Constant) right).getType());
+    Expression reg =
+        Constant.create("%" + ((Constant) right).getValue(), ((Constant) right).getType());
     return new StringRegExpression(ENDS_WITH, left, right, reg);
   }
 
@@ -89,7 +90,8 @@ public class StringRegExpression implements Expression {
 
   @Override
   public List<Expression> getChildren() {
-    // For LIKE statement, an extra ESCAPE parameter is required as the third parameter for ScalarFunc.
+    // For LIKE statement, an extra ESCAPE parameter is required as the third parameter for
+    // ScalarFunc.
     // However in Spark ESCAPE is not supported so we simply set this value to zero.
     return ImmutableList.of(left, reg, Constant.create(0, IntegerType.BIGINT));
   }
@@ -130,10 +132,10 @@ public class StringRegExpression implements Expression {
     }
 
     StringRegExpression that = (StringRegExpression) other;
-    return (regType == that.regType) &&
-        Objects.equals(left, that.left) &&
-        Objects.equals(left, that.right) &&
-        Objects.equals(reg, that.reg);
+    return (regType == that.regType)
+        && Objects.equals(left, that.left)
+        && Objects.equals(left, that.right)
+        && Objects.equals(reg, that.reg);
   }
 
   @Override

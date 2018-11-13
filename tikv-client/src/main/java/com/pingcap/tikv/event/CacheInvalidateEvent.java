@@ -30,9 +30,8 @@ public class CacheInvalidateEvent implements Serializable {
   private boolean invalidateStore;
   private CacheType cacheType;
 
-  public CacheInvalidateEvent(long regionId, long storeId,
-                              boolean updateRegion, boolean updateStore,
-                              CacheType type) {
+  public CacheInvalidateEvent(
+      long regionId, long storeId, boolean updateRegion, boolean updateStore, CacheType type) {
     this.regionId = regionId;
     this.storeId = storeId;
     this.cacheType = type;
@@ -59,9 +58,9 @@ public class CacheInvalidateEvent implements Serializable {
       return true;
     } else if (obj instanceof CacheInvalidateEvent) {
       CacheInvalidateEvent event = (CacheInvalidateEvent) obj;
-      return event.getRegionId() == getRegionId() &&
-          event.getStoreId() == getStoreId() &&
-          event.getCacheType() == getCacheType();
+      return event.getRegionId() == getRegionId()
+          && event.getStoreId() == getStoreId()
+          && event.getCacheType() == getCacheType();
     }
     return false;
   }

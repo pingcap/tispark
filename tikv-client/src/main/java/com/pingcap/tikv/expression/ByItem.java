@@ -15,11 +15,10 @@
 
 package com.pingcap.tikv.expression;
 
-import com.pingcap.tikv.expression.visitor.ProtoConverter;
-
-import java.io.Serializable;
-
 import static com.google.common.base.Preconditions.checkNotNull;
+
+import com.pingcap.tikv.expression.visitor.ProtoConverter;
+import java.io.Serializable;
 
 public class ByItem implements Serializable {
   private Expression expr;
@@ -38,9 +37,7 @@ public class ByItem implements Serializable {
 
   public com.pingcap.tidb.tipb.ByItem toProto(Object context) {
     com.pingcap.tidb.tipb.ByItem.Builder builder = com.pingcap.tidb.tipb.ByItem.newBuilder();
-    return builder.setExpr(ProtoConverter.toProto(expr, context))
-        .setDesc(desc)
-        .build();
+    return builder.setExpr(ProtoConverter.toProto(expr, context)).setDesc(desc).build();
   }
 
   public Expression getExpr() {

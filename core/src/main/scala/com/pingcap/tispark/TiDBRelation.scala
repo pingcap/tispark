@@ -27,7 +27,7 @@ import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
 
-class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaManager)(
+case class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaManager)(
   @transient val sqlContext: SQLContext
 ) extends BaseRelation {
   val table: TiTableInfo = meta
@@ -82,5 +82,12 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
       session,
       sqlContext.sparkSession
     )
+  }
+
+  override def equals(obj: Any): Boolean = obj match {
+    case other: TiDBRelation =>
+      this.table.equals(other.table)
+    case _ =>
+      false
   }
 }

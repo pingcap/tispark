@@ -6,7 +6,7 @@ import org.apache.spark.sql.catalyst.parser._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.execution.SparkSqlParser
-import org.apache.spark.sql.execution.command.{CreateViewCommand, ExplainCommand}
+import org.apache.spark.sql.execution.command.{CacheTableCommand, CreateViewCommand, ExplainCommand, UncacheTableCommand}
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{SparkSession, TiContext}
 
@@ -17,6 +17,17 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
 
   private lazy val internal = new SparkSqlParser(sparkSession.sqlContext.conf)
 
+  private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier =
+    TableIdentifier(
+      tableIdentifier.table,
+      Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase))
+    )
+
+  private def notTempView(tableIdentifier: TableIdentifier) =
+    tableIdentifier.database.isEmpty && tiContext.sessionCatalog
+      .getTempView(tableIdentifier.table)
+      .isEmpty
+
   /**
    * WAR to lead Spark to consider this relation being on local files.
    * Otherwise Spark will lookup this relation in his session catalog.
@@ -24,15 +35,8 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
    */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier)
-        if tableIdentifier.database.isEmpty && tiContext.sessionCatalog
-          .getTempView(tableIdentifier.table)
-          .isEmpty =>
-      r.copy(
-        TableIdentifier(
-          tableIdentifier.table,
-          Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase))
-        )
-      )
+        if tableIdentifier.database.isEmpty && notTempView(tableIdentifier) =>
+      r.copy(qualifyTableIdentifierInternal(tableIdentifier))
     case f @ Filter(condition, _) =>
       f.copy(
         condition = condition.transform {
@@ -59,6 +63,15 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       cv.copy(child = child.transform(qualifyTableIdentifier))
     case e @ ExplainCommand(logicalPlan, _, _, _) =>
       e.copy(logicalPlan = logicalPlan.transform(qualifyTableIdentifier))
+    case c @ CacheTableCommand(tableIdentifier, plan, _)
+        if plan.isEmpty && notTempView(tableIdentifier) =>
+      // Caching an unqualified catalog table.
+      c.copy(qualifyTableIdentifierInternal(tableIdentifier))
+    case c @ CacheTableCommand(_, plan, _) if plan.isDefined =>
+      c.copy(plan = Some(plan.get.transform(qualifyTableIdentifier)))
+    case u @ UncacheTableCommand(tableIdentifier, _) if notTempView(tableIdentifier) =>
+      // Uncaching an unqualified catalog table.
+      u.copy(qualifyTableIdentifierInternal(tableIdentifier))
   }
 
   override def parsePlan(sqlText: String): LogicalPlan =

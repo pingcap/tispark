@@ -27,11 +27,7 @@ import com.pingcap.tikv.util.Pair;
 
 public class RawScanIterator extends ScanIterator {
 
-  public RawScanIterator(
-      ByteString startKey,
-      ByteString endKey,
-      int limit,
-      TiSession session) {
+  public RawScanIterator(ByteString startKey, ByteString endKey, int limit, TiSession session) {
     super(startKey, endKey, limit, session);
   }
 
@@ -51,7 +47,10 @@ public class RawScanIterator extends ScanIterator {
   }
 
   private boolean notEndOfScan() {
-    return limit > 0 && !(lastBatch && (index >= currentCache.size() || Key.toRawKey(currentCache.get(index).getKey()).compareTo(endKey) >= 0));
+    return limit > 0
+        && !(lastBatch
+            && (index >= currentCache.size()
+                || Key.toRawKey(currentCache.get(index).getKey()).compareTo(endKey) >= 0));
   }
 
   @Override

@@ -17,6 +17,8 @@
 
 package com.pingcap.tikv.region;
 
+import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
+import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
@@ -33,16 +35,11 @@ import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import org.apache.log4j.Logger;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
-
+import org.apache.log4j.Logger;
 
 public class RegionManager {
   private static final Logger logger = Logger.getLogger(RegionManager.class);
@@ -122,9 +119,7 @@ public class RegionManager {
       return region;
     }
 
-    /**
-     * Removes region associated with regionId from regionCache.
-     */
+    /** Removes region associated with regionId from regionCache. */
     public synchronized void invalidateRegion(long regionId) {
       try {
         if (logger.isDebugEnabled()) {
@@ -159,7 +154,6 @@ public class RegionManager {
     public synchronized void invalidateStore(long storeId) {
       storeCache.remove(storeId);
     }
-
 
     public synchronized Store getStoreById(long id) {
       try {
@@ -242,7 +236,8 @@ public class RegionManager {
     TiRegion r = cache.regionCache.get(regionId);
     if (r != null) {
       if (!r.switchPeer(storeId)) {
-        // failed to switch leader, possibly region is outdated, we need to drop region cache from regionCache
+        // failed to switch leader, possibly region is outdated, we need to drop region cache from
+        // regionCache
         logger.warn("Cannot find peer when updating leader (" + regionId + "," + storeId + ")");
         // drop region cache using verId
         cache.invalidateRegion(regionId);
@@ -256,7 +251,7 @@ public class RegionManager {
    * Clears all cache when a TiKV server does not respond
    *
    * @param regionId region's id
-   * @param storeId  TiKV store's id
+   * @param storeId TiKV store's id
    */
   public void onRequestFail(long regionId, long storeId) {
     cache.invalidateRegion(regionId);

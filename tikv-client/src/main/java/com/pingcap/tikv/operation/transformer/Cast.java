@@ -19,7 +19,6 @@ package com.pingcap.tikv.operation.transformer;
 
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.*;
-
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 

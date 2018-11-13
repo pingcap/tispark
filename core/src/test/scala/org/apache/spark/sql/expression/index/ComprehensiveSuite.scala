@@ -15,9 +15,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class ComprehensiveSuite extends BaseTiSparkSuite {
+class ComprehensiveSuite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     // MultiKeys
     """select tp_int, tp_float from full_data_type_table_idx

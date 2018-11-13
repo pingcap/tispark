@@ -27,10 +27,7 @@ import com.pingcap.tikv.util.Pair;
 public class ConcreteScanIterator extends ScanIterator {
   private final long version;
 
-  public ConcreteScanIterator(
-      ByteString startKey,
-      TiSession session,
-      long version) {
+  public ConcreteScanIterator(ByteString startKey, TiSession session, long version) {
     // Passing endKey as ByteString.EMPTY means that endKey is +INF by default,
     super(startKey, ByteString.EMPTY, Integer.MAX_VALUE, session);
     this.version = version;

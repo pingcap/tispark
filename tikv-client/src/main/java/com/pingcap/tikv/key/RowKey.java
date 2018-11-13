@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv.key;
 
+import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
 
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
@@ -23,10 +24,7 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
 import com.pingcap.tikv.util.FastByteComparisons;
-
 import java.util.Objects;
-
-import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
 
 public class RowKey extends Key {
   private static final byte[] REC_PREFIX_SEP = new byte[] {'_', 'r'};
@@ -45,7 +43,7 @@ public class RowKey extends Key {
   /**
    * The RowKey indicating maximum handle (its value exceeds Long.Max_Value)
    *
-   * Initializes an imaginary globally MAXIMUM rowKey with tableId.
+   * <p>Initializes an imaginary globally MAXIMUM rowKey with tableId.
    */
   private RowKey(long tableId) {
     super(encodeBeyondMaxHandle(tableId));
@@ -61,7 +59,7 @@ public class RowKey extends Key {
   public static RowKey toRowKey(long tableId, TypedKey handle) {
     Object obj = handle.getValue();
     if (obj instanceof Long) {
-      return new RowKey(tableId, (long)obj);
+      return new RowKey(tableId, (long) obj);
     }
     throw new TiExpressionException("Cannot encode row key with non-long type");
   }
@@ -123,6 +121,7 @@ public class RowKey extends Key {
 
   public static class DecodeResult {
     public long handle;
+
     public enum Status {
       MIN,
       MAX,
@@ -131,6 +130,7 @@ public class RowKey extends Key {
       GREATER,
       UNKNOWN_INF
     }
+
     public Status status;
   }
 
@@ -142,11 +142,16 @@ public class RowKey extends Key {
     }
     CodecDataOutput cdo = new CodecDataOutput();
     encodePrefix(cdo, tableId);
-    byte [] tablePrefix = cdo.toBytes();
+    byte[] tablePrefix = cdo.toBytes();
 
-    int res = FastByteComparisons.compareTo(
-        tablePrefix, 0, tablePrefix.length,
-        rowKey, 0, Math.min(rowKey.length, tablePrefix.length));
+    int res =
+        FastByteComparisons.compareTo(
+            tablePrefix,
+            0,
+            tablePrefix.length,
+            rowKey,
+            0,
+            Math.min(rowKey.length, tablePrefix.length));
 
     if (res > 0) {
       outResult.status = Status.MIN;
@@ -168,5 +173,4 @@ public class RowKey extends Key {
     }
     outResult.handle = IntegerCodec.readPartialLong(cdi);
   }
-
 }

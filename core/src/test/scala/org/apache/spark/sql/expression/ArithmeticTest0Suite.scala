@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class ArithmeticTest0Suite extends BaseTiSparkSuite {
+class ArithmeticTest0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select tp_tinyint + 9223372036854775807 from full_data_type_table  order by id_dt  limit 10",
     "select tp_tinyint + -9223372036854775808 from full_data_type_table  order by id_dt  limit 10",

@@ -18,14 +18,12 @@ package com.pingcap.tikv.expression;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.types.*;
-import org.joda.time.DateTime;
-
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
-
+import org.joda.time.DateTime;
 
 // Refactor needed.
 // Refer to https://github.com/pingcap/tipb/blob/master/go-tipb/expression.pb.go
@@ -54,8 +52,6 @@ public class Constant implements Expression {
         || value instanceof Byte;
   }
 
-
-
   private static DataType getDefaultType(Object value) {
     if (value == null) {
       throw new TiExpressionException("NULL constant has no type");
@@ -78,7 +74,8 @@ public class Constant implements Expression {
     } else if (value instanceof byte[]) {
       return BytesType.TEXT;
     } else {
-      throw new TiExpressionException("Constant type not supported:" + value.getClass().getSimpleName());
+      throw new TiExpressionException(
+          "Constant type not supported:" + value.getClass().getSimpleName());
     }
   }
 

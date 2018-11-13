@@ -222,7 +222,7 @@ case class RegionTaskExec(child: SparkPlan,
 
           // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
           // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
-          val indexTasks =
+          val indexTasks: util.List[RegionTask] =
             RangeSplitter
               .newSplitter(session.getRegionManager)
               .splitAndSortHandlesByRegion(

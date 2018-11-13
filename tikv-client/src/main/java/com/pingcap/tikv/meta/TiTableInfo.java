@@ -44,6 +44,7 @@ public class TiTableInfo implements Serializable {
   private final long maxColumnId;
   private final long maxIndexId;
   private final long oldSchemaId;
+  private final TiPartitionInfo partitionInfo;
 
   @JsonCreator
   public TiTableInfo(
@@ -58,7 +59,8 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("auto_inc_id") long autoIncId,
       @JsonProperty("max_col_id") long maxColumnId,
       @JsonProperty("max_idx_id") long maxIndexId,
-      @JsonProperty("old_schema_id") long oldSchemaId) {
+      @JsonProperty("old_schema_id") long oldSchemaId,
+      @JsonProperty("partition") TiPartitionInfo partitionInfo) {
     this.id = id;
     this.name = name.getL();
     this.charset = charset;
@@ -71,6 +73,7 @@ public class TiTableInfo implements Serializable {
     this.maxColumnId = maxColumnId;
     this.maxIndexId = maxIndexId;
     this.oldSchemaId = oldSchemaId;
+    this.partitionInfo = partitionInfo;
   }
 
   public long getId() {
@@ -166,16 +169,24 @@ public class TiTableInfo implements Serializable {
                 col.getSchemaState(),
                 col.getOriginDefaultValue(),
                 col.getDefaultValue(),
-                col.getComment()
-            );
+                col.getComment());
         newColumns.add(newCol.copyWithoutPrimaryKey());
       }
       newColumns.add(TiColumnInfo.getRowIdColumn(getColumns().size()));
       return new TiTableInfo(
-          getId(), CIStr.newCIStr(getName()), getCharset(), getCollate(),
-          true, newColumns.build(), getIndices(),
-          getComment(), getAutoIncId(), getMaxColumnId(),
-          getMaxIndexId(), getOldSchemaId());
+          getId(),
+          CIStr.newCIStr(getName()),
+          getCharset(),
+          getCollate(),
+          true,
+          newColumns.build(),
+          getIndices(),
+          getComment(),
+          getAutoIncId(),
+          getMaxColumnId(),
+          getMaxIndexId(),
+          getOldSchemaId(),
+          partitionInfo);
     } else {
       return this;
     }

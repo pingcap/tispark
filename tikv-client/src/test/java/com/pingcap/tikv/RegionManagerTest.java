@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv;
 
+import static org.junit.Assert.*;
+
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Store;
@@ -22,13 +24,10 @@ import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.Pair;
+import java.io.IOException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.IOException;
-
-import static org.junit.Assert.*;
 
 public class RegionManagerTest {
   private PDMockServer server;
@@ -47,8 +46,7 @@ public class RegionManagerTest {
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 1)),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
 
-    TiConfiguration conf =
-        TiConfiguration.createDefault("127.0.0.1:" + server.port);
+    TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + server.port);
     TiSession session = TiSession.create(conf);
     mgr = session.getRegionManager();
   }

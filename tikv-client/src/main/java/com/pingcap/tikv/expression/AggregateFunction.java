@@ -71,8 +71,7 @@ public class AggregateFunction implements Expression {
     }
 
     AggregateFunction that = (AggregateFunction) other;
-    return type == that.type &&
-           Objects.equals(argument, that.argument);
+    return type == that.type && Objects.equals(argument, that.argument);
   }
 
   @Override
@@ -82,6 +81,7 @@ public class AggregateFunction implements Expression {
 
   @Override
   public String toString() {
-    return String.format("%s(%s)", getType(), Joiner.on(",").useForNull("NULL").join(getChildren()));
+    return String.format(
+        "%s(%s)", getType(), Joiner.on(",").useForNull("NULL").join(getChildren()));
   }
 }

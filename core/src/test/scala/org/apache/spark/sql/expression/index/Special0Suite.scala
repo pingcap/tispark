@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseInitialOnceSuite
 
-class Special0Suite extends BaseTiSparkSuite {
+class Special0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
     "select * from full_data_type_table_idx where tp_date = date(date '2017-10-30')",
     "select * from full_data_type_table_idx where tp_date = date(date '2017-11-02')",

@@ -37,11 +37,12 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
 
   private final PushDownType pushDownType;
 
-  DAGIterator(DAGRequest req,
-              List<RangeSplitter.RegionTask> regionTasks,
-              TiSession session,
-              SchemaInfer infer,
-              PushDownType pushDownType) {
+  DAGIterator(
+      DAGRequest req,
+      List<RangeSplitter.RegionTask> regionTasks,
+      TiSession session,
+      SchemaInfer infer,
+      PushDownType pushDownType) {
     super(req, regionTasks, session, infer);
     this.pushDownType = pushDownType;
     switch (pushDownType) {
@@ -75,18 +76,14 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       return false;
     }
 
-    while (chunkList == null ||
-        chunkIndex >= chunkList.size() ||
-        dataInput.available() <= 0
-        ) {
+    while (chunkList == null || chunkIndex >= chunkList.size() || dataInput.available() <= 0) {
       // First we check if our chunk list has remaining chunk
       if (tryAdvanceChunkIndex()) {
         createDataInputReader();
       }
       // If not, check next region/response
       else if (pushDownType == STREAMING) {
-        if (!advanceNextResponse() &&
-            !readNextRegionChunks()) {
+        if (!advanceNextResponse() && !readNextRegionChunks()) {
           return false;
         }
       } else if (!readNextRegionChunks()) {
@@ -96,7 +93,6 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
 
     return true;
   }
-
 
   private boolean hasMoreResponse() {
     switch (pushDownType) {
@@ -133,9 +129,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
   }
 
   private boolean readNextRegionChunks() {
-    if (eof ||
-        regionTasks == null ||
-        taskIndex >= regionTasks.size()) {
+    if (eof || regionTasks == null || taskIndex >= regionTasks.size()) {
       return false;
     }
 
@@ -180,7 +174,11 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
         }
       } catch (Throwable e) {
         // Handle region task failed
-        logger.error("Process region tasks failed, remain " + remainTasks.size() + " tasks not executed due to", e);
+        logger.error(
+            "Process region tasks failed, remain "
+                + remainTasks.size()
+                + " tasks not executed due to",
+            e);
         // Rethrow to upper levels
         eof = true;
         throw new RegionTaskException("Handle region task failed:", e);
@@ -196,9 +194,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       }
     }
 
-    return SelectResponse.newBuilder()
-        .addAllChunks(resultChunk)
-        .build();
+    return SelectResponse.newBuilder().addAllChunks(resultChunk).build();
   }
 
   private Iterator<SelectResponse> processByStreaming(RangeSplitter.RegionTask regionTask) {

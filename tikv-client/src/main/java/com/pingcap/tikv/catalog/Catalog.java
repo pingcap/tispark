@@ -45,7 +45,7 @@ public class Catalog implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
-    if(service != null) {
+    if (service != null) {
       service.shutdown();
     }
   }
@@ -75,7 +75,7 @@ public class Catalog implements AutoCloseable {
     }
 
     public TiDBInfo getDatabase(String name) {
-      Objects.requireNonNull(name,"name is null");
+      Objects.requireNonNull(name, "name is null");
       return dbCache.get(name.toLowerCase());
     }
 
@@ -114,13 +114,14 @@ public class Catalog implements AutoCloseable {
       HashMap<String, TiDBInfo> newDBCache = new HashMap<>();
 
       List<TiDBInfo> databases = transaction.getDatabases();
-      databases.forEach(db -> {
-        TiDBInfo newDBInfo = db.rename(dbPrefix + db.getName());
-        newDBCache.put(newDBInfo.getName().toLowerCase(), newDBInfo);
-        if (loadTables) {
-          loadTables(newDBInfo);
-        }
-      });
+      databases.forEach(
+          db -> {
+            TiDBInfo newDBInfo = db.rename(dbPrefix + db.getName());
+            newDBCache.put(newDBInfo.getName().toLowerCase(), newDBInfo);
+            if (loadTables) {
+              loadTables(newDBInfo);
+            }
+          });
       return newDBCache;
     }
   }
@@ -131,20 +132,25 @@ public class Catalog implements AutoCloseable {
       TimeUnit periodUnit,
       boolean showRowId,
       String dbPrefix) {
-    this.snapshotProvider = Objects.requireNonNull(snapshotProvider,
-                                                   "Snapshot Provider is null");
+    this.snapshotProvider = Objects.requireNonNull(snapshotProvider, "Snapshot Provider is null");
     this.showRowId = showRowId;
     this.dbPrefix = dbPrefix;
     metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, false);
-    service = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
-    service.scheduleAtFixedRate(() -> {
-      // Wrap this with a try catch block in case schedule update fails
-      try {
-        reloadCache();
-      } catch (Exception e) {
-        logger.warn("Reload Cache failed", e);
-      }
-    }, refreshPeriod, refreshPeriod, periodUnit);
+    service =
+        Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder().setDaemon(true).build());
+    service.scheduleAtFixedRate(
+        () -> {
+          // Wrap this with a try catch block in case schedule update fails
+          try {
+            reloadCache();
+          } catch (Exception e) {
+            logger.warn("Reload Cache failed", e);
+          }
+        },
+        refreshPeriod,
+        refreshPeriod,
+        periodUnit);
   }
 
   public void reloadCache(boolean loadTables) {

@@ -15,6 +15,10 @@
 
 package com.pingcap.tikv.meta;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
@@ -26,7 +30,6 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.visitor.ColumnMatcher;
 import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
@@ -35,21 +38,14 @@ import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.KeyRangeUtils;
 import com.pingcap.tikv.util.Pair;
-
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.expression.AggregateFunction.FunctionType.First;
-import static com.pingcap.tikv.expression.AggregateFunction.newCall;
-import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
-import static java.util.Objects.requireNonNull;
-
 /**
  * Type TiDAGRequest.
- * <p>
- * Used for constructing a new DAG request to TiKV
+ *
+ * <p>Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
   public static class Builder {
@@ -152,17 +148,13 @@ public class TiDAGRequest implements Serializable {
     }
   }
 
-  /**
-   * Whether we use streaming to push down the request
-   */
+  /** Whether we use streaming to push down the request */
   public enum PushDownType {
     STREAMING,
     NORMAL
   }
 
-  /**
-   * Predefined executor priority map.
-   */
+  /** Predefined executor priority map. */
   private static final Map<ExecType, Integer> EXEC_TYPE_PRIORITY_MAP =
       ImmutableMap.<ExecType, Integer>builder()
           .put(ExecType.TypeTableScan, 0)
@@ -184,8 +176,10 @@ public class TiDAGRequest implements Serializable {
   // we need a cast to target when given
   private final List<Pair<Expression, DataType>> aggregates = new ArrayList<>();
   private final List<Coprocessor.KeyRange> keyRanges = new ArrayList<>();
-  // If index scanning of this request is not possible in some scenario, we downgrade it to a table scan and use
-  // downGradeRanges instead of index scan ranges stored in keyRanges along with downgradeFilters to perform a
+  // If index scanning of this request is not possible in some scenario, we downgrade it to a table
+  // scan and use
+  // downGradeRanges instead of index scan ranges stored in keyRanges along with downgradeFilters to
+  // perform a
   // table scan.
   private List<Expression> downgradeFilters = new ArrayList<>();
 
@@ -237,13 +231,12 @@ public class TiDAGRequest implements Serializable {
   }
 
   /**
-   * Unify indexScan and tableScan building logic since they are very much alike.
-   * DAGRequest for IndexScan should also contain filters and aggregation, so
-   * we can reuse this part of logic.
-   * <p>
-   * DAGRequest is made up of a chain of executors with strict orders:
-   * TableScan/IndexScan > Selection > Aggregation > TopN/Limit
-   * a DAGRequest must contain one and only one TableScan or IndexScan.
+   * Unify indexScan and tableScan building logic since they are very much alike. DAGRequest for
+   * IndexScan should also contain filters and aggregation, so we can reuse this part of logic.
+   *
+   * <p>DAGRequest is made up of a chain of executors with strict orders: TableScan/IndexScan >
+   * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
+   * IndexScan.
    *
    * @param isIndexScan whether the dagRequest to build is an IndexScan
    * @return final DAGRequest built
@@ -267,11 +260,12 @@ public class TiDAGRequest implements Serializable {
       List<TiColumnInfo> columnInfoList = tableInfo.getColumns();
       boolean hasPk = false;
       // We extract index column info
-      List<Integer> indexColOffsets = indexInfo
-          .getIndexColumns()
-          .stream()
-          .map(TiIndexColumn::getOffset)
-          .collect(Collectors.toList());
+      List<Integer> indexColOffsets =
+          indexInfo
+              .getIndexColumns()
+              .stream()
+              .map(TiIndexColumn::getOffset)
+              .collect(Collectors.toList());
 
       int idxPos = 0;
       // for index scan builder, columns are added by its order in index
@@ -296,9 +290,7 @@ public class TiDAGRequest implements Serializable {
 
         int colCount = indexScanBuilder.getColumnsCount();
         // double read case: need to retrieve handle
-        dagRequestBuilder.addOutputOffsets(
-            colCount != 0 ? colCount - 1 : 0
-        );
+        dagRequestBuilder.addOutputOffsets(colCount != 0 ? colCount - 1 : 0);
       } else {
         int colCount = indexScanBuilder.getColumnsCount();
         boolean pkIsNeeded = false;
@@ -323,7 +315,9 @@ public class TiDAGRequest implements Serializable {
             // for index scan, column offset must be in the order of index->handle
             colOffsetInFieldMap.put(col, indexColOffsets.size());
           } else {
-            throw new DAGRequestException("columns other than primary key and index key exist in fields while index single read: " + col.getName());
+            throw new DAGRequestException(
+                "columns other than primary key and index key exist in fields while index single read: "
+                    + col.getName());
           }
         }
         // pk is not included in index but still needed
@@ -333,9 +327,7 @@ public class TiDAGRequest implements Serializable {
       }
       executorBuilder.setTp(ExecType.TypeIndexScan);
 
-      indexScanBuilder
-          .setTableId(tableInfo.getId())
-          .setIndexId(indexInfo.getId());
+      indexScanBuilder.setTableId(tableInfo.getId()).setIndexId(indexInfo.getId());
       dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
     } else {
       // TableScan
@@ -379,30 +371,38 @@ public class TiDAGRequest implements Serializable {
         executorBuilder.setTp(ExecType.TypeSelection);
         dagRequestBuilder.addExecutors(
             executorBuilder.setSelection(
-                Selection.newBuilder().addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))
-            )
-        );
+                Selection.newBuilder()
+                    .addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))));
         executorBuilder.clear();
       }
 
       if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
         Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
-        getGroupByItems().forEach(tiByItem -> aggregationBuilder.addGroupBy(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
-        getAggregates().forEach(tiExpr -> aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
+        getGroupByItems()
+            .forEach(
+                tiByItem ->
+                    aggregationBuilder.addGroupBy(
+                        ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
+        getAggregates()
+            .forEach(
+                tiExpr ->
+                    aggregationBuilder.addAggFunc(
+                        ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
         executorBuilder.setTp(ExecType.TypeAggregation);
-        dagRequestBuilder.addExecutors(
-            executorBuilder.setAggregation(aggregationBuilder)
-        );
+        dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
         executorBuilder.clear();
       }
 
       if (!getOrderByItems().isEmpty()) {
         TopN.Builder topNBuilder = TopN.newBuilder();
-        getOrderByItems().forEach(tiByItem -> topNBuilder
-            .addOrderBy(com.pingcap.tidb.tipb.ByItem.newBuilder()
-                .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
-                .setDesc(tiByItem.isDesc())
-            ));
+        getOrderByItems()
+            .forEach(
+                tiByItem ->
+                    topNBuilder.addOrderBy(
+                        com.pingcap.tidb.tipb.ByItem.newBuilder()
+                            .setExpr(
+                                ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
+                            .setDesc(tiByItem.isDesc())));
         executorBuilder.setTp(ExecType.TypeTopN);
         topNBuilder.setLimit(getLimit());
         dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
@@ -416,11 +416,12 @@ public class TiDAGRequest implements Serializable {
       }
     }
 
-    DAGRequest request = dagRequestBuilder
-        .setTimeZoneOffset(timeZoneOffset)
-        .setFlags(flags)
-        .setStartTs(startTs)
-        .build();
+    DAGRequest request =
+        dagRequestBuilder
+            .setTimeZoneOffset(timeZoneOffset)
+            .setFlags(flags)
+            .setStartTs(startTs)
+            .build();
 
     validateRequest(request);
 
@@ -429,10 +430,9 @@ public class TiDAGRequest implements Serializable {
 
   /**
    * Check if a DAG request is valid.
-   * <p>
-   * Note:
-   * When constructing a DAG request, a executor with an ExecType of higher priority
-   * should always be placed before those lower ones.
+   *
+   * <p>Note: When constructing a DAG request, a executor with an ExecType of higher priority should
+   * always be placed before those lower ones.
    *
    * @param dagRequest Request DAG.
    */
@@ -444,16 +444,16 @@ public class TiDAGRequest implements Serializable {
     }
 
     ExecType formerType = dagRequest.getExecutors(0).getTp();
-    if (formerType != ExecType.TypeTableScan &&
-        formerType != ExecType.TypeIndexScan) {
-      throw new DAGRequestException("Invalid first executor type:" + formerType +
-          ", must one of TypeTableScan or TypeIndexScan");
+    if (formerType != ExecType.TypeTableScan && formerType != ExecType.TypeIndexScan) {
+      throw new DAGRequestException(
+          "Invalid first executor type:"
+              + formerType
+              + ", must one of TypeTableScan or TypeIndexScan");
     }
 
     for (int i = 1; i < dagRequest.getExecutorsCount(); i++) {
       ExecType currentType = dagRequest.getExecutors(i).getTp();
-      if (EXEC_TYPE_PRIORITY_MAP.get(currentType) <
-          EXEC_TYPE_PRIORITY_MAP.get(formerType)) {
+      if (EXEC_TYPE_PRIORITY_MAP.get(currentType) < EXEC_TYPE_PRIORITY_MAP.get(formerType)) {
         throw new DAGRequestException("Invalid executor priority.");
       }
       formerType = currentType;
@@ -610,7 +610,9 @@ public class TiDAGRequest implements Serializable {
   /**
    * Field is not support in TiDB yet, for here we simply allow TiColumnRef instead of TiExpr like
    * in SelectRequest proto
+   *
    * <p>
+   *
    * <p>This interface allows duplicate columns and it's user's responsibility to do dedup since we
    * need to ensure exact order and items preserved during decoding
    *
@@ -659,8 +661,7 @@ public class TiDAGRequest implements Serializable {
   }
 
   /**
-   * Check whether the DAG request has any
-   * aggregate expression.
+   * Check whether the DAG request has any aggregate expression.
    *
    * @return the boolean
    */
@@ -669,8 +670,7 @@ public class TiDAGRequest implements Serializable {
   }
 
   /**
-   * Check whether the DAG request has any
-   * group by expression.
+   * Check whether the DAG request has any group by expression.
    *
    * @return the boolean
    */
@@ -736,16 +736,12 @@ public class TiDAGRequest implements Serializable {
     return pushDownType;
   }
 
-  /**
-   * Set the estimated row count will be fetched from this request.
-   */
+  /** Set the estimated row count will be fetched from this request. */
   public void setEstimatedCount(double estimatedCount) {
     this.estimatedCount = estimatedCount;
   }
 
-  /**
-   * Get the estimated row count will be fetched from this request.
-   */
+  /** Get the estimated row count will be fetched from this request. */
   public double getEstimatedCount() {
     return estimatedCount;
   }
@@ -823,5 +819,4 @@ public class TiDAGRequest implements Serializable {
       throw new RuntimeException(e);
     }
   }
-
 }

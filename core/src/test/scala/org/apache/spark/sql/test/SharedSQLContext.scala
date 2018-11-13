@@ -63,6 +63,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
 
+  protected def paramConf(): Properties = SharedSQLContext._tidbConf
+
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
    */
@@ -148,7 +150,9 @@ object SharedSQLContext extends Logging {
 
   protected def initializeTiContext(): Unit =
     if (_spark != null && _ti == null) {
-      _ti = TiExtensions.getInstance(_spark).getOrCreateTiContext(_spark)
+      _ti = _spark.sessionState.planner.extraPlanningStrategies.head
+        .asInstanceOf[TiStrategy]
+        .getOrCreateTiContext(_spark)
     }
 
   protected def initStatistics(): Unit = {
@@ -158,6 +162,9 @@ object SharedSQLContext extends Logging {
     _statement.execute("analyze table tispark_test.full_data_type_table_idx")
     logger.info("Analyzing table tispark_test.full_data_type_table...")
     _statement.execute("analyze table tispark_test.full_data_type_table")
+    logger.info("Analyzing table finished.")
+    logger.info("Analyzing table resolveLock_test.CUSTOMER...")
+    _statement.execute("analyze table resolveLock_test.CUSTOMER")
     logger.info("Analyzing table finished.")
   }
 
@@ -202,6 +209,13 @@ object SharedSQLContext extends Logging {
         )
         _statement.execute(queryString)
         logger.warn("Load TPCHData.sql successfully.")
+        // Load resolveLock test data
+        queryString = resourceToString(
+          s"resolveLock-test/ddl.sql",
+          classLoader = Thread.currentThread().getContextClassLoader
+        )
+        _statement.execute(queryString)
+        logger.warn("Load resolveLock-test.ddl.sql successfully.")
         initStatistics()
       }
     }
@@ -223,6 +237,7 @@ object SharedSQLContext extends Logging {
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
       sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
       sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
+      sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
 
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
       sparkConf.set(DB_PREFIX, dbPrefix)
@@ -230,7 +245,7 @@ object SharedSQLContext extends Logging {
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
 
       _tidbConf = prop
-      _sparkSession = new TestSparkSession(sparkConf)
+      _sparkSession = new TestSparkSession(sparkConf).session
     }
 
   /**
@@ -274,7 +289,6 @@ object SharedSQLContext extends Logging {
 
     // Reset statisticsManager in case it use older version of TiContext
     StatisticsManager.reset()
-    TiExtensions.reset()
 
     if (_tidbConf != null) {
       _tidbConf = null

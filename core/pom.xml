@@ -207,6 +207,7 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>1.5</version>
                 <configuration>
+                    <keyname>Yifei Wu</keyname>
                     <skip>${gpg.skip}</skip>
                 </configuration>
                 <executions>

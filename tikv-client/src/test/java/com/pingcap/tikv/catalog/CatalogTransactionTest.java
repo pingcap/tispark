@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv.catalog;
 
+import static org.junit.Assert.assertEquals;
+
 import com.pingcap.tikv.KVMockServer;
 import com.pingcap.tikv.PDMockServer;
 import com.pingcap.tikv.TiConfiguration;
@@ -25,13 +27,9 @@ import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.region.TiRegion;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-
 
 public class CatalogTransactionTest {
   private KVMockServer kvServer;
@@ -44,8 +42,12 @@ public class CatalogTransactionTest {
     pdServer = new PDMockServer();
     pdServer.start(CLUSTER_ID);
     kvServer = new KVMockServer();
-    kvServer.start(new TiRegion(MetaMockHelper.region, MetaMockHelper.region.getPeers(0),
-        IsolationLevel.RC, CommandPri.Low));
+    kvServer.start(
+        new TiRegion(
+            MetaMockHelper.region,
+            MetaMockHelper.region.getPeers(0),
+            IsolationLevel.RC,
+            CommandPri.Low));
     // No PD needed in this test
     conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
   }

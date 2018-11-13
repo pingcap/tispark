@@ -47,7 +47,8 @@ public class ComparisonBinaryExpressionTest {
         .build();
   }
 
-  private void verifyNormalize(ComparisonBinaryExpression cond, String colName, Object value, DataType dataType, Type type) {
+  private void verifyNormalize(
+      ComparisonBinaryExpression cond, String colName, Object value, DataType dataType, Type type) {
     NormalizedPredicate normCond = cond.normalize();
     assertEquals(colName, normCond.getColumnRef().getName());
     assertEquals(value, normCond.getValue().getValue());

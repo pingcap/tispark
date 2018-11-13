@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv.operation.iterator;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -22,11 +24,8 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
-
 import java.util.Iterator;
 import java.util.List;
-
-import static java.util.Objects.requireNonNull;
 
 public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   protected final TiSession session;
@@ -67,8 +66,10 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     try {
       TiRegion region = loadCurrentRegionToCache();
       ByteString curRegionEndKey = region.getEndKey();
-      // currentCache is null means no keys found, whereas currentCache is empty means no values found
-      // the difference lies in whether to continue scanning, because chances are that the same key is
+      // currentCache is null means no keys found, whereas currentCache is empty means no values
+      // found
+      // the difference lies in whether to continue scanning, because chances are that the same key
+      // is
       // split in another region because of pending entries, region split, e.t.c.
       // See https://github.com/pingcap/tispark/issues/393 for details
       if (currentCache == null) {
@@ -98,10 +99,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   }
 
   boolean isCacheDrained() {
-    return currentCache == null
-        || limit <= 0
-        || index >= currentCache.size()
-        || index == -1;
+    return currentCache == null || limit <= 0 || index >= currentCache.size() || index == -1;
   }
 
   @Override

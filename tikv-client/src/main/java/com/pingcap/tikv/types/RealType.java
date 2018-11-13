@@ -32,10 +32,8 @@ public class RealType extends DataType {
   public static final RealType FLOAT = new RealType(MySQLType.TypeFloat);
   public static final RealType REAL = DOUBLE;
 
-  public static final MySQLType[] subTypes = new MySQLType[] {
-      MySQLType.TypeDouble,
-      MySQLType.TypeFloat
-  };
+  public static final MySQLType[] subTypes =
+      new MySQLType[] {MySQLType.TypeDouble, MySQLType.TypeFloat};
 
   private RealType(MySQLType tp) {
     super(tp);
@@ -45,9 +43,7 @@ public class RealType extends DataType {
     super(holder);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag == Codec.DECIMAL_FLAG) {
@@ -86,9 +82,7 @@ public class RealType extends DataType {
     throw new TypeException("Unknown Type encoding proto " + tp);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
     return Double.parseDouble(value);

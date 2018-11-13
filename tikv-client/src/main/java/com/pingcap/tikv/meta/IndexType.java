@@ -44,7 +44,7 @@ public enum IndexType {
   }
 
   public String toString() {
-    switch (this.type){
+    switch (this.type) {
       case 1:
         return "BTREE";
       case 2:

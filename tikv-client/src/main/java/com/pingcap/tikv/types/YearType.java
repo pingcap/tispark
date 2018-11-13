@@ -22,24 +22,19 @@ import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 /**
- * TODO: Support Year Type
- * YearType class is set now only to indicate this type exists,
- * so that we could throw UnsupportedTypeException when encountered.
- * Its logic is not yet implemented.
+ * TODO: Support Year Type YearType class is set now only to indicate this type exists, so that we
+ * could throw UnsupportedTypeException when encountered. Its logic is not yet implemented.
  *
- * Since year type acts differently in Spark and MySQL --
- *  for instance, in MySQL, year is an unsigned integer(2017),
- *  whereas in Spark, year is treated as Date(2017-01-01).
- * -- it is not decided which logic should inherit.
+ * <p>Since year type acts differently in Spark and MySQL -- for instance, in MySQL, year is an
+ * unsigned integer(2017), whereas in Spark, year is treated as Date(2017-01-01). -- it is not
+ * decided which logic should inherit.
  *
- * Year is encoded as unsigned int64.
+ * <p>Year is encoded as unsigned int64.
  */
 public class YearType extends DataType {
   public static final YearType YEAR = new YearType(MySQLType.TypeYear);
 
-  public static final MySQLType[] subTypes = new MySQLType[] {
-      MySQLType.TypeYear
-  };
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeYear};
 
   private YearType(MySQLType tp) {
     super(tp);
@@ -49,33 +44,25 @@ public class YearType extends DataType {
     super(holder);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     throw new UnsupportedTypeException("Year type not supported");
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     throw new UnsupportedTypeException("Year type not supported");
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
     throw new UnsupportedTypeException("Year type not supported");
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     throw new UnsupportedTypeException("Year type not supported");
@@ -86,9 +73,7 @@ public class YearType extends DataType {
     return ExprType.Int64;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
     return value;

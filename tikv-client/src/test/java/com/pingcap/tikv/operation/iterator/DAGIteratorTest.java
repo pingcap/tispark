@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv.operation.iterator;
 
+import static junit.framework.TestCase.assertEquals;
+
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.GrpcUtils;
@@ -35,11 +37,8 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
-import org.junit.Test;
-
 import java.util.List;
-
-import static junit.framework.TestCase.assertEquals;
+import org.junit.Test;
 
 public class DAGIteratorTest extends MockServerTest {
 
@@ -69,9 +68,12 @@ public class DAGIteratorTest extends MockServerTest {
     req.resolve();
 
     List<KeyRange> keyRanges =
-        ImmutableList.of(createByteStringRange(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key4")));
+        ImmutableList.of(
+            createByteStringRange(
+                ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key4")));
 
-    pdServer.addGetRegionResp(GrpcUtils.makeGetRegionResponse(pdServer.getClusterId(), region.getMeta()));
+    pdServer.addGetRegionResp(
+        GrpcUtils.makeGetRegionResponse(pdServer.getClusterId(), region.getMeta()));
     pdServer.addGetStoreResp(GrpcUtils.makeGetStoreResponse(pdServer.getClusterId(), store));
     server.putError("key1", KVMockServer.STALE_EPOCH);
     CodecDataOutput cdo = new CodecDataOutput();

@@ -25,6 +25,7 @@ import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
 import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
+import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
@@ -242,9 +243,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
-    val tblStatistics = StatisticsManager.getTableStatistics(source.table.getId)
+    val tblStatistics: TableStatistics = StatisticsManager.getTableStatistics(source.table.getId)
 
-    val tableScanPlan =
+    val tableScanPlan: ScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)
     val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
