@@ -153,7 +153,7 @@ public class ScanAnalyzer {
     boolean isDoubleRead = false;
     double estimatedRowCount = -1;
     // table name and columns
-    int tableSize = table.getColumns().size() + 1;
+    int tableSize = table.getColumns().size() + 2;
 
     if (index == null || index.isFakePrimaryKey()) {
       if (tableStatistics != null) {
@@ -161,7 +161,7 @@ public class ScanAnalyzer {
         // TODO: Fine-grained statistics usage
       }
       keyRanges = buildTableScanKeyRange(table, irs);
-      cost *= tableSize * TABLE_SCAN_COST_FACTOR;
+      cost *= (tableSize - 1) * TABLE_SCAN_COST_FACTOR;
     } else {
       if (tableStatistics != null) {
         long totalRowCount = tableStatistics.getCount();
