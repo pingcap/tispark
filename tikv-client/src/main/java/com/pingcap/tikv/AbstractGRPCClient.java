@@ -51,10 +51,11 @@ public abstract class AbstractGRPCClient<
   }
 
   // TODO: Seems a little bit messy for lambda part
-  public <ReqT, RespT> RespT callWithRetry(BackOffer backOffer,
-                                              MethodDescriptor<ReqT, RespT> method,
-                                              Supplier<ReqT> requestFactory,
-                                              ErrorHandler<RespT> handler) {
+  public <ReqT, RespT> RespT callWithRetry(
+      BackOffer backOffer,
+      MethodDescriptor<ReqT, RespT> method,
+      Supplier<ReqT> requestFactory,
+      ErrorHandler<RespT> handler) {
     if (logger.isTraceEnabled()) {
       logger.trace(String.format("Calling %s...", method.getFullMethodName()));
     }

@@ -64,10 +64,8 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
-
 import java.util.*;
 import java.util.function.Supplier;
-
 import jline.internal.TestAccessible;
 import org.apache.hadoop.hive.ql.lockmgr.LockException;
 import org.apache.log4j.Logger;
@@ -103,8 +101,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   // lockResolverClient, after implements the
   // write implementation of tispark, we can change
   // it to private
-  @TestAccessible
-  public final LockResolverClient lockResolverClient;
+  @TestAccessible public final LockResolverClient lockResolverClient;
   private TikvBlockingStub blockingStub;
   private TikvStub asyncStub;
 
@@ -113,12 +110,20 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       // we should refresh region
       region = regionManager.getRegionByKey(key);
 
-      Supplier<GetRequest> factory = () ->
-          GetRequest.newBuilder().setContext(region.getContext()).setKey(key).setVersion(version).build();
+      Supplier<GetRequest> factory =
+          () ->
+              GetRequest.newBuilder()
+                  .setContext(region.getContext())
+                  .setKey(key)
+                  .setVersion(version)
+                  .build();
 
       KVErrorHandler<GetResponse> handler =
           new KVErrorHandler<>(
-              regionManager, this, region, resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+              regionManager,
+              this,
+              region,
+              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
       GetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
 
@@ -130,10 +135,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       if (resp.hasError()) {
         if (resp.getError().hasLocked()) {
           Lock lock = new Lock(resp.getError().getLocked());
-          boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
+          boolean ok =
+              lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
           if (!ok) {
             // if not resolve all locks, we wait and retry
-            backOffer.doBackOff(BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
+            backOffer.doBackOff(
+                BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
           }
 
           continue;
@@ -230,7 +237,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private List<KvPair> batchGetHelper(BatchGetResponse resp, BackOffer bo) {
     List<Lock> locks = new ArrayList<>();
 
-    for (KvPair pair: resp.getPairsList()) {
+    for (KvPair pair : resp.getPairsList()) {
       if (pair.hasError()) {
         if (pair.getError().hasLocked()) {
           Lock lock = new Lock(pair.getError().getLocked());
@@ -292,7 +299,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private List<KvPair> scanHelper(ScanResponse resp, BackOffer bo) {
     List<Lock> locks = new ArrayList<>();
 
-    for (KvPair pair: resp.getPairsList()) {
+    for (KvPair pair : resp.getPairsList()) {
       if (pair.hasError()) {
         if (pair.getError().hasLocked()) {
           Lock lock = new Lock(pair.getError().getLocked());
@@ -362,7 +369,11 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   // returns more tasks when that happens, or handles the response if no error.
   // if we're handling streaming coprocessor response, lastRange is the range of last
   // successful response, otherwise it's nil.
-  private List<RangeSplitter.RegionTask> handleCopResponse(BackOffer backOffer, Coprocessor.Response response, List<KeyRange> ranges, Queue<SelectResponse> responseQueue) {
+  private List<RangeSplitter.RegionTask> handleCopResponse(
+      BackOffer backOffer,
+      Coprocessor.Response response,
+      List<KeyRange> ranges,
+      Queue<SelectResponse> responseQueue) {
     if (response.hasRegionError()) {
       Errorpb.Error regionError = response.getRegionError();
       backOffer.doBackOff(
@@ -380,9 +391,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
         backOffer.doBackOff(BoTxnLockFast, new LockException());
       }
       // Split ranges
-      return RangeSplitter
-          .newSplitter(session.getRegionManager())
-          .splitRangeByRegion(ranges);
+      return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);
     }
 
     String otherError = response.getOtherError();
@@ -418,11 +427,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             StreamingResponse::getFirstRegionError // TODO: handle all errors in streaming respinse
             );
 
-    StreamingResponse responseIterator = this.callServerStreamingWithRetry(
-        ConcreteBackOffer.newCopNextMaxBackOff(),
-        TikvGrpc.METHOD_COPROCESSOR_STREAM,
-        reqToSend,
-        handler);
+    StreamingResponse responseIterator =
+        this.callServerStreamingWithRetry(
+            ConcreteBackOffer.newCopNextMaxBackOff(),
+            TikvGrpc.METHOD_COPROCESSOR_STREAM,
+            reqToSend,
+            handler);
     return coprocessorHelper(responseIterator);
   }
 
@@ -501,8 +511,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   @Override
-  public void close() throws Exception {
-  }
+  public void close() throws Exception {}
 
   /**
    * onNotLeader deals with NotLeaderError and returns whether re-splitting key range is needed

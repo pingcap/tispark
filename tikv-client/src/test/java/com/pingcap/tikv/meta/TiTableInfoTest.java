@@ -188,14 +188,10 @@ public class TiTableInfoTest {
   }
 
   @Test
-  public void testPartitionInfo() throws Exception {
-
-  }
+  public void testPartitionInfo() throws Exception {}
 
   @Test
-  public void testPartitionDef() throws Exception {
-
-  }
+  public void testPartitionDef() throws Exception {}
 
   @Test
   public void testSerializable() throws Exception {

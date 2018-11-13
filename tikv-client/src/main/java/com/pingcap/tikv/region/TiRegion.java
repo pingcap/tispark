@@ -28,7 +28,6 @@ import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Region;
 import com.pingcap.tikv.util.FastByteComparisons;
-
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
@@ -121,7 +120,8 @@ public class TiRegion implements Serializable {
 
   // getVerID returns the Region's RegionVerID.
   public RegionVerID getVerID() {
-    return new RegionVerID(meta.getId(), meta.getRegionEpoch().getConfVer(), meta.getRegionEpoch().getVersion());
+    return new RegionVerID(
+        meta.getId(), meta.getRegionEpoch().getConfVer(), meta.getRegionEpoch().getVersion());
   }
 
   /**
@@ -143,10 +143,23 @@ public class TiRegion implements Serializable {
   }
 
   public boolean contains(ByteString key) {
-    return (FastByteComparisons.compareTo(meta.getStartKey().toByteArray(),
-        0, meta.getStartKey().size(), key.toByteArray(), 0, key.size()) <= 0)
-        && (meta.getEndKey().isEmpty() || FastByteComparisons.compareTo(meta.getEndKey().toByteArray(),
-        0, meta.getEndKey().size(), key.toByteArray(), 0, key.size()) > 0);
+    return (FastByteComparisons.compareTo(
+                meta.getStartKey().toByteArray(),
+                0,
+                meta.getStartKey().size(),
+                key.toByteArray(),
+                0,
+                key.size())
+            <= 0)
+        && (meta.getEndKey().isEmpty()
+            || FastByteComparisons.compareTo(
+                    meta.getEndKey().toByteArray(),
+                    0,
+                    meta.getEndKey().size(),
+                    key.toByteArray(),
+                    0,
+                    key.size())
+                > 0);
   }
 
   public boolean isValid() {
