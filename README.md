@@ -58,9 +58,6 @@ Assure that you are using the same maven profile as your spark version.
 
 | Available maven profiles |
 | ---- |
-| spark-2.3.0 |
-| spark-2.3.1 |
-| spark-2.3.2 |
 | spark-2.4.0 |
 
 ## How to migrate from Spark 2.1 to Spark 2.3
