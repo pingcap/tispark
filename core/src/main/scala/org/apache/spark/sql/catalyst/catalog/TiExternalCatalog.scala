@@ -46,38 +46,33 @@ class TiExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
     StringUtils.filterPattern(listTables(db), pattern)
 
   // Following are unimplemented.
-  override protected def doDropDatabase(db: String,
-                                        ignoreIfNotExists: Boolean,
-                                        cascade: Boolean): Unit = ???
+  override def dropDatabase(db: String, ignoreIfNotExists: Boolean, cascade: Boolean): Unit = ???
 
-  override protected def doDropTable(db: String,
-                                     table: String,
-                                     ignoreIfNotExists: Boolean,
-                                     purge: Boolean): Unit = ???
+  override def dropTable(db: String,
+                         table: String,
+                         ignoreIfNotExists: Boolean,
+                         purge: Boolean): Unit = ???
 
-  override protected def doCreateDatabase(dbDefinition: CatalogDatabase,
-                                          ignoreIfExists: Boolean): Unit = ???
+  override def createDatabase(dbDefinition: CatalogDatabase, ignoreIfExists: Boolean): Unit = ???
 
-  override protected def doAlterDatabase(dbDefinition: CatalogDatabase): Unit = ???
+  override def alterDatabase(dbDefinition: CatalogDatabase): Unit = ???
 
   override def getDatabase(db: String): CatalogDatabase = ???
 
   override def setCurrentDatabase(db: String): Unit = ???
 
-  override protected def doCreateTable(tableDefinition: CatalogTable,
-                                       ignoreIfExists: Boolean): Unit = ???
+  override def createTable(tableDefinition: CatalogTable, ignoreIfExists: Boolean): Unit =
+    ???
 
-  override protected def doRenameTable(db: String, oldName: String, newName: String): Unit = ???
+  override def renameTable(db: String, oldName: String, newName: String): Unit = ???
 
-  override protected def doAlterTable(tableDefinition: CatalogTable): Unit = ???
+  override def alterTable(tableDefinition: CatalogTable): Unit = ???
 
-  override protected def doAlterTableDataSchema(db: String,
-                                                table: String,
-                                                newDataSchema: StructType): Unit = ???
+  override def alterTableDataSchema(db: String, table: String, newDataSchema: StructType): Unit =
+    ???
 
-  override protected def doAlterTableStats(db: String,
-                                           table: String,
-                                           stats: Option[CatalogStatistics]): Unit = ???
+  override def alterTableStats(db: String, table: String, stats: Option[CatalogStatistics]): Unit =
+    ???
 
   override def loadTable(db: String,
                          table: String,
@@ -141,13 +136,13 @@ class TiExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
                                       predicates: Seq[Expression],
                                       defaultTimeZoneId: String): Seq[CatalogTablePartition] = ???
 
-  override protected def doCreateFunction(db: String, funcDefinition: CatalogFunction): Unit = ???
+  override def createFunction(db: String, funcDefinition: CatalogFunction): Unit = ???
 
-  override protected def doDropFunction(db: String, funcName: String): Unit = ???
+  override def dropFunction(db: String, funcName: String): Unit = ???
 
-  override protected def doAlterFunction(db: String, funcDefinition: CatalogFunction): Unit = ???
+  override def alterFunction(db: String, funcDefinition: CatalogFunction): Unit = ???
 
-  override protected def doRenameFunction(db: String, oldName: String, newName: String): Unit = ???
+  override def renameFunction(db: String, oldName: String, newName: String): Unit = ???
 
   override def getFunction(db: String, funcName: String): CatalogFunction = ???
 

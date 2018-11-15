@@ -64,7 +64,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version>2.3.2</spark.version>
+        <spark.version>2.4.0</spark.version>
         <tispark.version>${project.parent.version}</tispark.version>
         <tispark.sourceDirectory>src/main/scala</tispark.sourceDirectory>
         <tispark.testSourceDirectory>src/test/scala</tispark.testSourceDirectory>
@@ -78,26 +78,8 @@
 
     <profiles>
         <profile>
-            <id>spark-2.3.2</id>
-            <!--Use Default Global settings-->
-        </profile>
-        <profile>
-            <id>spark-2.3.1</id>
-            <properties>
-                <spark.version>2.3.1</spark.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>spark-2.3.0</id>
-            <properties>
-                <spark.version>2.3.0</spark.version>
-            </properties>
-        </profile>
-        <profile>
             <id>spark-2.4.0</id>
-            <properties>
-                <spark.version>2.4.0</spark.version>
-            </properties>
+            <!--Use Default Global settings-->
         </profile>
     </profiles>
 
