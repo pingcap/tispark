@@ -21,19 +21,18 @@ import org.apache.spark.sql.functions.{col, sum}
 class IssueTestSuite extends BaseTiSparkSuite {
   test("partition read") {
     tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
-    tidbStmt.execute(
-      """
-        |CREATE TABLE `partition_t` (
-        |  `id` int(11) DEFAULT NULL,
-        |  `name` varchar(50) DEFAULT NULL,
-        |  `purchased` date DEFAULT NULL
-        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
-        |PARTITION BY RANGE ( `id` ) (
-        |  PARTITION p0 VALUES LESS THAN (1990),
-        |  PARTITION p1 VALUES LESS THAN (1995),
-        |  PARTITION p2 VALUES LESS THAN (2000),
-        |  PARTITION p3 VALUES LESS THAN (2005)
-        |)
+    tidbStmt.execute("""
+                       |CREATE TABLE `partition_t` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `purchased` date DEFAULT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE ( `id` ) (
+                       |  PARTITION p0 VALUES LESS THAN (1990),
+                       |  PARTITION p1 VALUES LESS THAN (1995),
+                       |  PARTITION p2 VALUES LESS THAN (2000),
+                       |  PARTITION p3 VALUES LESS THAN (2005)
+                       |)
       """.stripMargin)
     refreshConnections()
     assert(spark.sql("select * from partition_t").count() == 0)
@@ -318,6 +317,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists t1")
       tidbStmt.execute("drop table if exists t2")
       tidbStmt.execute("drop table if exists single_read")
+      tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
     } finally {
       super.afterAll()
     }
