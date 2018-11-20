@@ -19,6 +19,24 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+  test("partition read") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `partition_t` (
+        |  `id` int(11) DEFAULT NULL,
+        |  `name` varchar(50) DEFAULT NULL,
+        |  `purchased` date DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+        |PARTITION BY RANGE ( `id` ) (
+        |  PARTITION p0 VALUES LESS THAN (1990),
+        |  PARTITION p1 VALUES LESS THAN (1995),
+        |  PARTITION p2 VALUES LESS THAN (2000),
+        |  PARTITION p3 VALUES LESS THAN (2005)
+        |)
+      """.stripMargin)
+    assert(spark.sql("select * from partition_t").count() == 0)
+  }
 
   test("test date") {
     judge("select tp_date from full_data_type_table where tp_date >= date '2065-04-19'")
