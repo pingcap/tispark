@@ -35,6 +35,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
         |  PARTITION p3 VALUES LESS THAN (2005)
         |)
       """.stripMargin)
+    refreshConnections()
     assert(spark.sql("select * from partition_t").count() == 0)
   }
 
