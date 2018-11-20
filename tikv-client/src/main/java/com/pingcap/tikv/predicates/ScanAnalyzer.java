@@ -65,6 +65,7 @@ public class ScanAnalyzer {
       this.estimatedRowCount = estimatedRowCount;
     }
 
+    private List<ScanPlan> children;
     private final List<KeyRange> keyRanges;
     private final Set<Expression> filters;
     private final double cost;
@@ -101,6 +102,7 @@ public class ScanAnalyzer {
     }
   }
 
+  // build a scan for debug purpose.
   public ScanPlan buildScan(
       List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
     return buildScan(columnList, conditions, table, null);

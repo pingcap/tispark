@@ -22,9 +22,222 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import org.junit.Test;
 
 public class TiTableInfoTest {
+
+  public static final String partitionDef =
+      "{\n"
+          + "   \"id\": 85,\n"
+          + "   \"name\": {\n"
+          + "      \"O\": \"p2\",\n"
+          + "      \"L\": \"p2\"\n"
+          + "   },\n"
+          + "   \"less_than\": [\n"
+          + "      \"2000\"\n"
+          + "   ]\n"
+          + "}";
+
+  public static final String partitionInfo =
+      "{\n"
+          + "      \"type\":1,\n"
+          + "      \"expr\":\"year(`purchased`)\",\n"
+          + "      \"columns\":null,\n"
+          + "      \"enable\":true,\n"
+          + "      \"definitions\":[\n"
+          + "         {\n"
+          + "            \"id\":83,\n"
+          + "            \"name\":{\n"
+          + "               \"O\":\"p0\",\n"
+          + "               \"L\":\"p0\"\n"
+          + "            },\n"
+          + "            \"less_than\":[\n"
+          + "               \"1990\"\n"
+          + "            ]\n"
+          + "         },\n"
+          + "         {\n"
+          + "            \"id\":84,\n"
+          + "            \"name\":{\n"
+          + "               \"O\":\"p1\",\n"
+          + "               \"L\":\"p1\"\n"
+          + "            },\n"
+          + "            \"less_than\":[\n"
+          + "               \"1995\"\n"
+          + "            ]\n"
+          + "         },\n"
+          + "         {\n"
+          + "            \"id\":85,\n"
+          + "            \"name\":{\n"
+          + "               \"O\":\"p2\",\n"
+          + "               \"L\":\"p2\"\n"
+          + "            },\n"
+          + "            \"less_than\":[\n"
+          + "               \"2000\"\n"
+          + "            ]\n"
+          + "         },\n"
+          + "         {\n"
+          + "            \"id\":86,\n"
+          + "            \"name\":{\n"
+          + "               \"O\":\"p3\",\n"
+          + "               \"L\":\"p3\"\n"
+          + "            },\n"
+          + "            \"less_than\":[\n"
+          + "               \"2005\"\n"
+          + "            ]\n"
+          + "         }\n"
+          + "      ]\n"
+          + "   }\n"
+          + "}";
+  public static final String partitionTableJson =
+      "{\n"
+          + "   \"id\":82,\n"
+          + "   \"name\":{\n"
+          + "      \"O\":\"trb3\",\n"
+          + "      \"L\":\"trb3\"\n"
+          + "   },\n"
+          + "   \"charset\":\"\",\n"
+          + "   \"collate\":\"\",\n"
+          + "   \"cols\":[\n"
+          + "      {\n"
+          + "         \"id\":1,\n"
+          + "         \"name\":{\n"
+          + "            \"O\":\"id\",\n"
+          + "            \"L\":\"id\"\n"
+          + "         },\n"
+          + "         \"offset\":0,\n"
+          + "         \"origin_default\":null,\n"
+          + "         \"default\":null,\n"
+          + "         \"default_bit\":null,\n"
+          + "         \"generated_expr_string\":\"\",\n"
+          + "         \"generated_stored\":false,\n"
+          + "         \"dependences\":null,\n"
+          + "         \"type\":{\n"
+          + "            \"Tp\":3,\n"
+          + "            \"Flag\":0,\n"
+          + "            \"Flen\":11,\n"
+          + "            \"Decimal\":0,\n"
+          + "            \"Charset\":\"binary\",\n"
+          + "            \"Collate\":\"binary\",\n"
+          + "            \"Elems\":null\n"
+          + "         },\n"
+          + "         \"state\":5,\n"
+          + "         \"comment\":\"\"\n"
+          + "      },\n"
+          + "      {\n"
+          + "         \"id\":2,\n"
+          + "         \"name\":{\n"
+          + "            \"O\":\"name\",\n"
+          + "            \"L\":\"name\"\n"
+          + "         },\n"
+          + "         \"offset\":1,\n"
+          + "         \"origin_default\":null,\n"
+          + "         \"default\":null,\n"
+          + "         \"default_bit\":null,\n"
+          + "         \"generated_expr_string\":\"\",\n"
+          + "         \"generated_stored\":false,\n"
+          + "         \"dependences\":null,\n"
+          + "         \"type\":{\n"
+          + "            \"Tp\":15,\n"
+          + "            \"Flag\":0,\n"
+          + "            \"Flen\":50,\n"
+          + "            \"Decimal\":0,\n"
+          + "            \"Charset\":\"utf8\",\n"
+          + "            \"Collate\":\"utf8_bin\",\n"
+          + "            \"Elems\":null\n"
+          + "         },\n"
+          + "         \"state\":5,\n"
+          + "         \"comment\":\"\"\n"
+          + "      },\n"
+          + "      {\n"
+          + "         \"id\":3,\n"
+          + "         \"name\":{\n"
+          + "            \"O\":\"purchased\",\n"
+          + "            \"L\":\"purchased\"\n"
+          + "         },\n"
+          + "         \"offset\":2,\n"
+          + "         \"origin_default\":null,\n"
+          + "         \"default\":null,\n"
+          + "         \"default_bit\":null,\n"
+          + "         \"generated_expr_string\":\"\",\n"
+          + "         \"generated_stored\":false,\n"
+          + "         \"dependences\":null,\n"
+          + "         \"type\":{\n"
+          + "            \"Tp\":10,\n"
+          + "            \"Flag\":128,\n"
+          + "            \"Flen\":10,\n"
+          + "            \"Decimal\":0,\n"
+          + "            \"Charset\":\"binary\",\n"
+          + "            \"Collate\":\"binary\",\n"
+          + "            \"Elems\":null\n"
+          + "         },\n"
+          + "         \"state\":5,\n"
+          + "         \"comment\":\"\"\n"
+          + "      }\n"
+          + "   ],\n"
+          + "   \"index_info\":null,\n"
+          + "   \"fk_info\":null,\n"
+          + "   \"state\":5,\n"
+          + "   \"pk_is_handle\":false,\n"
+          + "   \"comment\":\"\",\n"
+          + "   \"auto_inc_id\":0,\n"
+          + "   \"max_col_id\":3,\n"
+          + "   \"max_idx_id\":0,\n"
+          + "   \"update_timestamp\":404161490771771397,\n"
+          + "   \"ShardRowIDBits\":0,\n"
+          + "   \"partition\":{\n"
+          + "      \"type\":1,\n"
+          + "      \"expr\":\"year(`purchased`)\",\n"
+          + "      \"columns\":null,\n"
+          + "      \"enable\":true,\n"
+          + "      \"definitions\":[\n"
+          + "         {\n"
+          + "            \"id\":83,\n"
+          + "            \"name\":{\n"
+          + "               \"O\":\"p0\",\n"
+          + "               \"L\":\"p0\"\n"
+          + "            },\n"
+          + "            \"less_than\":[\n"
+          + "               \"1990\"\n"
+          + "            ]\n"
+          + "         },\n"
+          + "         {\n"
+          + "            \"id\":84,\n"
+          + "            \"name\":{\n"
+          + "               \"O\":\"p1\",\n"
+          + "               \"L\":\"p1\"\n"
+          + "            },\n"
+          + "            \"less_than\":[\n"
+          + "               \"1995\"\n"
+          + "            ]\n"
+          + "         },\n"
+          + "         {\n"
+          + "            \"id\":85,\n"
+          + "            \"name\":{\n"
+          + "               \"O\":\"p2\",\n"
+          + "               \"L\":\"p2\"\n"
+          + "            },\n"
+          + "            \"less_than\":[\n"
+          + "               \"2000\"\n"
+          + "            ]\n"
+          + "         },\n"
+          + "         {\n"
+          + "            \"id\":86,\n"
+          + "            \"name\":{\n"
+          + "               \"O\":\"p3\",\n"
+          + "               \"L\":\"p3\"\n"
+          + "            },\n"
+          + "            \"less_than\":[\n"
+          + "               \"2005\"\n"
+          + "            ]\n"
+          + "         }\n"
+          + "      ]\n"
+          + "   },\n"
+          + "   \"compression\":\"\"\n"
+          + "}";
   public static final String tableJson =
       "\n"
           + "{\n"
@@ -175,7 +388,31 @@ public class TiTableInfoTest {
           + "}";
 
   @Test
-  public void testFromJson() throws Exception {
+  public void testPartitionDefFromJson() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    TiPartitionDef pDef = mapper.readValue(partitionDef, TiPartitionDef.class);
+    assertEquals("p2", pDef.getName());
+    assertEquals(85, pDef.getId());
+    assertEquals("2000", pDef.getLessThan().get(0));
+  }
+
+  @Test
+  public void testPartitionInfoFromJson() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    TiPartitionInfo pInfo = mapper.readValue(partitionInfo, TiPartitionInfo.class);
+    assertEquals("year(`purchased`)", pInfo.getExpr());
+    assertEquals(4, pInfo.getDefs().size());
+  }
+
+  @Test
+  public void testPartitionTableFromJson() throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    TiTableInfo tableInfo = mapper.readValue(partitionTableJson, TiTableInfo.class);
+    assertEquals("year(`purchased`)", tableInfo.getPartitionInfo().getExpr());
+  }
+
+  @Test
+  public void testTableFromJson() throws Exception {
     ObjectMapper mapper = new ObjectMapper();
     TiTableInfo tableInfo = mapper.readValue(tableJson, TiTableInfo.class);
     assertEquals("test", tableInfo.getName());
