@@ -29,7 +29,6 @@ import java.io.ObjectOutputStream;
 import org.junit.Test;
 
 public class TiTableInfoTest {
-
   public static final String partitionDef =
       "{\n"
           + "   \"id\": 85,\n"
