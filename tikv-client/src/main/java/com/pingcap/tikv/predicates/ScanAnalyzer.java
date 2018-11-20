@@ -101,6 +101,7 @@ public class ScanAnalyzer {
     }
   }
 
+  // build a scan for debug purpose.
   public ScanPlan buildScan(
       List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
     return buildScan(columnList, conditions, table, null);
