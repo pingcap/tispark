@@ -34,8 +34,14 @@ class IssueTestSuite extends BaseTiSparkSuite {
                        |  PARTITION p3 VALUES LESS THAN (2005)
                        |)
       """.stripMargin)
+    tidbStmt.execute(("insert into partition_t values (1, `dede1`, 1989-01-01)"))
+    tidbStmt.execute(("insert into partition_t values (2, `dede2`, 1994-01-01)"))
+    tidbStmt.execute(("insert into partition_t values (3, `dede3`, 1996-01-01)"))
+    tidbStmt.execute(("insert into partition_t values (4, `dede4`, 1997-01-01)"))
+    tidbStmt.execute(("insert into partition_t values (5, `dede5`, 2001-01-01)"))
+    tidbStmt.execute(("insert into partition_t values (6, `dede6`, 2006-01-01)"))
     refreshConnections()
-    assert(spark.sql("select * from partition_t").count() == 0)
+    assert(spark.sql("select * from partition_t").count() == 6)
   }
 
   test("test date") {

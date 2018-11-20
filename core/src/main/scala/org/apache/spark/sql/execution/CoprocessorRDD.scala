@@ -222,13 +222,24 @@ case class RegionTaskExec(child: SparkPlan,
 
           // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
           // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
-          val indexTasks: util.List[RegionTask] =
-            RangeSplitter
+          var indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
+          if (!dagRequest.getTableInfo.isPartitionEnabled) {
+            indexTasks = RangeSplitter
               .newSplitter(session.getRegionManager)
               .splitAndSortHandlesByRegion(
                 dagRequest.getTableInfo.getId,
                 new TLongArrayList(handles)
               )
+          } else {
+            // when partition table is present, partition id is table id.
+            for (pDef <- dagRequest.getTableInfo.getPartitionInfo.getDefs) {
+              indexTasks.addAll(
+                RangeSplitter
+                  .newSplitter(session.getRegionManager)
+                  .splitAndSortHandlesByRegion(pDef.getId, new TLongArrayList())
+              )
+            }
+          }
 
           val indexTaskRanges = indexTasks.flatMap { _.getRanges }
 

@@ -64,9 +64,18 @@ public class TiDAGRequest implements Serializable {
     public Builder setFullTableScan(TiTableInfo tableInfo) {
       requireNonNull(tableInfo);
       setTableInfo(tableInfo);
-      RowKey start = RowKey.createMin(tableInfo.getId());
-      RowKey end = RowKey.createBeyondMax(tableInfo.getId());
-      ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+      if (!tableInfo.isPartitionEnabled()) {
+        RowKey start = RowKey.createMin(tableInfo.getId());
+        RowKey end = RowKey.createBeyondMax(tableInfo.getId());
+        ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+      } else {
+        for (TiPartitionDef pDef : tableInfo.getPartitionInfo().getDefs()) {
+          RowKey start = RowKey.createMin(pDef.getId());
+          RowKey end = RowKey.createBeyondMax(pDef.getId());
+          ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+        }
+      }
+
       return this;
     }
 
@@ -230,18 +239,7 @@ public class TiDAGRequest implements Serializable {
     typeMap = inferrer.getTypeMap();
   }
 
-  /**
-   * Unify indexScan and tableScan building logic since they are very much alike. DAGRequest for
-   * IndexScan should also contain filters and aggregation, so we can reuse this part of logic.
-   *
-   * <p>DAGRequest is made up of a chain of executors with strict orders: TableScan/IndexScan >
-   * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
-   * IndexScan.
-   *
-   * @param isIndexScan whether the dagRequest to build is an IndexScan
-   * @return final DAGRequest built
-   */
-  public DAGRequest buildScan(boolean isIndexScan) {
+  private DAGRequest buildScanHelper(long id, boolean isIndexScan) {
     checkArgument(startTs != 0, "timestamp is 0");
     DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
     Executor.Builder executorBuilder = Executor.newBuilder();
@@ -327,12 +325,12 @@ public class TiDAGRequest implements Serializable {
       }
       executorBuilder.setTp(ExecType.TypeIndexScan);
 
-      indexScanBuilder.setTableId(tableInfo.getId()).setIndexId(indexInfo.getId());
+      indexScanBuilder.setTableId(id).setIndexId(indexInfo.getId());
       dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
     } else {
       // TableScan
       executorBuilder.setTp(ExecType.TypeTableScan);
-      tblScanBuilder.setTableId(tableInfo.getId());
+      tblScanBuilder.setTableId(id);
       // Step1. Add columns to first executor
       for (int i = 0; i < getFields().size(); i++) {
         ColumnRef col = getFields().get(i);
@@ -424,8 +422,21 @@ public class TiDAGRequest implements Serializable {
             .build();
 
     validateRequest(request);
-
     return request;
+  }
+  /**
+   * Unify indexScan and tableScan building logic since they are very much alike. DAGRequest for
+   * IndexScan should also contain filters and aggregation, so we can reuse this part of logic.
+   *
+   * <p>DAGRequest is made up of a chain of executors with strict orders: TableScan/IndexScan >
+   * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
+   * IndexScan.
+   *
+   * @param isIndexScan whether the dagRequest to build is an IndexScan
+   * @return final DAGRequest built
+   */
+  public DAGRequest buildScan(boolean isIndexScan) {
+    return buildScanHelper(tableInfo.getId(), isIndexScan);
   }
 
   /**
