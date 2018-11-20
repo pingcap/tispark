@@ -65,7 +65,6 @@ public class ScanAnalyzer {
       this.estimatedRowCount = estimatedRowCount;
     }
 
-    private List<ScanPlan> children;
     private final List<KeyRange> keyRanges;
     private final Set<Expression> filters;
     private final double cost;
