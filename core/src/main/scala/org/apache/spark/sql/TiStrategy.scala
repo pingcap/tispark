@@ -17,7 +17,7 @@ package org.apache.spark.sql
 
 import java.time.ZonedDateTime
 
-import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
+import com.pingcap.tikv.exception.{IgnoreUnsupportedTypeException, UnsupportedTypeException}
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver}
@@ -244,6 +244,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
     val tblStatistics: TableStatistics = StatisticsManager.getTableStatistics(source.table.getId)
+
+    if (source.table.isPartitionEnabled) {
+      throw new UnsupportedTypeException("partition table is enabled but we are not supported for now. We are working on it")
+    }
 
     val tableScanPlan: ScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)
