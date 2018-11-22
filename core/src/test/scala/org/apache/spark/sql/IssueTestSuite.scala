@@ -44,7 +44,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into partition_t values (8, \"dede8\", \"2008-01-01\")")
     refreshConnections()
     assert(spark.sql("select * from partition_t").count() == 6)
-    assert(spark.sql("select * from partition_t where id = 1").count() == 1)
+    judge("select count(*) from partition_t where id = 1", checkLimit = false)
     judge("select id from partition_t group by id", checkLimit = false)
   }
 
