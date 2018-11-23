@@ -269,7 +269,7 @@ public class ScanAnalyzer {
     return ranges;
   }
 
-  Pair<Key, Key> buildInedxScanKeyRangeHelper(long id, TiIndexInfo index, IndexRange ir) {
+  private Pair<Key, Key> buildIndexScanKeyRangePerId(long id, TiIndexInfo index, IndexRange ir) {
     Key pointKey = ir.hasAccessKey() ? ir.getAccessKey() : Key.EMPTY;
 
     Range<TypedKey> range = ir.getRange();
@@ -324,13 +324,13 @@ public class ScanAnalyzer {
 
     for (IndexRange ir : indexRanges) {
       if (!table.isPartitionEnabled()) {
-        Pair<Key, Key> pairKeys = buildInedxScanKeyRangeHelper(table.getId(), index, ir);
+        Pair<Key, Key> pairKeys = buildIndexScanKeyRangePerId(table.getId(), index, ir);
         Key lbsKey = pairKeys.first;
         Key ubsKey = pairKeys.second;
         ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
       } else {
         for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
-          Pair<Key, Key> pairKeys = buildInedxScanKeyRangeHelper(pDef.getId(), index, ir);
+          Pair<Key, Key> pairKeys = buildIndexScanKeyRangePerId(pDef.getId(), index, ir);
           Key lbsKey = pairKeys.first;
           Key ubsKey = pairKeys.second;
           ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
