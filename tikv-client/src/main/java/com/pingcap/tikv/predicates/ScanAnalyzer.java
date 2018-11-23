@@ -35,10 +35,12 @@ import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
+import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -193,6 +195,49 @@ public class ScanAnalyzer {
         keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead, estimatedRowCount);
   }
 
+  private Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
+    Key startKey;
+    Key endKey;
+    if (ir.hasAccessKey()) {
+      checkArgument(
+          !ir.hasRange(), "Table scan must have one and only one access condition / point");
+
+      Key key = ir.getAccessKey();
+      checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
+      TypedKey typedKey = (TypedKey) key;
+      startKey = RowKey.toRowKey(id, typedKey);
+      endKey = startKey.next();
+    } else if (ir.hasRange()) {
+      checkArgument(
+          !ir.hasAccessKey(), "Table scan must have one and only one access condition / point");
+      Range<TypedKey> r = ir.getRange();
+
+      if (!r.hasLowerBound()) {
+        // -INF
+        startKey = RowKey.createMin(id);
+      } else {
+        // Comparision with null should be filtered since it yields unknown always
+        startKey = RowKey.toRowKey(id, r.lowerEndpoint());
+        if (r.lowerBoundType().equals(BoundType.OPEN)) {
+          startKey = startKey.next();
+        }
+      }
+
+      if (!r.hasUpperBound()) {
+        // INF
+        endKey = RowKey.createBeyondMax(id);
+      } else {
+        endKey = RowKey.toRowKey(id, r.upperEndpoint());
+        if (r.upperBoundType().equals(BoundType.CLOSED)) {
+          endKey = endKey.next();
+        }
+      }
+    } else {
+      throw new TiClientInternalException("Empty access conditions");
+    }
+    return new Pair<>(startKey, endKey);
+  }
+
   @VisibleForTesting
   List<KeyRange> buildTableScanKeyRange(TiTableInfo table, List<IndexRange> indexRanges) {
     requireNonNull(table, "Table is null");
@@ -200,53 +245,72 @@ public class ScanAnalyzer {
 
     List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
     for (IndexRange ir : indexRanges) {
-      Key startKey;
-      Key endKey;
-      if (ir.hasAccessKey()) {
-        checkArgument(
-            !ir.hasRange(), "Table scan must have one and only one access condition / point");
-
-        Key key = ir.getAccessKey();
-        checkArgument(key instanceof TypedKey, "Table scan key range must be typed key");
-        TypedKey typedKey = (TypedKey) key;
-        startKey = RowKey.toRowKey(table.getId(), typedKey);
-        endKey = startKey.next();
-      } else if (ir.hasRange()) {
-        checkArgument(
-            !ir.hasAccessKey(), "Table scan must have one and only one access condition / point");
-        Range<TypedKey> r = ir.getRange();
-
-        if (!r.hasLowerBound()) {
-          // -INF
-          startKey = RowKey.createMin(table.getId());
-        } else {
-          // Comparision with null should be filtered since it yields unknown always
-          startKey = RowKey.toRowKey(table.getId(), r.lowerEndpoint());
-          if (r.lowerBoundType().equals(BoundType.OPEN)) {
-            startKey = startKey.next();
-          }
-        }
-
-        if (!r.hasUpperBound()) {
-          // INF
-          endKey = RowKey.createBeyondMax(table.getId());
-        } else {
-          endKey = RowKey.toRowKey(table.getId(), r.upperEndpoint());
-          if (r.upperBoundType().equals(BoundType.CLOSED)) {
-            endKey = endKey.next();
-          }
+      if (!table.isPartitionEnabled()) {
+        Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(table.getId(), ir);
+        Key startKey = pairKey.first;
+        Key endKey = pairKey.second;
+        // This range only possible when < MIN or > MAX
+        if (!startKey.equals(endKey)) {
+          ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
         }
       } else {
-        throw new TiClientInternalException("Empty access conditions");
-      }
-
-      // This range only possible when < MIN or > MAX
-      if (!startKey.equals(endKey)) {
-        ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+        for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
+          Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(pDef.getId(), ir);
+          Key startKey = pairKey.first;
+          Key endKey = pairKey.second;
+          // This range only possible when < MIN or > MAX
+          if (!startKey.equals(endKey)) {
+            ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+          }
+        }
       }
     }
 
     return ranges;
+  }
+
+  private Pair<Key, Key> buildIndexScanKeyRangePerId(long id, TiIndexInfo index, IndexRange ir) {
+    Key pointKey = ir.hasAccessKey() ? ir.getAccessKey() : Key.EMPTY;
+
+    Range<TypedKey> range = ir.getRange();
+    Key lPointKey;
+    Key uPointKey;
+
+    Key lKey;
+    Key uKey;
+    if (!ir.hasRange()) {
+      lPointKey = pointKey;
+      uPointKey = pointKey.next();
+
+      lKey = Key.EMPTY;
+      uKey = Key.EMPTY;
+    } else {
+      lPointKey = pointKey;
+      uPointKey = pointKey;
+
+      if (!range.hasLowerBound()) {
+        // -INF
+        lKey = Key.NULL;
+      } else {
+        lKey = range.lowerEndpoint();
+        if (range.lowerBoundType().equals(BoundType.OPEN)) {
+          lKey = lKey.next();
+        }
+      }
+
+      if (!range.hasUpperBound()) {
+        // INF
+        uKey = Key.MAX;
+      } else {
+        uKey = range.upperEndpoint();
+        if (range.upperBoundType().equals(BoundType.CLOSED)) {
+          uKey = uKey.next();
+        }
+      }
+    }
+    IndexKey lbsKey = IndexKey.toIndexKey(id, index.getId(), lPointKey, lKey);
+    IndexKey ubsKey = IndexKey.toIndexKey(id, index.getId(), uPointKey, uKey);
+    return new Pair<>(lbsKey, ubsKey);
   }
 
   @VisibleForTesting
@@ -259,48 +323,19 @@ public class ScanAnalyzer {
     List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
 
     for (IndexRange ir : indexRanges) {
-      Key pointKey = ir.hasAccessKey() ? ir.getAccessKey() : Key.EMPTY;
-
-      Range<TypedKey> range = ir.getRange();
-      Key lPointKey;
-      Key uPointKey;
-
-      Key lKey;
-      Key uKey;
-      if (!ir.hasRange()) {
-        lPointKey = pointKey;
-        uPointKey = pointKey.next();
-
-        lKey = Key.EMPTY;
-        uKey = Key.EMPTY;
+      if (!table.isPartitionEnabled()) {
+        Pair<Key, Key> pairKeys = buildIndexScanKeyRangePerId(table.getId(), index, ir);
+        Key lbsKey = pairKeys.first;
+        Key ubsKey = pairKeys.second;
+        ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
       } else {
-        lPointKey = pointKey;
-        uPointKey = pointKey;
-
-        if (!range.hasLowerBound()) {
-          // -INF
-          lKey = Key.NULL;
-        } else {
-          lKey = range.lowerEndpoint();
-          if (range.lowerBoundType().equals(BoundType.OPEN)) {
-            lKey = lKey.next();
-          }
-        }
-
-        if (!range.hasUpperBound()) {
-          // INF
-          uKey = Key.MAX;
-        } else {
-          uKey = range.upperEndpoint();
-          if (range.upperBoundType().equals(BoundType.CLOSED)) {
-            uKey = uKey.next();
-          }
+        for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
+          Pair<Key, Key> pairKeys = buildIndexScanKeyRangePerId(pDef.getId(), index, ir);
+          Key lbsKey = pairKeys.first;
+          Key ubsKey = pairKeys.second;
+          ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
         }
       }
-      IndexKey lbsKey = IndexKey.toIndexKey(table.getId(), index.getId(), lPointKey, lKey);
-      IndexKey ubsKey = IndexKey.toIndexKey(table.getId(), index.getId(), uPointKey, uKey);
-
-      ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
     }
 
     return ranges;

@@ -64,9 +64,18 @@ public class TiDAGRequest implements Serializable {
     public Builder setFullTableScan(TiTableInfo tableInfo) {
       requireNonNull(tableInfo);
       setTableInfo(tableInfo);
-      RowKey start = RowKey.createMin(tableInfo.getId());
-      RowKey end = RowKey.createBeyondMax(tableInfo.getId());
-      ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+      if (!tableInfo.isPartitionEnabled()) {
+        RowKey start = RowKey.createMin(tableInfo.getId());
+        RowKey end = RowKey.createBeyondMax(tableInfo.getId());
+        ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+      } else {
+        for (TiPartitionDef pDef : tableInfo.getPartitionInfo().getDefs()) {
+          RowKey start = RowKey.createMin(pDef.getId());
+          RowKey end = RowKey.createBeyondMax(pDef.getId());
+          ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+        }
+      }
+
       return this;
     }
 
@@ -242,6 +251,7 @@ public class TiDAGRequest implements Serializable {
    * @return final DAGRequest built
    */
   public DAGRequest buildScan(boolean isIndexScan) {
+    long id  = tableInfo.getId();
     checkArgument(startTs != 0, "timestamp is 0");
     DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
     Executor.Builder executorBuilder = Executor.newBuilder();
@@ -327,12 +337,12 @@ public class TiDAGRequest implements Serializable {
       }
       executorBuilder.setTp(ExecType.TypeIndexScan);
 
-      indexScanBuilder.setTableId(tableInfo.getId()).setIndexId(indexInfo.getId());
+      indexScanBuilder.setTableId(id).setIndexId(indexInfo.getId());
       dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
     } else {
       // TableScan
       executorBuilder.setTp(ExecType.TypeTableScan);
-      tblScanBuilder.setTableId(tableInfo.getId());
+      tblScanBuilder.setTableId(id);
       // Step1. Add columns to first executor
       for (int i = 0; i < getFields().size(); i++) {
         ColumnRef col = getFields().get(i);
@@ -424,7 +434,6 @@ public class TiDAGRequest implements Serializable {
             .build();
 
     validateRequest(request);
-
     return request;
   }
 

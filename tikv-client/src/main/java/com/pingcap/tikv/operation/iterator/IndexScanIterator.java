@@ -20,10 +20,13 @@ import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDAGRequest;
+import com.pingcap.tikv.meta.TiPartitionDef;
+import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import gnu.trove.list.array.TLongArrayList;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -70,9 +73,19 @@ public class IndexScanIterator implements Iterator<Row> {
           batchCount++;
           completionService.submit(
               () -> {
-                List<RegionTask> tasks =
-                    RangeSplitter.newSplitter(session.getRegionManager())
-                        .splitAndSortHandlesByRegion(dagReq.getTableInfo().getId(), handles);
+                List<RegionTask> tasks = new ArrayList<>();
+                TiTableInfo table = dagReq.getTableInfo();
+                if (!table.isPartitionEnabled()) {
+                  tasks.addAll(
+                      RangeSplitter.newSplitter(session.getRegionManager())
+                          .splitAndSortHandlesByRegion(table.getId(), handles));
+                } else {
+                  for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
+                    tasks.addAll(
+                        RangeSplitter.newSplitter(session.getRegionManager())
+                            .splitAndSortHandlesByRegion(pDef.getId(), handles));
+                  }
+                }
                 return CoprocessIterator.getRowIterator(dagReq, tasks, session);
               });
         }
