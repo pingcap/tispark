@@ -195,7 +195,7 @@ public class ScanAnalyzer {
         keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead, estimatedRowCount);
   }
 
-  Pair<Key, Key> buildTableScanKeyRangeHelper(long id, IndexRange ir) {
+  Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
     Key startKey;
     Key endKey;
     if (ir.hasAccessKey()) {
@@ -246,7 +246,7 @@ public class ScanAnalyzer {
     List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
     for (IndexRange ir : indexRanges) {
       if (!table.isPartitionEnabled()) {
-        Pair<Key, Key> pairKey = buildTableScanKeyRangeHelper(table.getId(), ir);
+        Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(table.getId(), ir);
         Key startKey = pairKey.first;
         Key endKey = pairKey.second;
         // This range only possible when < MIN or > MAX
@@ -255,7 +255,7 @@ public class ScanAnalyzer {
         }
       } else {
         for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
-          Pair<Key, Key> pairKey = buildTableScanKeyRangeHelper(pDef.getId(), ir);
+          Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(pDef.getId(), ir);
           Key startKey = pairKey.first;
           Key endKey = pairKey.second;
           // This range only possible when < MIN or > MAX
