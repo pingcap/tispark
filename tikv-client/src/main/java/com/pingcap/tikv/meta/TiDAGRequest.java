@@ -239,7 +239,19 @@ public class TiDAGRequest implements Serializable {
     typeMap = inferrer.getTypeMap();
   }
 
-  private DAGRequest buildScanHelper(long id, boolean isIndexScan) {
+  /**
+   * Unify indexScan and tableScan building logic since they are very much alike. DAGRequest for
+   * IndexScan should also contain filters and aggregation, so we can reuse this part of logic.
+   *
+   * <p>DAGRequest is made up of a chain of executors with strict orders: TableScan/IndexScan >
+   * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
+   * IndexScan.
+   *
+   * @param isIndexScan whether the dagRequest to build is an IndexScan
+   * @return final DAGRequest built
+   */
+  public DAGRequest buildScan(boolean isIndexScan) {
+    long id  = tableInfo.getId();
     checkArgument(startTs != 0, "timestamp is 0");
     DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
     Executor.Builder executorBuilder = Executor.newBuilder();
@@ -423,20 +435,6 @@ public class TiDAGRequest implements Serializable {
 
     validateRequest(request);
     return request;
-  }
-  /**
-   * Unify indexScan and tableScan building logic since they are very much alike. DAGRequest for
-   * IndexScan should also contain filters and aggregation, so we can reuse this part of logic.
-   *
-   * <p>DAGRequest is made up of a chain of executors with strict orders: TableScan/IndexScan >
-   * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
-   * IndexScan.
-   *
-   * @param isIndexScan whether the dagRequest to build is an IndexScan
-   * @return final DAGRequest built
-   */
-  public DAGRequest buildScan(boolean isIndexScan) {
-    return buildScanHelper(tableInfo.getId(), isIndexScan);
   }
 
   /**

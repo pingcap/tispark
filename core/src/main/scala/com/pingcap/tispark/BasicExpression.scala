@@ -140,8 +140,7 @@ object BasicExpression {
         Some(ColumnRef.create(uattr.name))
 
       // TODO: Remove it and let it fail once done all translation
-      case _ =>
-        Option.empty[TiExpression]
+      case _ => Option.empty[TiExpression]
     }
 
   def unapply(expr: Expression): Option[TiExpression] = convertToTiExpr(expr)
