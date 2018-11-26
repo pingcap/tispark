@@ -251,7 +251,6 @@ class IssueTestSuite extends BaseTiSparkSuite {
 
   // https://github.com/pingcap/tispark/issues/496
   test("NPE when count(1) on empty table") {
-    setCurrentDatabase("test")
     tidbStmt.execute("DROP TABLE IF EXISTS `tmp_empty_tbl`")
     tidbStmt.execute(
       "CREATE TABLE `tmp_empty_tbl` (`c1` varchar(20))"
