@@ -25,6 +25,7 @@ import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.catalyst.FunctionIdentifier
 import org.apache.spark.sql.catalyst.catalog._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
@@ -53,6 +54,12 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
+
+  TiSparkFunctionRegistry.expressions.foreach {
+    case (name, (info, builder)) =>
+      sparkSession.sessionState.functionRegistry
+        .registerFunction(FunctionIdentifier(name), info, builder)
+  }
 
   lazy val tiConcreteCatalog: TiSessionCatalog =
     new TiConcreteSessionCatalog(this)(new TiExternalCatalog(this))

@@ -27,12 +27,12 @@ import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
 import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.TiUtils._
+import com.pingcap.tispark._
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Cast, Divide, Expression, IntegerLiteral, Literal, NamedExpression, SortOrder}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Cast, Divide, Expression, IntegerLiteral, Literal, NamedExpression, SortOrder}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -40,6 +40,7 @@ import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
+import com.google.common.collect.Range
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -243,6 +244,24 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     source: TiDBRelation,
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
+
+    if (source.isPartitioned) {
+      if (source.isRangePart) {
+        // split condition with partition column and residual column
+        val (accessConds: Seq[Expression], _) = filters.partition(
+          (expr: Expression) =>
+            expr
+              .find((e) => e.isInstanceOf[AttributeReference])
+              .get
+              .asInstanceOf[AttributeReference]
+              .name == source.partitionExpr.columnName
+        )
+
+        dagRequest.setPartInfo(source.partitionExpr.pruning(accessConds, source.table))
+      } else {
+        throw new IllegalArgumentException("Partition reading only supports on range partition.")
+      }
+    }
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
@@ -250,7 +269,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val tblStatistics: TableStatistics = StatisticsManager.getTableStatistics(source.table.getId)
 
     val tableScanPlan: ScanPlan =
-      scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)
+      scanBuilder
+        .buildTableScan(tiFilters.asJava, source.table, dagRequest.getPartInfo, tblStatistics)
     val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
@@ -259,6 +279,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
         tiColumns.map { _.getColumnInfo }.asJava,
         tiFilters.asJava,
         source.table,
+        dagRequest.getPartInfo,
         tblStatistics
       )
     } else {
@@ -338,8 +359,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): SparkPlan = {
 
-    val projectSet = AttributeSet(projectList.flatMap(_.references))
-    val filterSet = AttributeSet(filterPredicates.flatMap(_.references))
+    val projectSet = AttributeSet(projectList)
+    val filterSet = AttributeSet(filterPredicates)
 
     val (pushdownFilters: Seq[Expression], residualFilters: Seq[Expression]) =
       filterPredicates.partition(

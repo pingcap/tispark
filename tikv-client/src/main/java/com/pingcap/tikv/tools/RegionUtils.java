@@ -61,7 +61,7 @@ public class RegionUtils {
     requireNonNull(table, String.format("Table not found %s.%s", databaseName, tableName));
     ScanAnalyzer builder = new ScanAnalyzer();
     ScanAnalyzer.ScanPlan scanPlan =
-        builder.buildScan(ImmutableList.of(), ImmutableList.of(), table);
+        builder.buildScan(ImmutableList.of(), ImmutableList.of(), table, null);
     return RangeSplitter.newSplitter(session.getRegionManager())
         .splitRangeByRegion(scanPlan.getKeyRanges());
   }

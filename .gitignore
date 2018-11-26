@@ -71,3 +71,6 @@ python/pytispark.egg-info/
 
 # ignore spark warehouse
 spark-warehouse
+
+.ensime
+.ensime_cache

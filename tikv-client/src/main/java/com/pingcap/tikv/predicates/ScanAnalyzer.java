@@ -36,6 +36,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
+import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
@@ -105,8 +106,11 @@ public class ScanAnalyzer {
 
   // build a scan for debug purpose.
   public ScanPlan buildScan(
-      List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
-    return buildScan(columnList, conditions, table, null);
+      List<TiColumnInfo> columnList,
+      List<Expression> conditions,
+      TiTableInfo table,
+      TiPartitionInfo partInfo) {
+    return buildScan(columnList, conditions, table, partInfo, null);
   }
 
   // Build scan plan picking access path with lowest cost by estimation
@@ -114,11 +118,12 @@ public class ScanAnalyzer {
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiTableInfo table,
+      TiPartitionInfo partInfo,
       TableStatistics tableStatistics) {
-    ScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
+    ScanPlan minPlan = buildTableScan(conditions, table, partInfo, tableStatistics);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildScan(columnList, conditions, index, table, tableStatistics);
+      ScanPlan plan = buildScan(columnList, conditions, index, table, partInfo, tableStatistics);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -128,9 +133,12 @@ public class ScanAnalyzer {
   }
 
   public ScanPlan buildTableScan(
-      List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
+      List<Expression> conditions,
+      TiTableInfo table,
+      TiPartitionInfo partInfo,
+      TableStatistics tableStatistics) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
+    return buildScan(table.getColumns(), conditions, pkIndex, table, partInfo, tableStatistics);
   }
 
   public ScanPlan buildScan(
@@ -138,6 +146,7 @@ public class ScanAnalyzer {
       List<Expression> conditions,
       TiIndexInfo index,
       TiTableInfo table,
+      TiPartitionInfo partInfo,
       TableStatistics tableStatistics) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
@@ -163,7 +172,7 @@ public class ScanAnalyzer {
         cost = 100.0; // Full table scan cost
         // TODO: Fine-grained statistics usage
       }
-      keyRanges = buildTableScanKeyRange(table, irs);
+      keyRanges = buildTableScanKeyRange(table, irs, partInfo);
       cost *= tableSize * TABLE_SCAN_COST_FACTOR;
     } else {
       if (tableStatistics != null) {
@@ -239,7 +248,8 @@ public class ScanAnalyzer {
   }
 
   @VisibleForTesting
-  List<KeyRange> buildTableScanKeyRange(TiTableInfo table, List<IndexRange> indexRanges) {
+  List<KeyRange> buildTableScanKeyRange(
+      TiTableInfo table, List<IndexRange> indexRanges, TiPartitionInfo partInfo) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
 
@@ -254,7 +264,7 @@ public class ScanAnalyzer {
           ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
         }
       } else {
-        for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
+        for (TiPartitionDef pDef : partInfo.getDefs()) {
           Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(pDef.getId(), ir);
           Key startKey = pairKey.first;
           Key endKey = pairKey.second;

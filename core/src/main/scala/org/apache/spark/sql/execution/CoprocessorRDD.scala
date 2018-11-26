@@ -232,7 +232,7 @@ case class RegionTaskExec(child: SparkPlan,
               )
           } else {
             // when partition table is present, partition id is table id.
-            for (pDef <- dagRequest.getTableInfo.getPartitionInfo.getDefs) {
+            for (pDef <- dagRequest.getPartInfo.getDefs) {
               indexTasks.addAll(
                 RangeSplitter
                   .newSplitter(session.getRegionManager)

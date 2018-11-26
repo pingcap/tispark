@@ -18,10 +18,11 @@ package com.pingcap.tikv.meta;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 
 /** This class is mapping TiDB's CIStr/ For internal use only. */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CIStr {
+public class CIStr implements Serializable {
   private final String o; // original
   private final String l;
 
@@ -41,5 +42,10 @@ public class CIStr {
 
   public String getL() {
     return l;
+  }
+
+  @Override
+  public CIStr clone() {
+    return new CIStr(o, l);
   }
 }

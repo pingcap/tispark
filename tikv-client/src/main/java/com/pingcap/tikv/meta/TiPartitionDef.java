@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -53,5 +54,13 @@ public class TiPartitionDef implements Serializable {
 
   public List<String> getLessThan() {
     return lessThan;
+  }
+
+  @Override
+  public TiPartitionDef clone() {
+    List<String> newLessThan = new ArrayList<>(this.lessThan);
+    TiPartitionDef partDef =
+        new TiPartitionDef(this.id, CIStr.newCIStr(this.name), newLessThan, this.comment);
+    return partDef;
   }
 }

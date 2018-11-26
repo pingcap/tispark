@@ -172,6 +172,11 @@
             </plugins>
         </pluginManagement>
         <plugins>
+          <plugin>
+            <groupId>org.ensime.maven.plugins</groupId>
+            <artifactId>ensime-maven</artifactId>
+            <version>1.2.0</version>
+          </plugin>
             <!--GPG Signed Components-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

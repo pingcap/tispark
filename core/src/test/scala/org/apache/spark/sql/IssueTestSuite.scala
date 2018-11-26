@@ -102,6 +102,73 @@ class IssueTestSuite extends BaseTiSparkSuite {
     )
   }
 
+  test("partition expr can be parsed by sparkSQLParser") {
+    spark.sql("use test")
+    assert(spark.sql("select Abs(1)").count == 1)
+    assert(spark.sql("select Ceiling(1)").count == 1)
+    assert(spark.sql("SELECT datediff('2009-07-31', '2009-07-30')").count == 1)
+    assert(spark.sql("SELECT day('2009-07-30')").count() == 1)
+    assert(spark.sql("SELECT dayofmonth('2009-07-30')").count() == 1)
+    //Returns the weekday index for date (1 = Sunday, 2 = Monday, …, 7 = Saturday).
+    assert(spark.sql("SELECT dayofweek('2009-07-30')").count() == 1)
+    assert(spark.sql("SELECT dayofyear('2016-04-09')").count() == 1)
+    // extract is not supported
+    // https://dev.mysql.com/doc/refman/5.7/en/date-and-time-functions.html#function_extract
+    assert(spark.sql("SELECT floor(-0.1)").count() == 1)
+    assert(spark.sql("SELECT hour('2009-07-30 12:58:59')").count() == 1)
+    // microsecond is not supported
+    assert(spark.sql("SELECT minute('2009-07-30 12:58:59')").count() == 1)
+    assert(spark.sql("SELECT 2 mod 1.8").count() == 1)
+    assert(spark.sql("SELECT month('2016-07-30')").count() == 1)
+    assert(spark.sql("SELECT quarter('2016-08-31')").count() == 1)
+    assert(spark.sql("SELECT second('2009-07-30 12:58:59')").count() == 1)
+    judge("select time_to_sec('12:30:49')")
+    judge("select time_to_sec('2018-10-10 12:30:49'")
+    // time_to_sec is not supported
+    // TIME_TO_SEC(time)
+    //Returns the time argument, converted to seconds.
+
+    // to_days is not supported
+    // TO_DAYS(date)
+    //
+    //Given a date date, returns a day number (the number of days since year 0).
+    judge("select to_days('2018-10-10')")
+    judge("select to_days('2018-10-10 12:30:49'")
+
+    // to_seconds is not supported
+    // TO_SECONDS(expr)
+    judge("select to_seconds('2018-10-01 12:34:59')")
+    //
+    //Given a date or datetime expr, returns the number of seconds since the year 0.
+    // If expr is not a valid date or datetime value, returns NULL.
+    assert(spark.sql("SELECT year('2009-07-30 12:58:59')").count() == 1)
+    assert(spark.sql("SELECT unix_timestamp('2016-04-08', 'yyyy-MM-dd')").count() == 1)
+    assert(spark.sql("SELECT unix_timestamp()").count() == 1)
+    // weekday is not supported
+    judge("select weeekday('2018-09-12')")
+    // Returns the weekday index for date (0 = Monday, 1 = Tuesday, … 6 = Sunday).
+
+    // yearweek is not supported
+    judge("select yearweek('1992-01-01')")
+    judge("select yearweek('1992-12-31')")
+    judge("select yearweek('1992-01-01', 1)")
+    judge("select yearweek('1992-12-31', 1)")
+    judge("select yearweek('1992-01-01', 2)")
+    judge("select yearweek('1992-12-31', 2)")
+    judge("select yearweek('1992-01-01', 3)")
+    judge("select yearweek('1992-12-31', 3)")
+    judge("select yearweek('1992-01-01', 4)")
+    judge("select yearweek('1992-12-31', 4)")
+    judge("select yearweek('1992-01-01', 5)")
+    judge("select yearweek('1992-12-31', 5)")
+    judge("select yearweek('1992-01-01', 6)")
+    judge("select yearweek('1992-12-31', 6)")
+    judge("select yearweek('1992-01-01', 7)")
+    judge("select yearweek('1992-12-31', 7)")
+
+    // Returns year and week for a date. The year in the result may be different from the year
+    // in the date argument for the first and the last week of the year.
+  }
   test("partition read") {
     tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
     tidbStmt.execute("""

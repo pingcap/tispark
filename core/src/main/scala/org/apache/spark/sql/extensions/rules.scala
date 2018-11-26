@@ -14,16 +14,20 @@
  */
 package org.apache.spark.sql.extensions
 
+import com.pingcap.tikv.meta.{TiPartitionDef, TiPartitionInfo}
 import com.pingcap.tispark.statistics.StatisticsManager
-import org.apache.spark.sql.{AnalysisException, _}
+import com.pingcap.tispark.{MetaManager, PartitionExpr, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
-import org.apache.spark.sql.catalyst.rules.Rule
-import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
+import org.apache.spark.sql.catalyst.analysis.{UnresolvedAttribute, UnresolvedFunction, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
+import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.{AnalysisException, _}
+
+import scala.collection.mutable.ListBuffer
 
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
@@ -38,10 +42,8 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
     tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
 
-  protected val resolveTiDBRelation: TableIdentifier => LogicalPlan =
-    (tableIdentifier: TableIdentifier) => {
-      val dbName = getDatabaseFromIdentifier(tableIdentifier)
-      val tableName = tableIdentifier.table
+  protected val resolveTiDBRelation: (String, String) => TiDBRelation =
+    (dbName: String, tableName: String) => {
       val table = meta.getTable(dbName, tableName)
       if (table.isEmpty) {
         throw new AnalysisException(s"Table or view '$tableName' not found in database '$dbName'")
@@ -50,20 +52,102 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
         StatisticsManager.loadStatisticsInfo(table.get)
       }
       val sizeInBytes = StatisticsManager.estimateTableSize(table.get)
-      val tiDBRelation = TiDBRelation(
+      TiDBRelation(
         tiSession,
         TiTableReference(dbName, tableName, sizeInBytes),
-        meta
+        meta,
+        generatePartitionExpr(table.get.getPartitionInfo, table.get.isPartitionEnabled)
       )(sqlContext)
-      // Use SubqueryAlias so that projects and joins can correctly resolve
-      // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
-      SubqueryAlias(tableName, LogicalRelation(tiDBRelation))
     }
 
+  // This function will parse partition definitions into Spark's Expression.
+  // If we have a partition info such as
+  // partition by year(`purchased`)
+  // p0 less than 1990
+  // p1 less than 2000,
+  // we will get
+  // p0 year(`purchased`) < 1990
+  // p1 year(`purchased`) >= 1990 and year(`purchased`) < 2000
+  private def generatePartitionExpr(pInfo: TiPartitionInfo, partitioned: Boolean): PartitionExpr = {
+    if (!partitioned) return null
+    val parser = sparkSession.sessionState.sqlParser
+    val partitionExprs: ListBuffer[Expression] = ListBuffer()
+    val locateExprs: ListBuffer[Expression] = ListBuffer()
+    var previousPDef: TiPartitionDef = null
+    var columnName = ""
+    for (i <- 0 to pInfo.getDefs.size() - 1) {
+      val sb: StringBuilder = new StringBuilder
+      val pDef: TiPartitionDef = pInfo.getDefs().get(i)
+      val lessThan = pDef.getLessThan().get(0)
+      if (lessThan == "MAXVALUE") {
+        sb.append("true")
+      } else {
+        sb.append(s"((${pInfo.getExpr}) < (${pDef.getLessThan().get(0)}))")
+      }
+
+      locateExprs :+ resolveUnresolvedFnInExpr(parser.parseExpression(sb.toString())).getOrElse(
+        throw new IllegalStateException(
+          s"${sb.toString()} cannot" +
+            s"be parsed."
+        )
+      )
+      if (i > 0) {
+        sb.append(s" and ((${pInfo.getExpr}) >= (${previousPDef.getLessThan().get(0)}))")
+      } else {
+        // NULL will locate in the first partition, so its expression is
+        // (expr < value or expr is null).
+        sb.append(s" or ((${pInfo.getExpr}) is null)")
+
+        // Since we build a expression string and let SparkSQLParser parses
+        // such expression. The expected attribute is always [[UnresolvedAttribute]],
+        // so directly getting value from Option seems safe.
+        columnName = resolveUnresolvedFnInExpr(parser.parseExpression(pInfo.getExpr)).get
+          .find((e) => e.isInstanceOf[UnresolvedAttribute])
+          .get
+          .asInstanceOf[UnresolvedAttribute]
+          .name
+      }
+
+      // parse entire partition expression.
+      val pExpr = resolveUnresolvedFnInExpr(parser.parseExpression(sb.toString()))
+      partitionExprs += pExpr.getOrElse(
+        throw new IllegalStateException(
+          s"${sb.toString()} cannot" +
+            s"be parsed."
+        )
+      )
+      previousPDef = pDef
+    }
+    new PartitionExpr(
+      partitionExprs.toList,
+      locateExprs.toList,
+      resolveUnresolvedFnInExpr(parser.parseExpression(pInfo.getExpr)).getOrElse(
+        throw new IllegalStateException(
+          s"${pInfo.getExpr} cannot" +
+            s"be parsed."
+        )
+      ),
+      columnName
+    )
+  }
+
+  private def resolveUnresolvedFnInExpr(expr: Expression): Option[Expression] =
+    Option(expr transform {
+      case UnresolvedFunction(funcID, children, _) => {
+        tiCatalog.lookupFunction(funcID, children)
+      }
+    })
+
   override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
-    case UnresolvedRelation(tableIdentifier)
-        if tiCatalog.catalogOf(tableIdentifier.database).exists(_.isInstanceOf[TiSessionCatalog]) =>
-      resolveTiDBRelation(tableIdentifier)
+    case rel @ UnresolvedRelation(tableIdentifier) =>
+      val dbName = getDatabaseFromIdentifier(tableIdentifier)
+      if (!tiCatalog.isTemporaryTable(tableIdentifier) && tiCatalog
+            .catalogOf(Option.apply(dbName))
+            .exists(_.isInstanceOf[TiSessionCatalog])) {
+        LogicalRelation(resolveTiDBRelation(dbName, tableIdentifier.table))
+      } else {
+        rel
+      }
   }
 }
 

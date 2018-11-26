@@ -14,8 +14,9 @@
  */
 package org.apache.spark.sql.extensions
 
-import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.catalyst.expressions.{Exists, Expression, ListQuery, NamedExpression, ScalarSubquery}
+import org.apache.spark.sql.catalyst.analysis.{UnresolvedAttribute, UnresolvedFunction, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
+import org.apache.spark.sql.catalyst.expressions.{Add, And, Divide, Exists, Expression, GreaterThan, GreaterThanOrEqual, IsNull, LessThan, ListQuery, Literal, Multiply, NamedExpression, Or, ScalarSubquery, Subtract, Year}
 import org.apache.spark.sql.catalyst.parser._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}

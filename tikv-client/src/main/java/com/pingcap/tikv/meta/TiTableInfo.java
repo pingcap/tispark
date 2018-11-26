@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.TableInfo;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataTypeFactory;
@@ -46,7 +45,6 @@ public class TiTableInfo implements Serializable {
   private final long maxIndexId;
   private final long oldSchemaId;
   private final TiPartitionInfo partitionInfo;
-  private TiPartitionExpr partitionExpr;
 
   @JsonCreator
   public TiTableInfo(
@@ -206,18 +204,5 @@ public class TiTableInfo implements Serializable {
   public boolean isPartitionEnabled() {
     if (partitionInfo == null) return false;
     return partitionInfo.isEnable();
-  }
-
-  public void setPartitionExpr(TiPartitionExpr partitionExpr) {
-    MetaResolver.resolve(partitionExpr.getRanges(), this);
-    MetaResolver.resolve(partitionExpr.getUpperBound(), this);
-    if (partitionExpr.canPruned()) {
-      MetaResolver.resolve(partitionExpr.getColumn(), this);
-    }
-    this.partitionExpr = partitionExpr;
-  }
-
-  public TiPartitionExpr getPartitionExpr() {
-    return partitionExpr;
   }
 }

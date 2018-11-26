@@ -17,6 +17,7 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
+import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.expressions.aggregate._
@@ -26,12 +27,19 @@ import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
 
-case class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaManager)(
+case class TiDBRelation(session: TiSession,
+                        tableRef: TiTableReference,
+                        meta: MetaManager,
+                        partExpr: PartitionExpr = null)(
   @transient val sqlContext: SQLContext
 ) extends BaseRelation {
   val table: TiTableInfo = meta
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new TiClientInternalException("Table not exist"))
+
+  val partitionExpr: PartitionExpr = partExpr
+  lazy val isPartitioned: Boolean = partitionExpr != null
+  lazy val isRangePart: Boolean = table.getPartitionInfo.getType == PartitionType.RangePartition
 
   override lazy val schema: StructType = TiUtils.getSchemaFromTable(table)
 
