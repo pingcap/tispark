@@ -372,7 +372,7 @@ case class RegionTaskExec(child: SparkPlan,
 
           val schemaInferrer: SchemaInfer = if (satisfyDowngradeThreshold) {
             // Should downgrade to full table scan for one region
-            logger.warn(
+            logger.info(
               s"Index scan task range size = ${indexTaskRanges.size}, " +
                 s"exceeding downgrade threshold = $downgradeThreshold, " +
                 s"index scan handle size = ${handles.length}, will try to merge."
