@@ -249,6 +249,17 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge("select count(c1 + c2) from t")
   }
 
+  // https://github.com/pingcap/tispark/issues/496
+  test("NPE when count(1) on empty table") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `tmp_empty_tbl`")
+    tidbStmt.execute(
+      "CREATE TABLE `tmp_empty_tbl` (`c1` varchar(20))"
+    )
+    refreshConnections()
+    judge("select count(1) from tmp_debug")
+    judge("select cast(count(1) as string) from tmp_debug")
+  }
+
   test("json support") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(json_doc json)")
