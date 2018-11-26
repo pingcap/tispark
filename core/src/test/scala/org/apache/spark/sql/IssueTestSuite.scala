@@ -256,8 +256,8 @@ class IssueTestSuite extends BaseTiSparkSuite {
       "CREATE TABLE `tmp_empty_tbl` (`c1` varchar(20))"
     )
     refreshConnections()
-    judge("select count(1) from tmp_debug")
-    judge("select cast(count(1) as string) from tmp_debug")
+    judge("select count(1) from tmp_empty_tbl")
+    judge("select cast(count(1) as string) from tmp_empty_tbl")
   }
 
   test("json support") {
