@@ -106,7 +106,6 @@ public class RawKVClientTest {
   }
 
   /** Example of benchmarking base test */
-  @Test
   public void benchmark() {
     if (!initialized) return;
     baseTest(TEST_CASES, TEST_CASES, 200, 5000, true);
