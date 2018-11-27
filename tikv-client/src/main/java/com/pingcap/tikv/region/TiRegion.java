@@ -43,8 +43,17 @@ public class TiRegion implements Serializable {
 
   public TiRegion(
       Region meta, Peer peer, IsolationLevel isolationLevel, Kvrpcpb.CommandPri commandPri) {
+    this(meta, peer, isolationLevel, commandPri, false);
+  }
+
+  public TiRegion(
+      Region meta,
+      Peer peer,
+      IsolationLevel isolationLevel,
+      Kvrpcpb.CommandPri commandPri,
+      boolean isRawRegion) {
     Objects.requireNonNull(meta, "meta is null");
-    this.meta = decodeRegion(meta);
+    this.meta = decodeRegion(meta, isRawRegion);
     if (peer == null || peer.getId() == 0) {
       if (meta.getPeersCount() == 0) {
         throw new TiClientInternalException("Empty peer list for region " + meta.getId());
@@ -58,21 +67,21 @@ public class TiRegion implements Serializable {
     this.commandPri = commandPri;
   }
 
-  private Region decodeRegion(Region region) {
+  private Region decodeRegion(Region region, boolean isRawRegion) {
     Region.Builder builder =
         Region.newBuilder()
             .setId(region.getId())
             .setRegionEpoch(region.getRegionEpoch())
             .addAllPeers(region.getPeersList());
 
-    if (region.getStartKey().isEmpty()) {
+    if (region.getStartKey().isEmpty() || isRawRegion) {
       builder.setStartKey(region.getStartKey());
     } else {
       byte[] decodecStartKey = BytesCodec.readBytes(new CodecDataInput(region.getStartKey()));
       builder.setStartKey(ByteString.copyFrom(decodecStartKey));
     }
 
-    if (region.getEndKey().isEmpty()) {
+    if (region.getEndKey().isEmpty() || isRawRegion) {
       builder.setEndKey(region.getEndKey());
     } else {
       byte[] decodecEndKey = BytesCodec.readBytes(new CodecDataInput(region.getEndKey()));

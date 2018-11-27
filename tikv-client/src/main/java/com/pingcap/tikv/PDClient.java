@@ -105,7 +105,11 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
     GetRegionResponse resp = callWithRetry(backOffer, PDGrpc.METHOD_GET_REGION, request, handler);
     return new TiRegion(
-        resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
+        resp.getRegion(),
+        resp.getLeader(),
+        conf.getIsolationLevel(),
+        conf.getCommandPriority(),
+        true);
   }
 
   @Override
