@@ -25,8 +25,6 @@ import com.google.common.collect.TreeRangeMap;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.codec.Codec;
-import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
@@ -91,9 +89,26 @@ public class RegionManager {
     }
 
     synchronized TiRegion getRegionByRawKey(ByteString key) {
-      CodecDataOutput cdo = new CodecDataOutput();
-      Codec.BytesCodec.writeBytes(cdo, key.toByteArray());
-      return getRegionByKey(cdo.toByteString());
+      Long regionId;
+      regionId = keyToRegionIdCache.get(Key.toRawKey(key));
+      if (logger.isDebugEnabled()) {
+        logger.debug(String.format("getRegionByKey key[%s] -> ID[%s]", formatBytes(key), regionId));
+      }
+
+      if (regionId == null) {
+        logger.debug("Key not find in keyToRegionIdCache:" + formatBytes(key));
+        TiRegion region = pdClient.getRegionByRawKey(ConcreteBackOffer.newGetBackOff(), key);
+        if (!putRegion(region)) {
+          throw new TiClientInternalException("Invalid Region: " + region.toString());
+        }
+        return region;
+      }
+      TiRegion region = regionCache.get(regionId);
+      if (logger.isDebugEnabled()) {
+        logger.debug(String.format("getRegionByKey ID[%s] -> Region[%s]", regionId, region));
+      }
+
+      return region;
     }
 
     private synchronized boolean putRegion(TiRegion region) {

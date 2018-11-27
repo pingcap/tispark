@@ -12,7 +12,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class RawKVClientTest {
-  private static final String RAW_PREFIX = "raw_";
+  private static final String RAW_PREFIX = "raw_\u0001_";
   private static final int KEY_POOL_SIZE = 1000000;
   private static final int TEST_CASES = 10000;
   private static final int WORKER_CNT = 100;
@@ -106,6 +106,7 @@ public class RawKVClientTest {
   }
 
   /** Example of benchmarking base test */
+  @Test
   public void benchmark() {
     if (!initialized) return;
     baseTest(TEST_CASES, TEST_CASES, 200, 5000, true);

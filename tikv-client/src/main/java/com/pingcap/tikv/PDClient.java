@@ -95,6 +95,20 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   @Override
+  public TiRegion getRegionByRawKey(BackOffer backOffer, ByteString key) {
+
+    Supplier<GetRegionRequest> request =
+        () -> GetRegionRequest.newBuilder().setHeader(header).setRegionKey(key).build();
+
+    PDErrorHandler<GetRegionResponse> handler =
+        new PDErrorHandler<>(r -> r.getHeader().hasError() ? r.getHeader().getError() : null, this);
+
+    GetRegionResponse resp = callWithRetry(backOffer, PDGrpc.METHOD_GET_REGION, request, handler);
+    return new TiRegion(
+        resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
+  }
+
+  @Override
   public Future<TiRegion> getRegionByKeyAsync(BackOffer backOffer, ByteString key) {
     FutureObserver<TiRegion, GetRegionResponse> responseObserver =
         new FutureObserver<>(

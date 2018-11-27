@@ -39,6 +39,8 @@ public interface ReadOnlyPDClient {
    */
   TiRegion getRegionByKey(BackOffer backOffer, ByteString key);
 
+  TiRegion getRegionByRawKey(BackOffer backOffer, ByteString key);
+
   Future<TiRegion> getRegionByKeyAsync(BackOffer backOffer, ByteString key);
 
   /**
