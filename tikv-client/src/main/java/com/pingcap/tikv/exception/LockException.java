@@ -17,12 +17,13 @@ package com.pingcap.tikv.exception;
 import com.pingcap.tikv.txn.Lock;
 
 public class LockException extends RuntimeException {
-    private final Lock lock;
-    public LockException(Lock lock) {
-        this.lock = lock;
-    }
+  private final Lock lock;
 
-    public Lock getLock() {
-        return lock;
-    }
+  public LockException(Lock lock) {
+    this.lock = lock;
+  }
+
+  public Lock getLock() {
+    return lock;
+  }
 }
