@@ -23,6 +23,7 @@ import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DA
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
@@ -71,7 +72,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.function.Supplier;
-import jline.internal.TestAccessible;
 import org.apache.log4j.Logger;
 
 // RegionStore itself is not thread-safe
@@ -105,7 +105,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   // lockResolverClient, after implements the
   // write implementation of tispark, we can change
   // it to private
-  @TestAccessible public final LockResolverClient lockResolverClient;
+  @VisibleForTesting
+  public final LockResolverClient lockResolverClient;
   private TikvBlockingStub blockingStub;
   private TikvStub asyncStub;
 
