@@ -20,26 +20,16 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
   test("cannot resolve column name when specifying table.column") {
-    spark
-      .sql(
-        "select full_data_type_table.id_dt from full_data_type_table"
-      )
-      .explain(true)
-    spark
-      .sql(
-        "select full_data_type_table.id_dt from full_data_type_table"
-      )
-      .show
+    spark.sql("select full_data_type_table.id_dt from full_data_type_table").explain(true)
+    judge("select full_data_type_table.id_dt from full_data_type_table")
     spark
       .sql(
         "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt"
       )
       .explain(true)
-    spark
-      .sql(
-        "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt"
-      )
-      .show
+    judge(
+      "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt"
+    )
   }
 
   test("partition read") {

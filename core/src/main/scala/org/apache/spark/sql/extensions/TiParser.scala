@@ -50,10 +50,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
           .exists(_.isInstanceOf[TiSessionCatalog]) && notTempView(tableIdentifier) =>
       // Use SubqueryAlias so that projects and joins can correctly resolve
       // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
-      SubqueryAlias(
-        tableIdentifier.table,
-        child = r.copy(qualifyTableIdentifierInternal(tableIdentifier))
-      )
+      SubqueryAlias(tableIdentifier.table, r.copy(qualifyTableIdentifierInternal(tableIdentifier)))
     case f @ Filter(condition, _) =>
       f.copy(
         condition = condition.transformUp {
