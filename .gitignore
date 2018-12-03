@@ -68,3 +68,6 @@ core/src/test/resources/tidb_config.properties
 python/build/
 python/dist/
 python/pytispark.egg-info/
+
+# ignore spark warehouse
+spark-warehouse

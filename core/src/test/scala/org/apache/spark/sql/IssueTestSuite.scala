@@ -19,6 +19,29 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+  test("cannot resolve column name when specifying table.column") {
+    spark
+      .sql(
+        "select full_data_type_table.id_dt from full_data_type_table"
+      )
+      .explain(true)
+    spark
+      .sql(
+        "select full_data_type_table.id_dt from full_data_type_table"
+      )
+      .show
+    spark
+      .sql(
+        "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt"
+      )
+      .explain(true)
+    spark
+      .sql(
+        "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt"
+      )
+      .show
+  }
+
   test("partition read") {
     tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
     tidbStmt.execute("""
