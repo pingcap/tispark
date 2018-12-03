@@ -41,7 +41,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
    * See [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations.resolveRelation]] for detail.
    *
    * Here we use transformUp when transforming logicalPlans because We should first
-   * deal with the leaf nodes, and a bottom-to-top regression is needed.
+   * deal with the leaf nodes, and a bottom-to-top recursion is needed.
    */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier)
