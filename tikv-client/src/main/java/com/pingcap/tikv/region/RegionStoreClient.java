@@ -31,6 +31,7 @@ import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
+import com.pingcap.tikv.exception.LockException;
 import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.exception.SelectException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -64,10 +65,13 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Queue;
 import java.util.function.Supplier;
 import jline.internal.TestAccessible;
-import org.apache.hadoop.hive.ql.lockmgr.LockException;
 import org.apache.log4j.Logger;
 
 // RegionStore itself is not thread-safe
@@ -384,11 +388,11 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
 
     if (response.hasLocked()) {
-      logger.debug(String.format("coprocessor encounters locks: %s", response.getLocked()));
       Lock lock = new Lock(response.getLocked());
+      logger.debug(String.format("coprocessor encounters locks: %s", lock));
       boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
       if (!ok) {
-        backOffer.doBackOff(BoTxnLockFast, new LockException());
+        backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
       }
       // Split ranges
       return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);
