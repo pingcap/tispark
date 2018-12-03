@@ -251,7 +251,7 @@ public class TiDAGRequest implements Serializable {
    * @return final DAGRequest built
    */
   public DAGRequest buildScan(boolean isIndexScan) {
-    long id  = tableInfo.getId();
+    long id = tableInfo.getId();
     checkArgument(startTs != 0, "timestamp is 0");
     DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
     Executor.Builder executorBuilder = Executor.newBuilder();
