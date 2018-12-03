@@ -24,6 +24,14 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase))
     )
 
+  /**
+   * Determines whether a table specified by tableIdentifier is
+   * NOT a tempView registered. This is used for TiSpark to transform
+   * plans and decides whether a relation should be resolved of parsed.
+   *
+   * @param tableIdentifier tableIdentifier
+   * @return whether it is not a tempView
+   */
   private def notTempView(tableIdentifier: TableIdentifier) =
     !tiCatalog.isTemporaryTable(tableIdentifier)
 
@@ -31,12 +39,17 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
    * WAR to lead Spark to consider this relation being on local files.
    * Otherwise Spark will lookup this relation in his session catalog.
    * See [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations.resolveRelation]] for detail.
+   *
+   * Here we use transformUp when transforming logicalPlans because We should first
+   * deal with the leaf nodes, and a bottom-to-top regression is needed.
    */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier)
         if tiCatalog
           .catalogOf(tableIdentifier.database)
           .exists(_.isInstanceOf[TiSessionCatalog]) && notTempView(tableIdentifier) =>
+      // Use SubqueryAlias so that projects and joins can correctly resolve
+      // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
       SubqueryAlias.apply(
         tableIdentifier.table,
         child = r.copy(qualifyTableIdentifierInternal(tableIdentifier))
