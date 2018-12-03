@@ -27,7 +27,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   /**
    * Determines whether a table specified by tableIdentifier is
    * NOT a tempView registered. This is used for TiSpark to transform
-   * plans and decides whether a relation should be resolved of parsed.
+   * plans and decides whether a relation should be resolved or parsed.
    *
    * @param tableIdentifier tableIdentifier
    * @return whether it is not a tempView
