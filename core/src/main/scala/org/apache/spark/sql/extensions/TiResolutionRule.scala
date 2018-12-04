@@ -3,8 +3,8 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.{AnalysisException, _}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoTable, LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.rules.Rule
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
@@ -49,5 +49,10 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     case UnresolvedRelation(tableIdentifier)
         if tiCatalog.catalogOf(tableIdentifier.database).exists(_.isInstanceOf[TiSessionCatalog]) =>
       resolveTiDBRelation(tableIdentifier)
+    case i @ InsertIntoTable(UnresolvedRelation(tableIdentifier), _, _, _, _)
+      if tiCatalog
+        .catalogOf(tableIdentifier.database)
+        .exists(_.isInstanceOf[TiSessionCatalog]) =>
+      i.copy(table = EliminateSubqueryAliases(resolveTiDBRelation(tableIdentifier)))
   }
 }

@@ -43,6 +43,12 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier) if needQualify(tableIdentifier) =>
       r.copy(qualifyTableIdentifierInternal(tableIdentifier))
+    case i @ InsertIntoTable(r @ UnresolvedRelation(tableIdentifier), _, _, _, _)
+      // When getting temp view, we leverage legacy catalog.
+      if tableIdentifier.database.isEmpty && tiContext.sessionCatalog
+        .getTempView(tableIdentifier.table)
+        .isEmpty =>
+      i.copy(r.copy(qualifyTableIdentifierInternal(tableIdentifier)))
     case f @ Filter(condition, _) =>
       f.copy(
         condition = condition.transform {
