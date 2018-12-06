@@ -43,4 +43,12 @@ class CatalogTestSuite extends BaseTiSparkSuite {
         .contains("AnalysisException")
     )
   }
+
+  test("test insert into table command") {
+    setCurrentDatabase("default")
+    spark.sql("drop table if exists hive_table")
+    spark.sql("create table if not exists hive_table(c int)")
+    spark.sql("insert into table hive_table values(1)")
+    spark.sql("select * from hive_table").show()
+  }
 }

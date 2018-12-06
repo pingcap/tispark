@@ -17,6 +17,7 @@ package org.apache.spark.sql.test
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.internal.StaticSQLConf
 
 /**
  * A special [[SparkSession]] prepared for testing.
@@ -27,6 +28,8 @@ private[spark] class TestSparkSession(sparkConf: SparkConf) { self =>
     .master("local[*]")
     .appName("tispark-integration-test")
     .config(sparkConf.set("spark.sql.testkey", "true"))
+    .config(StaticSQLConf.CATALOG_IMPLEMENTATION.key, "hive")
+    .config(StaticSQLConf.WAREHOUSE_PATH.key, "/tmp/warehouse")
     .getOrCreate()
   SparkSession.setDefaultSession(spark)
   SparkSession.setActiveSession(spark)

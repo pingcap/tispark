@@ -50,9 +50,9 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
         if tiCatalog.catalogOf(tableIdentifier.database).exists(_.isInstanceOf[TiSessionCatalog]) =>
       resolveTiDBRelation(tableIdentifier)
     case i @ InsertIntoTable(UnresolvedRelation(tableIdentifier), _, _, _, _)
-      if tiCatalog
-        .catalogOf(tableIdentifier.database)
-        .exists(_.isInstanceOf[TiSessionCatalog]) =>
+        if tiCatalog
+          .catalogOf(tableIdentifier.database)
+          .exists(_.isInstanceOf[TiSessionCatalog]) =>
       i.copy(table = EliminateSubqueryAliases(resolveTiDBRelation(tableIdentifier)))
   }
 }
