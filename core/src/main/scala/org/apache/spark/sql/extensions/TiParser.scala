@@ -14,7 +14,6 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
                                                                      delegate: ParserInterface)
     extends ParserInterface {
   private lazy val tiContext = getOrCreateTiContext(sparkSession)
-
   private lazy val internal = new SparkSqlParser(sparkSession.sqlContext.conf)
 
   private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier =
@@ -23,7 +22,15 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase))
     )
 
-  private def notTempView(tableIdentifier: TableIdentifier) =
+  /**
+   * Determines whether a table specified by tableIdentifier is
+   * needs to be qualified. This is used for TiSpark to transform
+   * plans and decides whether a relation should be resolved or parsed.
+   *
+   * @param tableIdentifier tableIdentifier
+   * @return whether it needs qualifying
+   */
+  private def needQualify(tableIdentifier: TableIdentifier) =
     tableIdentifier.database.isEmpty && tiContext.sessionCatalog
       .getTempView(tableIdentifier.table)
       .isEmpty
@@ -34,8 +41,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
    * See [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations.resolveRelation]] for detail.
    */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
-    case r @ UnresolvedRelation(tableIdentifier)
-        if tableIdentifier.database.isEmpty && notTempView(tableIdentifier) =>
+    case r @ UnresolvedRelation(tableIdentifier) if needQualify(tableIdentifier) =>
       r.copy(qualifyTableIdentifierInternal(tableIdentifier))
     case f @ Filter(condition, _) =>
       f.copy(
@@ -64,12 +70,12 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
     case e @ ExplainCommand(logicalPlan, _, _, _) =>
       e.copy(logicalPlan = logicalPlan.transform(qualifyTableIdentifier))
     case c @ CacheTableCommand(tableIdentifier, plan, _)
-        if plan.isEmpty && notTempView(tableIdentifier) =>
+        if plan.isEmpty && needQualify(tableIdentifier) =>
       // Caching an unqualified catalog table.
       c.copy(qualifyTableIdentifierInternal(tableIdentifier))
     case c @ CacheTableCommand(_, plan, _) if plan.isDefined =>
       c.copy(plan = Some(plan.get.transform(qualifyTableIdentifier)))
-    case u @ UncacheTableCommand(tableIdentifier, _) if notTempView(tableIdentifier) =>
+    case u @ UncacheTableCommand(tableIdentifier, _) if needQualify(tableIdentifier) =>
       // Uncaching an unqualified catalog table.
       u.copy(qualifyTableIdentifierInternal(tableIdentifier))
   }

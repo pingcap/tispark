@@ -19,7 +19,8 @@ import java.sql.Timestamp
 
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, StartsWith, Subtract}
+import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, StartsWith, Subtract, Year}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
@@ -81,6 +82,12 @@ object BasicExpression {
       case Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ArithmeticBinaryExpression.divide(lhs, rhs))
 
+      case And(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(LogicalBinaryExpression.and(lhs, rhs))
+
+      case Or(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(LogicalBinaryExpression.or(lhs, rhs))
+
       case Alias(BasicExpression(child), _) =>
         Some(child)
 
@@ -128,6 +135,9 @@ object BasicExpression {
         // Do we need add ValToType in TiExpr?
         // Some(TiExpr.create().setValue(attr.name).toProto)
         Some(ColumnRef.create(attr.name))
+
+      case uattr: UnresolvedAttribute =>
+        Some(ColumnRef.create(uattr.name))
 
       // TODO: Remove it and let it fail once done all translation
       case _ => Option.empty[TiExpression]

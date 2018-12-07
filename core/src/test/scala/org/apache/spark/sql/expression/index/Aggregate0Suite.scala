@@ -29,7 +29,7 @@ class Aggregate0Suite extends BaseInitialOnceSuite {
     "select tp_double from full_data_type_table_idx  group by (tp_double)  order by tp_double ",
     "select tp_int from full_data_type_table_idx  group by (tp_int)  order by tp_int ",
     "select tp_bigint from full_data_type_table_idx  group by (tp_bigint)  order by tp_bigint ",
-    "select tp_timestamp from full_data_type_table_idx  group by (tp_timestamp)  order by tp_timestamp ",
+//    "select tp_timestamp from full_data_type_table_idx  group by (tp_timestamp)  order by tp_timestamp ",
     "select tp_real from full_data_type_table_idx  group by (tp_real)  order by tp_real ",
     "select tp_smallint from full_data_type_table_idx  group by (tp_smallint)  order by tp_smallint ",
     "select tp_nvarchar from full_data_type_table_idx  group by (tp_nvarchar)  order by tp_nvarchar ",

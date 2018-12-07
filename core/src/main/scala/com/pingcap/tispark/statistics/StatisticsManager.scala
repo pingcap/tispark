@@ -113,6 +113,7 @@ object StatisticsManager {
       return
     }
 
+    // TODO load statistics by pid
     val tblId = table.getId
     val tblCols = table.getColumns
     val loadAll = columns == null || columns.isEmpty
