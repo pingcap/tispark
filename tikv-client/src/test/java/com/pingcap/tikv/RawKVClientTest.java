@@ -102,17 +102,24 @@ public class RawKVClientTest {
   @Test
   public void validate() {
     if (!initialized) return;
-    baseTest(100, 100, 100, 100, false);
+    baseTest(100, 100, 100, 100, false, false);
+    baseTest(100, 100, 100, 100, false, true);
   }
 
   /** Example of benchmarking base test */
   public void benchmark() {
     if (!initialized) return;
-    baseTest(TEST_CASES, TEST_CASES, 200, 5000, true);
+    baseTest(TEST_CASES, TEST_CASES, 200, 5000, true, false);
+    baseTest(TEST_CASES, TEST_CASES, 200, 5000, true, true);
   }
 
   private void baseTest(
-      int putCases, int getCases, int scanCases, int deleteCases, boolean benchmark) {
+      int putCases,
+      int getCases,
+      int scanCases,
+      int deleteCases,
+      boolean benchmark,
+      boolean batchPut) {
     if (putCases > KEY_POOL_SIZE) {
       System.out.println(
           "Number of distinct orderedKeys required exceeded pool size " + KEY_POOL_SIZE);
@@ -126,7 +133,11 @@ public class RawKVClientTest {
 
     prepare();
 
-    rawPutTest(putCases, benchmark);
+    if (batchPut) {
+      rawBatchPutTest(putCases, benchmark);
+    } else {
+      rawPutTest(putCases, benchmark);
+    }
     rawGetTest(getCases, benchmark);
     rawScanTest(scanCases, benchmark);
     rawDeleteTest(deleteCases, benchmark);
@@ -206,6 +217,51 @@ public class RawKVClientTest {
         data.put(key, value);
         checkPut(key, value);
       }
+    }
+  }
+
+  private void rawBatchPutTest(int putCases, boolean benchmark) {
+    System.out.println("put testing");
+    if (benchmark) {
+      for (int i = 0; i < putCases; i++) {
+        ByteString key = orderedKeys.get(i), value = values.get(i);
+        data.put(key, value);
+      }
+
+      long start = System.currentTimeMillis();
+      int base = putCases / WORKER_CNT;
+      for (int cnt = 0; cnt < WORKER_CNT; cnt++) {
+        int i = cnt;
+        completionService.submit(
+            () -> {
+              List<Kvrpcpb.KvPair> list = new ArrayList<>();
+              for (int j = 0; j < base; j++) {
+                int num = i * base + j;
+                ByteString key = orderedKeys.get(num), value = values.get(num);
+                list.add(Kvrpcpb.KvPair.newBuilder().setKey(key).setValue(value).build());
+              }
+              client.batchPut(list);
+              return null;
+            });
+      }
+      awaitTimeOut(100);
+      long end = System.currentTimeMillis();
+      System.out.println(
+          putCases
+              + " put: "
+              + (end - start) / 1000.0
+              + "s workers="
+              + WORKER_CNT
+              + " put="
+              + rawKeys().size());
+    } else {
+      List<Kvrpcpb.KvPair> list = new ArrayList<>();
+      for (int i = 0; i < putCases; i++) {
+        ByteString key = randomKeys.get(i), value = values.get(r.nextInt(KEY_POOL_SIZE));
+        data.put(key, value);
+        list.add(Kvrpcpb.KvPair.newBuilder().setKey(key).setValue(value).build());
+      }
+      checkBatchPut(list);
     }
   }
 
@@ -315,6 +371,13 @@ public class RawKVClientTest {
   private void checkPut(ByteString key, ByteString value) {
     client.put(key, value);
     assert client.get(key).equals(value);
+  }
+
+  private void checkBatchPut(List<Kvrpcpb.KvPair> pairs) {
+    client.batchPut(pairs);
+    for (Kvrpcpb.KvPair pair : pairs) {
+      assert client.get(pair.getKey()).equals(pair.getValue());
+    }
   }
 
   private void checkScan(ByteString startKey, ByteString endKey, List<Kvrpcpb.KvPair> ans) {

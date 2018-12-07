@@ -45,6 +45,8 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.Context;
 import com.pingcap.tikv.kvproto.Kvrpcpb.GetRequest;
 import com.pingcap.tikv.kvproto.Kvrpcpb.GetResponse;
 import com.pingcap.tikv.kvproto.Kvrpcpb.KvPair;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawBatchPutRequest;
+import com.pingcap.tikv.kvproto.Kvrpcpb.RawBatchPutResponse;
 import com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteRequest;
 import com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteResponse;
 import com.pingcap.tikv.kvproto.Kvrpcpb.RawGetRequest;
@@ -346,6 +348,37 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
     }
+  }
+
+  public boolean rawBatchPut(BackOffer backOffer, List<KvPair> kvPairs) {
+    if (kvPairs.isEmpty()) {
+      return true;
+    }
+    Supplier<RawBatchPutRequest> factory =
+        () ->
+            RawBatchPutRequest.newBuilder()
+                .setContext(region.getContext())
+                .addAllPairs(kvPairs)
+                .build();
+    KVErrorHandler<RawBatchPutResponse> handler =
+        new KVErrorHandler<>(
+            regionManager,
+            this,
+            region,
+            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RawBatchPutResponse resp =
+        callWithRetry(backOffer, TikvGrpc.METHOD_RAW_BATCH_PUT, factory, handler);
+    return handleRawBatchPut(resp, backOffer);
+  }
+
+  private boolean handleRawBatchPut(RawBatchPutResponse resp, BackOffer backOffer) {
+    if (resp.hasRegionError()) {
+      Errorpb.Error regionError = resp.getRegionError();
+      logger.warn(
+          "Re-splitting RawBatchPutRequest due to region error:" + regionError.getMessage());
+      return false;
+    }
+    return true;
   }
 
   /**

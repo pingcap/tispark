@@ -10,9 +10,7 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class RawKVClient {
   private static final String DEFAULT_PD_ADDRESS = "127.0.0.1:2379";
@@ -46,6 +44,34 @@ public class RawKVClient {
     Pair<TiRegion, Metapb.Store> pair = regionManager.getRegionStorePairByRawKey(key);
     RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, session);
     client.rawPut(defaultBackOff(), key, value);
+  }
+
+  /**
+   * Put a list of raw key-value pair to TiKV
+   *
+   * @param kvPairs kvPairs
+   */
+  public void batchPut(List<Kvrpcpb.KvPair> kvPairs) {
+    Map<Pair<TiRegion, Metapb.Store>, List<Kvrpcpb.KvPair>> regionMap = new HashMap<>();
+    for (Kvrpcpb.KvPair kvPair : kvPairs) {
+      Pair<TiRegion, Metapb.Store> pair = regionManager.getRegionStorePairByRawKey(kvPair.getKey());
+      regionMap.computeIfAbsent(pair, t -> new ArrayList<>()).add(kvPair);
+    }
+
+    List<Kvrpcpb.KvPair> remainingPairs = new ArrayList<>();
+
+    for (Map.Entry<Pair<TiRegion, Metapb.Store>, List<Kvrpcpb.KvPair>> entry :
+        regionMap.entrySet()) {
+      RegionStoreClient client =
+          RegionStoreClient.create(entry.getKey().first, entry.getKey().second, session);
+      if (!client.rawBatchPut(defaultBackOff(), entry.getValue())) {
+        remainingPairs.addAll(entry.getValue());
+      }
+    }
+    if (!remainingPairs.isEmpty()) {
+      // re-splitting ranges
+      batchPut(remainingPairs);
+    }
   }
 
   /**

@@ -205,8 +205,7 @@ public class LockResolverTest {
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
       CommitResponse resp =
-          client.callWithRetry(
-              backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
+          client.callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
 
       if (resp.hasRegionError()) {
         throw new RegionException(resp.getRegionError());

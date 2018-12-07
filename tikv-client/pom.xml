@@ -171,7 +171,7 @@
                          <outputDirectory>${proto.folder}</outputDirectory>
                          <resources>
                             <resource>
-                               <directory>${basedir}/kvproto/vendor/github.com/gogo/protobuf</directory>
+                               <directory>${basedir}/kvproto/_vendor/src/github.com/gogo/protobuf</directory>
                                <includes>
                                     <include>**/gogoproto/**</include>
                                </includes>
