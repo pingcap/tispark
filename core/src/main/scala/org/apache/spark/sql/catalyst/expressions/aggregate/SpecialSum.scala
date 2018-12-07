@@ -20,11 +20,47 @@ import org.apache.spark.sql.catalyst.expressions.{Add, AttributeReference, Cast,
 import org.apache.spark.sql.catalyst.util.TypeUtils
 import org.apache.spark.sql.types._
 
+object PromotedSum {
+  def apply(child: Expression): SpecialSum = {
+    val retType = child.dataType match {
+      case DecimalType.Fixed(precision, scale) =>
+        DecimalType.bounded(precision + 10, scale)
+      case _ => DoubleType
+    }
+
+    SpecialSum(child, retType, null)
+  }
+
+  def unapply(s: SpecialSum): Option[Expression] = s match {
+    case s.initVal if (s.initVal == null) => Some(s.child)
+    case _                                => Option.empty[Expression]
+  }
+}
+
+object SumNotNullable {
+  def apply(child: Expression): SpecialSum = {
+    val retType = child.dataType match {
+      case DecimalType.Fixed(precision, scale) =>
+        DecimalType.bounded(precision + 10, scale)
+      case _: IntegralType => LongType
+      case _               => DoubleType
+    }
+
+    SpecialSum(child, retType, 0)
+  }
+
+  def unapply(s: SpecialSum): Option[Expression] = s match {
+    case s.initVal if (s.initVal == null) => Some(s.child)
+    case _                                => Option.empty[Expression]
+  }
+}
+
 @ExpressionDescription(
   usage =
     "_FUNC_(expr) - Returns the sum calculated from values of a group. Result type is promoted to double/decimal."
 )
-case class PromotedSum(child: Expression) extends DeclarativeAggregate {
+case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
+    extends DeclarativeAggregate {
 
   override def children: Seq[Expression] = child :: Nil
 
@@ -36,11 +72,7 @@ case class PromotedSum(child: Expression) extends DeclarativeAggregate {
   override def checkInputDataTypes(): TypeCheckResult =
     TypeUtils.checkForNumericExpr(child.dataType, "function sum")
 
-  private lazy val resultType = child.dataType match {
-    case DecimalType.Fixed(precision, scale) =>
-      DecimalType.bounded(precision + 10, scale)
-    case _ => DoubleType
-  }
+  private lazy val resultType = retType
 
   private lazy val sumDataType = resultType
 
@@ -51,7 +83,7 @@ case class PromotedSum(child: Expression) extends DeclarativeAggregate {
   override lazy val aggBufferAttributes: Seq[AttributeReference] = sum :: Nil
 
   override lazy val initialValues: Seq[Expression] = Seq(
-    /* sum = */ Literal.create(null, sumDataType)
+    /* sum = */ Literal.create(initVal, sumDataType)
   )
 
   override lazy val updateExpressions: Seq[Expression] = {

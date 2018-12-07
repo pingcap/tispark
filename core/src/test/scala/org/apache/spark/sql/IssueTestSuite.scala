@@ -19,6 +19,47 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+  test("cannot resolve column name when specifying table.column") {
+    spark.sql("select full_data_type_table.id_dt from full_data_type_table").explain(true)
+    judge("select full_data_type_table.id_dt from full_data_type_table")
+    spark
+      .sql(
+        "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt"
+      )
+      .explain(true)
+    judge(
+      "select full_data_type_table.id_dt from full_data_type_table join full_data_type_table_idx on full_data_type_table.id_dt = full_data_type_table_idx.id_dt"
+    )
+  }
+
+  test("partition read") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `partition_t` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `purchased` date DEFAULT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE ( `id` ) (
+                       |  PARTITION p0 VALUES LESS THAN (1990),
+                       |  PARTITION p1 VALUES LESS THAN (1995),
+                       |  PARTITION p2 VALUES LESS THAN (2000),
+                       |  PARTITION p3 VALUES LESS THAN (2005)
+                       |)
+      """.stripMargin)
+    tidbStmt.execute("insert into partition_t values (1, \"dede1\", \"1989-01-01\")")
+    tidbStmt.execute("insert into partition_t values (2, \"dede2\", \"1991-01-01\")")
+    tidbStmt.execute("insert into partition_t values (3, \"dede3\", \"1996-01-01\")")
+    tidbStmt.execute("insert into partition_t values (4, \"dede4\", \"1998-01-01\")")
+    tidbStmt.execute("insert into partition_t values (5, \"dede5\", \"2001-01-01\")")
+    tidbStmt.execute("insert into partition_t values (6, \"dede6\", \"2006-01-01\")")
+    tidbStmt.execute("insert into partition_t values (7, \"dede7\", \"2007-01-01\")")
+    tidbStmt.execute("insert into partition_t values (8, \"dede8\", \"2008-01-01\")")
+    refreshConnections()
+    assert(spark.sql("select * from partition_t").count() == 8)
+    judge("select count(*) from partition_t where id = 1", checkLimit = false)
+    judge("select id from partition_t group by id", checkLimit = false)
+  }
 
   test("test date") {
     judge("select tp_date from full_data_type_table where tp_date >= date '2065-04-19'")
@@ -231,6 +272,17 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge("select count(c1 + c2) from t")
   }
 
+  // https://github.com/pingcap/tispark/issues/496
+  test("NPE when count(1) on empty table") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `tmp_empty_tbl`")
+    tidbStmt.execute(
+      "CREATE TABLE `tmp_empty_tbl` (`c1` varchar(20))"
+    )
+    refreshConnections()
+    judge("select count(1) from `tmp_empty_tbl`")
+    judge("select cast(count(1) as char(20)) from `tmp_empty_tbl`")
+  }
+
   test("json support") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(json_doc json)")
@@ -299,6 +351,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists t1")
       tidbStmt.execute("drop table if exists t2")
       tidbStmt.execute("drop table if exists single_read")
+      tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
     } finally {
       super.afterAll()
     }

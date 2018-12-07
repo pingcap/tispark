@@ -23,13 +23,19 @@ import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DA
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.exception.*;
+import com.pingcap.tikv.exception.GrpcException;
+import com.pingcap.tikv.exception.KeyException;
+import com.pingcap.tikv.exception.LockException;
+import com.pingcap.tikv.exception.RegionException;
+import com.pingcap.tikv.exception.SelectException;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.kvproto.Errorpb;
@@ -62,10 +68,12 @@ import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Queue;
 import java.util.function.Supplier;
-import jline.internal.TestAccessible;
-import org.apache.hadoop.hive.ql.lockmgr.LockException;
 import org.apache.log4j.Logger;
 
 // RegionStore itself is not thread-safe
@@ -99,7 +107,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   // lockResolverClient, after implements the
   // write implementation of tispark, we can change
   // it to private
-  @TestAccessible public final LockResolverClient lockResolverClient;
+  @VisibleForTesting public final LockResolverClient lockResolverClient;
   private TikvBlockingStub blockingStub;
   private TikvStub asyncStub;
 
@@ -440,11 +448,11 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
 
     if (response.hasLocked()) {
-      logger.debug(String.format("coprocessor encounters locks: %s", response.getLocked()));
       Lock lock = new Lock(response.getLocked());
+      logger.debug(String.format("coprocessor encounters locks: %s", lock));
       boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
       if (!ok) {
-        backOffer.doBackOff(BoTxnLockFast, new LockException());
+        backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
       }
       // Split ranges
       return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);

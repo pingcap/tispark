@@ -46,7 +46,7 @@ object TiUtils {
                            tiDBRelation: TiDBRelation,
                            blacklist: ExpressionBlacklist): Boolean =
     aggExpr.aggregateFunction match {
-      case Average(_) | Sum(_) | PromotedSum(_) | Count(_) | Min(_) | Max(_) =>
+      case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Count(_) | Min(_) | Max(_) =>
         !aggExpr.isDistinct &&
           aggExpr.aggregateFunction.children
             .forall(isSupportedBasicExpression(_, tiDBRelation, blacklist))
@@ -204,8 +204,7 @@ object TiUtils {
     }
 
     if (conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
-      val isolationLevel =
-        IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL)).asInstanceOf[String]
+      val isolationLevel = conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL)
       if (isolationLevel.equals(TiConfigConst.SNAPSHOT_ISOLATION_LEVEL)) {
         tiConf.setIsolationLevel(IsolationLevel.SI)
       } else {

@@ -32,7 +32,7 @@ import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtil
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Cast, Divide, Expression, IntegerLiteral, NamedExpression, SortOrder}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Cast, Divide, Expression, IntegerLiteral, Literal, NamedExpression, SortOrder}
 import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -409,14 +409,15 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       val partialResultRef = aliasPushedPartialResult(aggExpr).toAttribute
 
       aggExpr.aggregateFunction match {
-        case e: Max         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Min         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Sum         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: PromotedSum => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: First       => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case _: Count       => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
-        case _: Average     => throw new IllegalStateException("All AVGs should have been rewritten.")
-        case _              => aggExpr
+        case e: Max        => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Min        => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Sum        => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: SpecialSum => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: First      => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case _: Count =>
+          aggExpr.copy(aggregateFunction = SumNotNullable(partialResultRef))
+        case _: Average => throw new IllegalStateException("All AVGs should have been rewritten.")
+        case _          => aggExpr
       }
     }
 

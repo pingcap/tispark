@@ -237,6 +237,7 @@ object SharedSQLContext extends Logging {
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
       sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
       sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
+      sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
       sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
 
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
