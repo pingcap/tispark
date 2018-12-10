@@ -67,8 +67,8 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
       currentCache = client.scan(backOffer, startKey, version);
       // currentCache is null means no keys found, whereas currentCache is empty means no values
-      // found the difference lies in whether to continue scanning, because chances are that the
-      // same key is split in another region because of pending entries, region split, e.t.c.
+      // found. The difference lies in whether to continue scanning, because chances are that
+      // an empty region exists due to deletion, region split, e.t.c.
       // See https://github.com/pingcap/tispark/issues/393 for details
       if (currentCache == null) {
         return false;
@@ -113,16 +113,12 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
 
   @Override
   public Kvrpcpb.KvPair next() {
-    if (currentCache == null) {
-      throw new TiClientInternalException("cache is null, read data failed");
-    }
-    Kvrpcpb.KvPair kv = getCurrent();
-    while (currentCache != null && kv == null) {
+    Kvrpcpb.KvPair kv;
+    // continue when cache is empty but not null
+    for (kv = getCurrent(); currentCache != null && kv == null; kv = getCurrent()) {
       if (!loadCache()) {
         return null;
       }
-      // continue when cache is empty but not null
-      kv = getCurrent();
     }
     return kv;
   }
