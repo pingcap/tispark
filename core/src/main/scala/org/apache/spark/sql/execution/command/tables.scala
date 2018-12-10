@@ -74,6 +74,7 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
       new MetadataBuilder().putString("comment", "comment of the column").build()
     )()
   )
+
   override def run(sparkSession: SparkSession): Seq[Row] =
     tiCatalog
       .catalogOf(delegate.table.database)
