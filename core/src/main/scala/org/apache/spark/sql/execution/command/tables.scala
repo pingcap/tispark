@@ -22,6 +22,12 @@ import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
 
 import scala.collection.mutable.ArrayBuffer
 
+/**
+ * Overwrites [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
+ *
+ * @param tiContext tiContext which contains our catalog info
+ * @param delegate original ShowTablesCommand
+ */
 case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
@@ -45,6 +51,12 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
   }
 }
 
+/**
+ * Overwrites [[org.apache.spark.sql.execution.command.DescribeTableCommand]]
+ *
+ * @param tiContext tiContext which contains our catalog info
+ * @param delegate original DescribeTableCommand
+ */
 case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTableCommand)
     extends TiCommand(delegate) {
   override val output: Seq[Attribute] = Seq(

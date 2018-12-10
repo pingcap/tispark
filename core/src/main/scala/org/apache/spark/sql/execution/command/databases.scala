@@ -16,6 +16,12 @@ package org.apache.spark.sql.execution.command
 
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
+/**
+ * Overwrites [[org.apache.spark.sql.execution.command.SetDatabaseCommand]]
+ *
+ * @param tiContext tiContext which contains our catalog info
+ * @param delegate original SetDatabaseCommand
+ */
 case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetDatabaseCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
@@ -24,6 +30,12 @@ case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetDatabaseComma
   }
 }
 
+/**
+ * Overwrites [[org.apache.spark.sql.execution.command.ShowDatabasesCommand]]
+ *
+ * @param tiContext tiContext which contains our catalog info
+ * @param delegate original ShowDatabasesCommand
+ */
 case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowDatabasesCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
