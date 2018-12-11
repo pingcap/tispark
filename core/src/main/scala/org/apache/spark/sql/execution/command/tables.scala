@@ -138,7 +138,6 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
     buffer += Row(column, dataType, nullable, comment)
 
   private def describeFormattedTableInfo(table: CatalogTable, buffer: ArrayBuffer[Row]): Unit = {
-    // So far we only have engine name and primary key for extended information.
     // TODO: Add more extended table information.
     append(buffer, "", "", "")
     append(buffer, "# Detailed Table Information", "", "")
