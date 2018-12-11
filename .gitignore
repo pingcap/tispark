@@ -55,6 +55,9 @@ tikv-client/tipb
 tikv-client/proto
 tikv-client/raft-rs
 
+# ignore raw-client
+tikv-client/client-java
+
 # ignore tikv-client bazel build
 tikv-client/bazel-*
 
