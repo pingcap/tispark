@@ -15,9 +15,9 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.exception.TiClientInternalException
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import org.tikv.TiSession
+import org.tikv.exception.TiClientInternalException
+import org.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}

@@ -18,13 +18,13 @@ package com.pingcap.tispark
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
-import com.pingcap.tikv.expression.ExpressionBlacklist
-import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
-import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
-import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
-import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
-import com.pingcap.tikv.types._
-import com.pingcap.tikv.TiConfiguration
+import org.tikv.expression.ExpressionBlacklist
+import org.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
+import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
+import org.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
+import org.tikv.region.RegionStoreClient.RequestTypes
+import org.tikv.types._
+import org.tikv.TiConfiguration
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
@@ -36,8 +36,8 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 
 object TiUtils {
-  type TiDataType = com.pingcap.tikv.types.DataType
-  type TiExpression = com.pingcap.tikv.expression.Expression
+  type TiDataType = org.tikv.types.DataType
+  type TiExpression = org.tikv.expression.Expression
 
   private final val logger = Logger.getLogger(getClass.getName)
   private final val MAX_PRECISION = sql.types.DecimalType.MAX_PRECISION
@@ -71,7 +71,7 @@ object TiUtils {
    * @return whether expression can be pushed down
    */
   def isPushDownSupported(expr: Expression, source: TiDBRelation): Boolean = {
-    val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
+    val nameTypeMap = mutable.HashMap[String, org.tikv.types.DataType]()
     source.table.getColumns
       .foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
 

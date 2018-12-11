@@ -1,0 +1,125 @@
+/*
+ * Copyright 2017 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.tikv.operation.iterator;
+
+import static java.util.Objects.requireNonNull;
+
+import java.util.Iterator;
+import java.util.List;
+import org.tikv.TiSession;
+import org.tikv.exception.TiClientInternalException;
+import org.tikv.key.Key;
+import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Metapb;
+import org.tikv.region.RegionManager;
+import org.tikv.region.RegionStoreClient;
+import org.tikv.region.TiRegion;
+import org.tikv.util.BackOffer;
+import org.tikv.util.ConcreteBackOffer;
+import org.tikv.util.Pair;
+import shade.com.google.protobuf.ByteString;
+
+public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
+  protected final TiSession session;
+  private final RegionManager regionCache;
+  protected final long version;
+
+  private List<Kvrpcpb.KvPair> currentCache;
+  protected ByteString startKey;
+  protected int index = -1;
+  private boolean endOfScan = false;
+
+  public ScanIterator(ByteString startKey, TiSession session, long version) {
+    this.startKey = requireNonNull(startKey, "start key is null");
+    if (startKey.isEmpty()) {
+      throw new IllegalArgumentException("start key cannot be empty");
+    }
+    this.session = session;
+    this.regionCache = session.getRegionManager();
+    this.version = version;
+  }
+
+  // return false if current cache is not loaded or empty
+  private boolean loadCache() {
+    if (endOfScan) {
+      return false;
+    }
+    if (startKey.isEmpty()) {
+      return false;
+    }
+    Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByKey(startKey);
+    TiRegion region = pair.first;
+    Metapb.Store store = pair.second;
+    try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
+      BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
+      currentCache = client.scan(backOffer, startKey, version);
+      // currentCache is null means no keys found, whereas currentCache is empty means no values
+      // found. The difference lies in whether to continue scanning, because chances are that
+      // an empty region exists due to deletion, region split, e.t.c.
+      // See https://github.com/pingcap/tispark/issues/393 for details
+      if (currentCache == null) {
+        return false;
+      }
+      index = 0;
+      // Session should be single-threaded itself
+      // so that we don't worry about conf change in the middle
+      // of a transaction. Otherwise below code might lose data
+      if (currentCache.size() < session.getConf().getScanBatchSize()) {
+        // Current region done, start new batch from next region
+        startKey = region.getEndKey();
+      } else {
+        // Start new scan from exact next key in current region
+        Key lastKey = Key.toRawKey(currentCache.get(currentCache.size() - 1).getKey());
+        startKey = lastKey.next().toByteString();
+      }
+    } catch (Exception e) {
+      throw new TiClientInternalException("Error scanning data from region.", e);
+    }
+    return true;
+  }
+
+  private boolean isCacheDrained() {
+    return currentCache == null || index >= currentCache.size() || index == -1;
+  }
+
+  @Override
+  public boolean hasNext() {
+    if (isCacheDrained() && !loadCache()) {
+      endOfScan = true;
+      return false;
+    }
+    return true;
+  }
+
+  private Kvrpcpb.KvPair getCurrent() {
+    if (isCacheDrained()) {
+      return null;
+    }
+    return currentCache.get(index++);
+  }
+
+  @Override
+  public Kvrpcpb.KvPair next() {
+    Kvrpcpb.KvPair kv;
+    // continue when cache is empty but not null
+    for (kv = getCurrent(); currentCache != null && kv == null; kv = getCurrent()) {
+      if (!loadCache()) {
+        return null;
+      }
+    }
+    return kv;
+  }
+}

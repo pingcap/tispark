@@ -15,13 +15,13 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv._
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
-import com.pingcap.tikv.operation.SchemaInfer
-import com.pingcap.tikv.operation.transformer.RowTransformer
-import com.pingcap.tikv.types.DataType
-import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
+import org.tikv._
+import org.tikv.meta.{TiDAGRequest, TiTimestamp}
+import org.tikv.operation.SchemaInfer
+import org.tikv.operation.transformer.RowTransformer
+import org.tikv.types.DataType
+import org.tikv.util.RangeSplitter
+import org.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
@@ -40,7 +40,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
             @transient private val sparkSession: SparkSession)
     extends RDD[Row](sparkSession.sparkContext, Nil) {
 
-  type TiRow = com.pingcap.tikv.row.Row
+  type TiRow = org.tikv.row.Row
 
   @transient lazy val (_: List[DataType], rowTransformer: RowTransformer) =
     initializeSchema()

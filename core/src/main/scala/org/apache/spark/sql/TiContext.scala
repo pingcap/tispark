@@ -17,8 +17,8 @@ package org.apache.spark.sql
 
 import java.lang
 
-import com.pingcap.tikv.tools.RegionUtils
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import org.tikv.tools.RegionUtils
+import org.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager

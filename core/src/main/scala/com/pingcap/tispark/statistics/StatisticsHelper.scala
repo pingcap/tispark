@@ -17,14 +17,14 @@
 
 package com.pingcap.tispark.statistics
 
-import com.google.common.primitives.UnsignedLong
-import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
-import com.pingcap.tikv.key.{Key, TypedKey}
-import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
-import com.pingcap.tikv.row.Row
-import com.pingcap.tikv.statistics._
-import com.pingcap.tikv.types.{DataType, DataTypeFactory, MySQLType}
+import shade.com.google.common.primitives.UnsignedLong
+import org.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
+import org.tikv.key.{Key, TypedKey}
+import org.tikv.meta.TiDAGRequest.PushDownType
+import org.tikv.meta.{TiDAGRequest, TiTableInfo}
+import org.tikv.row.Row
+import org.tikv.statistics._
+import org.tikv.types.{DataType, DataTypeFactory, MySQLType}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._

@@ -17,12 +17,12 @@
 
 package org.apache.spark.sql.statistics
 
-import com.google.common.collect.ImmutableList
-import com.pingcap.tikv.expression.ComparisonBinaryExpression._
-import com.pingcap.tikv.expression._
-import com.pingcap.tikv.meta.{TiIndexInfo, TiTableInfo}
-import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
-import com.pingcap.tikv.predicates.ScanAnalyzer
+import shade.com.google.common.collect.ImmutableList
+import org.tikv.expression.ComparisonBinaryExpression._
+import org.tikv.expression._
+import org.tikv.meta.{TiIndexInfo, TiTableInfo}
+import org.tikv.predicates.PredicateUtils.expressionToIndexRanges
+import org.tikv.predicates.ScanAnalyzer
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.execution.{CoprocessorRDD, HandleRDDExec, SparkPlan}

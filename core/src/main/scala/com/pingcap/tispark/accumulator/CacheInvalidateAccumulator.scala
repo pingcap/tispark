@@ -17,7 +17,7 @@ package com.pingcap.tispark.accumulator
 
 import java.util
 
-import com.pingcap.tikv.event.CacheInvalidateEvent
+import org.tikv.event.CacheInvalidateEvent
 import org.apache.spark.util.AccumulatorV2
 
 import scala.collection.JavaConversions._

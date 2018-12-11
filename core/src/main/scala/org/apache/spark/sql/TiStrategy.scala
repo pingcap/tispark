@@ -17,15 +17,15 @@ package org.apache.spark.sql
 
 import java.time.ZonedDateTime
 
-import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
-import com.pingcap.tikv.expression.AggregateFunction.FunctionType
-import com.pingcap.tikv.expression._
-import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver}
-import com.pingcap.tikv.meta.TiDAGRequest
-import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
-import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
-import com.pingcap.tikv.statistics.TableStatistics
+import org.tikv.exception.IgnoreUnsupportedTypeException
+import org.tikv.expression.AggregateFunction.FunctionType
+import org.tikv.expression._
+import org.tikv.expression.visitor.{ColumnMatcher, MetaResolver}
+import org.tikv.meta.TiDAGRequest
+import org.tikv.meta.TiDAGRequest.PushDownType
+import org.tikv.predicates.ScanAnalyzer.ScanPlan
+import org.tikv.predicates.{PredicateUtils, ScanAnalyzer}
+import org.tikv.statistics.TableStatistics
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
@@ -54,8 +54,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     extends Strategy
     with Logging {
   val sqlConf: SQLConf = sparkSession.sqlContext.conf
-  type TiExpression = com.pingcap.tikv.expression.Expression
-  type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
+  type TiExpression = org.tikv.expression.Expression
+  type TiColumnRef = org.tikv.expression.ColumnRef
 
   private def blacklist: ExpressionBlacklist = {
     val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")

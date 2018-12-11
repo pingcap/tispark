@@ -18,14 +18,14 @@ package org.apache.spark.sql.execution
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 
-import com.pingcap.tikv.kvproto.Coprocessor.KeyRange
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
-import com.pingcap.tikv.operation.SchemaInfer
-import com.pingcap.tikv.operation.iterator.CoprocessIterator
-import com.pingcap.tikv.operation.transformer.RowTransformer
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
-import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import org.tikv.kvproto.Coprocessor.KeyRange
+import org.tikv.meta.{TiDAGRequest, TiTimestamp}
+import org.tikv.operation.SchemaInfer
+import org.tikv.operation.iterator.CoprocessIterator
+import org.tikv.operation.transformer.RowTransformer
+import org.tikv.util.RangeSplitter.RegionTask
+import org.tikv.util.{KeyRangeUtils, RangeSplitter}
+import org.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiConfigConst, TiDBRelation, TiSessionCache, TiUtils}
 import gnu.trove.list.array
@@ -162,7 +162,7 @@ case class RegionTaskExec(child: SparkPlan,
     sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
   private lazy val project = UnsafeProjection.create(schema)
 
-  type TiRow = com.pingcap.tikv.row.Row
+  type TiRow = org.tikv.row.Row
 
   override val nodeName: String = "RegionTaskExec"
   // cache invalidation call back function

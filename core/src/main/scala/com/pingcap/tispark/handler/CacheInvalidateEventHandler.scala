@@ -17,9 +17,9 @@
 
 package com.pingcap.tispark.handler
 
-import com.pingcap.tikv.event.CacheInvalidateEvent
-import com.pingcap.tikv.event.CacheInvalidateEvent.CacheType
-import com.pingcap.tikv.region.RegionManager
+import org.tikv.event.CacheInvalidateEvent
+import org.tikv.event.CacheInvalidateEvent.CacheType
+import org.tikv.region.RegionManager
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import org.slf4j.LoggerFactory
 

@@ -15,10 +15,10 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
-import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import org.tikv.meta.{TiDAGRequest, TiTimestamp}
+import org.tikv.util.RangeSplitter
+import org.tikv.util.RangeSplitter.RegionTask
+import org.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD

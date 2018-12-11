@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.pingcap.tikv</groupId>
+    <groupId>org.tikv</groupId>
     <artifactId>tikv-client</artifactId>
     <packaging>jar</packaging>
     <name>TiSpark Project TiKV Java Client</name>
@@ -17,11 +17,9 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <protobuf.version>3.1.0</protobuf.version>
         <junit.version>4.12</junit.version>
         <log4j.version>1.2.17</log4j.version>
         <slf4j.version>1.7.16</slf4j.version>
-        <grpc.version>1.7.0</grpc.version>
         <powermock.version>1.6.6</powermock.version>
         <jackson.version>2.8.11</jackson.version>
         <jackson.databind.version>2.8.11.1</jackson.databind.version>
@@ -32,6 +30,11 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.tikv</groupId>
+            <artifactId>tikv-client-java</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -72,22 +75,6 @@
             <artifactId>murmur</artifactId>
             <version>1.0.0</version>
         </dependency>
-        <!-- grpc dependencies -->
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-netty</artifactId>
-            <version>${grpc.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-protobuf</artifactId>
-            <version>${grpc.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-stub</artifactId>
-            <version>${grpc.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
@@ -120,9 +107,9 @@
             <version>${joda-convert.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-testing</artifactId>
-            <version>${grpc.version}</version>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -140,83 +127,6 @@
             </extension>
         </extensions>
         <plugins>
-             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.6.0</version>
-                <executions>
-                    <execution>
-                        <id>clone proto files</id>
-                        <configuration>
-                            <executable>${basedir}/scripts/proto.sh</executable>
-                        </configuration>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>2.5</version>
-                <executions>
-                   <execution>
-                      <id>copy-resources</id>
-                      <phase>validate</phase>
-                      <goals>
-                         <goal>copy-resources</goal>
-                      </goals>
-                      <configuration>
-                         <outputDirectory>${proto.folder}</outputDirectory>
-                         <resources>
-                            <resource>
-                               <directory>${basedir}/kvproto/_vendor/src/github.com/gogo/protobuf</directory>
-                               <includes>
-                                    <include>**/gogoproto/**</include>
-                               </includes>
-                            </resource>
-                            <resource>
-                               <directory>${basedir}/kvproto/proto</directory>
-                               <filtering>true</filtering>
-                            </resource>
-                             <resource>
-                                 <directory>${basedir}/raft-rs/proto</directory>
-                                 <filtering>true</filtering>
-                             </resource>
-                             <resource>
-                               <directory>${basedir}/tipb/proto</directory>
-                               <filtering>true</filtering>
-                            </resource>
-                         </resources>
-                      </configuration>
-                   </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.xolstice.maven.plugins</groupId>
-                <artifactId>protobuf-maven-plugin</artifactId>
-                <version>0.5.0</version>
-                <configuration>
-                   <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-                   <protoSourceRoot>${proto.folder}</protoSourceRoot>
-                   <includes>
-                      <param>**/*.proto</param>
-                   </includes>
-                   <pluginId>grpc-java</pluginId>
-                   <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.4.0:exe:${os.detected.classifier}</pluginArtifact>
-                </configuration>
-                <executions>
-                   <execution>
-                      <goals>
-                         <goal>compile</goal>
-                         <goal>compile-custom</goal>
-                      </goals>
-                   </execution>
-                </executions>
-             </plugin>
-
             <!-- Compiler Plug-in -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -256,19 +166,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Clean Plug-in -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-clean-plugin</artifactId>
-                <version>3.0.0</version>
-                <configuration>
-                    <filesets>
-                        <fileset>
-                            <directory>${proto.folder}</directory>
-                        </fileset>
-                    </filesets>
-                </configuration>
-            </plugin>
             <!-- Javadoc Plug-in -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -305,67 +202,6 @@
                         <goals>
                             <goal>sign</goal>
                         </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- Assembly Plug-in -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.1.0</version>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>assemble-all</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!--- Needs to shade Protobuf 3 since other projects might use other version -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                            </transformers>
-                            <relocations>
-                                <relocation>
-                                    <pattern>com.fasterxml</pattern>
-                                    <shadedPattern>shade.com.fasterxml.jackson</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>io.grpc</pattern>
-                                    <shadedPattern>shade.io.grpc</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>com.google.protobuf</pattern>
-                                    <shadedPattern>shade.com.google.protobuf</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>io.netty</pattern>
-                                    <shadedPattern>shade.io.netty</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>com.google.common</pattern>
-                                    <shadedPattern>shade.com.google.common</shadedPattern>
-                                </relocation>
-                            </relocations>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.{TiConfiguration, TiSession}
+import org.tikv.{TiConfiguration, TiSession}
 
 object TiSessionCache {
   private var sessionCached: TiSession = null

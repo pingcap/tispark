@@ -17,8 +17,8 @@
 
 package com.pingcap.tispark.statistics.estimate
 
-import com.pingcap.tikv.meta.TiTableInfo
-import com.pingcap.tikv.types.MySQLType._
+import org.tikv.meta.TiTableInfo
+import org.tikv.types.MySQLType._
 import com.pingcap.tispark.statistics.StatisticsManager
 
 trait TableSizeEstimator {

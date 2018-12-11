@@ -17,8 +17,8 @@ package com.pingcap.tispark
 
 import java.sql.Timestamp
 
-import com.pingcap.tikv.expression._
-import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
+import org.tikv.expression._
+import org.tikv.region.RegionStoreClient.RequestTypes
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, StartsWith, Subtract, Year}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
@@ -28,9 +28,9 @@ import org.joda.time.DateTime
 import scala.language.implicitConversions
 
 object BasicExpression {
-  type TiExpression = com.pingcap.tikv.expression.Expression
-  type TiNot = com.pingcap.tikv.expression.Not
-  type TiIsNull = com.pingcap.tikv.expression.IsNull
+  type TiExpression = org.tikv.expression.Expression
+  type TiNot = org.tikv.expression.Not
+  type TiIsNull = org.tikv.expression.IsNull
 
   def convertLiteral(value: Any, dataType: DataType): Any =
     // all types from literals are passed according to DataType's InternalType definition

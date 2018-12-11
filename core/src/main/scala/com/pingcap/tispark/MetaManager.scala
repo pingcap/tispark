@@ -15,8 +15,8 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.catalog.Catalog
-import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
+import org.tikv.catalog.Catalog
+import org.tikv.meta.{TiDBInfo, TiTableInfo}
 
 import scala.collection.JavaConversions._
 

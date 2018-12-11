@@ -1,7 +1,7 @@
 package org.apache.spark.sql.txn
 
 import java.sql.{DriverManager, SQLException}
-import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel
+import org.tikv.kvproto.Kvrpcpb.IsolationLevel
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.Utils.getOrElse
@@ -86,7 +86,7 @@ class TxnTestSuite extends BaseTiSparkSuite {
     new Thread {
       override def run() {
         while (try {
-                 doQuery
+                 doQuery()
                  logger.info("query " + i.toString + " success!")
                  false
                } catch {

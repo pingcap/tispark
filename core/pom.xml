@@ -23,9 +23,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.pingcap.tikv</groupId>
+            <groupId>org.tikv</groupId>
             <artifactId>tikv-client</artifactId>
-            <version>${project.parent.version}</version>
+            <version>${tispark.version}</version>
         </dependency>
         <dependency>
             <groupId>org.scalaj</groupId>
