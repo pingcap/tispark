@@ -162,7 +162,9 @@ abstract class QueryTest extends PlanTest {
       } catch {
         // TODO:Remove this temporary exception handling
         //      case _:RuntimeException => false
-        case _: Throwable => false
+        case e: Throwable =>
+          logger.warn("Comparison failed due to exception: " + e.getMessage)
+          false
       }
     } else {
       false
