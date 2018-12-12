@@ -2,6 +2,8 @@ package org.apache.spark.sql
 
 import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
 
+import scala.collection.mutable
+
 class TiExtensions extends (SparkSessionExtensions => Unit) {
   private var tiContext: TiContext = _
 
@@ -18,4 +20,18 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
     e.injectResolutionRule(TiResolutionRule(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
+}
+
+object TiExtensions {
+  private val tiExtensionsMap: mutable.Map[SparkSession, TiExtensions] =
+    new mutable.HashMap[SparkSession, TiExtensions]
+
+  def getInstance(sparkSession: SparkSession): TiExtensions =
+    synchronized {
+      tiExtensionsMap.getOrElseUpdate(sparkSession, {
+        val tiExtensions = new TiExtensions
+        tiExtensions.apply(sparkSession.extensions)
+        tiExtensions
+      })
+    }
 }
