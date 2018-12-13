@@ -5,14 +5,13 @@ import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
 import scala.collection.mutable
 
 class TiExtensions extends (SparkSessionExtensions => Unit) {
-  private var tiContext: TiContext = _
+  private val tiContextMap: mutable.Map[SparkSession, TiContext] =
+    new mutable.HashMap[SparkSession, TiContext]
 
-  def getOrCreateTiContext(sparkSession: SparkSession): TiContext = {
-    if (tiContext == null) {
-      tiContext = new TiContext(sparkSession)
+  def getOrCreateTiContext(sparkSession: SparkSession): TiContext =
+    synchronized {
+      tiContextMap.getOrElseUpdate(sparkSession, new TiContext(sparkSession))
     }
-    tiContext
-  }
 
   override def apply(e: SparkSessionExtensions): Unit = {
     e.injectParser(TiParser(getOrCreateTiContext))
@@ -23,15 +22,18 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 }
 
 object TiExtensions {
-  private val tiExtensionsMap: mutable.Map[SparkSession, TiExtensions] =
-    new mutable.HashMap[SparkSession, TiExtensions]
+  private var tiExtensions: TiExtensions = _
 
-  def getInstance(sparkSession: SparkSession): TiExtensions =
-    synchronized {
-      tiExtensionsMap.getOrElseUpdate(sparkSession, {
-        val tiExtensions = new TiExtensions
-        tiExtensions.apply(sparkSession.extensions)
-        tiExtensions
-      })
+  def getInstance(sparkSession: SparkSession): TiExtensions = {
+    if (tiExtensions == null) {
+      synchronized {
+        if (tiExtensions == null) {
+          tiExtensions = new TiExtensions
+        }
+      }
     }
+    tiExtensions
+  }
+
+  def reset(): Unit = tiExtensions = null
 }
