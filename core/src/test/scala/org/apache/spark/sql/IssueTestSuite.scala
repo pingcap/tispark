@@ -19,7 +19,18 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
-
+  test("adding set and enum"){
+    tidbStmt.execute("drop table set_t if exists ")
+    tidbStmt.execute("drop table enum_t if exists")
+    tidbStmt.execute("CREATE TABLE `set_t` (" +
+      "`priority` set('Low','Medium','High') NOT NULL," +
+      " PRIMARY KEY (`id`));")
+    judge("select * from set_t")
+    tidbStmt.execute("CREATE TABLE `enum_t` (" +
+      "`priority` set('Low','Medium','High') NOT NULL," +
+      " PRIMARY KEY (`id`));")
+    judge("select * from enum_t")
+  }
   test("cannot resolve column name when specifying table.column") {
     spark.sql("select full_data_type_table.id_dt from full_data_type_table").explain(true)
     judge("select full_data_type_table.id_dt from full_data_type_table")

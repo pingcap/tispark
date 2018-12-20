@@ -37,7 +37,7 @@ public class DataTypeFactoryTest {
   }
 
   @Test
-  public void of() throws Exception {
+  public void of() {
     mappingTest(MySQLType.TypeBit, BitType.class);
     mappingTest(MySQLType.TypeLong, IntegerType.class);
     mappingTest(MySQLType.TypeTiny, IntegerType.class);

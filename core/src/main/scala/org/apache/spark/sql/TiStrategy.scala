@@ -64,7 +64,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
   def typeBlackList: TypeBlacklist = {
     val blacklistString =
-      sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "time,enum,set,year")
+      sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "time,year")
     new TypeBlacklist(blacklistString)
   }
 

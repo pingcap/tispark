@@ -39,8 +39,8 @@ public class SetType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    if (flag != Codec.UINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
-    return IntegerCodec.readULong(cdi);
+    if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
+    return this.getElems().get((int) IntegerCodec.readUVarLong(cdi) - 2);
   }
 
   /** {@inheritDoc} */
