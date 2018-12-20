@@ -16,17 +16,13 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tidb.tipb.ExprType;
+import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.UnsupportedTypeException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
-/**
- * TODO: Support Set Type SetType class is set now only to indicate this type exists, so that we
- * could throw UnsupportedTypeException when encountered. Its logic is not yet implemented.
- *
- * <p>Set is encoded as unsigned int64 with its 0-based value.
- */
 public class SetType extends DataType {
   public static final SetType SET = new SetType(MySQLType.TypeSet);
 
@@ -43,25 +39,26 @@ public class SetType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    throw new UnsupportedTypeException("Set type not supported");
+    if (flag != Codec.UINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
+    return IntegerCodec.readULong(cdi);
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Set type not supported");
+    IntegerCodec.writeULongFully(cdo, Converter.convertToLong(value), true);
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Set type not supported");
+    IntegerCodec.writeULongFully(cdo, Converter.convertToLong(value), false);
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Set type not supported");
+    IntegerCodec.writeULong(cdo, Converter.convertToLong(value));
   }
 
   @Override
