@@ -27,13 +27,19 @@ class IssueTestSuite extends BaseTiSparkSuite {
         "`priority` set('Low','Medium','High') NOT NULL);"
     )
     tidbStmt.execute("INSERT INTO set_t(priority) VALUES('High');")
+    tidbStmt.execute("INSERT INTO set_t(priority) VALUES('Medium');")
+    tidbStmt.execute("INSERT INTO set_t(priority) VALUES('Low');")
     judge("select * from set_t;")
+    judge("select * from set_t where priority = 'High';")
     tidbStmt.execute(
       "CREATE TABLE `enum_t` (" +
         "`priority` set('Low','Medium','High') NOT NULL);"
     )
     tidbStmt.execute("INSERT INTO enum_t(priority) VALUES('High');")
+    tidbStmt.execute("INSERT INTO enum_t(priority) VALUES('Medium');")
+    tidbStmt.execute("INSERT INTO enum_t(priority) VALUES('Low');")
     judge("select * from enum_t;")
+    judge("select * from enum_t where priority = 'High';")
   }
   test("cannot resolve column name when specifying table.column") {
     spark.sql("select full_data_type_table.id_dt from full_data_type_table").explain(true)
