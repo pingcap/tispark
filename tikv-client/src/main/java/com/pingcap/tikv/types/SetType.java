@@ -22,6 +22,9 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class SetType extends DataType {
   public static final SetType SET = new SetType(MySQLType.TypeSet);
@@ -32,6 +35,25 @@ public class SetType extends DataType {
     super(tp);
   }
 
+  private long[] setIndexValue = initSetIndexVal();
+  private long[] setIndexInvertValue = initSetIndexInvertVal();
+
+  private long[] initSetIndexInvertVal() {
+    long[] tmpArr = new long[64];
+    for (int i = 0; i < 64; i++) {
+      tmpArr[i] ^= 1 << i;
+    }
+    return tmpArr;
+  }
+
+  private long[] initSetIndexVal() {
+    long[] tmpArr = new long[64];
+    for (int i = 0; i < 64; i++) {
+      tmpArr[i] = 1 << i;
+    }
+    return tmpArr;
+  }
+
   protected SetType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
@@ -40,7 +62,21 @@ public class SetType extends DataType {
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
-    return this.getElems().get((int) IntegerCodec.readUVarLong(cdi) - 2);
+    // When it comes to the last element of elems, index decoded from cid is alwasy
+    // larger than 2 rather than 1.
+    int number = (int) IntegerCodec.readUVarLong(cdi);
+    List<String> items = new ArrayList<>();
+    for (int i = 0; i < this.getElems().size(); i++) {
+      if ((number & setIndexValue[i]) > 0) {
+        items.add(this.getElems().get(i));
+      }
+    }
+
+    if (number == 0) {
+      throw new TypeException(String.format("invalid number %d for Set %s", number, getElems()));
+    }
+
+    return items.stream().collect(Collectors.joining(","));
   }
 
   /** {@inheritDoc} */

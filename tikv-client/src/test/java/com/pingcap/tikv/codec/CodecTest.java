@@ -526,7 +526,4 @@ public class CodecTest {
     time2 = DateTimeCodec.readFromUVarInt(cdi, otherTz);
     assertEquals(time.getMillis(), time2.getMillis());
   }
-
-  @Test
-  public void testEnumAndSet() {}
 }
