@@ -62,8 +62,6 @@ public class SetType extends DataType {
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
-    // When it comes to the last element of elems, index decoded from cid is alwasy
-    // larger than 2 rather than 1.
     int number = (int) IntegerCodec.readUVarLong(cdi);
     List<String> items = new ArrayList<>();
     for (int i = 0; i < this.getElems().size(); i++) {
