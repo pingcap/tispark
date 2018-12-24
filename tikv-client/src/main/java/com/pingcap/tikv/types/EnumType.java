@@ -16,15 +16,14 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tidb.tipb.ExprType;
+import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
-/**
- * TODO: Support Enum Type EnumType class is set now only to indicate this type exists, so that we
- * could throw UnsupportedTypeException when encountered. Its logic is not yet implemented.
- */
 public class EnumType extends DataType {
   public static final EnumType ENUM = new EnumType(MySQLType.TypeEnum);
 
@@ -41,25 +40,29 @@ public class EnumType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    throw new UnsupportedTypeException("Enum type not supported");
+    if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
+    int idx = (int) IntegerCodec.readUVarLong(cdi) - 1;
+    if (idx <0 || idx > this.getElems().size()) throw new TypeException("Index is out of range, better "
+        + "take a look at tidb side.");
+    return this.getElems().get(idx);
   }
 
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type not supported");
+    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
   }
 
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type not supported");
+    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type not supported");
+    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
   }
 
   @Override

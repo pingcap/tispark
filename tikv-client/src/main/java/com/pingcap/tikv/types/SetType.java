@@ -16,17 +16,17 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tidb.tipb.ExprType;
+import com.pingcap.tikv.codec.Codec;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
-/**
- * TODO: Support Set Type SetType class is set now only to indicate this type exists, so that we
- * could throw UnsupportedTypeException when encountered. Its logic is not yet implemented.
- *
- * <p>Set is encoded as unsigned int64 with its 0-based value.
- */
 public class SetType extends DataType {
   public static final SetType SET = new SetType(MySQLType.TypeSet);
 
@@ -36,6 +36,25 @@ public class SetType extends DataType {
     super(tp);
   }
 
+  private long[] setIndexValue = initSetIndexVal();
+  private long[] setIndexInvertValue = initSetIndexInvertVal();
+
+  private long[] initSetIndexInvertVal() {
+    long[] tmpArr = new long[64];
+    for (int i = 0; i < 64; i++) {
+      tmpArr[i] ^= 1 << i;
+    }
+    return tmpArr;
+  }
+
+  private long[] initSetIndexVal() {
+    long[] tmpArr = new long[64];
+    for (int i = 0; i < 64; i++) {
+      tmpArr[i] = 1 << i;
+    }
+    return tmpArr;
+  }
+
   protected SetType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
@@ -43,25 +62,39 @@ public class SetType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    throw new UnsupportedTypeException("Set type not supported");
+    if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
+    int number = (int) IntegerCodec.readUVarLong(cdi);
+    List<String> items = new ArrayList<>();
+    for (int i = 0; i < this.getElems().size(); i++) {
+      if ((number & setIndexValue[i]) > 0) {
+        items.add(this.getElems().get(i));
+        number &= setIndexInvertValue[i];
+      }
+    }
+
+    if (number == 0) {
+      throw new TypeException(String.format("invalid number %d for Set %s", number, getElems()));
+    }
+
+    return items.stream().collect(Collectors.joining(","));
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Set type not supported");
+    throw new UnsupportedTypeException("Set type cannot be pushed down.");
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Set type not supported");
+    throw new UnsupportedTypeException("Set type cannot be pushed down.");
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Set type not supported");
+    throw new UnsupportedTypeException("Set type cannot be pushed down.");
   }
 
   @Override

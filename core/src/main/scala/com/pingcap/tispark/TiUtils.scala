@@ -139,8 +139,8 @@ object TiUtils {
       case _: DateTimeType  => sql.types.TimestampType
       case _: TimestampType => sql.types.TimestampType
       case _: DateType      => sql.types.DateType
-      case _: EnumType      => sql.types.LongType
-      case _: SetType       => sql.types.LongType
+      case _: EnumType      => sql.types.StringType
+      case _: SetType       => sql.types.StringType
       case _: YearType      => sql.types.LongType
       case _: JsonType      => sql.types.StringType
     }

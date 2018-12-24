@@ -26,7 +26,7 @@ import org.junit.Test;
 
 public class RealTypeTest {
   @Test
-  public void encodeTest() throws Exception {
+  public void encodeTest() {
     DataType type = RealType.DOUBLE;
     double originalVal = 666.66;
     byte[] encodedKey = encode(originalVal, EncodeType.KEY, type);
