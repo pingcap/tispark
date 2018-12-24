@@ -376,6 +376,8 @@ class IssueTestSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists t2")
       tidbStmt.execute("drop table if exists single_read")
       tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
+      tidbStmt.execute("drop table if exists set_t")
+      tidbStmt.execute("drop table if exists enum_t")
     } finally {
       super.afterAll()
     }

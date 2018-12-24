@@ -41,7 +41,10 @@ public class EnumType extends DataType {
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
-    return this.getElems().get((int) IntegerCodec.readUVarLong(cdi) - 1);
+    int idx = (int) IntegerCodec.readUVarLong(cdi) - 1;
+    if (idx > this.getElems().size()) throw new TypeException("Index is out of range, better "
+        + "take a look at tidb side.");
+    return this.getElems().get(idx);
   }
 
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */

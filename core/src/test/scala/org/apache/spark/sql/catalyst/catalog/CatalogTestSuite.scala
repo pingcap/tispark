@@ -72,8 +72,8 @@ class CatalogTestSuite extends BaseTiSparkSuite {
         List("tp_tinytext", "string", "true", null),
         List("tp_bit", "bigint", "true", null),
         List("tp_time", "timestamp", "true", null),
-        List("tp_enum", "bigint", "true", null),
-        List("tp_set", "bigint", "true", null)
+        List("tp_enum", "string", "true", null),
+        List("tp_set", "string", "true", null)
       )
     setCurrentDatabase("tispark_test")
     spark.sql("desc full_data_type_table").explain(true)
