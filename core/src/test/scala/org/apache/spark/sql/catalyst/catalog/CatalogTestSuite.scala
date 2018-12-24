@@ -75,6 +75,7 @@ class CatalogTestSuite extends BaseTiSparkSuite {
         List("tp_enum", "bigint", "true", null),
         List("tp_set", "bigint", "true", null)
       )
+    setCurrentDatabase("tispark_test")
     spark.sql("desc full_data_type_table").explain(true)
     explainAndRunTest("desc full_data_type_table", skipJDBC = true, rTiDB = tidbDescTable)
     spark.sql("desc extended full_data_type_table").explain()
