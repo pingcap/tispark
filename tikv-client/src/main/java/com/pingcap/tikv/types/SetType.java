@@ -21,6 +21,7 @@ import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
+import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +68,7 @@ public class SetType extends DataType {
     for (int i = 0; i < this.getElems().size(); i++) {
       if ((number & setIndexValue[i]) > 0) {
         items.add(this.getElems().get(i));
+        number &= setIndexInvertValue[i];
       }
     }
 
@@ -80,19 +82,19 @@ public class SetType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    IntegerCodec.writeULongFully(cdo, Converter.convertToLong(value), true);
+    throw new UnsupportedTypeException("Set type cannot be pushed down.");
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    IntegerCodec.writeULongFully(cdo, Converter.convertToLong(value), false);
+    throw new UnsupportedTypeException("Set type cannot be pushed down.");
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    IntegerCodec.writeULong(cdo, Converter.convertToLong(value));
+    throw new UnsupportedTypeException("Set type cannot be pushed down.");
   }
 
   @Override

@@ -21,6 +21,7 @@ import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
+import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 public class EnumType extends DataType {
@@ -46,19 +47,19 @@ public class EnumType extends DataType {
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    IntegerCodec.writeULongFully(cdo, Converter.convertToLong(value), true);
+    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
   }
 
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    IntegerCodec.writeULongFully(cdo, Converter.convertToLong(value), false);
+    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    IntegerCodec.writeULong(cdo, Converter.convertToLong(value));
+    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
   }
 
   @Override
