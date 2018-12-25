@@ -22,10 +22,7 @@ import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 /**
- * TODO: Support Year Type YearType class is set now only to indicate this type exists, so that we
- * could throw UnsupportedTypeException when encountered. Its logic is not yet implemented.
- *
- * <p>Since year type acts differently in Spark and MySQL -- for instance, in MySQL, year is an
+ * Since year type acts differently in Spark and MySQL -- for instance, in MySQL, year is an
  * unsigned integer(2017), whereas in Spark, year is treated as Date(2017-01-01). -- it is not
  * decided which logic should inherit.
  *
