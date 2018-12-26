@@ -19,6 +19,15 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+  test("adding year type") {
+    tidbStmt.execute("drop table if exists y_t")
+    tidbStmt.execute("CREATE TABLE `y_t` (`y4` year(4))")
+    tidbStmt.execute("INSERT INTO y_t (y4) VALUES(1912),(2012),(2112)")
+    refreshConnections()
+    judge("select * from y_t")
+    judge("select * from y_t where y4 = 2112")
+  }
+
   test("adding set and enum") {
     tidbStmt.execute("drop table if exists set_t")
     tidbStmt.execute("drop table if exists enum_t")

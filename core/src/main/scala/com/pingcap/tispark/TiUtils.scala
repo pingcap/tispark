@@ -141,7 +141,6 @@ object TiUtils {
       case _: DateType      => sql.types.DateType
       case _: EnumType      => sql.types.StringType
       case _: SetType       => sql.types.StringType
-      case _: YearType      => sql.types.LongType
       case _: JsonType      => sql.types.StringType
     }
 

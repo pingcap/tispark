@@ -45,7 +45,8 @@ public class IntegerType extends DataType {
         MySQLType.TypeShort,
         MySQLType.TypeInt24,
         MySQLType.TypeLong,
-        MySQLType.TypeLonglong
+        MySQLType.TypeLonglong,
+        MySQLType.TypeYear
       };
 
   protected IntegerType(MySQLType type, int flag, int len, int decimal) {
