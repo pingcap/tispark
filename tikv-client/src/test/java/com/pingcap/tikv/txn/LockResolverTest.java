@@ -52,10 +52,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
+import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
 public class LockResolverTest {
+  private final Logger logger = Logger.getLogger(this.getClass());
   private TiSession session;
   private static final int DefaultTTL = 10;
   private BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
@@ -260,7 +262,8 @@ public class LockResolverTest {
     try {
       session = TiSession.create(conf);
       pdClient = PDClient.create(session);
-    } catch (NullPointerException e) {
+    } catch (Exception e) {
+      logger.warn("TiDB cluster may not be present");
       // ignore npe since this test requires tidb cluster being present.
       return;
     }
