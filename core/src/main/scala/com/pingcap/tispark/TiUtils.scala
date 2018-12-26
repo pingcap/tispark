@@ -24,7 +24,7 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
-import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.{types, TiConfiguration}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
@@ -113,18 +113,18 @@ object TiUtils {
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType =
     tp match {
-      case StringType => sql.types.StringType
-      case BytesType  => sql.types.BinaryType
-      case IntegerType =>
+      case _: StringType => sql.types.StringType
+      case _: BytesType  => sql.types.BinaryType
+      case _: IntegerType =>
         if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
           DataTypes.createDecimalType(20, 0)
         } else {
           sql.types.LongType
         }
-      case RealType => sql.types.DoubleType
+      case _: RealType => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
       // Decimal precision cannot exceed MAX_PRECISION.
-      case DecimalType =>
+      case _: DecimalType =>
         var len = tp.getLength
         if (len > MAX_PRECISION) {
           logger.warning(
@@ -136,12 +136,13 @@ object TiUtils {
           len.asInstanceOf[Int],
           tp.getDecimal
         )
-      case DateTimeType  => sql.types.TimestampType
-      case TimestampType => sql.types.TimestampType
-      case DateType      => sql.types.DateType
-      case EnumType      => sql.types.StringType
-      case SetType       => sql.types.StringType
-      case JsonType      => sql.types.StringType
+      case _: DateTimeType  => sql.types.TimestampType
+      case _: TimestampType => sql.types.TimestampType
+      case _: DateType      => sql.types.DateType
+      case _: EnumType      => sql.types.StringType
+      case _: SetType       => sql.types.StringType
+      case _: JsonType      => sql.types.StringType
+      case _: TimeType      => sql.types.StringType
     }
 
   def fromSparkType(tp: DataType): TiDataType =
