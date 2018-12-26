@@ -25,6 +25,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("INSERT INTO y_t (y4) VALUES(1912),(2012),(2112)")
     refreshConnections()
     judge("select * from y_t")
+    judge("select * from y_t where y4 = 2112")
   }
 
   test("adding set and enum") {
