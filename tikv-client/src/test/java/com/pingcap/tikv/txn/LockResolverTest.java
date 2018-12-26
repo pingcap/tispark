@@ -54,7 +54,6 @@ import java.util.List;
 import java.util.function.Supplier;
 import org.junit.Before;
 import org.junit.Test;
-import scala.xml.Null;
 
 public class LockResolverTest {
   private TiSession session;
@@ -176,8 +175,8 @@ public class LockResolverTest {
             commitTS,
             Arrays.asList(ByteString.copyFromUtf8(primaryKey), ByteString.copyFromUtf8(key)));
       } else {
-        return commit(startTs, commitTS,
-            Collections.singletonList(ByteString.copyFromUtf8(primaryKey)));
+        return commit(
+            startTs, commitTS, Collections.singletonList(ByteString.copyFromUtf8(primaryKey)));
       }
     }
 
@@ -259,9 +258,9 @@ public class LockResolverTest {
   public void setUp() {
     TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:2379");
     try {
-    session = TiSession.create(conf);
-    pdClient = PDClient.create(session);
-    } catch(NullPointerException e) {
+      session = TiSession.create(conf);
+      pdClient = PDClient.create(session);
+    } catch (NullPointerException e) {
       // ignore npe since this test requires tidb cluster being present.
       return;
     }
@@ -277,7 +276,7 @@ public class LockResolverTest {
   }
 
   private void versionTest() {
-     for (int i = 0; i < 26; i++) {
+    for (int i = 0; i < 26; i++) {
       Pair<TiRegion, Store> pair =
           session
               .getRegionManager()
@@ -425,7 +424,9 @@ public class LockResolverTest {
     assertEquals(v.toStringUtf8(), String.valueOf('a'));
 
     try {
-      commit(startTs.getVersion(), endTs.getVersion(),
+      commit(
+          startTs.getVersion(),
+          endTs.getVersion(),
           Collections.singletonList(ByteString.copyFromUtf8("a")));
       fail();
     } catch (KeyException e) {
@@ -460,7 +461,9 @@ public class LockResolverTest {
     assertEquals(v.toStringUtf8(), String.valueOf('a'));
 
     try {
-      commit(startTs.getVersion(), endTs.getVersion(),
+      commit(
+          startTs.getVersion(),
+          endTs.getVersion(),
           Collections.singletonList(ByteString.copyFromUtf8("a")));
     } catch (KeyException e) {
       fail();
