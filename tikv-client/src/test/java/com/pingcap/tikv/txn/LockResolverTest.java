@@ -265,7 +265,6 @@ public class LockResolverTest {
     } catch (Exception e) {
       logger.warn("TiDB cluster may not be present");
       // ignore npe since this test requires tidb cluster being present.
-      return;
     }
   }
 
