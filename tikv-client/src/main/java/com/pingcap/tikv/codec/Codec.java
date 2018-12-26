@@ -87,6 +87,17 @@ public class Codec {
     }
 
     /**
+     * Encode Data as duration, the same as go's binary.PutUvarint
+     *
+     * @param cdo For outputting data in bytes array
+     * @param value The data to encode
+     */
+    public static void writeDuration(CodecDataOutput cdo, long value) {
+      cdo.writeByte(DURATION_FLAG);
+      writeULong(cdo, value);
+    }
+
+    /**
      * Encode long value without type flag at the beginning The signed bit is flipped for memory
      * comparable purpose
      *
@@ -553,6 +564,10 @@ public class Codec {
      */
     public static DateTime readFromUInt(CodecDataInput cdi, DateTimeZone tz) {
       return DateTimeCodec.fromPackedLong(IntegerCodec.readULong(cdi), tz);
+    }
+
+    public static DateTime readFromVarInt(CodecDataInput cdi) {
+      return DateTimeCodec.fromPackedLong(IntegerCodec.readVarLong(cdi), DateTimeZone.getDefault());
     }
   }
 

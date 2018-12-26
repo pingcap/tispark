@@ -23,55 +23,92 @@ import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
+import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
-import java.sql.Time;
 
 // https://dev.mysql.com/doc/refman/8.0/en/time.html
-public class TimeType extends DataType {
-  private Time
 
+public class TimeType extends DataType {
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeDuration};
+  private final long nanosecond = 1;
+  private final long microsecond = 1000 * nanosecond;
+  private final long millisecond = 1000 * microsecond;
+  private final long second = 1000 * millisecond;
+  private final long minute = 60 * second;
+  private final long hour = 60 * minute;
+  private boolean splited;
+  private int sign;
+  private int hours;
+  private int minutes;
+  private int seconds;
+  private int frac;
+
+  @SuppressWarnings("unused")
   protected TimeType(InternalTypeHolder holder) {
     super(holder);
   }
 
+  @SuppressWarnings("unused")
+  protected TimeType(MySQLType type, int flag, int len, int decimal) {
+    super(type, flag, len, decimal, "", Collation.DEF_COLLATION_CODE);
+  }
+
+  @SuppressWarnings("unused")
+  protected TimeType(MySQLType tp) {
+    super(tp);
+  }
+
+  private void splitDuration(long nanos) {
+    int sign = 1;
+    if (nanos < 0) {
+      nanos = -nanos;
+      sign = -1;
+    }
+    hours = (int) (nanos / hour);
+    nanos -= hours * hour;
+    minutes = (int) (nanos / minute);
+    nanos -= minutes * minute;
+    seconds = (int) (nanos / second);
+    nanos -= seconds * second;
+    frac = (int) (nanos / microsecond);
+    splited = true;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    if (sign < 0) {
+      sb.append('-');
+    }
+    sb.append(String.format("%02d:%02d:%02d", hours, minutes, seconds));
+    if (decimal > 0) {
+      sb.append('.');
+      sb.append(String.format("%06d", frac).substring(0, decimal));
+    }
+    return sb.toString();
+  }
+
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    if (flag != Codec.UINT_FLAG) throw new TypeException("Invalid EnumType(IntegerType) flag: " + flag);
-    long pockedInt = IntegerCodec.readULong(cdi);
-    // case mysql.TypeDuration: //duration should read fsp from column meta data
-    //		dur := types.Duration{Duration: time.Duration(datum.GetInt64()), Fsp: ft.Decimal}
-    //		datum.SetValue(dur)
-    //		return datum, nil
+    if (flag != Codec.VARINT_FLAG) throw new TypeException("Invalid TimeType flag: " + flag);
+    splitDuration(IntegerCodec.readVarLong(cdi));
+    return toString();
   }
 
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    // b = append(b, uintFlag)
-    //			t := vals[i].GetMysqlTime()
-    //			// Encoding timestamp need to consider timezone.
-    //			// If it's not in UTC, transform to UTC first.
-    //			if t.Type == mysql.TypeTimestamp && sc.TimeZone != time.UTC {
-    //				err = t.ConvertTimeZone(sc.TimeZone, time.UTC)
-    //				if err != nil {
-    //					return nil, errors.Trace(err)
-    //				}
-    //			}
-    //			var v uint64
-    //			v, err = t.ToPackedUint()
-    //			if err != nil {
-    //				return nil, errors.Trace(err)
-    //			}
-    //			b = EncodeUint(b, v)
+    IntegerCodec.writeDuration(cdo, Converter.convertToLong(value));
   }
 
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-
+    // per tidb's implementation, comparable is not needed.
+    encodeKey(cdo, value);
   }
 
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-
+    encodeKey(cdo, value);
   }
 
   @Override
