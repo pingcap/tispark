@@ -1,4 +1,5 @@
 /*
+ *
  * Copyright 2017 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package com.pingcap.tikv.types;
@@ -21,58 +23,64 @@ import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
-import com.pingcap.tikv.exception.UnsupportedTypeException;
-import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
+import java.sql.Time;
 
-public class EnumType extends DataType {
-  public static final EnumType ENUM = new EnumType(MySQLType.TypeEnum);
+// https://dev.mysql.com/doc/refman/8.0/en/time.html
+public class TimeType extends DataType {
+  private Time
 
-  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeEnum};
-
-  private EnumType(MySQLType tp) {
-    super(tp);
-  }
-
-  protected EnumType(TiColumnInfo.InternalTypeHolder holder) {
+  protected TimeType(InternalTypeHolder holder) {
     super(holder);
   }
 
-  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid EnumType(IntegerType) flag: " + flag);
-    int idx = (int) IntegerCodec.readUVarLong(cdi) - 1;
-    if (idx < 0 || idx >= this.getElems().size())
-      throw new TypeException("Index is out of range, better " + "take a look at tidb side.");
-    return this.getElems().get(idx);
+    if (flag != Codec.UINT_FLAG) throw new TypeException("Invalid EnumType(IntegerType) flag: " + flag);
+    long pockedInt = IntegerCodec.readULong(cdi);
+    // case mysql.TypeDuration: //duration should read fsp from column meta data
+    //		dur := types.Duration{Duration: time.Duration(datum.GetInt64()), Fsp: ft.Decimal}
+    //		datum.SetValue(dur)
+    //		return datum, nil
   }
 
-  /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
+    // b = append(b, uintFlag)
+    //			t := vals[i].GetMysqlTime()
+    //			// Encoding timestamp need to consider timezone.
+    //			// If it's not in UTC, transform to UTC first.
+    //			if t.Type == mysql.TypeTimestamp && sc.TimeZone != time.UTC {
+    //				err = t.ConvertTimeZone(sc.TimeZone, time.UTC)
+    //				if err != nil {
+    //					return nil, errors.Trace(err)
+    //				}
+    //			}
+    //			var v uint64
+    //			v, err = t.ToPackedUint()
+    //			if err != nil {
+    //				return nil, errors.Trace(err)
+    //			}
+    //			b = EncodeUint(b, v)
   }
 
-  /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
+
   }
 
-  /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
+
   }
 
   @Override
   public ExprType getProtoExprType() {
-    return ExprType.MysqlEnum;
+    return null;
   }
 
-  /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
-    return value;
+    return null;
   }
 }

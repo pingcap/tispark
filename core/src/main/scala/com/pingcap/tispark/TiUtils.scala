@@ -113,18 +113,18 @@ object TiUtils {
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType =
     tp match {
-      case _: StringType => sql.types.StringType
-      case _: BytesType  => sql.types.BinaryType
-      case _: IntegerType =>
+      case StringType => sql.types.StringType
+      case BytesType  => sql.types.BinaryType
+      case IntegerType =>
         if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
           DataTypes.createDecimalType(20, 0)
         } else {
           sql.types.LongType
         }
-      case _: RealType => sql.types.DoubleType
+      case RealType => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
       // Decimal precision cannot exceed MAX_PRECISION.
-      case _: DecimalType =>
+      case DecimalType =>
         var len = tp.getLength
         if (len > MAX_PRECISION) {
           logger.warning(
@@ -136,12 +136,12 @@ object TiUtils {
           len.asInstanceOf[Int],
           tp.getDecimal
         )
-      case _: DateTimeType  => sql.types.TimestampType
-      case _: TimestampType => sql.types.TimestampType
-      case _: DateType      => sql.types.DateType
-      case _: EnumType      => sql.types.StringType
-      case _: SetType       => sql.types.StringType
-      case _: JsonType      => sql.types.StringType
+      case DateTimeType  => sql.types.TimestampType
+      case TimestampType => sql.types.TimestampType
+      case DateType      => sql.types.DateType
+      case EnumType      => sql.types.StringType
+      case SetType       => sql.types.StringType
+      case JsonType      => sql.types.StringType
     }
 
   def fromSparkType(tp: DataType): TiDataType =
