@@ -52,7 +52,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   /**
    * WAR to lead Spark to consider this relation being on local files.
    * Otherwise Spark will lookup this relation in his session catalog.
-   * See [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations.resolveRelation]] for detail.
+   * CHECK Spark [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations.resolveRelation]] for details.
    */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier) if needQualify(tableIdentifier) =>

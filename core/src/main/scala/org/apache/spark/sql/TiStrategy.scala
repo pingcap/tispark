@@ -44,12 +44,16 @@ import org.apache.spark.sql.types._
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-// TODO: Too many hacks here since we hijack the planning
-// but we don't have full control over planning stage
-// We cannot pass context around during planning so
-// a re-extract needed for push-down since
-// a plan tree might contain Join which causes a single tree
-// have multiple plans to push-down
+/**
+ * CHECK Spark [[org.apache.spark.sql.Strategy]]
+ *
+ * TODO: Too many hacks here since we hijack the planning
+ * but we don't have full control over planning stage
+ * We cannot pass context around during planning so
+ * a re-extract needed for push-down since
+ * a plan tree might contain Join which causes a single tree
+ * have multiple plans to push-down
+ */
 case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Strategy
     with Logging {

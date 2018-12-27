@@ -17,7 +17,7 @@ package org.apache.spark.sql.execution.command
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
 /**
- * Overwrites [[org.apache.spark.sql.execution.command.SetDatabaseCommand]]
+ * CHECK Spark [[org.apache.spark.sql.execution.command.SetDatabaseCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
  * @param delegate original SetDatabaseCommand
@@ -31,7 +31,7 @@ case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetDatabaseComma
 }
 
 /**
- * Overwrites [[org.apache.spark.sql.execution.command.ShowDatabasesCommand]]
+ * CHECK Spark [[org.apache.spark.sql.execution.command.ShowDatabasesCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
  * @param delegate original ShowDatabasesCommand
