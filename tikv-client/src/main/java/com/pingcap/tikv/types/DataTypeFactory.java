@@ -55,7 +55,8 @@ public class DataTypeFactory {
       ImmutableMap.Builder<MySQLType, DataType> instBuilder) {
     for (MySQLType type : types) {
       try {
-        Constructor<? extends DataType> ctorByHolder = cls.getDeclaredConstructor(InternalTypeHolder.class);
+        Constructor<? extends DataType> ctorByHolder =
+            cls.getDeclaredConstructor(InternalTypeHolder.class);
         Constructor<? extends DataType> ctorByType = cls.getDeclaredConstructor(MySQLType.class);
         ctorByHolder.setAccessible(true);
         ctorByType.setAccessible(true);
