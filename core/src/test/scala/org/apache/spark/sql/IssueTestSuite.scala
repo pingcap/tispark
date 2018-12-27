@@ -19,6 +19,20 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+  test("adding time type") {
+    tidbStmt.execute("drop table if exists t_t")
+    tidbStmt.execute("CREATE TABLE `t_t` (`t` time(3))")
+    // NOTE: jdbc only allows time in day range whereas mysql time has much
+    // larger range.
+    tidbStmt.execute("INSERT INTO t_t (t) VALUES('18:59:59'),('17:59:59'),('12:59:59')")
+    refreshConnections()
+    val df = spark.sql("select * from t_t")
+    val schema = df.schema.fields
+    assert(dfData(df, schema)(0)(0).asInstanceOf[String].equals("18:59:59.000"))
+    assert(dfData(df, schema)(1)(0).asInstanceOf[String].equals("17:59:59.000"))
+    assert(dfData(df, schema)(2)(0).asInstanceOf[String].equals("12:59:59.000"))
+  }
+
   test("adding year type") {
     tidbStmt.execute("drop table if exists y_t")
     tidbStmt.execute("CREATE TABLE `y_t` (`y4` year(4))")
