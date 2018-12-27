@@ -18,6 +18,7 @@ package org.apache.spark.sql
 import java.lang
 
 import com.pingcap.tikv.tools.RegionUtils
+import com.pingcap.tikv.types.Converter
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import com.pingcap.tispark.listener.CacheInvalidateListener
@@ -44,6 +45,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
 
   StatisticsManager.initStatisticsManager(tiSession)
   sparkSession.udf.register("ti_version", () => TiSparkVersion.version)
+  sparkSession.udf.register("time_to_str", (value, frac) => Converter.convertDurationToStr(value, frac))
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())

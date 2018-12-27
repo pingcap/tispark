@@ -142,7 +142,7 @@ object TiUtils {
       case _: EnumType      => sql.types.StringType
       case _: SetType       => sql.types.StringType
       case _: JsonType      => sql.types.StringType
-      case _: TimeType      => sql.types.StringType
+      case _: TimeType      => sql.types.LongType
     }
 
   def fromSparkType(tp: DataType): TiDataType =

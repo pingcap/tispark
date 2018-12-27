@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tikv.types.Converter
 import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
@@ -28,9 +29,10 @@ class IssueTestSuite extends BaseTiSparkSuite {
     refreshConnections()
     val df = spark.sql("select * from t_t")
     val schema = df.schema.fields
-    assert(dfData(df, schema)(0)(0).asInstanceOf[String].equals("18:59:59.000"))
-    assert(dfData(df, schema)(1)(0).asInstanceOf[String].equals("17:59:59.000"))
-    assert(dfData(df, schema)(2)(0).asInstanceOf[String].equals("12:59:59.000"))
+    val data = dfData(df, schema)
+    assert(data(0)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("18:59:59")))
+    assert(data(1)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("17:59:59")))
+    assert(data(2)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
   }
 
   test("adding year type") {

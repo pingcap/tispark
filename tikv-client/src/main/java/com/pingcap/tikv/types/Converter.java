@@ -17,6 +17,10 @@
 
 package com.pingcap.tikv.types;
 
+import static com.pingcap.tikv.types.TimeType.HOUR;
+import static com.pingcap.tikv.types.TimeType.MICROSECOND;
+import static com.pingcap.tikv.types.TimeType.MINUTE;
+import static com.pingcap.tikv.types.TimeType.SECOND;
 import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tikv.exception.TypeException;
@@ -175,5 +179,58 @@ public class Converter {
     } else {
       throw new TypeException("can not cast non Number type to Double");
     }
+  }
+
+  public static String convertDurationToStr(long nanos, int decimal) {
+    int sign = 1, hours, minutes, seconds, frac;
+    if (nanos < 0) {
+      nanos = -nanos;
+      sign = -1;
+    }
+    hours = (int) (nanos / HOUR);
+    nanos -= hours * HOUR;
+    minutes = (int) (nanos / MINUTE);
+    nanos -= minutes * MINUTE;
+    seconds = (int) (nanos / SECOND);
+    nanos -= seconds * SECOND;
+    frac = (int) (nanos / MICROSECOND);
+    StringBuilder sb = new StringBuilder();
+    if (sign < 0) {
+      sb.append('-');
+    }
+    sb.append(String.format("%02d:%02d:%02d", hours, minutes, seconds));
+    if (decimal > 0) {
+      sb.append('.');
+      sb.append(String.format("%06d", frac), 0, decimal);
+    }
+    return sb.toString();
+  }
+
+  public static long convertStrToDuration(String value) {
+    String[] splitBySemiColon = value.split(":");
+    if (splitBySemiColon.length < 3)
+      throw new IllegalArgumentException(
+          String.format("%s is not a valid time type in mysql", value));
+    int sign, hour, minute, second, frac;
+    sign = 1;
+    hour = Integer.parseInt(splitBySemiColon[0]);
+    if (hour < 0) {
+      sign = -1;
+      hour -= hour;
+    }
+    minute = Integer.parseInt(splitBySemiColon[1]);
+    if (splitBySemiColon[2].contains(".")) {
+      String[] splitByDot = splitBySemiColon[2].split(".");
+      second = Integer.parseInt(splitByDot[0]);
+      frac = Integer.parseInt(splitByDot[1]);
+    } else {
+      second = Integer.parseInt(splitBySemiColon[2]);
+      frac = 0;
+    }
+    return ((long) hour * HOUR
+            + (long) minute * MINUTE
+            + (long) second * SECOND
+            + (long) frac * MICROSECOND)
+        * sign;
   }
 }
