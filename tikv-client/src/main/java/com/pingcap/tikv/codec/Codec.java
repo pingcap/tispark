@@ -565,10 +565,6 @@ public class Codec {
     public static DateTime readFromUInt(CodecDataInput cdi, DateTimeZone tz) {
       return DateTimeCodec.fromPackedLong(IntegerCodec.readULong(cdi), tz);
     }
-
-    public static DateTime readFromVarInt(CodecDataInput cdi) {
-      return DateTimeCodec.fromPackedLong(IntegerCodec.readVarLong(cdi), DateTimeZone.getDefault());
-    }
   }
 
   public static class DateCodec {
