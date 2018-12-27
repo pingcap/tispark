@@ -80,7 +80,7 @@ object TiUtils {
         // bit/duration type is not allowed to be pushed down
         case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
           val head = nameTypeMap.get(attr.name).head
-          return !head.isInstanceOf[BitType] && head.getType != MySQLType.TypeDuration
+          return !head.isInstanceOf[BitType]
         // TODO:Currently we do not support literal null type push down
         // when Constant is ready to support literal null or we have other
         // options, remove this.

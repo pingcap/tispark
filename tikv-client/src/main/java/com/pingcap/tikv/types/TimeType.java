@@ -105,7 +105,9 @@ public class TimeType extends DataType {
 
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    encodeKey(cdo, value);
+    // in tidb, druation will be firstly flatten into int64 and then encoded.
+    long val = parseTimeInStr(Converter.convertToString(value));
+    IntegerCodec.writeLong(cdo, val);
   }
 
   @Override
