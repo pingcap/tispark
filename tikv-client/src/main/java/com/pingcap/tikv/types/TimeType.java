@@ -30,13 +30,12 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 
 public class TimeType extends DataType {
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeDuration};
-  private final long nanosecond = 1;
-  private final long microsecond = 1000 * nanosecond;
-  private final long millisecond = 1000 * microsecond;
-  private final long second = 1000 * millisecond;
-  private final long minute = 60 * second;
-  private final long hour = 60 * minute;
-  private boolean splited;
+  private final long NANOSECOND = 1;
+  private final long MICROSECOND = 1000 * NANOSECOND;
+  private final long MILLISECOND = 1000 * MICROSECOND;
+  private final long SECOND = 1000 * MILLISECOND;
+  private final long MINUTE = 60 * SECOND;
+  private final long HOUR = 60 * MINUTE;
   private int sign;
   private int hours;
   private int minutes;
@@ -59,23 +58,21 @@ public class TimeType extends DataType {
   }
 
   private void splitDuration(long nanos) {
-    int sign = 1;
+    sign = 1;
     if (nanos < 0) {
       nanos = -nanos;
       sign = -1;
     }
-    hours = (int) (nanos / hour);
-    nanos -= hours * hour;
-    minutes = (int) (nanos / minute);
-    nanos -= minutes * minute;
-    seconds = (int) (nanos / second);
-    nanos -= seconds * second;
-    frac = (int) (nanos / microsecond);
-    splited = true;
+    hours = (int) (nanos / HOUR);
+    nanos -= hours * HOUR;
+    minutes = (int) (nanos / MINUTE);
+    nanos -= minutes * MINUTE;
+    seconds = (int) (nanos / SECOND);
+    nanos -= seconds * SECOND;
+    frac = (int) (nanos / MICROSECOND);
   }
 
-  @Override
-  public String toString() {
+  public String convertToStr() {
     StringBuilder sb = new StringBuilder();
     if (sign < 0) {
       sb.append('-');
@@ -83,7 +80,7 @@ public class TimeType extends DataType {
     sb.append(String.format("%02d:%02d:%02d", hours, minutes, seconds));
     if (decimal > 0) {
       sb.append('.');
-      sb.append(String.format("%06d", frac).substring(0, decimal));
+      sb.append(String.format("%06d", frac), 0, decimal);
     }
     return sb.toString();
   }
@@ -92,12 +89,12 @@ public class TimeType extends DataType {
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag != Codec.VARINT_FLAG) throw new TypeException("Invalid TimeType flag: " + flag);
     splitDuration(IntegerCodec.readVarLong(cdi));
-    return toString();
+    return convertToStr();
   }
 
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    IntegerCodec.writeDuration(cdo, Converter.convertToLong(value));
+    IntegerCodec.writeDuration(cdo, parseTimeInStr(Converter.convertToString(value)));
   }
 
   @Override
@@ -113,11 +110,39 @@ public class TimeType extends DataType {
 
   @Override
   public ExprType getProtoExprType() {
-    return null;
+    return ExprType.MysqlDuration;
+  }
+
+  private long parseTimeInStr(String value) {
+    String[] splitBySemiColon = value.split(":");
+    if (splitBySemiColon.length < 3)
+      throw new IllegalArgumentException(
+          String.format("%s is not a valid time type in mysql", value));
+    int sign, hour, minute, second, frac;
+    sign = 1;
+    hour = Integer.parseInt(splitBySemiColon[0]);
+    if (hour < 0) {
+      sign = -1;
+      hour -= hour;
+    }
+    minute = Integer.parseInt(splitBySemiColon[1]);
+    if (splitBySemiColon[2].contains(".")) {
+      String[] splitByDot = splitBySemiColon[2].split(".");
+      second = Integer.parseInt(splitByDot[0]);
+      frac = Integer.parseInt(splitByDot[1]);
+    } else {
+      second = Integer.parseInt(splitBySemiColon[2]);
+      frac = 0;
+    }
+    return ((long) hour * HOUR
+            + (long) minute * MINUTE
+            + (long) second * SECOND
+            + (long) frac * MICROSECOND)
+        * sign;
   }
 
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
-    return null;
+    return parseTimeInStr(value);
   }
 }

@@ -94,7 +94,7 @@ public class Codec {
      */
     public static void writeDuration(CodecDataOutput cdo, long value) {
       cdo.writeByte(DURATION_FLAG);
-      writeULong(cdo, value);
+      writeLong(cdo, value);
     }
 
     /**
