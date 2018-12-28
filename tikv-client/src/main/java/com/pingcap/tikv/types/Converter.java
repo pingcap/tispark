@@ -29,6 +29,7 @@ import java.math.BigInteger;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.Arrays;
+import java.util.IllegalFormatException;
 import org.apache.spark.unsafe.types.UTF8String;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -207,10 +208,10 @@ public class Converter {
   }
 
   public static long convertStrToDuration(String value) {
-    requireNonNull(value, "value cannot be null");
     // value should be in form of 12:59:59.000 or 12:59:59
     // length expect to be 3.
-    String[] splitBySemiColon = value.split(":");
+    try {
+      String[] splitBySemiColon = value.split(":");
     if (splitBySemiColon.length != 3)
       throw new IllegalArgumentException(
           String.format("%s is not a valid time type in mysql", value));
@@ -235,5 +236,9 @@ public class Converter {
             + (long) second * SECOND
             + (long) frac * MICROSECOND)
         * sign;
+    } catch (Exception e) {
+      throw new IllegalArgumentException("%s is not a valid format. Either hh:mm:ss.mmm or hh:mm:ss is accepted.");
+    }
+
   }
 }
