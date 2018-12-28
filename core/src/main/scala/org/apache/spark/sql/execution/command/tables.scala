@@ -23,7 +23,7 @@ import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * Overwrites [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
+ * CHECK Spark [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
  * @param delegate original ShowTablesCommand
@@ -52,7 +52,7 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
 }
 
 /**
- * Overwrites [[org.apache.spark.sql.execution.command.DescribeTableCommand]]
+ * CHECK Spark [[org.apache.spark.sql.execution.command.DescribeTableCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
  * @param delegate original DescribeTableCommand
