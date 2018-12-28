@@ -442,35 +442,6 @@ public class MyDecimal {
     this.resultFrac = this.digitsFrac;
   }
 
-  // parser a string to a int.
-  private int strToLong(String str) {
-    str = str.trim();
-    if (str.isEmpty()) {
-      return 0;
-    }
-    boolean negative = false;
-    int i = 0;
-    if (str.charAt(i) == '-') {
-      negative = true;
-      i++;
-    } else if (str.charAt(i) == '+') {
-      i++;
-    }
-
-    int r = 0;
-    for (; i < str.length(); i++) {
-      if (!Character.isDigit(str.charAt(i))) {
-        break;
-      }
-      r = r * 10 + (str.charAt(i) - '0');
-    }
-
-    if (negative) {
-      r = -r;
-    }
-    return r;
-  }
-
   // Returns a decimal string.
   public String toString() {
     char[] str;
