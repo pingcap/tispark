@@ -33,9 +33,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
     assert(data(1)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("17:59:59")))
     assert(data(2)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
 
-
     val where = spark.sql("select * from t_t")
-    val wheredata = dfData(spark.sql("select * from t_t where t = str_to_time('12:59:59')"), where.schema.fields)
+    val wheredata =
+      dfData(spark.sql("select * from t_t where t = str_to_time('12:59:59')"), where.schema.fields)
     assert(wheredata(0)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
   }
 
