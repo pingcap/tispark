@@ -72,7 +72,7 @@ public class TimeType extends DataType {
 
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    // in tidb, druation will be firstly flatten into int64 and then encoded.
+    // in tidb, duration will be firstly flatten into int64 and then encoded.
     long val = Converter.convertStrToDuration(Converter.convertToString(value));
     IntegerCodec.writeLong(cdo, val);
   }

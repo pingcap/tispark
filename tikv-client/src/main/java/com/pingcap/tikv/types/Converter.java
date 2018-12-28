@@ -207,8 +207,10 @@ public class Converter {
   }
 
   public static long convertStrToDuration(String value) {
+    // value should be in form of 12:59:59.000 or 12:59:59
+    // length expect to be 3.
     String[] splitBySemiColon = value.split(":");
-    if (splitBySemiColon.length < 3)
+    if (splitBySemiColon.length != 3)
       throw new IllegalArgumentException(
           String.format("%s is not a valid time type in mysql", value));
     int sign, hour, minute, second, frac;

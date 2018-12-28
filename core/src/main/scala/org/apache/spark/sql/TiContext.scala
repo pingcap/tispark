@@ -49,6 +49,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     "time_to_str",
     (value: Long, frac: Int) => Converter.convertDurationToStr(value, frac)
   )
+  sparkSession.udf.register("str_to_time", (value: String) => Converter.convertStrToDuration(value))
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
