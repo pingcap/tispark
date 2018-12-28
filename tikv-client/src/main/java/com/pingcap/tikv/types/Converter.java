@@ -29,7 +29,6 @@ import java.math.BigInteger;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.Arrays;
-import java.util.IllegalFormatException;
 import org.apache.spark.unsafe.types.UTF8String;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -212,33 +211,33 @@ public class Converter {
     // length expect to be 3.
     try {
       String[] splitBySemiColon = value.split(":");
-    if (splitBySemiColon.length != 3)
-      throw new IllegalArgumentException(
-          String.format("%s is not a valid time type in mysql", value));
-    int sign, hour, minute, second, frac;
-    sign = 1;
-    hour = Integer.parseInt(splitBySemiColon[0]);
-    if (hour < 0) {
-      sign = -1;
-      hour -= hour;
-    }
-    minute = Integer.parseInt(splitBySemiColon[1]);
-    if (splitBySemiColon[2].contains(".")) {
-      String[] splitByDot = splitBySemiColon[2].split(".");
-      second = Integer.parseInt(splitByDot[0]);
-      frac = Integer.parseInt(splitByDot[1]);
-    } else {
-      second = Integer.parseInt(splitBySemiColon[2]);
-      frac = 0;
-    }
-    return ((long) hour * HOUR
-            + (long) minute * MINUTE
-            + (long) second * SECOND
-            + (long) frac * MICROSECOND)
-        * sign;
+      if (splitBySemiColon.length != 3)
+        throw new IllegalArgumentException(
+            String.format("%s is not a valid time type in mysql", value));
+      int sign, hour, minute, second, frac;
+      sign = 1;
+      hour = Integer.parseInt(splitBySemiColon[0]);
+      if (hour < 0) {
+        sign = -1;
+        hour -= hour;
+      }
+      minute = Integer.parseInt(splitBySemiColon[1]);
+      if (splitBySemiColon[2].contains(".")) {
+        String[] splitByDot = splitBySemiColon[2].split(".");
+        second = Integer.parseInt(splitByDot[0]);
+        frac = Integer.parseInt(splitByDot[1]);
+      } else {
+        second = Integer.parseInt(splitBySemiColon[2]);
+        frac = 0;
+      }
+      return ((long) hour * HOUR
+              + (long) minute * MINUTE
+              + (long) second * SECOND
+              + (long) frac * MICROSECOND)
+          * sign;
     } catch (Exception e) {
-      throw new IllegalArgumentException("%s is not a valid format. Either hh:mm:ss.mmm or hh:mm:ss is accepted.");
+      throw new IllegalArgumentException(
+          String.format("%s is not a valid format. Either hh:mm:ss.mmm or hh:mm:ss is accepted."));
     }
-
   }
 }

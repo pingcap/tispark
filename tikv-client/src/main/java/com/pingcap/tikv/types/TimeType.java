@@ -54,14 +54,17 @@ public class TimeType extends DataType {
 
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    if (flag != Codec.VARINT_FLAG) throw new TypeException("Invalid TimeType flag: " + flag);
-    return IntegerCodec.readVarLong(cdi);
+    if (flag == Codec.VARINT_FLAG) {
+      return IntegerCodec.readVarLong(cdi);
+    } else if (flag == Codec.DURATION_FLAG) {
+      return IntegerCodec.readLong(cdi);
+    }
+    throw new TypeException("Invalid TimeType flag: " + flag);
   }
 
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    IntegerCodec.writeDuration(
-        cdo, Converter.convertStrToDuration(Converter.convertToString(value)));
+    IntegerCodec.writeDuration(cdo, Converter.convertToLong(value));
   }
 
   @Override

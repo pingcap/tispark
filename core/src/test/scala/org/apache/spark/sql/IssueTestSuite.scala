@@ -20,6 +20,24 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+  test("adding time type index test") {
+    tidbStmt.execute("drop table if exists t_t")
+    tidbStmt.execute("CREATE TABLE `t_t` (`t` time(3), index `idx_t`(t))")
+    // NOTE: jdbc only allows time in day range whereas mysql time has much
+    // larger range.
+    tidbStmt.execute("INSERT INTO t_t (t) VALUES('18:59:59'),('17:59:59'),('12:59:59')")
+    refreshConnections()
+    val df = spark.sql("select * from t_t")
+    val data = dfData(df, df.schema.fields)
+    assert(data(0)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("18:59:59")))
+    assert(data(1)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("17:59:59")))
+    assert(data(2)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
+
+    val where = spark.sql("select * from t_t where t = 46799000000000")
+    val wheredata = dfData(where, where.schema.fields)
+    assert(wheredata(0)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
+  }
+
   test("adding time type") {
     tidbStmt.execute("drop table if exists t_t")
     tidbStmt.execute("CREATE TABLE `t_t` (`t` time(3))")
@@ -33,9 +51,8 @@ class IssueTestSuite extends BaseTiSparkSuite {
     assert(data(1)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("17:59:59")))
     assert(data(2)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
 
-    val where = spark.sql("select * from t_t")
-    val wheredata =
-      dfData(spark.sql("select * from t_t where t = str_to_time('12:59:59')"), where.schema.fields)
+    val where = spark.sql("select * from t_t where t = 46799000000000")
+    val wheredata = dfData(where, where.schema.fields)
     assert(wheredata(0)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
   }
 
