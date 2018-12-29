@@ -2,7 +2,22 @@ package org.apache.spark.sql
 
 // NOTE: when you create new table, remember drop them at after all.
 class PartPruningSuite extends BaseTiSparkSuite {
-  test("adding part pruning test") {}
+  test("adding part pruning test") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `partition_t` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `purchased` date DEFAULT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE ( `id` ) (
+                       |  PARTITION p0 VALUES LESS THAN (1990),
+                       |  PARTITION p1 VALUES LESS THAN (1995),
+                       |  PARTITION p2 VALUES LESS THAN (2000),
+                       |  PARTITION p3 VALUES LESS THAN (2005)
+                       |)
+                     """.stripMargin)
+  }
 
   test("part expr function code-gen test") {
     tidbStmt.execute("create table part_fn(d date)")

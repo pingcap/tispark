@@ -254,10 +254,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
               .find((e) => e.isInstanceOf[AttributeReference])
               .get
               .asInstanceOf[AttributeReference]
-              .name == source.partitionExpr.columnName
+              .name == source.partPruningRule.columnName
         )
 
-        dagRequest.setPartInfo(source.partitionExpr.pruning(accessConds, source.table))
+        dagRequest.setPartInfo(source.partPruningRule.pruning(accessConds, source.table))
       } else {
         throw new IllegalArgumentException("Partition reading only supports on range partition.")
       }

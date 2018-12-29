@@ -16,7 +16,7 @@ package org.apache.spark.sql.extensions
 
 import com.pingcap.tikv.meta.{TiPartitionDef, TiPartitionInfo}
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.{MetaManager, PartitionExpr, TiDBRelation, TiTableReference}
+import com.pingcap.tispark.{MetaManager, PartitionPruningRule, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{UnresolvedAttribute, UnresolvedFunction, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
@@ -68,7 +68,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   // we will get
   // p0 year(`purchased`) < 1990
   // p1 year(`purchased`) >= 1990 and year(`purchased`) < 2000
-  private def generatePartitionExpr(pInfo: TiPartitionInfo, partitioned: Boolean): PartitionExpr = {
+  private def generatePartitionExpr(pInfo: TiPartitionInfo, partitioned: Boolean): PartitionPruningRule = {
     if (!partitioned) return null
     val parser = sparkSession.sessionState.sqlParser
     val partitionExprs: ListBuffer[Expression] = ListBuffer()
@@ -118,7 +118,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
       )
       previousPDef = pDef
     }
-    new PartitionExpr(
+    new PartitionPruningRule(
       partitionExprs.toList,
       locateExprs.toList,
       resolveUnresolvedFnInExpr(parser.parseExpression(pInfo.getExpr)).getOrElse(

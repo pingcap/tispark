@@ -30,15 +30,15 @@ import org.apache.spark.sql.types.StructType
 case class TiDBRelation(session: TiSession,
                         tableRef: TiTableReference,
                         meta: MetaManager,
-                        partExpr: PartitionExpr = null)(
+                        partExpr: PartitionPruningRule = null)(
   @transient val sqlContext: SQLContext
 ) extends BaseRelation {
   val table: TiTableInfo = meta
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new TiClientInternalException("Table not exist"))
 
-  val partitionExpr: PartitionExpr = partExpr
-  lazy val isPartitioned: Boolean = partitionExpr != null
+  val partPruningRule: PartitionPruningRule = partExpr
+  lazy val isPartitioned: Boolean = partPruningRule != null
   lazy val isRangePart: Boolean = table.getPartitionInfo.getType == PartitionType.RangePartition
 
   override lazy val schema: StructType = TiUtils.getSchemaFromTable(table)
