@@ -40,7 +40,8 @@ public class EnumType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
+    if (flag != Codec.UVARINT_FLAG)
+      throw new TypeException("Invalid EnumType(IntegerType) flag: " + flag);
     int idx = (int) IntegerCodec.readUVarLong(cdi) - 1;
     if (idx < 0 || idx >= this.getElems().size())
       throw new TypeException("Index is out of range, better " + "take a look at tidb side.");

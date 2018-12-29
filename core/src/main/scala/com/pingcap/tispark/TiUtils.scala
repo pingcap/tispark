@@ -24,7 +24,7 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
-import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.{types, TiConfiguration}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
@@ -80,7 +80,7 @@ object TiUtils {
         // bit/duration type is not allowed to be pushed down
         case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
           val head = nameTypeMap.get(attr.name).head
-          return !head.isInstanceOf[BitType] && head.getType != MySQLType.TypeDuration
+          return !head.isInstanceOf[BitType]
         // TODO:Currently we do not support literal null type push down
         // when Constant is ready to support literal null or we have other
         // options, remove this.
@@ -142,6 +142,7 @@ object TiUtils {
       case _: EnumType      => sql.types.StringType
       case _: SetType       => sql.types.StringType
       case _: JsonType      => sql.types.StringType
+      case _: TimeType      => sql.types.LongType
     }
 
   def fromSparkType(tp: DataType): TiDataType =

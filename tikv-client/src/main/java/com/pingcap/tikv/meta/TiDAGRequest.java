@@ -180,7 +180,7 @@ public class TiDAGRequest implements Serializable {
   private final List<Expression> filters = new ArrayList<>();
   private final List<ByItem> groupByItems = new ArrayList<>();
   private final List<ByItem> orderByItems = new ArrayList<>();
-  private List<Expression> pushdownFilters = null;
+  private List<Expression> residualFilters = null;
   // System like Spark has different type promotion rules
   // we need a cast to target when given
   private final List<Pair<Expression, DataType>> aggregates = new ArrayList<>();
@@ -773,18 +773,18 @@ public class TiDAGRequest implements Serializable {
 
     if (!getDowngradeFilters().isEmpty()) {
       // should be called after all parameters are set
-      if (pushdownFilters == null) {
-        pushdownFilters = new ArrayList<>(getDowngradeFilters());
-        pushdownFilters.removeAll(new HashSet<>(getFilters()));
+      if (residualFilters == null) {
+        residualFilters = new ArrayList<>(getDowngradeFilters());
+        residualFilters.removeAll(new HashSet<>(getFilters()));
       }
-      if (!pushdownFilters.isEmpty()) {
-        sb.append(", Pushdown Filter: ");
-        Joiner.on(", ").skipNulls().appendTo(sb, pushdownFilters);
+      if (!residualFilters.isEmpty()) {
+        sb.append(", Residual Filter: ");
+        Joiner.on(", ").skipNulls().appendTo(sb, residualFilters);
       }
     }
 
     if (!getFilters().isEmpty()) {
-      sb.append(", Residual Filter: ");
+      sb.append(", PushDown Filter: ");
       Joiner.on(", ").skipNulls().appendTo(sb, getFilters());
     }
 
