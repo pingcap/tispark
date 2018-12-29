@@ -1,17 +1,18 @@
 package org.apache.spark.sql
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.protobuf.ByteString
-import com.pingcap.tikv.catalog.CatalogTransaction
-import com.pingcap.tikv.meta.TiTableInfo
-import com.pingcap.tispark.TiDBRelation
-import org.apache.spark.sql.catalyst.rules
+import com.pingcap.tikv.meta.{TiDAGRequest, TiPartitionDef}
 import org.apache.spark.sql.execution.CoprocessorRDD
-import org.apache.spark.sql.extensions.TiResolutionRule
-import org.apache.spark.sql.tispark.TiRDD
 
 // NOTE: when you create new table, remember drop them at after all.
 class PartPruningSuite extends BaseTiSparkSuite {
+  private def extractDAGReq(df: DataFrame): TiDAGRequest =
+    df.queryExecution.executedPlan
+      .find(e => e.isInstanceOf[CoprocessorRDD])
+      .get
+      .asInstanceOf[CoprocessorRDD]
+      .tiRdd
+      .dagRequest
+
   test("adding part pruning test") {
     tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
     tidbStmt.execute("""
@@ -27,22 +28,44 @@ class PartPruningSuite extends BaseTiSparkSuite {
                        |)
                      """.stripMargin)
     refreshConnections()
-//    assert(spark.sql("select * from partition_t").queryExecution.executedPlan.find(e => e.isInstanceOf[CoprocessorRDD])
-//      .get.asInstanceOf[CoprocessorRDD].tiRdd.dagRequest.getPartInfo.getDefs.size() == 3)
-    // select weekday('1998-10-10') is 5
     assert(
-      spark
-        .sql("select * from partition_t where purchased = date'1998-10-10'")
-        .queryExecution
-        .executedPlan
-        .find(e => e.isInstanceOf[CoprocessorRDD])
-        .get
-        .asInstanceOf[CoprocessorRDD]
-        .tiRdd
-        .dagRequest
-        .getPartInfo
-        .getDefs
-        .size() == 1
+      extractDAGReq(
+        spark.sql("select * from partition_t")
+      ).getPartInfo.getDefs
+        .size() == 3
+    )
+    assert(
+      extractDAGReq(
+        spark
+        // select weekday('1998-10-10') is 5
+        // expected part info only contains one part which is p2.
+          .sql("select * from partition_t where purchased = date'1998-10-10'")
+      ).getPartInfo.getDefs
+        .get(0)
+        .getName == "p2"
+    )
+
+    assert(
+      extractDAGReq(
+        spark
+        // select weekday('1998-10-10') is 5
+        // expected part info only contains one part which is p2.
+          .sql("select * from partition_t where purchased > date'1998-10-10'")
+      ).getPartInfo.getDefs
+        .get(0)
+        .getName == "p2"
+    )
+
+    assert(
+      {
+        val pDef = extractDAGReq(
+        spark
+        // select weekday('1998-10-09') is 4
+        // expected part info only contains two parts which are p0 and p1.
+          .sql("select * from partition_t where purchased < date'1998-10-09'")
+      ).getPartInfo.getDefs
+        pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
+      }
     )
   }
 
