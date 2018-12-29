@@ -55,6 +55,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def tpcdsDBName: String = SharedSQLContext.tpcdsDBName
 
+  protected def runTPCH: Boolean = SharedSQLContext.runTPCH
+
   protected def runTPCDS: Boolean = SharedSQLContext.runTPCDS
 
   protected def dbPrefix: String = SharedSQLContext.dbPrefix
@@ -110,6 +112,7 @@ object SharedSQLContext extends Logging {
   protected var jdbcUrl: String = _
   protected var tpchDBName: String = _
   protected var tpcdsDBName: String = _
+  protected var runTPCH: Boolean = true
   protected var runTPCDS: Boolean = false
   protected var dbPrefix: String = _
 
@@ -249,10 +252,12 @@ object SharedSQLContext extends Logging {
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
       sparkConf.set(DB_PREFIX, dbPrefix)
 
+      // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
-      tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "tpcds_test")
+      tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "")
 
-      runTPCDS = getFlag(prop, RUN_TPCDS)
+      runTPCH = tpchDBName != ""
+      runTPCDS = tpcdsDBName != ""
 
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf).session
