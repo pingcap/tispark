@@ -4,35 +4,48 @@ package org.apache.spark.sql
 class PartPruningSuite extends BaseTiSparkSuite {
   test("adding part pruning test") {}
 
+  test("part expr code gen test") {
+    tidbStmt.execute("create table part_fn(d date)")
+    tidbStmt.execute("insert into part_fn values ('1989-01-01'), ('2018-10-11')")
+    refreshConnections()
+    judge("select to_seconds(d) from part_fn")
+    judge("select yearweek(d) from part_fn")
+    judge("select weekday(d) from part_fn")
+    judge("select to_days(d) from part_fn")
+    judge("select microsecond(d) from part_fn")
+    judge("select time_to_sec(d) from part_fn")
+  }
+
   test("partition expr can be parsed by sparkSQLParser") {
-    spark.sql("use test")
     assert(spark.sql("select Abs(1)").count == 1)
     assert(spark.sql("select Ceiling(1)").count == 1)
     assert(spark.sql("SELECT datediff('2009-07-31', '2009-07-30')").count == 1)
     assert(spark.sql("SELECT day('2009-07-30')").count() == 1)
     assert(spark.sql("SELECT dayofmonth('2009-07-30')").count() == 1)
-    //Returns the weekday index for date (1 = Sunday, 2 = Monday, …, 7 = Saturday).
     assert(spark.sql("SELECT dayofweek('2009-07-30')").count() == 1)
     assert(spark.sql("SELECT dayofyear('2016-04-09')").count() == 1)
-    // extract is not supported
-    // https://dev.mysql.com/doc/refman/5.7/en/date-and-time-functions.html#function_extract
     assert(spark.sql("SELECT floor(-0.1)").count() == 1)
     assert(spark.sql("SELECT hour('2009-07-30 12:58:59')").count() == 1)
-    // microsecond is not supported
     assert(spark.sql("SELECT minute('2009-07-30 12:58:59')").count() == 1)
-    assert(spark.sql("SELECT 2 mod 1.8").count() == 1)
+//     TODO 2 mod 1 is not supported.
+    assert(spark.sql("SELECT mod(2, 1)").count() == 1)
     assert(spark.sql("SELECT month('2016-07-30')").count() == 1)
     assert(spark.sql("SELECT quarter('2016-08-31')").count() == 1)
     assert(spark.sql("SELECT second('2009-07-30 12:58:59')").count() == 1)
-    judge("select time_to_sec('12:30:49')")
-    judge("select time_to_sec('2018-10-10 12:30:49'")
-    judge("select to_days('2018-10-10')")
-    judge("select to_days('2018-10-10 12:30:49'")
-    judge("select to_seconds('2018-10-01 12:34:59')")
-    assert(spark.sql("SELECT year('2009-07-30 12:58:59')").count() == 1)
     assert(spark.sql("SELECT unix_timestamp('2016-04-08', 'yyyy-MM-dd')").count() == 1)
     assert(spark.sql("SELECT unix_timestamp()").count() == 1)
-    judge("select weeekday('2018-09-12')")
+    assert(spark.sql("SELECT year('2009-07-30 12:58:59')").count() == 1)
+//     extract is not supported
+    // https://dev.mysql.com/doc/refman/5.7/en/date-and-time-functions.html#function_extract
+    judge("select time_to_sec('12:30:49')")
+    judge("select time_to_sec('2018-10-10 12:30:49')")
+    judge("select to_days('2018-10-10')")
+    judge("select to_days('2018-10-10 12:30:49')")
+    judge("select to_seconds('2018-10-01 12:34:59')")
+    judge("select to_seconds('2018-10-01')")
+    judge("select microsecond('2018-10-01 12:34:59')")
+    judge("select weekday('2018-09-12')")
+    judge("select weekday('2018-01-01')")
     judge("select yearweek('1992-01-01')")
     judge("select yearweek('1992-12-31')")
     judge("select yearweek('1992-01-01', 1)")
@@ -81,7 +94,10 @@ class PartPruningSuite extends BaseTiSparkSuite {
   }
 
   override def afterAll(): Unit =
-    try {} finally {
+    try {
+      tidbStmt.execute("drop table if exists `partition_t`")
+      tidbStmt.execute("drop table if exists part_fn")
+    } finally {
       super.afterAll()
     }
 }

@@ -80,9 +80,14 @@ case class ToDays(child: Expression) extends UnaryExpression with ImplicitCastIn
 // Given a date or datetime expr, returns the number of seconds since the year 0.
 // If expr is not a valid date or datetime value, returns NULL.
 case class ToSeconds(child: Expression) extends UnaryExpression with ImplicitCastInputTypes {
+  @transient private lazy val c = {
+    val c = Calendar.getInstance(DateTimeUtils.defaultTimeZone())
+    c
+  }
+
   override def inputTypes: Seq[AbstractDataType] = Seq(TimestampType)
 
-  override def dataType: DataType = IntegerType
+  override def dataType: DataType = LongType
 
   @transient private lazy val daysFromZero = {
     // since the input is valid, we are no need to guard this
@@ -94,10 +99,10 @@ case class ToSeconds(child: Expression) extends UnaryExpression with ImplicitCas
   // format the expected result is null.
   override protected def nullSafeEval(date: Any): Any = {
     val ts = date.asInstanceOf[Long]
-    val hour = DateTimeUtils.getHours(ts * 1000L)
-    val minute = DateTimeUtils.getMinutes(ts * 1000L)
-    val sec = DateTimeUtils.getSeconds(ts * 1000L)
-    hour * 24 * 60 + minute * 60 + sec + (DateTimeUtils
+    val hour = DateTimeUtils.getHours(ts)
+    val minute = DateTimeUtils.getMinutes(ts)
+    val sec = DateTimeUtils.getSeconds(ts)
+    hour * 60 * 60 + minute * 60 + sec + (DateTimeUtils
       .millisToDays(ts / 1000L) - daysFromZero) * 24 * 3600L
   }
 
@@ -107,10 +112,10 @@ case class ToSeconds(child: Expression) extends UnaryExpression with ImplicitCas
       ctx,
       ev,
       c =>
-        s"$dtu.getHour($c * 1000L)*24*60" +
-          s"+ $dtu.getMinutes($c*1000L)*60" +
-          s"+ $dtu.getSeconds($c*1000L)" +
-          s"+ ($dtu.millisTodays($c/1000L) + 719528) * 24*60"
+        s"$dtu.getHours($c)*60*60" +
+          s"+ $dtu.getMinutes($c)*60" +
+          s"+ $dtu.getSeconds($c)" +
+          s"+ ($dtu.millisToDays($c/1000L) + 719528) * 24 * 3600L"
     )
   }
 
@@ -268,11 +273,11 @@ case class YearWeek(timeExp: Expression, mode: Expression)
 // scalastyle:off line.size.limit
 @ExpressionDescription(
   usage =
-    "_FUNC_(date) - Returns the week of the year of the given date. A week is considered to start on a Monday and week 1 is the first week with >3 days.",
+    "_FUNC_(date) - Returns the weekday index for date(0 = Monday, 1 = Tuesday, … 6 = Sunday).",
   examples = """
     Examples:
-      > SELECT _FUNC_('2008-02-20');
-       8
+      > SELECT _FUNC_('2008-02-03');
+       6
   """,
   since = "2.3.2"
 )
@@ -283,15 +288,16 @@ case class WeekDay(child: Expression) extends UnaryExpression with ImplicitCastI
   override def dataType: DataType = IntegerType
 
   @transient private lazy val c = {
-    val c = Calendar.getInstance(DateTimeUtils.getTimeZone("UTC"))
+    val c = Calendar.getInstance(DateTimeUtils.defaultTimeZone())
     c.setFirstDayOfWeek(Calendar.MONDAY)
-    c.setMinimalDaysInFirstWeek(4)
     c
   }
 
   override protected def nullSafeEval(date: Any): Any = {
     c.setTimeInMillis(date.asInstanceOf[Int] * 1000L * 3600L * 24L)
-    c.get(Calendar.WEEK_OF_YEAR)
+    // Monday is the first day of week and its index is 0 where as its index in Spark is 1.
+    // That is why we need subtract 1 from original value.
+    c.get(Calendar.DAY_OF_WEEK) - 1
   }
 
   override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode =
@@ -305,14 +311,13 @@ case class WeekDay(child: Expression) extends UnaryExpression with ImplicitCastI
         ctx.addImmutableStateIfNotExists(
           cal,
           c,
-          v => s"""$v = $cal.getInstance($dtu.getTimeZone("UTC"));
+          v => s"""$v = $cal.getInstance($dtu.defaultTimeZone());
                   |$c.setFirstDayOfWeek($cal.MONDAY);
-                  |$c.setMinimalDaysInFirstWeek(4);
            """.stripMargin
         )
         s"""
         $c.setTimeInMillis($time * 1000L * 3600L * 24L);
-        ${ev.value} = $c.get($cal.WEEK_OF_YEAR);
+        ${ev.value} = $c.get($cal.DAY_OF_WEEK) - 1;
       """
       }
     )
