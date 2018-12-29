@@ -113,7 +113,9 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
 
   tpchQueries.foreach { name =>
     test(name) {
-      assertResult(tiSparkRes(name))(jdbcRes(name))
+      if (runTPCH) {
+        assertResult(tiSparkRes(name))(jdbcRes(name))
+      }
     }
   }
 }
