@@ -59,14 +59,43 @@ class PartPruningSuite extends BaseTiSparkSuite {
     assert(
       {
         val pDef = extractDAGReq(
-        spark
-        // select weekday('1998-10-09') is 4
-        // expected part info only contains two parts which are p0 and p1.
-          .sql("select * from partition_t where purchased < date'1998-10-09'")
-      ).getPartInfo.getDefs
+          spark
+          // select weekday('1998-10-09') is 4
+          // expected part info only contains two parts which are p0 and p1.
+            .sql("select * from partition_t where purchased < date'1998-10-09'")
+        ).getPartInfo.getDefs
         pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
       }
     )
+
+    assert(
+      {
+        val pDef = extractDAGReq(
+          spark
+          // select weekday('1998-10-09') is 4 and select weekday('1998-10-08') is 3
+          // expected part info only contains one part which is p1.
+            .sql(
+              "select * from partition_t where purchased < date'1998-10-09' and purchased > date'1998-10-08'"
+            )
+        ).getPartInfo.getDefs
+        pDef.size() == 1 && pDef.get(0).getName == "p1"
+      }
+    )
+
+    // TODO: enable this later when we can push down or expression to tikv side.
+//    assert(
+//      {
+//        val pDef = extractDAGReq(
+//          spark
+//          // select weekday('1998-10-09') is 4 and select weekday('1998-10-07') is 2
+//          // expected parts info only contains two parts which is p0 and p2.
+//            .sql(
+//              "select * from partition_t where purchased < date'1998-10-07' or purchased > date'1998-10-09'"
+//            )
+//        ).getPartInfo.getDefs
+//        pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p2"
+//      }
+//    )
   }
 
   test("part expr function code-gen test") {
