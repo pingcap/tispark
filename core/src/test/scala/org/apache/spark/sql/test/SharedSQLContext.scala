@@ -53,6 +53,10 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def tpchDBName: String = SharedSQLContext.tpchDBName
 
+  protected def tpcdsDBName: String = SharedSQLContext.tpcdsDBName
+
+  protected def runTPCDS: Boolean = SharedSQLContext.runTPCDS
+
   protected def dbPrefix: String = SharedSQLContext.dbPrefix
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
@@ -105,6 +109,8 @@ object SharedSQLContext extends Logging {
   private var _sparkJDBC: SparkSession = _
   protected var jdbcUrl: String = _
   protected var tpchDBName: String = _
+  protected var tpcdsDBName: String = _
+  protected var runTPCDS: Boolean = false
   protected var dbPrefix: String = _
 
   protected implicit def spark: SparkSession = _spark
@@ -244,6 +250,9 @@ object SharedSQLContext extends Logging {
       sparkConf.set(DB_PREFIX, dbPrefix)
 
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
+      tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "tpcds_test")
+
+      runTPCDS = getFlag(prop, RUN_TPCDS)
 
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf).session
