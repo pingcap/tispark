@@ -68,7 +68,8 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   // we will get
   // p0 year(`purchased`) < 1990
   // p1 year(`purchased`) >= 1990 and year(`purchased`) < 2000
-  private def generatePartitionExpr(pInfo: TiPartitionInfo, partitioned: Boolean): PartitionPruningRule = {
+  private def generatePartitionExpr(pInfo: TiPartitionInfo,
+                                    partitioned: Boolean): PartitionPruningRule = {
     if (!partitioned) return null
     val parser = sparkSession.sessionState.sqlParser
     val partitionExprs: ListBuffer[Expression] = ListBuffer()
@@ -120,7 +121,6 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     }
     new PartitionPruningRule(
       partitionExprs.toList,
-      locateExprs.toList,
       resolveUnresolvedFnInExpr(parser.parseExpression(pInfo.getExpr)).getOrElse(
         throw new IllegalStateException(
           s"${pInfo.getExpr} cannot" +

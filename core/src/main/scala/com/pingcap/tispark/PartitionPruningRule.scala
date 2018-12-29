@@ -16,12 +16,10 @@ case class AsOrdered[T](val value: T)(implicit ord: Ordering[T]) extends Ordered
 }
 
 case class PartitionPruningRule(partitionExprs: List[Expression],
-                                locateExprs: List[Expression],
                                 partitionExpr: Expression,
                                 col: String) {
   val ranges = partitionExprs
   val partExpr = partitionExpr
-  val upperBound = locateExprs
   val columnName = col
 
   private def buildExprRange(e: Expression): Range[AsOrdered[Long]] = {
