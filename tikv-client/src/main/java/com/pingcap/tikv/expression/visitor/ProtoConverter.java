@@ -45,6 +45,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
           .put(TimestampType.class, "Time")
           .put(BytesType.class, "String")
           .put(StringType.class, "String")
+          .put(TimeType.class, "Duration")
           .build();
 
   private final IdentityHashMap<Expression, DataType> typeMap;

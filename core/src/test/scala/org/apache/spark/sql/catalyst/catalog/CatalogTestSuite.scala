@@ -71,7 +71,7 @@ class CatalogTestSuite extends BaseTiSparkSuite {
         List("tp_text", "string", "true", null),
         List("tp_tinytext", "string", "true", null),
         List("tp_bit", "bigint", "true", null),
-        List("tp_time", "timestamp", "true", null),
+        List("tp_time", "bigint", "true", null),
         List("tp_enum", "string", "true", null),
         List("tp_set", "string", "true", null)
       )
