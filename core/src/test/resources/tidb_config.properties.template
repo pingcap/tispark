@@ -6,8 +6,12 @@
 # tidb.user=root
 # TiDB login password
 # tidb.password=
-# TPCH database name, if you already have a tpch database in TiDB, specify the db name so that TPCH tests will run on this database
+# TPC-H database name, if you already have a tpch database in TiDB, specify the db name so that TPC-H tests will run on this database
+# TPC-H test is enabled by default, you may turn it off by setting tpch.db=
 # tpch.db=tpch_test
+# TPC-DS database name, if you already have a tpcds database in TiDB, specify the db name so that TPC-DS tests will run on this database
+# TPC-DS test is disabled by default
+# tpcds.db=tpcds_test
 # Placement Driver address:port
 # spark.tispark.pd.addresses=127.0.0.1:2379
 # Whether to allow index read in tests, you must set this to true to run index tests.

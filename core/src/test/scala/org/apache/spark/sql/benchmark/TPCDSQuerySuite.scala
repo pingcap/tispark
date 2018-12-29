@@ -28,8 +28,6 @@ class TPCDSQuerySuite extends BaseTiSparkSuite {
   private val tpcdsDirectory = getClass.getResource("/tpcds-sql").getPath
   private val tpcdsQueries = getListOfFiles(tpcdsDirectory)
 
-  println(tpcdsQueries)
-
   private def getListOfFiles(dir: String): List[String] = {
     val d = new File(dir)
     if (d.exists && d.isDirectory) {
@@ -91,8 +89,8 @@ class TPCDSQuerySuite extends BaseTiSparkSuite {
         fail(e)
     }
 
-  if (runTPCDS) {
-    test("TPCDS Test") {
+  test("TPCDS Test") {
+    if (runTPCDS) {
       run(tpcdsQueries)
     }
   }

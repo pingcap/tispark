@@ -249,10 +249,11 @@ object SharedSQLContext extends Logging {
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
       sparkConf.set(DB_PREFIX, dbPrefix)
 
+      // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
-      tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "tpcds_test")
+      tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "")
 
-      runTPCDS = getFlag(prop, RUN_TPCDS)
+      runTPCDS = tpcdsDBName != ""
 
       _tidbConf = prop
       _sparkSession = new TestSparkSession(sparkConf).session
