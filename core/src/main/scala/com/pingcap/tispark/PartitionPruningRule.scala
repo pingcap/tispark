@@ -2,7 +2,7 @@ package com.pingcap.tispark
 
 import java.util
 
-import com.google.common.collect.Range
+import com.google.common.collect.{Range, RangeSet, TreeRangeSet}
 import com.pingcap.tikv.meta.{TiPartitionDef, TiPartitionInfo, TiTableInfo}
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.{And, AttributeReference, BinaryComparison, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Literal, Or, UnaryExpression}
@@ -22,117 +22,136 @@ case class PartitionPruningRule(partitionExprs: List[Expression],
   val partExpr = partitionExpr
   val columnName = col
 
-  private def buildExprRange(e: Expression): Range[AsOrdered[Long]] = {
-    Range.all[AsOrdered[Long]]()
+  private def buildExprRange(e: Expression): RangeSet[AsOrdered[Long]] =
     e match {
       case GreaterThan(left, right) => {
-        var range: Range[AsOrdered[Long]] = null
+        val rangeSet = TreeRangeSet.create[AsOrdered[Long]]()
         if (!left.isInstanceOf[Literal] && right.isInstanceOf[Literal]) {
-          range = Range.open[AsOrdered[Long]](
-            AsOrdered(right.eval().asInstanceOf[Number].longValue()),
-            AsOrdered(Long.MaxValue)
+          rangeSet.add(
+            Range.open[AsOrdered[Long]](
+              AsOrdered(right.eval().asInstanceOf[Number].longValue()),
+              AsOrdered(Long.MaxValue)
+            )
           )
         }
         if (!right.isInstanceOf[Literal] && left.isInstanceOf[Literal]) {
-          range = Range.open[AsOrdered[Long]](
-            AsOrdered(Long.MinValue),
-            AsOrdered(left.eval().asInstanceOf[Number].longValue())
+          rangeSet.add(
+            Range.open[AsOrdered[Long]](
+              AsOrdered(Long.MinValue),
+              AsOrdered(left.eval().asInstanceOf[Number].longValue())
+            )
           )
         }
-        range
+        rangeSet
       }
       case LessThan(left, right) => {
-        var range: Range[AsOrdered[Long]] = null
+        val rangeSet = TreeRangeSet.create[AsOrdered[Long]]()
         if (!left.isInstanceOf[Literal] && right.isInstanceOf[Literal]) {
-          range = Range.open[AsOrdered[Long]](
-            AsOrdered(Long.MinValue),
-            AsOrdered(right.eval().asInstanceOf[Number].longValue())
+          rangeSet.add(
+            Range.open[AsOrdered[Long]](
+              AsOrdered(Long.MinValue),
+              AsOrdered(right.eval().asInstanceOf[Number].longValue())
+            )
           )
         }
         if (!right.isInstanceOf[Literal] && left.isInstanceOf[Literal]) {
-          range = Range.open[AsOrdered[Long]](
-            AsOrdered(left.eval().asInstanceOf[Number].longValue()),
-            AsOrdered(Long.MaxValue)
+          rangeSet.add(
+            Range.open[AsOrdered[Long]](
+              AsOrdered(left.eval().asInstanceOf[Number].longValue()),
+              AsOrdered(Long.MaxValue)
+            )
           )
         }
-        range
+        rangeSet
       }
       case Or(left, right) => {
-        val leftRange = buildExprRange(left)
-        val rightRange = buildExprRange(right)
-        leftRange.span(rightRange)
+        val leftRangeSet = buildExprRange(left)
+        val rightRangeSet = buildExprRange(right)
+        leftRangeSet.addAll(rightRangeSet)
+        leftRangeSet
       }
       case And(left, right) => {
-        val leftRange = buildExprRange(left)
-        val rightRange = buildExprRange(right)
-        leftRange.intersection(rightRange)
+        val leftRangeSet = buildExprRange(left)
+        val rightRangeSet = buildExprRange(right)
+        leftRangeSet.removeAll(rightRangeSet.complement())
+        leftRangeSet
       }
       case LessThanOrEqual(left, right) => {
+        val rangeSet = TreeRangeSet.create[AsOrdered[Long]]()
         var range: Range[AsOrdered[Long]] = null
         if (!left.isInstanceOf[Literal] && right.isInstanceOf[Literal]) {
-          range = Range.open[AsOrdered[Long]](
-            AsOrdered(Long.MinValue),
-            AsOrdered(right.eval().asInstanceOf[Number].longValue())
+          rangeSet.add(
+            Range.open[AsOrdered[Long]](
+              AsOrdered(Long.MinValue),
+              AsOrdered(right.eval().asInstanceOf[Number].longValue())
+            )
           )
         }
         if (!right.isInstanceOf[Literal] && left.isInstanceOf[Literal]) {
-          range = Range.open[AsOrdered[Long]](
-            AsOrdered(left.eval().asInstanceOf[Number].longValue()),
-            AsOrdered(Long.MaxValue)
+          rangeSet.add(
+            Range.open[AsOrdered[Long]](
+              AsOrdered(left.eval().asInstanceOf[Number].longValue()),
+              AsOrdered(Long.MaxValue)
+            )
           )
         }
-        range
+        rangeSet
       }
       case GreaterThanOrEqual(left, right) => {
-        var range: Range[AsOrdered[Long]] = null
+        val rangeSet = TreeRangeSet.create[AsOrdered[Long]]()
         if (!left.isInstanceOf[Literal] && right.isInstanceOf[Literal]) {
-          range = Range.closedOpen[AsOrdered[Long]](
-            AsOrdered(right.eval().asInstanceOf[Number].longValue()),
-            AsOrdered(Long.MaxValue)
+          rangeSet.add(
+            Range.closedOpen[AsOrdered[Long]](
+              AsOrdered(right.eval().asInstanceOf[Number].longValue()),
+              AsOrdered(Long.MaxValue)
+            )
           )
         }
         if (!right.isInstanceOf[Literal] && left.isInstanceOf[Literal]) {
-          range = Range.openClosed[AsOrdered[Long]](
-            AsOrdered(Long.MinValue),
-            AsOrdered(left.eval().asInstanceOf[Number].longValue())
+          rangeSet.add(
+            Range.openClosed[AsOrdered[Long]](
+              AsOrdered(Long.MinValue),
+              AsOrdered(left.eval().asInstanceOf[Number].longValue())
+            )
           )
         }
-        range
+        rangeSet
       }
       case EqualTo(left, right) => {
-        var range: Range[AsOrdered[Long]] = null
+        val rangeSet = TreeRangeSet.create[AsOrdered[Long]]()
         if (!left.isInstanceOf[Literal] && right.isInstanceOf[Literal]) {
-          range = Range.closed[AsOrdered[Long]](
-            AsOrdered(right.eval(null).asInstanceOf[Number].longValue()),
-            AsOrdered(right.eval(null).asInstanceOf[Number].longValue())
+          rangeSet.add(
+            Range.closed[AsOrdered[Long]](
+              AsOrdered(right.eval(null).asInstanceOf[Number].longValue()),
+              AsOrdered(right.eval(null).asInstanceOf[Number].longValue())
+            )
           )
         }
         if (!right.isInstanceOf[Literal] && left.isInstanceOf[Literal]) {
-          range = Range.closed[AsOrdered[Long]](
-            AsOrdered(left.eval(null).asInstanceOf[Number].longValue()),
-            AsOrdered(left.eval(null).asInstanceOf[Number].longValue())
+          rangeSet.add(
+            Range.closed[AsOrdered[Long]](
+              AsOrdered(left.eval(null).asInstanceOf[Number].longValue()),
+              AsOrdered(left.eval(null).asInstanceOf[Number].longValue())
+            )
           )
         }
-        range
+        rangeSet
       }
     }
-  }
 
   // exprs should be in the form of partition def + all filters got
   // involved with partition column.
   def canBePruned(exprs: Seq[Expression]): Boolean = {
-    var rangePoints = Range.all[AsOrdered[Long]]()
+    val rangePointsSet = TreeRangeSet.create[AsOrdered[Long]]()
     exprs.foreach((e) => {
-      val exprRange = buildExprRange(e)
-      // range points and range built from expression is
-      // not connected which implies we need scan this
-      // partition.
-      if (!rangePoints.isConnected(exprRange)) {
-        return true
+      if (rangePointsSet.isEmpty) {
+        rangePointsSet.addAll(buildExprRange(e))
+      } else {
+        val exprRangeSet = buildExprRange(e)
+        rangePointsSet.removeAll(exprRangeSet.complement())
       }
-      rangePoints = rangePoints.intersection(exprRange)
     })
-    rangePoints.isEmpty
+    rangePointsSet.isEmpty
   }
 
   // expression parsed by parseExpression will leave attribute as unresolved.
@@ -149,6 +168,11 @@ case class PartitionPruningRule(partitionExprs: List[Expression],
   // For date < '1992-01-01', expected result is 'date < 1992)' if part_expr is year.
   private def evalLiteralInBinaryComparison(expr: Expression): Expression =
     expr match {
+      case o @ Or(left, right) => {
+        o.withNewChildren(
+          Seq(evalLiteralInBinaryComparison(left), evalLiteralInBinaryComparison(right))
+        )
+      }
       case b @ BinaryComparison(left, right) => {
         var newB: Expression = null
         // only allowing `attribute > literal` or 'literal > attribute' form entering if branch.
@@ -172,30 +196,24 @@ case class PartitionPruningRule(partitionExprs: List[Expression],
   private def validExprCheck(exprs: Seq[Expression]): Boolean =
     return exprs.find((e) => e.isInstanceOf[UnaryExpression]).isEmpty
 
-  def pruning(accessConds: Seq[Expression], table: TiTableInfo): TiPartitionInfo =
-    // This check maybe redundant since accessConds pushed here
-    // is expected to be simple expr.
-    if (!validExprCheck(accessConds)) {
-      val filteredAccessConds =
-        accessConds.filter((e) => !e.isInstanceOf[IsNull] && !e.isInstanceOf[IsNotNull])
-      // this step applies partition expression on where condition.
-      // If we have a partition expr: year(date) - 1, when it comes to date < '1992-10-10',
-      // we need apply `year(date) - 1` on '1992-10-10'.
-      val transformedAccessConds = filteredAccessConds.map(evalLiteralInBinaryComparison)
+  def pruning(accessConds: Seq[Expression], table: TiTableInfo): TiPartitionInfo = {
+    val filteredAccessConds =
+      accessConds.filter((e) => !e.isInstanceOf[IsNull] && !e.isInstanceOf[IsNotNull])
+    // this step applies partition expression on where condition.
+    // If we have a partition expr: year(date) - 1, when it comes to date < '1992-10-10',
+    // we need apply `year(date) - 1` on '1992-10-10'.
+    val transformedAccessConds = filteredAccessConds.map(evalLiteralInBinaryComparison)
 
-      val residualPartDefs: java.util.List[TiPartitionDef] = new util.ArrayList[TiPartitionDef]()
-      ranges.zipWithIndex.foreach {
-        case (e, i) =>
-          if (!canBePruned(transformedAccessConds :+ e)) {
-            residualPartDefs.add(table.getPartitionInfo.getDefs.get(i))
-          }
-      }
-      val prunedPartInfo: TiPartitionInfo =
-        table.getPartitionInfo().clone
-      prunedPartInfo.setDefs(residualPartDefs)
-      prunedPartInfo
-    } else {
-      table.getPartitionInfo
+    val residualPartDefs: java.util.List[TiPartitionDef] = new util.ArrayList[TiPartitionDef]()
+    ranges.zipWithIndex.foreach {
+      case (e, i) =>
+        if (!canBePruned(transformedAccessConds :+ e)) {
+          residualPartDefs.add(table.getPartitionInfo.getDefs.get(i))
+        }
     }
-
+    val prunedPartInfo: TiPartitionInfo =
+      table.getPartitionInfo().clone
+    prunedPartInfo.setDefs(residualPartDefs)
+    prunedPartInfo
+  }
 }
