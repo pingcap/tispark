@@ -6,6 +6,7 @@ import org.apache.spark.sql.catalyst.expressions.{Expression, ExpressionDescript
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
+// CHECK Spark[[org.apache.spark.sql.catalyst.analysis.FunctionRegistry]]
 object TiSparkFunctionRegistry {
 
 // Note: Whenever we add a new entry here, make sure we also update ExpressionToSQLSuite

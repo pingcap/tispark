@@ -4,7 +4,7 @@ package org.apache.spark.sql
 class PartPruningSuite extends BaseTiSparkSuite {
   test("adding part pruning test") {}
 
-  test("part expr code gen test") {
+  test("part expr function code-gen test") {
     tidbStmt.execute("create table part_fn(d date)")
     tidbStmt.execute("insert into part_fn values ('1989-01-01'), ('2018-10-11')")
     refreshConnections()
@@ -64,7 +64,7 @@ class PartPruningSuite extends BaseTiSparkSuite {
     judge("select yearweek('1992-12-31', 7)")
   }
 
-  test("partition read") {
+  test("partition read(w/o pruning)") {
     tidbStmt.execute("DROP TABLE IF EXISTS `partition_t`")
     tidbStmt.execute("""
                        |CREATE TABLE `partition_t` (
