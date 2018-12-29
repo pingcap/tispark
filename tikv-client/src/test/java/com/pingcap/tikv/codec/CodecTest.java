@@ -22,10 +22,12 @@ import static org.junit.Assert.*;
 import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.codec.Codec.*;
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.util.Calendar;
 import java.util.TimeZone;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
@@ -525,5 +527,61 @@ public class CodecTest {
     assertEquals(UVARINT_FLAG, cdi.readByte());
     time2 = DateTimeCodec.readFromUVarInt(cdi, otherTz);
     assertEquals(time.getMillis(), time2.getMillis());
+  }
+
+  @Test
+  public void readNWriteDateTest() {
+    DateTimeZone defaultDateTimeZone = DateTimeZone.getDefault();
+    DateTimeZone testTz = DateTimeZone.forOffsetHours(-8);
+    TimeZone defaultTimeZone = TimeZone.getDefault();
+    TimeZone testTimeZone = TimeZone.getTimeZone("GMT-8");
+
+    DateTimeZone.setDefault(testTz);
+    TimeZone.setDefault(testTimeZone);
+
+    Date time = new Date(new LocalDate(2007, 3, 11).toDateTimeAtStartOfDay(testTz).getMillis());
+
+    CodecDataOutput cdo = new CodecDataOutput();
+    DateCodec.writeDateFully(cdo, time, testTz);
+    DateCodec.writeDateProto(cdo, time, testTz);
+
+    assertArrayEquals(
+        new byte[] {
+          (byte) 0x4,
+          (byte) 0x19,
+          (byte) 0x7b,
+          (byte) 0x96,
+          (byte) 0x00,
+          (byte) 0x00,
+          (byte) 0x00,
+          (byte) 0x00,
+          (byte) 0x00,
+          (byte) 0x19,
+          (byte) 0x7b,
+          (byte) 0x96,
+          (byte) 0x00,
+          (byte) 0x00,
+          (byte) 0x00,
+          (byte) 0x00,
+          (byte) 0x00,
+        },
+        cdo.toBytes());
+
+    CodecDataInput cdi = new CodecDataInput(cdo.toBytes());
+    assertEquals(UINT_FLAG, cdi.readByte());
+    LocalDate time2 = DateCodec.readFromUInt(cdi);
+    assertEquals(time.getTime(), time2.toDate().getTime());
+    time2 = DateCodec.readFromUInt(cdi);
+    assertEquals(time.getTime(), time2.toDate().getTime());
+
+    cdo.reset();
+    IntegerCodec.writeULongFully(cdo, DateCodec.toPackedLong(time, testTz), false);
+    cdi = new CodecDataInput(cdo.toBytes());
+    assertEquals(UVARINT_FLAG, cdi.readByte());
+    time2 = DateCodec.readFromUVarInt(cdi);
+    assertEquals(time.getTime(), time2.toDate().getTime());
+
+    DateTimeZone.setDefault(defaultDateTimeZone);
+    TimeZone.setDefault(defaultTimeZone);
   }
 }

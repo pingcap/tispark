@@ -36,13 +36,6 @@ public class CodecDataInput implements DataInput {
       this.count = buf.length;
     }
 
-    public UnSyncByteArrayInputStream(byte buf[], int offset, int length) {
-      this.buf = buf;
-      this.pos = offset;
-      this.count = Math.min(offset + length, buf.length);
-      this.mark = offset;
-    }
-
     public int read() {
       return (pos < count) ? (buf[pos++] & 0xff) : -1;
     }

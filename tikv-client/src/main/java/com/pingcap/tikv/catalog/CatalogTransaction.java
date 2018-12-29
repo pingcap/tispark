@@ -114,6 +114,9 @@ public class CatalogTransaction {
     List<Pair<ByteString, ByteString>> fields = new ArrayList<>();
     while (iterator.hasNext()) {
       Kvrpcpb.KvPair kv = iterator.next();
+      if (kv == null || kv.getKey() == null) {
+        continue;
+      }
       if (!KeyUtils.hasPrefix(kv.getKey(), encodedKey)) {
         break;
       }
