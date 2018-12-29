@@ -197,7 +197,8 @@ case class PartitionPruningRule(partitionExprs: List[Expression],
     return exprs.find((e) => e.isInstanceOf[UnaryExpression]).isEmpty
 
   def pruning(accessConds: Seq[Expression], table: TiTableInfo): TiPartitionInfo = {
-    val filteredAccessConds =
+    if(accessConds.nonEmpty) {
+      val filteredAccessConds =
       accessConds.filter((e) => !e.isInstanceOf[IsNull] && !e.isInstanceOf[IsNotNull])
     // this step applies partition expression on where condition.
     // If we have a partition expr: year(date) - 1, when it comes to date < '1992-10-10',
@@ -215,5 +216,9 @@ case class PartitionPruningRule(partitionExprs: List[Expression],
       table.getPartitionInfo().clone
     prunedPartInfo.setDefs(residualPartDefs)
     prunedPartInfo
+  } else {
+      table.getPartitionInfo
   }
+}
+
 }

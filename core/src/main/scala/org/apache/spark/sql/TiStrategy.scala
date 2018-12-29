@@ -248,7 +248,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     if (source.isPartitioned) {
       if (source.isRangePart) {
         // split condition with partition column and residual column
-        val (accessConds: Seq[Expression], _) = filters.partition(
+        val (accessConds: Seq[Expression], nonPartColFilters: Seq[Expression]) = filters.partition(
           (expr: Expression) =>
             expr
               .find((e) => e.isInstanceOf[AttributeReference])
@@ -256,8 +256,11 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
               .asInstanceOf[AttributeReference]
               .name == source.partPruningRule.columnName
         )
-
-        dagRequest.setPartInfo(source.partPruningRule.pruning(accessConds, source.table))
+        if(nonPartColFilters.isEmpty) {
+          dagRequest.setPartInfo(source.partPruningRule.pruning(accessConds, source.table))
+        } else {
+          dagRequest.setPartInfo(source.table.getPartitionInfo)
+        }
       } else {
         throw new IllegalArgumentException("Partition reading only supports on range partition.")
       }

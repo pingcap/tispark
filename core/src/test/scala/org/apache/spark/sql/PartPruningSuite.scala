@@ -6,9 +6,8 @@ import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 // NOTE: when you create new table, remember drop them at after all.
 class PartPruningSuite extends BaseTiSparkSuite {
   private def extractDAGReq(df: DataFrame): TiDAGRequest =
-    if (!df.queryExecution.executedPlan
-          .find(e => e.isInstanceOf[CoprocessorRDD])
-          .isEmpty) {
+    if (df.queryExecution.executedPlan
+      .find(e => e.isInstanceOf[CoprocessorRDD]).isDefined) {
       df.queryExecution.executedPlan
         .find(e => e.isInstanceOf[CoprocessorRDD])
         .get
@@ -143,6 +142,7 @@ class PartPruningSuite extends BaseTiSparkSuite {
       ).getPartInfo.getDefs
         .size() == 3
     )
+
     assert(
       extractDAGReq(
         spark
@@ -216,6 +216,19 @@ class PartPruningSuite extends BaseTiSparkSuite {
             )
         ).getPartInfo.getDefs
         pDef.size() == 1 && pDef.get(0).getName == "p1"
+      }
+    )
+
+    assert(
+      {
+        val pDef = extractDAGReq(
+          spark
+            // id column is involved in, hence partition pruning will not work.
+            .sql(
+              "select * from partition_t where purchased > date'1998-10-07' and purchased < date'1998-10-09' and id > 10"
+            )
+        ).getPartInfo.getDefs
+        pDef.size() == 3
       }
     )
   }
