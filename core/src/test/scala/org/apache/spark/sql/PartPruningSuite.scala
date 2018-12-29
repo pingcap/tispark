@@ -1,5 +1,15 @@
 package org.apache.spark.sql
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.protobuf.ByteString
+import com.pingcap.tikv.catalog.CatalogTransaction
+import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tispark.TiDBRelation
+import org.apache.spark.sql.catalyst.rules
+import org.apache.spark.sql.execution.CoprocessorRDD
+import org.apache.spark.sql.extensions.TiResolutionRule
+import org.apache.spark.sql.tispark.TiRDD
+
 // NOTE: when you create new table, remember drop them at after all.
 class PartPruningSuite extends BaseTiSparkSuite {
   test("adding part pruning test") {
@@ -11,12 +21,29 @@ class PartPruningSuite extends BaseTiSparkSuite {
                        |  `purchased` date DEFAULT NULL
                        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
                        |PARTITION BY RANGE ( weekday(purchased) ) (
-                       |  PARTITION p0 VALUES LESS THAN (1990),
-                       |  PARTITION p1 VALUES LESS THAN (1995),
-                       |  PARTITION p2 VALUES LESS THAN (2000),
-                       |  PARTITION p3 VALUES LESS THAN (2005)
+                       |  PARTITION p0 VALUES LESS THAN (2),
+                       |  PARTITION p1 VALUES LESS THAN (4),
+                       |  PARTITION p2 VALUES LESS THAN (6)
                        |)
                      """.stripMargin)
+    refreshConnections()
+//    assert(spark.sql("select * from partition_t").queryExecution.executedPlan.find(e => e.isInstanceOf[CoprocessorRDD])
+//      .get.asInstanceOf[CoprocessorRDD].tiRdd.dagRequest.getPartInfo.getDefs.size() == 3)
+    // select weekday('1998-10-10') is 5
+    assert(
+      spark
+        .sql("select * from partition_t where purchased = date'1998-10-10'")
+        .queryExecution
+        .executedPlan
+        .find(e => e.isInstanceOf[CoprocessorRDD])
+        .get
+        .asInstanceOf[CoprocessorRDD]
+        .tiRdd
+        .dagRequest
+        .getPartInfo
+        .getDefs
+        .size() == 1
+    )
   }
 
   test("part expr function code-gen test") {

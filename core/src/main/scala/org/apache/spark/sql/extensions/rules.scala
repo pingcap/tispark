@@ -97,7 +97,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
       } else {
         // NULL will locate in the first partition, so its expression is
         // (expr < value or expr is null).
-        sb.append(s" or ((${pInfo.getExpr}) is null)")
+//        sb.append(s" or ((${pInfo.getExpr}) is null)")
 
         // Since we build a expression string and let SparkSQLParser parses
         // such expression. The expected attribute is always [[UnresolvedAttribute]],

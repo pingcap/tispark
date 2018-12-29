@@ -57,9 +57,6 @@ case class PartitionPruningRule(partitionExprs: List[Expression],
         }
         range
       }
-      case IsNotNull(_) | IsNull(_) => {
-        Range.all[AsOrdered[Long]]
-      }
       case Or(left, right) => {
         val leftRange = buildExprRange(left)
         val rightRange = buildExprRange(right)
@@ -105,15 +102,15 @@ case class PartitionPruningRule(partitionExprs: List[Expression],
       case EqualTo(left, right) => {
         var range: Range[AsOrdered[Long]] = null
         if (!left.isInstanceOf[Literal] && right.isInstanceOf[Literal]) {
-          range = Range.open[AsOrdered[Long]](
-            AsOrdered(Long.MinValue),
-            AsOrdered(right.eval(null).asInstanceOf[Long])
+          range = Range.closed[AsOrdered[Long]](
+            AsOrdered(right.eval(null).asInstanceOf[Number].longValue()),
+            AsOrdered(right.eval(null).asInstanceOf[Number].longValue())
           )
         }
         if (!right.isInstanceOf[Literal] && left.isInstanceOf[Literal]) {
-          range = Range.open[AsOrdered[Long]](
-            AsOrdered(Long.MinValue),
-            AsOrdered(left.eval(null).asInstanceOf[Long])
+          range = Range.closed[AsOrdered[Long]](
+            AsOrdered(left.eval(null).asInstanceOf[Number].longValue()),
+            AsOrdered(left.eval(null).asInstanceOf[Number].longValue())
           )
         }
         range
@@ -175,7 +172,7 @@ case class PartitionPruningRule(partitionExprs: List[Expression],
   private def validExprCheck(exprs: Seq[Expression]): Boolean =
     return exprs.find((e) => e.isInstanceOf[UnaryExpression]).isEmpty
 
-  def pruning(accessConds: Seq[Expression], table: TiTableInfo): TiPartitionInfo = {
+  def pruning(accessConds: Seq[Expression], table: TiTableInfo): TiPartitionInfo =
     // This check maybe redundant since accessConds pushed here
     // is expected to be simple expr.
     if (!validExprCheck(accessConds)) {
@@ -196,8 +193,9 @@ case class PartitionPruningRule(partitionExprs: List[Expression],
       val prunedPartInfo: TiPartitionInfo =
         table.getPartitionInfo().clone
       prunedPartInfo.setDefs(residualPartDefs)
+      prunedPartInfo
+    } else {
+      table.getPartitionInfo
     }
-    table.getPartitionInfo
-  }
 
 }
