@@ -28,7 +28,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
 ) extends Rule[LogicalPlan] {
-  protected lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
+  protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val autoLoad = tiContext.autoLoad
   protected lazy val meta: MetaManager = tiContext.meta
   private lazy val tiCatalog = tiContext.tiCatalog
