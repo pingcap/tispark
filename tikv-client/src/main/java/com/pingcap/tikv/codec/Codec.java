@@ -38,7 +38,7 @@ public class Codec {
   public static final int UVARINT_FLAG = 9;
   public static final int JSON_FLAG = 10;
   public static final int MAX_FLAG = 250;
-  private static final long SIGN_MASK = ~Long.MAX_VALUE;
+  public static final long SIGN_MASK = ~Long.MAX_VALUE;
 
   public static boolean isNullFlag(int flag) {
     return flag == NULL_FLAG;

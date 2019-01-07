@@ -69,13 +69,14 @@ public class SetType extends DataType {
     List<String> items = new ArrayList<>();
     int length = this.getElems().size();
     for (int i = 0; i < length; i++) {
-      if ((number & setIndexValue[i]) > 0) {
+      long checker = number & setIndexValue[i];
+      if (checker != 0) {
         items.add(this.getElems().get(i));
         number &= setIndexInvertValue[i];
       }
     }
 
-    if (number != 0) {
+    if (number != Long.MIN_VALUE && number != 0) {
       throw new TypeException(String.format("invalid number %d for Set %s", number, getElems()));
     }
 
