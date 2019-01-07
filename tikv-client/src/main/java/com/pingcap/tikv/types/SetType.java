@@ -42,7 +42,9 @@ public class SetType extends DataType {
   private long[] initSetIndexInvertVal() {
     long[] tmpArr = new long[64];
     for (int i = 0; i < 64; i++) {
-      tmpArr[i] ^= 1 << i;
+      // In TiDB code base, it is taking complement of original value.
+      // setIndexInvertValue[i] = ^setIndexValue[i] is invalid in Java.
+      tmpArr[i] = setIndexValue[i] ^ -1L;
     }
     return tmpArr;
   }
@@ -50,7 +52,7 @@ public class SetType extends DataType {
   private long[] initSetIndexVal() {
     long[] tmpArr = new long[64];
     for (int i = 0; i < 64; i++) {
-      tmpArr[i] = 1 << i;
+      tmpArr[i] = 1L << i;
     }
     return tmpArr;
   }
@@ -63,16 +65,21 @@ public class SetType extends DataType {
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
-    int number = (int) IntegerCodec.readUVarLong(cdi);
+    long number = IntegerCodec.readUVarLong(cdi);
     List<String> items = new ArrayList<>();
-    for (int i = 0; i < this.getElems().size(); i++) {
-      if ((number & setIndexValue[i]) > 0) {
+    int length = this.getElems().size();
+    for (int i = 0; i < length; i++) {
+      // Long.MIN_VALUE is -9223372036854775808 with 1000...000 binary string.
+      // setIndexValue[63] is also Long.MIN_VALUE, hence number & setIndexValue yields
+      // Long.MIN_VALUE which is not 0(other cases will yield 0)
+      long checker = number & setIndexValue[i];
+      if (checker != 0) {
         items.add(this.getElems().get(i));
         number &= setIndexInvertValue[i];
       }
     }
 
-    if (number == 0) {
+    if (number != 0) {
       throw new TypeException(String.format("invalid number %d for Set %s", number, getElems()));
     }
 

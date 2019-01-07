@@ -38,13 +38,13 @@ public class Codec {
   public static final int UVARINT_FLAG = 9;
   public static final int JSON_FLAG = 10;
   public static final int MAX_FLAG = 250;
+  public static final long SIGN_MASK = ~Long.MAX_VALUE;
 
   public static boolean isNullFlag(int flag) {
     return flag == NULL_FLAG;
   }
 
   public static class IntegerCodec {
-    private static final long SIGN_MASK = ~Long.MAX_VALUE;
 
     private static long flipSignBit(long v) {
       return v ^ SIGN_MASK;
@@ -332,9 +332,6 @@ public class Codec {
   }
 
   public static class RealCodec {
-
-    private static final long signMask = 0x8000000000000000L;
-
     /**
      * Decode as float
      *
@@ -354,7 +351,7 @@ public class Codec {
     private static long encodeDoubleToCmpLong(double val) {
       long u = Double.doubleToRawLongBits(val);
       if (val >= 0) {
-        u |= signMask;
+        u |= SIGN_MASK;
       } else {
         u = ~u;
       }
