@@ -69,6 +69,9 @@ public class SetType extends DataType {
     List<String> items = new ArrayList<>();
     int length = this.getElems().size();
     for (int i = 0; i < length; i++) {
+      // Long.MIN_VALUE is -9223372036854775808 with 1000...000 binary string.
+      // setIndexValue[63] is also Long.MIN_VALUE, hence number & setIndexValue yields
+      // Long.MIN_VALUE which is not 0(other cases will yield 0)
       long checker = number & setIndexValue[i];
       if (checker != 0) {
         items.add(this.getElems().get(i));
@@ -76,7 +79,7 @@ public class SetType extends DataType {
       }
     }
 
-    if (number != Long.MIN_VALUE && number != 0) {
+    if (number != 0) {
       throw new TypeException(String.format("invalid number %d for Set %s", number, getElems()));
     }
 
