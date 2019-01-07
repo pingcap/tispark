@@ -42,6 +42,8 @@ public class SetType extends DataType {
   private long[] initSetIndexInvertVal() {
     long[] tmpArr = new long[64];
     for (int i = 0; i < 64; i++) {
+      // In TiDB code base, it is taking complement of original value.
+      // setIndexInvertValue[i] = ^setIndexValue[i] is invalid in Java.
       tmpArr[i] = setIndexValue[i] ^ -1L;
     }
     return tmpArr;
@@ -63,9 +65,10 @@ public class SetType extends DataType {
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
-    int number = (int) IntegerCodec.readUVarLong(cdi);
+    long number = IntegerCodec.readUVarLong(cdi);
     List<String> items = new ArrayList<>();
-    for (int i = 0; i < this.getElems().size(); i++) {
+    int length = this.getElems().size();
+    for (int i = 0; i < length; i++) {
       if ((number & setIndexValue[i]) > 0) {
         items.add(this.getElems().get(i));
         number &= setIndexInvertValue[i];
