@@ -254,8 +254,6 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge("select cast(count(1) as char(20)) from `tmp_empty_tbl`")
   }
 
-
-
   override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists t")

@@ -74,8 +74,7 @@ class TiDBTypeTestSuite extends BaseTiSparkSuite {
     judge("select * from enum_t where priority = 'High'")
   }
 
-
-test("adding json support") {
+  test("adding json support") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(json_doc json)")
     tidbStmt.execute(
