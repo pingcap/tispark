@@ -35,7 +35,6 @@ import scala.collection.mutable.ListBuffer
 class TiRDD(val dagRequest: TiDAGRequest,
             val tiConf: TiConfiguration,
             val tableRef: TiTableReference,
-            val ts: TiTimestamp,
             @transient private val session: TiSession,
             @transient private val sparkSession: SparkSession)
     extends RDD[Row](sparkSession.sparkContext, Nil) {
@@ -62,6 +61,11 @@ class TiRDD(val dagRequest: TiDAGRequest,
     private val tiPartition = split.asInstanceOf[TiPartition]
     private val session = TiSessionCache.getSession(tiConf)
     session.injectCallBackFunc(callBackFunc)
+    val ts = if (dagRequest.getStartTs == null) {
+      session.getTimestamp
+    } else {
+      dagRequest.getStartTs
+    }
     private val snapshot = session.createSnapshot(ts)
     private[this] val tasks = tiPartition.tasks
 

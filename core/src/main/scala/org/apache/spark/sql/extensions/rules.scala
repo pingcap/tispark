@@ -14,6 +14,7 @@
  */
 package org.apache.spark.sql.extensions
 
+import com.pingcap.tikv.meta.TiTimestamp
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.{AnalysisException, _}
 import org.apache.spark.sql.catalyst.TableIdentifier
@@ -38,8 +39,8 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
     tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
 
-  protected val resolveTiDBRelation: TableIdentifier => LogicalPlan =
-    (tableIdentifier: TableIdentifier) => {
+  protected val resolveTiDBRelation: (TableIdentifier, TiTimestamp) => LogicalPlan =
+    (tableIdentifier: TableIdentifier, ts: TiTimestamp) => {
       val dbName = getDatabaseFromIdentifier(tableIdentifier)
       val tableName = tableIdentifier.table
       val table = meta.getTable(dbName, tableName)
@@ -53,17 +54,23 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
       val tiDBRelation = TiDBRelation(
         tiSession,
         TiTableReference(dbName, tableName, sizeInBytes),
-        meta
+        meta,
+        Some(ts)
       )(sqlContext)
       // Use SubqueryAlias so that projects and joins can correctly resolve
       // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
       SubqueryAlias(tableName, LogicalRelation(tiDBRelation))
     }
 
-  override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
-    case UnresolvedRelation(tableIdentifier)
-        if tiCatalog.catalogOf(tableIdentifier.database).exists(_.isInstanceOf[TiSessionCatalog]) =>
-      resolveTiDBRelation(tableIdentifier)
+  override def apply(plan: LogicalPlan): LogicalPlan = {
+    val ts = tiContext.tiSession.getTimestamp
+    plan transformUp {
+      case UnresolvedRelation(tableIdentifier)
+          if tiCatalog
+            .catalogOf(tableIdentifier.database)
+            .exists(_.isInstanceOf[TiSessionCatalog]) =>
+        resolveTiDBRelation(tableIdentifier, ts)
+    }
   }
 }
 

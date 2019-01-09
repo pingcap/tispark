@@ -21,7 +21,7 @@ import com.google.common.primitives.UnsignedLong
 import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
 import com.pingcap.tikv.key.{Key, TypedKey}
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.{DataType, DataTypeFactory, MySQLType}
@@ -200,7 +200,7 @@ object StatisticsHelper {
 
   private[statistics] def buildHistogramsRequest(histTable: TiTableInfo,
                                                  targetTblId: Long,
-                                                 startTs: Long): TiDAGRequest =
+                                                 startTs: TiTimestamp): TiDAGRequest =
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(histTable)
@@ -219,7 +219,7 @@ object StatisticsHelper {
 
   private[statistics] def buildMetaRequest(metaTable: TiTableInfo,
                                            targetTblId: Long,
-                                           startTs: Long): TiDAGRequest =
+                                           startTs: TiTimestamp): TiDAGRequest =
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(metaTable)
@@ -233,7 +233,7 @@ object StatisticsHelper {
 
   private[statistics] def buildBucketRequest(bucketTable: TiTableInfo,
                                              targetTblId: Long,
-                                             startTs: Long): TiDAGRequest =
+                                             startTs: TiTimestamp): TiDAGRequest =
     TiDAGRequest.Builder
       .newBuilder()
       .setFullTableScan(bucketTable)
