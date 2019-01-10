@@ -237,11 +237,18 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Scala Format Plug-in -->
             <plugin>
                 <groupId>org.antipathy</groupId>
-                <artifactId>mvn-scalafmt</artifactId>
-                <version>0.7_1.5.1</version>
+                <artifactId>mvn-scalafmt_${scala.version}</artifactId>
+                <version>0.10_1.5.1</version>
                 <configuration>
+                    <sourceDirectories> <!-- (Optional) Paths to source-directories. Overrides ${project.build.sourceDirectory} -->
+                        <param>${project.basedir}/src/main/scala</param>
+                    </sourceDirectories>
+                    <testSourceDirectories> <!-- (Optional) Paths to test-source-directories. Overrides ${project.build.testSourceDirectory} -->
+                        <param>${project.basedir}/src/test/scala</param>
+                    </testSourceDirectories>
                     <configLocation>${project.basedir}/scalafmt.conf</configLocation>
                 </configuration>
                 <executions>
