@@ -54,13 +54,6 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>${tispark.sourceDirectory}</sourceDirectory>
-        <testSourceDirectory>${tispark.testSourceDirectory}</testSourceDirectory>
-        <resources>
-            <resource>
-                <directory>${tispark.resourcesDirectory}</directory>
-            </resource>
-        </resources>
         <extensions>
             <extension>
                 <groupId>kr.motd.maven</groupId>
