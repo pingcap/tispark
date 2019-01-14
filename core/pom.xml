@@ -13,7 +13,6 @@
     <packaging>jar</packaging>
     <name>TiSpark Project Core</name>
     <url>http://github.copm/pingcap/tispark</url>
-    <version>${tispark.version}</version>
 
     <properties>
         <scalaj.version>2.3.0</scalaj.version>
