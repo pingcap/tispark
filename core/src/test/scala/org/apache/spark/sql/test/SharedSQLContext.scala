@@ -187,7 +187,7 @@ object SharedSQLContext extends Logging {
 
       val jdbcPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
 
-      val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toBoolean
+      val loadData = getFlag(_tidbConf, SHOULD_LOAD_DATA)
 
       jdbcUrl =
         s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
@@ -243,7 +243,7 @@ object SharedSQLContext extends Logging {
 
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
-      sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
+      sparkConf.set(ALLOW_INDEX_READ, getFlag(prop, ALLOW_INDEX_READ).toString)
       sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
       sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
       sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
