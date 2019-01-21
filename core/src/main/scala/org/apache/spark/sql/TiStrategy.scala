@@ -73,13 +73,13 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   }
 
   private def allowAggregationPushdown(): Boolean =
-    sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toBoolean
+    sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toLowerCase.toBoolean
 
   private def allowIndexDoubleRead(): Boolean =
-    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "false").toBoolean
+    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "false").toLowerCase.toBoolean
 
   private def useStreamingProcess(): Boolean =
-    sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toBoolean
+    sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
   private def timeZoneOffset(): Int =
     sqlConf
