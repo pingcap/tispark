@@ -6,7 +6,7 @@ at same directory. The way to address this need is setting tidb up as metastore 
 
 ## Setup TiDB
 
-First you need have a TiDB cluster present, and then use a mysql client log into TiDB cluster. 
+First you need a TiDB cluster, and then use a mysql client log into TiDB cluster. 
 
 You will need to create a TiDB user for Spark to access the metastore.
 
@@ -16,7 +16,16 @@ GRANT ALL PRIVILEGES ON metastore.* TO 'hive'@'%';
 FLUSH PRIVILEGES;
 ```
 
-It helps you create a user and grant access privileges to all databases and tables. 
+It helps you create a user and grant access privileges to all databases and tables. Something need to
+be noted is:
+
+> This is actually very dangerous and not recommended. If you rely on spark itself to initialize metastore, 
+please do following:
+> 1. Make sure there is no existing metastore. If so, please use official spark schema tools to upgrade or migrate.
+> 2. Fill in root account in hive-site.xml. Let spark use root account to create metastore tables.
+> 3. Then switch back to a normal account without any create table and alter table privileges.
+>
+> This preventing unexpected schema corruption when code changes.
 
 ## Adding hive-site.xml configuration to Spark
 
