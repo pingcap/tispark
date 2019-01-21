@@ -1,13 +1,14 @@
 # Setting TiDB as metastore db
 
-Generally sparking, you need setup tidb first and then copy `hive-site.xml` into Spark's `conf`
-directory.
+From time to time, users may need run multiple `spark-shell`s at same directory which often leads to some 
+exceptions. Exceptions caused by lock conflicts: you already have a spark-shell running which blocks you run another spark-shell
+at same directory. The way to address this need is setting tidb up as metastore db. 
 
 ## Setup TiDB
 
 First you need have a TiDB cluster present, and then use a mysql client log into TiDB cluster. 
 
-You will need execute the following command:
+You will need to create a TiDB user for Spark to access the metastore.
 
 ```$xslt
 CREATE USER 'hive'@'%' IDENTIFIED BY 'mine';
@@ -19,9 +20,7 @@ It helps you create a user and grant access privileges to all databases and tabl
 
 ## Adding hive-site.xml configuration to Spark
 
-Then you can find a sample conf file at config directory at [tispark](https://github.com/pingcap/tispark)
-project. What you need to do is copy and paste such file into `SPARK_HOME/conf`. One last thing to mention 
-is that you need to adjust some properties if you change the user name or user password at 
-setting up tidb step. 
+Then you can find a sample conf file [hive-site.xml.template](../config/hive-site.xml.template) and 
+adjust some settings. You also need put the file into `SPARK_HOME/conf`.
 
 After you finish these two steps, you are able to use tidb to store meta info of Spark.
