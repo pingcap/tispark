@@ -44,8 +44,7 @@ metastore.
 
 ## Adding hive-site.xml configuration to Spark
 
-Then you can find a sample conf file [hive-site.xml.template](../config/h
-ive-site.xml.template) and 
+Then you can find a sample conf file [hive-site.xml.template](../config/hive-site.xml.template) and 
 adjust some settings. You also need put the file into `SPARK_HOME/conf`.
 
 After you finish these two steps, you are able to use tidb to store meta info of Spark.
