@@ -111,7 +111,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagRequest: TiDAGRequest
   ): SparkPlan = {
     val table = source.table
+    val ts = source.ts.getOrElse(source.session.getTimestamp)
     dagRequest.setTableInfo(table)
+    dagRequest.setStartTs(ts)
     // Need to resolve column info after add aggregation push downs
     dagRequest.resolve()
 
@@ -272,7 +274,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       // need to set isDoubleRead to true for dagRequest in case of double read
       dagRequest.setIsDoubleRead(scanPlan.isDoubleRead)
     }
+
+    val ts = source.ts.getOrElse(source.session.getTimestamp)
     dagRequest.setTableInfo(source.table)
+    dagRequest.setStartTs(ts)
     dagRequest.setEstimatedCount(scanPlan.getEstimatedRowCount)
     dagRequest
   }

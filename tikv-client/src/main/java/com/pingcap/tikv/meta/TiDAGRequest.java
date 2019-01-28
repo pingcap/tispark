@@ -16,6 +16,7 @@
 package com.pingcap.tikv.meta;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
 import static java.util.Objects.requireNonNull;
 
@@ -55,7 +56,7 @@ public class TiDAGRequest implements Serializable {
     private List<Coprocessor.KeyRange> ranges = new ArrayList<>();
     private TiTableInfo tableInfo;
     private int limit;
-    private long startTs;
+    private TiTimestamp startTs;
 
     public static Builder newBuilder() {
       return new Builder();
@@ -109,7 +110,7 @@ public class TiDAGRequest implements Serializable {
       return this;
     }
 
-    public Builder setStartTs(long ts) {
+    public Builder setStartTs(TiTimestamp ts) {
       this.startTs = ts;
       return this;
     }
@@ -195,7 +196,7 @@ public class TiDAGRequest implements Serializable {
   private int limit;
   private int timeZoneOffset;
   private long flags;
-  private long startTs;
+  private TiTimestamp startTs;
   private Expression having;
   private boolean distinct;
   private boolean handleNeeded;
@@ -252,7 +253,8 @@ public class TiDAGRequest implements Serializable {
    */
   public DAGRequest buildScan(boolean isIndexScan) {
     long id = tableInfo.getId();
-    checkArgument(startTs != 0, "timestamp is 0");
+    checkNotNull(startTs, "startTs is null");
+    checkArgument(startTs.getVersion() != 0, "timestamp is 0");
     DAGRequest.Builder dagRequestBuilder = DAGRequest.newBuilder();
     Executor.Builder executorBuilder = Executor.newBuilder();
     IndexScan.Builder indexScanBuilder = IndexScan.newBuilder();
@@ -430,7 +432,7 @@ public class TiDAGRequest implements Serializable {
         dagRequestBuilder
             .setTimeZoneOffset(timeZoneOffset)
             .setFlags(flags)
-            .setStartTs(startTs)
+            .setStartTs(startTs.getVersion())
             .build();
 
     validateRequest(request);
@@ -543,12 +545,13 @@ public class TiDAGRequest implements Serializable {
    * @param startTs timestamp
    * @return a TiDAGRequest
    */
-  public TiDAGRequest setStartTs(long startTs) {
+  public TiDAGRequest setStartTs(TiTimestamp startTs) {
     this.startTs = startTs;
     return this;
   }
 
-  long getStartTs() {
+  @VisibleForTesting
+  public TiTimestamp getStartTs() {
     return startTs;
   }
 

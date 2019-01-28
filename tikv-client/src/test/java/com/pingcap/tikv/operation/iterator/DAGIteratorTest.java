@@ -36,6 +36,7 @@ import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
@@ -123,7 +124,7 @@ public class DAGIteratorTest {
     req.setTableInfo(table);
     req.addRequiredColumn(ColumnRef.create("c1"));
     req.addRequiredColumn(ColumnRef.create("c2"));
-    req.setStartTs(1);
+    req.setStartTs(new TiTimestamp(0, 1));
     req.resolve();
 
     List<KeyRange> keyRanges =

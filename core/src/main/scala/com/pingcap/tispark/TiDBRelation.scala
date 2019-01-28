@@ -26,7 +26,10 @@ import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
 
-case class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaManager)(
+case class TiDBRelation(session: TiSession,
+                        tableRef: TiTableReference,
+                        meta: MetaManager,
+                        ts: Option[TiTimestamp] = None)(
   @transient val sqlContext: SQLContext
 ) extends BaseRelation {
   val table: TiTableInfo = meta
@@ -37,16 +40,16 @@ case class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: Me
 
   override def sizeInBytes: Long = tableRef.sizeInBytes
 
-  def logicalPlanToRDD(dagRequest: TiDAGRequest): TiRDD = {
-    val ts: TiTimestamp = session.getTimestamp
-    dagRequest.setStartTs(ts.getVersion)
-
-    new TiRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
-  }
+  def logicalPlanToRDD(dagRequest: TiDAGRequest): TiRDD =
+    new TiRDD(dagRequest, session.getConf, tableRef, session, sqlContext.sparkSession)
 
   def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
-    val ts: TiTimestamp = session.getTimestamp
-    dagRequest.setStartTs(ts.getVersion)
+    val ts: TiTimestamp = if (dagRequest.getStartTs() == null) {
+      session.getTimestamp
+    } else {
+      dagRequest.getStartTs
+    }
+    dagRequest.setStartTs(ts)
     dagRequest.resolve()
 
     val tiHandleRDD =

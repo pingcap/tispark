@@ -59,7 +59,7 @@ public class TiDAGRequestTest {
     dagRequest.addRequiredColumn(col1);
     dagRequest.setLimit(0);
     dagRequest.setTableInfo(table);
-    dagRequest.setStartTs(1);
+    dagRequest.setStartTs(new TiTimestamp(0, 1));
     dagRequest.buildScan(false);
   }
 
@@ -86,7 +86,7 @@ public class TiDAGRequestTest {
         .addGroupByItem(ByItem.create(ColumnRef.create("c2", table), true))
         .addOrderByItem(ByItem.create(ColumnRef.create("c3", table), false))
         .setTableInfo(table)
-        .setStartTs(666)
+        .setStartTs(new TiTimestamp(0, 666))
         .setTruncateMode(TiDAGRequest.TruncateMode.IgnoreTruncation)
         .setDistinct(true)
         .setIndexInfo(table.getIndices().get(0))
