@@ -8,7 +8,7 @@ at same directory. The way to address this need is setting tidb up as metastore 
 
 First you need a TiDB cluster(before 2.1 release), and then use a mysql client log into TiDB cluster. 
 
-You will need to create a TiDB user, `hive` with password `mine`, for Spark to access the metastore.
+You will need to create a TiDB user with its password, e.g., `hive` with password `mine`, for Spark to access the metastore.
 
 ```$xslt
 CREATE USER 'hive'@'%' IDENTIFIED BY 'mine';
@@ -17,8 +17,6 @@ FLUSH PRIVILEGES;
 ```
 
 Above SQLs help you create a user and grant access privileges to tables under `metastore_db`. 
-
-When it comes to your case, you may change the user name `hive` and its password `mine` to something else.
 
 ### When you rely on spark itself to initialize metastore
 
