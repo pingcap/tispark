@@ -104,13 +104,13 @@ public class ScanAnalyzer {
   }
 
   // build a scan for debug purpose.
-  public ScanPlan buildScan(
+  public ScanPlan buildIndexScan(
       List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
-    return buildScan(columnList, conditions, table, null);
+    return buildIndexScan(columnList, conditions, table, null);
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildScan(
+  public ScanPlan buildIndexScan(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiTableInfo table,
@@ -118,7 +118,7 @@ public class ScanAnalyzer {
     ScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildScan(columnList, conditions, index, table, tableStatistics);
+      ScanPlan plan = buildIndexScan(columnList, conditions, index, table, tableStatistics);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -130,10 +130,10 @@ public class ScanAnalyzer {
   public ScanPlan buildTableScan(
       List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
+    return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
   }
 
-  public ScanPlan buildScan(
+  public ScanPlan buildIndexScan(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiIndexInfo index,

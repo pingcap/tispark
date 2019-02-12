@@ -268,7 +268,7 @@ public class ScanAnalyzerTest {
     TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanAnalyzer scanBuilder = new ScanAnalyzer();
     ScanAnalyzer.ScanPlan scanPlan =
-        scanBuilder.buildScan(ImmutableList.of(), ImmutableList.of(), index, table, null);
+        scanBuilder.buildIndexScan(ImmutableList.of(), ImmutableList.of(), index, table, null);
 
     ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
     ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();
