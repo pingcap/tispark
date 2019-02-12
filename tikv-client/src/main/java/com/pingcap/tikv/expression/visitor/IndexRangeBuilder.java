@@ -91,6 +91,7 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
   }
 
   @Override
+  @SuppressWarnings("Duplicates")
   protected RangeSet<TypedKey> visit(ComparisonBinaryExpression node, Void context) {
     NormalizedPredicate predicate = node.normalize();
     if (predicate == null) {

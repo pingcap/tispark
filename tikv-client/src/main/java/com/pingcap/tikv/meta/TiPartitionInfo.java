@@ -20,10 +20,15 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiPartitionInfo implements Serializable {
+
+  public long getType() {
+    return type;
+  }
 
   public enum PartitionType {
     RangePartition,
@@ -32,13 +37,13 @@ public class TiPartitionInfo implements Serializable {
     InvalidPartition,
   }
 
-  private final PartitionType type;
+  private final long type;
   private final String expr;
-  private final List<CIStr> columns;
+  private final List<String> columns;
   private final boolean enable;
   private final List<TiPartitionDef> defs;
 
-  private PartitionType toPartType(int tp) {
+  public static PartitionType toPartType(int tp) {
     switch (tp) {
       case 1:
         return PartitionType.RangePartition;
@@ -60,9 +65,12 @@ public class TiPartitionInfo implements Serializable {
       @JsonProperty("definitions") List<TiPartitionDef> defs) {
     // Part type only contains limited amount, so long to int conversion
     // should be safe.
-    this.type = toPartType((int) type);
+    this.type = type;
     this.expr = expr;
-    this.columns = columns;
+    this.columns = new ArrayList<>();
+    for (CIStr col : columns) {
+      this.columns.add(col.getL());
+    }
     this.enable = enable;
     this.defs = defs;
   }
@@ -71,7 +79,7 @@ public class TiPartitionInfo implements Serializable {
     return enable;
   }
 
-  public List<CIStr> getColumns() {
+  public List<String> getColumns() {
     return columns;
   }
 

@@ -97,7 +97,7 @@ public class ScanAnalyzerTest {
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
     List<Coprocessor.KeyRange> keyRanges =
-        scanAnalyzer.buildTableScanKeyRange(table, irs, table.getPartitionInfo());
+        scanAnalyzer.buildTableScanKeyRange(table, irs, table.getPartitionInfo().getDefs());
 
     assertEquals(keyRanges.size(), 1);
 
@@ -131,7 +131,7 @@ public class ScanAnalyzerTest {
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
     List<Coprocessor.KeyRange> keyRanges =
-        scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo());
+        scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo().getDefs());
 
     assertEquals(keyRanges.size(), 1);
 
@@ -159,7 +159,8 @@ public class ScanAnalyzerTest {
         expressionToIndexRanges(
             result.getPointPredicates(), result.getRangePredicate(), table, index);
 
-    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo());
+    keyRanges =
+        scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo().getDefs());
 
     assertEquals(keyRanges.size(), 1);
 
