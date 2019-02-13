@@ -17,7 +17,9 @@ package org.apache.spark.sql
 
 class PartitionTableSuite extends BaseTiSparkSuite {
   test("index scan on partition table") {
-    tidbStmt.execute("CREATE TABLE `pt` (   `id` int(11) DEFAULT NULL, `y` date DEFAULT NULL,   index `idx_y`(`y`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin PARTITION BY RANGE ( id ) (   PARTITION p0 VALUES LESS THAN (2),   PARTITION p1 VALUES LESS THAN (4),   PARTITION p2 VALUES LESS THAN (6) );")
+    tidbStmt.execute(
+      "CREATE TABLE `pt` (   `id` int(11) DEFAULT NULL, `y` date DEFAULT NULL,   index `idx_y`(`y`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin PARTITION BY RANGE ( id ) (   PARTITION p0 VALUES LESS THAN (2),   PARTITION p1 VALUES LESS THAN (4),   PARTITION p2 VALUES LESS THAN (6) );"
+    )
     tidbStmt.execute("insert into `pt` values(1, '1995-10-10')")
     tidbStmt.execute("insert into `pt` values(2, '1996-10-10')")
     tidbStmt.execute("insert into `pt` values(3, '1997-10-10')")
