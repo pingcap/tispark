@@ -220,10 +220,9 @@ case class RegionTaskExec(child: SparkPlan,
             new ExecutorCompletionService[util.Iterator[TiRow]](session.getThreadPoolForIndexScan)
           var rowIterator: util.Iterator[TiRow] = null
 
-
-           // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
+          // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
           // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
-          def generateIndexTasks(handles: TLongArrayList):util.List[RegionTask] = {
+          def generateIndexTasks(handles: TLongArrayList): util.List[RegionTask] = {
             var indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
             if (!dagRequest.getTableInfo.isPartitionEnabled) {
               indexTasks.addAll(
