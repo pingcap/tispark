@@ -36,6 +36,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
+import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
@@ -58,13 +59,15 @@ public class ScanAnalyzer {
         TiIndexInfo index,
         double cost,
         boolean isDoubleRead,
-        double estimatedRowCount) {
+        double estimatedRowCount,
+        TiPartitionInfo partInfo) {
       this.filters = filters;
       this.keyRanges = keyRanges;
       this.cost = cost;
       this.index = index;
       this.isDoubleRead = isDoubleRead;
       this.estimatedRowCount = estimatedRowCount;
+      prunedPartInfo = partInfo;
     }
 
     private final List<KeyRange> keyRanges;
@@ -73,6 +76,7 @@ public class ScanAnalyzer {
     private TiIndexInfo index;
     private final boolean isDoubleRead;
     private final double estimatedRowCount;
+    private final TiPartitionInfo prunedPartInfo;
 
     public double getEstimatedRowCount() {
       return estimatedRowCount;
@@ -101,16 +105,20 @@ public class ScanAnalyzer {
     public boolean isDoubleRead() {
       return isDoubleRead;
     }
+
+    public TiPartitionInfo getPrunedPartInfo() {
+      return prunedPartInfo;
+    }
   }
 
   // build a scan for debug purpose.
-  public ScanPlan buildIndexScan(
+  public ScanPlan buildScan(
       List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
-    return buildIndexScan(columnList, conditions, table, null);
+    return buildScan(columnList, conditions, table, null);
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildIndexScan(
+  public ScanPlan buildScan(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiTableInfo table,
@@ -156,7 +164,7 @@ public class ScanAnalyzer {
     boolean isDoubleRead = false;
     double estimatedRowCount = -1;
     // table name and columns
-    int tableSize = table.getColumns().size() + 1;
+    int tableColSize = table.getColumns().size() + 1;
 
     if (index == null || index.isFakePrimaryKey()) {
       if (tableStatistics != null) {
@@ -164,7 +172,7 @@ public class ScanAnalyzer {
         // TODO: Fine-grained statistics usage
       }
       keyRanges = buildTableScanKeyRange(table, irs);
-      cost *= tableSize * TABLE_SCAN_COST_FACTOR;
+      cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
     } else {
       if (tableStatistics != null) {
         long totalRowCount = tableStatistics.getCount();
@@ -184,15 +192,27 @@ public class ScanAnalyzer {
       // table name, index and handle column
       int indexSize = index.getIndexColumns().size() + 2;
       if (isDoubleRead) {
-        cost *= tableSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
+        cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
       } else {
         cost *= indexSize * INDEX_SCAN_COST_FACTOR;
       }
+      // TODO: pruning part info later
       keyRanges = buildIndexScanKeyRange(table, index, irs);
     }
 
     return new ScanPlan(
-        keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead, estimatedRowCount);
+        keyRanges,
+        result.getResidualPredicates(),
+        index,
+        cost,
+        isDoubleRead,
+        estimatedRowCount,
+        partPruning(table));
+  }
+
+  private TiPartitionInfo partPruning(TiTableInfo tableInfo) {
+    // TODO implement real logic later
+    return tableInfo.getPartitionInfo();
   }
 
   private Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
@@ -254,6 +274,7 @@ public class ScanAnalyzer {
           ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
         }
       } else {
+        // TODO: partition pruning can be applied here.
         for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
           Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(pDef.getId(), ir);
           Key startKey = pairKey.first;

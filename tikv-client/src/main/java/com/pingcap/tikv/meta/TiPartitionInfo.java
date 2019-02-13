@@ -41,7 +41,7 @@ public class TiPartitionInfo implements Serializable {
   private PartitionType toPartType(int tp) {
     switch (tp) {
       case 1:
-       return PartitionType.RangePartition;
+        return PartitionType.RangePartition;
       case 2:
         return PartitionType.HashPartition;
       case 3:
@@ -60,7 +60,7 @@ public class TiPartitionInfo implements Serializable {
       @JsonProperty("definitions") List<TiPartitionDef> defs) {
     // Part type only contains limited amount, so long to int conversion
     // should be safe.
-    this.type = toPartType((int)type);
+    this.type = toPartType((int) type);
     this.expr = expr;
     this.columns = columns;
     this.enable = enable;

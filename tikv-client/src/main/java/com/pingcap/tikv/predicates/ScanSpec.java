@@ -95,7 +95,7 @@ public class ScanSpec {
       Optional<Expression> newRangePred =
           rangePredicates.isEmpty()
               ? Optional.empty()
-              : Optional.of(mergeCNFExpressions(rangePredicates));
+              : Optional.ofNullable(mergeCNFExpressions(rangePredicates));
       pushedPredicates.addAll(rangePredicates);
 
       Set<Expression> newResidualPredicates = new HashSet<>(residualPredicates);

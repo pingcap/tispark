@@ -256,7 +256,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
-      scanBuilder.buildIndexScan(
+      scanBuilder.buildScan(
         // need to bind all columns needed
         tiColumns.map { _.getColumnInfo }.asJava,
         tiFilters.asJava,
@@ -268,6 +268,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
+    dagRequest.setPrunedPartInfo(scanPlan.getPrunedPartInfo)
     scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)
