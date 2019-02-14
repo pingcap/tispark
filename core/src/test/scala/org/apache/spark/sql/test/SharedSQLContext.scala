@@ -187,7 +187,7 @@ object SharedSQLContext extends Logging {
 
       val jdbcPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
 
-      val loadData = getFlag(_tidbConf, SHOULD_LOAD_DATA)
+      val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA,"true").toLowerCase.toBoolean
 
       jdbcUrl =
         s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
