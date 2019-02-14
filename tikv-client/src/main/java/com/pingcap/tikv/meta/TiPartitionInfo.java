@@ -25,17 +25,30 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiPartitionInfo implements Serializable {
 
-  public static enum PartitionType {
+  public enum PartitionType {
     RangePartition,
     HashPartition,
     ListPartition,
+    InvalidPartition,
   }
 
-  private final long type;
+  private final PartitionType type;
   private final String expr;
   private final List<CIStr> columns;
   private final boolean enable;
   private final List<TiPartitionDef> defs;
+
+  private PartitionType toPartType(int tp) {
+    switch (tp) {
+      case 1:
+        return PartitionType.RangePartition;
+      case 2:
+        return PartitionType.HashPartition;
+      case 3:
+        return PartitionType.ListPartition;
+    }
+    return PartitionType.InvalidPartition;
+  }
 
   @VisibleForTesting
   @JsonCreator
@@ -45,7 +58,9 @@ public class TiPartitionInfo implements Serializable {
       @JsonProperty("columns") List<CIStr> columns,
       @JsonProperty("enable") boolean enable,
       @JsonProperty("definitions") List<TiPartitionDef> defs) {
-    this.type = type;
+    // Part type only contains limited amount, so long to int conversion
+    // should be safe.
+    this.type = toPartType((int) type);
     this.expr = expr;
     this.columns = columns;
     this.enable = enable;

@@ -92,7 +92,8 @@ public class ScanAnalyzerTest {
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
-    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildTableScanKeyRange(table, irs);
+    List<Coprocessor.KeyRange> keyRanges =
+        scanAnalyzer.buildTableScanKeyRange(table, irs, table.getPartitionInfo());
 
     assertEquals(keyRanges.size(), 1);
 
@@ -125,7 +126,8 @@ public class ScanAnalyzerTest {
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
-    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs);
+    List<Coprocessor.KeyRange> keyRanges =
+        scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo());
 
     assertEquals(keyRanges.size(), 1);
 
@@ -153,7 +155,7 @@ public class ScanAnalyzerTest {
         expressionToIndexRanges(
             result.getPointPredicates(), result.getRangePredicate(), table, index);
 
-    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs);
+    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo());
 
     assertEquals(keyRanges.size(), 1);
 
@@ -268,7 +270,7 @@ public class ScanAnalyzerTest {
     TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanAnalyzer scanBuilder = new ScanAnalyzer();
     ScanAnalyzer.ScanPlan scanPlan =
-        scanBuilder.buildScan(ImmutableList.of(), ImmutableList.of(), index, table, null);
+        scanBuilder.buildIndexScan(ImmutableList.of(), ImmutableList.of(), index, table, null);
 
     ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
     ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();

@@ -36,6 +36,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
+import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
@@ -58,13 +59,15 @@ public class ScanAnalyzer {
         TiIndexInfo index,
         double cost,
         boolean isDoubleRead,
-        double estimatedRowCount) {
+        double estimatedRowCount,
+        TiPartitionInfo partInfo) {
       this.filters = filters;
       this.keyRanges = keyRanges;
       this.cost = cost;
       this.index = index;
       this.isDoubleRead = isDoubleRead;
       this.estimatedRowCount = estimatedRowCount;
+      prunedPartInfo = partInfo;
     }
 
     private final List<KeyRange> keyRanges;
@@ -73,6 +76,7 @@ public class ScanAnalyzer {
     private TiIndexInfo index;
     private final boolean isDoubleRead;
     private final double estimatedRowCount;
+    private final TiPartitionInfo prunedPartInfo;
 
     public double getEstimatedRowCount() {
       return estimatedRowCount;
@@ -101,6 +105,10 @@ public class ScanAnalyzer {
     public boolean isDoubleRead() {
       return isDoubleRead;
     }
+
+    public TiPartitionInfo getPrunedPartInfo() {
+      return prunedPartInfo;
+    }
   }
 
   // build a scan for debug purpose.
@@ -118,7 +126,7 @@ public class ScanAnalyzer {
     ScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildScan(columnList, conditions, index, table, tableStatistics);
+      ScanPlan plan = buildIndexScan(columnList, conditions, index, table, tableStatistics);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -130,10 +138,10 @@ public class ScanAnalyzer {
   public ScanPlan buildTableScan(
       List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
+    return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
   }
 
-  public ScanPlan buildScan(
+  public ScanPlan buildIndexScan(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiIndexInfo index,
@@ -144,6 +152,8 @@ public class ScanAnalyzer {
 
     MetaResolver.resolve(conditions, table);
 
+    // pruning redundant part here.
+    TiPartitionInfo prunedPartInfo = partPruning(table);
     ScanSpec result = extractConditions(conditions, table, index);
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
@@ -156,15 +166,15 @@ public class ScanAnalyzer {
     boolean isDoubleRead = false;
     double estimatedRowCount = -1;
     // table name and columns
-    int tableSize = table.getColumns().size() + 1;
+    int tableColSize = table.getColumns().size() + 1;
 
     if (index == null || index.isFakePrimaryKey()) {
       if (tableStatistics != null) {
         cost = 100.0; // Full table scan cost
         // TODO: Fine-grained statistics usage
       }
-      keyRanges = buildTableScanKeyRange(table, irs);
-      cost *= tableSize * TABLE_SCAN_COST_FACTOR;
+      keyRanges = buildTableScanKeyRange(table, irs, prunedPartInfo);
+      cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
     } else {
       if (tableStatistics != null) {
         long totalRowCount = tableStatistics.getCount();
@@ -184,15 +194,27 @@ public class ScanAnalyzer {
       // table name, index and handle column
       int indexSize = index.getIndexColumns().size() + 2;
       if (isDoubleRead) {
-        cost *= tableSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
+        cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
       } else {
         cost *= indexSize * INDEX_SCAN_COST_FACTOR;
       }
-      keyRanges = buildIndexScanKeyRange(table, index, irs);
+      // TODO: pruning part info later
+      keyRanges = buildIndexScanKeyRange(table, index, irs, prunedPartInfo);
     }
 
     return new ScanPlan(
-        keyRanges, result.getResidualPredicates(), index, cost, isDoubleRead, estimatedRowCount);
+        keyRanges,
+        result.getResidualPredicates(),
+        index,
+        cost,
+        isDoubleRead,
+        estimatedRowCount,
+        prunedPartInfo);
+  }
+
+  private TiPartitionInfo partPruning(TiTableInfo tableInfo) {
+    // TODO implement real logic later
+    return tableInfo.getPartitionInfo();
   }
 
   private Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
@@ -239,7 +261,8 @@ public class ScanAnalyzer {
   }
 
   @VisibleForTesting
-  List<KeyRange> buildTableScanKeyRange(TiTableInfo table, List<IndexRange> indexRanges) {
+  List<KeyRange> buildTableScanKeyRange(
+      TiTableInfo table, List<IndexRange> indexRanges, TiPartitionInfo prunedPartInfo) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
 
@@ -254,7 +277,8 @@ public class ScanAnalyzer {
           ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
         }
       } else {
-        for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
+        // TODO: partition pruning can be applied here.
+        for (TiPartitionDef pDef : prunedPartInfo.getDefs()) {
           Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(pDef.getId(), ir);
           Key startKey = pairKey.first;
           Key endKey = pairKey.second;
@@ -315,7 +339,10 @@ public class ScanAnalyzer {
 
   @VisibleForTesting
   List<KeyRange> buildIndexScanKeyRange(
-      TiTableInfo table, TiIndexInfo index, List<IndexRange> indexRanges) {
+      TiTableInfo table,
+      TiIndexInfo index,
+      List<IndexRange> indexRanges,
+      TiPartitionInfo prunedPartInfo) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(index, "Index cannot be null to encoding keyRange");
     requireNonNull(indexRanges, "indexRanges cannot be null to encoding keyRange");
@@ -329,7 +356,7 @@ public class ScanAnalyzer {
         Key ubsKey = pairKeys.second;
         ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
       } else {
-        for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
+        for (TiPartitionDef pDef : prunedPartInfo.getDefs()) {
           Pair<Key, Key> pairKeys = buildIndexScanKeyRangePerId(pDef.getId(), index, ir);
           Key lbsKey = pairKeys.first;
           Key ubsKey = pairKeys.second;

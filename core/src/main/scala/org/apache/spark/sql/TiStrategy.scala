@@ -268,6 +268,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
+    dagRequest.setPrunedPartInfo(scanPlan.getPrunedPartInfo)
     scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
     if (scanPlan.isIndexScan) {
       dagRequest.setIndexInfo(scanPlan.getIndex)

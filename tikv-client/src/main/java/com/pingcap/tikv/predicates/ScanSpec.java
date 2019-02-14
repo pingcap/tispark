@@ -95,7 +95,7 @@ public class ScanSpec {
       Optional<Expression> newRangePred =
           rangePredicates.isEmpty()
               ? Optional.empty()
-              : Optional.of(mergeCNFExpressions(rangePredicates));
+              : Optional.ofNullable(mergeCNFExpressions(rangePredicates));
       pushedPredicates.addAll(rangePredicates);
 
       Set<Expression> newResidualPredicates = new HashSet<>(residualPredicates);
@@ -103,14 +103,6 @@ public class ScanSpec {
         if (!pushedPredicates.contains(pred)) {
           newResidualPredicates.add(pred);
         }
-      }
-
-      Optional<DataType> rangeType;
-      if (rangeColumn == null) {
-        rangeType = Optional.empty();
-      } else {
-        TiColumnInfo col = table.getColumn(rangeColumn.getOffset());
-        rangeType = Optional.of(col.getType());
       }
 
       return new ScanSpec(ImmutableList.copyOf(points), newRangePred, newResidualPredicates);

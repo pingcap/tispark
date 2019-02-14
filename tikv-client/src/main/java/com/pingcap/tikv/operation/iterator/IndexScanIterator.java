@@ -80,7 +80,7 @@ public class IndexScanIterator implements Iterator<Row> {
                       RangeSplitter.newSplitter(session.getRegionManager())
                           .splitAndSortHandlesByRegion(table.getId(), handles));
                 } else {
-                  for (TiPartitionDef pDef : table.getPartitionInfo().getDefs()) {
+                  for (TiPartitionDef pDef : dagReq.getPrunedPartInfo().getDefs()) {
                     tasks.addAll(
                         RangeSplitter.newSplitter(session.getRegionManager())
                             .splitAndSortHandlesByRegion(pDef.getId(), handles));

@@ -49,6 +49,15 @@ import java.util.stream.Collectors;
  * <p>Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
+
+  public TiPartitionInfo getPrunedPartInfo() {
+    return prunedPartInfo;
+  }
+
+  public void setPrunedPartInfo(TiPartitionInfo prunedPartInfo) {
+    this.prunedPartInfo = prunedPartInfo;
+  }
+
   public static class Builder {
     private List<String> requiredCols = new ArrayList<>();
     private List<Expression> filters = new ArrayList<>();
@@ -176,6 +185,7 @@ public class TiDAGRequest implements Serializable {
           .build();
 
   private TiTableInfo tableInfo;
+  private TiPartitionInfo prunedPartInfo;
   private TiIndexInfo indexInfo;
   private final List<ColumnRef> fields = new ArrayList<>();
   private final List<Expression> filters = new ArrayList<>();

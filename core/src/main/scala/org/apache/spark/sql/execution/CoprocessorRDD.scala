@@ -19,7 +19,7 @@ import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.iterator.CoprocessIterator
 import com.pingcap.tikv.operation.transformer.RowTransformer
@@ -222,25 +222,34 @@ case class RegionTaskExec(child: SparkPlan,
 
           // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
           // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
-          var indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
-          if (!dagRequest.getTableInfo.isPartitionEnabled) {
-            indexTasks = RangeSplitter
-              .newSplitter(session.getRegionManager)
-              .splitAndSortHandlesByRegion(
-                dagRequest.getTableInfo.getId,
-                new TLongArrayList(handles)
-              )
-          } else {
-            // when partition table is present, partition id is table id.
-            for (pDef <- dagRequest.getTableInfo.getPartitionInfo.getDefs) {
+          def generateIndexTasks(handles: TLongArrayList): util.List[RegionTask] = {
+            var indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
+            if (!dagRequest.getTableInfo.isPartitionEnabled) {
               indexTasks.addAll(
                 RangeSplitter
                   .newSplitter(session.getRegionManager)
-                  .splitAndSortHandlesByRegion(pDef.getId, new TLongArrayList())
+                  .splitAndSortHandlesByRegion(
+                    dagRequest.getTableInfo.getId,
+                    new TLongArrayList(handles)
+                  )
               )
+            } else {
+              // when partition table is present, partition id is table id.
+              val partInfo = dagRequest.getPrunedPartInfo
+              for (pDef <- partInfo.getDefs) {
+                indexTasks.addAll(
+                  RangeSplitter
+                    .newSplitter(session.getRegionManager)
+                    .splitAndSortHandlesByRegion(pDef.getId, handles)
+                )
+              }
             }
+            return indexTasks
           }
 
+          // this indexTaks was made to be used later to determine should we downgrade to
+          // table scan or not.
+          val indexTasks: util.List[RegionTask] = generateIndexTasks(new TLongArrayList(handles))
           val indexTaskRanges = indexTasks.flatMap { _.getRanges }
 
           // Checks whether the number of handle ranges retrieved from TiKV
@@ -295,18 +304,11 @@ case class RegionTaskExec(child: SparkPlan,
 
           def doIndexScan(): Unit =
             while (handleIterator.hasNext) {
-              val handleList = feedBatch()
+              val handleList: TLongArrayList = feedBatch()
               numHandles += handleList.size()
               logger.info("Single batch handles size:" + handleList.size())
-              // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
-              // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
-              val indexTasks =
-                RangeSplitter
-                  .newSplitter(session.getRegionManager)
-                  .splitAndSortHandlesByRegion(
-                    dagRequest.getTableInfo.getId,
-                    new TLongArrayList(handleList)
-                  )
+
+              val indexTasks: util.List[RegionTask] = generateIndexTasks(handleList)
 
               indexTasks.foreach { task =>
                 val taskRange = task.getRanges
