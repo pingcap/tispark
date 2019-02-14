@@ -195,15 +195,20 @@ object SharedSQLContext extends Logging {
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
       _statement = _tidbConnection.createStatement()
 
+      if (loadData) {
+        logger.info("load data is enabled")
+      } else {
+        logger.info("load data is disabled")
+      }
       if (loadData && !forceNotLoad) {
-        logger.warn("Loading TiSparkTestData")
+        logger.info("Loading TiSparkTestData")
         // Load index test data
         var queryString = resourceToString(
           s"tispark-test/IndexTest.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Load IndexTest.sql successfully.")
+        logger.info("Load IndexTest.sql successfully.")
         // Load expression test data
         queryString = resourceToString(
           s"tispark-test/TiSparkTest.sql",
