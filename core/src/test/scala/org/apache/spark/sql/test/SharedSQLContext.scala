@@ -187,7 +187,7 @@ object SharedSQLContext extends Logging {
 
       val jdbcPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
 
-      val loadData = getFlag(_tidbConf, SHOULD_LOAD_DATA)
+      val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toLowerCase.toBoolean
 
       jdbcUrl =
         s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
@@ -195,36 +195,42 @@ object SharedSQLContext extends Logging {
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
       _statement = _tidbConnection.createStatement()
 
+      if (loadData) {
+        logger.info("load data is enabled")
+      } else {
+        logger.info("load data is disabled")
+      }
+
       if (loadData && !forceNotLoad) {
-        logger.warn("Loading TiSparkTestData")
+        logger.info("Loading TiSparkTestData")
         // Load index test data
         var queryString = resourceToString(
           s"tispark-test/IndexTest.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Load IndexTest.sql successfully.")
+        logger.info("Load IndexTest.sql successfully.")
         // Load expression test data
         queryString = resourceToString(
           s"tispark-test/TiSparkTest.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Load TiSparkTest.sql successfully.")
+        logger.info("Load TiSparkTest.sql successfully.")
         // Load tpch test data
         queryString = resourceToString(
           s"tispark-test/TPCHData.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Load TPCHData.sql successfully.")
+        logger.info("Load TPCHData.sql successfully.")
         // Load resolveLock test data
         queryString = resourceToString(
           s"resolveLock-test/ddl.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
-        logger.warn("Load resolveLock-test.ddl.sql successfully.")
+        logger.info("Load resolveLock-test.ddl.sql successfully.")
         initStatistics()
       }
     }
@@ -243,7 +249,6 @@ object SharedSQLContext extends Logging {
 
       import com.pingcap.tispark.TiConfigConst._
       sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
-      sparkConf.set(ALLOW_INDEX_READ, getFlag(prop, ALLOW_INDEX_READ).toString)
       sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
       sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
       sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
