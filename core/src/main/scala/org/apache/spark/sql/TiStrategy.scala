@@ -200,16 +200,16 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   def referencedTiColumns(expression: TiExpression): Seq[TiColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
-  def extractTiColumnRefFromExpressions(expressions: Seq[TiExpression]): Seq[TiColumnRef] = {
-    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
-    for (expression <- expressions) {
-      set += PredicateUtils.extractColumnRefFromExpression(expression)
-    }
-    set.toSeq
-  }
+//  def extractTiColumnRefFromExpressions(expressions: Seq[TiExpression]): Seq[TiColumnRef] = {
+//    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
+//    for (expression <- expressions) {
+//      set += PredicateUtils.extractColumnRefFromExpression(expression)
+//    }
+//    set.toSeq
+//  }
 
   /**
-   * build a Seq of used TiColumnRef from AttributeSet and bound them to souce table
+   * build a Seq of used TiColumnRef from AttributeSet and bound them to source table
    *
    * @param attributeSet AttributeSet containing projects w/ or w/o filters
    * @param source source TiDBRelation
@@ -221,12 +221,17 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       case BasicExpression(expr) => expr
     }
     val resolver = new MetaResolver(source.table)
-    val tiColumns: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
-    for (expression <-tiColumnSet) {
-      set += PredicateUtils.extractColumnRefFromExpression(expression)
+    var tiColumns: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
+    for (expression <- tiColumnSet) {
+      val colRef: TiColumnRef = PredicateUtils
+        .extractColumnRefFromExpression(
+          expression.asInstanceOf[com.pingcap.tikv.expression.Expression]
+        )
+        .asInstanceOf[TiColumnRef]
+      tiColumns += colRef
     }
     tiColumns.foreach { resolver.resolve(_) }
-    tiColumns
+    tiColumns.toSeq
   }
 
   private def filterToDAGRequest(
