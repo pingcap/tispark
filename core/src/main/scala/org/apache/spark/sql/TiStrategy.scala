@@ -200,14 +200,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   def referencedTiColumns(expression: TiExpression): Seq[TiColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
-//  def extractTiColumnRefFromExpressions(expressions: Seq[TiExpression]): Seq[TiColumnRef] = {
-//    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
-//    for (expression <- expressions) {
-//      set += PredicateUtils.extractColumnRefFromExpression(expression)
-//    }
-//    set.toSeq
-//  }
-
   /**
    * build a Seq of used TiColumnRef from AttributeSet and bound them to source table
    *
