@@ -200,23 +200,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   def referencedTiColumns(expression: TiExpression): Seq[TiColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
-  def extractTiColumnRefFromExpression(expression: TiExpression): mutable.HashSet[TiColumnRef] = {
-    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
-    expression match {
-      case r: TiColumnRef => set += r
-      case _: Constant    =>
-      case e: TiExpression =>
-        for (child <- e.getChildren.asScala) {
-          extractTiColumnRefFromExpression(child).foreach { set += _ }
-        }
-    }
-    set
-  }
-
   def extractTiColumnRefFromExpressions(expressions: Seq[TiExpression]): Seq[TiColumnRef] = {
     val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
     for (expression <- expressions) {
-      extractTiColumnRefFromExpression(expression).foreach { set += _ }
+      set += PredicateUtils.extractColumnRefFromExpression(expression)
     }
     set.toSeq
   }
@@ -234,7 +221,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       case BasicExpression(expr) => expr
     }
     val resolver = new MetaResolver(source.table)
-    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
+    val tiColumns: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
+    for (expression <-tiColumnSet) {
+      set += PredicateUtils.extractColumnRefFromExpression(expression)
+    }
     tiColumns.foreach { resolver.resolve(_) }
     tiColumns
   }
