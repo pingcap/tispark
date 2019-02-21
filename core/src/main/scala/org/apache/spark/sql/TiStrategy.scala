@@ -209,18 +209,17 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
    */
   def buildTiColumnRefFromColumnSet(attributeSet: AttributeSet,
                                     source: TiDBRelation): Seq[TiColumnRef] = {
-    val tiColumnSet: Seq[TiExpression] = attributeSet.toSeq.collect {
+    val tiColumnSeq: Seq[TiExpression] = attributeSet.toSeq.collect {
       case BasicExpression(expr) => expr
     }
     val resolver = new MetaResolver(source.table)
     var tiColumns: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
-    for (expression <- tiColumnSet) {
-      val colRef: TiColumnRef = PredicateUtils
-        .extractColumnRefFromExpression(
-          expression.asInstanceOf[com.pingcap.tikv.expression.Expression]
-        )
-        .asInstanceOf[TiColumnRef]
-      tiColumns += colRef
+    for (expression <- tiColumnSeq) {
+      val colSetPerExpr = PredicateUtils
+        .extractColumnRefFromExpression(expression.asInstanceOf[com.pingcap.tikv.expression.Expression])
+      colSetPerExpr.asScala.foreach {
+        tiColumns += _
+      }
     }
     tiColumns.foreach { resolver.resolve(_) }
     tiColumns.toSeq
