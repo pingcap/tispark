@@ -201,6 +201,10 @@ public class ScanAnalyzerTest {
   public void logicalBinaryExpressionToIndexRangesTest() {
     TiTableInfo table = createTableWithIndex(6, 5);
     TiIndexInfo index = table.getIndices().get(0);
+    
+    TypedKey zero = TypedKey.toTypedKey(0, IntegerType.INT);
+    TypedKey one = TypedKey.toTypedKey(1, IntegerType.INT);
+    TypedKey two = TypedKey.toTypedKey(2, IntegerType.INT);
 
     Expression eq1 = greaterThan(ColumnRef.create("c1", table), Constant.create(0));
     Expression eq2 = lessThan(ColumnRef.create("c1", table), Constant.create(2));
@@ -216,33 +220,15 @@ public class ScanAnalyzerTest {
     Expression xor2 = xor(eq1, eq3);
     Expression xor3 = xor(eq2, eq3);
 
-    List<Range> ans1 =
-        ImmutableList.of(
-            Range.open(
-                TypedKey.toTypedKey(0, IntegerType.INT), TypedKey.toTypedKey(2, IntegerType.INT)));
-    List<Range> ans2 =
-        ImmutableList.of(
-            Range.openClosed(
-                TypedKey.toTypedKey(0, IntegerType.INT), TypedKey.toTypedKey(1, IntegerType.INT)));
-    List<Range> ans3 = ImmutableList.of(Range.atMost(TypedKey.toTypedKey(1, IntegerType.INT)));
+    List<Range> ans1 = ImmutableList.of(Range.open(zero, two));
+    List<Range> ans2 = ImmutableList.of(Range.openClosed(zero, one));
+    List<Range> ans3 = ImmutableList.of(Range.atMost(one));
     List<Range> ans4 = ImmutableList.of(Range.all());
-    List<Range> ans5 = ImmutableList.of(Range.greaterThan(TypedKey.toTypedKey(0, IntegerType.INT)));
-    List<Range> ans6 =
-        ImmutableList.of(
-            Range.atMost(TypedKey.toTypedKey(1, IntegerType.INT)),
-            Range.greaterThan(TypedKey.toTypedKey(2, IntegerType.INT)));
-    List<Range> ans7 =
-        ImmutableList.of(
-            Range.atMost(TypedKey.toTypedKey(0, IntegerType.INT)),
-            Range.atLeast(TypedKey.toTypedKey(2, IntegerType.INT)));
-    List<Range> ans8 =
-        ImmutableList.of(
-            Range.atMost(TypedKey.toTypedKey(0, IntegerType.INT)),
-            Range.greaterThan(TypedKey.toTypedKey(1, IntegerType.INT)));
-    List<Range> ans9 =
-        ImmutableList.of(
-            Range.open(
-                TypedKey.toTypedKey(1, IntegerType.INT), TypedKey.toTypedKey(2, IntegerType.INT)));
+    List<Range> ans5 = ImmutableList.of(Range.greaterThan(zero));
+    List<Range> ans6 = ImmutableList.of(Range.atMost(one), Range.greaterThan(two));
+    List<Range> ans7 = ImmutableList.of(Range.atMost(zero), Range.atLeast(two));
+    List<Range> ans8 = ImmutableList.of(Range.atMost(zero), Range.greaterThan(one));
+    List<Range> ans9 = ImmutableList.of(Range.open(one, two));
 
     Tests<Expression, List<Range>> logicalTests = new Tests<>();
     logicalTests.addTestCase(and1, ans1);
