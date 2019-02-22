@@ -47,13 +47,6 @@ public interface MySqlParserVisitor<T> extends ParseTreeVisitor<T> {
    */
   T visitCollationName(MySqlParser.CollationNameContext ctx);
   /**
-   * Visit a parse tree produced by {@link MySqlParser#engineName}.
-   *
-   * @param ctx the parse tree
-   * @return the visitor result
-   */
-  T visitEngineName(MySqlParser.EngineNameContext ctx);
-  /**
    * Visit a parse tree produced by {@link MySqlParser#uid}.
    *
    * @param ctx the parse tree
@@ -540,20 +533,6 @@ public interface MySqlParserVisitor<T> extends ParseTreeVisitor<T> {
    * @return the visitor result
    */
   T visitCharsetNameBase(MySqlParser.CharsetNameBaseContext ctx);
-  /**
-   * Visit a parse tree produced by {@link MySqlParser#transactionLevelBase}.
-   *
-   * @param ctx the parse tree
-   * @return the visitor result
-   */
-  T visitTransactionLevelBase(MySqlParser.TransactionLevelBaseContext ctx);
-  /**
-   * Visit a parse tree produced by {@link MySqlParser#privilegesBase}.
-   *
-   * @param ctx the parse tree
-   * @return the visitor result
-   */
-  T visitPrivilegesBase(MySqlParser.PrivilegesBaseContext ctx);
   /**
    * Visit a parse tree produced by {@link MySqlParser#intervalTypeBase}.
    *

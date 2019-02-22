@@ -66,18 +66,6 @@ public interface MySqlParserListener extends ParseTreeListener {
    */
   void exitCollationName(MySqlParser.CollationNameContext ctx);
   /**
-   * Enter a parse tree produced by {@link MySqlParser#engineName}.
-   *
-   * @param ctx the parse tree
-   */
-  void enterEngineName(MySqlParser.EngineNameContext ctx);
-  /**
-   * Exit a parse tree produced by {@link MySqlParser#engineName}.
-   *
-   * @param ctx the parse tree
-   */
-  void exitEngineName(MySqlParser.EngineNameContext ctx);
-  /**
    * Enter a parse tree produced by {@link MySqlParser#uid}.
    *
    * @param ctx the parse tree
@@ -923,30 +911,6 @@ public interface MySqlParserListener extends ParseTreeListener {
    * @param ctx the parse tree
    */
   void exitCharsetNameBase(MySqlParser.CharsetNameBaseContext ctx);
-  /**
-   * Enter a parse tree produced by {@link MySqlParser#transactionLevelBase}.
-   *
-   * @param ctx the parse tree
-   */
-  void enterTransactionLevelBase(MySqlParser.TransactionLevelBaseContext ctx);
-  /**
-   * Exit a parse tree produced by {@link MySqlParser#transactionLevelBase}.
-   *
-   * @param ctx the parse tree
-   */
-  void exitTransactionLevelBase(MySqlParser.TransactionLevelBaseContext ctx);
-  /**
-   * Enter a parse tree produced by {@link MySqlParser#privilegesBase}.
-   *
-   * @param ctx the parse tree
-   */
-  void enterPrivilegesBase(MySqlParser.PrivilegesBaseContext ctx);
-  /**
-   * Exit a parse tree produced by {@link MySqlParser#privilegesBase}.
-   *
-   * @param ctx the parse tree
-   */
-  void exitPrivilegesBase(MySqlParser.PrivilegesBaseContext ctx);
   /**
    * Enter a parse tree produced by {@link MySqlParser#intervalTypeBase}.
    *

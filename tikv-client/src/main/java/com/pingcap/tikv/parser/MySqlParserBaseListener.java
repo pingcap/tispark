@@ -86,20 +86,6 @@ public class MySqlParserBaseListener implements MySqlParserListener {
    * <p>The default implementation does nothing.
    */
   @Override
-  public void enterEngineName(MySqlParser.EngineNameContext ctx) {}
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The default implementation does nothing.
-   */
-  @Override
-  public void exitEngineName(MySqlParser.EngineNameContext ctx) {}
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The default implementation does nothing.
-   */
-  @Override
   public void enterUid(MySqlParser.UidContext ctx) {}
   /**
    * {@inheritDoc}
@@ -992,34 +978,6 @@ public class MySqlParserBaseListener implements MySqlParserListener {
    */
   @Override
   public void exitCharsetNameBase(MySqlParser.CharsetNameBaseContext ctx) {}
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The default implementation does nothing.
-   */
-  @Override
-  public void enterTransactionLevelBase(MySqlParser.TransactionLevelBaseContext ctx) {}
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The default implementation does nothing.
-   */
-  @Override
-  public void exitTransactionLevelBase(MySqlParser.TransactionLevelBaseContext ctx) {}
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The default implementation does nothing.
-   */
-  @Override
-  public void enterPrivilegesBase(MySqlParser.PrivilegesBaseContext ctx) {}
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The default implementation does nothing.
-   */
-  @Override
-  public void exitPrivilegesBase(MySqlParser.PrivilegesBaseContext ctx) {}
   /**
    * {@inheritDoc}
    *

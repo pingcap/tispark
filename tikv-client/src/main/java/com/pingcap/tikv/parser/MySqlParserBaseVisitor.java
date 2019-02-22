@@ -69,16 +69,6 @@ public class MySqlParserBaseVisitor<T> extends AbstractParseTreeVisitor<T>
    * ctx}.
    */
   @Override
-  public T visitEngineName(MySqlParser.EngineNameContext ctx) {
-    return visitChildren(ctx);
-  }
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The default implementation returns the result of calling {@link #visitChildren} on {@code
-   * ctx}.
-   */
-  @Override
   public T visitUid(MySqlParser.UidContext ctx) {
     return visitChildren(ctx);
   }
@@ -710,26 +700,6 @@ public class MySqlParserBaseVisitor<T> extends AbstractParseTreeVisitor<T>
    */
   @Override
   public T visitCharsetNameBase(MySqlParser.CharsetNameBaseContext ctx) {
-    return visitChildren(ctx);
-  }
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The default implementation returns the result of calling {@link #visitChildren} on {@code
-   * ctx}.
-   */
-  @Override
-  public T visitTransactionLevelBase(MySqlParser.TransactionLevelBaseContext ctx) {
-    return visitChildren(ctx);
-  }
-  /**
-   * {@inheritDoc}
-   *
-   * <p>The default implementation returns the result of calling {@link #visitChildren} on {@code
-   * ctx}.
-   */
-  @Override
-  public T visitPrivilegesBase(MySqlParser.PrivilegesBaseContext ctx) {
     return visitChildren(ctx);
   }
   /**

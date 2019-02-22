@@ -58,12 +58,6 @@ charsetName
 collationName
     : uid | STRING_LITERAL;
 
-engineName
-    : ARCHIVE | BLACKHOLE | CSV | FEDERATED | INNODB | MEMORY
-    | MRG_MYISAM | MYISAM | NDB | NDBCLUSTER | PERFOMANCE_SCHEMA
-    | STRING_LITERAL | REVERSE_QUOTE_ID
-    ;
-
 uid
     : simpleId
     //| DOUBLE_QUOTE_ID
@@ -74,9 +68,6 @@ uid
 simpleId
     : ID
     | charsetNameBase
-    | transactionLevelBase
-    | engineName
-    | privilegesBase
     | intervalTypeBase
     | dataTypeBase
     | keywordsCanBeId
@@ -365,15 +356,6 @@ charsetNameBase
     | KOI8R | KOI8U | LATIN1 | LATIN2 | LATIN5 | LATIN7 | MACCE
     | MACROMAN | SJIS | SWE7 | TIS620 | UCS2 | UJIS | UTF16
     | UTF16LE | UTF32 | UTF8 | UTF8MB3 | UTF8MB4
-    ;
-
-transactionLevelBase
-    : REPEATABLE | COMMITTED | UNCOMMITTED | SERIALIZABLE
-    ;
-
-privilegesBase
-    : TABLES | ROUTINE | EXECUTE | FILE | PROCESS
-    | RELOAD | SHUTDOWN | SUPER | PRIVILEGES
     ;
 
 intervalTypeBase

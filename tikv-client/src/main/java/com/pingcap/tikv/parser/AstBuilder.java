@@ -11,14 +11,13 @@ import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
 import com.pingcap.tikv.types.RealType;
 
+// AstBuilder will convert ParseTree into Ast Node.
+// In tikv java client, we only need to parser expression
+// which is used by partition pruning.
 public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   public Expression visitSimpleId(MySqlParser.SimpleIdContext ctx) {
     if (ctx.ID() != null) {
       return ColumnRef.create(ctx.ID().getSymbol().getText());
-    }
-
-    if (ctx.engineName() != null) {
-      return Constant.create(ctx.engineName().getText());
     }
 
     throw new UnsupportedSyntaxException(ctx.getParent().toString() + ": it is not supported");
