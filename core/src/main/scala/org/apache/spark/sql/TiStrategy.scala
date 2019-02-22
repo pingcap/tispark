@@ -215,8 +215,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val resolver = new MetaResolver(source.table)
     var tiColumns: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
     for (expression <- tiColumnSeq) {
-      val colSetPerExpr = PredicateUtils
-        .extractColumnRefFromExpression(expression.asInstanceOf[com.pingcap.tikv.expression.Expression])
+      val colSetPerExpr = PredicateUtils.extractColumnRefFromExpression(expression)
       colSetPerExpr.asScala.foreach {
         tiColumns += _
       }
