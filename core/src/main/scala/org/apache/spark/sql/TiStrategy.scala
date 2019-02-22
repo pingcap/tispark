@@ -200,43 +200,28 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   def referencedTiColumns(expression: TiExpression): Seq[TiColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
-  def extractTiColumnRefFromExpression(expression: TiExpression): mutable.HashSet[TiColumnRef] = {
-    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
-    expression match {
-      case r: TiColumnRef => set += r
-      case _: Constant    =>
-      case e: TiExpression =>
-        for (child <- e.getChildren.asScala) {
-          extractTiColumnRefFromExpression(child).foreach { set += _ }
-        }
-    }
-    set
-  }
-
-  def extractTiColumnRefFromExpressions(expressions: Seq[TiExpression]): Seq[TiColumnRef] = {
-    val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
-    for (expression <- expressions) {
-      extractTiColumnRefFromExpression(expression).foreach { set += _ }
-    }
-    set.toSeq
-  }
-
   /**
-   * build a Seq of used TiColumnRef from AttributeSet and bound them to souce table
+   * build a Seq of used TiColumnRef from AttributeSet and bound them to source table
    *
    * @param attributeSet AttributeSet containing projects w/ or w/o filters
    * @param source source TiDBRelation
    * @return a Seq of TiColumnRef extracted
    */
-  def buildTiColumnRefFromColumnSet(attributeSet: AttributeSet,
+  def buildTiColumnRefFromColumnSeq(attributeSet: AttributeSet,
                                     source: TiDBRelation): Seq[TiColumnRef] = {
-    val tiColumnSet: Seq[TiExpression] = attributeSet.toSeq.collect {
+    val tiColumnSeq: Seq[TiExpression] = attributeSet.toSeq.collect {
       case BasicExpression(expr) => expr
     }
     val resolver = new MetaResolver(source.table)
-    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
+    var tiColumns: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
+    for (expression <- tiColumnSeq) {
+      val colSetPerExpr = PredicateUtils.extractColumnRefFromExpression(expression)
+      colSetPerExpr.asScala.foreach {
+        tiColumns += _
+      }
+    }
     tiColumns.foreach { resolver.resolve(_) }
-    tiColumns
+    tiColumns.toSeq
   }
 
   private def filterToDAGRequest(
@@ -355,7 +340,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val residualFilter: Option[Expression] =
       residualFilters.reduceLeftOption(catalyst.expressions.And)
 
-    val tiColumns = buildTiColumnRefFromColumnSet(projectSet ++ filterSet, source)
+    val tiColumns = buildTiColumnRefFromColumnSeq(projectSet ++ filterSet, source)
 
     filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
 
@@ -532,7 +517,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           TiAggregationProjection(filters, _, `source`, projects)
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
         val projectSet = AttributeSet((projects ++ filters).flatMap { _.references })
-        val tiColumns = buildTiColumnRefFromColumnSet(projectSet, source)
+        val tiColumns = buildTiColumnRefFromColumnSeq(projectSet, source)
         val dagReq: TiDAGRequest = filterToDAGRequest(tiColumns, filters, source)
         groupAggregateProjection(
           tiColumns,
