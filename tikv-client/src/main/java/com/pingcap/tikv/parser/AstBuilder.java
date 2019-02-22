@@ -21,7 +21,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       return Constant.create(ctx.engineName().getText());
     }
 
-    throw new UnsupportedSyntaxException(ctx.getParent().toString() + "is not supported");
+    throw new UnsupportedSyntaxException(ctx.getParent().toString() + ": it is not supported");
   }
 
   @Override
@@ -49,7 +49,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
           Doubles.tryParse(ctx.DECIMAL_LITERAL().getSymbol().getText()), RealType.DOUBLE);
     }
 
-    throw new UnsupportedSyntaxException(ctx.toString() + "is not supported.");
+    throw new UnsupportedSyntaxException(ctx.toString() + ": it is not supported.");
   }
 
   @Override
@@ -113,7 +113,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       case ">=":
         return ComparisonBinaryExpression.greaterEqual(left, right);
     }
-    throw new UnsupportedSyntaxException("it is not possible reach this line of code");
+
+    throw new UnsupportedSyntaxException(ctx.toString() + ": it is not possible reach to this line of code");
   }
 
   public Expression visitLogicalExpression(MySqlParser.LogicalExpressionContext ctx) {
@@ -128,12 +129,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
         return LogicalBinaryExpression.xor(visitChildren(left), visitChildren(right));
     }
 
-    throw new UnsupportedSyntaxException("it is not possible reach this line of code");
-  }
-
-  @Override
-  public Expression visitExpressions(MySqlParser.ExpressionsContext ctx) {
-    return visitChildren(ctx);
+    throw new UnsupportedSyntaxException(ctx.toString() + ": it is not possible reach to this line of code");
   }
 
   @Override
@@ -151,6 +147,6 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       case "div":
         return ArithmeticBinaryExpression.divide(left, right);
     }
-    throw new UnsupportedSyntaxException("not supported");
+    throw new UnsupportedSyntaxException(ctx.toString() + ": it is not supported right now");
   }
 }
