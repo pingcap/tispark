@@ -207,7 +207,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
    * @param source source TiDBRelation
    * @return a Seq of TiColumnRef extracted
    */
-  def buildTiColumnRefFromColumnSet(attributeSet: AttributeSet,
+  def buildTiColumnRefFromColumnSeq(attributeSet: AttributeSet,
                                     source: TiDBRelation): Seq[TiColumnRef] = {
     val tiColumnSeq: Seq[TiExpression] = attributeSet.toSeq.collect {
       case BasicExpression(expr) => expr
@@ -340,7 +340,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val residualFilter: Option[Expression] =
       residualFilters.reduceLeftOption(catalyst.expressions.And)
 
-    val tiColumns = buildTiColumnRefFromColumnSet(projectSet ++ filterSet, source)
+    val tiColumns = buildTiColumnRefFromColumnSeq(projectSet ++ filterSet, source)
 
     filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
 
@@ -517,7 +517,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           TiAggregationProjection(filters, _, `source`, projects)
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
         val projectSet = AttributeSet((projects ++ filters).flatMap { _.references })
-        val tiColumns = buildTiColumnRefFromColumnSet(projectSet, source)
+        val tiColumns = buildTiColumnRefFromColumnSeq(projectSet, source)
         val dagReq: TiDAGRequest = filterToDAGRequest(tiColumns, filters, source)
         groupAggregateProjection(
           tiColumns,
