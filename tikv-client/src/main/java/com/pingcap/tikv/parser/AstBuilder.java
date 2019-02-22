@@ -114,7 +114,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
         return ComparisonBinaryExpression.greaterEqual(left, right);
     }
 
-    throw new UnsupportedSyntaxException(ctx.toString() + ": it is not possible reach to this line of code");
+    throw new UnsupportedSyntaxException(
+        ctx.toString() + ": it is not possible reach to this line of code");
   }
 
   public Expression visitLogicalExpression(MySqlParser.LogicalExpressionContext ctx) {
@@ -129,7 +130,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
         return LogicalBinaryExpression.xor(visitChildren(left), visitChildren(right));
     }
 
-    throw new UnsupportedSyntaxException(ctx.toString() + ": it is not possible reach to this line of code");
+    throw new UnsupportedSyntaxException(
+        ctx.toString() + ": it is not possible reach to this line of code");
   }
 
   @Override
