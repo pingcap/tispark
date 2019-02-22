@@ -85,13 +85,12 @@ public class PrunedPartitionBuilder extends DefaultVisitor<RangeSet<Long>, Void>
     return canBePruned;
   }
 
-  private static List<Expression> filterFilters(List<Expression> filters) {
+  private static List<Expression> extractLogicalOrComparisonExpr(List<Expression> filters) {
     List<Expression> filteredFilters = new ArrayList<>();
     for (Expression expr : filters) {
-      if (expr instanceof Not || expr instanceof IsNull) {
-        continue;
+      if (expr instanceof LogicalBinaryExpression || expr instanceof ComparisonBinaryExpression) {
+        filteredFilters.add(expr);
       }
-      filteredFilters.add(expr);
     }
     return filteredFilters;
   }
@@ -154,8 +153,32 @@ public class PrunedPartitionBuilder extends DefaultVisitor<RangeSet<Long>, Void>
     return rightRanges;
   }
 
-  public List<TiPartitionDef> pruning(TiTableInfo tableInfo, List<Expression> filters) {
-    filters = filterFilters(filters);
+  public List<TiPartitionDef> prune(TiTableInfo tableInfo, List<Expression> filters) {
+    switch (TiPartitionInfo.toPartType((int) tableInfo.getPartitionInfo().getType())) {
+      case RangePartition:
+        return pruneRangePart(tableInfo, filters);
+      case ListPartition:
+        return pruneListPart(tableInfo, filters);
+      case HashPartition:
+        return pruneHashPart(tableInfo, filters);
+    }
+
+    throw new UnsupportedOperationException("cannot prune under invalid partition table");
+  }
+
+  // pruneListPart will prune list partition that where conditions never access.
+  private List<TiPartitionDef> pruneListPart(TiTableInfo tableInfo, List<Expression> filters) {
+    return tableInfo.getPartitionInfo().getDefs();
+  }
+
+  // pruneHashPart will prune hash partition that where conditions never access.
+  private List<TiPartitionDef> pruneHashPart(TiTableInfo tableInfo, List<Expression> filters) {
+    return tableInfo.getPartitionInfo().getDefs();
+  }
+
+  // pruneRangePart will prune range partition that where conditions never access.
+  private List<TiPartitionDef> pruneRangePart(TiTableInfo tableInfo, List<Expression> filters) {
+    filters = extractLogicalOrComparisonExpr(filters);
 
     Expression cnfExpr = PredicateUtils.mergeCNFExpressions(filters);
     if (!canBePruned(tableInfo, cnfExpr)) {

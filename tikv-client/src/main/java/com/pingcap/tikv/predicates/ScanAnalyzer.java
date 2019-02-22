@@ -152,16 +152,16 @@ public class ScanAnalyzer {
 
     MetaResolver.resolve(conditions, table);
 
-    PrunedPartitionBuilder prunedPartBuilder = new PrunedPartitionBuilder();
-    // apply partition pruning here.
-    List<TiPartitionDef> prunedParts = prunedPartBuilder.pruning(table, conditions);
     ScanSpec result = extractConditions(conditions, table, index);
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
     List<IndexRange> irs =
-        expressionToIndexRanges(
-            result.getPointPredicates(), result.getRangePredicate(), table, index);
+        expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
+
+    PrunedPartitionBuilder prunedPartBuilder = new PrunedPartitionBuilder();
+    // apply partition pruning here.
+    List<TiPartitionDef> prunedParts = prunedPartBuilder.prune(table, conditions);
 
     List<KeyRange> keyRanges;
     boolean isDoubleRead = false;
