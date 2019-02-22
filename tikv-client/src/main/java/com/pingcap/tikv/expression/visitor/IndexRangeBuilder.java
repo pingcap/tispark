@@ -76,7 +76,7 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
         break;
       case XOR:
         // AND
-        RangeSet<TypedKey> intersection = rightRanges;
+        RangeSet<TypedKey> intersection = TreeRangeSet.create(rightRanges);
         for (Range<TypedKey> range : leftRanges.asRanges()) {
           intersection = intersection.subRangeSet(range);
         }

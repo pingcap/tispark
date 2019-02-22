@@ -16,22 +16,26 @@
 package com.pingcap.tikv.predicates;
 
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.*;
 import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
 import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.*;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.key.RowKey;
+import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.meta.*;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.*;
 import java.util.*;
+import java.util.function.BiConsumer;
 import org.junit.Test;
 
 public class ScanAnalyzerTest {
@@ -175,6 +179,80 @@ public class ScanAnalyzerTest {
               0, 0, 0, 0, 1, 119, 116, 102, 0, 0, 0, 0, 0, -5
             }),
         keyRange.getEnd());
+  }
+
+  private class Tests<K, V> {
+    List<K> input = new ArrayList<>();
+    List<V> output = new ArrayList<>();
+
+    void addTestCase(K in, V out) {
+      input.add(in);
+      output.add(out);
+    }
+
+    void test(BiConsumer<K, V> c) {
+      for (int i = 0; i < input.size(); i++) {
+        c.accept(input.get(i), output.get(i));
+      }
+    }
+  }
+
+  @Test
+  public void logicalBinaryExpressionToIndexRangesTest() {
+    TiTableInfo table = createTableWithIndex(6, 5);
+    TiIndexInfo index = table.getIndices().get(0);
+    
+    TypedKey zero = TypedKey.toTypedKey(0, IntegerType.INT);
+    TypedKey one = TypedKey.toTypedKey(1, IntegerType.INT);
+    TypedKey two = TypedKey.toTypedKey(2, IntegerType.INT);
+
+    Expression eq1 = greaterThan(ColumnRef.create("c1", table), Constant.create(0));
+    Expression eq2 = lessThan(ColumnRef.create("c1", table), Constant.create(2));
+    Expression eq3 = lessEqual(ColumnRef.create("c1", table), Constant.create(1));
+    Expression eq4 = greaterThan(ColumnRef.create("c1", table), Constant.create(2));
+    Expression and1 = and(eq1, eq2);
+    Expression and2 = and(eq1, eq3);
+    Expression and3 = and(eq2, eq3);
+    Expression or1 = or(eq1, eq2);
+    Expression or2 = or(eq1, eq4);
+    Expression or3 = or(eq3, eq4);
+    Expression xor1 = xor(eq1, eq2);
+    Expression xor2 = xor(eq1, eq3);
+    Expression xor3 = xor(eq2, eq3);
+
+    List<Range> ans1 = ImmutableList.of(Range.open(zero, two));
+    List<Range> ans2 = ImmutableList.of(Range.openClosed(zero, one));
+    List<Range> ans3 = ImmutableList.of(Range.atMost(one));
+    List<Range> ans4 = ImmutableList.of(Range.all());
+    List<Range> ans5 = ImmutableList.of(Range.greaterThan(zero));
+    List<Range> ans6 = ImmutableList.of(Range.atMost(one), Range.greaterThan(two));
+    List<Range> ans7 = ImmutableList.of(Range.atMost(zero), Range.atLeast(two));
+    List<Range> ans8 = ImmutableList.of(Range.atMost(zero), Range.greaterThan(one));
+    List<Range> ans9 = ImmutableList.of(Range.open(one, two));
+
+    Tests<Expression, List<Range>> logicalTests = new Tests<>();
+    logicalTests.addTestCase(and1, ans1);
+    logicalTests.addTestCase(and2, ans2);
+    logicalTests.addTestCase(and3, ans3);
+    logicalTests.addTestCase(or1, ans4);
+    logicalTests.addTestCase(or2, ans5);
+    logicalTests.addTestCase(or3, ans6);
+    logicalTests.addTestCase(xor1, ans7);
+    logicalTests.addTestCase(xor2, ans8);
+    logicalTests.addTestCase(xor3, ans9);
+
+    logicalTests.test(
+        (k, v) -> {
+          List<Expression> exprs = ImmutableList.of(k);
+          ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+          List<IndexRange> irs =
+              expressionToIndexRanges(
+                  result.getPointPredicates(), result.getRangePredicate(), table, index);
+          assertEquals(irs.size(), v.size());
+          for (int i = 0; i < irs.size(); i++) {
+            assertEquals(irs.get(i).getRange(), v.get(i));
+          }
+        });
   }
 
   @Test
