@@ -27,7 +27,6 @@ parser grammar MySqlParser;
 
 options { tokenVocab=MySqlLexer; }
 
-
 // Top Level Description
 // details
 intervalType
@@ -87,14 +86,7 @@ decimalLiteral
     ;
 
 stringLiteral
-    : (
-        STRING_CHARSET_NAME? STRING_LITERAL
-        | START_NATIONAL_STRING_LITERAL
-      ) STRING_LITERAL+
-    | (
-        STRING_CHARSET_NAME? STRING_LITERAL
-        | START_NATIONAL_STRING_LITERAL
-      ) (COLLATE collationName)?
+    : STRING_LITERAL+
     ;
 
 booleanLiteral

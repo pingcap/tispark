@@ -10,6 +10,7 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
 import com.pingcap.tikv.types.RealType;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 // AstBuilder will convert ParseTree into Ast Node.
 // In tikv java client, we only need to parser expression
@@ -59,7 +60,11 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   @Override
   public Expression visitStringLiteral(MySqlParser.StringLiteralContext ctx) {
     if (ctx.STRING_LITERAL() != null) {
-      return Constant.create(ctx.STRING_LITERAL().get(0).getSymbol().getText());
+      StringBuilder sb = new StringBuilder();
+      for (TerminalNode str : ctx.STRING_LITERAL()) {
+        sb.append(str.getSymbol().getText());
+      }
+      return Constant.create(sb.toString());
     }
     throw new UnsupportedSyntaxException(ctx.toString() + " is not supported yet");
   }
