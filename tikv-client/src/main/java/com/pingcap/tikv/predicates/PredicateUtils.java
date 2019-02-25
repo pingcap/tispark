@@ -78,7 +78,8 @@ public class PredicateUtils {
       List<Key> pointKeys = expressionToPoints(pointPredicates, table, index);
       for (Key key : pointKeys) {
         if (rangePredicate.isPresent()) {
-          Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(rangePredicate.get()).asRanges();
+          Set<Range<TypedKey>> ranges =
+              indexRangeBuilder.buildRange(rangePredicate.get()).asRanges();
           for (Range<TypedKey> range : ranges) {
             builder.add(new IndexRange(key, range));
           }

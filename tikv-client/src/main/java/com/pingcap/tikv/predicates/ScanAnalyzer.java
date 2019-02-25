@@ -157,11 +157,15 @@ public class ScanAnalyzer {
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
 
     List<IndexRange> irs =
-        expressionToIndexRanges(result.getPointPredicates(), result.getRangePredicate(), table, index);
+        expressionToIndexRanges(
+            result.getPointPredicates(), result.getRangePredicate(), table, index);
 
-    PrunedPartitionBuilder prunedPartBuilder = new PrunedPartitionBuilder();
+    List<TiPartitionDef> prunedParts = null;
     // apply partition pruning here.
-    List<TiPartitionDef> prunedParts = prunedPartBuilder.prune(table, conditions);
+    if (table.getPartitionInfo() != null) {
+      PrunedPartitionBuilder prunedPartBuilder = new PrunedPartitionBuilder();
+      prunedParts = prunedPartBuilder.prune(table, conditions);
+    }
 
     List<KeyRange> keyRanges;
     boolean isDoubleRead = false;

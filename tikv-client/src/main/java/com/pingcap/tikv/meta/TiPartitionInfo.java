@@ -69,8 +69,8 @@ public class TiPartitionInfo implements Serializable {
     this.expr = expr;
     this.columns = new ArrayList<>();
 
-    //range column or list column case
-    if(columns != null) {
+    // range column or list column case
+    if (columns != null) {
       for (CIStr col : columns) {
         this.columns.add(col.getL());
       }

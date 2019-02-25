@@ -9,12 +9,13 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.visitor.DefaultVisitor;
 
-public class RangeBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void>{
+public class RangeBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void> {
 
-  protected RangeSet<C> comparisionBinaryExprVisit(ComparisonBinaryExpression node, Void context, C literal, boolean loose) {
+  protected RangeSet<C> comparisionBinaryExprVisit(
+      ComparisonBinaryExpression node, Void context, C literal, boolean loose) {
     NormalizedPredicate predicate = node.normalize();
     RangeSet<C> ranges = TreeRangeSet.create();
-    if(loose) {
+    if (loose) {
       switch (predicate.getType()) {
         case GREATER_THAN:
         case GREATER_EQUAL:
@@ -37,28 +38,28 @@ public class RangeBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<
       }
     } else {
       switch (predicate.getType()) {
-      case GREATER_THAN:
-        ranges.add(Range.greaterThan(literal));
-        break;
-      case GREATER_EQUAL:
-        ranges.add(Range.atLeast(literal));
-        break;
-      case LESS_THAN:
-        ranges.add(Range.lessThan(literal));
-        break;
-      case LESS_EQUAL:
-        ranges.add(Range.atMost(literal));
-        break;
-      case EQUAL:
-        ranges.add(Range.singleton(literal));
-        break;
-      case NOT_EQUAL:
-        ranges.add(Range.lessThan(literal));
-        ranges.add(Range.greaterThan(literal));
-        break;
-      default:
-        throwOnError(node);
-    }
+        case GREATER_THAN:
+          ranges.add(Range.greaterThan(literal));
+          break;
+        case GREATER_EQUAL:
+          ranges.add(Range.atLeast(literal));
+          break;
+        case LESS_THAN:
+          ranges.add(Range.lessThan(literal));
+          break;
+        case LESS_EQUAL:
+          ranges.add(Range.atMost(literal));
+          break;
+        case EQUAL:
+          ranges.add(Range.singleton(literal));
+          break;
+        case NOT_EQUAL:
+          ranges.add(Range.lessThan(literal));
+          ranges.add(Range.greaterThan(literal));
+          break;
+        default:
+          throwOnError(node);
+      }
     }
 
     return ranges;
