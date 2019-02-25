@@ -134,7 +134,7 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
       return tableInfo.getPartitionInfo().getDefs();
     }
 
-    List<Expression> partExprs = generatePartExprs(tableInfo);
+    List<Expression> partExprs = generateRangePartExprs(tableInfo);
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
     // TODO: throw exception whene cnfExpr is null
     Objects.requireNonNull(cnfExpr, "cnf expression cannot be null at pruning stage");
@@ -156,7 +156,7 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
     return filter.accept(this, null);
   }
 
-  private static List<Expression> generatePartExprs(TiTableInfo tableInfo) {
+  private static List<Expression> generateRangePartExprs(TiTableInfo tableInfo) {
     // only support column ref for now. Fn Expr will be supported later.
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
     List<Expression> partExprs = new ArrayList<>();
