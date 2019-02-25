@@ -15,19 +15,17 @@
 
 package com.pingcap.tikv.expression.visitor;
 
-import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Longs;
+import com.pingcap.tikv.exception.RangeBuilder;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.IsNull;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.Not;
 import com.pingcap.tikv.expression.visitor.CanBePrunedValidator.ContextPartExpr;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiPartitionInfo;
@@ -36,8 +34,9 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.predicates.PredicateUtils;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-public class PrunedPartitionBuilder extends DefaultVisitor<RangeSet<Long>, Void> {
+public class PrunedPartitionBuilder extends RangeBuilder<Long> {
 
   private static Expression partExpr;
 
@@ -96,61 +95,11 @@ public class PrunedPartitionBuilder extends DefaultVisitor<RangeSet<Long>, Void>
   }
 
   @Override
-  @SuppressWarnings("Duplicates")
   protected RangeSet<Long> visit(ComparisonBinaryExpression node, Void context) {
     NormalizedPredicate predicate = node.normalize();
-    RangeSet<Long> ranges = TreeRangeSet.create();
     if (!predicate.getColumnRef().equals(partExpr)) return TreeRangeSet.<Long>create().complement();
     Long literal = (Long) predicate.getValue().getValue();
-    switch (predicate.getType()) {
-      case GREATER_THAN:
-        ranges.add(Range.greaterThan(literal));
-        break;
-      case GREATER_EQUAL:
-        ranges.add(Range.atLeast(literal));
-        break;
-      case LESS_THAN:
-        ranges.add(Range.lessThan(literal));
-        break;
-      case LESS_EQUAL:
-        ranges.add(Range.atMost(literal));
-        break;
-      case EQUAL:
-        ranges.add(Range.singleton(literal));
-        break;
-      case NOT_EQUAL:
-        ranges.add(Range.lessThan(literal));
-        ranges.add(Range.greaterThan(literal));
-        break;
-      default:
-        throwOnError(node);
-    }
-    return ranges;
-  }
-
-  @Override
-  protected RangeSet<Long> visit(LogicalBinaryExpression node, Void context) {
-    RangeSet<Long> leftRanges = node.getLeft().accept(this, context);
-    RangeSet<Long> rightRanges = node.getRight().accept(this, context);
-    switch (node.getCompType()) {
-      case AND:
-        rightRanges.removeAll(leftRanges.complement());
-        break;
-      case OR:
-        rightRanges.addAll(leftRanges);
-        break;
-      case XOR:
-        // AND
-        RangeSet<Long> intersection = TreeRangeSet.create(rightRanges);
-        intersection.removeAll(leftRanges.complement());
-        // full set
-        rightRanges.addAll(leftRanges);
-        rightRanges.removeAll(intersection);
-        break;
-      default:
-        throwOnError(node);
-    }
-    return rightRanges;
+    return comparisionBinaryExprVisit(node, context, literal, false);
   }
 
   public List<TiPartitionDef> prune(TiTableInfo tableInfo, List<Expression> filters) {
@@ -187,11 +136,13 @@ public class PrunedPartitionBuilder extends DefaultVisitor<RangeSet<Long>, Void>
 
     List<Expression> partExprs = generatePartExprs(tableInfo);
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
-    RangeSet<Long> filterRange = buildPartRange(cnfExpr);
+    // TODO: throw exception whene cnfExpr is null
+    Objects.requireNonNull(cnfExpr, "cnf expression cannot be null at pruning stage");
+    RangeSet<Long> filterRange = buildRange(cnfExpr);
     List<TiPartitionDef> pDefs = new ArrayList<>();
     for (int i = 0; i < partExprs.size(); i++) {
       Expression partExpr = partExprs.get(i);
-      RangeSet<Long> partRange = buildPartRange(partExpr);
+      RangeSet<Long> partRange = buildRange(partExpr);
       partRange.removeAll(filterRange.complement());
       if (!partRange.isEmpty()) {
         // part range is empty indicates this partition can be pruned.
@@ -201,7 +152,7 @@ public class PrunedPartitionBuilder extends DefaultVisitor<RangeSet<Long>, Void>
     return pDefs;
   }
 
-  private RangeSet<Long> buildPartRange(Expression filter) {
+  private RangeSet<Long> buildRange(Expression filter) {
     return filter.accept(this, null);
   }
 

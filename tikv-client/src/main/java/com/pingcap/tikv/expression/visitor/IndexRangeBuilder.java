@@ -18,6 +18,7 @@ package com.pingcap.tikv.expression.visitor;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.pingcap.tikv.exception.RangeBuilder;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
@@ -29,9 +30,8 @@ import com.pingcap.tikv.types.DataType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
-public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> {
+public class IndexRangeBuilder extends RangeBuilder<TypedKey> {
 
   private final Map<ColumnRef, Integer> lengths; // length of corresponding ColumnRef
 
@@ -46,9 +46,9 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     this.lengths = result;
   }
 
-  public Set<Range<TypedKey>> buildRange(Expression predicate) {
+  public RangeSet<TypedKey> buildRange(Expression predicate) {
     Objects.requireNonNull(predicate, "predicate is null");
-    return predicate.accept(this, null).asRanges();
+    return predicate.accept(this, null);
   }
 
   private static void throwOnError(Expression node) {
@@ -62,36 +62,6 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
   }
 
   @Override
-  protected RangeSet<TypedKey> visit(LogicalBinaryExpression node, Void context) {
-    RangeSet<TypedKey> leftRanges = node.getLeft().accept(this, context);
-    RangeSet<TypedKey> rightRanges = node.getRight().accept(this, context);
-    switch (node.getCompType()) {
-      case AND:
-        for (Range<TypedKey> range : leftRanges.asRanges()) {
-          rightRanges = rightRanges.subRangeSet(range);
-        }
-        break;
-      case OR:
-        rightRanges.addAll(leftRanges);
-        break;
-      case XOR:
-        // AND
-        RangeSet<TypedKey> intersection = TreeRangeSet.create(rightRanges);
-        for (Range<TypedKey> range : leftRanges.asRanges()) {
-          intersection = intersection.subRangeSet(range);
-        }
-        // full set
-        rightRanges.addAll(leftRanges);
-        rightRanges.removeAll(intersection);
-        break;
-      default:
-        throwOnError(node);
-    }
-    return rightRanges;
-  }
-
-  @Override
-  @SuppressWarnings("Duplicates")
   protected RangeSet<TypedKey> visit(ComparisonBinaryExpression node, Void context) {
     NormalizedPredicate predicate = node.normalize();
     if (predicate == null) {
@@ -121,54 +91,8 @@ public class IndexRangeBuilder extends DefaultVisitor<RangeSet<TypedKey>, Void> 
     TypedKey literal = predicate.getTypedLiteral(prefixLen);
     RangeSet<TypedKey> ranges = TreeRangeSet.create();
 
-    if (prefixLen != DataType.UNSPECIFIED_LEN) {
-      // With prefix length specified, the filter is loosen and so should the ranges
-      switch (predicate.getType()) {
-        case GREATER_THAN:
-        case GREATER_EQUAL:
-          ranges.add(Range.atLeast(literal));
-          break;
-        case LESS_THAN:
-        case LESS_EQUAL:
-          ranges.add(Range.atMost(literal));
-          break;
-        case EQUAL:
-          ranges.add(Range.singleton(literal));
-          break;
-        case NOT_EQUAL:
-          // Should return full range because prefix index predicate for NOT_EQUAL
-          // will be split into an NOT_EQUAL filter and a full range scan
-          ranges.add(Range.all());
-          break;
-        default:
-          throwOnError(node);
-      }
-    } else {
-      switch (predicate.getType()) {
-        case GREATER_THAN:
-          ranges.add(Range.greaterThan(literal));
-          break;
-        case GREATER_EQUAL:
-          ranges.add(Range.atLeast(literal));
-          break;
-        case LESS_THAN:
-          ranges.add(Range.lessThan(literal));
-          break;
-        case LESS_EQUAL:
-          ranges.add(Range.atMost(literal));
-          break;
-        case EQUAL:
-          ranges.add(Range.singleton(literal));
-          break;
-        case NOT_EQUAL:
-          ranges.add(Range.lessThan(literal));
-          ranges.add(Range.greaterThan(literal));
-          break;
-        default:
-          throwOnError(node);
-      }
-    }
-    return ranges;
+    boolean loose = prefixLen != DataType.UNSPECIFIED_LEN;
+    return comparisionBinaryExprVisit(node, context, literal, loose);
   }
 
   @Override

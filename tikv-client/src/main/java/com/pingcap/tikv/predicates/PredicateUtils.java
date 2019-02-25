@@ -78,7 +78,7 @@ public class PredicateUtils {
       List<Key> pointKeys = expressionToPoints(pointPredicates, table, index);
       for (Key key : pointKeys) {
         if (rangePredicate.isPresent()) {
-          Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(rangePredicate.get());
+          Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(rangePredicate.get()).asRanges();
           for (Range<TypedKey> range : ranges) {
             builder.add(new IndexRange(key, range));
           }
@@ -89,7 +89,7 @@ public class PredicateUtils {
       }
     } else {
       if (rangePredicate.isPresent()) {
-        Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(rangePredicate.get());
+        Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(rangePredicate.get()).asRanges();
         for (Range<TypedKey> range : ranges) {
           builder.add(new IndexRange(null, range));
         }
@@ -120,7 +120,7 @@ public class PredicateUtils {
       Expression predicate = pointPredicates.get(i);
       try {
         // each expr will be expand to one or more points
-        Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(predicate);
+        Set<Range<TypedKey>> ranges = indexRangeBuilder.buildRange(predicate).asRanges();
         List<Key> points = rangesToPoint(ranges);
         resultKeys = joinKeys(resultKeys, points);
       } catch (Exception e) {

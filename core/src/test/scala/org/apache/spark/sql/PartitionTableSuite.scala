@@ -304,7 +304,6 @@ class PartitionTableSuite extends BaseTiSparkSuite {
 //    assert(spark.sql("SELECT floor(-0.1)").count() == 1)
 //    assert(spark.sql("SELECT hour('2009-07-30 12:58:59')").count() == 1)
 //    assert(spark.sql("SELECT minute('2009-07-30 12:58:59')").count() == 1)
-//    //     TODO 2 mod 1 is not supported.
 //    assert(spark.sql("SELECT mod(2, 1)").count() == 1)
 //    assert(spark.sql("SELECT month('2016-07-30')").count() == 1)
 //    assert(spark.sql("SELECT quarter('2016-08-31')").count() == 1)
