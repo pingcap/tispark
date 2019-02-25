@@ -125,18 +125,9 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
     return tableInfo.getPartitionInfo().getDefs();
   }
 
-  // pruneRangePart will prune range partition that where conditions never access.
-  private List<TiPartitionDef> pruneRangePart(TiTableInfo tableInfo, List<Expression> filters) {
-    filters = extractLogicalOrComparisonExpr(filters);
-
-    Expression cnfExpr = PredicateUtils.mergeCNFExpressions(filters);
-    if (!canBePruned(tableInfo, cnfExpr)) {
-      return tableInfo.getPartitionInfo().getDefs();
-    }
-
+  private List<TiPartitionDef> pruneRangeColPart(TiTableInfo tableInfo, Expression cnfExpr) {
     List<Expression> partExprs = generateRangePartExprs(tableInfo);
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
-    // TODO: throw exception whene cnfExpr is null
     Objects.requireNonNull(cnfExpr, "cnf expression cannot be null at pruning stage");
     RangeSet<Long> filterRange = buildRange(cnfExpr);
     List<TiPartitionDef> pDefs = new ArrayList<>();
@@ -150,6 +141,23 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
       }
     }
     return pDefs;
+  }
+
+  // pruneRangePart will prune range partition that where conditions never access.
+  private List<TiPartitionDef> pruneRangePart(TiTableInfo tableInfo, List<Expression> filters) {
+    filters = extractLogicalOrComparisonExpr(filters);
+    Expression cnfExpr = PredicateUtils.mergeCNFExpressions(filters);
+    if (!canBePruned(tableInfo, cnfExpr)) {
+      return tableInfo.getPartitionInfo().getDefs();
+    }
+
+    boolean isRangeCol = tableInfo.getPartitionInfo().getColumns() != null;
+    if(isRangeCol) {
+      // range column partition pruning will be support later.
+      return tableInfo.getPartitionInfo().getDefs();
+    }
+
+    return pruneRangeColPart(tableInfo, cnfExpr);
   }
 
   private RangeSet<Long> buildRange(Expression filter) {
