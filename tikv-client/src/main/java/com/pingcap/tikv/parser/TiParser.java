@@ -1,5 +1,6 @@
 package com.pingcap.tikv.parser;
 
+import com.pingcap.tikv.exception.UnsupportedSyntaxException;
 import com.pingcap.tikv.expression.Expression;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -11,6 +12,7 @@ public class TiParser extends MySqlParserBaseVisitor {
   private final AstBuilder astBuilder = new AstBuilder();
 
   public Expression parseExpression(String command) {
+    if(command == "") throw new UnsupportedSyntaxException("cannot parse empty command");
     MySqlLexer lexer = new MySqlLexer(new UpperCaseCharStream(CharStreams.fromString(command)));
     CommonTokenStream cmnTokStrm = new CommonTokenStream(lexer);
     MySqlParser parser = new MySqlParser(cmnTokStrm);
