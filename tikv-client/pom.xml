@@ -32,6 +32,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+            <version>4.7.1</version>
+        </dependency>
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
@@ -139,7 +144,28 @@
             </extension>
         </extensions>
         <plugins>
-             <plugin>
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>4.7.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                    </execution>
+                </executions>
+              <configuration>
+                <arguments>
+                  <argument>-package</argument>
+                  <argument>com.pingcap.tikv.parser</argument>
+                </arguments>
+                <visitor>true</visitor>
+                <sourceDirectory>./src/main/java/com/pingcap/tikv/parser</sourceDirectory>
+                <outputDirectory>./src/main/java/com/pingcap/tikv/parser</outputDirectory>
+              </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
