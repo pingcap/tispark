@@ -168,6 +168,7 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
     // only support column ref for now. Fn Expr will be supported later.
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
     List<Expression> partExprs = new ArrayList<>();
+    // TODO: this will be replaced by parser logic.
     for (int i = 0; i < partInfo.getDefs().size(); i++) {
       TiPartitionDef pDef = partInfo.getDefs().get(i);
       Constant cst = Constant.create(Longs.tryParse(pDef.getLessThan().get(0)));
