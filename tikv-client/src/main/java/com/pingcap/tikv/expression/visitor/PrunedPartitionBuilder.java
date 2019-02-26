@@ -17,20 +17,15 @@ package com.pingcap.tikv.expression.visitor;
 
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.google.common.primitives.Longs;
-import com.pingcap.tikv.exception.RangeBuilder;
-import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
-import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.visitor.CanBePrunedValidator.ContextPartExpr;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.parser.TiParser;
 import com.pingcap.tikv.predicates.PredicateUtils;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,11 +34,6 @@ import java.util.Objects;
 public class PrunedPartitionBuilder extends RangeBuilder<Long> {
 
   private static Expression partExpr;
-
-  private static void throwOnError(Expression node) {
-    final String errorFormat = "Unsupported conversion to Range: %s";
-    throw new TiExpressionException(String.format(errorFormat, node));
-  }
 
   protected RangeSet<Long> process(Expression node, Void context) {
     throwOnError(node);
@@ -75,11 +65,12 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
     // but it requires a lot work, we chose a brute force way
     // to workaround.
     boolean canBePruned = true;
-    partExpr = ColumnRef.create(tblInfo.getPartitionInfo().getExpr(), tblInfo);
-    if (!tblInfo.getPartitionInfo().getExpr().contains("(")) {
-      // skip not(isnull(col)) case
-      canBePruned = CanBePrunedValidator.canBePruned(filter, new ContextPartExpr(partExpr));
-    }
+    // TODO: revist this later
+    //    partExpr = ColumnRef.create(tblInfo.getPartitionInfo().getExpr(), tblInfo);
+    //    if (!tblInfo.getPartitionInfo().getExpr().contains("(")) {
+    //      // skip not(isnull(col)) case
+    //      canBePruned = CanBePrunedValidator.canBePruned(filter, new ContextPartExpr(partExpr));
+    //    }
 
     return canBePruned;
   }
@@ -125,7 +116,8 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
     return tableInfo.getPartitionInfo().getDefs();
   }
 
-  private List<TiPartitionDef> pruneRangeColPart(TiTableInfo tableInfo, Expression cnfExpr) {
+  /** */
+  private List<TiPartitionDef> pruneRangeNormalPart(TiTableInfo tableInfo, Expression cnfExpr) {
     List<Expression> partExprs = generateRangePartExprs(tableInfo);
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
     Objects.requireNonNull(cnfExpr, "cnf expression cannot be null at pruning stage");
@@ -143,6 +135,16 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
     return pDefs;
   }
 
+  /**
+   * When table is a partition table and its type is range. We use this method to do the pruning.
+   * Range partition has two types: 1. range 2. range column. If it is the first case,
+   * pruneRangeNormalPart will be called. Otherwise pruneRangeColPart will be called. For now, we
+   * simply skip range column partition case. TODO: support partition pruning on range column later.
+   *
+   * @param tableInfo is used when we resolve column. See {@code ColumnRef}
+   * @param filters is where condition belong to a select statement.
+   * @return a pruned partition for scanning.
+   */
   // pruneRangePart will prune range partition that where conditions never access.
   private List<TiPartitionDef> pruneRangePart(TiTableInfo tableInfo, List<Expression> filters) {
     filters = extractLogicalOrComparisonExpr(filters);
@@ -151,38 +153,34 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
       return tableInfo.getPartitionInfo().getDefs();
     }
 
-    boolean isRangeCol = tableInfo.getPartitionInfo().getColumns() != null;
-    if(isRangeCol) {
+    List<String> columnInfos = tableInfo.getPartitionInfo().getColumns();
+    boolean isRangeCol = columnInfos != null & columnInfos.size() > 0;
+    if (isRangeCol) {
       // range column partition pruning will be support later.
       return tableInfo.getPartitionInfo().getDefs();
     }
 
-    return pruneRangeColPart(tableInfo, cnfExpr);
-  }
-
-  private RangeSet<Long> buildRange(Expression filter) {
-    return filter.accept(this, null);
+    return pruneRangeNormalPart(tableInfo, cnfExpr);
   }
 
   private static List<Expression> generateRangePartExprs(TiTableInfo tableInfo) {
     // only support column ref for now. Fn Expr will be supported later.
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
     List<Expression> partExprs = new ArrayList<>();
-    // TODO: this will be replaced by parser logic.
+    TiParser parser = new TiParser(tableInfo);
+    String partExpr = tableInfo.getPartitionInfo().getExpr();
+    // when it is not range column case, only first element stores useful info.
     for (int i = 0; i < partInfo.getDefs().size(); i++) {
       TiPartitionDef pDef = partInfo.getDefs().get(i);
-      Constant cst = Constant.create(Longs.tryParse(pDef.getLessThan().get(0)));
       if (i == 0) {
-        partExprs.add(ComparisonBinaryExpression.lessThan(partExpr, cst));
+        String literal = pDef.getLessThan().get(0);
+        partExprs.add(parser.parseExpression(partExpr + "<" + literal));
       } else {
-        Constant previous =
-            Constant.create(Longs.tryParse(partInfo.getDefs().get(i - 1).getLessThan().get(0)));
-        Constant current =
-            Constant.create(Longs.tryParse(partInfo.getDefs().get(i).getLessThan().get(0)));
-        partExprs.add(
-            LogicalBinaryExpression.and(
-                ComparisonBinaryExpression.greaterEqual(partExpr, previous),
-                ComparisonBinaryExpression.lessThan(partExpr, current)));
+        String previous = partInfo.getDefs().get(i - 1).getLessThan().get(0);
+        String current = pDef.getLessThan().get(0);
+        String and =
+            String.format("%s and %s", partExpr + ">=" + previous, partExpr + "<" + current);
+        partExprs.add(parser.parseExpression(and));
       }
     }
     return partExprs;

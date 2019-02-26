@@ -1,13 +1,14 @@
-package com.pingcap.tikv.exception;
+package com.pingcap.tikv.expression.visitor;
 
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.visitor.DefaultVisitor;
+import java.util.Objects;
 
 public class RangeBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void> {
 
@@ -90,7 +91,12 @@ public class RangeBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<
     return rightRanges;
   }
 
-  private static void throwOnError(Expression node) {
+  public RangeSet<C> buildRange(Expression predicate) {
+    Objects.requireNonNull(predicate, "predicate is null");
+    return predicate.accept(this, null);
+  }
+
+  protected static void throwOnError(Expression node) {
     final String errorFormat = "Unsupported conversion to Range: %s";
     throw new TiExpressionException(String.format(errorFormat, node));
   }

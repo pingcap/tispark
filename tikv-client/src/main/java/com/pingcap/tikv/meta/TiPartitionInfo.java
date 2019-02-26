@@ -55,6 +55,18 @@ public class TiPartitionInfo implements Serializable {
     return PartitionType.InvalidPartition;
   }
 
+  public static long partTypeToLong(PartitionType type) {
+    switch (type) {
+      case RangePartition:
+        return 1L;
+      case HashPartition:
+        return 2L;
+      case ListPartition:
+        return 3L;
+    }
+    return -1;
+  }
+
   @VisibleForTesting
   @JsonCreator
   public TiPartitionInfo(

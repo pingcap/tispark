@@ -200,7 +200,7 @@ public class ScanAnalyzerTest {
   public void logicalBinaryExpressionToIndexRangesTest() {
     TiTableInfo table = createTableWithIndex(6, 5);
     TiIndexInfo index = table.getIndices().get(0);
-    
+
     TypedKey zero = TypedKey.toTypedKey(0, IntegerType.INT);
     TypedKey one = TypedKey.toTypedKey(1, IntegerType.INT);
     TypedKey two = TypedKey.toTypedKey(2, IntegerType.INT);

@@ -1,10 +1,20 @@
 package com.pingcap.tikv.parser;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.meta.CIStr;
+import com.pingcap.tikv.meta.MetaUtils;
+import com.pingcap.tikv.meta.TiPartitionDef;
+import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
+import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.RealType;
+import com.pingcap.tikv.types.StringType;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,35 +40,29 @@ public class TiParserTest {
     Assert.assertEquals(
         colRef,
         ArithmeticBinaryExpression.plus(
-            ColumnRef.create("id"), Constant.create(1.0, RealType.REAL)));
+            ColumnRef.create("id"), Constant.create(1, IntegerType.INT)));
 
     sql = "id*1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
         colRef,
         ArithmeticBinaryExpression.multiply(
-            ColumnRef.create("id"), Constant.create(1.0, RealType.REAL)));
+            ColumnRef.create("id"), Constant.create(1, IntegerType.INT)));
 
     sql = "id-1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        colRef,
-        ArithmeticBinaryExpression.minus(
-            ColumnRef.create("id"), Constant.create(1.0, RealType.REAL)));
+        colRef, ArithmeticBinaryExpression.minus(ColumnRef.create("id"), Constant.create(1)));
 
     sql = "id/1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        colRef,
-        ArithmeticBinaryExpression.divide(
-            ColumnRef.create("id"), Constant.create(1.0, RealType.REAL)));
+        colRef, ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)));
 
     sql = "id div 1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        colRef,
-        ArithmeticBinaryExpression.divide(
-            ColumnRef.create("id"), Constant.create(1.0, RealType.REAL)));
+        colRef, ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)));
 
     sql = "'abc'";
     Expression stringLiteral = parser.parseExpression(sql);
@@ -66,7 +70,7 @@ public class TiParserTest {
 
     sql = "id < 1 and id >= 3";
     Expression and = parser.parseExpression(sql);
-    Assert.assertEquals(and.toString(), "[[[id] LESS_THAN 1.0] AND [[id] GREATER_EQUAL 3.0]]");
+    Assert.assertEquals(and.toString(), "[[[id] LESS_THAN 1] AND [[id] GREATER_EQUAL 3]]");
 
     sql = "''";
     stringLiteral = parser.parseExpression(sql);
@@ -74,6 +78,30 @@ public class TiParserTest {
 
     sql = "\"abc\"";
     stringLiteral = parser.parseExpression(sql);
-    Assert.assertEquals(stringLiteral, Constant.create("abc"));
+    Assert.assertEquals(stringLiteral, Constant.create("\"abc\""));
+  }
+
+  private TiTableInfo createTaleInfoWithParts() {
+    List<TiPartitionDef> partDefs = new ArrayList<>();
+    partDefs.add(new TiPartitionDef(1L, CIStr.newCIStr("p0"), ImmutableList.of("5"), ""));
+    partDefs.add(new TiPartitionDef(2L, CIStr.newCIStr("p1"), ImmutableList.of("10"), ""));
+    partDefs.add(new TiPartitionDef(3L, CIStr.newCIStr("p2"), ImmutableList.of("15"), ""));
+    partDefs.add(new TiPartitionDef(4L, CIStr.newCIStr("p3"), ImmutableList.of("MAXVALUE"), ""));
+    return new MetaUtils.TableBuilder()
+        .name("rcx")
+        .addColumn("a", IntegerType.INT, true)
+        .addColumn("b", IntegerType.INT)
+        .addColumn("c", StringType.CHAR)
+        .addColumn("d", IntegerType.INT)
+        .addPartition("a", PartitionType.RangePartition, partDefs, null)
+        .build();
+  }
+
+  @Test
+  public void TestParseWithTableInfo() {
+    TiTableInfo tableInfo = createTaleInfoWithParts();
+    TiParser parser = new TiParser(tableInfo);
+    Expression expr = parser.parseExpression("`a` < 5");
+    Assert.assertEquals(expr.toString(), "[[a] LESS_THAN 5.0]");
   }
 }

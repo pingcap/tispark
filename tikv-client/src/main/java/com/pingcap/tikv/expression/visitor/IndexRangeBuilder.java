@@ -18,8 +18,6 @@ package com.pingcap.tikv.expression.visitor;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.pingcap.tikv.exception.RangeBuilder;
-import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.key.TypedKey;
@@ -29,7 +27,6 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 public class IndexRangeBuilder extends RangeBuilder<TypedKey> {
 
@@ -44,21 +41,6 @@ public class IndexRangeBuilder extends RangeBuilder<TypedKey> {
       }
     }
     this.lengths = result;
-  }
-
-  public RangeSet<TypedKey> buildRange(Expression predicate) {
-    Objects.requireNonNull(predicate, "predicate is null");
-    return predicate.accept(this, null);
-  }
-
-  private static void throwOnError(Expression node) {
-    final String errorFormat = "Unsupported conversion to Range: %s";
-    throw new TiExpressionException(String.format(errorFormat, node));
-  }
-
-  protected RangeSet<TypedKey> process(Expression node, Void context) {
-    throwOnError(node);
-    return null;
   }
 
   @Override
@@ -89,8 +71,6 @@ public class IndexRangeBuilder extends RangeBuilder<TypedKey> {
     // under other encoding methods
     int prefixLen = lengths.getOrDefault(predicate.getColumnRef(), DataType.UNSPECIFIED_LEN);
     TypedKey literal = predicate.getTypedLiteral(prefixLen);
-    RangeSet<TypedKey> ranges = TreeRangeSet.create();
-
     boolean loose = prefixLen != DataType.UNSPECIFIED_LEN;
     return comparisionBinaryExprVisit(node, context, literal, loose);
   }
