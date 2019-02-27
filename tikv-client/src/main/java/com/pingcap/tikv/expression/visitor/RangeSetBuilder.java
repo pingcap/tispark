@@ -10,7 +10,14 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import java.util.Objects;
 
-public class RangeBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void> {
+/**
+ * A builder can build a range set of type {@code C}. It also extends {@code DefaultVisitor} and
+ * override and {@code LogicalBinaryExpression}'s visit. For {@code ComparisonBinaryExpression}, we
+ * cannot just override it because {@code IndexRangeSetBuilder} and {@code LogicalBinaryExpression} has
+ * different behavior. A method {@code comparisonBinaryExprVisit} is added with extra boolean variable
+ * to control the behavior.
+ */
+public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void> {
 
   /**
    * visits {@code ComparisonBinaryExpression} expression and constructs a range set.
@@ -20,7 +27,7 @@ public class RangeBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<
    * @param loose If prefix length is specified, then filter is loose, so is the range.
    * @return a range set.
    */
-  protected RangeSet<C> comparisionBinaryExprVisit(
+  protected RangeSet<C> comparisonBinaryExprVisit(
       ComparisonBinaryExpression node, Void context, C literal, boolean loose) {
     NormalizedPredicate predicate = node.normalize();
     RangeSet<C> ranges = TreeRangeSet.create();

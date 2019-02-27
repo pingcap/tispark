@@ -33,7 +33,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class PrunedPartitionBuilder extends RangeBuilder<Long> {
+/**
+ * Apply partition pruning rule on filter condition. Partition pruning is based on a simple idea and
+ * can be described as "Do not scan partitions where there can be no matching values".
+ * Currently only range partition pruning is supported(range column on mutiple columns is not supported
+ * at TiDB side, so we can't optimize this yet).
+ */
+public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
 
   private static Expression partExpr;
   private static List<Expression> partExprs;
@@ -96,7 +102,7 @@ public class PrunedPartitionBuilder extends RangeBuilder<Long> {
     Long literal;
     if (predicate.getValue().getValue() instanceof Number) {
       literal = ((Number) predicate.getValue().getValue()).longValue();
-      return comparisionBinaryExprVisit(node, context, literal, false);
+      return comparisonBinaryExprVisit(node, context, literal, false);
     }
     return TreeRangeSet.create();
   }

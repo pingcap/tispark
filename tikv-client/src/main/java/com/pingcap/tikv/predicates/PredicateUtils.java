@@ -25,7 +25,7 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.Visitor;
 import com.pingcap.tikv.expression.visitor.DefaultVisitor;
-import com.pingcap.tikv.expression.visitor.IndexRangeBuilder;
+import com.pingcap.tikv.expression.visitor.IndexRangeSetBuilder;
 import com.pingcap.tikv.key.CompoundKey;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
@@ -72,7 +72,7 @@ public class PredicateUtils {
     requireNonNull(pointPredicates, "pointPredicates is null");
     requireNonNull(rangePredicate, "rangePredicate is null");
     ImmutableList.Builder<IndexRange> builder = ImmutableList.builder();
-    IndexRangeBuilder indexRangeBuilder = new IndexRangeBuilder(table, index);
+    IndexRangeSetBuilder indexRangeBuilder = new IndexRangeSetBuilder(table, index);
 
     if (pointPredicates.size() != 0) {
       List<Key> pointKeys = expressionToPoints(pointPredicates, table, index);
@@ -115,7 +115,7 @@ public class PredicateUtils {
     requireNonNull(pointPredicates, "pointPredicates cannot be null");
 
     List<Key> resultKeys = new ArrayList<>();
-    IndexRangeBuilder indexRangeBuilder = new IndexRangeBuilder(table, index);
+    IndexRangeSetBuilder indexRangeBuilder = new IndexRangeSetBuilder(table, index);
 
     for (int i = 0; i < pointPredicates.size(); i++) {
       Expression predicate = pointPredicates.get(i);

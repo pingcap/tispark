@@ -28,11 +28,11 @@ import com.pingcap.tikv.types.DataType;
 import java.util.HashMap;
 import java.util.Map;
 
-public class IndexRangeBuilder extends RangeBuilder<TypedKey> {
+public class IndexRangeSetBuilder extends RangeSetBuilder<TypedKey> {
 
   private final Map<ColumnRef, Integer> lengths; // length of corresponding ColumnRef
 
-  public IndexRangeBuilder(TiTableInfo table, TiIndexInfo index) {
+  public IndexRangeSetBuilder(TiTableInfo table, TiIndexInfo index) {
     Map<ColumnRef, Integer> result = new HashMap<>();
     if (table != null && index != null) {
       for (TiIndexColumn indexColumn : index.getIndexColumns()) {
@@ -73,7 +73,7 @@ public class IndexRangeBuilder extends RangeBuilder<TypedKey> {
     TypedKey literal = predicate.getTypedLiteral(prefixLen);
     boolean loose = prefixLen != DataType.UNSPECIFIED_LEN;
     // With prefix length specified, the filter is loosen and so should the ranges
-    return comparisionBinaryExprVisit(node, context, literal, loose);
+    return comparisonBinaryExprVisit(node, context, literal, loose);
   }
 
   @Override
