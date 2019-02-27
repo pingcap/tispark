@@ -12,6 +12,14 @@ import java.util.Objects;
 
 public class RangeBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void> {
 
+  /**
+   * visits {@code ComparisonBinaryExpression} expression and constructs a range set.
+   * @param node represents a {@code ComparisonBinaryExpression}.
+   * @param context represents a context during visiting process. It is not being used in this method.
+   * @param literal represents a comparable value.
+   * @param loose If prefix length is specified, then filter is loose, so is the range.
+   * @return a range set.
+   */
   protected RangeSet<C> comparisionBinaryExprVisit(
       ComparisonBinaryExpression node, Void context, C literal, boolean loose) {
     NormalizedPredicate predicate = node.normalize();
@@ -79,6 +87,8 @@ public class RangeBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<
         break;
       case XOR:
         // AND
+        // We need make a copy of rightRanges rather than assign the pointer
+        // to intersection since we need modify intersection later.
         RangeSet<C> intersection = TreeRangeSet.create(rightRanges);
         intersection.removeAll(leftRanges.complement());
         // full set
