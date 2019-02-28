@@ -240,6 +240,11 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     }
 
     void close() {}
+
+    @Override
+    public String toString() {
+      return "[leaderInfo: " + leaderInfo + "]";
+    }
   }
 
   public GetMembersResponse getMembers(HostAndPort url) {
