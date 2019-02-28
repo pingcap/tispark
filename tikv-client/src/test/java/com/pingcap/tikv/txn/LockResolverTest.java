@@ -62,6 +62,7 @@ public class LockResolverTest {
   private static final int DefaultTTL = 10;
   private BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
   private ReadOnlyPDClient pdClient;
+  private boolean init;
 
   private void putKV(String key, String value, long startTS, long commitTS) {
     Mutation m =
@@ -262,14 +263,23 @@ public class LockResolverTest {
     try {
       session = TiSession.create(conf);
       pdClient = PDClient.create(session);
+      init = true;
     } catch (Exception e) {
       logger.warn("TiDB cluster may not be present");
-      // ignore npe since this test requires tidb cluster being present.
+      init = false;
     }
+  }
+
+  private void skipTest() {
+    logger.warn("Test skipped due to failure in initializing pd client.");
   }
 
   @Test
   public void getSITest() {
+    if (!init) {
+      skipTest();
+      return;
+    }
     session.getConf().setIsolationLevel(IsolationLevel.SI);
     putAlphabet();
     prepareAlphabetLocks();
@@ -295,6 +305,10 @@ public class LockResolverTest {
 
   @Test
   public void getRCTest() {
+    if (!init) {
+      skipTest();
+      return;
+    }
     session.getConf().setIsolationLevel(IsolationLevel.RC);
     putAlphabet();
     prepareAlphabetLocks();
@@ -304,6 +318,10 @@ public class LockResolverTest {
 
   @Test
   public void cleanLockTest() {
+    if (!init) {
+      skipTest();
+      return;
+    }
     session.getConf().setIsolationLevel(IsolationLevel.SI);
     for (int i = 0; i < 26; i++) {
       String k = String.valueOf((char) ('a' + i));
@@ -354,6 +372,10 @@ public class LockResolverTest {
 
   @Test
   public void txnStatusTest() {
+    if (!init) {
+      skipTest();
+      return;
+    }
     session.getConf().setIsolationLevel(IsolationLevel.SI);
     TiTimestamp startTs = pdClient.getTimestamp(backOffer);
     TiTimestamp endTs = pdClient.getTimestamp(backOffer);
@@ -402,6 +424,10 @@ public class LockResolverTest {
 
   @Test
   public void SITest() {
+    if (!init) {
+      skipTest();
+      return;
+    }
     session.getConf().setIsolationLevel(IsolationLevel.SI);
     TiTimestamp startTs = pdClient.getTimestamp(backOffer);
     TiTimestamp endTs = pdClient.getTimestamp(backOffer);
@@ -439,6 +465,10 @@ public class LockResolverTest {
 
   @Test
   public void RCTest() {
+    if (!init) {
+      skipTest();
+      return;
+    }
     session.getConf().setIsolationLevel(IsolationLevel.RC);
     TiTimestamp startTs = pdClient.getTimestamp(backOffer);
     TiTimestamp endTs = pdClient.getTimestamp(backOffer);
