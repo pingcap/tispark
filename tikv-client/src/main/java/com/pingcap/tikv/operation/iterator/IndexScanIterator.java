@@ -20,8 +20,6 @@ import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiPartitionDef;
-import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
@@ -74,18 +72,10 @@ public class IndexScanIterator implements Iterator<Row> {
           completionService.submit(
               () -> {
                 List<RegionTask> tasks = new ArrayList<>();
-                TiTableInfo table = dagReq.getTableInfo();
-                if (!table.isPartitionEnabled()) {
-                  tasks.addAll(
-                      RangeSplitter.newSplitter(session.getRegionManager())
-                          .splitAndSortHandlesByRegion(table.getId(), handles));
-                } else {
-                  for (TiPartitionDef pDef : dagReq.getPrunedPartInfo().getDefs()) {
-                    tasks.addAll(
-                        RangeSplitter.newSplitter(session.getRegionManager())
-                            .splitAndSortHandlesByRegion(pDef.getId(), handles));
-                  }
-                }
+                List<Long> ids = dagReq.getIds();
+                tasks.addAll(RangeSplitter.newSplitter(session.getRegionManager())
+                    .splitAndSortHandlesByRegion(ids, handles));
+
                 return CoprocessIterator.getRowIterator(dagReq, tasks, session);
               });
         }

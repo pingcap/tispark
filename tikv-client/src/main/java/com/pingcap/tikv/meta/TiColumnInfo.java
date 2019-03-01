@@ -130,7 +130,8 @@ public class TiColumnInfo implements Serializable {
   }
 
   public boolean matchName(String name) {
-    return this.name.equalsIgnoreCase(name);
+    return this.name.equalsIgnoreCase(name)
+        || String.format("`%s`", this.name).equalsIgnoreCase(name);
   }
 
   public int getOffset() {

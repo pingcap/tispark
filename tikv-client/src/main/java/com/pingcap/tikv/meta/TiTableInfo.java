@@ -45,7 +45,6 @@ public class TiTableInfo implements Serializable {
   private final long maxIndexId;
   private final long oldSchemaId;
   private final TiPartitionInfo partitionInfo;
-  private TiPartitionExpr partitionExpr;
 
   @JsonCreator
   public TiTableInfo(
