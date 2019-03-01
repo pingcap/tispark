@@ -13,16 +13,18 @@ import java.util.Objects;
 /**
  * A builder can build a range set of type {@code C}. It also extends {@code DefaultVisitor} and
  * override and {@code LogicalBinaryExpression}'s visit. For {@code ComparisonBinaryExpression}, we
- * cannot just override it because {@code IndexRangeSetBuilder} and {@code LogicalBinaryExpression} has
- * different behavior. A method {@code comparisonBinaryExprVisit} is added with extra boolean variable
- * to control the behavior.
+ * cannot just override it because {@code IndexRangeSetBuilder} and {@code LogicalBinaryExpression}
+ * has different behavior. A method {@code comparisonBinaryExprVisit} is added with extra boolean
+ * variable to control the behavior.
  */
 public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void> {
 
   /**
    * visits {@code ComparisonBinaryExpression} expression and constructs a range set.
+   *
    * @param node represents a {@code ComparisonBinaryExpression}.
-   * @param context represents a context during visiting process. It is not being used in this method.
+   * @param context represents a context during visiting process. It is not being used in this
+   *     method.
    * @param literal represents a comparable value.
    * @param loose If prefix length is specified, then filter is loose, so is the range.
    * @return a range set.

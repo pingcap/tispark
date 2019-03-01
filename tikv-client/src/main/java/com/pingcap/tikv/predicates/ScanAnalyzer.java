@@ -260,17 +260,6 @@ public class ScanAnalyzer {
     return new Pair<>(startKey, endKey);
   }
 
-  private KeyRange makeKeyRange(long id, IndexRange ir) {
-    Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(id, ir);
-    Key startKey = pairKey.first;
-    Key endKey = pairKey.second;
-    // This range only possible when < MIN or > MAX
-    if (!startKey.equals(endKey)) {
-      return makeCoprocRange(startKey.toByteString(), endKey.toByteString());
-    }
-    return null;
-  }
-
   private List<KeyRange> buildTableScanKeyRangeWithIds(
       List<Long> ids, List<IndexRange> indexRanges) {
     List<KeyRange> ranges = new ArrayList<>(indexRanges.size());

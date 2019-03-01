@@ -56,7 +56,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       private[this] val tasks = tiPartition.tasks
 
       private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
-      private val tableId = dagRequest.getTableInfo.getId
+      private val ids = dagRequest.getIds
       private val regionManager = session.getRegionManager
       private lazy val handleList = {
         val lst = new TLongArrayList()
@@ -74,7 +74,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       // Fetch all handles and group by region id
       private val regionHandleMap = RangeSplitter
         .newSplitter(regionManager)
-        .groupByAndSortHandlesByRegionId(tableId, handleList)
+        .groupByAndSortHandlesByRegionIds(ids, handleList)
 
       private val iterator = regionHandleMap.iterator()
 

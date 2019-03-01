@@ -106,6 +106,15 @@ public class RangeSplitter {
 
   private final RegionManager regionManager;
 
+  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionIds(
+      List<Long> ids, TLongArrayList handles) {
+    TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
+    for (Long id : ids) {
+      result.putAll(groupByAndSortHandlesByRegionId(id, handles));
+    }
+    return result;
+  }
+
   /**
    * Group by a list of handles by the handles' region id, handles will be sorted.
    *
@@ -172,6 +181,14 @@ public class RangeSplitter {
       result.add(handles.get(i));
     }
     return result;
+  }
+
+  public List<RegionTask> splitAndSortHandlesByRegion(List<Long> ids, TLongArrayList handles) {
+    List<RegionTask> regionTasks = new ArrayList<>();
+    for (Long id : ids) {
+      regionTasks.addAll(splitAndSortHandlesByRegion(id, handles));
+    }
+    return regionTasks;
   }
 
   /**

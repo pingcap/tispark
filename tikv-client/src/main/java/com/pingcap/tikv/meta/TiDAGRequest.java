@@ -490,6 +490,18 @@ public class TiDAGRequest implements Serializable {
     return this.tableInfo;
   }
 
+  public List<Long> getIds() {
+    if (!this.tableInfo.isPartitionEnabled()) {
+      return ImmutableList.of(this.tableInfo.getId());
+    }
+
+    List<Long> ids = new ArrayList<>();
+    for (TiPartitionDef pDef : this.getPrunedParts()) {
+      ids.add(pDef.getId());
+    }
+    return ids;
+  }
+
   public TiDAGRequest setIndexInfo(TiIndexInfo indexInfo) {
     this.indexInfo = requireNonNull(indexInfo, "indexInfo is null");
     return this;

@@ -35,9 +35,9 @@ import java.util.Objects;
 
 /**
  * Apply partition pruning rule on filter condition. Partition pruning is based on a simple idea and
- * can be described as "Do not scan partitions where there can be no matching values".
- * Currently only range partition pruning is supported(range column on mutiple columns is not supported
- * at TiDB side, so we can't optimize this yet).
+ * can be described as "Do not scan partitions where there can be no matching values". Currently
+ * only range partition pruning is supported(range column on mutiple columns is not supported at
+ * TiDB side, so we can't optimize this yet).
  */
 public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
 
@@ -168,7 +168,17 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     List<String> columnInfos = tableInfo.getPartitionInfo().getColumns();
     boolean isRangeCol = columnInfos != null & columnInfos.size() > 0;
     if (isRangeCol) {
-      // range column partition pruning will be support later.
+      // TODO: range column partition pruning will be support later.
+      // pruning can also be performed for WHERE conditions that involve comparisons of the
+      // preceding types on multiple columns for tables that use RANGE COLUMNS or LIST COLUMNS
+      // partitioning.
+      // This type of optimization can be applied whenever the partitioning expression consists
+      // of an equality or a range which can be reduced to a set of equalities, or when
+      // the partitioning expression represents an increasing or decreasing relationship.
+      // Pruning can also be applied for tables partitioned on a DATE or DATETIME column
+      // when the partitioning expression uses the YEAR() or TO_DAYS() function.
+      // Pruning can also be applied for such tables when the partitioning expression uses
+      // the TO_SECONDS() function
       return tableInfo.getPartitionInfo().getDefs();
     }
 
