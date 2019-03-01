@@ -122,7 +122,7 @@ public class RangeSplitter {
    * @param handles Handle list
    * @return <RegionId, HandleList> map
    */
-  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(
+  private TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(
       long tableId, TLongArrayList handles) {
     TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
     handles.sort();
@@ -198,7 +198,7 @@ public class RangeSplitter {
    * @param handles Handle list
    * @return A list of region tasks
    */
-  public List<RegionTask> splitAndSortHandlesByRegion(long tableId, TLongArrayList handles) {
+  private List<RegionTask> splitAndSortHandlesByRegion(long tableId, TLongArrayList handles) {
     // Max value for current index handle range
     ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
 
