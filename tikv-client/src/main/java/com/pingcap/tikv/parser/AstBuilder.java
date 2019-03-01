@@ -1,6 +1,8 @@
 package com.pingcap.tikv.parser;
 
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.pingcap.tikv.exception.UnsupportedSyntaxException;
 import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
@@ -8,7 +10,9 @@ import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.RealType;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
@@ -16,16 +20,35 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 // In tikv java client, we only need to parser expression
 // which is used by partition pruning.
 public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
+  private TiTableInfo tableInfo;
+
+  public AstBuilder() {}
+
+  public AstBuilder(TiTableInfo tableInfo) {
+    this.tableInfo = tableInfo;
+  }
+
   public Expression visitSimpleId(MySqlParser.SimpleIdContext ctx) {
     if (ctx.ID() != null) {
-      return ColumnRef.create(ctx.ID().getSymbol().getText());
+      return createColRef(ctx.ID().getSymbol().getText());
     }
 
     throw new UnsupportedSyntaxException(ctx.getParent().toString() + ": it is not supported");
   }
 
+  private Expression createColRef(String id) {
+    if (tableInfo != null) {
+      return ColumnRef.create(id, tableInfo);
+    } else {
+      return ColumnRef.create(id);
+    }
+  }
+
   @Override
   public Expression visitUid(MySqlParser.UidContext ctx) {
+    if (ctx.REVERSE_QUOTE_ID() != null) {
+      return createColRef(ctx.REVERSE_QUOTE_ID().getSymbol().getText());
+    }
     return visitSimpleId(ctx.simpleId());
   }
 
@@ -34,19 +57,31 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
     return visitUid(ctx.uid());
   }
 
+  private Expression parseIntOrLongOrDec(String val) {
+    try {
+      return Constant.create(Ints.tryParse(val), IntegerType.INT);
+    } catch (Exception e) {
+      try {
+        return Constant.create(Longs.tryParse(val), IntegerType.BIGINT);
+      } catch (Exception e2) {
+        return Constant.create(Doubles.tryParse(val), RealType.DOUBLE);
+      }
+    }
+  }
+
   @Override
   public Expression visitDecimalLiteral(MySqlParser.DecimalLiteralContext ctx) {
     if (ctx.ONE_DECIMAL() != null) {
-      return Constant.create(
-          Doubles.tryParse(ctx.ONE_DECIMAL().getSymbol().getText()), RealType.DOUBLE);
+      String val = ctx.ONE_DECIMAL().getSymbol().getText();
+      return parseIntOrLongOrDec(val);
     }
     if (ctx.TWO_DECIMAL() != null) {
-      return Constant.create(
-          Doubles.tryParse(ctx.TWO_DECIMAL().getSymbol().getText()), RealType.DOUBLE);
+      String val = ctx.TWO_DECIMAL().getSymbol().getText();
+      return parseIntOrLongOrDec(val);
     }
     if (ctx.DECIMAL_LITERAL() != null) {
-      return Constant.create(
-          Doubles.tryParse(ctx.DECIMAL_LITERAL().getSymbol().getText()), RealType.DOUBLE);
+      String val = ctx.DECIMAL_LITERAL().getSymbol().getText();
+      return parseIntOrLongOrDec(val);
     }
 
     throw new UnsupportedSyntaxException(ctx.toString() + ": it is not supported.");
