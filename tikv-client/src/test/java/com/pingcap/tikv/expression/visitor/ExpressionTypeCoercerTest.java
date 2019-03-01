@@ -41,7 +41,7 @@ import java.util.Map;
 import org.junit.Test;
 
 public class ExpressionTypeCoercerTest {
-  private static TiTableInfo createTable() {
+  public static TiTableInfo createTable() {
     return new MetaUtils.TableBuilder()
         .name("testTable")
         .addColumn("c1", IntegerType.INT, true)
