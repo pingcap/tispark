@@ -25,7 +25,7 @@ import org.junit.Test;
 public class IndexKeyTest {
 
   @Test
-  public void createTest() throws Exception {
+  public void createTest() {
     Key k1 = Key.toRawKey(new byte[] {1, 2, 3, 4});
     Key k2 = Key.toRawKey(new byte[] {5, 6, 7, 8});
     Key k3 = Key.toRawKey(new byte[] {5, 6, 7, 9});
@@ -33,7 +33,7 @@ public class IndexKeyTest {
     IndexKey ik2 = IndexKey.toIndexKey(666, 777, k1, k2);
     IndexKey ik3 = IndexKey.toIndexKey(666, 777, k1, k3);
     assertEquals(ik1, ik2);
-    assertTrue(ik1.compareTo(ik2) == 0);
+    assertEquals(0, ik1.compareTo(ik2));
     assertTrue(ik1.compareTo(ik3) < 0);
     assertEquals(2, ik1.getDataKeys().length);
     assertEquals(k1, ik1.getDataKeys()[0]);
@@ -47,7 +47,7 @@ public class IndexKeyTest {
   }
 
   @Test
-  public void toStringTest() throws Exception {
+  public void toStringTest() {
     Key k1 = Key.toRawKey(new byte[] {1, 2, 3, 4});
     TypedKey k2 = TypedKey.toTypedKey(666, IntegerType.INT);
     IndexKey ik = IndexKey.toIndexKey(0, 0, k1, Key.NULL, k2);

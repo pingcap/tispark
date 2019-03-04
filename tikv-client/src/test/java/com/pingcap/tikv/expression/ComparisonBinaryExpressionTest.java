@@ -25,6 +25,7 @@ import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.key.TypedKey;
@@ -57,7 +58,7 @@ public class ComparisonBinaryExpressionTest {
   }
 
   @Test
-  public void normalizeTest() throws Exception {
+  public void normalizeTest() {
     TiTableInfo table = createTable();
     ColumnRef col1 = ColumnRef.create("c1", table);
     Constant c1 = Constant.create(1, IntegerType.INT);
@@ -87,6 +88,6 @@ public class ComparisonBinaryExpressionTest {
     verifyNormalize(cond, "c1", 1, IntegerType.INT, Type.LESS_EQUAL);
 
     cond = equal(divide(col1, c1), c1);
-    assertEquals(null, cond.normalize());
+    assertNull(cond.normalize());
   }
 }

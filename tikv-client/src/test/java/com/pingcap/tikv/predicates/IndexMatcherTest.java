@@ -50,7 +50,7 @@ public class IndexMatcherTest {
   }
 
   @Test
-  public void matchOnlyEq() throws Exception {
+  public void matchOnlyEq() {
     TiTableInfo table = createTable();
     TiIndexInfo index = table.getIndices().get(0);
     TiIndexColumn col = index.getIndexColumns().get(0);
@@ -85,16 +85,14 @@ public class IndexMatcherTest {
   }
 
   @Test
-  public void matchAll() throws Exception {
+  public void matchAll() {
     TiTableInfo table = createTable();
     TiIndexInfo index = table.getIndices().get(0);
     TiIndexColumn col = index.getIndexColumns().get(0);
     IndexMatcher matcher = IndexMatcher.matcher(col);
-    Constant c0 = Constant.create(0, IntegerType.INT);
     Constant c1 = Constant.create(1, IntegerType.INT);
     Constant c2 = Constant.create(2, IntegerType.INT);
     ColumnRef col1 = ColumnRef.create("c1", table);
-    ColumnRef col2 = ColumnRef.create("c2", table);
 
     // index col = c1, long
     Expression cond = lessEqual(col1, c1);

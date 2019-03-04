@@ -27,7 +27,7 @@ import org.junit.Test;
 
 public class DecimalTypeTest {
   @Test
-  public void encodeTest() throws Exception {
+  public void encodeTest() {
     DataType type = DecimalType.DECIMAL;
     BigDecimal originalVal = BigDecimal.valueOf(6.66);
     byte[] encodedKey = encode(originalVal, EncodeType.KEY, type);

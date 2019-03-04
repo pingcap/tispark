@@ -29,7 +29,7 @@ public class RangeSplitterTest {
   static class MockRegionManager extends RegionManager {
     private final Map<KeyRange, TiRegion> mockRegionMap;
 
-    public MockRegionManager(List<KeyRange> ranges) {
+    MockRegionManager(List<KeyRange> ranges) {
       super(null);
       mockRegionMap =
           ranges.stream().collect(Collectors.toMap(kr -> kr, kr -> region(ranges.indexOf(kr), kr)));
@@ -135,7 +135,7 @@ public class RangeSplitterTest {
   }
 
   @Test
-  public void splitRangeByRegionTest() throws Exception {
+  public void splitRangeByRegionTest() {
     MockRegionManager mgr =
         new MockRegionManager(
             ImmutableList.of(keyRange(null, 30L), keyRange(30L, 50L), keyRange(50L, null)));
@@ -161,7 +161,7 @@ public class RangeSplitterTest {
   }
 
   @Test
-  public void splitAndSortHandlesByRegionTest() throws Exception {
+  public void splitAndSortHandlesByRegionTest() {
     final long tableId = 1;
     TLongArrayList handles = new TLongArrayList();
     handles.add(

@@ -57,7 +57,7 @@ public class RegionManagerTest {
   }
 
   @Test
-  public void getRegionByKey() throws Exception {
+  public void getRegionByKey() {
     ByteString startKey = ByteString.copyFrom(new byte[] {1});
     ByteString endKey = ByteString.copyFrom(new byte[] {10});
     ByteString searchKey = ByteString.copyFrom(new byte[] {5});
@@ -86,12 +86,12 @@ public class RegionManagerTest {
     try {
       mgr.getRegionByKey(searchKeyNotExists);
       fail();
-    } catch (Exception e) {
+    } catch (Exception ignored) {
     }
   }
 
   @Test
-  public void getStoreByKey() throws Exception {
+  public void getStoreByKey() {
     ByteString startKey = ByteString.copyFrom(new byte[] {1});
     ByteString endKey = ByteString.copyFrom(new byte[] {10});
     ByteString searchKey = ByteString.copyFrom(new byte[] {5});
@@ -125,7 +125,7 @@ public class RegionManagerTest {
   }
 
   @Test
-  public void getRegionById() throws Exception {
+  public void getRegionById() {
     ByteString startKey = ByteString.copyFrom(new byte[] {1});
     ByteString endKey = ByteString.copyFrom(new byte[] {10});
 
@@ -160,7 +160,7 @@ public class RegionManagerTest {
   }
 
   @Test
-  public void getStoreById() throws Exception {
+  public void getStoreById() {
     long storeId = 234;
     String testAddress = "testAddress";
     server.addGetStoreResp(
@@ -190,7 +190,7 @@ public class RegionManagerTest {
     try {
       mgr.getStoreById(storeId);
       fail();
-    } catch (Exception e) {
+    } catch (Exception ignored) {
     }
   }
 }

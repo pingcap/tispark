@@ -24,7 +24,7 @@ import org.junit.Test;
 public class CompoundKeyTest {
 
   @Test
-  public void concatTest() throws Exception {
+  public void concatTest() {
     Key k1 = Key.toRawKey(new byte[] {1, 2, 3});
     Key k2 = Key.toRawKey(new byte[] {4, 5, 6});
     CompoundKey cpk1 = CompoundKey.concat(k1, k2);
@@ -39,7 +39,7 @@ public class CompoundKeyTest {
   }
 
   @Test
-  public void getKeysTest() throws Exception {
+  public void getKeysTest() {
     Key k1 = Key.toRawKey(new byte[] {1, 2, 3});
     Key k2 = Key.toRawKey(new byte[] {4, 5, 6});
     Key k3 = Key.toRawKey(new byte[] {7, 8, 9});

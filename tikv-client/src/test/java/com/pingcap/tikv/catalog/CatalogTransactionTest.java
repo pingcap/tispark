@@ -17,43 +17,16 @@ package com.pingcap.tikv.catalog;
 
 import static org.junit.Assert.assertEquals;
 
-import com.pingcap.tikv.KVMockServer;
-import com.pingcap.tikv.PDMockServer;
-import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
-import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.region.TiRegion;
 import java.util.List;
-import org.junit.Before;
 import org.junit.Test;
 
-public class CatalogTransactionTest {
-  private KVMockServer kvServer;
-  private PDMockServer pdServer;
-  private static final long CLUSTER_ID = 1024;
-  private TiConfiguration conf;
-
-  @Before
-  public void setUp() throws Exception {
-    pdServer = new PDMockServer();
-    pdServer.start(CLUSTER_ID);
-    kvServer = new KVMockServer();
-    kvServer.start(
-        new TiRegion(
-            MetaMockHelper.region,
-            MetaMockHelper.region.getPeers(0),
-            IsolationLevel.RC,
-            CommandPri.Low));
-    // No PD needed in this test
-    conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
-  }
-
+public class CatalogTransactionTest  extends CatalogTest {
   @Test
-  public void getLatestSchemaVersionTest() throws Exception {
+  public void getLatestSchemaVersionTest() {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
     helper.setSchemaVersion(666);
@@ -63,7 +36,7 @@ public class CatalogTransactionTest {
   }
 
   @Test
-  public void getDatabasesTest() throws Exception {
+  public void getDatabasesTest() {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
     helper.addDatabase(130, "global_temp");
@@ -85,7 +58,7 @@ public class CatalogTransactionTest {
   }
 
   @Test
-  public void getTablesTest() throws Exception {
+  public void getTablesTest() {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
     helper.addTable(130, 42, "test");

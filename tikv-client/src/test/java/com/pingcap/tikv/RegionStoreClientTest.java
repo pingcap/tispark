@@ -88,7 +88,7 @@ public class RegionStoreClientTest {
   }
 
   @After
-  public void tearDown() throws Exception {
+  public void tearDown() {
     server.stop();
   }
 
@@ -231,9 +231,7 @@ public class RegionStoreClientTest {
                 .map(c -> c.getRowsData().toStringUtf8())
                 .collect(Collectors.toList()));
     assertTrue(
-        ImmutableList.of("value1", "value2", "value4", "value6", "value7")
-            .stream()
-            .allMatch(results::contains));
+        results.containsAll(ImmutableList.of("value1", "value2", "value4", "value6", "value7")));
 
     builder = DAGRequest.newBuilder();
     builder.setStartTs(1);

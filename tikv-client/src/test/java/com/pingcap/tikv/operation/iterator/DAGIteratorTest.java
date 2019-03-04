@@ -38,7 +38,6 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.SchemaInfer;
-import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.IntegerType;
@@ -94,24 +93,13 @@ public class DAGIteratorTest {
     session = TiSession.create(conf);
   }
 
-  private RegionStoreClient createClient() {
-    Metapb.Store store =
-        Metapb.Store.newBuilder()
-            .setAddress(LOCAL_ADDR + ":" + port)
-            .setId(1)
-            .setState(Metapb.StoreState.Up)
-            .build();
-
-    return RegionStoreClient.create(region, store, session);
-  }
-
   @After
-  public void tearDown() throws Exception {
+  public void tearDown() {
     server.stop();
   }
 
   @Test
-  public void staleEpochTest() throws Exception {
+  public void staleEpochTest() {
     Metapb.Store store =
         Metapb.Store.newBuilder()
             .setAddress(LOCAL_ADDR + ":" + port)

@@ -1,6 +1,7 @@
 package com.pingcap.tikv.catalog;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.pingcap.tikv.KVMockServer;
@@ -20,10 +21,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class CatalogTest {
-  private KVMockServer kvServer;
-  private PDMockServer pdServer;
+  KVMockServer kvServer;
+  PDMockServer pdServer;
   private static final long CLUSTER_ID = 1024;
-  private TiConfiguration conf;
+  TiConfiguration conf;
 
   @Before
   public void setUp() throws Exception {
@@ -41,7 +42,7 @@ public class CatalogTest {
   }
 
   @Test
-  public void listDatabasesTest() throws Exception {
+  public void listDatabasesTest() {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
     helper.setSchemaVersion(666);
@@ -71,11 +72,11 @@ public class CatalogTest {
     assertEquals("tpch_001", names.get(2));
 
     assertEquals(130, cat.getDatabase("global_temp").getId());
-    assertEquals(null, cat.getDatabase("global_temp111"));
+    assertNull(cat.getDatabase("global_temp111"));
   }
 
   @Test
-  public void listTablesTest() throws Exception {
+  public void listTablesTest() {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
     helper.setSchemaVersion(666);
@@ -98,7 +99,7 @@ public class CatalogTest {
 
     assertEquals("test", cat.getTable(db, 42).getName());
     assertEquals("test1", cat.getTable(db, 43).getName());
-    assertEquals(null, cat.getTable(db, 44));
+    assertNull(cat.getTable(db, 44));
 
     helper.addTable(130, 44, "other");
     helper.setSchemaVersion(667);
@@ -114,7 +115,7 @@ public class CatalogTest {
     assertEquals("test1", names.get(2));
 
     assertEquals(42, cat.getTable("global_temp", "test").getId());
-    assertEquals(null, cat.getTable("global_temp", "test111"));
+    assertNull(cat.getTable("global_temp", "test111"));
 
     helper.dropTable(db.getId(), tables.get(0).getId());
     helper.setSchemaVersion(668);
