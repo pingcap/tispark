@@ -1,11 +1,5 @@
 language: java
-
-script: "cd tikv-client&&mvn cobertura:cobertura"
-
+script:
+  - "cd tikv-client && mvn clean verify"
 after_success:
   - bash <(curl -s https://codecov.io/bash) -t f499cf7f-6b6c-4f02-8af8-d83d9811f18a
-
-cache:
-  directories:
-  - $HOME/.m2
-
