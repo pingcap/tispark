@@ -20,7 +20,6 @@ import static com.pingcap.tikv.util.KeyRangeUtils.formatByteString;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.net.HostAndPort;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.Key;
@@ -34,6 +33,7 @@ import com.pingcap.tikv.region.TiRegion;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.io.Serializable;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,7 +57,7 @@ public class RangeSplitter {
       this.ranges = ranges;
       String host = null;
       try {
-        host = HostAndPort.fromString(store.getAddress()).getHostText();
+        host = URI.create(store.getAddress()).getHost();
       } catch (Exception ignored) {
       }
       this.host = host;
