@@ -35,4 +35,6 @@ public abstract class Visitor<R, C> {
   protected abstract R visit(IsNull node, C context);
 
   protected abstract R visit(Not node, C context);
+
+  protected abstract R visit(Year node, C context);
 }

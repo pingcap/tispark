@@ -21,6 +21,7 @@ import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
+import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import java.util.Objects;
@@ -44,7 +45,7 @@ public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeS
    * @param loose If prefix length is specified, then filter is loose, so is the range.
    * @return a range set.
    */
-  protected RangeSet<C> comparisonBinaryExprVisit(
+  RangeSet<C> comparisonBinaryExprVisit(
       ComparisonBinaryExpression node, Void context, C literal, boolean loose) {
     NormalizedPredicate predicate = node.normalize();
     RangeSet<C> ranges = TreeRangeSet.create();
@@ -130,7 +131,7 @@ public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeS
     return predicate.accept(this, null);
   }
 
-  protected static void throwOnError(Expression node) {
+  static void throwOnError(Expression node) {
     final String errorFormat = "Unsupported conversion to Range: %s";
     throw new TiExpressionException(String.format(errorFormat, node));
   }
