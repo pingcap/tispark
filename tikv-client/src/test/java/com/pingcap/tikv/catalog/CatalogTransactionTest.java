@@ -24,7 +24,7 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import java.util.List;
 import org.junit.Test;
 
-public class CatalogTransactionTest  extends CatalogTest {
+public class CatalogTransactionTest extends CatalogTest {
   @Test
   public void getLatestSchemaVersionTest() {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);

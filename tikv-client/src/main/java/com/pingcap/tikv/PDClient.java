@@ -20,7 +20,6 @@ import static com.pingcap.tikv.operation.PDErrorHandler.getRegionResponseErrorEx
 import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
@@ -49,8 +48,7 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.FutureObserver;
 import io.grpc.ManagedChannel;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -65,7 +63,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
   private IsolationLevel isolationLevel;
-  private List<HostAndPort> pdAddrs;
+  private List<URI> pdAddrs;
 
   @Override
   public TiTimestamp getTimestamp(BackOffer backOffer) {
@@ -247,9 +245,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     }
   }
 
-  public GetMembersResponse getMembers(HostAndPort url) {
+  public GetMembersResponse getMembers(URI url) {
     try {
-      ManagedChannel probChan = session.getChannel(url.getHostText() + ":" + url.getPort());
+      ManagedChannel probChan = session.getChannel(url.getHost() + ":" + url.getPort());
       PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);
       GetMembersRequest request =
           GetMembersRequest.newBuilder().setHeader(RequestHeader.getDefaultInstance()).build();
@@ -260,7 +258,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return null;
   }
 
-  private synchronized boolean switchLeader(List<String> leaderURLs) {
+  synchronized boolean switchLeader(List<String> leaderURLs) {
     if (leaderURLs.isEmpty()) return false;
     String leaderUrlStr = leaderURLs.get(0);
     // TODO: Why not strip protocol info on server side since grpc does not need it
@@ -273,9 +271,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private boolean createLeaderWrapper(String leaderUrlStr) {
     try {
-      URL tURL = new URL(leaderUrlStr);
-      HostAndPort newLeader = HostAndPort.fromParts(tURL.getHost(), tURL.getPort());
-      leaderUrlStr = newLeader.toString();
+      URI newLeader = URI.create(leaderUrlStr);
+      leaderUrlStr = newLeader.getHost() + ":" + newLeader.getPort();
       if (leaderWrapper != null && leaderUrlStr.equals(leaderWrapper.getLeaderInfo())) {
         return true;
       }
@@ -288,8 +285,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
               PDGrpc.newBlockingStub(clientChannel),
               PDGrpc.newStub(clientChannel),
               System.nanoTime());
-    } catch (MalformedURLException e) {
-      logger.error("Error updating leader.", e);
+    } catch (IllegalArgumentException e) {
+      logger.error("Error updating leader. " + leaderUrlStr, e);
       return false;
     }
     logger.info(String.format("Switched to new leader: %s", leaderWrapper));
@@ -297,7 +294,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   public void updateLeader() {
-    for (HostAndPort url : this.pdAddrs) {
+    for (URI url : this.pdAddrs) {
       // since resp is null, we need update leader's address by walking through all pd server.
       GetMembersResponse resp = getMembers(url);
       if (resp == null) {
@@ -338,8 +335,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private void initCluster() {
     GetMembersResponse resp = null;
-    List<HostAndPort> pdAddrs = getSession().getConf().getPdAddrs();
-    for (HostAndPort u : pdAddrs) {
+    List<URI> pdAddrs = getSession().getConf().getPdAddrs();
+    for (URI u : pdAddrs) {
       resp = getMembers(u);
       if (resp != null) {
         break;

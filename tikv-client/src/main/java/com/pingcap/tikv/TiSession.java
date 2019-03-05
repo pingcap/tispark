@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv;
 
-import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
@@ -24,6 +23,7 @@ import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -110,17 +110,17 @@ public class TiSession implements AutoCloseable {
   public synchronized ManagedChannel getChannel(String addressStr) {
     ManagedChannel channel = connPool.get(addressStr);
     if (channel == null) {
-      HostAndPort address;
+      URI address;
       try {
-        address = HostAndPort.fromString(addressStr);
+        address = URI.create("http://" + addressStr);
       } catch (Exception e) {
-        throw new IllegalArgumentException("failed to form address");
+        throw new IllegalArgumentException("failed to form address " + addressStr);
       }
 
       // Channel should be lazy without actual connection until first call
       // So a coarse grain lock is ok here
       channel =
-          ManagedChannelBuilder.forAddress(address.getHostText(), address.getPort())
+          ManagedChannelBuilder.forAddress(address.getHost(), address.getPort())
               .maxInboundMessageSize(conf.getMaxFrameSize())
               .usePlaintext(true)
               .idleTimeout(60, TimeUnit.SECONDS)

@@ -77,7 +77,7 @@ public class SchemaInferTest {
 
   private List<TiDAGRequest> makeSelectDAGReq(ByItem... byItems) {
     List<TiDAGRequest> reqs = new ArrayList<>();
-    for(ByItem byItem: byItems) {
+    for (ByItem byItem : byItems) {
       // select sum(number) from t1 group by name;
       TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
       dagRequest.setTableInfo(table);
@@ -95,12 +95,11 @@ public class SchemaInferTest {
   public void selectAggWithGroupBySchemaInferTest() {
     // select sum(number) from t1 group by name;
     List<TiDAGRequest> dagRequests = makeSelectDAGReq(simpleGroupBy, complexGroupBy);
-    for(TiDAGRequest req: dagRequests) {
+    for (TiDAGRequest req : dagRequests) {
       List<DataType> dataTypes = SchemaInfer.create(req).getTypes();
       assertEquals(2, dataTypes.size());
       assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
       assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(1).getClass());
     }
-
   }
 }
