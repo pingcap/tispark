@@ -43,7 +43,7 @@ public class MyDecimalTest {
   }
 
   @Test
-  public void fromStringTest() throws Exception {
+  public void fromStringTest() {
     List<MyDecimalTestStruct> tests = new ArrayList<>();
     tests.add(
         new MyDecimalTestStruct(
@@ -73,7 +73,7 @@ public class MyDecimalTest {
   }
 
   @Test
-  public void readWordTest() throws Exception {
+  public void readWordTest() {
     assertEquals(MyDecimal.readWord(new int[] {250}, 1, 0), -6);
     assertEquals(MyDecimal.readWord(new int[] {50}, 1, 0), 50);
 
@@ -88,7 +88,7 @@ public class MyDecimalTest {
   }
 
   @Test
-  public void toBinFromBinTest() throws Exception {
+  public void toBinFromBinTest() {
     List<MyDecimalTestStruct> tests = new ArrayList<>();
     String decValStr = "11111111111111111111111111111111111.111111111111111111111111111111";
     tests.add(new MyDecimalTestStruct(decValStr, decValStr, 65, 30));
@@ -111,7 +111,7 @@ public class MyDecimalTest {
   }
 
   @Test
-  public void toBinTest() throws Exception {
+  public void toBinTest() {
     MyDecimal dec = new MyDecimal();
     dec.fromDecimal(-1234567890.1234);
     int[] data = dec.toBin(dec.precision(), dec.frac());
@@ -122,7 +122,7 @@ public class MyDecimalTest {
     assertArrayEquals(expected, data);
   }
 
-  // MyDecimalTestStruct is only used for simplifing testing.
+  // MyDecimalTestStruct is only used for simplifying testing.
   private class MyDecimalTestStruct {
     String in;
     String out;

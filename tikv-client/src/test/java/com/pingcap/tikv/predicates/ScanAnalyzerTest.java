@@ -81,7 +81,7 @@ public class ScanAnalyzerTest {
   }
 
   @Test
-  public void buildTableScanKeyRangeTest() throws Exception {
+  public void buildTableScanKeyRangeTest() {
     TiTableInfo table = createTableWithIndex(6, 5);
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
 
@@ -114,7 +114,7 @@ public class ScanAnalyzerTest {
   }
 
   @Test
-  public void buildIndexScanKeyRangeTest() throws Exception {
+  public void buildIndexScanKeyRangeTest() {
     TiTableInfo table = createTableWithIndex(6, 5);
     TiIndexInfo index = table.getIndices().get(0);
 
@@ -256,7 +256,7 @@ public class ScanAnalyzerTest {
   }
 
   @Test
-  public void extractConditionsTest() throws Exception {
+  public void extractConditionsTest() {
     TiTableInfo table = createTable();
     TiIndexInfo index = table.getIndices().get(0);
 
@@ -284,7 +284,7 @@ public class ScanAnalyzerTest {
   }
 
   @Test
-  public void extractConditionsWithPrefixTest() throws Exception {
+  public void extractConditionsWithPrefixTest() {
     TiTableInfo table = createTableWithPrefix();
     TiIndexInfo index = table.getIndices().get(0);
 
@@ -312,7 +312,7 @@ public class ScanAnalyzerTest {
   }
 
   @Test
-  public void extractConditionsWithPrimaryKeyTest() throws Exception {
+  public void extractConditionsWithPrimaryKeyTest() {
     TiTableInfo table = createTableWithPrefix();
     TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     requireNonNull(index);
@@ -343,7 +343,7 @@ public class ScanAnalyzerTest {
   }
 
   @Test
-  public void testKeyRangeGenWithNoFilterTest() throws Exception {
+  public void testKeyRangeGenWithNoFilterTest() {
     TiTableInfo table = createTableWithPrefix();
     TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     ScanAnalyzer scanBuilder = new ScanAnalyzer();
@@ -359,7 +359,7 @@ public class ScanAnalyzerTest {
   }
 
   @Test
-  public void TestCoveringIndex() throws Exception {
+  public void TestCoveringIndex() {
     InternalTypeHolder holder =
         new InternalTypeHolder(
             MySQLType.TypeVarchar.getTypeCode(),

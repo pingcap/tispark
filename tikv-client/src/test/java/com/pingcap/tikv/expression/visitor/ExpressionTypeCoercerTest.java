@@ -53,7 +53,7 @@ public class ExpressionTypeCoercerTest {
   }
 
   @Test
-  public void typeVerifyWithColumnRefTest() throws Exception {
+  public void typeVerifyWithColumnRefTest() {
     TiTableInfo table = createTable();
     ColumnRef col1 = ColumnRef.create("c1", table); // INT
     ColumnRef col4 = ColumnRef.create("c4", table); // DOUBLE
@@ -86,12 +86,12 @@ public class ExpressionTypeCoercerTest {
     try {
       inf.infer(log2);
       fail();
-    } catch (Exception e) {
+    } catch (Exception ignored) {
     }
   }
 
   @Test
-  public void typeVerifyTest() throws Exception {
+  public void typeVerifyTest() {
     Constant const1 = Constant.create(1);
     Constant const2 = Constant.create(11);
     ComparisonBinaryExpression comp1 = equal(const1, const2);

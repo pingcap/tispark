@@ -63,7 +63,7 @@ public class CodecTest {
   }
 
   @Test
-  public void readNWriteDecimalTest() throws Exception {
+  public void readNWriteDecimalTest() {
     CodecDataOutput cdo = new CodecDataOutput();
     DecimalCodec.writeDecimal(cdo, BigDecimal.valueOf(0));
     BigDecimal bigDec = DecimalCodec.readDecimal(new CodecDataInput(cdo.toBytes()));
@@ -90,7 +90,7 @@ public class CodecTest {
   }
 
   @Test
-  public void readNWriteLongTest() throws Exception {
+  public void readNWriteLongTest() {
     CodecDataOutput cdo = new CodecDataOutput();
     IntegerCodec.writeLongFully(cdo, 9999L, true);
     IntegerCodec.writeLongFully(cdo, -2333L, false);
@@ -129,7 +129,7 @@ public class CodecTest {
   }
 
   @Test
-  public void readNWriteUnsignedLongTest() throws Exception {
+  public void readNWriteUnsignedLongTest() {
     CodecDataOutput cdo = new CodecDataOutput();
     IntegerCodec.writeULongFully(cdo, 0xffffffffffffffffL, true);
     IntegerCodec.writeULongFully(cdo, Long.MIN_VALUE, false);
@@ -193,7 +193,6 @@ public class CodecTest {
     try {
       cdi.skipBytes(1);
       IntegerCodec.readUVarLong(cdi);
-      fail();
     } catch (Exception e) {
       assertEquals("readUVarLong overflow", e.getMessage());
     }
@@ -223,7 +222,7 @@ public class CodecTest {
   }
 
   @Test
-  public void writeBytesTest() throws Exception {
+  public void writeBytesTest() {
     CodecDataOutput cdo = new CodecDataOutput();
     Codec.BytesCodec.writeBytes(cdo, "abcdefghijk".getBytes());
     byte[] result = cdo.toBytes();
@@ -254,36 +253,7 @@ public class CodecTest {
   }
 
   @Test
-  public void readBytesTest() {
-    // TODO: How to test private
-    byte[] data =
-        new byte[] {
-          (byte) 0x61,
-          (byte) 0x62,
-          (byte) 0x63,
-          (byte) 0x64,
-          (byte) 0x65,
-          (byte) 0x66,
-          (byte) 0x67,
-          (byte) 0x68,
-          (byte) 0xff,
-          (byte) 0x69,
-          (byte) 0x6a,
-          (byte) 0x6b,
-          (byte) 0x00,
-          (byte) 0x00,
-          (byte) 0x00,
-          (byte) 0x00,
-          (byte) 0x00,
-          (byte) 0xfa
-        };
-    CodecDataInput cdi = new CodecDataInput(data);
-    // byte[] result = BytesCodec.readBytes(cdi, false);
-
-  }
-
-  @Test
-  public void writeFloatTest() throws Exception {
+  public void writeFloatTest() {
     CodecDataOutput cdo = new CodecDataOutput();
     RealCodec.writeDouble(cdo, 0.00);
     double u = RealCodec.readDouble(new CodecDataInput(cdo.toBytes()));
@@ -301,7 +271,7 @@ public class CodecTest {
   }
 
   @Test
-  public void readFloatTest() throws Exception {
+  public void readFloatTest() {
     byte[] data =
         new byte[] {
           (byte) (191 & 0xFF),
@@ -350,7 +320,7 @@ public class CodecTest {
   }
 
   @Test
-  public void negativeLongTest() throws Exception {
+  public void negativeLongTest() {
     CodecDataOutput cdo = new CodecDataOutput();
     IntegerCodec.writeULong(cdo, UnsignedLong.valueOf("13831004815617530266").longValue());
     double u = RealCodec.readDouble(new CodecDataInput(cdo.toBytes()));

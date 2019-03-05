@@ -55,17 +55,17 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   private Map<ByteString, Integer> errorMap = new HashMap<>();
 
   // for KV error
-  public static final int ABORT = 1;
-  public static final int RETRY = 2;
+  static final int ABORT = 1;
+  private static final int RETRY = 2;
   // for raw client error
-  public static final int NOT_LEADER = 3;
-  public static final int REGION_NOT_FOUND = 4;
-  public static final int KEY_NOT_IN_REGION = 5;
+  static final int NOT_LEADER = 3;
+  private static final int REGION_NOT_FOUND = 4;
+  private static final int KEY_NOT_IN_REGION = 5;
   public static final int STALE_EPOCH = 6;
-  public static final int SERVER_IS_BUSY = 7;
-  public static final int STALE_COMMAND = 8;
-  public static final int STORE_NOT_MATCH = 9;
-  public static final int RAFT_ENTRY_TOO_LARGE = 10;
+  private static final int SERVER_IS_BUSY = 7;
+  private static final int STALE_COMMAND = 8;
+  private static final int STORE_NOT_MATCH = 9;
+  private static final int RAFT_ENTRY_TOO_LARGE = 10;
 
   public int getPort() {
     return port;
@@ -79,7 +79,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
     dataMap.remove(toRawKey(key));
   }
 
-  public void put(String key, String value) {
+  void put(String key, String value) {
     put(ByteString.copyFromUtf8(key), ByteString.copyFromUtf8(value));
   }
 
@@ -91,7 +91,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
     errorMap.put(ByteString.copyFromUtf8(key), code);
   }
 
-  public void clearAllMap() {
+  void clearAllMap() {
     dataMap.clear();
     errorMap.clear();
   }

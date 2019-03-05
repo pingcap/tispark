@@ -55,7 +55,7 @@ public class PredicateUtilsTest {
   }
 
   @Test
-  public void mergeCNFExpressionsTest() throws Exception {
+  public void mergeCNFExpressionsTest() {
     Constant c1 = Constant.create(1, IntegerType.INT);
     Constant c2 = Constant.create(2, IntegerType.INT);
     Constant c3 = Constant.create(3, IntegerType.INT);

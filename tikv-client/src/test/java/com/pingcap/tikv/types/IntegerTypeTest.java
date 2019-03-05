@@ -18,6 +18,7 @@
 package com.pingcap.tikv.types;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -26,7 +27,7 @@ import org.junit.Test;
 
 public class IntegerTypeTest {
   @Test
-  public void encodeTest() throws Exception {
+  public void encodeTest() {
     DataType type = IntegerType.INT;
     long originalVal = 666;
     byte[] encodedKey = encode(originalVal, EncodeType.KEY, type);
@@ -35,7 +36,7 @@ public class IntegerTypeTest {
 
     encodedKey = encode(null, EncodeType.KEY, type);
     val = decode(encodedKey, type);
-    assertEquals(null, val);
+    assertNull(val);
   }
 
   private static byte[] encode(Object val, EncodeType encodeType, DataType type) {
