@@ -25,11 +25,11 @@ public class TiParserTest {
     String sql = "1.0";
     TiParser parser = new TiParser();
     Expression constant = parser.parseExpression(sql);
-    Assert.assertEquals(constant, Constant.create(1.0, RealType.REAL));
+    Assert.assertEquals(Constant.create(1.0, RealType.REAL), constant);
 
     sql = "1.4;";
     Expression cst2 = parser.parseExpression(sql);
-    Assert.assertEquals(cst2, Constant.create(1.4));
+    Assert.assertEquals(Constant.create(1.4), cst2);
 
     sql = "id;";
     Expression colRef = parser.parseExpression(sql);
@@ -38,35 +38,38 @@ public class TiParserTest {
     sql = "id+1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        colRef,
         ArithmeticBinaryExpression.plus(
-            ColumnRef.create("id"), Constant.create(1, IntegerType.INT)));
+            ColumnRef.create("id"), Constant.create(1, IntegerType.INT)),
+        colRef);
 
     sql = "id*1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        colRef,
         ArithmeticBinaryExpression.multiply(
-            ColumnRef.create("id"), Constant.create(1, IntegerType.INT)));
+            ColumnRef.create("id"), Constant.create(1, IntegerType.INT)),
+        colRef);
 
     sql = "id-1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        colRef, ArithmeticBinaryExpression.minus(ColumnRef.create("id"), Constant.create(1)));
+        ArithmeticBinaryExpression.minus(ColumnRef.create("id"), Constant.create(1)),
+        colRef);
 
     sql = "id/1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        colRef, ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)));
+        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)),
+        colRef);
 
     sql = "id div 1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        colRef, ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)));
+        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)),
+        colRef);
 
     sql = "'abc'";
     Expression stringLiteral = parser.parseExpression(sql);
-    Assert.assertEquals(stringLiteral, Constant.create("'abc'"));
+    Assert.assertEquals(Constant.create("'abc'"), stringLiteral);
 
     sql = "id < 1 and id >= 3";
     Expression and = parser.parseExpression(sql);
