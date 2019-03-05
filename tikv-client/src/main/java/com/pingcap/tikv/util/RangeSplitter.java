@@ -57,7 +57,7 @@ public class RangeSplitter {
       this.ranges = ranges;
       String host = null;
       try {
-        host = URI.create(store.getAddress()).getHost();
+        host = URI.create("http://" + store.getAddress()).getHost();
       } catch (Exception ignored) {
       }
       this.host = host;
