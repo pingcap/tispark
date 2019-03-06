@@ -15,9 +15,9 @@
 
 package com.pingcap.tikv;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
+import com.pingcap.tikv.pd.PDUtils;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
@@ -72,11 +72,7 @@ public class TiConfiguration implements Serializable {
   private static List<URI> strToURI(String addressStr) {
     Objects.requireNonNull(addressStr);
     String[] addrs = addressStr.split(",");
-    ImmutableList.Builder<URI> addrsBuilder = ImmutableList.builder();
-    for (String addr : addrs) {
-      addrsBuilder.add(URI.create("http://" + addr));
-    }
-    return addrsBuilder.build();
+    return PDUtils.addrsToUrls(addrs);
   }
 
   public int getTimeout() {
