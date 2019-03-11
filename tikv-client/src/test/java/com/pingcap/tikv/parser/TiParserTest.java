@@ -52,20 +52,17 @@ public class TiParserTest {
     sql = "id-1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        ArithmeticBinaryExpression.minus(ColumnRef.create("id"), Constant.create(1)),
-        colRef);
+        ArithmeticBinaryExpression.minus(ColumnRef.create("id"), Constant.create(1)), colRef);
 
     sql = "id/1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)),
-        colRef);
+        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)), colRef);
 
     sql = "id div 1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)),
-        colRef);
+        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)), colRef);
 
     sql = "'abc'";
     Expression stringLiteral = parser.parseExpression(sql);

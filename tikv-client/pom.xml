@@ -35,6 +35,7 @@
             <groupId>org.antlr</groupId>
             <artifactId>antlr4-runtime</artifactId>
             <version>4.7.1</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -150,6 +151,7 @@
                 <version>4.7.1</version>
                 <executions>
                     <execution>
+                        <id>antlr</id>
                         <goals>
                             <goal>antlr4</goal>
                         </goals>
@@ -162,7 +164,6 @@
                 </arguments>
                 <visitor>true</visitor>
                 <sourceDirectory>./src/main/java/com/pingcap/tikv/parser</sourceDirectory>
-                <outputDirectory>./src/main/java/com/pingcap/tikv/parser</outputDirectory>
               </configuration>
             </plugin>
             <plugin>

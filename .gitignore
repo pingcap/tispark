@@ -72,5 +72,3 @@ python/pytispark.egg-info/
 # ignore spark warehouse
 spark-warehouse
 
-tikv-client/src/main/java/com/pingcap/tikv/parser/*.interp
-tikv-client/src/main/java/com/pingcap/tikv/parser/*.tokens
