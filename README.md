@@ -11,7 +11,7 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to an
 Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
-The current stable version is 1.1 which is compatible with Spark 2.1.0+.
+The current stable version is 2.0 which is compatible with Spark 2.3.0+.
 
 **When using Spark 2.1.0+, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
@@ -23,19 +23,19 @@ If you are using maven, add the following to your pom.xml:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-core</artifactId>
-      <version>1.1</version>
+      <version>2.0</version>
     </dependency>
     <dependency>
       <groupId>com.pingcap.tikv</groupId>
       <artifactId>tikv-client</artifactId>
-      <version>1.1</version>
+      <version>2.0</version>
     </dependency>
 </dependencies>
 ```
 If you're using SBT, add the following line to your build file:
 ```scala
-libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.1"
-libraryDependencies += "com.pingcap.tikv" % "tikv-client" % "1.1"
+libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "2.0"
+libraryDependencies += "com.pingcap.tikv" % "tikv-client" % "2.0"
 ```
 
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
@@ -49,7 +49,7 @@ git clone https://github.com/pingcap/tispark.git
 ```
 To build all TiSpark modules from sources, please run command under TiSpark root directory:
 ```
-mvn clean install -Dmaven.test.skip=true -Pspark-2.3.2
+mvn clean install -Dmaven.test.skip=true -Pspark-2.3.3
 ```
 **Please note that after Spark v2.3 you need to specify minor version of Spark as above switching dependency.**
 Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.
@@ -78,6 +78,7 @@ https://github.com/pingcap/tispark/tree/master/tikv-client
 
 ## Quick Start
 **Before everything starts, you must add `spark.sql.extensions  org.apache.spark.sql.TiExtensions` in spark-defaults.conf**
+**You should also confirm that `spark.tispark.pd.addresses` is set correctly**
 
 From Spark-shell:
 ```
@@ -124,20 +125,10 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.coprocess.streaming |  false | Whether to use streaming for response fetching (Experimental) |
 | spark.tispark.plan.unsupported_pushdown_exprs |  "" | A comma separated list of expressions. In case you have very old version of TiKV, you might disable some of the expression push-down if not supported |
 | spark.tispark.plan.downgrade.index_threshold | 10000 | If index scan ranges on one region exceeds this limit in original request, downgrade this region's request to table scan rather than original planned index scan |
-| spark.tispark.type.unsupported_mysql_types |  "time,enum,set,year" | A comma separated list of mysql types TiSpark does not support currently, refer to `Unsupported MySQL Type List` below |
 | spark.tispark.request.timezone.offset |  Local Timezone offset | An integer, represents timezone offset to UTC time(like 28800, GMT+8), this value will be added to requests issued to TiKV |
 | spark.tispark.show_rowid |  true | If to show implicit row Id if exists |
 | spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
 | spark.tispark.request.isolation.level |  "RC" | Isolation level means whether do the resolve lock for the underlying tidb clusters. When you use the "RC", you will get the newest version of record smaller than your tso and ignore the locks. And if you use "SI", you will resolve the locks and get the records according whether resolved lock is committed or aborted  |
-
-## Unsupported MySQL Type List
-
-| Mysql Type |
-| ----- |
-| time |
-| enum |
-| set  |
-| year |
 
 ## Statistics information
 If you want to know how TiSpark could benefit from TiDB's statistic information, read more [here](./docs/userguide.md).
