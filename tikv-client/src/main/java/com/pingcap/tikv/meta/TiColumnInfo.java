@@ -43,7 +43,6 @@ public class TiColumnInfo implements Serializable {
   private final boolean isPrimaryKey;
   private final String defaultValue;
   private final String originDefaultValue;
-
   // this version is from ColumnInfo which is used to address compatible issue.
   // If version is 0 then timestamp's default value will be read and decoded as local timezone.
   // if version is 1 then timestamp's default value will be read and decoded as utc.

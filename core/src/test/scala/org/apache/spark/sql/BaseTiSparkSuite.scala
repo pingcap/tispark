@@ -43,13 +43,6 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     dfData(df, schema)
   }
 
-  protected def querySparkJdbc(query:String): List[List[Any]] = {
-    val df = jdbc.sql(query)
-    val schema = df.schema.fields
-
-    dfData(df, schema)
-  }
-
   protected def queryTiDB(query: String): List[List[Any]] = {
     val resultSet = tidbStmt.executeQuery(query)
     val rsMetaData = resultSet.getMetaData
@@ -360,8 +353,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
     if (!skipJDBC && r2 == null) {
       try {
-//        r2 = querySpark(qJDBC)
-        r2 = querySparkJdbc(qSpark)
+        r2 = querySpark(qJDBC)
       } catch {
         case e: Throwable =>
           logger.warn(s"Spark with JDBC failed when executing:$qJDBC", e) // JDBC failed
