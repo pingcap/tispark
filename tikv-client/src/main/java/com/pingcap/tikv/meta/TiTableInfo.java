@@ -45,7 +45,6 @@ public class TiTableInfo implements Serializable {
   private final long maxIndexId;
   private final long oldSchemaId;
   private final TiPartitionInfo partitionInfo;
-  private TiPartitionExpr partitionExpr;
 
   @JsonCreator
   public TiTableInfo(
@@ -116,19 +115,19 @@ public class TiTableInfo implements Serializable {
     return comment;
   }
 
-  public long getAutoIncId() {
+  private long getAutoIncId() {
     return autoIncId;
   }
 
-  public long getMaxColumnId() {
+  private long getMaxColumnId() {
     return maxColumnId;
   }
 
-  public long getMaxIndexId() {
+  private long getMaxIndexId() {
     return maxIndexId;
   }
 
-  public long getOldSchemaId() {
+  private long getOldSchemaId() {
     return oldSchemaId;
   }
 
@@ -136,7 +135,7 @@ public class TiTableInfo implements Serializable {
     return partitionInfo;
   }
 
-  public TableInfo toProto() {
+  TableInfo toProto() {
     return TableInfo.newBuilder()
         .setTableId(getId())
         .addAllColumns(
@@ -146,7 +145,7 @@ public class TiTableInfo implements Serializable {
 
   // Only Integer Column will be a PK column
   // and there exists only one PK column
-  public TiColumnInfo getPrimaryKeyColumn() {
+  TiColumnInfo getPrimaryKeyColumn() {
     if (isPkHandle()) {
       for (TiColumnInfo col : getColumns()) {
         if (col.isPrimaryKey()) {
@@ -174,7 +173,8 @@ public class TiTableInfo implements Serializable {
                 col.getSchemaState(),
                 col.getOriginDefaultValue(),
                 col.getDefaultValue(),
-                col.getComment());
+                col.getComment(),
+                col.getVersion());
         newColumns.add(newCol.copyWithoutPrimaryKey());
       }
       newColumns.add(TiColumnInfo.getRowIdColumn(getColumns().size()));

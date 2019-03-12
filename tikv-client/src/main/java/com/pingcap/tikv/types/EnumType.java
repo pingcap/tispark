@@ -73,7 +73,7 @@ public class EnumType extends DataType {
 
   /** {@inheritDoc} */
   @Override
-  public Object getOriginDefaultValueNonNull(String value) {
+  public Object getOriginDefaultValueNonNull(String value, long version) {
     return value;
   }
 }

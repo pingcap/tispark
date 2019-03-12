@@ -49,6 +49,7 @@ public abstract class DataType implements Serializable {
   public static final int NoDefaultValueFlag = 4096; /* Field doesn't have a default value */
   public static final int OnUpdateNowFlag = 8192; /* Field is set to NOW on UPDATE */
   public static final int NumFlag = 32768; /* Field is a num (for clients) */
+  public static final long COLUMN_VERSION_FLAG = 1;
 
   public enum EncodeType {
     KEY,
@@ -215,11 +216,11 @@ public abstract class DataType implements Serializable {
    * @param value a int value represents in string
    * @return a int object
    */
-  public abstract Object getOriginDefaultValueNonNull(String value);
+  public abstract Object getOriginDefaultValueNonNull(String value, long version);
 
-  public Object getOriginDefaultValue(String value) {
+  public Object getOriginDefaultValue(String value, long version) {
     if (value == null) return null;
-    return getOriginDefaultValueNonNull(value);
+    return getOriginDefaultValueNonNull(value, version);
   }
 
   public int getCollationCode() {
@@ -348,14 +349,6 @@ public abstract class DataType implements Serializable {
 
   public InternalTypeHolder toTypeHolder() {
     return new InternalTypeHolder(
-        getTypeCode(),
-        flag,
-        length,
-        decimal,
-        charset,
-        "",
-        "",
-        Collation.translate(collation),
-        elems);
+        getTypeCode(), flag, length, decimal, charset, Collation.translate(collation), elems);
   }
 }
