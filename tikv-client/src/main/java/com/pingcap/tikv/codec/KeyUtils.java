@@ -40,7 +40,7 @@ public class KeyUtils {
   }
 
   public static String formatBytes(Coprocessor.KeyRange keyRange) {
-    return "[[" + formatBytes(keyRange.getStart()) + "], [" + formatBytes(keyRange.getEnd()) + "])";
+    return "([" + formatBytes(keyRange.getStart()) + "], [" + formatBytes(keyRange.getEnd()) + "])";
   }
 
   public static boolean hasPrefix(ByteString str, ByteString prefix) {
