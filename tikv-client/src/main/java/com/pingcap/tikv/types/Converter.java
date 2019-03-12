@@ -126,7 +126,7 @@ public class Converter {
     } else if (val instanceof String) {
       // interpret string as in local timezone
       try {
-        return strToDateTime((String)val, localDateTimeFormatter);
+        return strToDateTime((String) val, localDateTimeFormatter);
       } catch (Exception e) {
         throw new TypeException(
             String.format("Error parsing string %s to datetime", (String) val), e);

@@ -26,7 +26,7 @@ import org.junit.Test;
 public class DataTypeFactoryTest {
 
   private static InternalTypeHolder createHolder(MySQLType type) {
-    return new InternalTypeHolder(type.getTypeCode(), 0, 0, 0, "",  "", ImmutableList.of());
+    return new InternalTypeHolder(type.getTypeCode(), 0, 0, 0, "", "", ImmutableList.of());
   }
 
   private void mappingTest(MySQLType type, Class<? extends DataType> cls) {

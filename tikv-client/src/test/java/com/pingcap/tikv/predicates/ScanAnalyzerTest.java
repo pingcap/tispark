@@ -64,8 +64,7 @@ public class ScanAnalyzerTest {
             0,
             "",
             "",
-            ImmutableList.of()
-        );
+            ImmutableList.of());
 
     DataType typePrefix = DataTypeFactory.of(holder);
     return new MetaUtils.TableBuilder()

@@ -52,8 +52,7 @@ public class TiColumnInfo implements Serializable {
     return new TiColumnInfo(-1, "_tidb_rowid", offset, IntegerType.ROW_ID_TYPE, true);
   }
 
-  @VisibleForTesting
-  private static final int PK_MASK = 0x2;
+  @VisibleForTesting private static final int PK_MASK = 0x2;
 
   @JsonCreator
   public TiColumnInfo(

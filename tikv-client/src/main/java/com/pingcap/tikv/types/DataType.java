@@ -349,12 +349,6 @@ public abstract class DataType implements Serializable {
 
   public InternalTypeHolder toTypeHolder() {
     return new InternalTypeHolder(
-        getTypeCode(),
-        flag,
-        length,
-        decimal,
-        charset,
-        Collation.translate(collation),
-        elems);
+        getTypeCode(), flag, length, decimal, charset, Collation.translate(collation), elems);
   }
 }
