@@ -84,7 +84,7 @@ public class RealType extends DataType {
 
   /** {@inheritDoc} */
   @Override
-  public Object getOriginDefaultValueNonNull(String value) {
+  public Object getOriginDefaultValueNonNull(String value, long version) {
     return Double.parseDouble(value);
   }
 }

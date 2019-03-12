@@ -51,14 +51,6 @@ public abstract class DataType implements Serializable {
   public static final int NumFlag = 32768; /* Field is a num (for clients) */
   public static final long COLUMN_VERSION_FLAG = 1;
 
-  public long getVersion() {
-    return version;
-  }
-
-  public void setVersion(long version) {
-    this.version = version;
-  }
-
   public enum EncodeType {
     KEY,
     VALUE,
@@ -77,9 +69,6 @@ public abstract class DataType implements Serializable {
   protected final int collation;
   protected final long length;
   private final List<String> elems;
-
-
-  private long version;
 
   protected DataType(TiColumnInfo.InternalTypeHolder holder) {
     this.tp = MySQLType.fromTypeCode(holder.getTp());
@@ -227,11 +216,11 @@ public abstract class DataType implements Serializable {
    * @param value a int value represents in string
    * @return a int object
    */
-  public abstract Object getOriginDefaultValueNonNull(String value);
+  public abstract Object getOriginDefaultValueNonNull(String value, long version);
 
-  public Object getOriginDefaultValue(String value) {
+  public Object getOriginDefaultValue(String value, long version) {
     if (value == null) return null;
-    return getOriginDefaultValueNonNull(value);
+    return getOriginDefaultValueNonNull(value, version);
   }
 
   public int getCollationCode() {

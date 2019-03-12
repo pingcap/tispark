@@ -72,7 +72,7 @@ public class DecimalType extends DataType {
 
   /** {@inheritDoc} */
   @Override
-  public Object getOriginDefaultValueNonNull(String value) {
+  public Object getOriginDefaultValueNonNull(String value, long version) {
     return new BigDecimal(value);
   }
 }
