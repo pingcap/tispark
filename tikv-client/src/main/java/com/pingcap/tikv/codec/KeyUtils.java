@@ -44,6 +44,9 @@ public class KeyUtils {
   }
 
   public static boolean hasPrefix(ByteString str, ByteString prefix) {
+    if (prefix.size() > str.size()) {
+      return false;
+    }
     for (int i = 0; i < prefix.size(); i++) {
       if (str.byteAt(i) != prefix.byteAt(i)) {
         return false;
