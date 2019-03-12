@@ -43,6 +43,13 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     dfData(df, schema)
   }
 
+  protected def querySparkJdbc(query:String): List[List[Any]] = {
+    val df = jdbc.sql(query)
+    val schema = df.schema.fields
+
+    dfData(df, schema)
+  }
+
   protected def queryTiDB(query: String): List[List[Any]] = {
     val resultSet = tidbStmt.executeQuery(query)
     val rsMetaData = resultSet.getMetaData
@@ -187,8 +194,13 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
     assert(execDBTSAndJudge(str, skipped, checkLimit))
 
-  private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
-    compSqlResult(sql, querySpark(sql), queryTiDB(sql), checkLimit)
+  private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean = {
+    val sparkStr = querySpark(sql)
+    val tidbStr = queryTiDB(sql)
+    println(sparkStr)
+    println(tidbStr)
+    compSqlResult(sql, sparkStr, tidbStr, checkLimit)
+  }
 
   protected def execDBTSAndJudge(str: String,
                                  skipped: Boolean = false,
@@ -348,7 +360,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
     if (!skipJDBC && r2 == null) {
       try {
-        r2 = querySpark(qJDBC)
+//        r2 = querySpark(qJDBC)
+        r2 = querySparkJdbc(qSpark)
       } catch {
         case e: Throwable =>
           logger.warn(s"Spark with JDBC failed when executing:$qJDBC", e) // JDBC failed

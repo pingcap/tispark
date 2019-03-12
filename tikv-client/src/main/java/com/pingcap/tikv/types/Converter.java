@@ -101,9 +101,15 @@ public class Converter {
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(localTimeZone);
   private static final DateTimeFormatter localDateFormatter =
       DateTimeFormat.forPattern("yyyy-MM-dd").withZone(localTimeZone);
+  public static final DateTimeFormatter UTC_TIME_FORMATTER =
+      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC);
 
   public static DateTimeZone getLocalTimezone() {
     return localTimeZone;
+  }
+
+  public static DateTime strToDateTime(String value, DateTimeFormatter formatter) {
+    return DateTime.parse(value, formatter);
   }
 
   /**
@@ -120,7 +126,7 @@ public class Converter {
     } else if (val instanceof String) {
       // interpret string as in local timezone
       try {
-        return DateTime.parse((String) val, localDateTimeFormatter);
+        return strToDateTime((String)val, localDateTimeFormatter);
       } catch (Exception e) {
         throw new TypeException(
             String.format("Error parsing string %s to datetime", (String) val), e);
