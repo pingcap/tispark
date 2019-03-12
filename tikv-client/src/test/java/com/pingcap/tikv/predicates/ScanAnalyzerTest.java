@@ -64,9 +64,8 @@ public class ScanAnalyzerTest {
             0,
             "",
             "",
-            "",
-            "",
-            ImmutableList.of());
+            ImmutableList.of()
+        );
 
     DataType typePrefix = DataTypeFactory.of(holder);
     return new MetaUtils.TableBuilder()
@@ -366,8 +365,6 @@ public class ScanAnalyzerTest {
             0,
             3, // indicating a prefix type
             0,
-            "",
-            "",
             "",
             "",
             ImmutableList.of());

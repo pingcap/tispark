@@ -49,6 +49,15 @@ public abstract class DataType implements Serializable {
   public static final int NoDefaultValueFlag = 4096; /* Field doesn't have a default value */
   public static final int OnUpdateNowFlag = 8192; /* Field is set to NOW on UPDATE */
   public static final int NumFlag = 32768; /* Field is a num (for clients) */
+  public static final long COLUMN_VERSION_FLAG = 1;
+
+  public long getVersion() {
+    return version;
+  }
+
+  public void setVersion(long version) {
+    this.version = version;
+  }
 
   public enum EncodeType {
     KEY,
@@ -68,6 +77,9 @@ public abstract class DataType implements Serializable {
   protected final int collation;
   protected final long length;
   private final List<String> elems;
+
+
+  private long version;
 
   protected DataType(TiColumnInfo.InternalTypeHolder holder) {
     this.tp = MySQLType.fromTypeCode(holder.getTp());
@@ -353,8 +365,6 @@ public abstract class DataType implements Serializable {
         length,
         decimal,
         charset,
-        "",
-        "",
         Collation.translate(collation),
         elems);
   }
