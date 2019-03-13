@@ -21,7 +21,6 @@ import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
-import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import java.util.Objects;

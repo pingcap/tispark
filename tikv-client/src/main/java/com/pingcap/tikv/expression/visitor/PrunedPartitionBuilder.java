@@ -91,9 +91,9 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
   @Override
   protected RangeSet<Long> visit(Constant node, Void context) {
     RangeSet<Long> ranges = TreeRangeSet.create();
-    if(node.getValue() instanceof Number) {
+    if (node.getValue() instanceof Number) {
       long val = ((Number) node.getValue()).longValue();
-      if(val == 1) {
+      if (val == 1) {
         return ranges.complement();
       }
       return ranges;

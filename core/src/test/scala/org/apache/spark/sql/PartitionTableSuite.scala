@@ -168,7 +168,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
       }
     )
 
-     assert(
+    assert(
       {
         val pDef = extractDAGReq(
           // for complicated expression, we do not support for now.

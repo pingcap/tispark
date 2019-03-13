@@ -224,7 +224,14 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
 
   // TODO finish ExpressionTypeCoercer
   @Override
-  protected Pair<DataType, Double> visit(Year node, DataType context) {
-    return null;
+  protected Pair<DataType, Double> visit(Year node, DataType targetType) {
+    if (targetType != null && !targetType.equals(IntegerType.INT)) {
+      throw new TiExpressionException(String.format("Not result cannot be %s", targetType));
+    }
+    if (!typeMap.containsKey(node)) {
+      coerceType(null, node.getExpression());
+      typeMap.put(node, IntegerType.INT);
+    }
+    return Pair.create(IntegerType.INT, FUNCTION_CRED);
   }
 }
