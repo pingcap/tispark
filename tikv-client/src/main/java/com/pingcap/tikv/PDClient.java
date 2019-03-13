@@ -44,6 +44,7 @@ import com.pingcap.tikv.kvproto.Pdpb.TsoRequest;
 import com.pingcap.tikv.kvproto.Pdpb.TsoResponse;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.PDErrorHandler;
+import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.FutureObserver;
@@ -271,7 +272,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private boolean createLeaderWrapper(String leaderUrlStr) {
     try {
-      URI newLeader = URI.create(leaderUrlStr);
+      URI newLeader = PDUtils.addrToUrl(leaderUrlStr);
       leaderUrlStr = newLeader.getHost() + ":" + newLeader.getPort();
       if (leaderWrapper != null && leaderUrlStr.equals(leaderWrapper.getLeaderInfo())) {
         return true;
