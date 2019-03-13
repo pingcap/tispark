@@ -154,6 +154,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
         pDef.size() == 1 && pDef.get(0).getName == "p2"
       }
     )
+
     assert(
       {
         val pDef = extractDAGReq(
@@ -161,6 +162,20 @@ class PartitionTableSuite extends BaseTiSparkSuite {
           // or with an unrelated column. All parts should be accessed.
             .sql(
               "select * from pt3 where id < 4 or purchased < date'1995-10-10'"
+            )
+        ).getPrunedParts
+        pDef.size() == 4
+      }
+    )
+
+     assert(
+      {
+        val pDef = extractDAGReq(
+          // for complicated expression, we do not support for now.
+          // this will be improved later.
+          spark
+            .sql(
+              "select * from pt3 where year(purchased) < 1995"
             )
         ).getPrunedParts
         pDef.size() == 4
