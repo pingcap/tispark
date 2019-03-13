@@ -39,7 +39,6 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       return createColRef(ctx.functionNameBase().getText());
     }
 
-    ctx.functionNameBase();
     throw new UnsupportedSyntaxException(ctx.getParent().toString() + ": it is not supported");
   }
 
@@ -57,12 +56,6 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       return createColRef(ctx.REVERSE_QUOTE_ID().getSymbol().getText());
     }
     return visitSimpleId(ctx.simpleId());
-  }
-
-  @Override
-  public Expression visitFunctionArgs(MySqlParser.FunctionArgsContext ctx) {
-    if (ctx.expression() != null) {}
-    return visitChildren(ctx);
   }
 
   @Override
