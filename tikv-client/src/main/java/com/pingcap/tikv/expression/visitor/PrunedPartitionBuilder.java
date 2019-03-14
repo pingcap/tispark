@@ -89,6 +89,7 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
   }
 
   @Override
+  // This deals with partition definition's 'lessthan' is "maxvalue".
   protected RangeSet<Long> visit(Constant node, Void context) {
     RangeSet<Long> ranges = TreeRangeSet.create();
     if (node.getValue() instanceof Number) {
@@ -207,6 +208,16 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     return pruneRangeNormalPart(tableInfo, cnfExpr);
   }
 
+  // say we have a partitioned table with the following partition definitions with year(y) as
+  // partition expression:
+  // 1. p0 less than 1995
+  // 2. p1 less than 1996
+  // 3. p2 less than maxvalue
+  // Above infos, after this function, will become the following:
+  // 1. p0: year(y) < 1995
+  // 2. p1: 1995 <= year(y) and year(y) < 1996
+  // 3. p2: 1996 <= year(y) and true
+  // true will become {@Code Constant} 1.
   private static List<Expression> generateRangePartExprs(TiTableInfo tableInfo) {
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
     List<Expression> partExprs = new ArrayList<>();
@@ -215,7 +226,7 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     // rewrite filter condition
     // purchased > '1995-10-10'
     // year(purchased) > year('1995-10-10')
-    // evaled_purchased > 1995
+    // purchased > 1995
     String partExprStr = tableInfo.getPartitionInfo().getExpr();
     partExpr = parser.parseExpression(partExprStr);
     partExprColRefs = PredicateUtils.extractColumnRefFromExpression(partExpr);
@@ -223,7 +234,7 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     for (int i = 0; i < partInfo.getDefs().size(); i++) {
       TiPartitionDef pDef = partInfo.getDefs().get(i);
       String current = pDef.getLessThan().get(0);
-      String leftHand = "";
+      String leftHand;
       if (current.equals("MAXVALUE")) {
         leftHand = "true";
       } else {
