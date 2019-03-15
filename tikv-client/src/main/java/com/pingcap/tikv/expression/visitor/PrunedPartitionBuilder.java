@@ -20,7 +20,6 @@ import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
-import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.meta.TiPartitionDef;
@@ -86,20 +85,6 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
       }
     }
     return filteredFilters;
-  }
-
-  @Override
-  // This deals with partition definition's 'lessthan' is "maxvalue".
-  protected RangeSet<Long> visit(Constant node, Void context) {
-    RangeSet<Long> ranges = TreeRangeSet.create();
-    if (node.getValue() instanceof Number) {
-      long val = ((Number) node.getValue()).longValue();
-      if (val == 1) {
-        return ranges.complement();
-      }
-      return ranges;
-    }
-    return ranges;
   }
 
   @Override
@@ -244,7 +229,12 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
         partExprs.add(parser.parseExpression(leftHand));
       } else {
         String previous = partInfo.getDefs().get(i - 1).getLessThan().get(0);
-        String and = String.format("%s and %s", partExprStr + ">=" + previous, leftHand);
+        String and;
+        if (leftHand.equals("true")) {
+          and = String.format("%s", partExprStr + ">=" + previous);
+        } else {
+          and = String.format("%s and %s", partExprStr + ">=" + previous, leftHand);
+        }
         partExprs.add(parser.parseExpression(and));
       }
     }
