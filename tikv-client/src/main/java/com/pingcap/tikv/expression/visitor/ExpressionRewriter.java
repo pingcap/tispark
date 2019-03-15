@@ -5,7 +5,9 @@ import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.IsNull;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.expression.Not;
 import com.pingcap.tikv.expression.Year;
 import com.pingcap.tikv.predicates.PredicateUtils;
 import java.util.Objects;
@@ -43,6 +45,16 @@ public class ExpressionRewriter extends DefaultVisitor<Expression, Void> {
     Expression left = node.getLeft().accept(this, null);
     Expression right = node.getRight().accept(this, null);
     return new LogicalBinaryExpression(node.getCompType(), left, right);
+  }
+
+  @Override
+  public Expression visit(Not node, Void context) {
+    return node;
+  }
+
+  @Override
+  public Expression visit(IsNull node, Void context) {
+    return node;
   }
 
   @Override
