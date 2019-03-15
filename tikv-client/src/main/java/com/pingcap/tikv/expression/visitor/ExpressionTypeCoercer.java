@@ -222,7 +222,6 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
     return Pair.create(IntegerType.BOOLEAN, NOT_CRED);
   }
 
-  // TODO finish ExpressionTypeCoercer
   @Override
   protected Pair<DataType, Double> visit(Year node, DataType targetType) {
     if (targetType != null && !targetType.equals(IntegerType.INT)) {
