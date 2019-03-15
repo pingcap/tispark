@@ -12,7 +12,7 @@ import com.pingcap.tikv.expression.Year;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
-public class ExpressionRewriterTest {
+public class PartAndFilterExprRewriterTest {
 
   @Test
   public void TestRewrite() {
@@ -25,14 +25,14 @@ public class ExpressionRewriterTest {
         LogicalBinaryExpression.or(
             ComparisonBinaryExpression.equal(col, Constant.create(date)),
             ComparisonBinaryExpression.greaterEqual(col2, Constant.create(5)));
-    ExpressionRewriter expressionRewriter = new ExpressionRewriter(partExpr);
+    PartAndFilterExprRewriter expressionRewriter = new PartAndFilterExprRewriter(partExpr);
     Expression rewrote = expressionRewriter.rewrite(exprToBeRewrited);
     assertEquals("[[[y] EQUAL 1995] OR [[a] GREATER_EQUAL 5]]", rewrote.toString());
 
     // not support case
     partExpr = new Not(col);
     exprToBeRewrited = ComparisonBinaryExpression.equal(col, Constant.create("1995-10-10"));
-    expressionRewriter = new ExpressionRewriter(partExpr);
+    expressionRewriter = new PartAndFilterExprRewriter(partExpr);
     rewrote = expressionRewriter.rewrite(exprToBeRewrited);
     assertNull(rewrote);
     assertTrue(expressionRewriter.isUnsupportedPartFnFound());
@@ -45,7 +45,7 @@ public class ExpressionRewriterTest {
 
     // simple column case. No rewriting happens.
     exprToBeRewrited = ComparisonBinaryExpression.lessEqual(col, Constant.create(1));
-    expressionRewriter = new ExpressionRewriter(col);
+    expressionRewriter = new PartAndFilterExprRewriter(col);
     rewrote = expressionRewriter.rewrite(exprToBeRewrited);
     assertEquals("[[y] LESS_EQUAL 1]", rewrote.toString());
   }

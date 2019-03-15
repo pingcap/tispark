@@ -14,20 +14,20 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * ExpressionRewriter takes partition expression as an input. Rewriting rule is based on the type of
- * partition expression. 1. If partition expression is a columnRef, no rewriting will be performed.
- * 2. If partition expression is year and the expression to be rewrote in the form of y <
+ * PartAndFilterExprRewriter takes partition expression as an input. Rewriting rule is based on the
+ * type of partition expression. 1. If partition expression is a columnRef, no rewriting will be
+ * performed. 2. If partition expression is year and the expression to be rewrote in the form of y <
  * '1995-10-10' then its right hand child will be replaced with "1995". 3. If partition expression
  * is year and the expression to be rewrote in the form of year(y) < '1995' then its left hand child
  * will be replaced with y.
  */
-public class ExpressionRewriter extends DefaultVisitor<Expression, Void> {
+public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> {
   private Expression partExpr;
   private Set<ColumnRef> columnRefs;
 
   private boolean unsupportedPartFnFound;
 
-  ExpressionRewriter(Expression partExpr) {
+  PartAndFilterExprRewriter(Expression partExpr) {
     Objects.requireNonNull(partExpr, "partition expression cannot be null");
     this.partExpr = partExpr;
     this.columnRefs = PredicateUtils.extractColumnRefFromExpression(partExpr);
