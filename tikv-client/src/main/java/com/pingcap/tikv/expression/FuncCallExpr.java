@@ -21,8 +21,8 @@ public class FuncCallExpr implements Expression {
     this.funcTp = funcTp;
   }
 
-  public static FuncCallExpr year(Expression expr, Type funcTp) {
-    return new FuncCallExpr(expr, funcTp);
+  public static FuncCallExpr year(Expression expr) {
+    return new FuncCallExpr(expr, Type.YEAR);
   }
 
   @Override
