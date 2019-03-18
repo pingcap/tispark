@@ -20,9 +20,9 @@ import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
+import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.visitor.CanBePrunedValidator.PartPruningContext;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
@@ -32,6 +32,7 @@ import com.pingcap.tikv.predicates.PredicateUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Apply partition pruning rule on filter condition. Partition pruning is based on a simple idea and
@@ -42,6 +43,7 @@ import java.util.Objects;
 public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
 
   private static Expression partExpr;
+  private static Set<ColumnRef> partExprColRefs;
   private static List<Expression> partExprs;
 
   protected RangeSet<Long> process(Expression node, Void context) {
@@ -70,19 +72,10 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     // if query is select * from t, then filter will be null.
     if (filter == null) return false;
 
+    // generate partition expressions
     partExprs = generateRangePartExprs(tblInfo);
-    // Ideally, part expr should be parsed by a parser
-    // but it requires a lot work, we chose a brute force way
-    // to workaround.
-    boolean canBePruned;
-    if (partExpr instanceof ColumnRef) {
-      // skip not(isnull(col)) case
-      canBePruned = CanBePrunedValidator.canBePruned(filter, new PartPruningContext(partExpr));
-    } else {
-      canBePruned = false;
-    }
 
-    return canBePruned;
+    return true;
   }
 
   private static List<Expression> extractLogicalOrComparisonExpr(List<Expression> filters) {
@@ -96,13 +89,28 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
   }
 
   @Override
+  // This deals with partition definition's 'lessthan' is "maxvalue".
+  protected RangeSet<Long> visit(Constant node, Void context) {
+    RangeSet<Long> ranges = TreeRangeSet.create();
+    if (node.getValue() instanceof Number) {
+      long val = ((Number) node.getValue()).longValue();
+      if (val == 1) {
+        return ranges.complement();
+      }
+      return ranges;
+    }
+    return ranges;
+  }
+
+  @Override
   protected RangeSet<Long> visit(ComparisonBinaryExpression node, Void context) {
     NormalizedPredicate predicate = node.normalize();
-    if (!predicate.getColumnRef().equals(partExpr)) return TreeRangeSet.<Long>create().complement();
+    if (!partExprColRefs.contains(predicate.getColumnRef()))
+      return TreeRangeSet.<Long>create().complement();
     Long literal;
     if (predicate.getValue().getValue() instanceof Number) {
       literal = ((Number) predicate.getValue().getValue()).longValue();
-      return comparisonBinaryExprVisit(node, context, literal, false);
+      return visitComparisonBinaryExpr(node, context, literal, false);
     }
     return TreeRangeSet.create();
   }
@@ -133,11 +141,26 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
   private List<TiPartitionDef> pruneRangeNormalPart(TiTableInfo tableInfo, Expression cnfExpr) {
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
     Objects.requireNonNull(cnfExpr, "cnf expression cannot be null at pruning stage");
+
+    // we need rewrite filter expression. This step is designed to  deal with
+    // y < '1885-10-10' where y is a date type. Rewrite will apply partition expression
+    // on the constant part. After rewriting, it becomes y < 1995;
+    PartAndFilterExprRewriter expressionRewriter = new PartAndFilterExprRewriter(partExpr);
+    cnfExpr = expressionRewriter.rewrite(cnfExpr);
+    // if we find an unsupported partition function, we downgrade to scan all partitions.
+    if (expressionRewriter.isUnsupportedPartFnFound()) {
+      return partInfo.getDefs();
+    }
+
     RangeSet<Long> filterRange = buildRange(cnfExpr);
+
     List<TiPartitionDef> pDefs = new ArrayList<>();
     for (int i = 0; i < partExprs.size(); i++) {
       Expression partExpr = partExprs.get(i);
-      RangeSet<Long> partRange = buildRange(partExpr);
+      // when we build range, we still need rewrite partition expression.
+      // If we have a year(purchased) < 1995 which cannot be normalized, we need
+      // to rewrite it into purchased < 1995 to let RangeSetBuilder be happy.
+      RangeSet<Long> partRange = buildRange(expressionRewriter.rewrite(partExpr));
       partRange.removeAll(filterRange.complement());
       if (!partRange.isEmpty()) {
         // part range is empty indicates this partition can be pruned.
@@ -185,23 +208,43 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     return pruneRangeNormalPart(tableInfo, cnfExpr);
   }
 
+  // say we have a partitioned table with the following partition definitions with year(y) as
+  // partition expression:
+  // 1. p0 less than 1995
+  // 2. p1 less than 1996
+  // 3. p2 less than maxvalue
+  // Above infos, after this function, will become the following:
+  // 1. p0: year(y) < 1995
+  // 2. p1: 1995 <= year(y) and year(y) < 1996
+  // 3. p2: 1996 <= year(y) and true
+  // true will become {@Code Constant} 1.
   private static List<Expression> generateRangePartExprs(TiTableInfo tableInfo) {
     TiPartitionInfo partInfo = tableInfo.getPartitionInfo();
     List<Expression> partExprs = new ArrayList<>();
     TiParser parser = new TiParser(tableInfo);
+    // check year expression
+    // rewrite filter condition
+    // purchased > '1995-10-10'
+    // year(purchased) > year('1995-10-10')
+    // purchased > 1995
     String partExprStr = tableInfo.getPartitionInfo().getExpr();
     partExpr = parser.parseExpression(partExprStr);
+    partExprColRefs = PredicateUtils.extractColumnRefFromExpression(partExpr);
     // when it is not range column case, only first element stores useful info.
     for (int i = 0; i < partInfo.getDefs().size(); i++) {
       TiPartitionDef pDef = partInfo.getDefs().get(i);
+      String current = pDef.getLessThan().get(0);
+      String leftHand;
+      if (current.equals("MAXVALUE")) {
+        leftHand = "true";
+      } else {
+        leftHand = String.format("%s < %s", partExprStr, current);
+      }
       if (i == 0) {
-        String literal = pDef.getLessThan().get(0);
-        partExprs.add(parser.parseExpression(partExprStr + "<" + literal));
+        partExprs.add(parser.parseExpression(leftHand));
       } else {
         String previous = partInfo.getDefs().get(i - 1).getLessThan().get(0);
-        String current = pDef.getLessThan().get(0);
-        String and =
-            String.format("%s and %s", partExprStr + ">=" + previous, partExprStr + "<" + current);
+        String and = String.format("%s and %s", partExprStr + ">=" + previous, leftHand);
         partExprs.add(parser.parseExpression(and));
       }
     }

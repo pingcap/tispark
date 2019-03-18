@@ -21,11 +21,55 @@ import org.junit.Test;
 public class TiParserTest {
 
   @Test
+  public void TestYearFunction() {
+    String sql = "year(purchased)";
+    TiParser parser = new TiParser();
+    Expression year = parser.parseExpression(sql);
+    Assert.assertEquals("year([purchased])", year.toString());
+  }
+
+  @Test
+  public void TestParseOR() {
+    String sql = "1.0";
+    TiParser parser = new TiParser();
+    Expression constant = parser.parseExpression(sql);
+    Assert.assertEquals(Constant.create(1.0, RealType.REAL), constant);
+
+    sql = "id < 1 or id >= 3";
+    Expression or = parser.parseExpression(sql);
+    Assert.assertEquals(or.toString(), "[[[id] LESS_THAN 1] OR [[id] GREATER_EQUAL 3]]");
+
+    sql = "id < 1 xor id >= 3";
+    Expression xor = parser.parseExpression(sql);
+    Assert.assertEquals(xor.toString(), "[[[id] LESS_THAN 1] XOR [[id] GREATER_EQUAL 3]]");
+  }
+
+  @Test
   public void TestParseExpression() {
     String sql = "1.0";
     TiParser parser = new TiParser();
     Expression constant = parser.parseExpression(sql);
     Assert.assertEquals(Constant.create(1.0, RealType.REAL), constant);
+
+    sql = "true";
+    Expression ex1 = parser.parseExpression(sql);
+    Assert.assertEquals("1", ex1.toString());
+
+    sql = "true and id < 4";
+    ex1 = parser.parseExpression(sql);
+    Assert.assertEquals("[1 AND [[id] LESS_THAN 4]]", ex1.toString());
+
+    sql = "true and x <= 4";
+    ex1 = parser.parseExpression(sql);
+    Assert.assertEquals("[1 AND [[x] LESS_EQUAL 4]]", ex1.toString());
+
+    sql = "true and x = 4";
+    ex1 = parser.parseExpression(sql);
+    Assert.assertEquals("[1 AND [[x] EQUAL 4]]", ex1.toString());
+
+    sql = "true and x > 4";
+    ex1 = parser.parseExpression(sql);
+    Assert.assertEquals("[1 AND [[x] GREATER_THAN 4]]", ex1.toString());
 
     sql = "1.4;";
     Expression cst2 = parser.parseExpression(sql);
@@ -52,20 +96,17 @@ public class TiParserTest {
     sql = "id-1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        ArithmeticBinaryExpression.minus(ColumnRef.create("id"), Constant.create(1)),
-        colRef);
+        ArithmeticBinaryExpression.minus(ColumnRef.create("id"), Constant.create(1)), colRef);
 
     sql = "id/1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)),
-        colRef);
+        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)), colRef);
 
     sql = "id div 1";
     colRef = parser.parseExpression(sql);
     Assert.assertEquals(
-        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)),
-        colRef);
+        ArithmeticBinaryExpression.divide(ColumnRef.create("id"), Constant.create(1)), colRef);
 
     sql = "'abc'";
     Expression stringLiteral = parser.parseExpression(sql);

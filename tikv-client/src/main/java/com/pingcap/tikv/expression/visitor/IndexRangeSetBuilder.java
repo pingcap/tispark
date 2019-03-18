@@ -73,7 +73,7 @@ public class IndexRangeSetBuilder extends RangeSetBuilder<TypedKey> {
     TypedKey literal = predicate.getTypedLiteral(prefixLen);
     boolean loose = prefixLen != DataType.UNSPECIFIED_LEN;
     // With prefix length specified, the filter is loosen and so should the ranges
-    return comparisonBinaryExprVisit(node, context, literal, loose);
+    return visitComparisonBinaryExpr(node, context, literal, loose);
   }
 
   @Override

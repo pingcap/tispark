@@ -1,5 +1,7 @@
 package com.pingcap.tikv.parser;
 
+import static com.pingcap.tikv.types.IntegerType.BOOLEAN;
+
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -9,9 +11,12 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.FuncCallExpr;
+import com.pingcap.tikv.expression.FuncCallExpr.Type;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
+import com.pingcap.tikv.parser.MySqlParser.FunctionNameBaseContext;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.RealType;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -33,6 +38,10 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       return createColRef(ctx.ID().getSymbol().getText());
     }
 
+    if (ctx.functionNameBase() != null) {
+      return createColRef(ctx.functionNameBase().getText());
+    }
+
     throw new UnsupportedSyntaxException(ctx.getParent().toString() + ": it is not supported");
   }
 
@@ -50,6 +59,18 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       return createColRef(ctx.REVERSE_QUOTE_ID().getSymbol().getText());
     }
     return visitSimpleId(ctx.simpleId());
+  }
+
+  @Override
+  public Expression visitScalarFunctionCall(MySqlParser.ScalarFunctionCallContext ctx) {
+    FunctionNameBaseContext fnNameCtx = ctx.scalarFunctionName().functionNameBase();
+    if (fnNameCtx != null) {
+      if (fnNameCtx.YEAR() != null) {
+        Expression args = visitFunctionArgs(ctx.functionArgs());
+        return new FuncCallExpr(args, Type.YEAR);
+      }
+    }
+    return visitChildren(ctx);
   }
 
   @Override
@@ -89,7 +110,8 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
 
   @Override
   public Expression visitBooleanLiteral(MySqlParser.BooleanLiteralContext ctx) {
-    throw new UnsupportedSyntaxException("boolean type is not supported yet");
+    if (ctx.FALSE() != null) return Constant.create(0);
+    return Constant.create(1, BOOLEAN);
   }
 
   @Override

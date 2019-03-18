@@ -54,7 +54,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
     return inf.infer(expression);
   }
 
-  public DataType infer(Expression expression) {
+  DataType infer(Expression expression) {
     requireNonNull(expression, "expression is null");
     return expression.accept(this, null).first;
   }
@@ -77,7 +77,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   // Try to coerceType if needed
   // A column reference is source of coerce and constant is the subject to coerce
   // targetType null means no coerce needed from parent and choose the highest credibility result
-  protected Pair<DataType, Double> coerceType(DataType targetType, Expression... nodes) {
+  private Pair<DataType, Double> coerceType(DataType targetType, Expression... nodes) {
     if (nodes.length == 0) {
       throw new TiExpressionException("failed to verify empty node list");
     }
@@ -220,5 +220,17 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
       typeMap.put(node, IntegerType.BOOLEAN);
     }
     return Pair.create(IntegerType.BOOLEAN, NOT_CRED);
+  }
+
+  @Override
+  protected Pair<DataType, Double> visit(FuncCallExpr node, DataType targetType) {
+    if (targetType != null && !targetType.equals(IntegerType.INT)) {
+      throw new TiExpressionException(String.format("Not result cannot be %s", targetType));
+    }
+    if (!typeMap.containsKey(node)) {
+      coerceType(null, node.getExpression());
+      typeMap.put(node, IntegerType.INT);
+    }
+    return Pair.create(IntegerType.INT, FUNCTION_CRED);
   }
 }

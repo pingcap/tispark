@@ -59,7 +59,6 @@ collationName
 
 uid
     : simpleId
-    //| DOUBLE_QUOTE_ID
     | REVERSE_QUOTE_ID
     | CHARSET_REVERSE_QOUTE_STRING
     ;

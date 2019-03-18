@@ -29,7 +29,7 @@ import java.util.Objects;
  * A builder can build a range set of type {@code C}. It also extends {@code DefaultVisitor} and
  * override and {@code LogicalBinaryExpression}'s visit. For {@code ComparisonBinaryExpression}, we
  * cannot just override it because {@code IndexRangeSetBuilder} and {@code LogicalBinaryExpression}
- * has different behavior. A method {@code comparisonBinaryExprVisit} is added with extra boolean
+ * has different behavior. A method {@code visitComparisonBinaryExpr} is added with extra boolean
  * variable to control the behavior.
  */
 public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void> {
@@ -44,7 +44,7 @@ public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeS
    * @param loose If prefix length is specified, then filter is loose, so is the range.
    * @return a range set.
    */
-  protected RangeSet<C> comparisonBinaryExprVisit(
+  RangeSet<C> visitComparisonBinaryExpr(
       ComparisonBinaryExpression node, Void context, C literal, boolean loose) {
     NormalizedPredicate predicate = node.normalize();
     RangeSet<C> ranges = TreeRangeSet.create();
@@ -130,7 +130,7 @@ public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeS
     return predicate.accept(this, null);
   }
 
-  protected static void throwOnError(Expression node) {
+  static void throwOnError(Expression node) {
     final String errorFormat = "Unsupported conversion to Range: %s";
     throw new TiExpressionException(String.format(errorFormat, node));
   }

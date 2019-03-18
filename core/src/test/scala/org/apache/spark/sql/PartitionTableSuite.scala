@@ -19,6 +19,17 @@ import com.pingcap.tikv.meta.TiDAGRequest
 import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 
 class PartitionTableSuite extends BaseTiSparkSuite {
+  test("single maxvalue partition table case") {
+    tidbStmt.execute(
+      "create table t2 (c1 int) partition by range(c1) (partition p0 values less than maxvalue)"
+    )
+    tidbStmt.execute("insert into `t2` values(2)")
+    tidbStmt.execute("insert into `t2` values(3)")
+    refreshConnections()
+
+    judge("select * from t2 order by c1")
+  }
+
   test("index scan on partition table") {
     tidbStmt.execute(
       "CREATE TABLE `p_t` (   `id` int(11) DEFAULT NULL, `y` date DEFAULT NULL,   index `idx_y`(`y`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin PARTITION BY RANGE ( id ) (   PARTITION p0 VALUES LESS THAN (2),   PARTITION p1 VALUES LESS THAN (4),   PARTITION p2 VALUES LESS THAN (6) );"
@@ -63,6 +74,124 @@ class PartitionTableSuite extends BaseTiSparkSuite {
         .asInstanceOf[RegionTaskExec]
         .dagRequest
     }
+  }
+
+  test("part pruning on unix_timestamp") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt4`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `pt4` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `purchased` timestamp DEFAULT NULL,
+                       |  index `idx_id`(`id`)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE (unix_timestamp(purchased)) (
+                       |  PARTITION p0 VALUES LESS THAN (unix_timestamp('1995-10-10')),
+                       |  PARTITION p1 VALUES LESS THAN (unix_timestamp('2000-10-10')),
+                       |  PARTITION p2 VALUES LESS THAN (unix_timestamp('2005-10-10'))
+                       |)
+                     """.stripMargin)
+    refreshConnections()
+
+    assert(
+      extractDAGReq(
+        spark
+          .sql("select * from pt4 where purchased = date'1994-10-10'")
+      ).getPrunedParts
+        .size() == 3
+    )
+  }
+
+  test("part pruning on year function") {
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt3`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `pt3` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `purchased` date DEFAULT NULL,
+                       |  index `idx_id`(`id`)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE (year(purchased)) (
+                       |  PARTITION p0 VALUES LESS THAN (1995),
+                       |  PARTITION p1 VALUES LESS THAN (2000),
+                       |  PARTITION p2 VALUES LESS THAN (2005),
+                       |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+                       |)
+                     """.stripMargin)
+    refreshConnections()
+
+    assert(
+      extractDAGReq(
+        spark
+        // expected part info only contains one part which is p.
+          .sql("select * from pt3 where purchased = date'1994-10-10'")
+      ).getPrunedParts
+        .get(0)
+        .getName == "p0"
+    )
+
+    assert(
+      extractDAGReq(
+        spark
+        // expected part info only contains one part which is p2.
+          .sql(
+            "select * from pt3 where purchased > date'1996-10-10' and purchased < date'2000-10-10'"
+          )
+      ).getPrunedParts
+        .get(0)
+        .getName == "p1"
+    )
+
+    assert(
+      {
+        val pDef = extractDAGReq(
+          spark
+          // expected part info only contains two parts which are p0 and p1.
+            .sql("select * from pt3 where purchased < date'2000-10-10'")
+        ).getPrunedParts
+        pDef.size() == 2 && pDef.get(0).getName == "p0" && pDef.get(1).getName == "p1"
+      }
+    )
+
+    assert(
+      {
+        val pDef = extractDAGReq(
+          spark
+          // expected part info only contains one part which is p1.
+            .sql(
+              "select * from pt3 where purchased < date'2005-10-10' and purchased > date'2000-10-10'"
+            )
+        ).getPrunedParts
+        pDef.size() == 1 && pDef.get(0).getName == "p2"
+      }
+    )
+
+    assert(
+      {
+        val pDef = extractDAGReq(
+          spark
+          // or with an unrelated column. All parts should be accessed.
+            .sql(
+              "select * from pt3 where id < 4 or purchased < date'1995-10-10'"
+            )
+        ).getPrunedParts
+        pDef.size() == 4
+      }
+    )
+
+    assert(
+      {
+        val pDef = extractDAGReq(
+          // for complicated expression, we do not support for now.
+          // this will be improved later.
+          spark
+            .sql(
+              "select * from pt3 where year(purchased) < 1995"
+            )
+        ).getPrunedParts
+        pDef.size() == 4
+      }
+    )
   }
 
   test("adding part pruning test when index is on partitioned column") {
@@ -278,66 +407,6 @@ class PartitionTableSuite extends BaseTiSparkSuite {
     )
   }
 
-  //TODO: fn is not finished yet, comment them for now
-//  test("part expr function code-gen test") {
-//    tidbStmt.execute("create table part_fn(d date)")
-//    tidbStmt.execute("insert into part_fn values ('1989-01-01'), ('2018-10-11')")
-//    refreshConnections()
-//    judge("select to_seconds(d) from part_fn")
-//    judge("select yearweek(d) from part_fn")
-//    judge("select weekday(d) from part_fn")
-//    judge("select to_days(d) from part_fn")
-//    judge("select microsecond(d) from part_fn")
-//    judge("select time_to_sec(d) from part_fn")
-//  }
-
-//  test("partition expr can be parsed by sparkSQLParser") {
-//    assert(spark.sql("select Abs(1)").count == 1)
-//    assert(spark.sql("select Ceiling(1)").count == 1)
-//    assert(spark.sql("SELECT datediff('2009-07-31', '2009-07-30')").count == 1)
-//    assert(spark.sql("SELECT day('2009-07-30')").count() == 1)
-//    assert(spark.sql("SELECT dayofmonth('2009-07-30')").count() == 1)
-//    assert(spark.sql("SELECT dayofweek('2009-07-30')").count() == 1)
-//    assert(spark.sql("SELECT dayofyear('2016-04-09')").count() == 1)
-//    assert(spark.sql("SELECT floor(-0.1)").count() == 1)
-//    assert(spark.sql("SELECT hour('2009-07-30 12:58:59')").count() == 1)
-//    assert(spark.sql("SELECT minute('2009-07-30 12:58:59')").count() == 1)
-//    assert(spark.sql("SELECT mod(2, 1)").count() == 1)
-//    assert(spark.sql("SELECT month('2016-07-30')").count() == 1)
-//    assert(spark.sql("SELECT quarter('2016-08-31')").count() == 1)
-//    assert(spark.sql("SELECT second('2009-07-30 12:58:59')").count() == 1)
-//    assert(spark.sql("SELECT unix_timestamp('2016-04-08', 'yyyy-MM-dd')").count() == 1)
-//    assert(spark.sql("SELECT unix_timestamp()").count() == 1)
-//    assert(spark.sql("SELECT year('2009-07-30 12:58:59')").count() == 1)
-//    //     extract is not supported
-//    // https://dev.mysql.com/doc/refman/5.7/en/date-and-time-functions.html#function_extract
-//    judge("select time_to_sec('12:30:49')")
-//    judge("select time_to_sec('2018-10-10 12:30:49')")
-//    judge("select to_days('2018-10-10')")
-//    judge("select to_days('2018-10-10 12:30:49')")
-//    judge("select to_seconds('2018-10-01 12:34:59')")
-//    judge("select to_seconds('2018-10-01')")
-//    judge("select microsecond('2018-10-01 12:34:59')")
-//    judge("select weekday('2018-09-12')")
-//    judge("select weekday('2018-01-01')")
-//    judge("select yearweek('1992-01-01')")
-//    judge("select yearweek('1992-12-31')")
-//    judge("select yearweek('1992-01-01', 1)")
-//    judge("select yearweek('1992-12-31', 1)")
-//    judge("select yearweek('1992-01-01', 2)")
-//    judge("select yearweek('1992-12-31', 2)")
-//    judge("select yearweek('1992-01-01', 3)")
-//    judge("select yearweek('1992-12-31', 3)")
-//    judge("select yearweek('1992-01-01', 4)")
-//    judge("select yearweek('1992-12-31', 4)")
-//    judge("select yearweek('1992-01-01', 5)")
-//    judge("select yearweek('1992-12-31', 5)")
-//    judge("select yearweek('1992-01-01', 6)")
-//    judge("select yearweek('1992-12-31', 6)")
-//    judge("select yearweek('1992-01-01', 7)")
-//    judge("select yearweek('1992-12-31', 7)")
-//  }
-
   test("partition read(w/o pruning)") {
     tidbStmt.execute("DROP TABLE IF EXISTS `p_t`")
     tidbStmt.execute("""
@@ -372,6 +441,9 @@ class PartitionTableSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists pt")
       tidbStmt.execute("drop table if exists pt2")
       tidbStmt.execute("drop table if exists p_t")
+      tidbStmt.execute("drop table if exists pt3")
+      tidbStmt.execute("drop table if exists pt4")
+      tidbStmt.execute("drop table if exists t2")
     } finally {
       super.afterAll()
     }

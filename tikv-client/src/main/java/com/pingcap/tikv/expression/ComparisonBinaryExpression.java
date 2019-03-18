@@ -25,7 +25,6 @@ import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 public class ComparisonBinaryExpression implements Expression {
   public enum Type {
@@ -83,7 +82,7 @@ public class ComparisonBinaryExpression implements Expression {
       return pred.getComparisonType();
     }
 
-    public TypedKey getTypedLiteral() {
+    TypedKey getTypedLiteral() {
       return getTypedLiteral(DataType.UNSPECIFIED_LEN);
     }
 
@@ -98,7 +97,7 @@ public class ComparisonBinaryExpression implements Expression {
   private final Expression left;
   private final Expression right;
   private final Type compType;
-  private transient Optional<NormalizedPredicate> normalizedPredicate;
+  private transient NormalizedPredicate normalizedPredicate;
 
   public ComparisonBinaryExpression(Type type, Expression left, Expression right) {
     this.left = requireNonNull(left, "left expression is null");
@@ -130,7 +129,7 @@ public class ComparisonBinaryExpression implements Expression {
 
   public NormalizedPredicate normalize() {
     if (normalizedPredicate != null) {
-      return normalizedPredicate.orElseGet(null);
+      return normalizedPredicate;
     }
     if (getLeft() instanceof Constant && getRight() instanceof ColumnRef) {
       Constant left = (Constant) getLeft();
@@ -162,11 +161,11 @@ public class ComparisonBinaryExpression implements Expression {
       }
       ComparisonBinaryExpression newExpression =
           new ComparisonBinaryExpression(newType, right, left);
-      normalizedPredicate = Optional.of(new NormalizedPredicate(newExpression));
-      return normalizedPredicate.get();
+      normalizedPredicate = new NormalizedPredicate(newExpression);
+      return normalizedPredicate;
     } else if (getRight() instanceof Constant && getLeft() instanceof ColumnRef) {
-      normalizedPredicate = Optional.of(new NormalizedPredicate(this));
-      return normalizedPredicate.get();
+      normalizedPredicate = new NormalizedPredicate(this);
+      return normalizedPredicate;
     } else {
       return null;
     }
