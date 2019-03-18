@@ -315,7 +315,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
   }
 
   @Override
-  protected Expr visit(Year node, Object context) {
+  protected Expr visit(FuncCallExpr node, Object context) {
     ScalarFuncSig protoSig = ScalarFuncSig.Year;
     Expr.Builder builder = scalaToPartialProto(node, context);
     builder.setSig(protoSig);

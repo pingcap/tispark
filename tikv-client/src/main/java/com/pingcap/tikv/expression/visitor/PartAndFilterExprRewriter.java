@@ -5,10 +5,11 @@ import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.FuncCallExpr;
+import com.pingcap.tikv.expression.FuncCallExpr.Type;
 import com.pingcap.tikv.expression.IsNull;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
 import com.pingcap.tikv.expression.Not;
-import com.pingcap.tikv.expression.Year;
 import com.pingcap.tikv.predicates.PredicateUtils;
 import java.util.Objects;
 import java.util.Set;
@@ -34,7 +35,7 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
   }
 
   private boolean isYear() {
-    return partExpr instanceof Year;
+    return partExpr instanceof FuncCallExpr;
   }
 
   private boolean isColumnRef() {
@@ -58,7 +59,7 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
   }
 
   @Override
-  public Expression visit(Year node, Void context) {
+  public Expression visit(FuncCallExpr node, Void context) {
     return node.getExpression();
   }
 
@@ -77,7 +78,7 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
       }
       // we only support year for now.
       if (isYear()) {
-        Year year = new Year(predicate.getValue());
+        FuncCallExpr year = new FuncCallExpr(predicate.getValue(), Type.YEAR);
         Constant newLiteral = year.eval(predicate.getValue());
         return new ComparisonBinaryExpression(node.getComparisonType(), node.getLeft(), newLiteral);
       } else if (isColumnRef()) {
@@ -87,7 +88,7 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
       return null;
     }
 
-    // when we find a node in form like [Year(y) < 1995], we need rewrite the left child.
+    // when we find a node in form like [FuncCallExpr(y) < 1995], we need rewrite the left child.
     Expression left = node.getLeft().accept(this, null);
     Expression right = node.getRight().accept(this, null);
     return new ComparisonBinaryExpression(node.getComparisonType(), left, right);

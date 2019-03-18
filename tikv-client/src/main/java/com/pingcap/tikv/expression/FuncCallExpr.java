@@ -8,20 +8,26 @@ import java.util.List;
 import java.util.Objects;
 import org.joda.time.DateTime;
 
-public class Year implements Expression {
-  private Expression expression;
-
-  public Year(Expression expr) {
-    this.expression = expr;
+public class FuncCallExpr implements Expression {
+  public enum Type {
+    YEAR
   }
 
-  public static Year year(Expression expr) {
-    return new Year(expr);
+  private Expression child;
+  private Type funcTp;
+
+  public FuncCallExpr(Expression expr, Type funcTp) {
+    this.child = expr;
+    this.funcTp = funcTp;
+  }
+
+  public static FuncCallExpr year(Expression expr, Type funcTp) {
+    return new FuncCallExpr(expr, funcTp);
   }
 
   @Override
   public List<Expression> getChildren() {
-    return ImmutableList.of(expression);
+    return ImmutableList.of(child);
   }
 
   @Override
@@ -30,12 +36,19 @@ public class Year implements Expression {
   }
 
   public Expression getExpression() {
-    return expression;
+    return child;
+  }
+
+  private String getFuncString() {
+    if (funcTp == Type.YEAR) {
+      return "year";
+    }
+    return "";
   }
 
   @Override
   public String toString() {
-    return String.format("year(%s)", getExpression());
+    return String.format("%s(%s)", getFuncString(), getExpression());
   }
 
   @Override
@@ -43,23 +56,20 @@ public class Year implements Expression {
     if (this == other) {
       return true;
     }
-    if (!(other instanceof Year)) {
+    if (!(other instanceof FuncCallExpr)) {
       return false;
     }
 
-    Year that = (Year) other;
-    return Objects.equals(expression, that.expression);
+    FuncCallExpr that = (FuncCallExpr) other;
+    return Objects.equals(child, that.child);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(expression);
+    return Objects.hashCode(child);
   }
 
-  // try to evaluate a {@code Constant} literal if its type is
-  // varchar or datetime. If such literal cannot be evaluated, return
-  // input literal.
-  public Constant eval(Constant literal) {
+  private Constant evalForYear(Constant literal) {
     DataType type = literal.getType();
     if (type == StringType.VARCHAR) {
       DateTime date = DateTime.parse((String) literal.getValue());
@@ -70,5 +80,14 @@ public class Year implements Expression {
     } else {
       return literal;
     }
+  }
+  // try to evaluate a {@code Constant} literal if its type is
+  // varchar or datetime. If such literal cannot be evaluated, return
+  // input literal.
+  public Constant eval(Constant literal) {
+    if (funcTp == Type.YEAR) {
+      return evalForYear(literal);
+    }
+    return null;
   }
 }

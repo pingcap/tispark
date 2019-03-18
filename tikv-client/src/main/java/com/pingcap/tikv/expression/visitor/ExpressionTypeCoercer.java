@@ -223,7 +223,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   }
 
   @Override
-  protected Pair<DataType, Double> visit(Year node, DataType targetType) {
+  protected Pair<DataType, Double> visit(FuncCallExpr node, DataType targetType) {
     if (targetType != null && !targetType.equals(IntegerType.INT)) {
       throw new TiExpressionException(String.format("Not result cannot be %s", targetType));
     }

@@ -1,5 +1,7 @@
 package com.pingcap.tikv.parser;
 
+import static com.pingcap.tikv.types.IntegerType.BOOLEAN;
+
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -9,8 +11,9 @@ import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.FuncCallExpr;
+import com.pingcap.tikv.expression.FuncCallExpr.Type;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.Year;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.parser.MySqlParser.ExpressionContext;
 import com.pingcap.tikv.parser.MySqlParser.FunctionNameBaseContext;
@@ -64,7 +67,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
     if (fnNameCtx != null) {
       if (fnNameCtx.YEAR() != null) {
         Expression args = visitFunctionArgs(ctx.functionArgs());
-        return new Year(args);
+        return new FuncCallExpr(args, Type.YEAR);
       }
     }
     return visitChildren(ctx);
@@ -108,7 +111,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
   @Override
   public Expression visitBooleanLiteral(MySqlParser.BooleanLiteralContext ctx) {
     if (ctx.FALSE() != null) return Constant.create(0);
-    return Constant.create(1);
+    return Constant.create(1, BOOLEAN);
   }
 
   @Override
