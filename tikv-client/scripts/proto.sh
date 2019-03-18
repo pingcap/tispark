@@ -16,7 +16,7 @@
 
 if [ -d "kvproto" ]; then
     # cd kvproto; git pull origin master; cd ..
-    cd kvproto; git checkout 497dd34f807bccdb5bd01009c62c5fd5ced404f3; cd ..
+    cd kvproto; git checkout 66ff9210df7403c42d1c53724c159be555029d64; cd ..
 else
     git clone https://github.com/pingcap/kvproto; cd kvproto; git checkout 497dd34f807bccdb5bd01009c62c5fd5ced404f3; cd ..
 fi

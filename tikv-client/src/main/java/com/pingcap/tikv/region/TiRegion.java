@@ -86,6 +86,17 @@ public class TiRegion implements Serializable {
     return peer;
   }
 
+  public Peer getLearner() {
+    int peerCnt = getMeta().getPeersCount();
+    for (int i = 0; i < peerCnt; i++) {
+      Peer peer = getMeta().getPeers(i);
+      if (peer.getIsLearner()) {
+        return peer;
+      }
+    }
+    return null;
+  }
+
   public long getId() {
     return this.meta.getId();
   }
