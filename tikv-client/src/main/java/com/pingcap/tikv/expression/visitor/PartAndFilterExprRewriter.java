@@ -88,7 +88,7 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
       return null;
     }
 
-    // when we find a node in form like [FuncCallExpr(y) < 1995], we need rewrite the left child.
+    // when we find a node in form like [year(y) < 1995], we need rewrite the left child.
     Expression left = node.getLeft().accept(this, null);
     Expression right = node.getRight().accept(this, null);
     return new ComparisonBinaryExpression(node.getComparisonType(), left, right);

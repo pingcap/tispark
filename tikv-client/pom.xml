@@ -162,7 +162,6 @@
                 </arguments>
                 <visitor>true</visitor>
                 <sourceDirectory>./src/main/java/com/pingcap/tikv/parser</sourceDirectory>
-                <outputDirectory>./src/main/java/com/pingcap/tikv/parser</outputDirectory>
               </configuration>
             </plugin>
             <plugin>
