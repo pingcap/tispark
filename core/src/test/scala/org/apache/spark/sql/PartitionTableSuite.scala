@@ -27,7 +27,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into `t2` values(3)")
     refreshConnections()
 
-    judge("select * from t2 order by c1")
+    judge("select * from t2 where c1 = 2")
   }
 
   test("index scan on partition table") {
