@@ -19,9 +19,9 @@ import com.pingcap.tikv.meta.TiDAGRequest
 import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 
 class PartitionTableSuite extends BaseTiSparkSuite {
-  test("single maxvalue partition table case") {
+  test("single maxvalue partition table case and part expr is not column") {
     tidbStmt.execute(
-      "create table t2 (c1 int) partition by range(c1) (partition p0 values less than maxvalue)"
+      "create table t2 (c1 int) partition by range(c1 + 1) (partition p0 values less than maxvalue)"
     )
     tidbStmt.execute("insert into `t2` values(2)")
     tidbStmt.execute("insert into `t2` values(3)")
