@@ -64,8 +64,6 @@ public class ScanAnalyzerTest {
             0,
             "",
             "",
-            "",
-            "",
             ImmutableList.of());
 
     DataType typePrefix = DataTypeFactory.of(holder);
@@ -366,8 +364,6 @@ public class ScanAnalyzerTest {
             0,
             3, // indicating a prefix type
             0,
-            "",
-            "",
             "",
             "",
             ImmutableList.of());

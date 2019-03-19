@@ -40,10 +40,13 @@ public class KeyUtils {
   }
 
   public static String formatBytes(Coprocessor.KeyRange keyRange) {
-    return "[[" + formatBytes(keyRange.getStart()) + "], [" + formatBytes(keyRange.getEnd()) + "])";
+    return "([" + formatBytes(keyRange.getStart()) + "], [" + formatBytes(keyRange.getEnd()) + "])";
   }
 
   public static boolean hasPrefix(ByteString str, ByteString prefix) {
+    if (prefix.size() > str.size()) {
+      return false;
+    }
     for (int i = 0; i < prefix.size(); i++) {
       if (str.byteAt(i) != prefix.byteAt(i)) {
         return false;

@@ -43,8 +43,12 @@ public class TiColumnInfo implements Serializable {
   private final boolean isPrimaryKey;
   private final String defaultValue;
   private final String originDefaultValue;
+  // this version is from ColumnInfo which is used to address compatible issue.
+  // If version is 0 then timestamp's default value will be read and decoded as local timezone.
+  // if version is 1 then timestamp's default value will be read and decoded as utc.
+  private final long version;
 
-  public static TiColumnInfo getRowIdColumn(int offset) {
+  static TiColumnInfo getRowIdColumn(int offset) {
     return new TiColumnInfo(-1, "_tidb_rowid", offset, IntegerType.ROW_ID_TYPE, true);
   }
 
@@ -59,7 +63,8 @@ public class TiColumnInfo implements Serializable {
       @JsonProperty("state") int schemaState,
       @JsonProperty("origin_default") String originalDefaultValue,
       @JsonProperty("default") String defaultValue,
-      @JsonProperty("comment") String comment) {
+      @JsonProperty("comment") String comment,
+      @JsonProperty("version") long version) {
     this.id = id;
     this.name = requireNonNull(name, "column name is null").getL();
     this.offset = offset;
@@ -71,6 +76,7 @@ public class TiColumnInfo implements Serializable {
     // I don't think pk flag should be set on type
     // Refactor against original tidb code
     this.isPrimaryKey = (type.getFlag() & PK_MASK) > 0;
+    this.version = version;
   }
 
   public TiColumnInfo(
@@ -81,7 +87,8 @@ public class TiColumnInfo implements Serializable {
       SchemaState schemaState,
       String originalDefaultValue,
       String defaultValue,
-      String comment) {
+      String comment,
+      long version) {
     this.id = id;
     this.name = requireNonNull(name, "column name is null").toLowerCase();
     this.offset = offset;
@@ -91,9 +98,10 @@ public class TiColumnInfo implements Serializable {
     this.defaultValue = defaultValue;
     this.originDefaultValue = originalDefaultValue;
     this.isPrimaryKey = (type.getFlag() & PK_MASK) > 0;
+    this.version = version;
   }
 
-  public TiColumnInfo copyWithoutPrimaryKey() {
+  TiColumnInfo copyWithoutPrimaryKey() {
     InternalTypeHolder typeHolder = type.toTypeHolder();
     typeHolder.setFlag(type.getFlag() & (~TiColumnInfo.PK_MASK));
     DataType newType = DataTypeFactory.of(typeHolder);
@@ -105,7 +113,8 @@ public class TiColumnInfo implements Serializable {
         this.schemaState,
         this.originDefaultValue,
         this.defaultValue,
-        this.comment);
+        this.comment,
+        this.version);
   }
 
   @VisibleForTesting
@@ -119,6 +128,7 @@ public class TiColumnInfo implements Serializable {
     this.isPrimaryKey = isPrimaryKey;
     this.originDefaultValue = "1";
     this.defaultValue = "";
+    this.version = DataType.COLUMN_VERSION_FLAG;
   }
 
   public long getId() {
@@ -141,7 +151,7 @@ public class TiColumnInfo implements Serializable {
     return type;
   }
 
-  public SchemaState getSchemaState() {
+  SchemaState getSchemaState() {
     return schemaState;
   }
 
@@ -153,18 +163,22 @@ public class TiColumnInfo implements Serializable {
     return isPrimaryKey;
   }
 
-  public String getDefaultValue() {
+  String getDefaultValue() {
     return defaultValue;
   }
 
-  public String getOriginDefaultValue() {
+  String getOriginDefaultValue() {
     return originDefaultValue;
   }
 
-  public ByteString getOriginDefaultValueAsByteString() {
+  private ByteString getOriginDefaultValueAsByteString() {
     CodecDataOutput cdo = new CodecDataOutput();
-    type.encode(cdo, EncodeType.VALUE, type.getOriginDefaultValue(originDefaultValue));
+    type.encode(cdo, EncodeType.VALUE, type.getOriginDefaultValue(originDefaultValue, version));
     return cdo.toByteString();
+  }
+
+  public long getVersion() {
+    return version;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -175,8 +189,6 @@ public class TiColumnInfo implements Serializable {
     private int decimal;
     private String charset;
     private String collate;
-    private String defaultValue;
-    private String originDefaultValue;
     private List<String> elems;
 
     public void setTp(int tp) {
@@ -203,14 +215,6 @@ public class TiColumnInfo implements Serializable {
       this.collate = collate;
     }
 
-    public void setDefaultValue(String defaultValue) {
-      this.defaultValue = defaultValue;
-    }
-
-    public void setOriginDefaultValue(String originDefaultValue) {
-      this.originDefaultValue = originDefaultValue;
-    }
-
     public void setElems(List<String> elems) {
       this.elems = elems;
     }
@@ -226,8 +230,6 @@ public class TiColumnInfo implements Serializable {
         @JsonProperty("Flen") long flen,
         @JsonProperty("Decimal") int decimal,
         @JsonProperty("Charset") String charset,
-        @JsonProperty("origin_default") String originalDefaultValue,
-        @JsonProperty("default") String defaultValue,
         @JsonProperty("Collate") String collate,
         @JsonProperty("Elems") List<String> elems) {
       this.tp = tp;
@@ -236,22 +238,7 @@ public class TiColumnInfo implements Serializable {
       this.decimal = decimal;
       this.charset = charset;
       this.collate = collate;
-      this.defaultValue = defaultValue;
-      this.originDefaultValue = originalDefaultValue;
       this.elems = elems;
-    }
-
-    public InternalTypeHolder(ColumnInfo c) {
-      this.tp = c.getTp();
-      this.flag = c.getFlag();
-      this.flen = c.getColumnLen();
-      this.decimal = c.getDecimal();
-      this.charset = "";
-      this.collate = Collation.translate(c.getCollation());
-      this.elems = c.getElemsList();
-      this.defaultValue = c.getDefaultVal().toStringUtf8();
-      // TODO: we may need write a functon about get origin default value according to the string.
-      this.originDefaultValue = "";
     }
 
     public int getTp() {
@@ -281,14 +268,6 @@ public class TiColumnInfo implements Serializable {
     public List<String> getElems() {
       return elems;
     }
-
-    public String getDefaultValue() {
-      return defaultValue;
-    }
-
-    public String getOriginDefaultValue() {
-      return originDefaultValue;
-    }
   }
 
   TiIndexColumn toFakeIndexColumn() {
@@ -301,7 +280,7 @@ public class TiColumnInfo implements Serializable {
     return new TiIndexColumn(CIStr.newCIStr(getName()), getOffset(), getType().getLength());
   }
 
-  public ColumnInfo toProto(TiTableInfo table) {
+  ColumnInfo toProto(TiTableInfo table) {
     return toProtoBuilder(table).build();
   }
 

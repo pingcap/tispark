@@ -24,7 +24,7 @@ TiSpark Architecture
 
 ## Environment Setup
 
-+ The current version of TiSpark supports Spark 2.3+. It does not support any versions earlier than 2.3.
++ The current version of TiSpark supports Spark 2.3+. It does not support any versions earlier than Spark 2.3 .
 + TiSpark requires JDK 1.8+ and Scala 2.11 (Spark2.0 + default Scala version).
 + TiSpark runs in any Spark mode such as YARN, Mesos, and Standalone.
 

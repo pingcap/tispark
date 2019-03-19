@@ -60,7 +60,7 @@ public class DateTimeType extends AbstractDateTimeType {
   }
 
   @Override
-  public DateTime getOriginDefaultValueNonNull(String value) {
+  public DateTime getOriginDefaultValueNonNull(String value, long version) {
     return Converter.convertToDateTime(value);
   }
 }

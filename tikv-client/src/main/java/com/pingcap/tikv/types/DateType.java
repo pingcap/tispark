@@ -43,7 +43,7 @@ public class DateType extends AbstractDateTimeType {
   }
 
   @Override
-  public Date getOriginDefaultValueNonNull(String value) {
+  public Date getOriginDefaultValueNonNull(String value, long version) {
     return Converter.convertToDate(value);
   }
 

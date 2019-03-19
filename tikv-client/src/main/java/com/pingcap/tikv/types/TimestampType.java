@@ -17,6 +17,8 @@
 
 package com.pingcap.tikv.types;
 
+import static com.pingcap.tikv.types.Converter.UTC_TIME_FORMATTER;
+
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -24,6 +26,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import java.sql.Timestamp;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.LocalDateTime;
 
 /**
  * Timestamp in TiDB is represented as packed long including year/month and etc. When stored, it is
@@ -69,14 +72,21 @@ public class TimestampType extends AbstractDateTimeType {
   }
 
   @Override
-  public DateTime getOriginDefaultValueNonNull(String value) {
+  public DateTime getOriginDefaultValueNonNull(String value, long version) {
+    if (version == DataType.COLUMN_VERSION_FLAG) {
+      LocalDateTime localDateTime =
+          Converter.strToDateTime(value, UTC_TIME_FORMATTER)
+              .withZone(DateTimeZone.getDefault())
+              .toLocalDateTime();
+      return localDateTime.toDateTime();
+    }
     return Converter.convertToDateTime(value);
   }
 
   /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
-    DateTime dt = Converter.convertToDateTime(value);
+    DateTime dt = Converter.convertToDateTime(value).toDateTime(DateTimeZone.UTC);
     DateTimeCodec.writeDateTimeProto(cdo, dt, Converter.getLocalTimezone());
   }
 }

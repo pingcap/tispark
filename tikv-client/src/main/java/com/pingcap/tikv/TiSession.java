@@ -19,6 +19,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.meta.TiTimestamp;
+import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import io.grpc.ManagedChannel;
@@ -112,7 +113,7 @@ public class TiSession implements AutoCloseable {
     if (channel == null) {
       URI address;
       try {
-        address = URI.create("http://" + addressStr);
+        address = PDUtils.addrToUrl(addressStr);
       } catch (Exception e) {
         throw new IllegalArgumentException("failed to form address " + addressStr);
       }

@@ -28,12 +28,12 @@ import com.pingcap.tikv.key.RowKey.DecodeResult;
 import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
 import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.kvproto.Metapb;
+import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.io.Serializable;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,7 +57,7 @@ public class RangeSplitter {
       this.ranges = ranges;
       String host = null;
       try {
-        host = URI.create("http://" + store.getAddress()).getHost();
+        host = PDUtils.addrToUrl(store.getAddress()).getHost();
       } catch (Exception ignored) {
       }
       this.host = host;
