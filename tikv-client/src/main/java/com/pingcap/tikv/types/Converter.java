@@ -97,9 +97,9 @@ public class Converter {
   }
 
   private static final DateTimeZone localTimeZone = DateTimeZone.getDefault();
-  private static final DateTimeFormatter localDateTimeFormatter =
+  public static final DateTimeFormatter localDateTimeFormatter =
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(localTimeZone);
-  private static final DateTimeFormatter localDateFormatter =
+  public static final DateTimeFormatter localDateFormatter =
       DateTimeFormat.forPattern("yyyy-MM-dd").withZone(localTimeZone);
   public static final DateTimeFormatter UTC_TIME_FORMATTER =
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC);
