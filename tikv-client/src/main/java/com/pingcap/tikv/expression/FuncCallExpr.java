@@ -25,6 +25,10 @@ public class FuncCallExpr implements Expression {
     return new FuncCallExpr(expr, Type.YEAR);
   }
 
+  public Type getFuncTp() {
+    return this.funcTp;
+  }
+
   @Override
   public List<Expression> getChildren() {
     return ImmutableList.of(child);

@@ -1,5 +1,6 @@
 package com.pingcap.tikv.expression.visitor;
 
+import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
@@ -17,10 +18,10 @@ import java.util.Set;
 /**
  * PartAndFilterExprRewriter takes partition expression as an input. Rewriting rule is based on the
  * type of partition expression. 1. If partition expression is a columnRef, no rewriting will be
- * performed. 2. If partition expression is year and the expression to be rewrote in the form of y <
- * '1995-10-10' then its right hand child will be replaced with "1995". 3. If partition expression
- * is year and the expression to be rewrote in the form of year(y) < '1995' then its left hand child
- * will be replaced with y.
+ * performed. 2. If partition expression is year and the expression to be rewritten in the form of y
+ * < '1995-10-10' then its right hand child will be replaced with "1995". 3. If partition expression
+ * is year and the expression to be rewritten in the form of year(y) < '1995' then its left hand
+ * child will be replaced with y.
  */
 public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> {
   private Expression partExpr;
@@ -59,8 +60,25 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
   }
 
   @Override
+  public Expression visit(ColumnRef node, Void context) {
+    return node;
+  }
+
+  @Override
+  public Expression visit(ArithmeticBinaryExpression node, Void context) {
+//    unsupportedPartFnFound = true;
+    return node;
+  }
+
+  @Override
   public Expression visit(FuncCallExpr node, Void context) {
-    return node.getExpression();
+    if(node.getFuncTp() == Type.YEAR) {
+      return node.getExpression();
+    }
+    // other's is not supported right now.
+    // TODO: when adding new type in FuncCallExpr, please also modify here
+    // accordingly.
+    return node;
   }
 
   @Override

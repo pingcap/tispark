@@ -19,6 +19,17 @@ import com.pingcap.tikv.meta.TiDAGRequest
 import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 
 class PartitionTableSuite extends BaseTiSparkSuite {
+  test("constant folding does not apply case") {
+    tidbStmt.execute(
+      "create table t3 (c1 int) partition by range(c1) (partition p0 values less than maxvalue)"
+    )
+    tidbStmt.execute("insert into `t3` values(2)")
+    tidbStmt.execute("insert into `t3` values(3)")
+    refreshConnections()
+
+    judge("select * from t3 where c1 > 2 + c1")
+  }
+
   test("single maxvalue partition table case and part expr is not column") {
     tidbStmt.execute(
       "create table t2 (c1 int) partition by range(c1 + 1) (partition p0 values less than maxvalue)"
@@ -444,6 +455,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists pt3")
       tidbStmt.execute("drop table if exists pt4")
       tidbStmt.execute("drop table if exists t2")
+      tidbStmt.execute("drop table if exists t3")
     } finally {
       super.afterAll()
     }
