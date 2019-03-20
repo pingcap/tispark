@@ -18,6 +18,8 @@
 package com.pingcap.tikv.row;
 
 import com.pingcap.tikv.types.DataType;
+
+import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -26,7 +28,7 @@ import java.sql.Timestamp;
  * Even in case of mem-buffer-based row we can ignore field types when en/decoding if we put some
  * padding bits for fixed length and use fixed length index for var-length
  */
-public interface Row {
+public interface Row extends Serializable {
   void setNull(int pos);
 
   boolean isNull(int pos);
