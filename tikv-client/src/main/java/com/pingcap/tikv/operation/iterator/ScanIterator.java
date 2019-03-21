@@ -21,8 +21,6 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.kvproto.Kvrpcpb;
-import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
@@ -31,6 +29,8 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import java.util.Iterator;
 import java.util.List;
+import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Metapb;
 
 public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   protected final TiSession session;

@@ -23,9 +23,6 @@ import static org.junit.Assert.fail;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.kvproto.Metapb;
-import com.pingcap.tikv.kvproto.Metapb.Store;
-import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
@@ -35,6 +32,9 @@ import java.util.concurrent.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.tikv.kvproto.Metapb;
+import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.Metapb.StoreState;
 
 public class PDClientTest {
 

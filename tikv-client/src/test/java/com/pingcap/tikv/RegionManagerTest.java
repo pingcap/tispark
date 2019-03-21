@@ -18,9 +18,6 @@ package com.pingcap.tikv;
 import static org.junit.Assert.*;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.kvproto.Metapb;
-import com.pingcap.tikv.kvproto.Metapb.Store;
-import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.Pair;
@@ -28,6 +25,9 @@ import java.io.IOException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.tikv.kvproto.Metapb;
+import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.Metapb.StoreState;
 
 public class RegionManagerTest {
   private PDMockServer server;

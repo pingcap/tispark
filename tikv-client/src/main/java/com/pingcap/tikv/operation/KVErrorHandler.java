@@ -21,7 +21,6 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.kvproto.Errorpb;
 import com.pingcap.tikv.region.RegionErrorReceiver;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
@@ -31,6 +30,7 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.util.function.Function;
 import org.apache.log4j.Logger;
+import org.tikv.kvproto.Errorpb;
 
 // TODO: consider refactor to Builder mode
 public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
@@ -189,7 +189,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         recv.onStoreNotMatch(this.regionManager.getStoreById(storeId));
         notifyStoreCacheInvalidate(storeId);
         return true;
-      } else if (error.hasStaleEpoch()) {
+      } else if (error.hasEpochNotMatch()) {
         // this error is reported from raftstore:
         // region has outdated version，please try later.
         logger.warn(String.format("Stale Epoch encountered for region [%s]", ctxRegion));

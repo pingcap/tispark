@@ -29,7 +29,6 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.kvproto.Kvrpcpb;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.util.Pair;
@@ -39,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import org.apache.log4j.Logger;
+import org.tikv.kvproto.Kvrpcpb;
 
 public class CatalogTransaction {
   protected static final Logger logger = Logger.getLogger(Catalog.class);

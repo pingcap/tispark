@@ -30,13 +30,13 @@ import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
-import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.meta.*;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.*;
 import java.util.*;
 import java.util.function.BiConsumer;
 import org.junit.Test;
+import org.tikv.kvproto.Coprocessor;
 
 public class ScanAnalyzerTest {
   private static TiTableInfo createTable() {

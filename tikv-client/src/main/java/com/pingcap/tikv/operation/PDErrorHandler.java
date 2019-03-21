@@ -22,12 +22,12 @@ import static com.pingcap.tikv.pd.PDError.buildFromPdpbError;
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.kvproto.Pdpb;
 import com.pingcap.tikv.pd.PDError;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import java.util.function.Function;
 import org.apache.log4j.Logger;
+import org.tikv.kvproto.Pdpb;
 
 public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
   private static final Logger logger = Logger.getLogger(PDErrorHandler.class);

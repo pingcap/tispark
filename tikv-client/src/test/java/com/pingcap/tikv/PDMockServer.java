@@ -15,8 +15,6 @@
 
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.kvproto.PDGrpc;
-import com.pingcap.tikv.kvproto.Pdpb.*;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
@@ -26,6 +24,8 @@ import java.net.ServerSocket;
 import java.util.Deque;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingDeque;
+import org.tikv.kvproto.PDGrpc;
+import org.tikv.kvproto.Pdpb.*;
 
 public class PDMockServer extends PDGrpc.PDImplBase {
   public int port;

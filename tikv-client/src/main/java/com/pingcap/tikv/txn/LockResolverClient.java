@@ -24,14 +24,6 @@ import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
-import com.pingcap.tikv.kvproto.Kvrpcpb.CleanupRequest;
-import com.pingcap.tikv.kvproto.Kvrpcpb.CleanupResponse;
-import com.pingcap.tikv.kvproto.Kvrpcpb.ResolveLockRequest;
-import com.pingcap.tikv.kvproto.Kvrpcpb.ResolveLockResponse;
-import com.pingcap.tikv.kvproto.Metapb.Store;
-import com.pingcap.tikv.kvproto.TikvGrpc;
-import com.pingcap.tikv.kvproto.TikvGrpc.TikvBlockingStub;
-import com.pingcap.tikv.kvproto.TikvGrpc.TikvStub;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.RegionErrorReceiver;
 import com.pingcap.tikv.region.TiRegion;
@@ -44,6 +36,14 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 import org.apache.log4j.Logger;
+import org.tikv.kvproto.Kvrpcpb.CleanupRequest;
+import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
+import org.tikv.kvproto.Kvrpcpb.ResolveLockRequest;
+import org.tikv.kvproto.Kvrpcpb.ResolveLockResponse;
+import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.TikvGrpc;
+import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
+import org.tikv.kvproto.TikvGrpc.TikvStub;
 
 // LockResolver resolves locks and also caches resolved txn status.
 public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, TikvStub>
