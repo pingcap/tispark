@@ -43,6 +43,14 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
     return partExpr instanceof ColumnRef;
   }
 
+  @Override
+  protected Expression process(Expression node, Void context) {
+    for (Expression expr : node.getChildren()) {
+      expr.accept(this, context);
+    }
+    return node;
+  }
+
   public Expression visit(LogicalBinaryExpression node, Void context) {
     Expression left = node.getLeft().accept(this, null);
     Expression right = node.getRight().accept(this, null);
@@ -50,29 +58,8 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
   }
 
   @Override
-  public Expression visit(Not node, Void context) {
-    return node;
-  }
-
-  @Override
-  public Expression visit(IsNull node, Void context) {
-    return node;
-  }
-
-  @Override
-  public Expression visit(ColumnRef node, Void context) {
-    return node;
-  }
-
-  @Override
-  public Expression visit(ArithmeticBinaryExpression node, Void context) {
-//    unsupportedPartFnFound = true;
-    return node;
-  }
-
-  @Override
   public Expression visit(FuncCallExpr node, Void context) {
-    if(node.getFuncTp() == Type.YEAR) {
+    if (node.getFuncTp() == Type.YEAR) {
       return node.getExpression();
     }
     // other's is not supported right now.

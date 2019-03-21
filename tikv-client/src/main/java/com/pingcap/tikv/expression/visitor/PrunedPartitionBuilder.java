@@ -108,7 +108,7 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     // when meet a comparison binary expression cannot be normalized
     // which indicates it cannot be pruned such as a > b + 1
     // TODO: make this code better or normalization better.
-    if(predicate == null) return TreeRangeSet.<Long>create().complement();
+    if (predicate == null) return TreeRangeSet.<Long>create().complement();
     if (!partExprColRefs.contains(predicate.getColumnRef()))
       return TreeRangeSet.<Long>create().complement();
     Long literal;
