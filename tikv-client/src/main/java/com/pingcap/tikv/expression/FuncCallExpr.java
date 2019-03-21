@@ -1,12 +1,9 @@
 package com.pingcap.tikv.expression;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DateTimeType;
-import com.pingcap.tikv.types.StringType;
 import java.util.List;
 import java.util.Objects;
-import org.joda.time.DateTime;
+import java.util.function.Function;
 
 public class FuncCallExpr implements Expression {
   public enum Type {
@@ -73,25 +70,12 @@ public class FuncCallExpr implements Expression {
     return Objects.hashCode(child);
   }
 
-  private Constant evalForYear(Constant literal) {
-    DataType type = literal.getType();
-    if (type == StringType.VARCHAR) {
-      DateTime date = DateTime.parse((String) literal.getValue());
-      return Constant.create(date.getYear());
-    } else if (type == DateTimeType.DATETIME) {
-      DateTime date = (DateTime) literal.getValue();
-      return Constant.create(date.getYear());
-    } else {
-      return literal;
-    }
-  }
   // try to evaluate a {@code Constant} literal if its type is
   // varchar or datetime. If such literal cannot be evaluated, return
   // input literal.
   public Constant eval(Constant literal) {
-    if (funcTp == Type.YEAR) {
-      return evalForYear(literal);
-    }
-    return null;
+    Function<Constant, Constant> evalFn = FuncCallExprEval.getEvalFn(funcTp);
+    if (evalFn != null) return evalFn.apply(literal);
+    return literal;
   }
 }

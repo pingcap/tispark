@@ -1,6 +1,5 @@
 package com.pingcap.tikv.expression.visitor;
 
-import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
@@ -8,9 +7,7 @@ import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.FuncCallExpr;
 import com.pingcap.tikv.expression.FuncCallExpr.Type;
-import com.pingcap.tikv.expression.IsNull;
 import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.Not;
 import com.pingcap.tikv.predicates.PredicateUtils;
 import java.util.Objects;
 import java.util.Set;
