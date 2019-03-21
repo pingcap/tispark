@@ -71,7 +71,6 @@ public class TableCodecTest {
         newRows.add(IntegerType.BIGINT);
         newRows.add(rows[i]);
       }
-      DataType[] rowArr = newRows.toArray(new DataType[0]);
       Row row = rowReader.readRow(newRows.toArray(new DataType[0]));
       for (int i = 0; i < rows.length; i++) {
         assertEquals(row.get(2 * i, IntegerType.BIGINT), colIds.get(i));
