@@ -2,6 +2,7 @@ package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataType.EncodeType;
+import gnu.trove.list.array.TLongArrayList;
 
 public class TableCodec {
   public final long ID_LEN = 8;
@@ -18,15 +19,15 @@ public class TableCodec {
 
 
   // Row layout: colID1, value1, colID2, value2, .....
-  public static byte[] encodeRow(DataType[] rows, long[] colIDs, Object[] values, CodecDataOutput cdo)
+  public static byte[] encodeRow(DataType[] rows, TLongArrayList colIDs, Object[] values, CodecDataOutput cdo)
       throws IllegalAccessException {
-    if(rows.length != values.length) {
-      throw new IllegalAccessException(String.format("EncodeRow error: data and columnID count not "
-          + "match %d vs %d", rows.length, colIDs.length));
+    if(rows.length != colIDs.size()) {
+      throw new IllegalAccessException(String.format("encodeRow error: data and columnID count not "
+          + "match %d vs %d", rows.length, colIDs.size()));
     }
 
     for(int i = 0; i < rows.length; i++) {
-      cdo.writeLong(colIDs[i]);
+      cdo.writeLong(colIDs.get(i));
       rows[i].encode(cdo, EncodeType.VALUE, values[i]);
     }
 
