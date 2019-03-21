@@ -8,8 +8,6 @@ import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.RegionTaskException;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.kvproto.Coprocessor;
-import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -26,6 +24,8 @@ import java.util.Queue;
 import java.util.concurrent.ExecutorCompletionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.kvproto.Coprocessor;
+import org.tikv.kvproto.Metapb;
 
 public abstract class DAGIterator<T> extends CoprocessIterator<T> {
   private ExecutorCompletionService<Iterator<SelectResponse>> streamingService;

@@ -31,7 +31,6 @@ import com.pingcap.tikv.key.IndexKey;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
-import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
@@ -46,6 +45,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class ScanAnalyzer {
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;

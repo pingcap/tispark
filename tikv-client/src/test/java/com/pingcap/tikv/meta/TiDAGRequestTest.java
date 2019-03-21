@@ -27,7 +27,6 @@ import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
-import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import java.io.ByteArrayInputStream;
@@ -37,6 +36,7 @@ import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
+import org.tikv.kvproto.Coprocessor;
 
 public class TiDAGRequestTest {
   private static TiTableInfo createTable() {

@@ -10,11 +10,6 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
-import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
-import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
-import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
-import com.pingcap.tikv.kvproto.Metapb;
-import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import gnu.trove.list.array.TLongArrayList;
@@ -24,6 +19,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.Test;
+import org.tikv.kvproto.Coprocessor.KeyRange;
+import org.tikv.kvproto.Kvrpcpb.CommandPri;
+import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
+import org.tikv.kvproto.Metapb;
+import org.tikv.kvproto.Metapb.Peer;
 
 public class RangeSplitterTest {
   static class MockRegionManager extends RegionManager {

@@ -15,8 +15,6 @@
 
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
-import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.pd.PDUtils;
 import java.io.Serializable;
 import java.net.URI;
@@ -24,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import org.tikv.kvproto.Kvrpcpb.CommandPri;
+import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 
 public class TiConfiguration implements Serializable {
   private static final int DEF_TIMEOUT = 10;

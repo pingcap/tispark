@@ -17,7 +17,7 @@ package com.pingcap.tikv.codec;
 
 import com.google.common.primitives.UnsignedBytes;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.kvproto.Coprocessor;
+import org.tikv.kvproto.Coprocessor;
 
 public class KeyUtils {
 

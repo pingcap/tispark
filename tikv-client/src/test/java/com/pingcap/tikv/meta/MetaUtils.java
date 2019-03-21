@@ -24,12 +24,12 @@ import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.types.DataType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.tikv.kvproto.Metapb;
 
 public class MetaUtils {
   public static class TableBuilder {

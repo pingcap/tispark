@@ -23,8 +23,8 @@ import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
 import java.util.List;
+import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class KeyRangeUtils {
   public static Range<Key> makeRange(ByteString startKey, ByteString endKey) {

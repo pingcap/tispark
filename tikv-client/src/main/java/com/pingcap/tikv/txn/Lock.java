@@ -18,7 +18,7 @@
 package com.pingcap.tikv.txn;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Kvrpcpb;
 
 public class Lock {
   private final long txnID;

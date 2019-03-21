@@ -16,11 +16,11 @@
 package com.pingcap.tikv;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import java.util.concurrent.Future;
+import org.tikv.kvproto.Metapb.Store;
 
 /** Readonly PD client including only reading related interface Supposed for TiDB-like use cases */
 public interface ReadOnlyPDClient {

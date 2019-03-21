@@ -19,9 +19,9 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.kvproto.Metapb.*;
-import com.pingcap.tikv.kvproto.Pdpb.*;
 import java.util.Arrays;
+import org.tikv.kvproto.Metapb.*;
+import org.tikv.kvproto.Pdpb.*;
 
 public class GrpcUtils {
   private static ResponseHeader makeDefaultHeader(long clusterId) {
