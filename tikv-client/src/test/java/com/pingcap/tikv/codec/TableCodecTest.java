@@ -2,19 +2,18 @@ package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.*;
 
-import com.pingcap.tikv.codec.Codec.DateCodec;
-import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.row.DefaultRowReader;
+import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateTimeType;
-import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.TimestampType;
 import gnu.trove.list.array.TLongArrayList;
+import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import org.apache.commons.net.ntp.TimeStamp;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
@@ -22,13 +21,14 @@ public class TableCodecTest {
   private Object[] values;
   private DataType[] rows;
   private TLongArrayList colIds;
+
   private void makeValues() {
     List<Object> values = new ArrayList<>();
-    values.add(1);
+    values.add(1L);
     values.add(1L);
     DateTime dateTime = DateTime.parse("1995-10-10");
-    values.add(dateTime);
-    values.add(new TimeStamp(dateTime.getMillis()));
+    values.add(new Timestamp(dateTime.getMillis()));
+    values.add(new Timestamp(dateTime.getMillis()));
     values.add("abc");
     values.add("中");
     this.values = values.toArray();
@@ -59,9 +59,24 @@ public class TableCodecTest {
   @Test
   public void testRowCodec() {
     // Make sure empty row return not nil value.
+    makeColIds();
+    makeRowTypes();
+    makeValues();
 
     try {
       byte[] bytes = TableCodec.encodeRow(rows, colIds, values, new CodecDataOutput());
+      RowReader rowReader = DefaultRowReader.create(new CodecDataInput(bytes));
+      List<DataType> newRows = new ArrayList<>();
+      for (int i = 0; i < rows.length; i++) {
+        newRows.add(IntegerType.BIGINT);
+        newRows.add(rows[i]);
+      }
+      DataType[] rowArr = newRows.toArray(new DataType[0]);
+      Row row = rowReader.readRow(newRows.toArray(new DataType[0]));
+      for (int i = 0; i < rows.length; i++) {
+        assertEquals(row.get(2 * i, IntegerType.BIGINT), colIds.get(i));
+        assertEquals(row.get(2 * i + 1, rows[i]), values[i]);
+      }
     } catch (IllegalAccessException e) {
       e.printStackTrace();
     }
