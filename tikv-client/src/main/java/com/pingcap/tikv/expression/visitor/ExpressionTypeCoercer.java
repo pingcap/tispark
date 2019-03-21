@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
+import com.pingcap.tikv.expression.FuncCallExpr.Type;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DecimalType;
 import com.pingcap.tikv.types.IntegerType;
@@ -224,13 +225,19 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
 
   @Override
   protected Pair<DataType, Double> visit(FuncCallExpr node, DataType targetType) {
-    if (targetType != null && !targetType.equals(IntegerType.INT)) {
-      throw new TiExpressionException(String.format("Not result cannot be %s", targetType));
+    switch (node.getFuncTp()) {
+      case YEAR:
+        if (targetType != null && !targetType.equals(IntegerType.INT)) {
+           throw new TiExpressionException(String.format("FuncCallExpr result cannot be %s", targetType));
+        }
+        if (!typeMap.containsKey(node)) {
+        coerceType(null, node.getExpression());
+        typeMap.put(node, IntegerType.INT);
+        }
+        return Pair.create(IntegerType.INT, FUNCTION_CRED);
+        default:
+          throw new TiExpressionException(String.format("FuncCallExpr result cannot be %s", targetType));
     }
-    if (!typeMap.containsKey(node)) {
-      coerceType(null, node.getExpression());
-      typeMap.put(node, IntegerType.INT);
-    }
-    return Pair.create(IntegerType.INT, FUNCTION_CRED);
+
   }
 }
