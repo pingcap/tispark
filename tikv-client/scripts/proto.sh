@@ -15,10 +15,9 @@
 #
 
 if [ -d "kvproto" ]; then
-    # cd kvproto; git pull origin master; cd ..
-    cd kvproto; git checkout 497dd34f807bccdb5bd01009c62c5fd5ced404f3; cd ..
+    cd kvproto; git pull origin master; cd ..
 else
-    git clone https://github.com/pingcap/kvproto; cd kvproto; git checkout 497dd34f807bccdb5bd01009c62c5fd5ced404f3; cd ..
+    git clone https://github.com/pingcap/kvproto
 fi
 
 if [ -d "raft-rs" ]; then
@@ -29,6 +28,6 @@ fi
 
 if [ -d "tipb" ]; then
     cd tipb; git pull origin master; cd ..
-else 
+else
     git clone https://github.com/pingcap/tipb
 fi
