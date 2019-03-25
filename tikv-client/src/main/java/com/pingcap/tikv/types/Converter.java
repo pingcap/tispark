@@ -97,18 +97,18 @@ public class Converter {
   }
 
   private static final DateTimeZone localTimeZone = DateTimeZone.getDefault();
-  public static final DateTimeFormatter localDateTimeFormatter =
+  private static final DateTimeFormatter localDateTimeFormatter =
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(localTimeZone);
-  public static final DateTimeFormatter localDateFormatter =
+  private static final DateTimeFormatter localDateFormatter =
       DateTimeFormat.forPattern("yyyy-MM-dd").withZone(localTimeZone);
-  public static final DateTimeFormatter UTC_TIME_FORMATTER =
+  static final DateTimeFormatter UTC_TIME_FORMATTER =
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC);
 
-  public static DateTimeZone getLocalTimezone() {
+  static DateTimeZone getLocalTimezone() {
     return localTimeZone;
   }
 
-  public static DateTime strToDateTime(String value, DateTimeFormatter formatter) {
+  static DateTime strToDateTime(String value, DateTimeFormatter formatter) {
     return DateTime.parse(value, formatter);
   }
 
