@@ -37,13 +37,13 @@ public class TableCodec {
   }
 
   public static Object[] decodeRow(CodecDataInput cdi, DataType[] colTypes) {
-    List<DataType> newRows = new ArrayList<>();
+    List<DataType> newColTypes = new ArrayList<>();
     for (DataType row1 : colTypes) {
-      newRows.add(IntegerType.BIGINT);
-      newRows.add(row1);
+      newColTypes.add(IntegerType.BIGINT);
+      newColTypes.add(row1);
     }
     RowReader rowReader = DefaultRowReader.create(cdi);
-    Row row = rowReader.readRow(newRows.toArray(new DataType[0]));
+    Row row = rowReader.readRow(newColTypes.toArray(new DataType[0]));
     Object[] res = new Object[2 * colTypes.length];
     for (int i = 0; i < colTypes.length; i++) {
       res[2 * i] = row.get(2 * i, IntegerType.BIGINT);
