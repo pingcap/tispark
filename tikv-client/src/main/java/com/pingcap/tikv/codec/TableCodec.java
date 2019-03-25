@@ -14,18 +14,18 @@ import java.util.List;
 public class TableCodec {
   // Row layout: colID1, value1, colID2, value2, .....
   public static byte[] encodeRow(
-      DataType[] rows, TLongArrayList colIDs, Object[] values, CodecDataOutput cdo)
+      DataType[] colTypes, TLongArrayList colIDs, Object[] values, CodecDataOutput cdo)
       throws IllegalAccessException {
-    if (rows.length != colIDs.size()) {
+    if (colTypes.length != colIDs.size()) {
       throw new IllegalAccessException(
           String.format(
               "encodeRow error: data and columnID count not " + "match %d vs %d",
-              rows.length, colIDs.size()));
+              colTypes.length, colIDs.size()));
     }
 
-    for (int i = 0; i < rows.length; i++) {
+    for (int i = 0; i < colTypes.length; i++) {
       IntegerCodec.writeLongFully(cdo, colIDs.get(i), true);
-      rows[i].encode(cdo, EncodeType.VALUE, values[i]);
+      colTypes[i].encode(cdo, EncodeType.VALUE, values[i]);
     }
 
     // We could not set nil value into kv.
@@ -36,18 +36,18 @@ public class TableCodec {
     return cdo.toBytes();
   }
 
-  public static Object[] decodeRow(CodecDataInput cdi, DataType[] rows) {
+  public static Object[] decodeRow(CodecDataInput cdi, DataType[] colTypes) {
     List<DataType> newRows = new ArrayList<>();
-    for (DataType row1 : rows) {
+    for (DataType row1 : colTypes) {
       newRows.add(IntegerType.BIGINT);
       newRows.add(row1);
     }
     RowReader rowReader = DefaultRowReader.create(cdi);
     Row row = rowReader.readRow(newRows.toArray(new DataType[0]));
-    Object[] res = new Object[2 * rows.length];
-    for (int i = 0; i < rows.length; i++) {
+    Object[] res = new Object[2 * colTypes.length];
+    for (int i = 0; i < colTypes.length; i++) {
       res[2 * i] = row.get(2 * i, IntegerType.BIGINT);
-      res[2 * i + 1] = row.get(2 * i + 1, rows[i]);
+      res[2 * i + 1] = row.get(2 * i + 1, colTypes[i]);
     }
     return res;
   }
