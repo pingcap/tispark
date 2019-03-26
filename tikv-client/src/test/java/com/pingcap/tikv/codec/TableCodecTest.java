@@ -72,8 +72,7 @@ public class TableCodecTest {
       TableCodec.encodeRow(colsType, fakeColIds, values, new CodecDataOutput());
       expectedEx.expect(IllegalAccessException.class);
       expectedEx.expectMessage("encodeRow error: data and columnID count not match 6 vs 2");
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
+    } catch (IllegalAccessException ignored) {
     }
   }
 
@@ -88,8 +87,7 @@ public class TableCodecTest {
               new CodecDataOutput());
       assertEquals(1, bytes.length);
       assertEquals(Codec.NULL_FLAG, bytes[0]);
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
+    } catch (IllegalAccessException ignored) {
     }
   }
 
@@ -103,8 +101,7 @@ public class TableCodecTest {
         assertEquals(res[2 * i], colIds.get(i));
         assertEquals(res[2 * i + 1], values[i]);
       }
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
+    } catch (IllegalAccessException ignored) {
     }
   }
 }

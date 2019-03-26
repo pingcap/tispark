@@ -268,7 +268,7 @@
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                     <junitxml>.</junitxml>
                     <filereports>WDF TestSuite.txt</filereports>
-                    <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
+                    <argLine>${argLine}</argLine>
                 </configuration>
                 <executions>
                     <execution>
