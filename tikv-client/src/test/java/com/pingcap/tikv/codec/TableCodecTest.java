@@ -30,7 +30,7 @@ public class TableCodecTest {
     values.add(new Timestamp(dateTime.getMillis()));
     values.add(new Timestamp(dateTime.getMillis()));
     values.add("abc");
-    values.add("中");
+//    values.add("中");
     this.values = values.toArray();
   }
 
@@ -41,7 +41,7 @@ public class TableCodecTest {
     dateTypes.add(DateTimeType.DATETIME);
     dateTypes.add(TimestampType.TIMESTAMP);
     dateTypes.add(StringType.VARCHAR);
-    dateTypes.add(StringType.VARCHAR);
+//    dateTypes.add(StringType.VARCHAR);
     this.colsType = dateTypes.toArray(new DataType[0]);
   }
 
@@ -52,7 +52,7 @@ public class TableCodecTest {
     colIds.add(12L);
     colIds.add(13L);
     colIds.add(14L);
-    colIds.add(15L);
+//    colIds.add(15L);
     this.colIds = colIds;
   }
 
@@ -72,8 +72,7 @@ public class TableCodecTest {
       TableCodec.encodeRow(colsType, fakeColIds, values, new CodecDataOutput());
       expectedEx.expect(IllegalAccessException.class);
       expectedEx.expectMessage("encodeRow error: data and columnID count not match 6 vs 2");
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
+    } catch (IllegalAccessException ignored) {
     }
   }
 
@@ -88,8 +87,7 @@ public class TableCodecTest {
               new CodecDataOutput());
       assertEquals(1, bytes.length);
       assertEquals(Codec.NULL_FLAG, bytes[0]);
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
+    } catch (IllegalAccessException ignored) {
     }
   }
 
@@ -103,8 +101,7 @@ public class TableCodecTest {
         assertEquals(res[2 * i], colIds.get(i));
         assertEquals(res[2 * i + 1], values[i]);
       }
-    } catch (IllegalAccessException e) {
-      e.printStackTrace();
+    } catch (IllegalAccessException ignored) {
     }
   }
 }
