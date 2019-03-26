@@ -53,14 +53,15 @@ public class PDClientTest {
             server.getClusterId(),
             GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + server.port),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 1)),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
+            GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
     TiConfiguration conf = TiConfiguration.createDefault(LOCAL_ADDR + ":" + server.port);
     session = TiSession.create(conf);
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
     server.stop();
+    session.close();
   }
 
   @Test
@@ -85,7 +86,7 @@ public class PDClientTest {
             server.getClusterId(),
             GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR_IPV6 + ":" + server.port),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR_IPV6 + ":" + (server.port + 1)),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR_IPV6 + ":" + (server.port + 2))));
+            GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR_IPV6 + ":" + (server.port + 2))));
     TiConfiguration conf = TiConfiguration.createDefault(LOCAL_ADDR_IPV6 + ":" + server.port);
     session = TiSession.create(conf);
     try (PDClient client = session.getPDClient()) {

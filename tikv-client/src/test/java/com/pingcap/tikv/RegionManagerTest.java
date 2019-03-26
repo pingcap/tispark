@@ -34,6 +34,7 @@ public class RegionManagerTest {
   private static final long CLUSTER_ID = 1024;
   private static final String LOCAL_ADDR = "127.0.0.1";
   private RegionManager mgr;
+  private TiSession session;
 
   @Before
   public void setup() throws IOException {
@@ -44,16 +45,17 @@ public class RegionManagerTest {
             server.getClusterId(),
             GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + server.port),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 1)),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
+            GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
 
     TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + server.port);
-    TiSession session = TiSession.create(conf);
+    session = TiSession.create(conf);
     mgr = session.getRegionManager();
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
     server.stop();
+    session.close();
   }
 
   @Test

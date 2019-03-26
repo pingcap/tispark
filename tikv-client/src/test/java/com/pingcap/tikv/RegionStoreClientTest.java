@@ -56,7 +56,7 @@ public class RegionStoreClientTest {
             pdServer.getClusterId(),
             GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + pdServer.port),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 1)),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
+            GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
 
     Metapb.Region r =
         Metapb.Region.newBuilder()
@@ -88,8 +88,9 @@ public class RegionStoreClientTest {
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
     server.stop();
+    session.close();
   }
 
   @Test

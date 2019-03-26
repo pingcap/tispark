@@ -40,7 +40,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
@@ -63,7 +62,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private TsoRequest tsoReq;
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
-  private IsolationLevel isolationLevel;
   private List<URI> pdAddrs;
 
   @Override
@@ -187,9 +185,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     if (service != null) {
       service.shutdownNow();
     }
-    if (getLeaderWrapper() != null) {
-      getLeaderWrapper().close();
-    }
   }
 
   public static ReadOnlyPDClient create(TiSession session) {
@@ -239,15 +234,13 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       return createTime;
     }
 
-    void close() {}
-
     @Override
     public String toString() {
       return "[leaderInfo: " + leaderInfo + "]";
     }
   }
 
-  public GetMembersResponse getMembers(URI url) {
+  private GetMembersResponse getMembers(URI url) {
     try {
       ManagedChannel probChan = session.getChannel(url.getHost() + ":" + url.getPort());
       PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);

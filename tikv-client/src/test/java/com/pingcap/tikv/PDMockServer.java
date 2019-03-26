@@ -43,7 +43,7 @@ public class PDMockServer extends PDGrpc.PDImplBase {
   @Override
   public void getMembers(GetMembersRequest request, StreamObserver<GetMembersResponse> resp) {
     try {
-      resp.onNext(getMembersResp.removeFirst().get());
+      resp.onNext(getMembersResp.getFirst().get());
       resp.onCompleted();
     } catch (Exception e) {
       resp.onError(Status.INTERNAL.asRuntimeException());
@@ -86,7 +86,7 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     }
   }
 
-  public void addGetRegionByIDResp(GetRegionResponse r) {
+  void addGetRegionByIDResp(GetRegionResponse r) {
     getRegionByIDResp.addLast(r);
   }
 
@@ -127,9 +127,9 @@ public class PDMockServer extends PDGrpc.PDImplBase {
     Runtime.getRuntime().addShutdownHook(new Thread(PDMockServer.this::stop));
   }
 
-  public void stop() {
+  void stop() {
     if (server != null) {
-      server.shutdown();
+      server.shutdownNow();
     }
   }
 
