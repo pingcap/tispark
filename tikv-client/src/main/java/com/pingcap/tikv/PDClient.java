@@ -156,15 +156,16 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
   }
 
-  private PDErrorHandler<GetStoreResponse>  buildPDErrorHandler() {
+  private PDErrorHandler<GetStoreResponse> buildPDErrorHandler() {
     return new PDErrorHandler<>(
-            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
-            this);
+        r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null, this);
   }
 
   @Override
   public Store getStore(BackOffer backOffer, long storeId) {
-    return callWithRetry(backOffer, PDGrpc.METHOD_GET_STORE, buildGetStroeReq(storeId), buildPDErrorHandler()).getStore();
+    return callWithRetry(
+            backOffer, PDGrpc.METHOD_GET_STORE, buildGetStroeReq(storeId), buildPDErrorHandler())
+        .getStore();
   }
 
   @Override
@@ -172,7 +173,12 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     FutureObserver<Store, GetStoreResponse> responseObserver =
         new FutureObserver<>(GetStoreResponse::getStore);
 
-    callAsyncWithRetry(backOffer, PDGrpc.METHOD_GET_STORE, buildGetStroeReq(storeId), responseObserver, buildPDErrorHandler());
+    callAsyncWithRetry(
+        backOffer,
+        PDGrpc.METHOD_GET_STORE,
+        buildGetStroeReq(storeId),
+        responseObserver,
+        buildPDErrorHandler());
     return responseObserver.getFuture();
   }
 
