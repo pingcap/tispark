@@ -151,17 +151,20 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return responseObserver.getFuture();
   }
 
+  private Supplier<GetStoreRequest> buildGetStroeReq(long storeId) {
+    return () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
+  }
+
+  private PDErrorHandler<GetStoreResponse> buildPDErrorHandler() {
+    return new PDErrorHandler<>(
+        r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null, this);
+  }
+
   @Override
   public Store getStore(BackOffer backOffer, long storeId) {
-    Supplier<GetStoreRequest> request =
-        () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
-    PDErrorHandler<GetStoreResponse> handler =
-        new PDErrorHandler<>(
-            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
-            this);
-
-    GetStoreResponse resp = callWithRetry(backOffer, PDGrpc.METHOD_GET_STORE, request, handler);
-    return resp.getStore();
+    return callWithRetry(
+            backOffer, PDGrpc.METHOD_GET_STORE, buildGetStroeReq(storeId), buildPDErrorHandler())
+        .getStore();
   }
 
   @Override
@@ -169,14 +172,12 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     FutureObserver<Store, GetStoreResponse> responseObserver =
         new FutureObserver<>(GetStoreResponse::getStore);
 
-    Supplier<GetStoreRequest> request =
-        () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
-    PDErrorHandler<GetStoreResponse> handler =
-        new PDErrorHandler<>(
-            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
-            this);
-
-    callAsyncWithRetry(backOffer, PDGrpc.METHOD_GET_STORE, request, responseObserver, handler);
+    callAsyncWithRetry(
+        backOffer,
+        PDGrpc.METHOD_GET_STORE,
+        buildGetStroeReq(storeId),
+        responseObserver,
+        buildPDErrorHandler());
     return responseObserver.getFuture();
   }
 
