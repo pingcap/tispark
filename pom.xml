@@ -71,6 +71,7 @@
         <scalatest.version>3.0.4</scalatest.version>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
+        <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
     </properties>
 
     <profiles>
