@@ -62,7 +62,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private TsoRequest tsoReq;
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
-  private boolean isTerminated;
   private List<URI> pdAddrs;
 
   @Override
@@ -183,7 +182,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   @Override
   public void close() throws InterruptedException {
-    isTerminated = true;
     if (service != null) {
       service.shutdownNow();
     }
@@ -352,9 +350,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         () -> {
           // Wrap this with a try catch block in case schedule update fails
           try {
-            if (!isTerminated) {
-              updateLeader();
-            }
+            updateLeader();
           } catch (Exception e) {
             logger.warn("Update leader failed", e);
           }

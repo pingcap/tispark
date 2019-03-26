@@ -47,14 +47,7 @@ public class RegionManagerTest {
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 1)),
             GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
 
-    TiConfiguration conf =
-        TiConfiguration.createDefault(
-            "127.0.0.1:"
-                + server.port
-                + ",127.0,0,1:"
-                + (server.port + 1)
-                + ",127.0,0,1:"
-                + (server.port + 2));
+    TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + server.port);
     session = TiSession.create(conf);
     mgr = session.getRegionManager();
   }
