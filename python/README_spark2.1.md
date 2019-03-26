@@ -7,7 +7,7 @@ This is the simplest way, just a decent Spark environment should be enough.
 
 2. Run this command in your `SPARK_HOME` directory:
 ```
-./bin/pyspark --jars /where-ever-it-is/tispark-core-{$version}-jar-with-dependencies.jar
+./bin/pyspark --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar
 ```
 
 3. To use TiSpark, run these commands:
@@ -55,7 +55,7 @@ import pytispark.pytispark as pti
 
 ti = pti.TiContext(spark)
 
-ti.tidbMapDatabase("tpch")
+ti.tidbMapDatabase("tpch_test")
 
 sql("select count(*) from customer").show()
 
@@ -86,7 +86,7 @@ spark.sql("select count(*) from customer").show()
 
 2. Prepare your TiSpark environment as above and execute
 ```bash
-./bin/spark-submit --jars /where-ever-it-is/tispark-core-{$version}-jar-with-dependencies.jar test.py
+./bin/spark-submit --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar test.py
 ```
 
 3. Result:

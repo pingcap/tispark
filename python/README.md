@@ -14,7 +14,7 @@ This is the simplest way, just a decent Spark environment should be enough.
 
 4. Run this command in your `$SPARK_HOME` directory:
 ```
-./bin/pyspark --jars /where-ever-it-is/tispark-core-{$version}-jar-with-dependencies.jar
+./bin/pyspark --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar
 ```
 
 5. To use TiSpark, run these commands:
@@ -38,33 +38,32 @@ This way is useful when you want to execute your own Python scripts.
 
 Because of an open issue **[SPARK-25003]** in Spark 2.3, using spark-submit for python files will only support following api
 
-1. Create a Python file named `test.py` as below:
+1. Use ```pip install pytispark``` in your console to install `pytispark` 
+
+2. Create a Python file named `test.py` as below:
 ```python
-from py4j.java_gateway import java_import
-from pyspark.context import SparkContext
- 
-# We get a referenct to py4j Java Gateway
-gw = SparkContext._gateway
+import pytispark.pytispark as pti
 
-# Import TiExtensions
-java_import(gw.jvm, "org.apache.spark.sql.TiExtensions")
+ti = pti.TiContext(spark)
 
-# Inject TiExtensions, and get a TiContext
-ti = gw.jvm.TiExtensions.getInstance(spark._jsparkSession).getOrCreateTiContext(spark._jsparkSession)
+ti.tidbMapDatabase("tpch_test")
 
-# Map database as old api does
-ti.tidbMapDatabase("tpch_test", False, True)
+sql("select count(*) from customer").show()
 
-# sql("use tpch_test")
-sql("select count(*) from customer").show(20,200,False)
+# Result
+# +--------+
+# |count(1)|
+# +--------+
+# |     150|
+# +--------+
 ```
 
-2. Prepare your TiSpark environment as above and execute
+3. Prepare your TiSpark environment as above and execute
 ```bash
-./bin/spark-submit --jars /where-ever-it-is/tispark-core-{$version}-jar-with-dependencies.jar test.py
+./bin/spark-submit --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar test.py
 ```
 
-3. Result:
+4. Result:
 ```
 +--------+
 |count(1)|
