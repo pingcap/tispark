@@ -30,7 +30,7 @@ public class TableCodecTest {
     values.add(new Timestamp(dateTime.getMillis()));
     values.add(new Timestamp(dateTime.getMillis()));
     values.add("abc");
-//    values.add("中");
+    values.add("中");
     this.values = values.toArray();
   }
 
@@ -41,7 +41,7 @@ public class TableCodecTest {
     dateTypes.add(DateTimeType.DATETIME);
     dateTypes.add(TimestampType.TIMESTAMP);
     dateTypes.add(StringType.VARCHAR);
-//    dateTypes.add(StringType.VARCHAR);
+    dateTypes.add(StringType.VARCHAR);
     this.colsType = dateTypes.toArray(new DataType[0]);
   }
 
@@ -52,7 +52,7 @@ public class TableCodecTest {
     colIds.add(12L);
     colIds.add(13L);
     colIds.add(14L);
-//    colIds.add(15L);
+    colIds.add(15L);
     this.colIds = colIds;
   }
 
