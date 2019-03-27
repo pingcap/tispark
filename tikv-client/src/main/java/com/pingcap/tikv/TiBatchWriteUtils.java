@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.TableNotExistException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
@@ -27,7 +26,7 @@ import java.util.List;
 
 public class TiBatchWriteUtils {
   public static List<TiRegion> getRegionsByTable(
-      TiSession session, String databaseName, String tableName) throws TableNotExistException {
+          TiSession session, String databaseName, String tableName) throws TableNotExistException {
     TiTableInfo table = session.getCatalog().getTable(databaseName, tableName);
 
     if (table == null) {
@@ -38,18 +37,9 @@ public class TiBatchWriteUtils {
       RowKey endRowKey = RowKey.createBeyondMax(table.getId());
 
       while (key.compareTo(endRowKey) < 0) {
-        System.out.println(KeyUtils.formatBytes(key.toByteString()));
         TiRegion region = session.getRegionManager().getRegionByKey(key.toByteString());
-        if (region == null) {
-          break;
-        } else {
-          regionList.add(region);
-          byte[] endKey = region.getEndKey().toByteArray();
-          if (endKey.length == 0) {
-            break;
-          }
-          key = Key.toRawKey(endKey);
-        }
+        regionList.add(region);
+        key = Key.toRawKey(region.getEndKey());
       }
       return regionList;
     }

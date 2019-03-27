@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ import org.apache.spark.sql.TiContext
 import org.slf4j.LoggerFactory
 
 /**
-  * An ugly implementation of batch write framework, which will be
-  * replaced by spark api.
-  */
+ * An ugly implementation of batch write framework, which will be
+ * replaced by spark api.
+ */
 object TiBatchWrite {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -79,8 +79,8 @@ object TiBatchWrite {
 
   @throws(classOf[TableNotExistException])
   private def shuffleKeyToSameRegion(rdd: RDD[TiRow],
-                                  tableRef: TiTableReference,
-                                  tiContext: TiContext): RDD[(SerializableKey, TiRow)] = {
+                                     tableRef: TiTableReference,
+                                     tiContext: TiContext): RDD[(SerializableKey, TiRow)] = {
     val regions = getRegions(tableRef, tiContext)
     val tiRegionPartitioner = new TiRegionPartitioner(regions)
     val databaseName = tableRef.databaseName
@@ -106,7 +106,9 @@ object TiBatchWrite {
   @throws(classOf[TableNotExistException])
   private def getRegions(tableRef: TiTableReference, tiContext: TiContext): List[TiRegion] = {
     import scala.collection.JavaConversions._
-    TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, tableRef.databaseName, tableRef.tableName).toList
+    TiBatchWriteUtils
+      .getRegionsByTable(tiContext.tiSession, tableRef.databaseName, tableRef.tableName)
+      .toList
   }
 
   private def tiKVRow2Key(row: TiRow, tableId: Long): SerializableKey = {

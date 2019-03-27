@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,7 @@
 package com.pingcap.tikv.exception;
 
 public class TableNotExistException extends RuntimeException {
-  private String databaseName;
-  private String tableName;
-
   public TableNotExistException(String databaseName, String tableName) {
-    this.databaseName = databaseName;
-    this.tableName = tableName;
+    super("table(" + tableName + ") does not exist in database(" + databaseName + ")");
   }
 }
