@@ -73,7 +73,7 @@ public class TimestampType extends AbstractDateTimeType {
 
   @Override
   public DateTime getOriginDefaultValueNonNull(String value, long version) {
-    if (version == DataType.COLUMN_VERSION_FLAG) {
+    if (version >= DataType.COLUMN_VERSION_FLAG) {
       LocalDateTime localDateTime =
           Converter.strToDateTime(value, UTC_TIME_FORMATTER)
               .withZone(DateTimeZone.getDefault())
