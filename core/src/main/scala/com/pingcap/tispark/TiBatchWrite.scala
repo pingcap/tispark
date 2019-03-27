@@ -17,6 +17,7 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.TiBatchWriteUtils
 import com.pingcap.tikv.codec.KeyUtils
+import com.pingcap.tikv.exception.TableNotExistException
 import com.pingcap.tikv.key.{Key, RowKey}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
@@ -27,9 +28,9 @@ import org.apache.spark.sql.TiContext
 import org.slf4j.LoggerFactory
 
 /**
- * An ugly implementation of batch write framework, which will be
- * replaced by spark api.
- */
+  * An ugly implementation of batch write framework, which will be
+  * replaced by spark api.
+  */
 object TiBatchWrite {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -47,7 +48,7 @@ object TiBatchWrite {
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
       val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
-      shuffleToSameRegion(tiKVRowRDD, tableRef, tiContext)
+      shuffleKeyToSameRegion(tiKVRowRDD, tableRef, tiContext)
     }
 
     // TODO: resolve lock
@@ -74,19 +75,10 @@ object TiBatchWrite {
     // TODO: driver primary commit
 
     // TODO: executors secondary commit
-
-    // print for test
-    shuffledRDD.foreachPartition { iterator =>
-      println("==partition begin==")
-      iterator.foreach {
-        case (key, row) =>
-          println("key=" + key.toString + " row=" + row.toString)
-      }
-    }
-
   }
 
-  private def shuffleToSameRegion(rdd: RDD[TiRow],
+  @throws(classOf[TableNotExistException])
+  private def shuffleKeyToSameRegion(rdd: RDD[TiRow],
                                   tableRef: TiTableReference,
                                   tiContext: TiContext): RDD[(SerializableKey, TiRow)] = {
     val regions = getRegions(tableRef, tiContext)
@@ -111,11 +103,10 @@ object TiBatchWrite {
       }
   }
 
+  @throws(classOf[TableNotExistException])
   private def getRegions(tableRef: TiTableReference, tiContext: TiContext): List[TiRegion] = {
     import scala.collection.JavaConversions._
-    TiBatchWriteUtils
-      .getRegionsByTable(tiContext.tiSession, tableRef.databaseName, tableRef.tableName)
-      .toList
+    TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, tableRef.databaseName, tableRef.tableName).toList
   }
 
   private def tiKVRow2Key(row: TiRow, tableId: Long): SerializableKey = {

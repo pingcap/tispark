@@ -16,33 +16,42 @@
 package com.pingcap.tikv;
 
 import com.pingcap.tikv.codec.KeyUtils;
+import com.pingcap.tikv.exception.TableNotExistException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.region.TiRegion;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class TiBatchWriteUtils {
   public static List<TiRegion> getRegionsByTable(
-      TiSession session, String databaseName, String tableName) {
-    ArrayList<TiRegion> regionList = new ArrayList<>();
+      TiSession session, String databaseName, String tableName) throws TableNotExistException {
     TiTableInfo table = session.getCatalog().getTable(databaseName, tableName);
 
-    Key key = RowKey.createMin(table.getId());
-    RowKey endRowKey = RowKey.createBeyondMax(table.getId());
+    if (table == null) {
+      throw new TableNotExistException(databaseName, tableName);
+    } else {
+      ArrayList<TiRegion> regionList = new ArrayList<>();
+      Key key = RowKey.createMin(table.getId());
+      RowKey endRowKey = RowKey.createBeyondMax(table.getId());
 
-    while (key.compareTo(endRowKey) < 0) {
-      System.out.println(KeyUtils.formatBytes(key.toByteString()));
-      TiRegion region = session.getRegionManager().getRegionByKey(key.toByteString());
-      if (region == null) {
-        break;
-      } else {
-        regionList.add(region);
-        key = Key.toRawKey(region.getEndKey().toByteArray());
+      while (key.compareTo(endRowKey) < 0) {
+        System.out.println(KeyUtils.formatBytes(key.toByteString()));
+        TiRegion region = session.getRegionManager().getRegionByKey(key.toByteString());
+        if (region == null) {
+          break;
+        } else {
+          regionList.add(region);
+          byte[] endKey = region.getEndKey().toByteArray();
+          if (endKey.length == 0) {
+            break;
+          }
+          key = Key.toRawKey(endKey);
+        }
       }
+      return regionList;
     }
-
-    return regionList;
   }
 }

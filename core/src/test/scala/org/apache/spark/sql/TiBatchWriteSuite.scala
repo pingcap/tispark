@@ -23,7 +23,7 @@ import org.scalatest.Ignore
 class TiBatchWriteSuite extends BaseTiSparkSuite {
   test("ti batch write") {
     sql("show databases").show()
-    sql("use tidb_tpch_test")
+    setCurrentDatabase("tpch_test")
     val df = sql("select * from CUSTOMER")
     df.show()
 
