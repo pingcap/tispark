@@ -14,6 +14,7 @@
  */
 package org.apache.spark.sql.execution.command
 
+import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, SessionCatalog, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
@@ -146,4 +147,32 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
     }
   }
 
+}
+
+/**
+ * CHECK Spark [[org.apache.spark.sql.execution.command.ShowColumnsCommand]]
+ *
+ * @param tiContext tiContext which contains our catalog info
+ * @param delegate original ShowTablesCommand
+ */
+case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsCommand)
+    extends TiCommand(delegate) {
+  override def run(sparkSession: SparkSession): Seq[Row] = {
+    val databaseName = delegate.databaseName
+    val tableName = delegate.tableName
+    val catalog = tiCatalog
+    val resolver = sparkSession.sessionState.conf.resolver
+    val lookupTable = databaseName match {
+      case None => tableName
+      case Some(db) if tableName.database.exists(!resolver(_, db)) =>
+        throw new AnalysisException(
+          s"SHOW COLUMNS with conflicting databases: '$db' != '${tableName.database.get}'"
+        )
+      case Some(db) => TableIdentifier(tableName.identifier, Some(db))
+    }
+    val table = catalog.getTempViewOrPermanentTableMetadata(lookupTable)
+    table.schema.map { c =>
+      Row(c.name)
+    }
+  }
 }
