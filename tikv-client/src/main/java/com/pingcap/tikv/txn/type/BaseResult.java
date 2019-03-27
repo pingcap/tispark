@@ -13,21 +13,21 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.exception;
+package com.pingcap.tikv.txn.type;
 
-import org.tikv.kvproto.Errorpb.Error;
+public class BaseResult {
 
-public class RegionException extends TiKVException {
-  private static final long serialVersionUID = -4941554316743094356L;
+  protected String errorMsg;
 
-  private final Error regionErr;
-
-  public RegionException(Error regionErr) {
-    super("Region Exception occurred" + regionErr.getMessage());
-    this.regionErr = regionErr;
+  public boolean hasError() {
+    return errorMsg != null && !errorMsg.equals("");
   }
 
-  public Error getRegionErr() {
-    return regionErr;
+  public String getErrorMsg() {
+    return errorMsg;
+  }
+
+  public void setErrorMsg(String errorMsg) {
+    this.errorMsg = errorMsg;
   }
 }

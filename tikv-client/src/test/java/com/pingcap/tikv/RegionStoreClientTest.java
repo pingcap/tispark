@@ -84,7 +84,9 @@ public class RegionStoreClientTest {
             .setState(Metapb.StoreState.Up)
             .build();
 
-    return RegionStoreClient.create(region, store, session);
+    RegionStoreClient.RegionStoreClientBuilder builder = session.getRegionStoreClientBuilder();
+
+    return builder.build(region, store);
   }
 
   @After
@@ -103,18 +105,18 @@ public class RegionStoreClientTest {
             .setRegionEpoch(region.getRegionEpoch())
             .setPeer(region.getLeader())
             .build();
-    ByteString value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"), context);
+    ByteString value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"));
     assertEquals(ByteString.copyFromUtf8("value1"), value);
 
     server.putError("error1", KVMockServer.NOT_LEADER);
     // since not_leader is retryable, so the result should be correct.
-    value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"), context);
+    value = client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("key1"));
     assertEquals(ByteString.copyFromUtf8("value1"), value);
 
     server.putError("failure", KVMockServer.STALE_EPOCH);
     try {
       // since stale epoch is not retrable, so the test should fail.
-      client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("failure"), context);
+      client.rawGet(defaultBackOff(), ByteString.copyFromUtf8("failure"));
       fail();
     } catch (Exception e) {
       assertTrue(true);

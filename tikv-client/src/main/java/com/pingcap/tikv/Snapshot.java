@@ -44,12 +44,10 @@ import org.tikv.kvproto.Metapb.Store;
 public class Snapshot {
   private final TiTimestamp timestamp;
   private final TiSession session;
-  private final TiConfiguration conf;
 
   public Snapshot(TiTimestamp timestamp, TiSession session) {
     this.timestamp = timestamp;
     this.session = session;
-    this.conf = session.getConf();
   }
 
   public TiSession getSession() {
@@ -71,8 +69,7 @@ public class Snapshot {
   }
 
   public ByteString get(ByteString key) {
-    Pair<TiRegion, Store> pair = session.getRegionManager().getRegionStorePairByKey(key);
-    RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, getSession());
+    RegionStoreClient client = session.getRegionStoreClientBuilder().build(key);
     // TODO: Need to deal with lock error after grpc stable
     return client.get(ConcreteBackOffer.newGetBackOff(), key, timestamp.getVersion());
   }
@@ -150,8 +147,7 @@ public class Snapshot {
         curRegion = pair.first;
         curKeyRange = makeRange(curRegion.getStartKey(), curRegion.getEndKey());
 
-        try (RegionStoreClient client =
-            RegionStoreClient.create(lastPair.first, lastPair.second, getSession())) {
+        try (RegionStoreClient client = this.session.getRegionStoreClientBuilder().build(key)) {
           List<KvPair> partialResult =
               client.batchGet(backOffer, keyBuffer, timestamp.getVersion());
           // TODO: Add lock check

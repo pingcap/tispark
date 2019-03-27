@@ -240,7 +240,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
   @Override
   public boolean handleRequestError(BackOffer backOffer, Exception e) {
-    regionManager.onRequestFail(ctxRegion.getId(), ctxRegion.getLeader().getStoreId());
+    regionManager.onRequestFail(ctxRegion);
     notifyRegionStoreCacheInvalidate(
         ctxRegion.getId(),
         ctxRegion.getLeader().getStoreId(),

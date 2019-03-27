@@ -30,7 +30,10 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.log4j.Logger;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Store;
@@ -222,9 +225,12 @@ public class RegionManager {
   /**
    * Clears all cache when a TiKV server does not respond
    *
-   * @param regionId region's id
-   * @param storeId TiKV store's id
+   * @param region region
    */
+  public void onRequestFail(TiRegion region) {
+    onRequestFail(region.getId(), region.getLeader().getStoreId());
+  }
+
   public void onRequestFail(long regionId, long storeId) {
     cache.invalidateRegion(regionId);
     cache.invalidateAllRegionForStore(storeId);

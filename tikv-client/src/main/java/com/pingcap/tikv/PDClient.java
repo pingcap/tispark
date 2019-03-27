@@ -58,6 +58,9 @@ import org.tikv.kvproto.Pdpb.TsoResponse;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
+
+  private TiSession session;
+
   private RequestHeader header;
   private TsoRequest tsoReq;
   private volatile LeaderWrapper leaderWrapper;
@@ -187,6 +190,11 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     }
   }
 
+  @Override
+  public TiSession getSession() {
+    return session;
+  }
+
   public static ReadOnlyPDClient create(TiSession session) {
     return createRaw(session);
   }
@@ -254,7 +262,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   synchronized boolean switchLeader(List<String> leaderURLs) {
-    if (leaderURLs.isEmpty()) return false;
+    if (leaderURLs.isEmpty()) {
+      return false;
+    }
     String leaderUrlStr = leaderURLs.get(0);
     // TODO: Why not strip protocol info on server side since grpc does not need it
     if (leaderWrapper != null && leaderUrlStr.equals(leaderWrapper.getLeaderInfo())) {
@@ -324,8 +334,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         .withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
   }
 
-  private PDClient(TiSession session) {
-    super(session);
+  private PDClient(TiSession tiSession) {
+    super(tiSession.getConf(), tiSession.getChannelFactory());
+    this.session = tiSession;
   }
 
   private void initCluster() {
