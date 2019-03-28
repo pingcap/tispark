@@ -16,11 +16,11 @@
 package com.pingcap.tispark
 
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
-import com.pingcap.tikv.txn.TxnKVClient
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
@@ -47,7 +47,8 @@ object TiBatchWrite {
   def writeToTiDB(rdd: RDD[SparkRow], tableRef: TiTableReference, tiContext: TiContext) {
     // initialize
     val tiConf = tiContext.tiConf
-    val kvClient = createTxnKVClient(tiConf)
+    val tiSession = tiContext.tiSession
+    val kvClient = tiSession.createTxnClient()
     val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
 
     // TODO: region pre-split
@@ -76,7 +77,7 @@ object TiBatchWrite {
 
     // filter primary key
     val finalWriteRDD = shuffledRDD.filter {
-      case (key, row) => !key.equals(primaryKey)
+      case (key, _) => !key.equals(primaryKey)
     }
 
     // get timestamp as start_ts
@@ -86,38 +87,27 @@ object TiBatchWrite {
     // driver primary pre-write
     val ti2PCClient = new TiBatchWrite2PCClient(kvClient, startTs)
     val prewritePrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.batchPrewriteBackoff)
-    var error = ti2PCClient.prewritePrimaryKey(
-      prewritePrimaryBackoff,
-      primaryKey.bytes,
-      encodeTiRow(primaryRow, colDataTypes, colIds)
-    )
-    if (error != null) {
-      throw new TiBatchWriteException(s"prewrite primary key error: $error")
-    }
+    val encodedRow = encodeTiRow(primaryRow, colDataTypes, colIds)
+    ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, encodedRow)
 
     // executors secondary pre-write
-    finalWriteRDD.foreachPartition {
-      case iterator =>
-        val kvClientOnExecutor = createTxnKVClient(tiConf)
-        val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
-        val prewriteSecondaryBackoff =
-          ConcreteBackOffer.newCustomBackOff(BackOffer.batchPrewriteBackoff)
+    finalWriteRDD.foreachPartition { iterator =>
+      val tiSessionOnExecutor = new TiSession(tiConf)
+      val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
+      val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
+      val prewriteSecondaryBackoff =
+        ConcreteBackOffer.newCustomBackOff(BackOffer.batchPrewriteBackoff)
 
-        import scala.collection.JavaConverters._
-        val pairs = iterator.map {
-          case (key, row) =>
-            new TiBatchWrite2PCClient.BytePairWrapper(
-              key.bytes,
-              encodeTiRow(row, colDataTypes, colIds)
-            )
-        }.asJava
+      import scala.collection.JavaConverters._
+      val pairs = iterator.map {
+        case (key, row) =>
+          new TiBatchWrite2PCClient.BytePairWrapper(
+            key.bytes,
+            encodeTiRow(row, colDataTypes, colIds)
+          )
+      }.asJava
 
-        val error = ti2PCClientOnExecutor
-          .prewriteSecondaryKeys(prewriteSecondaryBackoff, primaryKey.bytes, pairs)
-        if (error != null) {
-          logger.error(s"prewrite secondary key error: $error")
-          throw new TiBatchWriteException(s"prewrite secondary key error: $error")
-        }
+      ti2PCClientOnExecutor.prewriteSecondaryKeys(prewriteSecondaryBackoff, primaryKey.bytes, pairs)
     }
 
     // driver primary commit
@@ -129,15 +119,13 @@ object TiBatchWrite {
       )
     }
     val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.batchCommitBackoff)
-    error = ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
-    if (error != null) {
-      throw new TiBatchWriteException(s"commit primary key error: $error")
-    }
+    ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
 
     // executors secondary commit
     finalWriteRDD.foreachPartition {
       case iterator =>
-        val kvClientOnExecutor = createTxnKVClient(tiConf)
+        val tiSessionOnExecutor = new TiSession(tiConf)
+        val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
         val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
         val commitSecondaryBackoff =
           ConcreteBackOffer.newCustomBackOff(BackOffer.batchCommitBackoff)
@@ -147,11 +135,12 @@ object TiBatchWrite {
           case (key, row) => new TiBatchWrite2PCClient.ByteWrapper(key.bytes)
         }.asJava
 
-        val error =
+        try {
           ti2PCClientOnExecutor.commitSecondaryKeys(commitSecondaryBackoff, keys, commitTs)
-        if (error != null) {
-          // ignored
-          logger.warn(s"commit secondary key error: $error")
+        } catch {
+          case e: TiBatchWriteException =>
+            // ignored
+            logger.warn(s"commit secondary key error", e)
         }
     }
   }
@@ -174,12 +163,6 @@ object TiBatchWrite {
       dataTypes.update(i, tiColumnInfo.getType)
     }
     (tiTableInfo, dataTypes, ids)
-  }
-
-  private def createTxnKVClient(tiConf: TiConfiguration): TxnKVClient = {
-    val session = new TiSession(tiConf)
-    val pdClient = PDClient.create(session)
-    new TxnKVClient(tiConf, session.getRegionStoreClientBuilder, pdClient)
   }
 
   @throws(classOf[NoSuchTableException])
@@ -220,14 +203,12 @@ object TiBatchWrite {
 
   private def tiKVRow2Key(row: TiRow, tableId: Long, tiTableInfo: TiTableInfo): SerializableKey = {
     val handle = if (tiTableInfo.isPkHandle) {
-      var i = 0
       var pos = 0
-      import scala.collection.JavaConversions._
-      for (col <- tiTableInfo.getColumns) {
-        if (col.isPrimaryKey) {
+      val columnList = tiTableInfo.getColumns
+      for (i <- 0 until columnList.size()) {
+        if (columnList.get(i).isPrimaryKey) {
           pos = i
         }
-        i = i + 1
       }
       row.getLong(pos)
     } else {
@@ -299,7 +280,3 @@ class SerializableKey(val bytes: Array[Byte]) extends Serializable {
       case _                     => false
     }
 }
-
-class TiBatchWriteException(val message: String, val cause: Option[Throwable] = None)
-    extends Exception(message, cause.orNull)
-    with Serializable {}

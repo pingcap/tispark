@@ -41,14 +41,16 @@ import org.tikv.kvproto.Metapb.StoreState;
 
 public class RegionManager {
   private static final Logger logger = Logger.getLogger(RegionManager.class);
-  private RegionCache cache;
+  private final RegionCache cache;
   private final ReadOnlyPDClient pdClient;
+  private final TiSession tiSession;
 
   // To avoid double retrieval, we used the async version of grpc
   // When rpc not returned, instead of call again, it wait for previous one done
-  public RegionManager(ReadOnlyPDClient pdClient) {
+  public RegionManager(ReadOnlyPDClient pdClient, TiSession tiSession) {
     this.cache = new RegionCache(pdClient);
     this.pdClient = pdClient;
+    this.tiSession = tiSession;
   }
 
   public static class RegionCache {
@@ -165,7 +167,7 @@ public class RegionManager {
   }
 
   public TiSession getSession() {
-    return pdClient.getSession();
+    return this.tiSession;
   }
 
   public TiRegion getRegionByKey(ByteString key) {

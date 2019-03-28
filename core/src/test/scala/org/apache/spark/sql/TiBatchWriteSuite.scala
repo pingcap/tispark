@@ -35,8 +35,6 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
 
   private val batchWriteTablePrefix = "BATCH_WRITE"
 
-  private val tiDatabasePrefix = "tidb"
-
   override def beforeAll(): Unit = {
     super.beforeAll()
     setCurrentDatabase(database)
@@ -54,7 +52,7 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
 
       // batch write
       val tableRef: TiTableReference =
-        TiTableReference(s"${tiDatabasePrefix}_$database", s"${batchWriteTablePrefix}_$table")
+        TiTableReference(s"$dbPrefix$database", s"${batchWriteTablePrefix}_$table")
       TiBatchWrite.writeToTiDB(df.rdd, tableRef, ti)
 
       // assert
@@ -74,7 +72,7 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
     // batch write
     val tableRef: TiTableReference =
       TiTableReference(
-        s"${tiDatabasePrefix}_$database",
+        s"$dbPrefix$database",
         s"${batchWriteTablePrefix}_TABLE_NOT_EXISTS"
       )
 

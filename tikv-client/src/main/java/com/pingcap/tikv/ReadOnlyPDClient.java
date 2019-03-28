@@ -63,7 +63,4 @@ public interface ReadOnlyPDClient {
 
   /** Close underlining resources */
   void close() throws InterruptedException;
-
-  /** Get associated session * @return the session associated to client */
-  TiSession getSession();
 }

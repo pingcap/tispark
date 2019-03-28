@@ -17,6 +17,7 @@ package com.pingcap.tikv;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.GrpcException;
+import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
@@ -107,7 +108,7 @@ public class TiBatchWrite2PCClient {
   private RegionManager regionManager;
 
   /** start timestamp of transaction which get from PD */
-  private long startTs = 0;
+  private final long startTs;
 
   public TiBatchWrite2PCClient(TxnKVClient kvClient, long startTime) {
     this.kvClient = kvClient;
@@ -123,8 +124,12 @@ public class TiBatchWrite2PCClient {
    * @param value
    * @return
    */
-  public String prewritePrimaryKey(BackOffer backOffer, byte[] primaryKey, byte[] value) {
-    return this.doPrewritePrimaryKey(backOffer, primaryKey, value);
+  public void prewritePrimaryKey(BackOffer backOffer, byte[] primaryKey, byte[] value)
+      throws TiBatchWriteException {
+    String error = this.doPrewritePrimaryKey(backOffer, primaryKey, value);
+    if (error != null) {
+      throw new TiBatchWriteException("prewrite primary key error: " + error);
+    }
   }
 
   private String doPrewritePrimaryKey(BackOffer backOffer, byte[] key, byte[] value) {
@@ -147,7 +152,7 @@ public class TiBatchWrite2PCClient {
     if (!prewriteResult.isSuccess() && !prewriteResult.isRetry()) {
       return prewriteResult.getError();
     }
-    if (!prewriteResult.isSuccess() && prewriteResult.isRetry()) {
+    if (prewriteResult.isRetry()) {
       try {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss,
@@ -177,8 +182,12 @@ public class TiBatchWrite2PCClient {
    * @param key
    * @return
    */
-  public String commitPrimaryKey(BackOffer backOffer, byte[] key, long commitTs) {
-    return doCommitPrimaryKey(backOffer, key, commitTs);
+  public void commitPrimaryKey(BackOffer backOffer, byte[] key, long commitTs)
+      throws TiBatchWriteException {
+    String error = doCommitPrimaryKey(backOffer, key, commitTs);
+    if (error != null) {
+      throw new TiBatchWriteException("commit primary key error: " + error);
+    }
   }
 
   private String doCommitPrimaryKey(BackOffer backOffer, byte[] key, long commitTs) {
@@ -194,7 +203,7 @@ public class TiBatchWrite2PCClient {
       LOG.error(error);
       return error;
     }
-    if (!commitResult.isSuccess() && commitResult.isRetry()) {
+    if (commitResult.isRetry()) {
       try {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss,
@@ -233,9 +242,13 @@ public class TiBatchWrite2PCClient {
    * @param pairs
    * @return
    */
-  public String prewriteSecondaryKeys(
-      BackOffer backOffer, byte[] primaryKey, Iterator<BytePairWrapper> pairs) {
-    return doPrewriteSecondaryKeys(backOffer, primaryKey, pairs);
+  public void prewriteSecondaryKeys(
+      BackOffer backOffer, byte[] primaryKey, Iterator<BytePairWrapper> pairs)
+      throws TiBatchWriteException {
+    String error = doPrewriteSecondaryKeys(backOffer, primaryKey, pairs);
+    if (error != null) {
+      throw new TiBatchWriteException("prewrite secondary key error: " + error);
+    }
   }
 
   private String doPrewriteSecondaryKeys(
@@ -244,15 +257,11 @@ public class TiBatchWrite2PCClient {
       byte[][] keyBytes = new byte[WRITE_BUFFER_SIZE][];
       byte[][] valueBytes = new byte[WRITE_BUFFER_SIZE][];
       int size = 0;
-      for (int i = 0; i < WRITE_BUFFER_SIZE; i++) {
-        if (pairs.hasNext()) {
-          BytePairWrapper pair = pairs.next();
-          keyBytes[size] = pair.key;
-          valueBytes[size] = pair.value;
-          size++;
-        } else {
-          break;
-        }
+      while (size < WRITE_BUFFER_SIZE && pairs.hasNext()) {
+        BytePairWrapper pair = pairs.next();
+        keyBytes[size] = pair.key;
+        valueBytes[size] = pair.value;
+        size++;
       }
       String error = doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
       if (error != null) {
@@ -320,12 +329,9 @@ public class TiBatchWrite2PCClient {
       Map<ByteWrapper, Kvrpcpb.Mutation> mutations) {
     List<byte[]> keyList = batchKeys.getKeys();
     int batchSize = keyList.size();
-    byte[][] keys = new byte[batchSize][];
-    int index = 0;
     List<Kvrpcpb.Mutation> mutationList = new ArrayList<>(batchSize);
     for (byte[] key : keyList) {
       mutationList.add(mutations.get(new ByteWrapper(key)));
-      keys[index++] = key;
     }
     // send rpc request to tikv server
     long regionId = batchKeys.getRegioId();
@@ -337,7 +343,7 @@ public class TiBatchWrite2PCClient {
     if (!prewriteResult.isSuccess() && !prewriteResult.isRetry()) {
       return prewriteResult.getError();
     }
-    if (!prewriteResult.isSuccess() && prewriteResult.isRetry()) {
+    if (prewriteResult.isRetry()) {
       try {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss,
@@ -352,7 +358,7 @@ public class TiBatchWrite2PCClient {
         int i = 0;
         for (byte[] k : batchKeys.getKeys()) {
           keyBytes[i] = k;
-          valueBytes[i] = mutations.get(new String(k)).getValue().toByteArray();
+          valueBytes[i] = mutations.get(new ByteWrapper(k)).getValue().toByteArray();
           i++;
         }
         return doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
@@ -415,9 +421,12 @@ public class TiBatchWrite2PCClient {
    * @param keys
    * @return
    */
-  public String commitSecondaryKeys(
-      BackOffer backOffer, Iterator<ByteWrapper> keys, long commitTs) {
-    return doCommitSecondaryKeys(backOffer, keys, commitTs);
+  public void commitSecondaryKeys(BackOffer backOffer, Iterator<ByteWrapper> keys, long commitTs)
+      throws TiBatchWriteException {
+    String error = doCommitSecondaryKeys(backOffer, keys, commitTs);
+    if (error != null) {
+      throw new TiBatchWriteException("commit secondary key error: " + error);
+    }
   }
 
   private String doCommitSecondaryKeys(
@@ -492,7 +501,7 @@ public class TiBatchWrite2PCClient {
       LOG.warn(error);
       return error;
     }
-    if (!commitResult.isSuccess() && commitResult.isRetry()) {
+    if (commitResult.isRetry()) {
       try {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss,
@@ -548,9 +557,7 @@ public class TiBatchWrite2PCClient {
           if (index == 0) {
             first = regionId;
           }
-          List<byte[]> groupItem = groups.computeIfAbsent(regionId, e -> new LinkedList<>());
-          groupItem.add(key);
-          groups.put(tiRegion.getId(), groupItem);
+          groups.computeIfAbsent(regionId, e -> new LinkedList<>()).add(key);
         }
       }
     } catch (Exception e) {

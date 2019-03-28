@@ -53,7 +53,7 @@ public class TiSession implements AutoCloseable {
   public TiSession(TiConfiguration conf) {
     this.conf = conf;
     this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
-    this.regionManager = new RegionManager(this.getPDClient());
+    this.regionManager = new RegionManager(this.getPDClient(), this);
     this.clientBuilder =
         new RegionStoreClient.RegionStoreClientBuilder(
             conf, this.channelFactory, this.regionManager, this);
@@ -61,7 +61,7 @@ public class TiSession implements AutoCloseable {
 
   public TxnKVClient createTxnClient() {
     // Create new Region Manager avoiding thread contentions
-    RegionManager regionMgr = new RegionManager(this.getPDClient());
+    RegionManager regionMgr = new RegionManager(this.getPDClient(), this);
     RegionStoreClient.RegionStoreClientBuilder builder =
         new RegionStoreClient.RegionStoreClientBuilder(conf, this.channelFactory, regionMgr, this);
     return new TxnKVClient(conf, builder, this.getPDClient());
@@ -92,7 +92,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (client == null) {
-          client = PDClient.createRaw(this);
+          client = PDClient.createRaw(this.getConf(), this.getChannelFactory());
         }
         res = client;
       }
@@ -124,7 +124,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (regionManager == null) {
-          regionManager = new RegionManager(getPDClient());
+          regionManager = new RegionManager(getPDClient(), this);
         }
         res = regionManager;
       }
