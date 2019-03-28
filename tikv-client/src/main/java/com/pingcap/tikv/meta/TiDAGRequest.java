@@ -209,7 +209,6 @@ public class TiDAGRequest implements Serializable {
   private TiTimestamp startTs;
   private Expression having;
   private boolean distinct;
-  private boolean handleNeeded;
   private boolean isDoubleRead;
   private final PushDownType pushDownType;
   private IdentityHashMap<Expression, DataType> typeMap;
@@ -258,7 +257,8 @@ public class TiDAGRequest implements Serializable {
    * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
    * IndexScan.
    *
-   * @param isIndexScan whether the dagRequest to build is an IndexScan
+   * @param isIndexScan whether the dagRequest to build should be an {@link
+   *     com.pingcap.tidb.tipb.IndexScan}
    * @return final DAGRequest built
    */
   public DAGRequest buildScan(boolean isIndexScan) {
@@ -357,34 +357,25 @@ public class TiDAGRequest implements Serializable {
       tblScanBuilder.setTableId(id);
       // Step1. Add columns to first executor
       int realOffset = 0;
-      for (int i = 0; i < getFields().size(); i++) {
-        ColumnRef col = getFields().get(i);
+      for (ColumnRef col : getFields()) {
+        int offset = realOffset;
+        realOffset++;
         // can't allow duplicated col added into executor.
-        if (!colOffsetInFieldMap.containsKey(col)) {
-          tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
-          colOffsetInFieldMap.put(col, realOffset);
-          realOffset++;
-        }
-
+        int colOffset =
+            colOffsetInFieldMap.computeIfAbsent(
+                col,
+                k -> {
+                  tblScanBuilder.addColumns(k.getColumnInfo().toProto(tableInfo));
+                  return offset;
+                });
         // column offset should be in accordance with fields
-        dagRequestBuilder.addOutputOffsets(colOffsetInFieldMap.getOrDefault(col, realOffset));
-      }
-
-      // Currently, according to TiKV's implementation, if handle
-      // is needed, we should add an extra column with an ID of -1
-      // to the TableScan executor
-      if (isHandleNeeded()) {
-        tblScanBuilder.addColumns(handleColumn);
-        // if handle is needed, we should append one output offset
-        // duplicated col may exists, we need append the size of current
-        // output offset's size.
-        dagRequestBuilder.addOutputOffsets(dagRequestBuilder.getOutputOffsetsCount());
+        dagRequestBuilder.addOutputOffsets(colOffset);
       }
 
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
     }
 
-    if (!isIndexScan || (isIndexScan() && !isDoubleRead())) {
+    if (!isIndexScan() || isCoveringIndexScan()) {
       // clear executorBuilder
       executorBuilder.clear();
 
@@ -549,7 +540,7 @@ public class TiDAGRequest implements Serializable {
   }
 
   @VisibleForTesting
-  public long getFlags() {
+  long getFlags() {
     return flags;
   }
 
@@ -709,25 +700,8 @@ public class TiDAGRequest implements Serializable {
   }
 
   /**
-   * Returns whether handle is needed.
-   *
-   * @return the boolean
-   */
-  public boolean isHandleNeeded() {
-    return handleNeeded;
-  }
-
-  /**
-   * Sets handle needed.
-   *
-   * @param handleNeeded the handle needed
-   */
-  public void setHandleNeeded(boolean handleNeeded) {
-    this.handleNeeded = handleNeeded;
-  }
-
-  /**
-   * Returns whether needs double read
+   * Returns whether needs to read handle from index first and find its corresponding row. i.e,
+   * "double read"
    *
    * @return boolean
    */
@@ -742,6 +716,15 @@ public class TiDAGRequest implements Serializable {
    */
   public void setIsDoubleRead(boolean isDoubleRead) {
     this.isDoubleRead = isDoubleRead;
+  }
+
+  /**
+   * Returns whether the request is CoveringIndex
+   *
+   * @return boolean
+   */
+  public boolean isCoveringIndexScan() {
+    return isIndexScan() && !isDoubleRead();
   }
 
   /**

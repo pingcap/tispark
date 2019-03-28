@@ -131,7 +131,6 @@ public class DAGIteratorTest {
     server.put("key1", cdo.toByteString());
     List<RegionTask> tasks = ImmutableList.of(RegionTask.newInstance(region, store, keyRanges));
     CoprocessIterator<Row> iter = CoprocessIterator.getRowIterator(req, tasks, session);
-    iter.hasNext();
     Row r = iter.next();
     SchemaInfer infer = SchemaInfer.create(req);
     assertEquals(r.get(0, infer.getType(0)), 666L);

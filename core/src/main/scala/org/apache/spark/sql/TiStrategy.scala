@@ -75,7 +75,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def allowAggregationPushdown(): Boolean =
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toLowerCase.toBoolean
 
-  private def allowIndexDoubleRead(): Boolean =
+  private def allowIndexRead(): Boolean =
     sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "false").toLowerCase.toBoolean
 
   private def useStreamingProcess(): Boolean =
@@ -238,7 +238,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     val tableScanPlan: ScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)
-    val scanPlan: ScanPlan = if (allowIndexDoubleRead()) {
+    val scanPlan: ScanPlan = if (allowIndexRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
       scanBuilder.buildScan(
