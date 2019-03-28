@@ -42,6 +42,7 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor;
+import scala.Immutable;
 
 /**
  * Type TiDAGRequest.
@@ -356,20 +357,16 @@ public class TiDAGRequest implements Serializable {
       executorBuilder.setTp(ExecType.TypeTableScan);
       tblScanBuilder.setTableId(id);
       // Step1. Add columns to first executor
-      int realOffset = 0;
+      int lastOffset = 0;
       for (ColumnRef col : getFields()) {
-        int offset = realOffset;
-        realOffset++;
         // can't allow duplicated col added into executor.
-        int colOffset =
-            colOffsetInFieldMap.computeIfAbsent(
-                col,
-                k -> {
-                  tblScanBuilder.addColumns(k.getColumnInfo().toProto(tableInfo));
-                  return offset;
-                });
+        if (!colOffsetInFieldMap.containsKey(col)) {
+          tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
+          colOffsetInFieldMap.put(col, lastOffset);
+          lastOffset++;
+        }
         // column offset should be in accordance with fields
-        dagRequestBuilder.addOutputOffsets(colOffset);
+        dagRequestBuilder.addOutputOffsets(colOffsetInFieldMap.get(col));
       }
 
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
