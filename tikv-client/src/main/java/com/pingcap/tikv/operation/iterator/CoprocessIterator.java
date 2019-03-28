@@ -60,6 +60,8 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
   public static CoprocessIterator<Row> getRowIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     return new DAGIterator<Row>(
+        // If index scan is a covering index, the logic is table scan
+        // so we need set isIndexScan to false.
         req.buildScan(req.isIndexScan() && !req.isDoubleRead()),
         regionTasks,
         session,
