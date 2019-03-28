@@ -84,7 +84,7 @@ public class Snapshot {
    * @return a Iterator that contains all result from this select request.
    */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest) {
-    if (dagRequest.isIndexScan()) {
+    if (dagRequest.hasIndex()) {
       Iterator<Long> iter =
           getHandleIterator(
               dagRequest,

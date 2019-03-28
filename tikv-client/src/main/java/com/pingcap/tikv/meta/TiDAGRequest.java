@@ -257,11 +257,11 @@ public class TiDAGRequest implements Serializable {
    * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
    * IndexScan.
    *
-   * @param isIndexScan whether the dagRequest to build should be an {@link
+   * @param buildIndexScan whether the dagRequest to build should be an {@link
    *     com.pingcap.tidb.tipb.IndexScan}
    * @return final DAGRequest built
    */
-  public DAGRequest buildScan(boolean isIndexScan) {
+  public DAGRequest buildScan(boolean buildIndexScan) {
     long id = tableInfo.getId();
     checkNotNull(startTs, "startTs is null");
     checkArgument(startTs.getVersion() != 0, "timestamp is 0");
@@ -274,7 +274,7 @@ public class TiDAGRequest implements Serializable {
     // find a column's position in index
     Map<TiColumnInfo, Integer> colPosInIndexMap = new HashMap<>();
 
-    if (isIndexScan) {
+    if (buildIndexScan) {
       // IndexScan
       if (indexInfo == null) {
         throw new TiClientInternalException("Index is empty for index scan");
@@ -375,7 +375,7 @@ public class TiDAGRequest implements Serializable {
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
     }
 
-    if (!isIndexScan() || isCoveringIndexScan()) {
+    if (isCoveringIndexScan()) {
       // clear executorBuilder
       executorBuilder.clear();
 
@@ -724,7 +724,7 @@ public class TiDAGRequest implements Serializable {
    * @return boolean
    */
   public boolean isCoveringIndexScan() {
-    return isIndexScan() && !isDoubleRead();
+    return hasIndex() && !isDoubleRead();
   }
 
   /**
@@ -732,7 +732,7 @@ public class TiDAGRequest implements Serializable {
    *
    * @return true iff indexInfo is provided, false otherwise
    */
-  public boolean isIndexScan() {
+  public boolean hasIndex() {
     return indexInfo != null;
   }
 
