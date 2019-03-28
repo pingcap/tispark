@@ -170,7 +170,7 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
   override def listTables(db: String): Seq[TableIdentifier] = listTables(db, "*")
 
   override def listTables(db: String, pattern: String): Seq[TableIdentifier] = {
-    val currentSessionCatalog = catalogOf(Some(db)).getOrElse(throw new NoSuchDatabaseException(db))
+    val currentSessionCatalog = catalogOf(Some(db)).get
     val tables = currentSessionCatalog.listTables(db, pattern)
     // list tempViews if catalog matches CH Catalog
     val extraLocalTempViews = currentSessionCatalog match {
@@ -182,6 +182,15 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
     }
     tables ++ extraLocalTempViews
   }
+
+  override def getTempViewOrPermanentTableMetadata(name: TableIdentifier): CatalogTable =
+    synchronized {
+      val currentSessionCatalog = catalogOf(name.database).get
+      currentSessionCatalog match {
+        case _: TiConcreteSessionCatalog => getTableMetadata(name)
+        case _                           => sessionCatalog.getTempViewOrPermanentTableMetadata(name)
+      }
+    }
 
   // Following are all routed to primary catalog.
   override def createDatabase(dbDefinition: CatalogDatabase, ignoreIfExists: Boolean): Unit =
@@ -245,9 +254,6 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
   override def dropTempView(name: String): Boolean = primaryCatalog.dropTempView(name)
 
   override def dropGlobalTempView(name: String): Boolean = primaryCatalog.dropGlobalTempView(name)
-
-  override def getTempViewOrPermanentTableMetadata(name: TableIdentifier): CatalogTable =
-    primaryCatalog.getTempViewOrPermanentTableMetadata(name)
 
   override def isTemporaryTable(name: TableIdentifier): Boolean =
     primaryCatalog.isTemporaryTable(name)

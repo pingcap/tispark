@@ -82,4 +82,47 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     spark.sql("desc extended full_data_type_table").show(200, truncate = false)
     spark.sql("desc formatted full_data_type_table").show(200, truncate = false)
   }
+
+  test("test support show columns") {
+    val columnNames = List(
+      List("id_dt"),
+      List("tp_varchar"),
+      List("tp_datetime"),
+      List("tp_blob"),
+      List("tp_binary"),
+      List("tp_date"),
+      List("tp_timestamp"),
+      List("tp_year"),
+      List("tp_bigint"),
+      List("tp_decimal"),
+      List("tp_double"),
+      List("tp_float"),
+      List("tp_int"),
+      List("tp_mediumint"),
+      List("tp_real"),
+      List("tp_smallint"),
+      List("tp_tinyint"),
+      List("tp_char"),
+      List("tp_nvarchar"),
+      List("tp_longtext"),
+      List("tp_mediumtext"),
+      List("tp_text"),
+      List("tp_tinytext"),
+      List("tp_bit"),
+      List("tp_time"),
+      List("tp_enum"),
+      List("tp_set")
+    )
+    setCurrentDatabase("tispark_test")
+    explainAndRunTest(
+      "show columns from full_data_type_table",
+      skipJDBC = true,
+      rTiDB = columnNames
+    )
+    runTest(
+      s"show columns from ${dbPrefix}tispark_test.full_data_type_table",
+      skipJDBC = true,
+      rTiDB = columnNames
+    )
+  }
 }
