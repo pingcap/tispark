@@ -21,6 +21,7 @@ import org.apache.spark.sql.BaseInitialOnceSuite
 
 class LogicalAndOr0Suite extends BaseInitialOnceSuite {
   private val allCases = Seq[String](
+    "select tp_char, tp_smallint, tp_char, tp_smallint, tp_char from full_data_type_table  where tp_char = tp_smallint and tp_char > 0",
     "select tp_char,tp_smallint from full_data_type_table  where tp_char = tp_smallint and tp_char > 0",
     "select tp_char,id_dt from full_data_type_table  where tp_char = id_dt and tp_char > 0",
     "select tp_nvarchar,tp_tinyint from full_data_type_table  where tp_nvarchar = tp_tinyint and tp_nvarchar > 0",

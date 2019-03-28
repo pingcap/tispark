@@ -356,28 +356,32 @@ public class TiDAGRequest implements Serializable {
       executorBuilder.setTp(ExecType.TypeTableScan);
       tblScanBuilder.setTableId(id);
       // Step1. Add columns to first executor
+      int realOffset = 0;
       for (int i = 0; i < getFields().size(); i++) {
         ColumnRef col = getFields().get(i);
-        tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
-        colOffsetInFieldMap.put(col, i);
+        // can't allow duplicated col added into executor.
+        if (!colOffsetInFieldMap.containsKey(col)) {
+          tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
+          colOffsetInFieldMap.put(col, realOffset);
+          realOffset++;
+        }
+
+        // column offset should be in accordance with fields
+        dagRequestBuilder.addOutputOffsets(colOffsetInFieldMap.getOrDefault(col, realOffset));
       }
+
       // Currently, according to TiKV's implementation, if handle
       // is needed, we should add an extra column with an ID of -1
       // to the TableScan executor
       if (isHandleNeeded()) {
         tblScanBuilder.addColumns(handleColumn);
+        // if handle is needed, we should append one output offset
+        // duplicated col may exists, we need append the size of current
+        // output offset's size.
+        dagRequestBuilder.addOutputOffsets(dagRequestBuilder.getOutputOffsetsCount());
       }
+
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
-
-      // column offset should be in accordance with fields
-      for (int i = 0; i < getFields().size(); i++) {
-        dagRequestBuilder.addOutputOffsets(i);
-      }
-
-      // if handle is needed, we should append one output offset
-      if (isHandleNeeded()) {
-        dagRequestBuilder.addOutputOffsets(tableInfo.getColumns().size());
-      }
     }
 
     if (!isIndexScan || (isIndexScan() && !isDoubleRead())) {
