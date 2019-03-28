@@ -153,7 +153,7 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowColumnsCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
- * @param delegate original ShowTablesCommand
+ * @param delegate original ShowColumnsCommand
  */
 case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsCommand)
     extends TiCommand(delegate) {
