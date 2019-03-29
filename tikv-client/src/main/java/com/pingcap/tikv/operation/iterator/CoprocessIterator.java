@@ -57,12 +57,22 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
 
   abstract void submitTasks();
 
+  /**
+   * Build a DAGIterator from TiDAGRequest and region tasks to get rows
+   *
+   * <p>When we are preforming a scan request using coveringIndex, {@link
+   * com.pingcap.tidb.tipb.IndexScan} should be used to read index rows. In other circumstances,
+   * {@link com.pingcap.tidb.tipb.TableScan} is used to scan table rows.
+   *
+   * @param req TiDAGRequest built
+   * @param regionTasks a list or RegionTask each contains a task on a single region
+   * @param session TiSession
+   * @return a DAGIterator to be processed
+   */
   public static CoprocessIterator<Row> getRowIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     return new DAGIterator<Row>(
-        // If index scan is a covering index, the logic is table scan
-        // so we need set isIndexScan to false.
-        req.buildScan(req.isIndexScan() && !req.isDoubleRead()),
+        req.buildScan(req.isCoveringIndexScan()),
         regionTasks,
         session,
         SchemaInfer.create(req),
@@ -78,6 +88,16 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
     };
   }
 
+  /**
+   * Build a DAGIterator from TiDAGRequest and region tasks to get handles
+   *
+   * <p>When we use getHandleIterator, we must be preforming a IndexScan.
+   *
+   * @param req TiDAGRequest built
+   * @param regionTasks a list or RegionTask each contains a task on a single region
+   * @param session TiSession
+   * @return a DAGIterator to be processed
+   */
   public static CoprocessIterator<Long> getHandleIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     return new DAGIterator<Long>(

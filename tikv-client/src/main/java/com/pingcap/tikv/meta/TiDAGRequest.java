@@ -209,7 +209,6 @@ public class TiDAGRequest implements Serializable {
   private TiTimestamp startTs;
   private Expression having;
   private boolean distinct;
-  private boolean handleNeeded;
   private boolean isDoubleRead;
   private final PushDownType pushDownType;
   private IdentityHashMap<Expression, DataType> typeMap;
@@ -258,10 +257,11 @@ public class TiDAGRequest implements Serializable {
    * Selection > Aggregation > TopN/Limit a DAGRequest must contain one and only one TableScan or
    * IndexScan.
    *
-   * @param isIndexScan whether the dagRequest to build is an IndexScan
+   * @param buildIndexScan whether the dagRequest to build should be an {@link
+   *     com.pingcap.tidb.tipb.IndexScan}
    * @return final DAGRequest built
    */
-  public DAGRequest buildScan(boolean isIndexScan) {
+  public DAGRequest buildScan(boolean buildIndexScan) {
     long id = tableInfo.getId();
     checkNotNull(startTs, "startTs is null");
     checkArgument(startTs.getVersion() != 0, "timestamp is 0");
@@ -274,7 +274,7 @@ public class TiDAGRequest implements Serializable {
     // find a column's position in index
     Map<TiColumnInfo, Integer> colPosInIndexMap = new HashMap<>();
 
-    if (isIndexScan) {
+    if (buildIndexScan) {
       // IndexScan
       if (indexInfo == null) {
         throw new TiClientInternalException("Index is empty for index scan");
@@ -356,90 +356,74 @@ public class TiDAGRequest implements Serializable {
       executorBuilder.setTp(ExecType.TypeTableScan);
       tblScanBuilder.setTableId(id);
       // Step1. Add columns to first executor
-      int realOffset = 0;
-      for (int i = 0; i < getFields().size(); i++) {
-        ColumnRef col = getFields().get(i);
+      int lastOffset = 0;
+      for (ColumnRef col : getFields()) {
         // can't allow duplicated col added into executor.
         if (!colOffsetInFieldMap.containsKey(col)) {
           tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
-          colOffsetInFieldMap.put(col, realOffset);
-          realOffset++;
+          colOffsetInFieldMap.put(col, lastOffset);
+          lastOffset++;
         }
-
         // column offset should be in accordance with fields
-        dagRequestBuilder.addOutputOffsets(colOffsetInFieldMap.getOrDefault(col, realOffset));
-      }
-
-      // Currently, according to TiKV's implementation, if handle
-      // is needed, we should add an extra column with an ID of -1
-      // to the TableScan executor
-      if (isHandleNeeded()) {
-        tblScanBuilder.addColumns(handleColumn);
-        // if handle is needed, we should append one output offset
-        // duplicated col may exists, we need append the size of current
-        // output offset's size.
-        dagRequestBuilder.addOutputOffsets(dagRequestBuilder.getOutputOffsetsCount());
+        dagRequestBuilder.addOutputOffsets(colOffsetInFieldMap.get(col));
       }
 
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
     }
 
-    if (!isIndexScan || (isIndexScan() && !isDoubleRead())) {
-      // clear executorBuilder
+    // clear executorBuilder
+    executorBuilder.clear();
+
+    // Step2. Add others
+    // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
+    // Or make sure the construction order is below:
+    // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
+    Expression whereExpr = mergeCNFExpressions(getFilters());
+    if (whereExpr != null) {
+      executorBuilder.setTp(ExecType.TypeSelection);
+      dagRequestBuilder.addExecutors(
+          executorBuilder.setSelection(
+              Selection.newBuilder()
+                  .addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))));
       executorBuilder.clear();
+    }
 
-      // Step2. Add others
-      // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
-      // Or make sure the construction order is below:
-      // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
-      Expression whereExpr = mergeCNFExpressions(getFilters());
-      if (whereExpr != null) {
-        executorBuilder.setTp(ExecType.TypeSelection);
-        dagRequestBuilder.addExecutors(
-            executorBuilder.setSelection(
-                Selection.newBuilder()
-                    .addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))));
-        executorBuilder.clear();
-      }
+    if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
+      Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
+      getGroupByItems()
+          .forEach(
+              tiByItem ->
+                  aggregationBuilder.addGroupBy(
+                      ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
+      getAggregates()
+          .forEach(
+              tiExpr ->
+                  aggregationBuilder.addAggFunc(
+                      ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
+      executorBuilder.setTp(ExecType.TypeAggregation);
+      dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
+      executorBuilder.clear();
+    }
 
-      if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
-        Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
-        getGroupByItems()
-            .forEach(
-                tiByItem ->
-                    aggregationBuilder.addGroupBy(
-                        ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
-        getAggregates()
-            .forEach(
-                tiExpr ->
-                    aggregationBuilder.addAggFunc(
-                        ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
-        executorBuilder.setTp(ExecType.TypeAggregation);
-        dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
-        executorBuilder.clear();
-      }
-
-      if (!getOrderByItems().isEmpty()) {
-        TopN.Builder topNBuilder = TopN.newBuilder();
-        getOrderByItems()
-            .forEach(
-                tiByItem ->
-                    topNBuilder.addOrderBy(
-                        com.pingcap.tidb.tipb.ByItem.newBuilder()
-                            .setExpr(
-                                ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
-                            .setDesc(tiByItem.isDesc())));
-        executorBuilder.setTp(ExecType.TypeTopN);
-        topNBuilder.setLimit(getLimit());
-        dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
-        executorBuilder.clear();
-      } else if (getLimit() != 0) {
-        Limit.Builder limitBuilder = Limit.newBuilder();
-        limitBuilder.setLimit(getLimit());
-        executorBuilder.setTp(ExecType.TypeLimit);
-        dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
-        executorBuilder.clear();
-      }
+    if (!getOrderByItems().isEmpty()) {
+      TopN.Builder topNBuilder = TopN.newBuilder();
+      getOrderByItems()
+          .forEach(
+              tiByItem ->
+                  topNBuilder.addOrderBy(
+                      com.pingcap.tidb.tipb.ByItem.newBuilder()
+                          .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
+                          .setDesc(tiByItem.isDesc())));
+      executorBuilder.setTp(ExecType.TypeTopN);
+      topNBuilder.setLimit(getLimit());
+      dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
+      executorBuilder.clear();
+    } else if (getLimit() != 0) {
+      Limit.Builder limitBuilder = Limit.newBuilder();
+      limitBuilder.setLimit(getLimit());
+      executorBuilder.setTp(ExecType.TypeLimit);
+      dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
+      executorBuilder.clear();
     }
 
     DAGRequest request =
@@ -549,7 +533,7 @@ public class TiDAGRequest implements Serializable {
   }
 
   @VisibleForTesting
-  public long getFlags() {
+  long getFlags() {
     return flags;
   }
 
@@ -709,25 +693,8 @@ public class TiDAGRequest implements Serializable {
   }
 
   /**
-   * Returns whether handle is needed.
-   *
-   * @return the boolean
-   */
-  public boolean isHandleNeeded() {
-    return handleNeeded;
-  }
-
-  /**
-   * Sets handle needed.
-   *
-   * @param handleNeeded the handle needed
-   */
-  public void setHandleNeeded(boolean handleNeeded) {
-    this.handleNeeded = handleNeeded;
-  }
-
-  /**
-   * Returns whether needs double read
+   * Returns whether needs to read handle from index first and find its corresponding row. i.e,
+   * "double read"
    *
    * @return boolean
    */
@@ -745,11 +712,20 @@ public class TiDAGRequest implements Serializable {
   }
 
   /**
+   * Returns whether the request is CoveringIndex
+   *
+   * @return boolean
+   */
+  public boolean isCoveringIndexScan() {
+    return hasIndex() && !isDoubleRead();
+  }
+
+  /**
    * Returns whether this request is of indexScanType
    *
    * @return true iff indexInfo is provided, false otherwise
    */
-  public boolean isIndexScan() {
+  public boolean hasIndex() {
     return indexInfo != null;
   }
 
