@@ -53,7 +53,7 @@ public class TiSession implements AutoCloseable {
   public TiSession(TiConfiguration conf) {
     this.conf = conf;
     this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
-    this.regionManager = new RegionManager(this.getPDClient(), this);
+    this.regionManager = new RegionManager(this.getPDClient(), this.cacheInvalidateCallback);
     this.clientBuilder =
         new RegionStoreClient.RegionStoreClientBuilder(
             conf, this.channelFactory, this.regionManager, this);
@@ -61,7 +61,7 @@ public class TiSession implements AutoCloseable {
 
   public TxnKVClient createTxnClient() {
     // Create new Region Manager avoiding thread contentions
-    RegionManager regionMgr = new RegionManager(this.getPDClient(), this);
+    RegionManager regionMgr = new RegionManager(this.getPDClient(), this.cacheInvalidateCallback);
     RegionStoreClient.RegionStoreClientBuilder builder =
         new RegionStoreClient.RegionStoreClientBuilder(conf, this.channelFactory, regionMgr, this);
     return new TxnKVClient(conf, builder, this.getPDClient());
@@ -124,7 +124,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (regionManager == null) {
-          regionManager = new RegionManager(getPDClient(), this);
+          regionManager = new RegionManager(getPDClient(), this.cacheInvalidateCallback);
         }
         res = regionManager;
       }
@@ -189,10 +189,6 @@ public class TiSession implements AutoCloseable {
 
   public static TiSession create(TiConfiguration conf) {
     return new TiSession(conf);
-  }
-
-  public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
-    return cacheInvalidateCallback;
   }
 
   /**

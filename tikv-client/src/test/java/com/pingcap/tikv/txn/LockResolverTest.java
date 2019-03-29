@@ -30,7 +30,6 @@ import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.KVErrorHandler;
-import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
@@ -82,9 +81,8 @@ public class LockResolverTest {
     if (mutations.size() == 0) return true;
 
     for (Mutation m : mutations) {
-      Pair<TiRegion, Store> pair = session.getRegionManager().getRegionStorePairByKey(m.getKey());
-
-      RegionStoreClient client = builder.build(pair.first);
+      TiRegion region = session.getRegionManager().getRegionByKey(m.getKey());
+      RegionStoreClient client = builder.build(region);
 
       Supplier<PrewriteRequest> factory =
           () ->
@@ -93,14 +91,14 @@ public class LockResolverTest {
                   .setPrimaryLock(primary.getKey())
                   .setStartVersion(startTS)
                   .setLockTtl(DefaultTTL)
-                  .setContext(pair.first.getContext())
+                  .setContext(region.getContext())
                   .build();
 
       KVErrorHandler<PrewriteResponse> handler =
           new KVErrorHandler<>(
               session.getRegionManager(),
               client,
-              pair.first,
+              region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
       PrewriteResponse resp =
@@ -258,7 +256,6 @@ public class LockResolverTest {
   }
 
   private RegionStoreClient.RegionStoreClientBuilder builder;
-  private RegionManager regionManager;
 
   @Before
   public void setUp() {
@@ -266,7 +263,6 @@ public class LockResolverTest {
     try {
       session = TiSession.create(conf);
       pdClient = session.getPDClient();
-      this.regionManager = session.getRegionManager();
       this.builder = session.getRegionStoreClientBuilder();
       init = true;
     } catch (Exception e) {

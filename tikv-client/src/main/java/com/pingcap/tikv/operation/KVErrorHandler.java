@@ -53,9 +53,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     this.regionManager = regionManager;
     this.getRegionError = getRegionError;
     this.cacheInvalidateCallBack =
-        regionManager != null && regionManager.getSession() != null
-            ? regionManager.getSession().getCacheInvalidateCallback()
-            : null;
+        regionManager != null ? regionManager.getCacheInvalidateCallback() : null;
   }
 
   private Errorpb.Error getRegionError(RespT resp) {

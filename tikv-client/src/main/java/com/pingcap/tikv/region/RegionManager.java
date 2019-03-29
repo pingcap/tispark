@@ -24,7 +24,7 @@ import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
-import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import org.apache.log4j.Logger;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Store;
@@ -42,15 +43,15 @@ import org.tikv.kvproto.Metapb.StoreState;
 public class RegionManager {
   private static final Logger logger = Logger.getLogger(RegionManager.class);
   private final RegionCache cache;
-  private final ReadOnlyPDClient pdClient;
-  private final TiSession tiSession;
+
+  private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
 
   // To avoid double retrieval, we used the async version of grpc
   // When rpc not returned, instead of call again, it wait for previous one done
-  public RegionManager(ReadOnlyPDClient pdClient, TiSession tiSession) {
+  public RegionManager(
+      ReadOnlyPDClient pdClient, Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
     this.cache = new RegionCache(pdClient);
-    this.pdClient = pdClient;
-    this.tiSession = tiSession;
+    this.cacheInvalidateCallback = cacheInvalidateCallback;
   }
 
   public static class RegionCache {
@@ -166,8 +167,8 @@ public class RegionManager {
     }
   }
 
-  public TiSession getSession() {
-    return this.tiSession;
+  public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
+    return cacheInvalidateCallback;
   }
 
   public TiRegion getRegionByKey(ByteString key) {

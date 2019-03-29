@@ -50,6 +50,7 @@ import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -151,13 +152,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
       GetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
 
-      if (getHelper(backOffer, resp)) {
+      if (getNeedRetry(backOffer, resp)) {
         return resp.getValue();
       }
     }
   }
 
-  private boolean getHelper(BackOffer backOffer, GetResponse resp) {
+  private boolean getNeedRetry(BackOffer backOffer, GetResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("GetResponse failed without a cause");
@@ -204,10 +205,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     RawPutResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_PUT, factory, handler);
-    rawPutHelper(resp);
-  }
-
-  private void rawPutHelper(RawPutResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("RawPutResponse failed without a cause");
@@ -231,10 +228,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     RawGetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_GET, factory, handler);
-    return rawGetHelper(resp);
-  }
-
-  private ByteString rawGetHelper(RawGetResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("RawGetResponse failed without a cause");
@@ -260,10 +253,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     RawDeleteResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_DELETE, factory, handler);
-    rawDeleteHelper(resp, region);
-  }
-
-  private void rawDeleteHelper(RawDeleteResponse resp, TiRegion region) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("RawDeleteResponse failed without a cause");
@@ -294,11 +283,11 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     BatchGetResponse resp =
         callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
-    return batchGetHelper(resp, backOffer);
+    return doBatchGet(resp, backOffer);
   }
 
   // TODO: deal with resolve locks and region errors
-  private List<KvPair> batchGetHelper(BatchGetResponse resp, BackOffer bo) {
+  private List<KvPair> doBatchGet(BatchGetResponse resp, BackOffer bo) {
     List<Lock> locks = new ArrayList<>();
 
     for (KvPair pair : resp.getPairsList()) {
@@ -349,14 +338,14 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
-    return scanHelper(resp, backOffer);
+    return doScan(resp, backOffer);
   }
 
   // TODO: remove helper and change to while style
   // needs to be fixed as batchGet
   // which we shoule retry not throw
   // exception
-  private List<KvPair> scanHelper(ScanResponse resp, BackOffer bo) {
+  private List<KvPair> doScan(ScanResponse resp, BackOffer bo) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("ScanResponse failed without a cause");
@@ -430,13 +419,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       PrewriteResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
-      if (prewriteHelper(bo, resp)) {
+      if (prewriteSuccess(bo, resp)) {
         break;
       }
     }
   }
 
-  private boolean prewriteHelper(BackOffer bo, PrewriteResponse resp) {
+  private boolean prewriteSuccess(BackOffer bo, PrewriteResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("PrewriteResponse failed without a cause");
@@ -450,7 +439,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     for (KeyError err : resp.getErrorsList()) {
       if (err.hasLocked()) {
         Lock lock = new Lock(err.getLocked());
-        boolean ok = lockResolverClient.resolveLocks(bo, new ArrayList<>(Arrays.asList(lock)));
+        boolean ok =
+            lockResolverClient.resolveLocks(bo, new ArrayList<>(Collections.singletonList(lock)));
         if (!ok) {
           bo.doBackOff(BoTxnLockFast, new KeyException((err.getLocked().toString())));
         }
@@ -498,13 +488,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       CommitResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
-      if (commitHelper(backOffer, resp)) {
+      if (commitSuccess(backOffer, resp)) {
         break;
       }
     }
   }
 
-  private boolean commitHelper(BackOffer bo, CommitResponse resp) {
+  private boolean commitSuccess(BackOffer bo, CommitResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("CommitResponse failed without a cause");
@@ -555,7 +545,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       CleanupResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_CLEANUP, factory, handler);
-      if (cleanUpHelper(backOffer, resp)) {
+      if (cleanUpSuccess(backOffer, resp)) {
         return resp.getCommitVersion();
       }
       // we should refresh region
@@ -563,7 +553,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
   }
 
-  private boolean cleanUpHelper(BackOffer bo, CleanupResponse resp) {
+  private boolean cleanUpSuccess(BackOffer bo, CleanupResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("CleanupResponse failed without a cause");
@@ -612,13 +602,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       BatchRollbackResponse resp =
           callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_ROLLBACK, factory, handler);
-      if (batchRollbackHelper(backOffer, resp)) {
+      if (batchRollbackSuccess(backOffer, resp)) {
         break;
       }
     }
   }
 
-  private boolean batchRollbackHelper(BackOffer bo, BatchRollbackResponse resp) {
+  private boolean batchRollbackSuccess(BackOffer bo, BatchRollbackResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("BatchRollbackResponse failed without a cause");
@@ -665,13 +655,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       GCResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_GC, factory, handler);
-      if (gcHelper(bo, resp)) {
+      if (gcSuccess(bo, resp)) {
         break;
       }
     }
   }
 
-  private boolean gcHelper(BackOffer bo, GCResponse resp) {
+  private boolean gcSuccess(BackOffer bo, GCResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("GCResponse failed without a cause");
@@ -721,7 +711,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       ScanLockResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_SCAN_LOCK, factory, handler);
-      if (scanLockHelper(bo, resp)) {
+      if (scanLockSuccess(bo, resp)) {
         return resp.getLocksList();
       }
 
@@ -730,7 +720,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
   }
 
-  private boolean scanLockHelper(BackOffer bo, ScanLockResponse resp) {
+  private boolean scanLockSuccess(BackOffer bo, ScanLockResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("ScanLockResponse failed without a cause");
@@ -826,11 +816,11 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       throw new GrpcException(otherError);
     }
 
-    responseQueue.offer(coprocessorHelper(response));
+    responseQueue.offer(doCoprocessor(response));
     return null;
   }
 
-  private Iterator<SelectResponse> coprocessorHelper(StreamingResponse response) {
+  private Iterator<SelectResponse> doCoprocessor(StreamingResponse response) {
     Iterator<Response> responseIterator = response.iterator();
     // If we got nothing to handle, return null
     if (!responseIterator.hasNext()) {
@@ -846,12 +836,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
       @Override
       public SelectResponse next() {
-        return coprocessorHelper(responseIterator.next());
+        return doCoprocessor(responseIterator.next());
       }
     };
   }
 
-  private SelectResponse coprocessorHelper(Response resp) {
+  private SelectResponse doCoprocessor(Response resp) {
     try {
       SelectResponse selectResp = SelectResponse.parseFrom(resp.getData());
       if (selectResp.hasError()) {
@@ -892,7 +882,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             TikvGrpc.METHOD_COPROCESSOR_STREAM,
             reqToSend,
             handler);
-    return coprocessorHelper(responseIterator);
+    return doCoprocessor(responseIterator);
   }
 
   public static class RegionStoreClientBuilder {
