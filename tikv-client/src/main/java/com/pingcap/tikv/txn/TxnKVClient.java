@@ -20,7 +20,9 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
+import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
+import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
@@ -30,7 +32,6 @@ import com.pingcap.tikv.txn.type.ClientRPCResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import io.grpc.StatusRuntimeException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,10 +97,10 @@ public class TxnKVClient implements AutoCloseable {
     RegionStoreClient client = clientBuilder.build(region);
     try {
       client.prewrite(backOffer, primary, mutations, startTs, lockTTL);
-    } catch (final TiKVException | StatusRuntimeException e) {
+    } catch (Exception e) {
       result.setSuccess(false);
       // mark retryable, region error, should retry prewrite again
-      result.setRetry(e instanceof RegionException);
+      result.setRetry(retrableException(e));
       result.setError(e.getMessage());
     }
     return result;
@@ -128,13 +129,19 @@ public class TxnKVClient implements AutoCloseable {
     }
     try {
       client.commit(backOffer, byteList, startTs, commitTs);
-    } catch (final TiKVException | StatusRuntimeException e) {
+    } catch (Exception e) {
       result.setSuccess(false);
       // mark retryable, region error, should retry prewrite again
-      result.setRetry(e instanceof RegionException);
+      result.setRetry(retrableException(e));
       result.setError(e.getMessage());
     }
     return result;
+  }
+
+  private boolean retrableException(Exception e) {
+    return e instanceof TiClientInternalException
+        || e instanceof KeyException
+        || e instanceof RegionException;
   }
 
   @Override

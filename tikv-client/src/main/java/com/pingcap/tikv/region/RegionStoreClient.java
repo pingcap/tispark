@@ -64,10 +64,6 @@ import org.tikv.kvproto.Coprocessor.Response;
 import org.tikv.kvproto.Errorpb;
 import org.tikv.kvproto.Kvrpcpb.BatchGetRequest;
 import org.tikv.kvproto.Kvrpcpb.BatchGetResponse;
-import org.tikv.kvproto.Kvrpcpb.BatchRollbackRequest;
-import org.tikv.kvproto.Kvrpcpb.BatchRollbackResponse;
-import org.tikv.kvproto.Kvrpcpb.CleanupRequest;
-import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
 import org.tikv.kvproto.Kvrpcpb.CommitRequest;
 import org.tikv.kvproto.Kvrpcpb.CommitResponse;
 import org.tikv.kvproto.Kvrpcpb.GetRequest;
@@ -77,12 +73,6 @@ import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Kvrpcpb.Mutation;
 import org.tikv.kvproto.Kvrpcpb.PrewriteRequest;
 import org.tikv.kvproto.Kvrpcpb.PrewriteResponse;
-import org.tikv.kvproto.Kvrpcpb.RawDeleteRequest;
-import org.tikv.kvproto.Kvrpcpb.RawDeleteResponse;
-import org.tikv.kvproto.Kvrpcpb.RawGetRequest;
-import org.tikv.kvproto.Kvrpcpb.RawGetResponse;
-import org.tikv.kvproto.Kvrpcpb.RawPutRequest;
-import org.tikv.kvproto.Kvrpcpb.RawPutResponse;
 import org.tikv.kvproto.Kvrpcpb.ScanRequest;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
 import org.tikv.kvproto.Metapb.Store;
@@ -124,8 +114,18 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return region;
   }
 
-  // APIs for KV Scan/Put/Get/Delete
-  public ByteString get(BackOffer backOffer, ByteString key, long version) {
+  /**
+   * Fetch a value according to a key
+   *
+   * @param backOffer
+   * @param key
+   * @param version
+   * @return
+   * @throws TiClientInternalException
+   * @throws KeyException
+   */
+  public ByteString get(BackOffer backOffer, ByteString key, long version)
+      throws TiClientInternalException, KeyException {
     while (true) {
       // we should refresh region
       region = regionManager.getRegionByKey(key);
@@ -147,13 +147,32 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
       GetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
 
-      if (getNeedRetry(backOffer, resp)) {
+      if (isGetSuccess(backOffer, resp)) {
         return resp.getValue();
       }
     }
   }
 
-  private boolean getNeedRetry(BackOffer backOffer, GetResponse resp) {
+  /**
+   * return true means the rpc call success
+   *
+   * <p>
+   *
+   * <p>return false means the rpc call fail, RegionStoreClient should retry
+   *
+   * <p>
+   *
+   * <p>throw an Exception means the rpc call fail, RegionStoreClient cannot handle this kind of
+   * error
+   *
+   * @param backOffer
+   * @param resp
+   * @return
+   * @throws TiClientInternalException
+   * @throws KeyException
+   */
+  private boolean isGetSuccess(BackOffer backOffer, GetResponse resp)
+      throws TiClientInternalException, KeyException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("GetResponse failed without a cause");
@@ -182,80 +201,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       }
     }
     return true;
-  }
-
-  public void rawPut(BackOffer backOffer, ByteString key, ByteString value) {
-    Supplier<RawPutRequest> factory =
-        () ->
-            RawPutRequest.newBuilder()
-                .setContext(region.getContext())
-                .setKey(key)
-                .setValue(value)
-                .build();
-
-    KVErrorHandler<RawPutResponse> handler =
-        new KVErrorHandler<>(
-            regionManager,
-            this,
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawPutResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_PUT, factory, handler);
-    if (resp == null) {
-      this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("RawPutResponse failed without a cause");
-    }
-    String error = resp.getError();
-    if (error != null && !error.isEmpty()) {
-      throw new KeyException(resp.getError());
-    }
-  }
-
-  public ByteString rawGet(BackOffer backOffer, ByteString key) {
-    Supplier<RawGetRequest> factory =
-        () -> RawGetRequest.newBuilder().setContext(region.getContext()).setKey(key).build();
-    KVErrorHandler<RawGetResponse> handler =
-        new KVErrorHandler<>(
-            regionManager,
-            this,
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawGetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_GET, factory, handler);
-    if (resp == null) {
-      this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("RawGetResponse failed without a cause");
-    }
-    String error = resp.getError();
-    if (error != null && !error.isEmpty()) {
-      throw new KeyException(resp.getError());
-    }
-    if (resp.hasRegionError()) {
-      throw new RegionException(resp.getRegionError());
-    }
-    return resp.getValue();
-  }
-
-  public void rawDelete(BackOffer backOffer, ByteString key) {
-    Supplier<RawDeleteRequest> factory =
-        () -> RawDeleteRequest.newBuilder().setContext(region.getContext()).setKey(key).build();
-
-    KVErrorHandler<RawDeleteResponse> handler =
-        new KVErrorHandler<>(
-            regionManager,
-            this,
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    RawDeleteResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_RAW_DELETE, factory, handler);
-    if (resp == null) {
-      this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("RawDeleteResponse failed without a cause");
-    }
-    String error = resp.getError();
-    if (error != null && !error.isEmpty()) {
-      throw new KeyException(resp.getError());
-    }
-    if (resp.hasRegionError()) {
-      throw new RegionException(resp.getRegionError());
-    }
   }
 
   // TODO: batch get should consider key range split
@@ -379,12 +324,37 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   /**
    * Prewrite batch keys
    *
+   * @param backOffer
+   * @param primary
+   * @param mutations
+   * @param startTs
+   * @param lockTTL
+   * @throws TiClientInternalException
+   * @throws KeyException
+   * @throws RegionException
+   */
+  public void prewrite(
+      BackOffer backOffer,
+      ByteString primary,
+      Iterable<Mutation> mutations,
+      long startTs,
+      long lockTTL)
+      throws TiClientInternalException, KeyException, RegionException {
+    this.prewrite(backOffer, primary, mutations, startTs, lockTTL, false);
+  }
+
+  /**
+   * Prewrite batch keys
+   *
    * @param bo
    * @param primaryLock
    * @param mutations
    * @param startVersion
    * @param ttl
    * @param skipConstraintCheck
+   * @throws TiClientInternalException
+   * @throws KeyException
+   * @throws RegionException
    */
   public void prewrite(
       BackOffer bo,
@@ -393,7 +363,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       long startVersion,
       long ttl,
       boolean skipConstraintCheck)
-      throws KeyException {
+      throws TiClientInternalException, KeyException, RegionException {
     while (true) {
       Supplier<PrewriteRequest> factory =
           () ->
@@ -412,13 +382,33 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       PrewriteResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
-      if (prewriteSuccess(bo, resp)) {
-        break;
+      if (isPrewriteSuccess(bo, resp)) {
+        return;
       }
     }
   }
 
-  private boolean prewriteSuccess(BackOffer bo, PrewriteResponse resp) throws KeyException {
+  /**
+   * return true means the rpc call success
+   *
+   * <p>
+   *
+   * <p>return false means the rpc call fail, RegionStoreClient should retry
+   *
+   * <p>
+   *
+   * <p>throw an Exception means the rpc call fail, RegionStoreClient cannot handle this kind of
+   * error
+   *
+   * @param backOffer
+   * @param resp
+   * @return
+   * @throws TiClientInternalException
+   * @throws RegionException
+   * @throws KeyException
+   */
+  private boolean isPrewriteSuccess(BackOffer backOffer, PrewriteResponse resp)
+      throws TiClientInternalException, KeyException, RegionException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("PrewriteResponse failed without a cause");
@@ -433,9 +423,10 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       if (err.hasLocked()) {
         Lock lock = new Lock(err.getLocked());
         boolean ok =
-            lockResolverClient.resolveLocks(bo, new ArrayList<>(Collections.singletonList(lock)));
+            lockResolverClient.resolveLocks(
+                backOffer, new ArrayList<>(Collections.singletonList(lock)));
         if (!ok) {
-          bo.doBackOff(BoTxnLockFast, new KeyException((err.getLocked().toString())));
+          backOffer.doBackOff(BoTxnLockFast, new KeyException((err.getLocked().toString())));
         }
         // retry prewrite directly in current method
         return false;
@@ -444,16 +435,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       }
     }
     return true;
-  }
-
-  public void prewrite(
-      BackOffer backOffer,
-      ByteString primary,
-      Iterable<Mutation> mutations,
-      long startTs,
-      long lockTTL)
-      throws KeyException {
-    this.prewrite(backOffer, primary, mutations, startTs, lockTTL, false);
   }
 
   /**
@@ -483,13 +464,33 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       CommitResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
-      if (commitSuccess(backOffer, resp)) {
+      if (isCommitSuccess(backOffer, resp)) {
         break;
       }
     }
   }
 
-  private boolean commitSuccess(BackOffer bo, CommitResponse resp) throws KeyException {
+  /**
+   * return true means the rpc call success
+   *
+   * <p>
+   *
+   * <p>return false means the rpc call fail, RegionStoreClient should retry
+   *
+   * <p>
+   *
+   * <p>throw an Exception means the rpc call fail, RegionStoreClient cannot handle this kind of
+   * error
+   *
+   * @param backOffer
+   * @param resp
+   * @return
+   * @throws TiClientInternalException
+   * @throws RegionException
+   * @throws KeyException
+   */
+  private boolean isCommitSuccess(BackOffer backOffer, CommitResponse resp)
+      throws TiClientInternalException, RegionException, KeyException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("CommitResponse failed without a cause");
@@ -504,122 +505,11 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     if (resp.hasError()) {
       if (resp.getError().hasLocked()) {
         Lock lock = new Lock(resp.getError().getLocked());
-        boolean ok = lockResolverClient.resolveLocks(bo, new ArrayList<>(Arrays.asList(lock)));
+        boolean ok =
+            lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
         if (!ok) {
-          bo.doBackOff(BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
-        }
-        return false;
-      } else {
-        throw new KeyException(resp.getError());
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Clean up the uncommitted kv data with the specified key which version equals to startTs
-   *
-   * @param backOffer
-   * @param key
-   * @param startTs
-   * @return
-   */
-  public long cleanup(BackOffer backOffer, ByteString key, long startTs) {
-    while (true) {
-      Supplier<CleanupRequest> factory =
-          () ->
-              CleanupRequest.newBuilder()
-                  .setContext(region.getContext())
-                  .setKey(key)
-                  .setStartVersion(startTs)
-                  .build();
-      KVErrorHandler<CleanupResponse> handler =
-          new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-      CleanupResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_CLEANUP, factory, handler);
-      if (cleanUpSuccess(backOffer, resp)) {
-        return resp.getCommitVersion();
-      }
-      // we should refresh region
-      region = regionManager.getRegionByKey(key);
-    }
-  }
-
-  private boolean cleanUpSuccess(BackOffer bo, CleanupResponse resp) {
-    if (resp == null) {
-      this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("CleanupResponse failed without a cause");
-    }
-    if (resp.hasRegionError()) {
-      bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
-      return false;
-    }
-    if (resp.hasError()) {
-      if (resp.getError().hasLocked()) {
-        Lock lock = new Lock(resp.getError().getLocked());
-        boolean ok = lockResolverClient.resolveLocks(bo, new ArrayList<>(Arrays.asList(lock)));
-        if (!ok) {
-          bo.doBackOff(BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
-        }
-        return false;
-      } else {
-        throw new KeyException(resp.getError());
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Batch roll back, clean up the lock information of the related key list with version equals to
-   * startVersion
-   *
-   * @param backOffer
-   * @param keys
-   * @param startVersion
-   */
-  public void batchRollback(BackOffer backOffer, Iterable<ByteString> keys, long startVersion) {
-    while (true) {
-      Supplier<BatchRollbackRequest> factory =
-          () ->
-              BatchRollbackRequest.newBuilder()
-                  .setStartVersion(startVersion)
-                  .setContext(region.getContext())
-                  .addAllKeys(keys)
-                  .build();
-      KVErrorHandler<BatchRollbackResponse> handler =
-          new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-      BatchRollbackResponse resp =
-          callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_ROLLBACK, factory, handler);
-      if (batchRollbackSuccess(backOffer, resp)) {
-        break;
-      }
-    }
-  }
-
-  private boolean batchRollbackSuccess(BackOffer bo, BatchRollbackResponse resp) {
-    if (resp == null) {
-      this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("BatchRollbackResponse failed without a cause");
-    }
-    if (resp.hasRegionError()) {
-      // bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
-      // return false;
-      // Caller method should restart rollback
-      throw new RegionException(resp.getRegionError());
-    }
-    if (resp.hasError()) {
-      if (resp.getError().hasLocked()) {
-        Lock lock = new Lock(resp.getError().getLocked());
-        boolean ok = lockResolverClient.resolveLocks(bo, new ArrayList<>(Arrays.asList(lock)));
-        if (!ok) {
-          bo.doBackOff(BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
+          backOffer.doBackOff(
+              BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
         }
         return false;
       } else {
