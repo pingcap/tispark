@@ -217,7 +217,7 @@ public class ScanAnalyzer {
     return tableInfo.getPartitionInfo();
   }
 
-  public Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
+  private Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
     Key startKey;
     Key endKey;
     if (ir.hasAccessKey()) {

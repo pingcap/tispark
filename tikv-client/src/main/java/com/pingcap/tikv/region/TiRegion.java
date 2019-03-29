@@ -29,6 +29,7 @@ import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Region;
 import com.pingcap.tikv.util.FastByteComparisons;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -86,15 +87,16 @@ public class TiRegion implements Serializable {
     return peer;
   }
 
-  public Peer getLearner() {
+  public List<Peer> getLearner() {
     int peerCnt = getMeta().getPeersCount();
+    List<Peer> peers = new ArrayList<Peer>();
     for (int i = 0; i < peerCnt; i++) {
       Peer peer = getMeta().getPeers(i);
       if (peer.getIsLearner()) {
-        return peer;
+        peers.add(peer);
       }
     }
-    return null;
+    return peers;
   }
 
   public long getId() {
