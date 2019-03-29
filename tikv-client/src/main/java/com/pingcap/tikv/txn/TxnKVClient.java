@@ -20,7 +20,6 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.meta.TiTimestamp;
@@ -129,7 +128,7 @@ public class TxnKVClient implements AutoCloseable {
     }
     try {
       client.commit(backOffer, byteList, startTs, commitTs);
-    } catch (final TiKVException | StatusRuntimeException | KeyException e) {
+    } catch (final TiKVException | StatusRuntimeException e) {
       result.setSuccess(false);
       // mark retryable, region error, should retry prewrite again
       result.setRetry(e instanceof RegionException);

@@ -400,7 +400,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       Iterable<Mutation> mutations,
       long startVersion,
       long ttl,
-      boolean skipConstraintCheck) {
+      boolean skipConstraintCheck)
+      throws KeyException {
     while (true) {
       Supplier<PrewriteRequest> factory =
           () ->
@@ -425,7 +426,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
   }
 
-  private boolean prewriteSuccess(BackOffer bo, PrewriteResponse resp) {
+  private boolean prewriteSuccess(BackOffer bo, PrewriteResponse resp) throws KeyException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("PrewriteResponse failed without a cause");
@@ -458,7 +459,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       ByteString primary,
       Iterable<Mutation> mutations,
       long startTs,
-      long lockTTL) {
+      long lockTTL)
+      throws KeyException {
     this.prewrite(backOffer, primary, mutations, startTs, lockTTL, false);
   }
 
@@ -471,7 +473,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
    * @param commitVersion
    */
   public void commit(
-      BackOffer backOffer, Iterable<ByteString> keys, long startVersion, long commitVersion) {
+      BackOffer backOffer, Iterable<ByteString> keys, long startVersion, long commitVersion)
+      throws KeyException {
     while (true) {
       Supplier<CommitRequest> factory =
           () ->
@@ -494,7 +497,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
   }
 
-  private boolean commitSuccess(BackOffer bo, CommitResponse resp) {
+  private boolean commitSuccess(BackOffer bo, CommitResponse resp) throws KeyException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("CommitResponse failed without a cause");

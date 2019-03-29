@@ -17,7 +17,10 @@ package com.pingcap.tikv.exception;
 
 import org.tikv.kvproto.Kvrpcpb;
 
-public class KeyException extends RuntimeException {
+public class KeyException extends TiKVException {
+
+  private static final long serialVersionUID = 6649195220216182286L;
+
   private final Kvrpcpb.KeyError keyErr;
 
   public KeyException(String errMsg) {
@@ -26,6 +29,7 @@ public class KeyException extends RuntimeException {
   }
 
   public KeyException(Kvrpcpb.KeyError keyErr) {
+    super("Key exception occurred");
     this.keyErr = keyErr;
   }
 
