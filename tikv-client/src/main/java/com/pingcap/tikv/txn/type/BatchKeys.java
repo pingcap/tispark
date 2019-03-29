@@ -15,18 +15,19 @@
 
 package com.pingcap.tikv.txn.type;
 
+import com.google.protobuf.ByteString;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class BatchKeys {
-  private List<byte[]> keys;
+  private List<ByteString> keys;
 
   private Long regioId;
 
   public BatchKeys() {}
 
-  public BatchKeys(Long regioId, List<byte[]> keysInput) {
+  public BatchKeys(Long regioId, List<ByteString> keysInput) {
     Objects.nonNull(regioId);
     Objects.nonNull(keysInput);
     this.regioId = regioId;
@@ -34,11 +35,11 @@ public class BatchKeys {
     this.keys.addAll(keysInput);
   }
 
-  public List<byte[]> getKeys() {
+  public List<ByteString> getKeys() {
     return keys;
   }
 
-  public void setKeys(List<byte[]> keys) {
+  public void setKeys(List<ByteString> keys) {
     this.keys = keys;
   }
 
@@ -48,11 +49,5 @@ public class BatchKeys {
 
   public void setRegioId(Long regioId) {
     this.regioId = regioId;
-  }
-
-  public byte[][] getKeysArray() {
-    byte[][] result = new byte[keys.size()][];
-    keys.toArray(result);
-    return result;
   }
 }

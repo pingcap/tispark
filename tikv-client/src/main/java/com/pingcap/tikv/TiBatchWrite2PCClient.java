@@ -26,6 +26,7 @@ import com.pingcap.tikv.txn.type.ClientRPCResult;
 import com.pingcap.tikv.txn.type.GroupKeyResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -126,20 +127,17 @@ public class TiBatchWrite2PCClient {
    */
   public void prewritePrimaryKey(BackOffer backOffer, byte[] primaryKey, byte[] value)
       throws TiBatchWriteException {
-    this.doPrewritePrimaryKey(backOffer, primaryKey, value);
+    this.doPrewritePrimaryKey(
+        backOffer, ByteString.copyFrom(primaryKey), ByteString.copyFrom(value));
   }
 
-  private void doPrewritePrimaryKey(BackOffer backOffer, byte[] key, byte[] value)
+  private void doPrewritePrimaryKey(BackOffer backOffer, ByteString key, ByteString value)
       throws TiBatchWriteException {
-    TiRegion tiRegion = this.regionManager.getRegionByKey(ByteString.copyFrom(key));
-    BatchKeys batchKeys = new BatchKeys(tiRegion.getId(), Arrays.asList(value));
+    TiRegion tiRegion = this.regionManager.getRegionByKey(key);
+    BatchKeys batchKeys = new BatchKeys(tiRegion.getId(), Collections.singletonList(value));
 
     Kvrpcpb.Mutation mutation =
-        Kvrpcpb.Mutation.newBuilder()
-            .setKey(ByteString.copyFrom(key))
-            .setValue(ByteString.copyFrom(value))
-            .setOp(Kvrpcpb.Op.Put)
-            .build();
+        Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
     List<Kvrpcpb.Mutation> mutationList = Collections.singletonList(mutation);
 
     // send rpc request to tikv server
@@ -182,14 +180,14 @@ public class TiBatchWrite2PCClient {
    */
   public void commitPrimaryKey(BackOffer backOffer, byte[] key, long commitTs)
       throws TiBatchWriteException {
-    doCommitPrimaryKey(backOffer, key, commitTs);
+    doCommitPrimaryKey(backOffer, ByteString.copyFrom(key), commitTs);
   }
 
-  private void doCommitPrimaryKey(BackOffer backOffer, byte[] key, long commitTs)
+  private void doCommitPrimaryKey(BackOffer backOffer, ByteString key, long commitTs)
       throws TiBatchWriteException {
-    TiRegion tiRegion = this.regionManager.getRegionByKey(ByteString.copyFrom(key));
+    TiRegion tiRegion = this.regionManager.getRegionByKey(key);
     long regionId = tiRegion.getId();
-    byte[][] keys = new byte[][] {key};
+    ByteString[] keys = new ByteString[] {key};
 
     // send rpc request to tikv server
     ClientRPCResult commitResult =
@@ -237,20 +235,36 @@ public class TiBatchWrite2PCClient {
   public void prewriteSecondaryKeys(
       BackOffer backOffer, byte[] primaryKey, Iterator<BytePairWrapper> pairs)
       throws TiBatchWriteException {
-    doPrewriteSecondaryKeys(backOffer, primaryKey, pairs);
+    Iterator<Pair<ByteString, ByteString>> byteStringKeys =
+        new Iterator<Pair<ByteString, ByteString>>() {
+
+          @Override
+          public boolean hasNext() {
+            return pairs.hasNext();
+          }
+
+          @Override
+          public Pair<ByteString, ByteString> next() {
+            BytePairWrapper pair = pairs.next();
+            return new Pair<>(
+                ByteString.copyFrom(pair.getKey()), ByteString.copyFrom(pair.getValue()));
+          }
+        };
+
+    doPrewriteSecondaryKeys(backOffer, ByteString.copyFrom(primaryKey), byteStringKeys);
   }
 
   private void doPrewriteSecondaryKeys(
-      BackOffer backOffer, byte[] primaryKey, Iterator<BytePairWrapper> pairs)
+      BackOffer backOffer, ByteString primaryKey, Iterator<Pair<ByteString, ByteString>> pairs)
       throws TiBatchWriteException {
     while (pairs.hasNext()) {
-      byte[][] keyBytes = new byte[WRITE_BUFFER_SIZE][];
-      byte[][] valueBytes = new byte[WRITE_BUFFER_SIZE][];
+      ByteString[] keyBytes = new ByteString[WRITE_BUFFER_SIZE];
+      ByteString[] valueBytes = new ByteString[WRITE_BUFFER_SIZE];
       int size = 0;
       while (size < WRITE_BUFFER_SIZE && pairs.hasNext()) {
-        BytePairWrapper pair = pairs.next();
-        keyBytes[size] = pair.key;
-        valueBytes[size] = pair.value;
+        Pair<ByteString, ByteString> pair = pairs.next();
+        keyBytes[size] = pair.first;
+        valueBytes[size] = pair.second;
         size++;
       }
       doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
@@ -261,26 +275,22 @@ public class TiBatchWrite2PCClient {
   }
 
   private void doPrewriteSecondaryKeys(
-      BackOffer backOffer, byte[] primaryKey, byte[][] keys, byte[][] values, int size)
+      BackOffer backOffer, ByteString primaryKey, ByteString[] keys, ByteString[] values, int size)
       throws TiBatchWriteException {
     if (keys == null || keys.length == 0 || values == null || values.length == 0 || size <= 0) {
       // return success
       return;
     }
 
-    Map<ByteWrapper, Kvrpcpb.Mutation> mutations = new LinkedHashMap<>();
+    Map<ByteString, Kvrpcpb.Mutation> mutations = new LinkedHashMap<>();
     for (int i = 0; i < size; i++) {
-      byte[] key = keys[i];
-      byte[] value = values[i];
+      ByteString key = keys[i];
+      ByteString value = values[i];
 
-      if (value.length > 0) {
+      if (!value.isEmpty()) {
         Kvrpcpb.Mutation mutation =
-            Kvrpcpb.Mutation.newBuilder()
-                .setKey(ByteString.copyFrom(key))
-                .setValue(ByteString.copyFrom(value))
-                .setOp(Kvrpcpb.Op.Put)
-                .build();
-        mutations.put(new ByteWrapper(key), mutation);
+            Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
+        mutations.put(key, mutation);
       }
     }
 
@@ -292,7 +302,7 @@ public class TiBatchWrite2PCClient {
 
     boolean sizeKeyValue = true;
     List<BatchKeys> batchKeyList = new LinkedList<>();
-    Map<Long, List<byte[]>> groupKeyMap = groupResult.getGroupsResult();
+    Map<Long, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
     for (Long regionId : groupKeyMap.keySet()) {
       this.appendBatchBySize(
           batchKeyList,
@@ -314,15 +324,15 @@ public class TiBatchWrite2PCClient {
 
   private void doPrewriteSecondaryKeySingleBatch(
       BackOffer backOffer,
-      byte[] primaryKey,
+      ByteString primaryKey,
       BatchKeys batchKeys,
-      Map<ByteWrapper, Kvrpcpb.Mutation> mutations)
+      Map<ByteString, Kvrpcpb.Mutation> mutations)
       throws TiBatchWriteException {
-    List<byte[]> keyList = batchKeys.getKeys();
+    List<ByteString> keyList = batchKeys.getKeys();
     int batchSize = keyList.size();
     List<Kvrpcpb.Mutation> mutationList = new ArrayList<>(batchSize);
-    for (byte[] key : keyList) {
-      mutationList.add(mutations.get(new ByteWrapper(key)));
+    for (ByteString key : keyList) {
+      mutationList.add(mutations.get(key));
     }
     // send rpc request to tikv server
     long regionId = batchKeys.getRegioId();
@@ -344,12 +354,12 @@ public class TiBatchWrite2PCClient {
                     batchKeys.getRegioId(), prewriteResult.getError())));
         // re-split keys and commit again.
         int size = batchKeys.getKeys().size();
-        byte[][] keyBytes = new byte[size][];
-        byte[][] valueBytes = new byte[size][];
+        ByteString[] keyBytes = new ByteString[size];
+        ByteString[] valueBytes = new ByteString[size];
         int i = 0;
-        for (byte[] k : batchKeys.getKeys()) {
+        for (ByteString k : batchKeys.getKeys()) {
           keyBytes[i] = k;
-          valueBytes[i] = mutations.get(new ByteWrapper(k)).getValue().toByteArray();
+          valueBytes[i] = mutations.get(k).getValue();
           i++;
         }
         doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
@@ -370,10 +380,10 @@ public class TiBatchWrite2PCClient {
   private void appendBatchBySize(
       List<BatchKeys> batchKeyList,
       Long regionId,
-      List<byte[]> keys,
+      List<ByteString> keys,
       boolean sizeKeyValue,
       int limit,
-      Map<ByteWrapper, Kvrpcpb.Mutation> mutations) {
+      Map<ByteString, Kvrpcpb.Mutation> mutations) {
     int start;
     int end;
     int len = keys.size();
@@ -391,9 +401,9 @@ public class TiBatchWrite2PCClient {
     }
   }
 
-  private long keyValueSize(byte[] key, Map<ByteWrapper, Kvrpcpb.Mutation> mutations) {
-    long size = key.length;
-    Kvrpcpb.Mutation mutation = mutations.get(new ByteWrapper(key));
+  private long keyValueSize(ByteString key, Map<ByteString, Kvrpcpb.Mutation> mutations) {
+    long size = key.size();
+    Kvrpcpb.Mutation mutation = mutations.get(key);
     if (mutation != null) {
       size += mutation.getValue().toByteArray().length;
     }
@@ -401,8 +411,8 @@ public class TiBatchWrite2PCClient {
     return size;
   }
 
-  private long keySize(byte[] key) {
-    return key.length;
+  private long keySize(ByteString key) {
+    return key.size();
   }
 
   /**
@@ -414,17 +424,32 @@ public class TiBatchWrite2PCClient {
    */
   public void commitSecondaryKeys(BackOffer backOffer, Iterator<ByteWrapper> keys, long commitTs)
       throws TiBatchWriteException {
-    doCommitSecondaryKeys(backOffer, keys, commitTs);
+
+    Iterator<ByteString> byteStringKeys =
+        new Iterator<ByteString>() {
+
+          @Override
+          public boolean hasNext() {
+            return keys.hasNext();
+          }
+
+          @Override
+          public ByteString next() {
+            return ByteString.copyFrom(keys.next().bytes);
+          }
+        };
+
+    doCommitSecondaryKeys(backOffer, byteStringKeys, commitTs);
   }
 
-  private void doCommitSecondaryKeys(BackOffer backOffer, Iterator<ByteWrapper> keys, long commitTs)
+  private void doCommitSecondaryKeys(BackOffer backOffer, Iterator<ByteString> keys, long commitTs)
       throws TiBatchWriteException {
     while (keys.hasNext()) {
-      byte[][] keyBytes = new byte[WRITE_BUFFER_SIZE][];
+      ByteString[] keyBytes = new ByteString[WRITE_BUFFER_SIZE];
       int size = 0;
       for (int i = 0; i < WRITE_BUFFER_SIZE; i++) {
         if (keys.hasNext()) {
-          keyBytes[size] = keys.next().bytes;
+          keyBytes[size] = keys.next();
           size++;
         } else {
           break;
@@ -434,7 +459,8 @@ public class TiBatchWrite2PCClient {
     }
   }
 
-  private void doCommitSecondaryKeys(BackOffer backOffer, byte[][] keys, int size, long commitTs)
+  private void doCommitSecondaryKeys(
+      BackOffer backOffer, ByteString[] keys, int size, long commitTs)
       throws TiBatchWriteException {
     if (keys == null || keys.length == 0 || size <= 0) {
       return;
@@ -449,7 +475,7 @@ public class TiBatchWrite2PCClient {
 
     boolean sizeKeyValue = false;
     List<BatchKeys> batchKeyList = new LinkedList<>();
-    Map<Long, List<byte[]>> groupKeyMap = groupResult.getGroupsResult();
+    Map<Long, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
     for (Long regionId : groupKeyMap.keySet()) {
       this.appendBatchBySize(
           batchKeyList,
@@ -469,8 +495,8 @@ public class TiBatchWrite2PCClient {
 
   private void doCommitSecondaryKeySingleBatch(
       BackOffer backOffer, BatchKeys batchKeys, long commitTs) throws TiBatchWriteException {
-    List<byte[]> keysCommit = batchKeys.getKeys();
-    byte[][] keys = new byte[keysCommit.size()][];
+    List<ByteString> keysCommit = batchKeys.getKeys();
+    ByteString[] keys = new ByteString[keysCommit.size()];
     keysCommit.toArray(keys);
     // send rpc request to tikv server
     long regionId = batchKeys.getRegioId();
@@ -488,15 +514,15 @@ public class TiBatchWrite2PCClient {
     return;
   }
 
-  private GroupKeyResult groupKeysByRegion(BackOffer backOffer, byte[][] keys, int size) {
-    Map<Long, List<byte[]>> groups = new HashMap<>();
+  private GroupKeyResult groupKeysByRegion(BackOffer backOffer, ByteString[] keys, int size) {
+    Map<Long, List<ByteString>> groups = new HashMap<>();
     long first = 0;
     int index = 0;
     String error = null;
     try {
       for (; index < size; index++) {
-        byte[] key = keys[index];
-        TiRegion tiRegion = this.regionManager.getRegionByKey(ByteString.copyFrom(key));
+        ByteString key = keys[index];
+        TiRegion tiRegion = this.regionManager.getRegionByKey(key);
         if (tiRegion != null) {
           Long regionId = tiRegion.getId();
           if (index == 0) {

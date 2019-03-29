@@ -86,7 +86,7 @@ public class TxnKVClient implements AutoCloseable {
   public ClientRPCResult prewrite(
       BackOffer backOffer,
       List<Kvrpcpb.Mutation> mutations,
-      byte[] primary,
+      ByteString primary,
       long lockTTL,
       long startTs,
       long regionId) {
@@ -95,7 +95,7 @@ public class TxnKVClient implements AutoCloseable {
     TiRegion region = regionManager.getRegionById(regionId);
     RegionStoreClient client = clientBuilder.build(region);
     try {
-      client.prewrite(backOffer, ByteString.copyFrom(primary), mutations, startTs, lockTTL);
+      client.prewrite(backOffer, primary, mutations, startTs, lockTTL);
     } catch (final TiKVException | StatusRuntimeException e) {
       result.setSuccess(false);
       // mark retryable, region error, should retry prewrite again
@@ -117,14 +117,14 @@ public class TxnKVClient implements AutoCloseable {
    * @return
    */
   public ClientRPCResult commit(
-      BackOffer backOffer, byte[][] keys, long startTs, long commitTs, long regionId) {
+      BackOffer backOffer, ByteString[] keys, long startTs, long commitTs, long regionId) {
     ClientRPCResult result = new ClientRPCResult(true, false, null);
     // send request
     TiRegion region = regionManager.getRegionById(regionId);
     RegionStoreClient client = clientBuilder.build(region);
     List<ByteString> byteList = Lists.newArrayList();
-    for (byte[] key : keys) {
-      byteList.add(ByteString.copyFrom(key));
+    for (ByteString key : keys) {
+      byteList.add(key);
     }
     try {
       client.commit(backOffer, byteList, startTs, commitTs);

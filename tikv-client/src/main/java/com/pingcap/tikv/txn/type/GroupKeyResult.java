@@ -15,13 +15,14 @@
 
 package com.pingcap.tikv.txn.type;
 
+import com.google.protobuf.ByteString;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class GroupKeyResult extends BaseResult {
 
-  private Map<Long, List<byte[]>> groupsResult;
+  private Map<Long, List<ByteString>> groupsResult;
 
   private Long firstRegion;
 
@@ -29,11 +30,11 @@ public class GroupKeyResult extends BaseResult {
     this.groupsResult = new HashMap<>();
   }
 
-  public Map<Long, List<byte[]>> getGroupsResult() {
+  public Map<Long, List<ByteString>> getGroupsResult() {
     return groupsResult;
   }
 
-  public void setGroupsResult(Map<Long, List<byte[]>> groupsResult) {
+  public void setGroupsResult(Map<Long, List<ByteString>> groupsResult) {
     this.groupsResult = groupsResult;
   }
 
