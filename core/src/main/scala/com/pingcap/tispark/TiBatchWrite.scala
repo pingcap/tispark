@@ -202,15 +202,11 @@ object TiBatchWrite {
   }
 
   private def tiKVRow2Key(row: TiRow, tableId: Long, tiTableInfo: TiTableInfo): SerializableKey = {
+    import scala.collection.JavaConverters._
     val handle = if (tiTableInfo.isPkHandle) {
-      var pos = 0
-      val columnList = tiTableInfo.getColumns
-      for (i <- 0 until columnList.size()) {
-        if (columnList.get(i).isPrimaryKey) {
-          pos = i
-        }
-      }
-      row.getLong(pos)
+      val columnList = tiTableInfo.getColumns.asScala
+      val primaryColumn = columnList.find(_.isPrimaryKey).get
+      row.getLong(primaryColumn.getOffset)
     } else {
       // TODO: auto generate a primary key if does not exists
       // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
@@ -244,6 +240,8 @@ object TiBatchWrite {
       throw new TiBatchWriteException(s"col size $colSize != table column size $tableColSize")
     }
 
+    // TODO: ddl state change
+    // pending: https://internal.pingcap.net/jira/browse/TISPARK-82
     val values = new Array[AnyRef](colSize)
     for (i <- 0 until colSize) {
       values.update(i, tiRow.get(i, colDataTypes(i)))

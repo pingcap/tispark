@@ -126,13 +126,11 @@ public class TiBatchWrite2PCClient {
    */
   public void prewritePrimaryKey(BackOffer backOffer, byte[] primaryKey, byte[] value)
       throws TiBatchWriteException {
-    String error = this.doPrewritePrimaryKey(backOffer, primaryKey, value);
-    if (error != null) {
-      throw new TiBatchWriteException("prewrite primary key error: " + error);
-    }
+    this.doPrewritePrimaryKey(backOffer, primaryKey, value);
   }
 
-  private String doPrewritePrimaryKey(BackOffer backOffer, byte[] key, byte[] value) {
+  private void doPrewritePrimaryKey(BackOffer backOffer, byte[] key, byte[] value)
+      throws TiBatchWriteException {
     TiRegion tiRegion = this.regionManager.getRegionByKey(ByteString.copyFrom(key));
     BatchKeys batchKeys = new BatchKeys(tiRegion.getId(), Arrays.asList(value));
 
@@ -150,7 +148,7 @@ public class TiBatchWrite2PCClient {
     ClientRPCResult prewriteResult =
         this.kvClient.prewrite(backOffer, mutationList, key, lockTTL, this.startTs, regionId);
     if (!prewriteResult.isSuccess() && !prewriteResult.isRetry()) {
-      return prewriteResult.getError();
+      throw new TiBatchWriteException("prewrite primary key error: " + prewriteResult.getError());
     }
     if (prewriteResult.isRetry()) {
       try {
@@ -161,18 +159,18 @@ public class TiBatchWrite2PCClient {
                     "Txn prewrite primary key failed, regionId=%s, detail=%s",
                     batchKeys.getRegioId(), prewriteResult.getError())));
         // re-split keys and commit again.
-        return this.doPrewritePrimaryKey(backOffer, key, value);
+        this.doPrewritePrimaryKey(backOffer, key, value);
       } catch (GrpcException e) {
         String error =
             String.format(
                 "Txn prewrite primary key error, re-split commit failed, regionId=%s, detail=%s",
                 batchKeys.getRegioId(), e.getMessage());
         LOG.error(error);
-        return error;
+        throw new TiBatchWriteException("prewrite primary key error", e);
       }
     }
     // success return
-    return null;
+    return;
   }
 
   /**
@@ -184,13 +182,11 @@ public class TiBatchWrite2PCClient {
    */
   public void commitPrimaryKey(BackOffer backOffer, byte[] key, long commitTs)
       throws TiBatchWriteException {
-    String error = doCommitPrimaryKey(backOffer, key, commitTs);
-    if (error != null) {
-      throw new TiBatchWriteException("commit primary key error: " + error);
-    }
+    doCommitPrimaryKey(backOffer, key, commitTs);
   }
 
-  private String doCommitPrimaryKey(BackOffer backOffer, byte[] key, long commitTs) {
+  private void doCommitPrimaryKey(BackOffer backOffer, byte[] key, long commitTs)
+      throws TiBatchWriteException {
     TiRegion tiRegion = this.regionManager.getRegionByKey(ByteString.copyFrom(key));
     long regionId = tiRegion.getId();
     byte[][] keys = new byte[][] {key};
@@ -199,9 +195,7 @@ public class TiBatchWrite2PCClient {
     ClientRPCResult commitResult =
         this.kvClient.commit(backOffer, keys, this.startTs, commitTs, regionId);
     if (!commitResult.isSuccess() && !commitResult.isRetry()) {
-      String error = String.format("Txn commit primary key error, regionId=%s", regionId);
-      LOG.error(error);
-      return error;
+      throw new TiBatchWriteException("commit primary key error: " + commitResult.getError());
     }
     if (commitResult.isRetry()) {
       try {
@@ -210,17 +204,13 @@ public class TiBatchWrite2PCClient {
             new GrpcException(
                 String.format("Txn commit primary key failed, regionId=%s", regionId)));
         // re-split keys and commit again.
-        String error = this.doCommitPrimaryKey(backOffer, key, commitTs);
-        if (error != null) {
-          LOG.error(error);
-          return error;
-        }
+        this.doCommitPrimaryKey(backOffer, key, commitTs);
       } catch (GrpcException e) {
         String error =
             String.format(
                 "Txn commit primary key error, re-split commit failed, regionId=%s", regionId);
         LOG.error(error);
-        return error;
+        throw new TiBatchWriteException("commit primary key error" + e);
       }
     }
     if (!commitResult.isSuccess()) {
@@ -229,9 +219,11 @@ public class TiBatchWrite2PCClient {
               "Txn commit primary key error, regionId=%s, detail=%s",
               regionId, commitResult.getError());
       LOG.error(error);
-      return error;
+      throw new TiBatchWriteException("commit primary key error: " + commitResult.getError());
     }
-    return null;
+
+    // return success
+    return;
   }
 
   /**
@@ -245,14 +237,12 @@ public class TiBatchWrite2PCClient {
   public void prewriteSecondaryKeys(
       BackOffer backOffer, byte[] primaryKey, Iterator<BytePairWrapper> pairs)
       throws TiBatchWriteException {
-    String error = doPrewriteSecondaryKeys(backOffer, primaryKey, pairs);
-    if (error != null) {
-      throw new TiBatchWriteException("prewrite secondary key error: " + error);
-    }
+    doPrewriteSecondaryKeys(backOffer, primaryKey, pairs);
   }
 
-  private String doPrewriteSecondaryKeys(
-      BackOffer backOffer, byte[] primaryKey, Iterator<BytePairWrapper> pairs) {
+  private void doPrewriteSecondaryKeys(
+      BackOffer backOffer, byte[] primaryKey, Iterator<BytePairWrapper> pairs)
+      throws TiBatchWriteException {
     while (pairs.hasNext()) {
       byte[][] keyBytes = new byte[WRITE_BUFFER_SIZE][];
       byte[][] valueBytes = new byte[WRITE_BUFFER_SIZE][];
@@ -263,18 +253,19 @@ public class TiBatchWrite2PCClient {
         valueBytes[size] = pair.value;
         size++;
       }
-      String error = doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
-      if (error != null) {
-        return error;
-      }
+      doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
     }
-    return null;
+
+    // return success
+    return;
   }
 
-  private String doPrewriteSecondaryKeys(
-      BackOffer backOffer, byte[] primaryKey, byte[][] keys, byte[][] values, int size) {
+  private void doPrewriteSecondaryKeys(
+      BackOffer backOffer, byte[] primaryKey, byte[][] keys, byte[][] values, int size)
+      throws TiBatchWriteException {
     if (keys == null || keys.length == 0 || values == null || values.length == 0 || size <= 0) {
-      return null;
+      // return success
+      return;
     }
 
     Map<ByteWrapper, Kvrpcpb.Mutation> mutations = new LinkedHashMap<>();
@@ -296,7 +287,7 @@ public class TiBatchWrite2PCClient {
     // groups keys by region
     GroupKeyResult groupResult = this.groupKeysByRegion(backOffer, keys, size);
     if (groupResult.hasError()) {
-      return groupResult.getErrorMsg();
+      throw new TiBatchWriteException("prewrite secondary key error: " + groupResult.getErrorMsg());
     }
 
     boolean sizeKeyValue = true;
@@ -314,19 +305,19 @@ public class TiBatchWrite2PCClient {
 
     // For prewrite, stop sending other requests after receiving first error.
     for (BatchKeys batchKeys : batchKeyList) {
-      String error = doPrewriteSecondaryKeySingleBatch(backOffer, primaryKey, batchKeys, mutations);
-      if (error != null) {
-        return error;
-      }
+      doPrewriteSecondaryKeySingleBatch(backOffer, primaryKey, batchKeys, mutations);
     }
-    return null;
+
+    // return success
+    return;
   }
 
-  private String doPrewriteSecondaryKeySingleBatch(
+  private void doPrewriteSecondaryKeySingleBatch(
       BackOffer backOffer,
       byte[] primaryKey,
       BatchKeys batchKeys,
-      Map<ByteWrapper, Kvrpcpb.Mutation> mutations) {
+      Map<ByteWrapper, Kvrpcpb.Mutation> mutations)
+      throws TiBatchWriteException {
     List<byte[]> keyList = batchKeys.getKeys();
     int batchSize = keyList.size();
     List<Kvrpcpb.Mutation> mutationList = new ArrayList<>(batchSize);
@@ -341,7 +332,7 @@ public class TiBatchWrite2PCClient {
         this.kvClient.prewrite(
             backOffer, mutationList, primaryKey, lockTTL, this.startTs, regionId);
     if (!prewriteResult.isSuccess() && !prewriteResult.isRetry()) {
-      return prewriteResult.getError();
+      throw new TiBatchWriteException("prewrite secondary key error: " + prewriteResult.getError());
     }
     if (prewriteResult.isRetry()) {
       try {
@@ -361,19 +352,19 @@ public class TiBatchWrite2PCClient {
           valueBytes[i] = mutations.get(new ByteWrapper(k)).getValue().toByteArray();
           i++;
         }
-        return doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
+        doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
       } catch (GrpcException e) {
         String error =
             String.format(
                 "Txn prewrite secondary key SingleBatch error, re-split commit failed, regionId=%s, detail=%s",
                 batchKeys.getRegioId(), e.getMessage());
         LOG.error(error);
-        return error;
+        throw new TiBatchWriteException("prewrite secondary key error", e);
       }
     }
     // success return
     LOG.info("prewrite " + batchKeys.getKeys().size() + "rows successfully");
-    return null;
+    return;
   }
 
   private void appendBatchBySize(
@@ -423,14 +414,11 @@ public class TiBatchWrite2PCClient {
    */
   public void commitSecondaryKeys(BackOffer backOffer, Iterator<ByteWrapper> keys, long commitTs)
       throws TiBatchWriteException {
-    String error = doCommitSecondaryKeys(backOffer, keys, commitTs);
-    if (error != null) {
-      throw new TiBatchWriteException("commit secondary key error: " + error);
-    }
+    doCommitSecondaryKeys(backOffer, keys, commitTs);
   }
 
-  private String doCommitSecondaryKeys(
-      BackOffer backOffer, Iterator<ByteWrapper> keys, long commitTs) {
+  private void doCommitSecondaryKeys(BackOffer backOffer, Iterator<ByteWrapper> keys, long commitTs)
+      throws TiBatchWriteException {
     while (keys.hasNext()) {
       byte[][] keyBytes = new byte[WRITE_BUFFER_SIZE][];
       int size = 0;
@@ -442,25 +430,21 @@ public class TiBatchWrite2PCClient {
           break;
         }
       }
-      String error = doCommitSecondaryKeys(backOffer, keyBytes, size, commitTs);
-      if (error != null) {
-        // ignore error
-        LOG.warn("commit secondary key error: {}", error);
-      }
+      doCommitSecondaryKeys(backOffer, keyBytes, size, commitTs);
     }
-    return null;
   }
 
-  private String doCommitSecondaryKeys(
-      BackOffer backOffer, byte[][] keys, int size, long commitTs) {
+  private void doCommitSecondaryKeys(BackOffer backOffer, byte[][] keys, int size, long commitTs)
+      throws TiBatchWriteException {
     if (keys == null || keys.length == 0 || size <= 0) {
-      return null;
+      return;
     }
 
     // groups keys by region
     GroupKeyResult groupResult = this.groupKeysByRegion(backOffer, keys, size);
     if (groupResult.hasError()) {
-      return groupResult.getErrorMsg();
+      LOG.warn("commit secondary key error: " + groupResult.getErrorMsg());
+      return;
     }
 
     boolean sizeKeyValue = false;
@@ -478,16 +462,13 @@ public class TiBatchWrite2PCClient {
 
     // For prewrite, stop sending other requests after receiving first error.
     for (BatchKeys batchKeys : batchKeyList) {
-      String error = doCommitSecondaryKeySingleBatch(backOffer, batchKeys, commitTs);
-      if (error != null) {
-        return error;
-      }
+      doCommitSecondaryKeySingleBatch(backOffer, batchKeys, commitTs);
     }
-    return null;
+    return;
   }
 
-  private String doCommitSecondaryKeySingleBatch(
-      BackOffer backOffer, BatchKeys batchKeys, long commitTs) {
+  private void doCommitSecondaryKeySingleBatch(
+      BackOffer backOffer, BatchKeys batchKeys, long commitTs) throws TiBatchWriteException {
     List<byte[]> keysCommit = batchKeys.getKeys();
     byte[][] keys = new byte[keysCommit.size()][];
     keysCommit.toArray(keys);
@@ -495,52 +476,16 @@ public class TiBatchWrite2PCClient {
     long regionId = batchKeys.getRegioId();
     ClientRPCResult commitResult =
         this.kvClient.commit(backOffer, keys, this.startTs, commitTs, regionId);
-    if (!commitResult.isSuccess() && !commitResult.isRetry()) {
+    if (!commitResult.isSuccess()) {
       String error =
           String.format("Txn commit secondary key error, regionId=%s", batchKeys.getRegioId());
       LOG.warn(error);
-      return error;
-    }
-    if (commitResult.isRetry()) {
-      try {
-        backOffer.doBackOff(
-            BackOffFunction.BackOffFuncType.BoRegionMiss,
-            new GrpcException(
-                String.format(
-                    "Txn commit secondary key failed, regionId=%s", batchKeys.getRegioId())));
-        // re-split keys and commit again.
-        int size = batchKeys.getKeys().size();
-        byte[][] keyBytes = new byte[size][];
-        int i = 0;
-        for (byte[] k : batchKeys.getKeys()) {
-          keyBytes[i] = k;
-          i++;
-        }
-        String error = this.doCommitSecondaryKeys(backOffer, keyBytes, size, commitTs);
-        if (error != null) {
-          LOG.warn(error);
-          return error;
-        }
-      } catch (GrpcException e) {
-        String error =
-            String.format(
-                "Txn commit secondary key error, re-split commit failed, regionId=%s",
-                batchKeys.getKeys());
-        LOG.warn(error);
-        return error;
-      }
-    }
-    if (!commitResult.isSuccess()) {
-      String error =
-          String.format(
-              "Txn commit secondary key error, regionId=%s, detail=%s",
-              batchKeys.getKeys(), commitResult.getError());
-      LOG.warn(error);
-      return error;
+      throw new TiBatchWriteException("commit secondary key error: " + commitResult.getError());
     }
 
+    // return success
     LOG.info("commit " + batchKeys.getKeys().size() + "rows successfully");
-    return null;
+    return;
   }
 
   private GroupKeyResult groupKeysByRegion(BackOffer backOffer, byte[][] keys, int size) {

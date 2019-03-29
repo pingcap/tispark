@@ -70,13 +70,10 @@ import org.tikv.kvproto.Kvrpcpb.CleanupRequest;
 import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
 import org.tikv.kvproto.Kvrpcpb.CommitRequest;
 import org.tikv.kvproto.Kvrpcpb.CommitResponse;
-import org.tikv.kvproto.Kvrpcpb.GCRequest;
-import org.tikv.kvproto.Kvrpcpb.GCResponse;
 import org.tikv.kvproto.Kvrpcpb.GetRequest;
 import org.tikv.kvproto.Kvrpcpb.GetResponse;
 import org.tikv.kvproto.Kvrpcpb.KeyError;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
-import org.tikv.kvproto.Kvrpcpb.LockInfo;
 import org.tikv.kvproto.Kvrpcpb.Mutation;
 import org.tikv.kvproto.Kvrpcpb.PrewriteRequest;
 import org.tikv.kvproto.Kvrpcpb.PrewriteResponse;
@@ -86,8 +83,6 @@ import org.tikv.kvproto.Kvrpcpb.RawGetRequest;
 import org.tikv.kvproto.Kvrpcpb.RawGetResponse;
 import org.tikv.kvproto.Kvrpcpb.RawPutRequest;
 import org.tikv.kvproto.Kvrpcpb.RawPutResponse;
-import org.tikv.kvproto.Kvrpcpb.ScanLockRequest;
-import org.tikv.kvproto.Kvrpcpb.ScanLockResponse;
 import org.tikv.kvproto.Kvrpcpb.ScanRequest;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
 import org.tikv.kvproto.Metapb.Store;
@@ -212,9 +207,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     String error = resp.getError();
     if (error != null && !error.isEmpty()) {
       throw new KeyException(resp.getError());
-    }
-    if (resp.hasRegionError()) {
-      throw new RegionException(resp.getRegionError());
     }
   }
 
@@ -621,116 +613,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       // return false;
       // Caller method should restart rollback
       throw new RegionException(resp.getRegionError());
-    }
-    if (resp.hasError()) {
-      if (resp.getError().hasLocked()) {
-        Lock lock = new Lock(resp.getError().getLocked());
-        boolean ok = lockResolverClient.resolveLocks(bo, new ArrayList<>(Arrays.asList(lock)));
-        if (!ok) {
-          bo.doBackOff(BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
-        }
-        return false;
-      } else {
-        throw new KeyException(resp.getError());
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Delete all expired history kv data which version less than specific safePoint
-   *
-   * @param bo
-   * @param safePoint
-   */
-  public void gc(BackOffer bo, long safePoint) {
-    while (true) {
-      Supplier<GCRequest> factory =
-          () ->
-              GCRequest.newBuilder()
-                  .setSafePoint(safePoint)
-                  .setContext(region.getContext())
-                  .build();
-      KVErrorHandler<GCResponse> handler =
-          new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-      GCResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_GC, factory, handler);
-      if (gcSuccess(bo, resp)) {
-        break;
-      }
-    }
-  }
-
-  private boolean gcSuccess(BackOffer bo, GCResponse resp) {
-    if (resp == null) {
-      this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("GCResponse failed without a cause");
-    }
-    if (resp.hasRegionError()) {
-      bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
-      return false;
-    }
-    if (resp.hasError()) {
-      if (resp.getError().hasLocked()) {
-        Lock lock = new Lock(resp.getError().getLocked());
-        boolean ok = lockResolverClient.resolveLocks(bo, new ArrayList<>(Arrays.asList(lock)));
-        if (!ok) {
-          bo.doBackOff(BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
-        }
-        return false;
-      } else {
-        throw new KeyException(resp.getError());
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Scan all locks which version less than a specific version
-   *
-   * @param bo
-   * @param startKey
-   * @param maxVersion
-   * @param limit
-   * @return
-   */
-  public List<LockInfo> scanLock(BackOffer bo, ByteString startKey, long maxVersion, int limit) {
-    while (true) {
-      Supplier<ScanLockRequest> factory =
-          () ->
-              ScanLockRequest.newBuilder()
-                  .setContext(region.getContext())
-                  .setMaxVersion(maxVersion)
-                  .setStartKey(startKey)
-                  .setLimit(limit)
-                  .build();
-      KVErrorHandler<ScanLockResponse> handler =
-          new KVErrorHandler<>(
-              regionManager,
-              this,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-      ScanLockResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_SCAN_LOCK, factory, handler);
-      if (scanLockSuccess(bo, resp)) {
-        return resp.getLocksList();
-      }
-
-      // we should refresh region
-      region = regionManager.getRegionByKey(startKey);
-    }
-  }
-
-  private boolean scanLockSuccess(BackOffer bo, ScanLockResponse resp) {
-    if (resp == null) {
-      this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("ScanLockResponse failed without a cause");
-    }
-    if (resp.hasRegionError()) {
-      bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
-      return false;
     }
     if (resp.hasError()) {
       if (resp.getError().hasLocked()) {

@@ -256,9 +256,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   synchronized boolean switchLeader(List<String> leaderURLs) {
-    if (leaderURLs.isEmpty()) {
-      return false;
-    }
+    if (leaderURLs.isEmpty()) return false;
     String leaderUrlStr = leaderURLs.get(0);
     // TODO: Why not strip protocol info on server side since grpc does not need it
     if (leaderWrapper != null && leaderUrlStr.equals(leaderWrapper.getLeaderInfo())) {
