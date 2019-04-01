@@ -86,7 +86,8 @@ object TiBatchWrite {
 
     // driver primary pre-write
     val ti2PCClient = new TiBatchWrite2PCClient(kvClient, startTs)
-    val prewritePrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
+    val prewritePrimaryBackoff =
+      ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     val encodedRow = encodeTiRow(primaryRow, colDataTypes, colIds)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, encodedRow)
 
