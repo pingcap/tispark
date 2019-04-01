@@ -117,12 +117,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   /**
    * Fetch a value according to a key
    *
-   * @param backOffer
-   * @param key
-   * @param version
-   * @return
-   * @throws TiClientInternalException
-   * @throws KeyException
+   * @param backOffer means a backoffer polich
+   * @param key key-value pair's key which can be used to get a value
+   * @param version specifies a particular mvcc version.
+   * @return a value associated with key at particular version.
+   * @throws TiClientInternalException when resp is null
+   * @throws KeyException when fails to resolve lock.
    */
   public ByteString get(BackOffer backOffer, ByteString key, long version)
       throws TiClientInternalException, KeyException {
@@ -165,11 +165,11 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
    * <p>throw an Exception means the rpc call fail, RegionStoreClient cannot handle this kind of
    * error
    *
-   * @param backOffer
-   * @param resp
-   * @return
-   * @throws TiClientInternalException
-   * @throws KeyException
+   * @param backOffer specifies backooffer policy
+   * @param resp specifies a GetResponse
+   * @return true if get successes.
+   * @throws TiClientInternalException when @param resp is null.
+   * @throws KeyException when fails to resolve lock.
    */
   private boolean isGetSuccess(BackOffer backOffer, GetResponse resp)
       throws TiClientInternalException, KeyException {
@@ -183,24 +183,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       return false;
     }
 
-    if (resp.hasError()) {
-      if (resp.getError().hasLocked()) {
-        Lock lock = new Lock(resp.getError().getLocked());
-        boolean ok =
-            lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
-        if (!ok) {
-          // if not resolve all locks, we wait and retry
-          backOffer.doBackOff(
-              BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
-        }
-        return false;
-      } else {
-        // retry or abort
-        // this should trigger Spark to retry the txn
-        throw new KeyException(resp.getError());
-      }
-    }
-    return true;
+    return handleCommitRespOnError(backOffer, resp.hasError(), resp.getError());
   }
 
   // TODO: batch get should consider key range split
@@ -288,6 +271,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       throw new TiClientInternalException("ScanResponse failed without a cause");
     }
 
+    //    return doBatchGet();
     List<Lock> locks = new ArrayList<>();
 
     for (KvPair pair : resp.getPairsList()) {
@@ -324,14 +308,14 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   /**
    * Prewrite batch keys
    *
-   * @param backOffer
-   * @param primary
+   * @param backOffer specifies prewrite backoffer policy.
+   * @param primary specifies primary key
    * @param mutations
-   * @param startTs
-   * @param lockTTL
-   * @throws TiClientInternalException
-   * @throws KeyException
-   * @throws RegionException
+   * @param startTs specifies a txn's start timestamp.
+   * @param lockTTL a lock's time to live.
+   * @throws TiClientInternalException when resp is null.
+   * @throws KeyException when fails to resolve lock.
+   * @throws RegionException when region has split during prewrite operation.
    */
   public void prewrite(
       BackOffer backOffer,
@@ -343,19 +327,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     this.prewrite(backOffer, primary, mutations, startTs, lockTTL, false);
   }
 
-  /**
-   * Prewrite batch keys
-   *
-   * @param bo
-   * @param primaryLock
-   * @param mutations
-   * @param startVersion
-   * @param ttl
-   * @param skipConstraintCheck
-   * @throws TiClientInternalException
-   * @throws KeyException
-   * @throws RegionException
-   */
+  /** Prewrite batch keys */
   public void prewrite(
       BackOffer bo,
       ByteString primaryLock,
@@ -400,12 +372,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
    * <p>throw an Exception means the rpc call fail, RegionStoreClient cannot handle this kind of
    * error
    *
-   * @param backOffer
-   * @param resp
-   * @return
-   * @throws TiClientInternalException
-   * @throws RegionException
-   * @throws KeyException
+   * @param backOffer specifies a backoffer policy.
+   * @param resp specifies prewrite response.
+   * @return true if prewrite is succeeded.
+   * @throws TiClientInternalException when resp is null.
+   * @throws RegionException when region has split during this operation.
+   * @throws KeyException when fails to resolve lock.
    */
   private boolean isPrewriteSuccess(BackOffer backOffer, PrewriteResponse resp)
       throws TiClientInternalException, KeyException, RegionException {
@@ -437,10 +409,10 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   /**
    * Commit batch keys
    *
-   * @param backOffer
-   * @param keys
-   * @param startVersion
-   * @param commitVersion
+   * @param backOffer specifies a backoffer policy.
+   * @param keys will be committed.
+   * @param startVersion specifies key's start version.
+   * @param commitVersion specifies key's commit version.
    */
   public void commit(
       BackOffer backOffer, Iterable<ByteString> keys, long startVersion, long commitVersion)
@@ -479,12 +451,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
    * <p>throw an Exception means the rpc call fail, RegionStoreClient cannot handle this kind of
    * error
    *
-   * @param backOffer
-   * @param resp
-   * @return
+   * @param backOffer specifies a backoffer policy.
+   * @param resp specifies a commit response.
+   * @return true if commit is succeeded.
    * @throws TiClientInternalException
-   * @throws RegionException
-   * @throws KeyException
+   * @throws RegionException 
+   * @throws KeyException when fails to resolve lock.
    */
   private boolean isCommitSuccess(BackOffer backOffer, CommitResponse resp)
       throws TiClientInternalException, RegionException, KeyException {
@@ -499,18 +471,22 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       throw new RegionException(resp.getRegionError());
     }
     // If we find locks, we first resolve and let its caller retry.
-    if (resp.hasError()) {
-      if (resp.getError().hasLocked()) {
-        Lock lock = new Lock(resp.getError().getLocked());
+    return handleCommitRespOnError(backOffer, resp.hasError(), resp.getError());
+  }
+
+  private boolean handleCommitRespOnError(BackOffer backOffer, boolean b, KeyError error) {
+    if (b) {
+      if (error.hasLocked()) {
+        Lock lock = new Lock(error.getLocked());
         boolean ok =
-            lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
+            lockResolverClient.resolveLocks(backOffer, new ArrayList<>(
+                Collections.singletonList(lock)));
         if (!ok) {
-          backOffer.doBackOff(
-              BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
+          backOffer.doBackOff(BoTxnLockFast, new KeyException((error.getLocked().toString())));
         }
         return false;
       } else {
-        throw new KeyException(resp.getError());
+        throw new KeyException(error);
       }
     }
     return true;
@@ -574,7 +550,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     if (response.hasLocked()) {
       Lock lock = new Lock(response.getLocked());
       logger.debug(String.format("coprocessor encounters locks: %s", lock));
-      boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
+      boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(
+          Collections.singletonList(lock)));
       if (!ok) {
         backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
       }
@@ -742,7 +719,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   @Override
-  public void close() throws Exception {}
+  public void close() {}
 
   /**
    * onNotLeader deals with NotLeaderError and returns whether re-splitting key range is needed

@@ -198,11 +198,12 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
 
     // TxnID -> []Region, record resolved Regions.
     // TODO: Maybe put it in all LockResolverClient and share by all txns.
-    Map<Long, Set<RegionVerID>> cleanTxns = new HashMap<>();
+    Map<Long, Set<RegionVerID>> cleanedTxns = new HashMap<>();
     for (Lock l : expiredLocks) {
       Long status = getTxnStatus(bo, l.getTxnID(), l.getPrimary());
 
-      Set<RegionVerID> cleanRegion = cleanTxns.computeIfAbsent(l.getTxnID(), k -> new HashSet<>());
+      Set<RegionVerID> cleanRegion =
+          cleanedTxns.computeIfAbsent(l.getTxnID(), k -> new HashSet<>());
 
       resolveLock(bo, l, status, cleanRegion);
     }
