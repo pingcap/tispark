@@ -43,12 +43,13 @@ Because of an open issue **[SPARK-25003]** in Spark 2.3, using spark-submit for 
 2. Create a Python file named `test.py` as below:
 ```python
 import pytispark.pytispark as pti
-
+from pyspark.sql import SparkSession
+spark = SparkSession.getOrCreate()
 ti = pti.TiContext(spark)
 
 ti.tidbMapDatabase("tpch_test")
 
-sql("select count(*) from customer").show()
+spark.sql("select count(*) from customer").show()
 
 # Result
 # +--------+
