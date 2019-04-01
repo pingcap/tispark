@@ -31,26 +31,22 @@ public interface BackOffer {
   }
 
   // Back off types.
-  int copBuildTaskMaxBackoff = 5000;
-  int tsoMaxBackoff = 5000;
-  int scannerNextMaxBackoff = 40000;
-  int batchGetMaxBackoff = 40000;
-  int copNextMaxBackoff = 40000;
-  int getMaxBackoff = 40000;
-  int prewriteMaxBackoff = 20000;
-  int cleanupMaxBackoff = 20000;
-  int GcOneRegionMaxBackoff = 20000;
-  int GcResolveLockMaxBackoff = 100000;
-  int GcDeleteRangeMaxBackoff = 100000;
-  int rawkvMaxBackoff = 40000;
-  int splitRegionBackoff = 20000;
-  int commitMaxBackoff = 3000;
-
-  /** 20 seconds */
-  int batchPrewriteBackoff = 20000;
-
-  /** 3 seconds */
-  int batchCommitBackoff = 3000;
+  int seconds = 1000;
+  int copBuildTaskMaxBackoff = 5 * seconds;
+  int tsoMaxBackoff = 5 * seconds;
+  int scannerNextMaxBackoff = 40 * seconds;
+  int batchGetMaxBackoff = 40 * seconds;
+  int copNextMaxBackoff = 40 * seconds;
+  int getMaxBackoff = 40 * seconds;
+  int prewriteMaxBackoff = 20 * seconds;
+  int cleanupMaxBackoff = 20 * seconds;
+  int GcOneRegionMaxBackoff = 20 * seconds;
+  int GcResolveLockMaxBackoff = 100 * seconds;
+  int GcDeleteRangeMaxBackoff = 100 * seconds;
+  int rawkvMaxBackoff = 40 * seconds;
+  int splitRegionBackoff = 20 * seconds;
+  int batchPrewriteBackoff = 20 * seconds;
+  int batchCommitBackoff = 3 * seconds;
 
   /**
    * doBackOff sleeps a while base on the BackOffType and records the error message. Will stop until
