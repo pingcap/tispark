@@ -155,18 +155,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   /**
-<<<<<<< HEAD
-   * return true means the rpc call success
-   *
-   * <p>
-   *
-   * <p>return false means the rpc call fail, RegionStoreClient should retry
-   *
-   * <p>
-   *
-   * <p>throw an Exception means the rpc call fail, RegionStoreClient cannot handle this kind of
-   * error
-   *
+   * Check Get successes or not
    * @param backOffer specifies backooffer policy
    * @param resp specifies a GetResponse
    * @return true if get successes.
@@ -363,18 +352,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   /**
-<<<<<<< HEAD
-   * return true means the rpc call success
-   *
-   * <p>
-   *
-   * <p>return false means the rpc call fail, RegionStoreClient should retry
-   *
-   * <p>
-   *
-   * <p>throw an Exception means the rpc call fail, RegionStoreClient cannot handle this kind of
-   * error
-   *
+   * Check preweite successes or not.
    * @param backOffer specifies a backoffer policy.
    * @param resp specifies prewrite response.
    * @return true if prewrite is succeeded.
@@ -444,18 +422,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   /**
-<<<<<<< HEAD
-   * return true means the rpc call success
-   *
-   * <p>
-   *
-   * <p>return false means the rpc call fail, RegionStoreClient should retry
-   *
-   * <p>
-   *
-   * <p>throw an Exception means the rpc call fail, RegionStoreClient cannot handle this kind of
-   * error
-   *
+   * Check Commit successes or not
    * @param backOffer specifies a backoffer policy.
    * @param resp specifies a commit response.
    * @return true if commit is succeeded.
