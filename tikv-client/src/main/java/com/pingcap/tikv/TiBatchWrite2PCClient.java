@@ -295,11 +295,7 @@ public class TiBatchWrite2PCClient {
     }
 
     // groups keys by region
-    GroupKeyResult groupResult = this.groupKeysByRegion(backOffer, keys, size);
-    if (groupResult.hasError()) {
-      throw new TiBatchWriteException("prewrite secondary key error: " + groupResult.getErrorMsg());
-    }
-
+    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size);
     boolean sizeKeyValue = true;
     List<BatchKeys> batchKeyList = new LinkedList<>();
     Map<Long, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
@@ -467,12 +463,7 @@ public class TiBatchWrite2PCClient {
     }
 
     // groups keys by region
-    GroupKeyResult groupResult = this.groupKeysByRegion(backOffer, keys, size);
-    if (groupResult.hasError()) {
-      LOG.warn("commit secondary key error: " + groupResult.getErrorMsg());
-      return;
-    }
-
+    GroupKeyResult groupResult = this.groupKeysByRegion(keys, size);
     boolean sizeKeyValue = false;
     List<BatchKeys> batchKeyList = new LinkedList<>();
     Map<Long, List<ByteString>> groupKeyMap = groupResult.getGroupsResult();
@@ -514,32 +505,24 @@ public class TiBatchWrite2PCClient {
     return;
   }
 
-  private GroupKeyResult groupKeysByRegion(BackOffer backOffer, ByteString[] keys, int size) {
+  private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size)
+      throws TiBatchWriteException {
     Map<Long, List<ByteString>> groups = new HashMap<>();
-    long first = 0;
     int index = 0;
-    String error = null;
     try {
       for (; index < size; index++) {
         ByteString key = keys[index];
         TiRegion tiRegion = this.regionManager.getRegionByKey(key);
         if (tiRegion != null) {
           Long regionId = tiRegion.getId();
-          if (index == 0) {
-            first = regionId;
-          }
           groups.computeIfAbsent(regionId, e -> new LinkedList<>()).add(key);
         }
       }
     } catch (Exception e) {
-      error = String.format("Txn groupKeysByRegion error, %s", e.getMessage());
+      throw new TiBatchWriteException("Txn groupKeysByRegion error", e);
     }
     GroupKeyResult result = new GroupKeyResult();
-    if (error == null) {
-      result.setFirstRegion(first);
-      result.setGroupsResult(groups);
-    }
-    result.setErrorMsg(error);
+    result.setGroupsResult(groups);
     return result;
   }
 

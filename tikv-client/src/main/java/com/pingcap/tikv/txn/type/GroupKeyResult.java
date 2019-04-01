@@ -20,11 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GroupKeyResult extends BaseResult {
+public class GroupKeyResult {
 
   private Map<Long, List<ByteString>> groupsResult;
-
-  private Long firstRegion;
 
   public GroupKeyResult() {
     this.groupsResult = new HashMap<>();
@@ -36,13 +34,5 @@ public class GroupKeyResult extends BaseResult {
 
   public void setGroupsResult(Map<Long, List<ByteString>> groupsResult) {
     this.groupsResult = groupsResult;
-  }
-
-  public Long getFirstRegion() {
-    return firstRegion;
-  }
-
-  public void setFirstRegion(Long firstRegion) {
-    this.firstRegion = firstRegion;
   }
 }
