@@ -86,7 +86,7 @@ object TiBatchWrite {
 
     // driver primary pre-write
     val ti2PCClient = new TiBatchWrite2PCClient(kvClient, startTs)
-    val prewritePrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.batchPrewriteBackoff)
+    val prewritePrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     val encodedRow = encodeTiRow(primaryRow, colDataTypes, colIds)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, encodedRow)
 
@@ -96,7 +96,7 @@ object TiBatchWrite {
       val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
       val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
       val prewriteSecondaryBackoff =
-        ConcreteBackOffer.newCustomBackOff(BackOffer.batchPrewriteBackoff)
+        ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
 
       import scala.collection.JavaConverters._
       val pairs = iterator.map {
@@ -118,7 +118,7 @@ object TiBatchWrite {
         s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs"
       )
     }
-    val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.batchCommitBackoff)
+    val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
 
     // executors secondary commit
@@ -128,7 +128,7 @@ object TiBatchWrite {
         val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
         val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
         val commitSecondaryBackoff =
-          ConcreteBackOffer.newCustomBackOff(BackOffer.batchCommitBackoff)
+          ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
 
         import scala.collection.JavaConverters._
         val keys = iterator.map {
