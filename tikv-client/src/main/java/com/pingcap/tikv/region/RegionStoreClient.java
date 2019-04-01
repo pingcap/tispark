@@ -414,9 +414,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       throw new TiClientInternalException("PrewriteResponse failed without a cause");
     }
     if (resp.hasRegionError()) {
-      // bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
-      // return false;
-      // Caller method should retry start prewrite
       throw new RegionException(resp.getRegionError());
     }
     for (KeyError err : resp.getErrorsList()) {
@@ -501,7 +498,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       // Caller method should restart commit
       throw new RegionException(resp.getRegionError());
     }
-    // if hasLock, need to resolveLocks and retry?
+    // If we find locks, we first resolve and let its caller retry.
     if (resp.hasError()) {
       if (resp.getError().hasLocked()) {
         Lock lock = new Lock(resp.getError().getLocked());
