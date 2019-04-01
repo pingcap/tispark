@@ -174,6 +174,7 @@ public class TiRegion implements Serializable {
     return meta;
   }
 
+  @Override
   public String toString() {
     return String.format(
         "{Region[%d] ConfVer[%d] Version[%d] Store[%d] KeyRange[%s]:[%s]}",

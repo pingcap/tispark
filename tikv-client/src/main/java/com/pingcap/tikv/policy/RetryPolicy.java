@@ -40,14 +40,14 @@ public abstract class RetryPolicy<RespT> {
     this.handler = handler;
   }
 
-  private void rethrowNotRecoverableException(Exception e) {
+  private void rethrowNotRecoverableException(Exception e) throws GrpcException {
     Status status = Status.fromThrowable(e);
     if (unrecoverableStatus.contains(status.getCode())) {
       throw new GrpcException(e);
     }
   }
 
-  public RespT callWithRetry(Callable<RespT> proc, String methodName) {
+  public RespT callWithRetry(Callable<RespT> proc, String methodName) throws GrpcException {
     while (true) {
       RespT result = null;
       try {

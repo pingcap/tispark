@@ -23,6 +23,7 @@ import com.pingcap.tikv.policy.RetryMaxMs.Builder;
 import com.pingcap.tikv.policy.RetryPolicy;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ChannelFactory;
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.AbstractStub;
 import io.grpc.stub.ClientCalls;
@@ -34,16 +35,12 @@ public abstract class AbstractGRPCClient<
         BlockingStubT extends AbstractStub<BlockingStubT>, StubT extends AbstractStub<StubT>>
     implements AutoCloseable {
   protected final Logger logger = Logger.getLogger(this.getClass());
-  protected TiSession session;
   protected TiConfiguration conf;
+  protected final ChannelFactory channelFactory;
 
-  protected AbstractGRPCClient(TiSession session) {
-    this.session = session;
-    this.conf = session.getConf();
-  }
-
-  public TiSession getSession() {
-    return session;
+  protected AbstractGRPCClient(TiConfiguration conf, ChannelFactory channelFactory) {
+    this.conf = conf;
+    this.channelFactory = channelFactory;
   }
 
   public TiConfiguration getConf() {
