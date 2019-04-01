@@ -454,8 +454,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
    * @param backOffer specifies a backoffer policy.
    * @param resp specifies a commit response.
    * @return true if commit is succeeded.
-   * @throws TiClientInternalException
-   * @throws RegionException 
+   * @throws TiClientInternalException when resp is null
+   * @throws RegionException when region has split during this operation.
    * @throws KeyException when fails to resolve lock.
    */
   private boolean isCommitSuccess(BackOffer backOffer, CommitResponse resp)
@@ -493,7 +493,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   /**
-   * Execute and retrieve the response from TiKV server.
+   * Execute and retrieve theA response from TiKV server.
    *
    * @param req Select request to process
    * @param ranges Key range list
