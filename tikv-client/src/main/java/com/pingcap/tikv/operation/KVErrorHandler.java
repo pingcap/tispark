@@ -53,9 +53,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     this.regionManager = regionManager;
     this.getRegionError = getRegionError;
     this.cacheInvalidateCallBack =
-        regionManager != null && regionManager.getSession() != null
-            ? regionManager.getSession().getCacheInvalidateCallback()
-            : null;
+        regionManager != null ? regionManager.getCacheInvalidateCallback() : null;
   }
 
   private Errorpb.Error getRegionError(RespT resp) {
@@ -240,7 +238,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
   @Override
   public boolean handleRequestError(BackOffer backOffer, Exception e) {
-    regionManager.onRequestFail(ctxRegion.getId(), ctxRegion.getLeader().getStoreId());
+    regionManager.onRequestFail(ctxRegion);
     notifyRegionStoreCacheInvalidate(
         ctxRegion.getId(),
         ctxRegion.getLeader().getStoreId(),

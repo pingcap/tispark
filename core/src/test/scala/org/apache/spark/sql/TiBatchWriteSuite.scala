@@ -16,20 +16,78 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.{TiBatchWrite, TiTableReference}
-import org.apache.spark.rdd.RDD
-import org.scalatest.Ignore
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
-@Ignore
 class TiBatchWriteSuite extends BaseTiSparkSuite {
-  test("ti batch write") {
-    sql("show databases").show()
-    setCurrentDatabase("tpch_test")
-    val df = sql("select * from CUSTOMER")
-    df.show()
 
-    val rdd: RDD[Row] = df.rdd
-    val tableRef: TiTableReference = TiTableReference("tidb_tpch_test", "test")
-    val tiContext: TiContext = this.ti
-    TiBatchWrite.writeToTiDB(rdd, tableRef, tiContext)
+  private val database = "tpch_test"
+
+  private val tables =
+    "CUSTOMER" ::
+      //"LINEITEM" no primary key, current not support
+      "NATION" ::
+      "ORDERS" ::
+      "PART" ::
+      //"PARTSUPP" no primary key, current not support
+      "REGION" ::
+      "SUPPLIER" ::
+      Nil
+
+  private val batchWriteTablePrefix = "BATCH_WRITE"
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    setCurrentDatabase(database)
+    for (table <- tables) {
+      tidbStmt.execute(s"drop table if exists ${batchWriteTablePrefix}_$table")
+      tidbStmt.execute(s"create table if not exists ${batchWriteTablePrefix}_$table like $table ")
+    }
   }
+
+  test("ti batch write") {
+    for (table <- tables) {
+      // select
+      refreshConnections(TestTables(database, s"${batchWriteTablePrefix}_$table"))
+      val df = sql(s"select * from $table")
+
+      // batch write
+      val tableRef: TiTableReference =
+        TiTableReference(s"$dbPrefix$database", s"${batchWriteTablePrefix}_$table")
+      TiBatchWrite.writeToTiDB(df.rdd, tableRef, ti)
+
+      // assert
+      refreshConnections(TestTables(database, s"${batchWriteTablePrefix}_$table"))
+      setCurrentDatabase(database)
+      val originCount = querySpark(s"select count(*) from $table").head.head.asInstanceOf[Long]
+      val count = querySpark(s"select count(*) from ${batchWriteTablePrefix}_$table").head.head
+        .asInstanceOf[Long]
+      assert(count == originCount)
+    }
+  }
+
+  test("table not exists") {
+    // select
+    val df = sql(s"select * from CUSTOMER")
+
+    // batch write
+    val tableRef: TiTableReference =
+      TiTableReference(
+        s"$dbPrefix$database",
+        s"${batchWriteTablePrefix}_TABLE_NOT_EXISTS"
+      )
+
+    intercept[NoSuchTableException] {
+      TiBatchWrite.writeToTiDB(df.rdd, tableRef, ti)
+    }
+  }
+
+  override def afterAll(): Unit =
+    try {
+      setCurrentDatabase(database)
+      for (table <- tables) {
+        tidbStmt.execute(s"drop table if exists ${batchWriteTablePrefix}_$table")
+      }
+    } finally {
+      super.afterAll()
+    }
 }

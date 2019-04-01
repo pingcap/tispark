@@ -13,27 +13,26 @@
  * limitations under the License.
  */
 
-package com.pingcap.tikv.exception;
+package com.pingcap.tikv.txn.type;
 
-import org.tikv.kvproto.Kvrpcpb;
+import com.google.protobuf.ByteString;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class KeyException extends TiKVException {
+public class GroupKeyResult {
 
-  private static final long serialVersionUID = 6649195220216182286L;
+  private Map<Long, List<ByteString>> groupsResult;
 
-  private final Kvrpcpb.KeyError keyErr;
-
-  public KeyException(String errMsg) {
-    super(errMsg);
-    keyErr = null;
+  public GroupKeyResult() {
+    this.groupsResult = new HashMap<>();
   }
 
-  public KeyException(Kvrpcpb.KeyError keyErr) {
-    super("Key exception occurred");
-    this.keyErr = keyErr;
+  public Map<Long, List<ByteString>> getGroupsResult() {
+    return groupsResult;
   }
 
-  public Kvrpcpb.KeyError getKeyErr() {
-    return keyErr;
+  public void setGroupsResult(Map<Long, List<ByteString>> groupsResult) {
+    this.groupsResult = groupsResult;
   }
 }

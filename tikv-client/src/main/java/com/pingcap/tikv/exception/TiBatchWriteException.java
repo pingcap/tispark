@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,12 @@
 
 package com.pingcap.tikv.exception;
 
-import org.tikv.kvproto.Kvrpcpb;
-
-public class KeyException extends TiKVException {
-
-  private static final long serialVersionUID = 6649195220216182286L;
-
-  private final Kvrpcpb.KeyError keyErr;
-
-  public KeyException(String errMsg) {
-    super(errMsg);
-    keyErr = null;
+public class TiBatchWriteException extends RuntimeException {
+  public TiBatchWriteException(String msg) {
+    super(msg);
   }
 
-  public KeyException(Kvrpcpb.KeyError keyErr) {
-    super("Key exception occurred");
-    this.keyErr = keyErr;
-  }
-
-  public Kvrpcpb.KeyError getKeyErr() {
-    return keyErr;
+  public TiBatchWriteException(String msg, Throwable t) {
+    super(msg, t);
   }
 }
