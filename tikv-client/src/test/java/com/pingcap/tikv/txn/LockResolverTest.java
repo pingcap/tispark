@@ -188,23 +188,23 @@ public class LockResolverTest {
     if (keys.size() == 0) return true;
 
     for (ByteString k : keys) {
-      Pair<TiRegion, Store> pair = session.getRegionManager().getRegionStorePairByKey(k);
+      TiRegion tiRegion = session.getRegionManager().getRegionByKey(k);
 
-      RegionStoreClient client = builder.build(pair.first);
+      RegionStoreClient client = builder.build(tiRegion);
       Supplier<CommitRequest> factory =
           () ->
               CommitRequest.newBuilder()
                   .setStartVersion(startTS)
                   .setCommitVersion(commitTS)
                   .addAllKeys(Collections.singletonList(k))
-                  .setContext(pair.first.getContext())
+                  .setContext(tiRegion.getContext())
                   .build();
 
       KVErrorHandler<CommitResponse> handler =
           new KVErrorHandler<>(
               session.getRegionManager(),
               client,
-              pair.first,
+              tiRegion,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
 
       CommitResponse resp =
