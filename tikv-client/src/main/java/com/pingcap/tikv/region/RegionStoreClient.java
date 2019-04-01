@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
+import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -154,6 +155,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   /**
+<<<<<<< HEAD
    * return true means the rpc call success
    *
    * <p>
@@ -361,6 +363,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   /**
+<<<<<<< HEAD
    * return true means the rpc call success
    *
    * <p>
@@ -388,22 +391,23 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
     }
+
+    boolean result = true;
+    List<Lock> locks = new ArrayList<>();
     for (KeyError err : resp.getErrorsList()) {
       if (err.hasLocked()) {
+        result = false;
         Lock lock = new Lock(err.getLocked());
-        boolean ok =
-            lockResolverClient.resolveLocks(
-                backOffer, new ArrayList<>(Collections.singletonList(lock)));
-        if (!ok) {
-          backOffer.doBackOff(BoTxnLockFast, new KeyException((err.getLocked().toString())));
-        }
-        // retry prewrite directly in current method
-        return false;
+        locks.add(lock);
       } else {
         throw new KeyException(err.toString());
       }
     }
-    return true;
+
+    if (!lockResolverClient.resolveLocks(backOffer, locks)) {
+      backOffer.doBackOff(BoTxnLock, new KeyException(resp.getErrorsList().get(0)));
+    }
+    return result;
   }
 
   /**
@@ -440,6 +444,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   /**
+<<<<<<< HEAD
    * return true means the rpc call success
    *
    * <p>
@@ -479,8 +484,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       if (error.hasLocked()) {
         Lock lock = new Lock(error.getLocked());
         boolean ok =
-            lockResolverClient.resolveLocks(backOffer, new ArrayList<>(
-                Collections.singletonList(lock)));
+            lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Collections.singletonList(lock)));
         if (!ok) {
           backOffer.doBackOff(BoTxnLockFast, new KeyException((error.getLocked().toString())));
         }
