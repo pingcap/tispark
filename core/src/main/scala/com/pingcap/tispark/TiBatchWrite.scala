@@ -15,16 +15,20 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.TiBatchWriteUtils
-import com.pingcap.tikv.codec.KeyUtils
-import com.pingcap.tikv.exception.TableNotExistException
+import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
+import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
+import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
-import com.pingcap.tikv.util.KeyRangeUtils
+import com.pingcap.tikv.types.DataType
+import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
+import com.pingcap.tikv.{TiBatchWriteUtils, _}
+import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.TiContext
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.slf4j.LoggerFactory
 
 /**
@@ -38,7 +42,15 @@ object TiBatchWrite {
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
 
+  @throws(classOf[NoSuchTableException])
+  @throws(classOf[TiBatchWriteException])
   def writeToTiDB(rdd: RDD[SparkRow], tableRef: TiTableReference, tiContext: TiContext) {
+    // initialize
+    val tiConf = tiContext.tiConf
+    val tiSession = tiContext.tiSession
+    val kvClient = tiSession.createTxnClient()
+    val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
+
     // TODO: region pre-split
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-69
 
@@ -48,11 +60,8 @@ object TiBatchWrite {
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
       val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
-      shuffleKeyToSameRegion(tiKVRowRDD, tableRef, tiContext)
+      shuffleKeyToSameRegion(tiKVRowRDD, tableRef, tiTableInfo, tiContext)
     }
-
-    // TODO: resolve lock
-    // why here? can we do resolve after receiving an error during writing data?
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: TiRow) = {
@@ -66,35 +75,119 @@ object TiBatchWrite {
     }
     logger.info(s"primary key: $primaryKey primary row: $primaryRow")
 
-    // TODO: get timestamp as start_ts
+    // filter primary key
+    val finalWriteRDD = shuffledRDD.filter {
+      case (key, _) => !key.equals(primaryKey)
+    }
 
-    // TODO: driver primary pre-write
+    // get timestamp as start_ts
+    val startTs = kvClient.getTimestamp.getVersion
+    logger.info(s"startTS: $startTs")
 
-    // TODO: executors secondary pre-write
+    // driver primary pre-write
+    val ti2PCClient = new TiBatchWrite2PCClient(kvClient, startTs)
+    val prewritePrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.batchPrewriteBackoff)
+    val encodedRow = encodeTiRow(primaryRow, colDataTypes, colIds)
+    ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, encodedRow)
 
-    // TODO: driver primary commit
+    // executors secondary pre-write
+    finalWriteRDD.foreachPartition { iterator =>
+      val tiSessionOnExecutor = new TiSession(tiConf)
+      val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
+      val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
+      val prewriteSecondaryBackoff =
+        ConcreteBackOffer.newCustomBackOff(BackOffer.batchPrewriteBackoff)
 
-    // TODO: executors secondary commit
+      import scala.collection.JavaConverters._
+      val pairs = iterator.map {
+        case (key, row) =>
+          new TiBatchWrite2PCClient.BytePairWrapper(
+            key.bytes,
+            encodeTiRow(row, colDataTypes, colIds)
+          )
+      }.asJava
+
+      ti2PCClientOnExecutor.prewriteSecondaryKeys(prewriteSecondaryBackoff, primaryKey.bytes, pairs)
+    }
+
+    // driver primary commit
+    val commitTs = kvClient.getTimestamp.getVersion
+    // check commitTS
+    if (commitTs <= startTs) {
+      throw new TiBatchWriteException(
+        s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs"
+      )
+    }
+    val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.batchCommitBackoff)
+    ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
+
+    // executors secondary commit
+    finalWriteRDD.foreachPartition {
+      case iterator =>
+        val tiSessionOnExecutor = new TiSession(tiConf)
+        val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
+        val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
+        val commitSecondaryBackoff =
+          ConcreteBackOffer.newCustomBackOff(BackOffer.batchCommitBackoff)
+
+        import scala.collection.JavaConverters._
+        val keys = iterator.map {
+          case (key, row) => new TiBatchWrite2PCClient.ByteWrapper(key.bytes)
+        }.asJava
+
+        try {
+          ti2PCClientOnExecutor.commitSecondaryKeys(commitSecondaryBackoff, keys, commitTs)
+        } catch {
+          case e: TiBatchWriteException =>
+            // ignored
+            logger.warn(s"commit secondary key error", e)
+        }
+    }
   }
 
-  @throws(classOf[TableNotExistException])
+  @throws(classOf[NoSuchTableException])
+  private def getTableInfo(tableRef: TiTableReference,
+                           tiContext: TiContext): (TiTableInfo, Array[DataType], TLongArrayList) = {
+    val tiTableInfo =
+      tiContext.tiSession.getCatalog.getTable(tableRef.databaseName, tableRef.tableName)
+    if (tiTableInfo == null) {
+      throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName)
+    }
+    val tableColSize = tiTableInfo.getColumns.size()
+    val dataTypes = new Array[DataType](tableColSize)
+    val ids = new TLongArrayList
+
+    for (i <- 0 until tableColSize) {
+      val tiColumnInfo = tiTableInfo.getColumn(i)
+      ids.add(tiColumnInfo.getId)
+      dataTypes.update(i, tiColumnInfo.getType)
+    }
+    (tiTableInfo, dataTypes, ids)
+  }
+
+  @throws(classOf[NoSuchTableException])
   private def shuffleKeyToSameRegion(rdd: RDD[TiRow],
                                      tableRef: TiTableReference,
+                                     tiTableInfo: TiTableInfo,
                                      tiContext: TiContext): RDD[(SerializableKey, TiRow)] = {
-    val regions = getRegions(tableRef, tiContext)
-    val tiRegionPartitioner = new TiRegionPartitioner(regions)
     val databaseName = tableRef.databaseName
     val tableName = tableRef.tableName
     val session = tiContext.tiSession
     val table = session.getCatalog.getTable(databaseName, tableName)
+    if (table == null) {
+      throw new NoSuchTableException(databaseName, tableName)
+    }
     val tableId = table.getId
+
+    val regions = getRegions(table, tiContext)
+    val tiRegionPartitioner = new TiRegionPartitioner(regions)
 
     logger.info(
       s"find ${regions.size} regions in database: $databaseName table: $tableName tableId: $tableId"
     )
 
     rdd
-      .map(row => (tiKVRow2Key(row, tableId), row))
+      .map(row => (tiKVRow2Key(row, tableId, tiTableInfo), row))
       .groupByKey(tiRegionPartitioner)
       .map {
         case (key, iterable) =>
@@ -103,18 +196,22 @@ object TiBatchWrite {
       }
   }
 
-  @throws(classOf[TableNotExistException])
-  private def getRegions(tableRef: TiTableReference, tiContext: TiContext): List[TiRegion] = {
+  private def getRegions(table: TiTableInfo, tiContext: TiContext): List[TiRegion] = {
     import scala.collection.JavaConversions._
-    TiBatchWriteUtils
-      .getRegionsByTable(tiContext.tiSession, tableRef.databaseName, tableRef.tableName)
-      .toList
+    TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, table).toList
   }
 
-  private def tiKVRow2Key(row: TiRow, tableId: Long): SerializableKey = {
-    // TODO: how to get primary key if exists || auto generate a primary key if does not exists
-    // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
-    val handle = row.getLong(0)
+  private def tiKVRow2Key(row: TiRow, tableId: Long, tiTableInfo: TiTableInfo): SerializableKey = {
+    import scala.collection.JavaConverters._
+    val handle = if (tiTableInfo.isPkHandle) {
+      val columnList = tiTableInfo.getColumns.asScala
+      val primaryColumn = columnList.find(_.isPrimaryKey).get
+      row.getLong(primaryColumn.getOffset)
+    } else {
+      // TODO: auto generate a primary key if does not exists
+      // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
+      row.getLong(0)
+    }
 
     val rowKey = RowKey.toRowKey(tableId, handle)
     new SerializableKey(rowKey.getBytes)
@@ -131,6 +228,27 @@ object TiBatchWrite {
     }
     tiRow
   }
+
+  @throws(classOf[TiBatchWriteException])
+  private def encodeTiRow(tiRow: TiRow,
+                          colDataTypes: Array[DataType],
+                          colIDs: TLongArrayList): Array[Byte] = {
+    val colSize = tiRow.fieldCount()
+    val tableColSize = colDataTypes.length
+
+    if (colSize != tableColSize) {
+      throw new TiBatchWriteException(s"col size $colSize != table column size $tableColSize")
+    }
+
+    // TODO: ddl state change
+    // pending: https://internal.pingcap.net/jira/browse/TISPARK-82
+    val values = new Array[AnyRef](colSize)
+    for (i <- 0 until colSize) {
+      values.update(i, tiRow.get(i, colDataTypes(i)))
+    }
+
+    TableCodec.encodeRow(colDataTypes, colIDs, values, new CodecDataOutput())
+  }
 }
 
 class TiRegionPartitioner(regions: List[TiRegion]) extends Partitioner {
@@ -143,17 +261,20 @@ class TiRegionPartitioner(regions: List[TiRegion]) extends Partitioner {
     regions.indices.foreach { i =>
       val region = regions(i)
       val range = KeyRangeUtils.makeRange(region.getStartKey, region.getEndKey)
-
       if (range.contains(rawKey)) {
         return i
       }
     }
-
     0
   }
 }
 
 class SerializableKey(val bytes: Array[Byte]) extends Serializable {
-  override def toString: String =
-    KeyUtils.formatBytes(bytes)
+  override def toString: String = KeyUtils.formatBytes(bytes)
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: SerializableKey => this.bytes.sameElements(that.bytes)
+      case _                     => false
+    }
 }

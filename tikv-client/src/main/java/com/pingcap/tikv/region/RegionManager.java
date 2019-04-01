@@ -24,13 +24,17 @@ import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
-import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import org.apache.log4j.Logger;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Store;
@@ -38,14 +42,16 @@ import org.tikv.kvproto.Metapb.StoreState;
 
 public class RegionManager {
   private static final Logger logger = Logger.getLogger(RegionManager.class);
-  private RegionCache cache;
-  private final ReadOnlyPDClient pdClient;
+  private final RegionCache cache;
+
+  private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
 
   // To avoid double retrieval, we used the async version of grpc
   // When rpc not returned, instead of call again, it wait for previous one done
-  public RegionManager(ReadOnlyPDClient pdClient) {
+  public RegionManager(
+      ReadOnlyPDClient pdClient, Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
     this.cache = new RegionCache(pdClient);
-    this.pdClient = pdClient;
+    this.cacheInvalidateCallback = cacheInvalidateCallback;
   }
 
   public static class RegionCache {
@@ -161,8 +167,8 @@ public class RegionManager {
     }
   }
 
-  public TiSession getSession() {
-    return pdClient.getSession();
+  public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
+    return cacheInvalidateCallback;
   }
 
   public TiRegion getRegionByKey(ByteString key) {
@@ -222,9 +228,12 @@ public class RegionManager {
   /**
    * Clears all cache when a TiKV server does not respond
    *
-   * @param regionId region's id
-   * @param storeId TiKV store's id
+   * @param region region
    */
+  public void onRequestFail(TiRegion region) {
+    onRequestFail(region.getId(), region.getLeader().getStoreId());
+  }
+
   public void onRequestFail(long regionId, long storeId) {
     cache.invalidateRegion(regionId);
     cache.invalidateAllRegionForStore(storeId);

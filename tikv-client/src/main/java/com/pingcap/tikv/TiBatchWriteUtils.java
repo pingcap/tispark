@@ -15,33 +15,25 @@
 
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.exception.TableNotExistException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.region.TiRegion;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public class TiBatchWriteUtils {
-  public static List<TiRegion> getRegionsByTable(
-          TiSession session, String databaseName, String tableName) throws TableNotExistException {
-    TiTableInfo table = session.getCatalog().getTable(databaseName, tableName);
 
-    if (table == null) {
-      throw new TableNotExistException(databaseName, tableName);
-    } else {
-      ArrayList<TiRegion> regionList = new ArrayList<>();
-      Key key = RowKey.createMin(table.getId());
-      RowKey endRowKey = RowKey.createBeyondMax(table.getId());
+  public static List<TiRegion> getRegionsByTable(TiSession session, TiTableInfo table) {
+    ArrayList<TiRegion> regionList = new ArrayList<>();
+    Key key = RowKey.createMin(table.getId());
+    RowKey endRowKey = RowKey.createBeyondMax(table.getId());
 
-      while (key.compareTo(endRowKey) < 0) {
-        TiRegion region = session.getRegionManager().getRegionByKey(key.toByteString());
-        regionList.add(region);
-        key = Key.toRawKey(region.getEndKey());
-      }
-      return regionList;
+    while (key.compareTo(endRowKey) < 0) {
+      TiRegion region = session.getRegionManager().getRegionByKey(key.toByteString());
+      regionList.add(region);
+      key = Key.toRawKey(region.getEndKey());
     }
+    return regionList;
   }
 }
