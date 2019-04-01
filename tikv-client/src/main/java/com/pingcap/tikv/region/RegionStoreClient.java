@@ -50,7 +50,6 @@ import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;

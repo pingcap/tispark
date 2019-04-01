@@ -311,5 +311,14 @@ public class LockResolverClient extends AbstractGRPCClient<TikvBlockingStub, Tik
     ManagedChannel channel = channelFactory.getChannel(addressStr);
     blockingStub = TikvGrpc.newBlockingStub(channel);
     asyncStub = TikvGrpc.newStub(channel);
+    if (logger.isDebugEnabled() && region.getLeader().getStoreId() != store.getId()) {
+      logger.debug(
+          "store_not_match may occur? "
+              + region
+              + ", original store = "
+              + store.getId()
+              + " address = "
+              + addressStr);
+    }
   }
 }
