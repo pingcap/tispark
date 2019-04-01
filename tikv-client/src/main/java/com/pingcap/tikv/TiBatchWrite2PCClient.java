@@ -219,9 +219,6 @@ public class TiBatchWrite2PCClient {
       LOG.error(error);
       throw new TiBatchWriteException("commit primary key error: " + commitResult.getError());
     }
-
-    // return success
-    return;
   }
 
   /**
@@ -267,14 +264,11 @@ public class TiBatchWrite2PCClient {
         valueBytes[size] = pair.second;
         size++;
       }
-      doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
+      doPrewriteSecondaryKeysInBatches(backOffer, primaryKey, keyBytes, valueBytes, size);
     }
-
-    // return success
-    return;
   }
 
-  private void doPrewriteSecondaryKeys(
+  private void doPrewriteSecondaryKeysInBatches(
       BackOffer backOffer, ByteString primaryKey, ByteString[] keys, ByteString[] values, int size)
       throws TiBatchWriteException {
     if (keys == null || keys.length == 0 || values == null || values.length == 0 || size <= 0) {
@@ -313,9 +307,6 @@ public class TiBatchWrite2PCClient {
     for (BatchKeys batchKeys : batchKeyList) {
       doPrewriteSecondaryKeySingleBatch(backOffer, primaryKey, batchKeys, mutations);
     }
-
-    // return success
-    return;
   }
 
   private void doPrewriteSecondaryKeySingleBatch(
@@ -358,7 +349,7 @@ public class TiBatchWrite2PCClient {
           valueBytes[i] = mutations.get(k).getValue();
           i++;
         }
-        doPrewriteSecondaryKeys(backOffer, primaryKey, keyBytes, valueBytes, size);
+        doPrewriteSecondaryKeysInBatches(backOffer, primaryKey, keyBytes, valueBytes, size);
       } catch (GrpcException e) {
         String error =
             String.format(
@@ -368,9 +359,7 @@ public class TiBatchWrite2PCClient {
         throw new TiBatchWriteException("prewrite secondary key error", e);
       }
     }
-    // success return
     LOG.info("prewrite " + batchKeys.getKeys().size() + "rows successfully");
-    return;
   }
 
   private void appendBatchBySize(
@@ -481,7 +470,6 @@ public class TiBatchWrite2PCClient {
     for (BatchKeys batchKeys : batchKeyList) {
       doCommitSecondaryKeySingleBatch(backOffer, batchKeys, commitTs);
     }
-    return;
   }
 
   private void doCommitSecondaryKeySingleBatch(
@@ -499,10 +487,7 @@ public class TiBatchWrite2PCClient {
       LOG.warn(error);
       throw new TiBatchWriteException("commit secondary key error: " + commitResult.getError());
     }
-
-    // return success
     LOG.info("commit " + batchKeys.getKeys().size() + "rows successfully");
-    return;
   }
 
   private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size)
