@@ -10,6 +10,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 import org.apache.commons.io.Charsets;
 
@@ -137,8 +138,12 @@ public class JsonType extends DataType {
   // * notice use this as a unsigned long
   private long parseUint64(DataInput cdi) {
     byte[] readBuffer = new byte[8];
-    readFully(cdi, readBuffer, 0, 8);
+    readFully(cdi, readBuffer);
 
+    return getaLong(readBuffer);
+  }
+
+  private long getaLong(byte[] readBuffer) {
     return ((long) (readBuffer[7]) << 56)
         + ((long) (readBuffer[6] & 255) << 48)
         + ((long) (readBuffer[5] & 255) << 40)
@@ -146,28 +151,13 @@ public class JsonType extends DataType {
         + ((long) (readBuffer[3] & 255) << 24)
         + ((readBuffer[2] & 255) << 16)
         + ((readBuffer[1] & 255) << 8)
-        + ((readBuffer[0] & 255) << 0);
-  }
-
-  private void readFully(DataInput cdi, byte[] readBuffer, final int off, final int len) {
-    try {
-      cdi.readFully(readBuffer, off, len);
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+        + ((readBuffer[0] & 255));
   }
 
   private long parseInt64(DataInput cdi) {
     byte[] readBuffer = new byte[8];
     readFully(cdi, readBuffer);
-    return ((long) readBuffer[7] << 56)
-        + ((long) (readBuffer[6] & 255) << 48)
-        + ((long) (readBuffer[5] & 255) << 40)
-        + ((long) (readBuffer[4] & 255) << 32)
-        + ((long) (readBuffer[3] & 255) << 24)
-        + ((readBuffer[2] & 255) << 16)
-        + ((readBuffer[1] & 255) << 8)
-        + ((readBuffer[0] & 255) << 0);
+    return getaLong(readBuffer);
   }
 
   private long parseUint32(DataInput cdi) {
@@ -177,28 +167,20 @@ public class JsonType extends DataType {
     return ((long) (readBuffer[3] & 255) << 24)
         + ((readBuffer[2] & 255) << 16)
         + ((readBuffer[1] & 255) << 8)
-        + ((readBuffer[0] & 255) << 0);
+        + ((readBuffer[0] & 255));
   }
 
   private double parseDouble(DataInput cdi) {
     byte[] readBuffer = new byte[8];
     readFully(cdi, readBuffer);
-    return Double.longBitsToDouble(
-        ((long) readBuffer[7] << 56)
-            + ((long) (readBuffer[6] & 255) << 48)
-            + ((long) (readBuffer[5] & 255) << 40)
-            + ((long) (readBuffer[4] & 255) << 32)
-            + ((long) (readBuffer[3] & 255) << 24)
-            + ((readBuffer[2] & 255) << 16)
-            + ((readBuffer[1] & 255) << 8)
-            + ((readBuffer[0] & 255) << 0));
+    return Double.longBitsToDouble(getaLong(readBuffer));
   }
 
   private int parseUint16(DataInput cdi) {
     byte[] readBuffer = new byte[2];
     readFully(cdi, readBuffer);
 
-    return ((readBuffer[1] & 255) << 8) + ((readBuffer[0] & 255) << 0);
+    return ((readBuffer[1] & 255) << 8) + ((readBuffer[0] & 255));
   }
 
   private String parseString(DataInput di, long length) {
@@ -213,8 +195,8 @@ public class JsonType extends DataType {
    * 0x80 { if i > 9 || i == 9 && b > 1 { return 0, -(i + 1) // overflow } return x | uint64(b)<<s,
    * i + 1 * } x |= uint64(b&0x7f) << s s += 7 } return 0, 0 }
    *
-   * @param di
-   * @return
+   * @param di data input
+   * @return date's length
    */
   private long parseDataLength(DataInput di) {
     long x = 0;
@@ -262,52 +244,60 @@ public class JsonType extends DataType {
     return type;
   }
 
-  private JsonArray parseArray(DataInput di) {
+  private JsonElement parseWithFn(DataInput di, BiFunction<byte[], Long, JsonElement> fn) {
     long elementCount = parseUint32(di);
     long size = parseUint32(di);
+
     byte[] buffer = new byte[Math.toIntExact(size - 8)];
     readFully(di, buffer);
-    JsonArray jsonArray = new JsonArray();
-    for (int i = 0; i < elementCount; i++) {
-      JsonElement value = parseValueEntry(buffer, VALUE_ENTRY_SIZE * i);
-      jsonArray.add(value);
-    }
-    return jsonArray;
+    return fn.apply(buffer, elementCount);
+  }
+
+  private JsonArray parseArray(DataInput di) {
+    BiFunction<byte[], Long, JsonElement> fn =
+        (buffer, elementCount) -> {
+          JsonArray jsonArray = new JsonArray();
+          for (int i = 0; i < elementCount; i++) {
+            JsonElement value = parseValueEntry(buffer, VALUE_ENTRY_SIZE * i);
+            jsonArray.add(value);
+          }
+          return jsonArray;
+        };
+    return parseWithFn(di, fn).getAsJsonArray();
   }
 
   private JsonObject parseObject(DataInput di) {
-    long elementCount = parseUint32(di);
-    long size = parseUint32(di);
 
-    byte[] buffer = new byte[Math.toIntExact(size - 8)];
-    readFully(di, buffer);
-    JsonObject jsonObject = new JsonObject();
-    for (int i = 0; i < elementCount; i++) {
-      KeyEntry keyEntry = parseKeyEntry(ByteStreams.newDataInput(buffer, i * KEY_ENTRY_LENGTH));
-      String key =
-          parseString(
-              ByteStreams.newDataInput(buffer, Math.toIntExact(keyEntry.keyOffset - 8)),
-              keyEntry.keyLength);
-      long valueEntryOffset = elementCount * KEY_ENTRY_LENGTH + i * VALUE_ENTRY_SIZE;
-      JsonElement value = parseValueEntry(buffer, valueEntryOffset);
-      jsonObject.add(key, value);
-    }
-    return jsonObject;
+    BiFunction<byte[], Long, JsonElement> fn =
+        (buffer, elementCount) -> {
+          JsonObject jsonObject = new JsonObject();
+          for (int i = 0; i < elementCount; i++) {
+            KeyEntry keyEntry =
+                parseKeyEntry(ByteStreams.newDataInput(buffer, i * KEY_ENTRY_LENGTH));
+            String key =
+                parseString(
+                    ByteStreams.newDataInput(buffer, Math.toIntExact(keyEntry.keyOffset - 8)),
+                    keyEntry.keyLength);
+            long valueEntryOffset = elementCount * KEY_ENTRY_LENGTH + i * VALUE_ENTRY_SIZE;
+            JsonElement value = parseValueEntry(buffer, valueEntryOffset);
+            jsonObject.add(key, value);
+          }
+          return jsonObject;
+        };
+
+    return parseWithFn(di, fn).getAsJsonObject();
   }
 
   private JsonElement parseValueEntry(byte[] buffer, long valueEntryOffset) {
     byte valueType = buffer[Math.toIntExact(valueEntryOffset)];
     JsonElement value;
     ByteArrayDataInput bs = ByteStreams.newDataInput(buffer, Math.toIntExact(valueEntryOffset + 1));
-    switch (valueType) {
-      case TYPE_CODE_LITERAL:
-        value = parseLiteralJson(bs);
-        break;
-      default:
-        long valueOffset = parseUint32(bs);
-        value =
-            parseValue(
-                valueType, ByteStreams.newDataInput(buffer, Math.toIntExact(valueOffset - 8)));
+    if (valueType == TYPE_CODE_LITERAL) {
+      value = parseLiteralJson(bs);
+    } else {
+      long valueOffset = parseUint32(bs);
+      value =
+          parseValue(valueType, ByteStreams.newDataInput(buffer, Math.toIntExact(valueOffset - 8)));
     }
     return value;
   }
@@ -333,7 +323,7 @@ public class JsonType extends DataType {
     long keyOffset;
     int keyLength;
 
-    public KeyEntry(long keyOffset, int keyLength) {
+    KeyEntry(long keyOffset, int keyLength) {
       this.keyOffset = keyOffset;
       this.keyLength = keyLength;
     }
