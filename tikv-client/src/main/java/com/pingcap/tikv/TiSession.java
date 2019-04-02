@@ -83,7 +83,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (client == null) {
-          client = PDClient.createRaw(this.getConf(), this.getChannelFactory());
+          client = PDClient.createRaw(this.getConf(), channelFactory);
         }
         res = client;
       }
@@ -172,11 +172,6 @@ public class TiSession implements AutoCloseable {
   public void close() throws Exception {
     getThreadPoolForTableScan().shutdownNow();
     getThreadPoolForIndexScan().shutdownNow();
-    channelFactory.close();
     getPDClient().close();
-  }
-
-  private ChannelFactory getChannelFactory() {
-    return channelFactory;
   }
 }
