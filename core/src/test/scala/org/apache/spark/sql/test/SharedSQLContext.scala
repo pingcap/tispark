@@ -147,7 +147,7 @@ object SharedSQLContext extends Logging {
    * 'initializeSession' between a 'describe' and an 'it' call than it does to
    * call 'beforeAll'.
    */
-  protected def initializeSession(): Unit =
+  protected def initializeSparkSession(): Unit =
     if (_spark == null) {
       _spark = _sparkSession
     }
@@ -273,7 +273,7 @@ object SharedSQLContext extends Logging {
    */
   def init(forceNotLoad: Boolean = false): Unit = {
     initializeConf()
-    initializeSession()
+    initializeSparkSession()
     initializeTiDB(forceNotLoad)
     initializeJDBC()
     initializeTiContext()
@@ -292,6 +292,7 @@ object SharedSQLContext extends Logging {
     if (_ti != null) {
       _ti.sparkSession.sessionState.catalog.reset()
       _ti.sparkSession.stop()
+      _ti.meta.close()
       _ti.tiSession.close()
       _ti = null
     }

@@ -46,7 +46,8 @@ public class Catalog implements AutoCloseable {
   @Override
   public void close() throws Exception {
     if (service != null) {
-      service.shutdown();
+      service.shutdownNow();
+      service.awaitTermination(1, TimeUnit.SECONDS);
     }
   }
 
@@ -162,7 +163,6 @@ public class Catalog implements AutoCloseable {
     }
   }
 
-  @VisibleForTesting
   public void reloadCache() {
     reloadCache(false);
   }

@@ -15,29 +15,20 @@
 
 package com.pingcap.tikv;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.meta.TiTimestamp;
-import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 public class TiSession implements AutoCloseable {
-  private static final Map<String, ManagedChannel> connPool = new HashMap<>();
   private final TiConfiguration conf;
   private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
@@ -92,7 +83,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (client == null) {
-          client = PDClient.createRaw(this.getConf(), this.getChannelFactory());
+          client = PDClient.createRaw(this.getConf(), channelFactory);
         }
         res = client;
       }
@@ -130,29 +121,6 @@ public class TiSession implements AutoCloseable {
       }
     }
     return res;
-  }
-
-  public synchronized ManagedChannel getChannel(String addressStr) {
-    ManagedChannel channel = connPool.get(addressStr);
-    if (channel == null) {
-      URI address;
-      try {
-        address = PDUtils.addrToUrl(addressStr);
-      } catch (Exception e) {
-        throw new IllegalArgumentException("failed to form address " + addressStr);
-      }
-
-      // Channel should be lazy without actual connection until first call
-      // So a coarse grain lock is ok here
-      channel =
-          ManagedChannelBuilder.forAddress(address.getHost(), address.getPort())
-              .maxInboundMessageSize(conf.getMaxFrameSize())
-              .usePlaintext(true)
-              .idleTimeout(60, TimeUnit.SECONDS)
-              .build();
-      connPool.put(addressStr, channel);
-    }
-    return channel;
   }
 
   public ExecutorService getThreadPoolForIndexScan() {
@@ -205,10 +173,5 @@ public class TiSession implements AutoCloseable {
     getThreadPoolForTableScan().shutdownNow();
     getThreadPoolForIndexScan().shutdownNow();
     getPDClient().close();
-  }
-
-  @VisibleForTesting
-  public ChannelFactory getChannelFactory() {
-    return channelFactory;
   }
 }
