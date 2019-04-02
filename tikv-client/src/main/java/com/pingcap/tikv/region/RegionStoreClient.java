@@ -29,8 +29,8 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
-import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.TiKVClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
@@ -81,8 +81,7 @@ import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
 
 // RegionStore itself is not thread-safe
-public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, TikvStub>
-    implements RegionErrorReceiver {
+public class RegionStoreClient extends TiKVClient {
   public enum RequestTypes {
     REQ_TYPE_SELECT(101),
     REQ_TYPE_INDEX(102),
@@ -107,8 +106,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private final TiSession session;
 
   @VisibleForTesting public final LockResolverClient lockResolverClient;
-  private TikvBlockingStub blockingStub;
-  private TikvStub asyncStub;
 
   public TiRegion getRegion() {
     return region;
@@ -155,6 +152,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
   /**
    * Check Get successes or not
+   *
    * @param backOffer specifies backooffer policy
    * @param resp specifies a GetResponse
    * @return true if get successes.
@@ -248,20 +246,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
-    return doScan(resp, backOffer);
-  }
-
-  // TODO: remove helper and change to while style
-  // needs to be fixed as batchGet
-  // which we shoule retry not throw
-  // exception
-  private List<KvPair> doScan(ScanResponse resp, BackOffer bo) {
-    if (resp == null) {
-      this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("ScanResponse failed without a cause");
-    }
-
-    //    return doBatchGet();
+    //    KeyErrorHandler<ScanResponse> errorExtracter =
+    //        new KeyErrorHandler<>(regionManager,
+    //            this,
+    //            region,
+    //            ScanResponse::getPairsList,
+    //            lockResolverClient);
     List<Lock> locks = new ArrayList<>();
 
     for (KvPair pair : resp.getPairsList()) {
@@ -274,16 +264,17 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
         }
       }
     }
-
+    //
     if (!locks.isEmpty()) {
-      boolean ok = lockResolverClient.resolveLocks(bo, locks);
+      boolean ok = lockResolverClient.resolveLocks(backOffer, locks);
       if (!ok) {
-        // if not resolve all locks, we wait and retry
-        bo.doBackOff(BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
+        //         if not resolve all locks, we wait and retry
+        backOffer.doBackOff(
+            BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
       }
-
-      // TODO: we should retry
-      // fix me
+      //
+      //       TODO: we should retry
+      //       fix me
     }
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
@@ -300,7 +291,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
    *
    * @param backOffer specifies prewrite backoffer policy.
    * @param primary specifies primary key
-   * @param mutations
+   * @param mutations memory buffer which used for changes.
    * @param startTs specifies a txn's start timestamp.
    * @param lockTTL a lock's time to live.
    * @throws TiClientInternalException when resp is null.
@@ -352,6 +343,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
   /**
    * Check preweite successes or not.
+   *
    * @param backOffer specifies a backoffer policy.
    * @param resp specifies prewrite response.
    * @return true if prewrite is succeeded.
@@ -422,6 +414,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
   /**
    * Check Commit successes or not
+   *
    * @param backOffer specifies a backoffer policy.
    * @param resp specifies a commit response.
    * @return true if commit is succeeded.
@@ -450,7 +443,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       if (error.hasLocked()) {
         Lock lock = new Lock(error.getLocked());
         boolean ok =
-            lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Collections.singletonList(lock)));
+            lockResolverClient.resolveLocks(
+                backOffer, new ArrayList<>(Collections.singletonList(lock)));
         if (!ok) {
           backOffer.doBackOff(BoTxnLockFast, new KeyException((error.getLocked().toString())));
         }
@@ -520,8 +514,9 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     if (response.hasLocked()) {
       Lock lock = new Lock(response.getLocked());
       logger.debug(String.format("coprocessor encounters locks: %s", lock));
-      boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(
-          Collections.singletonList(lock)));
+      boolean ok =
+          lockResolverClient.resolveLocks(
+              backOffer, new ArrayList<>(Collections.singletonList(lock)));
       if (!ok) {
         backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
       }
@@ -664,73 +659,14 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       TikvBlockingStub blockingStub,
       TikvStub asyncStub,
       RegionManager regionManager) {
-    super(conf, channelFactory);
+    super(conf, blockingStub, asyncStub, channelFactory, regionManager);
     checkNotNull(region, "Region is empty");
     checkNotNull(region.getLeader(), "Leader Peer is null");
     checkArgument(region.getLeader() != null, "Leader Peer is null");
     this.regionManager = regionManager;
     this.session = session;
     this.region = region;
-    this.blockingStub = blockingStub;
-    this.asyncStub = asyncStub;
     this.lockResolverClient =
-        new LockResolverClient(
-            conf, this.blockingStub, this.asyncStub, channelFactory, regionManager);
-  }
-
-  @Override
-  protected TikvBlockingStub getBlockingStub() {
-    return blockingStub.withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
-  }
-
-  @Override
-  protected TikvStub getAsyncStub() {
-    return asyncStub.withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
-  }
-
-  @Override
-  public void close() {}
-
-  /**
-   * onNotLeader deals with NotLeaderError and returns whether re-splitting key range is needed
-   *
-   * @param newStore the new store presented by NotLeader Error
-   * @return false when re-split is needed.
-   */
-  @Override
-  public boolean onNotLeader(Store newStore) {
-    if (logger.isDebugEnabled()) {
-      logger.debug(region + ", new leader = " + newStore.getId());
-    }
-    TiRegion cachedRegion = regionManager.getRegionById(region.getId());
-    // When switch leader fails or the region changed its key range,
-    // it would be necessary to re-split task's key range for new region.
-    if (!region.getStartKey().equals(cachedRegion.getStartKey())
-        || !region.getEndKey().equals(cachedRegion.getEndKey())) {
-      return false;
-    }
-    region = cachedRegion;
-    String addressStr = regionManager.getStoreById(region.getLeader().getStoreId()).getAddress();
-    ManagedChannel channel = channelFactory.getChannel(addressStr);
-    blockingStub = TikvGrpc.newBlockingStub(channel);
-    asyncStub = TikvGrpc.newStub(channel);
-    return true;
-  }
-
-  @Override
-  public void onStoreNotMatch(Store store) {
-    String addressStr = store.getAddress();
-    ManagedChannel channel = channelFactory.getChannel(addressStr);
-    blockingStub = TikvGrpc.newBlockingStub(channel);
-    asyncStub = TikvGrpc.newStub(channel);
-    if (logger.isDebugEnabled() && region.getLeader().getStoreId() != store.getId()) {
-      logger.debug(
-          "store_not_match may occur? "
-              + region
-              + ", original store = "
-              + store.getId()
-              + " address = "
-              + addressStr);
-    }
+        new LockResolverClient(conf, blockingStub, asyncStub, channelFactory, regionManager);
   }
 }

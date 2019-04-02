@@ -186,6 +186,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   public void close() throws InterruptedException {
     if (service != null) {
       service.shutdownNow();
+      service.awaitTermination(1, TimeUnit.SECONDS);
     }
   }
 

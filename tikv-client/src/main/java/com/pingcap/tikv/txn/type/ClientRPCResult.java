@@ -16,9 +16,9 @@
 package com.pingcap.tikv.txn.type;
 
 public class ClientRPCResult {
-  boolean success;
-  boolean retry;
-  String error;
+  private boolean success;
+  private boolean retry;
+  private String error;
 
   public ClientRPCResult(boolean success, boolean retry, String error) {
     this.success = success;

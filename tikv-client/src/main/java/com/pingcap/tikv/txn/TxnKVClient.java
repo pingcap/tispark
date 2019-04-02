@@ -32,6 +32,7 @@ import com.pingcap.tikv.txn.type.ClientRPCResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,7 +101,7 @@ public class TxnKVClient implements AutoCloseable {
     } catch (Exception e) {
       result.setSuccess(false);
       // mark retryable, region error, should retry prewrite again
-      result.setRetry(retrableException(e));
+      result.setRetry(retryableException(e));
       result.setError(e.getMessage());
     }
     return result;
@@ -110,12 +111,12 @@ public class TxnKVClient implements AutoCloseable {
    * Commit request of 2pc, add backoff logic when encountered region error, ErrBodyMissing, and
    * other errors
    *
-   * @param backOffer
-   * @param keys
-   * @param startTs
-   * @param commitTs
-   * @param regionId
-   * @return
+   * @param backOffer specifies backoffer policy
+   * @param keys specifies batch keys which need to be committed.
+   * @param startTs specifies txn's start timestamp.
+   * @param commitTs specifies txn's commit timestamp.
+   * @param regionId specifies the corresponding regon's id.
+   * @return a {@code} ClientRPCResult which carries rpc call's info.
    */
   public ClientRPCResult commit(
       BackOffer backOffer, ByteString[] keys, long startTs, long commitTs, long regionId) {
@@ -124,26 +125,24 @@ public class TxnKVClient implements AutoCloseable {
     TiRegion region = regionManager.getRegionById(regionId);
     RegionStoreClient client = clientBuilder.build(region);
     List<ByteString> byteList = Lists.newArrayList();
-    for (ByteString key : keys) {
-      byteList.add(key);
-    }
+    byteList.addAll(Arrays.asList(keys));
     try {
       client.commit(backOffer, byteList, startTs, commitTs);
     } catch (Exception e) {
       result.setSuccess(false);
       // mark retryable, region error, should retry prewrite again
-      result.setRetry(retrableException(e));
+      result.setRetry(retryableException(e));
       result.setError(e.getMessage());
     }
     return result;
   }
 
-  private boolean retrableException(Exception e) {
+  private boolean retryableException(Exception e) {
     return e instanceof TiClientInternalException
         || e instanceof KeyException
         || e instanceof RegionException;
   }
 
   @Override
-  public void close() throws Exception {}
+  public void close() {}
 }
