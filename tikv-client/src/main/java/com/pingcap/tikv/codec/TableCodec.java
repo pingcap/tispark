@@ -13,9 +13,10 @@ import java.util.List;
 
 public class TableCodec {
   // Row layout: colID1, value1, colID2, value2, .....
-  public static byte[] encodeRow(
-      DataType[] colTypes, TLongArrayList colIDs, Object[] values, CodecDataOutput cdo)
+  public static byte[] encodeRow(DataType[] colTypes, TLongArrayList colIDs, Object[] values)
       throws IllegalAccessException {
+    // TODO should we replace this with static field and reset it?
+    CodecDataOutput cdo = new CodecDataOutput();
     if (colTypes.length != colIDs.size()) {
       throw new IllegalAccessException(
           String.format(

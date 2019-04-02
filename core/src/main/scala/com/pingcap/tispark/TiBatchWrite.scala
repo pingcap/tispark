@@ -248,7 +248,7 @@ object TiBatchWrite {
       values.update(i, tiRow.get(i, colDataTypes(i)))
     }
 
-    TableCodec.encodeRow(colDataTypes, colIDs, values, new CodecDataOutput())
+    TableCodec.encodeRow(colDataTypes, colIDs, values)
   }
 }
 

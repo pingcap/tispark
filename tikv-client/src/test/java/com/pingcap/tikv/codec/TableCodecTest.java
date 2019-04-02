@@ -69,7 +69,7 @@ public class TableCodecTest {
   public void testRowCodecThrowException() {
     TLongArrayList fakeColIds = TLongArrayList.wrap(new long[] {1, 2});
     try {
-      TableCodec.encodeRow(colsType, fakeColIds, values, new CodecDataOutput());
+      TableCodec.encodeRow(colsType, fakeColIds, values);
       expectedEx.expect(IllegalAccessException.class);
       expectedEx.expectMessage("encodeRow error: data and columnID count not match 6 vs 2");
     } catch (IllegalAccessException ignored) {
@@ -81,10 +81,7 @@ public class TableCodecTest {
     try {
       byte[] bytes =
           TableCodec.encodeRow(
-              new DataType[] {},
-              TLongArrayList.wrap(new long[] {}),
-              new Object[] {},
-              new CodecDataOutput());
+              new DataType[] {}, TLongArrayList.wrap(new long[] {}), new Object[] {});
       assertEquals(1, bytes.length);
       assertEquals(Codec.NULL_FLAG, bytes[0]);
     } catch (IllegalAccessException ignored) {
@@ -94,7 +91,7 @@ public class TableCodecTest {
   @Test
   public void testRowCodec() {
     try {
-      byte[] bytes = TableCodec.encodeRow(colsType, colIds, values, new CodecDataOutput());
+      byte[] bytes = TableCodec.encodeRow(colsType, colIds, values);
       // testing the correctness via decodeRow
       Object[] res = TableCodec.decodeRow(new CodecDataInput(bytes), colsType);
       for (int i = 0; i < colsType.length; i++) {
