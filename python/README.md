@@ -20,10 +20,10 @@ This is the simplest way, just a decent Spark environment should be enough.
 5. To use TiSpark, run these commands:
 ```python
 # Query as you are in spark-shell
-sql("show databases").show()
-sql("use tpch_test")
-sql("show tables").show()
-sql("select count(*) from customer").show()
+spark.sql("show databases").show()
+spark.sql("use tpch_test")
+spark.sql("show tables").show()
+spark.sql("select count(*) from customer").show()
 
 # Result
 # +--------+
@@ -39,6 +39,8 @@ This way is useful when you want to execute your own Python scripts.
 Because of an open issue **[SPARK-25003]** in Spark 2.3, using spark-submit for python files will only support following api
 
 1. Use ```pip install pytispark``` in your console to install `pytispark` 
+
+Note that you may need reinstall `pytispark` if you meet `No plan for reation` error.
 
 2. Create a Python file named `test.py` as below:
 ```python
