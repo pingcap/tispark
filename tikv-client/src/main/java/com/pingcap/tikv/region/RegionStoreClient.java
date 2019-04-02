@@ -246,12 +246,6 @@ public class RegionStoreClient extends TiKVClient {
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
-    //    KeyErrorHandler<ScanResponse> errorExtracter =
-    //        new KeyErrorHandler<>(regionManager,
-    //            this,
-    //            region,
-    //            ScanResponse::getPairsList,
-    //            lockResolverClient);
     List<Lock> locks = new ArrayList<>();
 
     for (KvPair pair : resp.getPairsList()) {
