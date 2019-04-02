@@ -25,10 +25,8 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.util.FastByteComparisons;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Metapb;
@@ -37,7 +35,6 @@ import org.tikv.kvproto.Metapb.Region;
 
 public class TiRegion implements Serializable {
   private final Region meta;
-  private final Set<Long> unreachableStores;
   private Peer peer;
   private final IsolationLevel isolationLevel;
   private final Kvrpcpb.CommandPri commandPri;
@@ -54,7 +51,6 @@ public class TiRegion implements Serializable {
     } else {
       this.peer = peer;
     }
-    this.unreachableStores = new HashSet<>();
     this.isolationLevel = isolationLevel;
     this.commandPri = commandPri;
   }

@@ -24,7 +24,7 @@ public class TableCodec {
     }
 
     for (int i = 0; i < colTypes.length; i++) {
-      IntegerCodec.writeLongFully(cdo, colIDs.get(i), true);
+      IntegerCodec.writeLongFully(cdo, colIDs.get(i), false);
       colTypes[i].encode(cdo, EncodeType.VALUE, values[i]);
     }
 

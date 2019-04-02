@@ -32,6 +32,7 @@ import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.FutureObserver;
 import io.grpc.ManagedChannel;
 import java.net.URI;
@@ -53,6 +54,8 @@ import org.tikv.kvproto.Pdpb.GetRegionResponse;
 import org.tikv.kvproto.Pdpb.GetStoreRequest;
 import org.tikv.kvproto.Pdpb.GetStoreResponse;
 import org.tikv.kvproto.Pdpb.RequestHeader;
+import org.tikv.kvproto.Pdpb.ScatterRegionRequest;
+import org.tikv.kvproto.Pdpb.ScatterRegionResponse;
 import org.tikv.kvproto.Pdpb.Timestamp;
 import org.tikv.kvproto.Pdpb.TsoRequest;
 import org.tikv.kvproto.Pdpb.TsoResponse;
@@ -65,6 +68,24 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
   private List<URI> pdAddrs;
+
+  public void scatterRegion(TiRegion left) {
+    Supplier<ScatterRegionRequest> request =
+        () -> ScatterRegionRequest.newBuilder().setHeader(header).setRegionId(left.getId()).build();
+
+    PDErrorHandler<ScatterRegionResponse> handler =
+        new PDErrorHandler<>(
+            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
+            this);
+
+    ScatterRegionResponse resp =
+        callWithRetry(
+            ConcreteBackOffer.newGetBackOff(), PDGrpc.METHOD_SCATTER_REGION, request, handler);
+    if (resp.hasHeader() && resp.getHeader().hasError()) {
+      throw new TiClientInternalException(
+          String.format("failed to scatter region because %s", resp.getHeader().getError()));
+    }
+  }
 
   @Override
   public TiTimestamp getTimestamp(BackOffer backOffer) {
