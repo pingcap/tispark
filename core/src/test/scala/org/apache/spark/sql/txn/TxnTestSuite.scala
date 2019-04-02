@@ -60,11 +60,10 @@ class TxnTestSuite extends BaseTiSparkSuite {
       //Assume a valid connection object conn
       conn.setAutoCommit(false)
       val stmt = conn.createStatement()
-      query.foreach {
-        case q: String =>
-          stmt.executeUpdate(q)
-          if (wait)
-            Thread.sleep(2000)
+      query.foreach { q: String =>
+        stmt.executeUpdate(q)
+        if (wait)
+          Thread.sleep(2000)
       }
       conn.commit()
     } catch {
@@ -122,7 +121,7 @@ class TxnTestSuite extends BaseTiSparkSuite {
                       giveString.replace("$1", num).replace("$2", id1),
                       getString.replace("$1", num).replace("$2", id2)
                     )
-                    queryTIDBTxn(queries, true)
+                    queryTIDBTxn(queries, wait = true)
                   }
                 )
               case 2 =>
@@ -149,7 +148,7 @@ class TxnTestSuite extends BaseTiSparkSuite {
 
                         val queries = array.map(_._1) ++ array.map(_._2)
 
-                        queryTIDBTxn(queries, false)
+                        queryTIDBTxn(queries, wait = false)
                       }
                     )
                 }
