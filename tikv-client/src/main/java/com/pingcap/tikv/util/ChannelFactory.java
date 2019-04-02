@@ -52,14 +52,9 @@ public class ChannelFactory implements AutoCloseable {
 
   @Override
   public void close() {
-    connPool.forEach(
-        (k, v) -> {
-          v.shutdownNow();
-          try {
-            v.awaitTermination(1, TimeUnit.SECONDS);
-          } catch (InterruptedException ignored) {
-          }
-        });
+    for (ManagedChannel ch : connPool.values()) {
+      ch.shutdown();
+    }
     connPool.clear();
   }
 }
