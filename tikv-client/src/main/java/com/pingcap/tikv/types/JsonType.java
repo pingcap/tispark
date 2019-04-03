@@ -140,10 +140,10 @@ public class JsonType extends DataType {
     byte[] readBuffer = new byte[8];
     readFully(cdi, readBuffer);
 
-    return getaLong(readBuffer);
+    return getLong(readBuffer);
   }
 
-  private long getaLong(byte[] readBuffer) {
+  private long getLong(byte[] readBuffer) {
     return ((long) (readBuffer[7]) << 56)
         + ((long) (readBuffer[6] & 255) << 48)
         + ((long) (readBuffer[5] & 255) << 40)
@@ -157,7 +157,7 @@ public class JsonType extends DataType {
   private long parseInt64(DataInput cdi) {
     byte[] readBuffer = new byte[8];
     readFully(cdi, readBuffer);
-    return getaLong(readBuffer);
+    return getLong(readBuffer);
   }
 
   private long parseUint32(DataInput cdi) {
@@ -173,7 +173,7 @@ public class JsonType extends DataType {
   private double parseDouble(DataInput cdi) {
     byte[] readBuffer = new byte[8];
     readFully(cdi, readBuffer);
-    return Double.longBitsToDouble(getaLong(readBuffer));
+    return Double.longBitsToDouble(getLong(readBuffer));
   }
 
   private int parseUint16(DataInput cdi) {
