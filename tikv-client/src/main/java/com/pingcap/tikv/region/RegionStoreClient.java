@@ -764,7 +764,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
   }
 
-  public TiRegion splitRegion(TiRegion region, ByteString splitedKey) {
+  public TiRegion splitRegion(TiRegion region, ByteString splitKey) {
     Supplier<SplitRegionRequest> request =
         () ->
             SplitRegionRequest.newBuilder()
@@ -774,7 +774,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
                         .setRegionEpoch(region.getRegionEpoch())
                         .setPeer(region.getLeader())
                         .build())
-                .setSplitKey(splitedKey)
+                .setSplitKey(splitKey)
                 .build();
 
     KVErrorHandler<SplitRegionResponse> handler =
