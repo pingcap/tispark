@@ -33,7 +33,7 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
   }
 
   private boolean isYear() {
-    return partExpr instanceof FuncCallExpr;
+    return partExpr instanceof FuncCallExpr && ((FuncCallExpr) partExpr).getFuncTp() == Type.YEAR;
   }
 
   private boolean isColumnRef() {
