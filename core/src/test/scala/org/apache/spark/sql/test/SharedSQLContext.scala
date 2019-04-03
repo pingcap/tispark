@@ -202,7 +202,7 @@ object SharedSQLContext extends Logging {
       }
 
       if (loadData && !forceNotLoad) {
-        logger.info("Loading TirkTestData")
+        logger.info("Loading TiSparkTestData")
         // Load index test data
         var queryString = resourceToString(
           s"tispark-test/IndexTest.sql",
@@ -212,7 +212,7 @@ object SharedSQLContext extends Logging {
         logger.info("Load IndexTest.sql successfully.")
         // Load expression test data
         queryString = resourceToString(
-          s"tispaest/TiSparkTest.sql",
+          s"tispark-test/TiSparkTest.sql",
           classLoader = Thread.currentThread().getContextClassLoader
         )
         _statement.execute(queryString)
