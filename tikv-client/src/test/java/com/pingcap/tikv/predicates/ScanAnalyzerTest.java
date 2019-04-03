@@ -80,6 +80,8 @@ public class ScanAnalyzerTest {
 
   @Test
   public void buildTableScanKeyRangeTest() {
+    // This test also covers partitioned table. When it comes to partitioned table
+    // we need to build key range from table ids(collect from partition definitions)
     TiTableInfo table = createTableWithIndex(6, 5);
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
 
@@ -94,8 +96,7 @@ public class ScanAnalyzerTest {
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
-    List<Coprocessor.KeyRange> keyRanges =
-        scanAnalyzer.buildTableScanKeyRange(table, irs, table.getPartitionInfo());
+    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildTableScanKeyRange(table, irs, null);
 
     assertEquals(keyRanges.size(), 1);
 
@@ -129,7 +130,7 @@ public class ScanAnalyzerTest {
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
     List<Coprocessor.KeyRange> keyRanges =
-        scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo());
+        scanAnalyzer.buildIndexScanKeyRange(table, index, irs, null);
 
     assertEquals(keyRanges.size(), 1);
 
@@ -157,7 +158,7 @@ public class ScanAnalyzerTest {
         expressionToIndexRanges(
             result.getPointPredicates(), result.getRangePredicate(), table, index);
 
-    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo());
+    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, null);
 
     assertEquals(keyRanges.size(), 1);
 

@@ -50,12 +50,12 @@ import org.tikv.kvproto.Coprocessor;
  */
 public class TiDAGRequest implements Serializable {
 
-  public TiPartitionInfo getPrunedPartInfo() {
-    return prunedPartInfo;
+  public List<TiPartitionDef> getPrunedParts() {
+    return prunedParts;
   }
 
-  public void setPrunedPartInfo(TiPartitionInfo prunedPartInfo) {
-    this.prunedPartInfo = prunedPartInfo;
+  public void setPrunedParts(List<TiPartitionDef> prunedParts) {
+    this.prunedParts = prunedParts;
   }
 
   public static class Builder {
@@ -185,7 +185,7 @@ public class TiDAGRequest implements Serializable {
           .build();
 
   private TiTableInfo tableInfo;
-  private TiPartitionInfo prunedPartInfo;
+  private List<TiPartitionDef> prunedParts;
   private TiIndexInfo indexInfo;
   private final List<ColumnRef> fields = new ArrayList<>();
   private final List<Expression> filters = new ArrayList<>();
@@ -476,6 +476,18 @@ public class TiDAGRequest implements Serializable {
 
   public TiTableInfo getTableInfo() {
     return this.tableInfo;
+  }
+
+  public List<Long> getIds() {
+    if (!this.tableInfo.isPartitionEnabled()) {
+      return ImmutableList.of(this.tableInfo.getId());
+    }
+
+    List<Long> ids = new ArrayList<>();
+    for (TiPartitionDef pDef : this.getPrunedParts()) {
+      ids.add(pDef.getId());
+    }
+    return ids;
   }
 
   public TiDAGRequest setIndexInfo(TiIndexInfo indexInfo) {

@@ -24,6 +24,8 @@ import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import org.tikv.kvproto.Metapb;
+import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
 import com.pingcap.tikv.types.DataType;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +49,7 @@ public class MetaUtils {
     private String name;
     private List<TiColumnInfo> columns = new ArrayList<>();
     private List<TiIndexInfo> indices = new ArrayList<>();
+    private TiPartitionInfo partInfo;
     private Long tid = null;
 
     public TableBuilder() {}
@@ -74,6 +77,14 @@ public class MetaUtils {
 
       TiColumnInfo col = new TiColumnInfo(newId(), name, columns.size(), type, pk);
       columns.add(col);
+      return this;
+    }
+
+    public TableBuilder addPartition(
+        String expr, PartitionType type, List<TiPartitionDef> partitionDefs, List<CIStr> columns) {
+      this.partInfo =
+          new TiPartitionInfo(
+              TiPartitionInfo.partTypeToLong(type), expr, columns, true, partitionDefs);
       return this;
     }
 
@@ -120,7 +131,7 @@ public class MetaUtils {
         name = "Table" + tid;
       }
       return new TiTableInfo(
-          tid, CIStr.newCIStr(name), "", "", pkHandle, columns, indices, "", 0, 0, 0, 0, null);
+          tid, CIStr.newCIStr(name), "", "", pkHandle, columns, indices, "", 0, 0, 0, 0, partInfo);
     }
   }
 

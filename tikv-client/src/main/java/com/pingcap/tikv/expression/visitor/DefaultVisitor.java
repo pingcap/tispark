@@ -69,4 +69,9 @@ public class DefaultVisitor<R, C> extends Visitor<R, C> {
   protected R visit(Not node, C context) {
     return process(node, context);
   }
+
+  @Override
+  protected R visit(FuncCallExpr node, C context) {
+    return process(node, context);
+  }
 }
