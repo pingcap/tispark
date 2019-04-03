@@ -28,10 +28,6 @@ import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
-import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
-import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
-import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
@@ -47,6 +43,10 @@ import java.util.List;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.tikv.kvproto.Coprocessor.KeyRange;
+import org.tikv.kvproto.Kvrpcpb.CommandPri;
+import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
+import org.tikv.kvproto.Metapb;
 
 public class DAGIteratorTest {
   private KVMockServer server;
@@ -74,7 +74,7 @@ public class DAGIteratorTest {
             pdServer.getClusterId(),
             GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + pdServer.port),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 1)),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
+            GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
 
     Metapb.Region r =
         Metapb.Region.newBuilder()
@@ -94,8 +94,9 @@ public class DAGIteratorTest {
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
     server.stop();
+    session.close();
   }
 
   @Test
@@ -130,7 +131,6 @@ public class DAGIteratorTest {
     server.put("key1", cdo.toByteString());
     List<RegionTask> tasks = ImmutableList.of(RegionTask.newInstance(region, store, keyRanges));
     CoprocessIterator<Row> iter = CoprocessIterator.getRowIterator(req, tasks, session);
-    iter.hasNext();
     Row r = iter.next();
     SchemaInfer infer = SchemaInfer.create(req);
     assertEquals(r.get(0, infer.getType(0)), 666L);

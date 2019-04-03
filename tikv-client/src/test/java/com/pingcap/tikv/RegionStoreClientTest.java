@@ -21,13 +21,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.*;
-import com.pingcap.tikv.kvproto.Coprocessor;
-import com.pingcap.tikv.kvproto.Coprocessor.KeyRange;
-import com.pingcap.tikv.kvproto.Kvrpcpb;
-import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
-import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
-import com.pingcap.tikv.kvproto.Metapb;
-import com.pingcap.tikv.kvproto.Pdpb;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
@@ -37,6 +30,13 @@ import java.util.stream.Collectors;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.tikv.kvproto.Coprocessor;
+import org.tikv.kvproto.Coprocessor.KeyRange;
+import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Kvrpcpb.CommandPri;
+import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
+import org.tikv.kvproto.Metapb;
+import org.tikv.kvproto.Pdpb;
 
 public class RegionStoreClientTest {
   private KVMockServer server;
@@ -56,7 +56,7 @@ public class RegionStoreClientTest {
             pdServer.getClusterId(),
             GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + pdServer.port),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 1)),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
+            GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
 
     Metapb.Region r =
         Metapb.Region.newBuilder()
@@ -88,8 +88,9 @@ public class RegionStoreClientTest {
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
     server.stop();
+    session.close();
   }
 
   @Test

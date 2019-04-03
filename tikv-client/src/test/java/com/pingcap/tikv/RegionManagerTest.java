@@ -18,9 +18,6 @@ package com.pingcap.tikv;
 import static org.junit.Assert.*;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.kvproto.Metapb;
-import com.pingcap.tikv.kvproto.Metapb.Store;
-import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.Pair;
@@ -28,12 +25,16 @@ import java.io.IOException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.tikv.kvproto.Metapb;
+import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.Metapb.StoreState;
 
 public class RegionManagerTest {
   private PDMockServer server;
   private static final long CLUSTER_ID = 1024;
   private static final String LOCAL_ADDR = "127.0.0.1";
   private RegionManager mgr;
+  private TiSession session;
 
   @Before
   public void setup() throws IOException {
@@ -44,16 +45,17 @@ public class RegionManagerTest {
             server.getClusterId(),
             GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + server.port),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 1)),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
+            GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
 
     TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + server.port);
-    TiSession session = TiSession.create(conf);
+    session = TiSession.create(conf);
     mgr = session.getRegionManager();
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
     server.stop();
+    session.close();
   }
 
   @Test

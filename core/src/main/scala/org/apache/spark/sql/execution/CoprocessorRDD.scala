@@ -18,7 +18,7 @@ package org.apache.spark.sql.execution
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 
-import com.pingcap.tikv.kvproto.Coprocessor.KeyRange
+import org.tikv.kvproto.Coprocessor.KeyRange
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.iterator.CoprocessIterator
@@ -223,27 +223,12 @@ case class RegionTaskExec(child: SparkPlan,
           // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
           // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
           def generateIndexTasks(handles: TLongArrayList): util.List[RegionTask] = {
-            var indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
-            if (!dagRequest.getTableInfo.isPartitionEnabled) {
-              indexTasks.addAll(
-                RangeSplitter
-                  .newSplitter(session.getRegionManager)
-                  .splitAndSortHandlesByRegion(
-                    dagRequest.getTableInfo.getId,
-                    new TLongArrayList(handles)
-                  )
-              )
-            } else {
-              // when partition table is present, partition id is table id.
-              val partInfo = dagRequest.getPrunedPartInfo
-              for (pDef <- partInfo.getDefs) {
-                indexTasks.addAll(
-                  RangeSplitter
-                    .newSplitter(session.getRegionManager)
-                    .splitAndSortHandlesByRegion(pDef.getId, handles)
-                )
-              }
-            }
+            val indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
+            indexTasks.addAll(
+              RangeSplitter
+                .newSplitter(session.getRegionManager)
+                .splitAndSortHandlesByRegion(dagRequest.getIds, new TLongArrayList(handles))
+            )
             return indexTasks
           }
 

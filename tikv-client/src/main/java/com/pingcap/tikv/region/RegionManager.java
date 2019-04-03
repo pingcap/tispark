@@ -28,13 +28,13 @@ import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.kvproto.Metapb.Peer;
-import com.pingcap.tikv.kvproto.Metapb.Store;
-import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import java.util.*;
 import org.apache.log4j.Logger;
+import org.tikv.kvproto.Metapb.Peer;
+import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.Metapb.StoreState;
 
 public class RegionManager {
   private static final Logger logger = Logger.getLogger(RegionManager.class);

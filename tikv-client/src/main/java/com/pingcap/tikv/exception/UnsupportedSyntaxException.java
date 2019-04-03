@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,8 @@
 
 package com.pingcap.tikv.exception;
 
-import org.tikv.kvproto.Errorpb.Error;
-
-public class RegionException extends RuntimeException {
-  private final Error regionErr;
-
-  public RegionException(Error regionErr) {
-    this.regionErr = regionErr;
-  }
-
-  public Error getRegionErr() {
-    return regionErr;
+public class UnsupportedSyntaxException extends RuntimeException {
+  public UnsupportedSyntaxException(String msg) {
+    super(msg);
   }
 }

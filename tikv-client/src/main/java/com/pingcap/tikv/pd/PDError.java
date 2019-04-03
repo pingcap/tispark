@@ -17,7 +17,7 @@
 
 package com.pingcap.tikv.pd;
 
-import com.pingcap.tikv.kvproto.Pdpb;
+import org.tikv.kvproto.Pdpb;
 
 public final class PDError {
   private final Pdpb.Error error;

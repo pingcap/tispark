@@ -21,8 +21,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.kvproto.Coprocessor;
 import org.junit.Test;
+import org.tikv.kvproto.Coprocessor;
 
 public class KeyUtilsTest {
   @Test

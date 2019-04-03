@@ -23,8 +23,6 @@ import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.kvproto.Kvrpcpb.KvPair;
-import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
@@ -40,6 +38,8 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.tikv.kvproto.Kvrpcpb.KvPair;
+import org.tikv.kvproto.Metapb.Store;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
@@ -84,7 +84,7 @@ public class Snapshot {
    * @return a Iterator that contains all result from this select request.
    */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest) {
-    if (dagRequest.isIndexScan()) {
+    if (dagRequest.hasIndex()) {
       Iterator<Long> iter =
           getHandleIterator(
               dagRequest,

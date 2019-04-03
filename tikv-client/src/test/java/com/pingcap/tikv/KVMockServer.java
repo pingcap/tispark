@@ -23,15 +23,6 @@ import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.kvproto.Coprocessor;
-import com.pingcap.tikv.kvproto.Errorpb;
-import com.pingcap.tikv.kvproto.Errorpb.Error;
-import com.pingcap.tikv.kvproto.Errorpb.NotLeader;
-import com.pingcap.tikv.kvproto.Errorpb.ServerIsBusy;
-import com.pingcap.tikv.kvproto.Errorpb.StaleEpoch;
-import com.pingcap.tikv.kvproto.Kvrpcpb;
-import com.pingcap.tikv.kvproto.Kvrpcpb.Context;
-import com.pingcap.tikv.kvproto.TikvGrpc;
 import com.pingcap.tikv.region.TiRegion;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -45,6 +36,14 @@ import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
+import org.tikv.kvproto.Coprocessor;
+import org.tikv.kvproto.Errorpb;
+import org.tikv.kvproto.Errorpb.Error;
+import org.tikv.kvproto.Errorpb.NotLeader;
+import org.tikv.kvproto.Errorpb.ServerIsBusy;
+import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Kvrpcpb.Context;
+import org.tikv.kvproto.TikvGrpc;
 
 public class KVMockServer extends TikvGrpc.TikvImplBase {
 
@@ -106,9 +105,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void rawGet(
-      com.pingcap.tikv.kvproto.Kvrpcpb.RawGetRequest request,
-      io.grpc.stub.StreamObserver<com.pingcap.tikv.kvproto.Kvrpcpb.RawGetResponse>
-          responseObserver) {
+      org.tikv.kvproto.Kvrpcpb.RawGetRequest request,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.RawGetResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       ByteString key = request.getKey();
@@ -131,9 +129,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   /** */
   public void rawPut(
-      com.pingcap.tikv.kvproto.Kvrpcpb.RawPutRequest request,
-      io.grpc.stub.StreamObserver<com.pingcap.tikv.kvproto.Kvrpcpb.RawPutResponse>
-          responseObserver) {
+      org.tikv.kvproto.Kvrpcpb.RawPutRequest request,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.RawPutResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       ByteString key = request.getKey();
@@ -161,7 +158,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
     } else if (errorCode == KEY_NOT_IN_REGION) {
       errBuilder.setKeyNotInRegion(Errorpb.KeyNotInRegion.getDefaultInstance());
     } else if (errorCode == STALE_EPOCH) {
-      errBuilder.setStaleEpoch(Errorpb.StaleEpoch.getDefaultInstance());
+      errBuilder.setEpochNotMatch(Errorpb.EpochNotMatch.getDefaultInstance());
     } else if (errorCode == STALE_COMMAND) {
       errBuilder.setStaleCommand(Errorpb.StaleCommand.getDefaultInstance());
     } else if (errorCode == SERVER_IS_BUSY) {
@@ -175,9 +172,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   /** */
   public void rawDelete(
-      com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteRequest request,
-      io.grpc.stub.StreamObserver<com.pingcap.tikv.kvproto.Kvrpcpb.RawDeleteResponse>
-          responseObserver) {
+      org.tikv.kvproto.Kvrpcpb.RawDeleteRequest request,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.RawDeleteResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       ByteString key = request.getKey();
@@ -198,8 +194,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void kvGet(
-      com.pingcap.tikv.kvproto.Kvrpcpb.GetRequest request,
-      io.grpc.stub.StreamObserver<com.pingcap.tikv.kvproto.Kvrpcpb.GetResponse> responseObserver) {
+      org.tikv.kvproto.Kvrpcpb.GetRequest request,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.GetResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       if (request.getVersion() == 0) {
@@ -230,8 +226,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void kvScan(
-      com.pingcap.tikv.kvproto.Kvrpcpb.ScanRequest request,
-      io.grpc.stub.StreamObserver<com.pingcap.tikv.kvproto.Kvrpcpb.ScanResponse> responseObserver) {
+      org.tikv.kvproto.Kvrpcpb.ScanRequest request,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.ScanResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       if (request.getVersion() == 0) {
@@ -270,9 +266,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void kvBatchGet(
-      com.pingcap.tikv.kvproto.Kvrpcpb.BatchGetRequest request,
-      io.grpc.stub.StreamObserver<com.pingcap.tikv.kvproto.Kvrpcpb.BatchGetResponse>
-          responseObserver) {
+      org.tikv.kvproto.Kvrpcpb.BatchGetRequest request,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Kvrpcpb.BatchGetResponse> responseObserver) {
     try {
       verifyContext(request.getContext());
       if (request.getVersion() == 0) {
@@ -306,8 +301,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
   @Override
   public void coprocessor(
-      com.pingcap.tikv.kvproto.Coprocessor.Request requestWrap,
-      io.grpc.stub.StreamObserver<com.pingcap.tikv.kvproto.Coprocessor.Response> responseObserver) {
+      org.tikv.kvproto.Coprocessor.Request requestWrap,
+      io.grpc.stub.StreamObserver<org.tikv.kvproto.Coprocessor.Response> responseObserver) {
     try {
       verifyContext(requestWrap.getContext());
 
@@ -320,14 +315,14 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
       Coprocessor.Response.Builder builderWrap = Coprocessor.Response.newBuilder();
       SelectResponse.Builder builder = SelectResponse.newBuilder();
-      com.pingcap.tikv.kvproto.Errorpb.Error.Builder errBuilder =
-          com.pingcap.tikv.kvproto.Errorpb.Error.newBuilder();
+      org.tikv.kvproto.Errorpb.Error.Builder errBuilder =
+          org.tikv.kvproto.Errorpb.Error.newBuilder();
 
       for (Coprocessor.KeyRange keyRange : keyRanges) {
         Integer errorCode = errorMap.remove(keyRange.getStart());
         if (errorCode != null) {
           if (STALE_EPOCH == errorCode) {
-            errBuilder.setStaleEpoch(StaleEpoch.getDefaultInstance());
+            errBuilder.setEpochNotMatch(Errorpb.EpochNotMatch.getDefaultInstance());
           } else if (NOT_LEADER == errorCode) {
             errBuilder.setNotLeader(NotLeader.getDefaultInstance());
           } else {

@@ -30,13 +30,13 @@ import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
-import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.meta.*;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.*;
 import java.util.*;
 import java.util.function.BiConsumer;
 import org.junit.Test;
+import org.tikv.kvproto.Coprocessor;
 
 public class ScanAnalyzerTest {
   private static TiTableInfo createTable() {
@@ -80,6 +80,8 @@ public class ScanAnalyzerTest {
 
   @Test
   public void buildTableScanKeyRangeTest() {
+    // This test also covers partitioned table. When it comes to partitioned table
+    // we need to build key range from table ids(collect from partition definitions)
     TiTableInfo table = createTableWithIndex(6, 5);
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
 
@@ -94,8 +96,7 @@ public class ScanAnalyzerTest {
 
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
-    List<Coprocessor.KeyRange> keyRanges =
-        scanAnalyzer.buildTableScanKeyRange(table, irs, table.getPartitionInfo());
+    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildTableScanKeyRange(table, irs, null);
 
     assertEquals(keyRanges.size(), 1);
 
@@ -129,7 +130,7 @@ public class ScanAnalyzerTest {
     ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
 
     List<Coprocessor.KeyRange> keyRanges =
-        scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo());
+        scanAnalyzer.buildIndexScanKeyRange(table, index, irs, null);
 
     assertEquals(keyRanges.size(), 1);
 
@@ -157,7 +158,7 @@ public class ScanAnalyzerTest {
         expressionToIndexRanges(
             result.getPointPredicates(), result.getRangePredicate(), table, index);
 
-    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, table.getPartitionInfo());
+    keyRanges = scanAnalyzer.buildIndexScanKeyRange(table, index, irs, null);
 
     assertEquals(keyRanges.size(), 1);
 

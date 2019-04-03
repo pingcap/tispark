@@ -26,22 +26,6 @@ import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
-import com.pingcap.tikv.kvproto.Metapb.Store;
-import com.pingcap.tikv.kvproto.PDGrpc;
-import com.pingcap.tikv.kvproto.PDGrpc.PDBlockingStub;
-import com.pingcap.tikv.kvproto.PDGrpc.PDStub;
-import com.pingcap.tikv.kvproto.Pdpb.GetMembersRequest;
-import com.pingcap.tikv.kvproto.Pdpb.GetMembersResponse;
-import com.pingcap.tikv.kvproto.Pdpb.GetRegionByIDRequest;
-import com.pingcap.tikv.kvproto.Pdpb.GetRegionRequest;
-import com.pingcap.tikv.kvproto.Pdpb.GetRegionResponse;
-import com.pingcap.tikv.kvproto.Pdpb.GetStoreRequest;
-import com.pingcap.tikv.kvproto.Pdpb.GetStoreResponse;
-import com.pingcap.tikv.kvproto.Pdpb.RequestHeader;
-import com.pingcap.tikv.kvproto.Pdpb.Timestamp;
-import com.pingcap.tikv.kvproto.Pdpb.TsoRequest;
-import com.pingcap.tikv.kvproto.Pdpb.TsoResponse;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
@@ -56,6 +40,21 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.PDGrpc;
+import org.tikv.kvproto.PDGrpc.PDBlockingStub;
+import org.tikv.kvproto.PDGrpc.PDStub;
+import org.tikv.kvproto.Pdpb.GetMembersRequest;
+import org.tikv.kvproto.Pdpb.GetMembersResponse;
+import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
+import org.tikv.kvproto.Pdpb.GetRegionRequest;
+import org.tikv.kvproto.Pdpb.GetRegionResponse;
+import org.tikv.kvproto.Pdpb.GetStoreRequest;
+import org.tikv.kvproto.Pdpb.GetStoreResponse;
+import org.tikv.kvproto.Pdpb.RequestHeader;
+import org.tikv.kvproto.Pdpb.Timestamp;
+import org.tikv.kvproto.Pdpb.TsoRequest;
+import org.tikv.kvproto.Pdpb.TsoResponse;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
@@ -63,7 +62,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private TsoRequest tsoReq;
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
-  private IsolationLevel isolationLevel;
   private List<URI> pdAddrs;
 
   @Override
@@ -152,17 +150,20 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return responseObserver.getFuture();
   }
 
+  private Supplier<GetStoreRequest> buildGetStroeReq(long storeId) {
+    return () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
+  }
+
+  private PDErrorHandler<GetStoreResponse> buildPDErrorHandler() {
+    return new PDErrorHandler<>(
+        r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null, this);
+  }
+
   @Override
   public Store getStore(BackOffer backOffer, long storeId) {
-    Supplier<GetStoreRequest> request =
-        () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
-    PDErrorHandler<GetStoreResponse> handler =
-        new PDErrorHandler<>(
-            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
-            this);
-
-    GetStoreResponse resp = callWithRetry(backOffer, PDGrpc.METHOD_GET_STORE, request, handler);
-    return resp.getStore();
+    return callWithRetry(
+            backOffer, PDGrpc.METHOD_GET_STORE, buildGetStroeReq(storeId), buildPDErrorHandler())
+        .getStore();
   }
 
   @Override
@@ -170,14 +171,12 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     FutureObserver<Store, GetStoreResponse> responseObserver =
         new FutureObserver<>(GetStoreResponse::getStore);
 
-    Supplier<GetStoreRequest> request =
-        () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
-    PDErrorHandler<GetStoreResponse> handler =
-        new PDErrorHandler<>(
-            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
-            this);
-
-    callAsyncWithRetry(backOffer, PDGrpc.METHOD_GET_STORE, request, responseObserver, handler);
+    callAsyncWithRetry(
+        backOffer,
+        PDGrpc.METHOD_GET_STORE,
+        buildGetStroeReq(storeId),
+        responseObserver,
+        buildPDErrorHandler());
     return responseObserver.getFuture();
   }
 
@@ -185,9 +184,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   public void close() throws InterruptedException {
     if (service != null) {
       service.shutdownNow();
-    }
-    if (getLeaderWrapper() != null) {
-      getLeaderWrapper().close();
     }
   }
 
@@ -238,15 +234,13 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       return createTime;
     }
 
-    void close() {}
-
     @Override
     public String toString() {
       return "[leaderInfo: " + leaderInfo + "]";
     }
   }
 
-  public GetMembersResponse getMembers(URI url) {
+  private GetMembersResponse getMembers(URI url) {
     try {
       ManagedChannel probChan = session.getChannel(url.getHost() + ":" + url.getPort());
       PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);
