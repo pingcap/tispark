@@ -764,7 +764,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
   }
 
-  public TiRegion splitRegion(TiRegion region, ByteString splitKey) {
+  public TiRegion splitRegion(ByteString splitKey) {
     Supplier<SplitRegionRequest> request =
         () ->
             SplitRegionRequest.newBuilder()

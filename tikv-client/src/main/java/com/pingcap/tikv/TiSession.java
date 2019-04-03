@@ -16,14 +16,19 @@
 package com.pingcap.tikv;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.Catalog;
+import com.pingcap.tikv.codec.Codec.BytesCodec;
+import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
+import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -166,6 +171,20 @@ public class TiSession implements AutoCloseable {
    */
   public void injectCallBackFunc(Function<CacheInvalidateEvent, Void> callBackFunc) {
     this.cacheInvalidateCallback = callBackFunc;
+  }
+
+  public void splitRegionAndScatter(List<ByteString> splitKeys) {
+    splitKeys.forEach(this::splitRegionAndScatter);
+  }
+
+  public void splitRegionAndScatter(ByteString encodeKey) {
+    TiRegion region = regionManager.getRegionByKey(encodeKey);
+    // this need key which is not encoded.
+
+    ByteString decodedKey =
+        ByteString.copyFrom(BytesCodec.readBytes(new CodecDataInput(encodeKey.toByteArray())));
+    TiRegion left = getRegionStoreClientBuilder().build(region).splitRegion(decodedKey);
+    getPDClient().scatterRegion(left);
   }
 
   @Override
