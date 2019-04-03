@@ -27,8 +27,9 @@ import com.pingcap.tikv.{TiBatchWriteUtils, _}
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.TiContext
+import org.apache.spark.sql.{Row, TiContext}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+import org.apache.spark.util.SizeEstimator
 import org.slf4j.LoggerFactory
 
 /**
@@ -42,6 +43,25 @@ object TiBatchWrite {
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
 
+  def getTotalSize(rdd: RDD[Row]): Double = {
+    // This can be a parameter
+    val NO_OF_SAMPLE_ROWS = 0.1
+    val totalRows: Long = rdd.count()
+    val sampleRDD = rdd.sample(withReplacement = true, NO_OF_SAMPLE_ROWS)
+    val sampleRDDSize: Double = getRDDSize(sampleRDD)
+    sampleRDDSize.*(totalRows.toDouble)/ NO_OF_SAMPLE_ROWS
+  }
+
+  def getRDDSize(rdd: RDD[Row]) : Double = {
+    var rddSize = 0
+    val rows = rdd.collect()
+    for (i <- rows.indices) {
+      rddSize += SizeEstimator.estimate(rows.apply(i).toSeq.map { value => value.asInstanceOf[AnyRef] })
+    }
+
+    rddSize
+  }
+
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   def writeToTiDB(rdd: RDD[SparkRow], tableRef: TiTableReference, tiContext: TiContext) {
@@ -51,6 +71,8 @@ object TiBatchWrite {
     val kvClient = tiSession.createTxnClient()
     val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
 
+    val dataSize = getTotalSize(rdd)
+    // how to know data size?
     // TODO: region pre-split
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-69
 
@@ -60,6 +82,9 @@ object TiBatchWrite {
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
       val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
+      val maxKey: TiRow = tiKVRowRDD.max()
+      val minKey: TiRow = tiKVRowRDD.min()
+      val regions = getRegions(tiTableInfo, tiContext)
       shuffleKeyToSameRegion(tiKVRowRDD, tableRef, tiTableInfo, tiContext)
     }
 
@@ -188,7 +213,7 @@ object TiBatchWrite {
     )
 
     rdd
-      .map(row => (tiKVRow2Key(row, tableId, tiTableInfo), row))
+      .map(row => (tiKVRow2Key(row, tableId, tiTableInfo, isUpdate = false), row))
       .groupByKey(tiRegionPartitioner)
       .map {
         case (key, iterable) =>
@@ -202,13 +227,18 @@ object TiBatchWrite {
     TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, table).toList
   }
 
-  private def tiKVRow2Key(row: TiRow, tableId: Long, tiTableInfo: TiTableInfo): SerializableKey = {
+  private def tiKVRow2Key(row: TiRow, tableId: Long, tiTableInfo: TiTableInfo, isUpdate: Boolean): SerializableKey = {
     import scala.collection.JavaConverters._
-    val handle = if (tiTableInfo.isPkHandle) {
+    // If handle ID is changed when update, update will remove the old record first,
+    // and then call `AddRecord` to add a new record.
+    // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
+    val handle = if (row.fieldCount() > tiTableInfo.getColumns.size() && !isUpdate) {
+      row.getLong(row.fieldCount() - 1)
+    } else {
+      tiTableInfo.isPkHandle
       val columnList = tiTableInfo.getColumns.asScala
       val primaryColumn = columnList.find(_.isPrimaryKey).get
       row.getLong(primaryColumn.getOffset)
-    } else {
       // TODO: auto generate a primary key if does not exists
       // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
       row.getLong(0)
