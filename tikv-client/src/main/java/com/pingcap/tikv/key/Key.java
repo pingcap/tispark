@@ -122,7 +122,9 @@ public class Key implements Comparable<Key> {
     assert (start.length == end.length);
     long val = 0;
     for (int i = 0; i < start.length; i++) {
-      val += end[i] * end[i] - start[i] * start[i];
+      int e = end[i];
+      int s = start[i];
+      val += Math.abs(e * e - s * s);
     }
     return Math.round(Math.sqrt(val));
   }

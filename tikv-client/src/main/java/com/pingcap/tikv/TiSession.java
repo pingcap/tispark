@@ -30,6 +30,7 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import javassist.bytecode.ByteArray;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;

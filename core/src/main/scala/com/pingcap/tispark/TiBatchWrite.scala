@@ -29,7 +29,6 @@ import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, TiContext}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.util.SizeEstimator
 import org.slf4j.LoggerFactory
 
 /**
@@ -70,7 +69,10 @@ object TiBatchWrite {
   // estimate using 15% of data
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
-  def writeToTiDB(rdd: RDD[SparkRow], tableRef: TiTableReference, tiContext: TiContext) {
+  def writeToTiDB(rdd: RDD[SparkRow],
+                  tableRef: TiTableReference,
+                  tiContext: TiContext,
+                  regionSplitNumber: Option[Int] = None) {
     // initialize
     val tiConf = tiContext.tiConf
     val tiSession = tiContext.tiSession
@@ -87,7 +89,7 @@ object TiBatchWrite {
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-69
     // region pre-split
     // A very rough version and will be rewrite later.
-    tiContext.tiSession.regionPreSplit(iteration.toInt, tiTableInfo)
+    tiContext.tiSession.regionPreSplit(regionSplitNumber.getOrElse(iteration.toInt), tiTableInfo)
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
@@ -95,7 +97,9 @@ object TiBatchWrite {
     val shuffledRDD = {
       val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
       shuffleKeyToSameRegion(tiKVRowRDD, tableRef, tiTableInfo, tiContext)
-    }
+    }.cache()
+    val totalCount = shuffledRDD.count()
+    logger.info(s"total write count=$totalCount")
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: TiRow) = {
@@ -248,11 +252,15 @@ object TiBatchWrite {
     } else {
       tiTableInfo.isPkHandle
       val columnList = tiTableInfo.getColumns.asScala
-      val primaryColumn = columnList.find(_.isPrimaryKey).get
-      row.getLong(primaryColumn.getOffset)
-      // TODO: auto generate a primary key if does not exists
-      // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
-      row.getLong(0)
+      columnList.find(_.isPrimaryKey) match {
+        case Some(primaryColumn) =>
+          row.getLong(primaryColumn.getOffset)
+
+        case None =>
+          // TODO: auto generate a primary key if does not exists
+          // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
+          row.getLong(0)
+      }
     }
 
     val rowKey = RowKey.toRowKey(tableId, handle)

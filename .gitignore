@@ -71,3 +71,6 @@ python/pytispark.egg-info/
 
 # ignore spark warehouse
 spark-warehouse
+
+# ignore log4j config
+log4j.properties
