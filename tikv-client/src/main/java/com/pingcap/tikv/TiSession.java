@@ -21,6 +21,8 @@ import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -28,7 +30,9 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -171,6 +175,28 @@ public class TiSession implements AutoCloseable {
    */
   public void injectCallBackFunc(Function<CacheInvalidateEvent, Void> callBackFunc) {
     this.cacheInvalidateCallback = callBackFunc;
+  }
+
+  public void regionPreSplit(int times, TiTableInfo tblInfo) {
+    // only consider table region split for now
+    // index region split will be finished in future.
+    List<TiRegion> regionsneedsplit = TiBatchWriteUtils.getRegionsByTable(this, tblInfo);
+    for (int i = 0; i < times; i++) {
+      regionsneedsplit = TiBatchWriteUtils.getRegionsByTable(this, tblInfo);
+      List<ByteString> splitKeys = new ArrayList<>();
+      regionsneedsplit.forEach(
+          r -> {
+            long distance =
+                Key.middleValue(r.getStartKey().toByteArray(), r.getEndKey().toByteArray()) / 2;
+            Key splitKey = null;
+            for (long j = 0; j < distance; j++) {
+              splitKey = Key.toRawKey(r.getStartKey()).next();
+            }
+            Objects.requireNonNull(splitKey, "after advance region's middle key cannot be null");
+            splitKeys.add(splitKey.toByteString());
+          });
+      splitRegionAndScatter(splitKeys);
+    }
   }
 
   public void splitRegionAndScatter(List<ByteString> splitKeys) {

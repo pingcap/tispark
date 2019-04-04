@@ -117,6 +117,16 @@ public class Key implements Comparable<Key> {
     return toRawKey(nextValue(value));
   }
 
+  // Euclidean distance
+  public static long middleValue(byte[] start, byte[] end) {
+    assert (start.length == end.length);
+    long val = 0;
+    for (int i = 0; i < start.length; i++) {
+      val += end[i] * end[i] - start[i] * start[i];
+    }
+    return Math.round(Math.sqrt(val));
+  }
+
   static byte[] nextValue(byte[] value) {
     int i;
     byte[] newVal = Arrays.copyOf(value, value.length);

@@ -43,25 +43,31 @@ object TiBatchWrite {
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
 
-  def getTotalSize(rdd: RDD[Row]): Double = {
-    // This can be a parameter
-    val NO_OF_SAMPLE_ROWS = 0.1
-    val totalRows: Long = rdd.count()
-    val sampleRDD = rdd.sample(withReplacement = true, NO_OF_SAMPLE_ROWS)
-    val sampleRDDSize: Double = getRDDSize(sampleRDD)
-    sampleRDDSize.*(totalRows.toDouble)/ NO_OF_SAMPLE_ROWS
+  def calcRDDSize(rdd: RDD[Row]): Long =
+    rdd
+      .map(_.mkString(",").getBytes("UTF-8").length.toLong)
+      .reduce(_ + _) //add the sizes together
+
+  def estimateRDDSize(rdd: RDD[Row], fraction: Double): Long = {
+    val sampleRDD = rdd.sample(withReplacement = true, fraction = fraction)
+    val sampleRDDsize = calcRDDSize(sampleRDD)
+    println(s"sampleRDDsize is ${sampleRDDsize / (1024 * 1024)} MB")
+
+    val sampleAvgRowSize = sampleRDDsize / sampleRDD.count()
+    println(s"sampleAvgRowSize is $sampleAvgRowSize")
+
+    val totalRows = rdd.count()
+    println(s"totalRows is $totalRows")
+
+    val estimatedTotalSize = totalRows * sampleAvgRowSize
+    val formatter = java.text.NumberFormat.getIntegerInstance
+    val estimateInMB = formatter.format(estimatedTotalSize / (1024 * 1024))
+    println(s"estimatedTotalSize is $estimateInMB MB")
+
+    estimatedTotalSize
   }
 
-  def getRDDSize(rdd: RDD[Row]) : Double = {
-    var rddSize = 0
-    val rows = rdd.collect()
-    for (i <- rows.indices) {
-      rddSize += SizeEstimator.estimate(rows.apply(i).toSeq.map { value => value.asInstanceOf[AnyRef] })
-    }
-
-    rddSize
-  }
-
+  // estimate using 15% of data
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   def writeToTiDB(rdd: RDD[SparkRow], tableRef: TiTableReference, tiContext: TiContext) {
@@ -71,20 +77,23 @@ object TiBatchWrite {
     val kvClient = tiSession.createTxnClient()
     val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
 
-    val dataSize = getTotalSize(rdd)
-    // how to know data size?
-    // TODO: region pre-split
+    // get data size
+    val dataSize = estimateRDDSize(rdd, 0.15)
+    val regionNeed = dataSize / 96.0
+    val regions = getRegions(tiTableInfo, tiContext)
+    val currentRegionSize = regions.length
+    // compute how many split is needed.
+    val iteration = Math.round(Math.log(regionNeed) / Math.log(currentRegionSize)) + 1
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-69
-
+    // region pre-split
+    // A very rough version and will be rewrite later.
+    tiContext.tiSession.regionPreSplit(iteration.toInt, tiTableInfo)
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
       val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
-      val maxKey: TiRow = tiKVRowRDD.max()
-      val minKey: TiRow = tiKVRowRDD.min()
-      val regions = getRegions(tiTableInfo, tiContext)
       shuffleKeyToSameRegion(tiKVRowRDD, tableRef, tiTableInfo, tiContext)
     }
 
@@ -148,26 +157,25 @@ object TiBatchWrite {
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
 
     // executors secondary commit
-    finalWriteRDD.foreachPartition {
-      case iterator =>
-        val tiSessionOnExecutor = new TiSession(tiConf)
-        val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
-        val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
-        val commitSecondaryBackoff =
-          ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
+    finalWriteRDD.foreachPartition { iterator =>
+      val tiSessionOnExecutor = new TiSession(tiConf)
+      val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
+      val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
+      val commitSecondaryBackoff =
+        ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
 
-        import scala.collection.JavaConverters._
-        val keys = iterator.map {
-          case (key, row) => new TiBatchWrite2PCClient.ByteWrapper(key.bytes)
-        }.asJava
+      import scala.collection.JavaConverters._
+      val keys = iterator.map {
+        case (key, row) => new TiBatchWrite2PCClient.ByteWrapper(key.bytes)
+      }.asJava
 
-        try {
-          ti2PCClientOnExecutor.commitSecondaryKeys(commitSecondaryBackoff, keys, commitTs)
-        } catch {
-          case e: TiBatchWriteException =>
-            // ignored
-            logger.warn(s"commit secondary key error", e)
-        }
+      try {
+        ti2PCClientOnExecutor.commitSecondaryKeys(commitSecondaryBackoff, keys, commitTs)
+      } catch {
+        case e: TiBatchWriteException =>
+          // ignored
+          logger.warn(s"commit secondary key error", e)
+      }
     }
   }
 
@@ -227,7 +235,10 @@ object TiBatchWrite {
     TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, table).toList
   }
 
-  private def tiKVRow2Key(row: TiRow, tableId: Long, tiTableInfo: TiTableInfo, isUpdate: Boolean): SerializableKey = {
+  private def tiKVRow2Key(row: TiRow,
+                          tableId: Long,
+                          tiTableInfo: TiTableInfo,
+                          isUpdate: Boolean): SerializableKey = {
     import scala.collection.JavaConverters._
     // If handle ID is changed when update, update will remove the old record first,
     // and then call `AddRecord` to add a new record.
