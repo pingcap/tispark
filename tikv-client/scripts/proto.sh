@@ -14,7 +14,7 @@
 #   limitations under the License.
 #
 
-kvproto_hash=38ff317f4aea97ffe6e3f0a3a22882ad79f90a1f
+kvproto_hash=a63718839aee85e3315e58d7bd8a49c721a43294
 
 if [ -d "kvproto" ]; then
 	cd kvproto; git fetch -p; git checkout ${kvproto_hash}; cd ..
