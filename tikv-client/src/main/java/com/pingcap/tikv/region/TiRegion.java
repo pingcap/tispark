@@ -24,6 +24,7 @@ import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.util.FastByteComparisons;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -84,6 +85,17 @@ public class TiRegion implements Serializable {
 
   public Peer getLeader() {
     return peer;
+  }
+
+  public List<Peer> getLearnerList() {
+    int peerCnt = getMeta().getPeersCount();
+    List<Peer> peers = new ArrayList<Peer>();
+    for (Peer peer : getMeta().getPeersList()) {
+      if (peer.getIsLearner()) {
+        peers.add(peer);
+      }
+    }
+    return peers;
   }
 
   public long getId() {

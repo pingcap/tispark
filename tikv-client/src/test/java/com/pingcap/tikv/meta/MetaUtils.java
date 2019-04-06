@@ -24,7 +24,6 @@ import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiClientInternalException;
-import org.tikv.kvproto.Metapb;
 import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
 import com.pingcap.tikv.types.DataType;
 import java.util.ArrayList;
