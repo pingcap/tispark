@@ -10,8 +10,8 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import java.io.DataInput;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import javax.annotation.Nullable;
-import org.apache.commons.io.Charsets;
 
 public class JsonType extends DataType {
 
@@ -205,7 +205,7 @@ public class JsonType extends DataType {
 
     byte[] buffer = new byte[Math.toIntExact(length)];
     readFully(di, buffer);
-    return new String(buffer, Charsets.UTF_8);
+    return new String(buffer, StandardCharsets.UTF_8);
   }
 
   /**

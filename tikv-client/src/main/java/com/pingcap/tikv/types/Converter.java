@@ -26,10 +26,10 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tikv.exception.TypeException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.Arrays;
-import org.apache.spark.unsafe.types.UTF8String;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -88,9 +88,9 @@ public class Converter {
   static byte[] convertUtf8ToBytes(Object val, int prefixLength) {
     requireNonNull(val, "val is null");
     if (val instanceof byte[]) {
-      return UTF8String.fromBytes(((byte[]) val)).substring(0, prefixLength).getBytes();
+      return new String((byte[]) val).substring(0, prefixLength).getBytes(StandardCharsets.UTF_8);
     } else if (val instanceof String) {
-      return UTF8String.fromString(((String) val)).substring(0, prefixLength).getBytes();
+      return ((String) val).substring(0, prefixLength).getBytes(StandardCharsets.UTF_8);
     }
     throw new TypeException(
         String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
@@ -229,7 +229,7 @@ public class Converter {
       }
       minute = Integer.parseInt(splitBySemiColon[1]);
       if (splitBySemiColon[2].contains(".")) {
-        String[] splitByDot = splitBySemiColon[2].split(".");
+        String[] splitByDot = splitBySemiColon[2].split("\\.");
         second = Integer.parseInt(splitByDot[0]);
         frac = Integer.parseInt(splitByDot[1]);
       } else {
@@ -243,7 +243,8 @@ public class Converter {
           * sign;
     } catch (Exception e) {
       throw new IllegalArgumentException(
-          String.format("%s is not a valid format. Either hh:mm:ss.mmm or hh:mm:ss is accepted."));
+          String.format(
+              "%s is not a valid format. Either hh:mm:ss.mmm or hh:mm:ss is accepted.", value));
     }
   }
 }
