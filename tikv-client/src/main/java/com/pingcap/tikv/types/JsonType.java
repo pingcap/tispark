@@ -4,6 +4,7 @@ import com.google.gson.*;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import javax.annotation.Nullable;
 import org.apache.commons.io.Charsets;
 
@@ -37,8 +38,16 @@ public class JsonType extends DataType {
   private static final JsonPrimitive JSON_TRUE = new JsonPrimitive(true);
   public static MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeJSON};
 
+  protected JsonType(InternalTypeHolder holder) {
+    super(holder);
+  }
+
   public JsonType(MySQLType type) {
     super(type);
+  }
+
+  public JsonType(MySQLType type, int flag, int len, int decimal, String charset, int collation) {
+    super(type, flag, len, decimal, charset, collation);
   }
 
   @Override
@@ -49,6 +58,9 @@ public class JsonType extends DataType {
 
   /**
    * The binary JSON format from MySQL 5.7 is as follows:
+   *
+   * <pre>{@code
+   * JsonFormat {
    *      JSON doc ::= type value
    *      type ::=
    *          0x01 |       // large JSON object
@@ -97,6 +109,8 @@ public class JsonType extends DataType {
    *                                // field. So we need 1 byte to represent
    *                                // lengths up to 127, 2 bytes to represent
    *                                // lengths up to 16383, and so on...
+   * }
+   * }</pre>
    *
    * @param type type byte
    * @param cdi codec data input
