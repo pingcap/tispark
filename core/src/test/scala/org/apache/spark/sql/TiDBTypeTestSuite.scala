@@ -136,7 +136,7 @@ class TiDBTypeTestSuite extends BaseTiSparkSuite {
         )
       )
     )
-//    spark.sql("select from_json(json_doc) from t").show(30, truncate = false)
+    // FIXME: spark.sql("select from_json(json_doc) from t").show(30, truncate = false)
   }
 
   override def afterAll(): Unit =

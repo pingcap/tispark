@@ -48,24 +48,55 @@ public class JsonType extends DataType {
   }
 
   /**
-   * The binary JSON format from MySQL 5.7 is as follows: JSON doc ::= type value type ::= 0x01 | //
-   * large JSON object 0x03 | // large JSON array 0x04 | // literal (true/false/null) 0x05 | //
-   * int16 0x06 | // uint16 0x07 | // int32 0x08 | // uint32 0x09 | // int64 0x0a | // uint64 0x0b |
-   * // double 0x0c | // utf8mb4 string value ::= object | array | literal | number | string |
-   * object ::= element-count size key-entry* value-entry* key* value* array ::= element-count size
-   * value-entry* value* // number of members in object or number of elements in array element-count
-   * ::= uint32 // number of bytes in the binary representation of the object or array size ::=
-   * uint32 key-entry ::= key-offset key-length key-offset ::= uint32 key-length ::= uint16 // key
-   * length must be less than 64KB value-entry ::= type offset-or-inlined-value // This field holds
-   * either the offset to where the value is stored, // or the value itself if it is small enough to
-   * be inlined (that is, // if it is a JSON literal or a small enough [u]int).
-   * offset-or-inlined-value ::= uint32 key ::= utf8mb4-data literal ::= 0x00 | // JSON null literal
-   * 0x01 | // JSON true literal 0x02 | // JSON false literal number ::= .... // little-endian
-   * format for [u]int(16|32|64), whereas // double is stored in a platform-independent, eight-byte
-   * // format using float8store() string ::= data-length utf8mb4-data data-length ::= uint8* // If
-   * the high bit of a byte is 1, the length // field is continued in the next byte, // otherwise it
-   * is the last byte of the length // field. So we need 1 byte to represent // lengths up to 127, 2
-   * bytes to represent // lengths up to 16383, and so on...
+   * The binary JSON format from MySQL 5.7 is as follows:
+   *      JSON doc ::= type value
+   *      type ::=
+   *          0x01 |       // large JSON object
+   *          0x03 |       // large JSON array
+   *          0x04 |       // literal (true/false/null)
+   *          0x05 |       // int16
+   *          0x06 |       // uint16
+   *          0x07 |       // int32
+   *          0x08 |       // uint32
+   *          0x09 |       // int64
+   *          0x0a |       // uint64
+   *          0x0b |       // double
+   *          0x0c |       // utf8mb4 string
+   *      value ::=
+   *          object  |
+   *          array   |
+   *          literal |
+   *          number  |
+   *          string  |
+   *      object ::= element-count size key-entry* value-entry* key* value*
+   *      array ::= element-count size value-entry* value*
+   *      // number of members in object or number of elements in array
+   *      element-count ::= uint32
+   *      // number of bytes in the binary representation of the object or array
+   *      size ::= uint32
+   *      key-entry ::= key-offset key-length
+   *      key-offset ::= uint32
+   *      key-length ::= uint16    // key length must be less than 64KB
+   *      value-entry ::= type offset-or-inlined-value
+   *      // This field holds either the offset to where the value is stored,
+   *      // or the value itself if it is small enough to be inlined (that is,
+   *      // if it is a JSON literal or a small enough [u]int).
+   *      offset-or-inlined-value ::= uint32
+   *      key ::= utf8mb4-data
+   *      literal ::=
+   *          0x00 |   // JSON null literal
+   *          0x01 |   // JSON true literal
+   *          0x02 |   // JSON false literal
+   *      number ::=  ....    // little-endian format for [u]int(16|32|64), whereas
+   *                          // double is stored in a platform-independent, eight-byte
+   *                          // format using float8store()
+   *      string ::= data-length utf8mb4-data
+   *      data-length ::= uint8*    // If the high bit of a byte is 1, the length
+   *                                // field is continued in the next byte,
+   *                                // otherwise it is the last byte of the length
+   *                                // field. So we need 1 byte to represent
+   *                                // lengths up to 127, 2 bytes to represent
+   *                                // lengths up to 16383, and so on...
    *
    * @param type type byte
    * @param cdi codec data input
