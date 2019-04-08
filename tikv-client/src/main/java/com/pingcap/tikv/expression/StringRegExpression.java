@@ -134,7 +134,7 @@ public class StringRegExpression implements Expression {
     StringRegExpression that = (StringRegExpression) other;
     return (regType == that.regType)
         && Objects.equals(left, that.left)
-        && Objects.equals(left, that.right)
+        && Objects.equals(right, that.right)
         && Objects.equals(reg, that.reg);
   }
 
