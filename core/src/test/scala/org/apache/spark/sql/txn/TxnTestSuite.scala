@@ -82,7 +82,7 @@ class TxnTestSuite extends BaseTiSparkSuite {
    * @param doQuery the query operation
    * @return thread
    */
-  protected def doThread(i: Int, doQuery: () => Unit): Thread =
+  protected def doThread(i: Int, doQuery: => Unit): Thread =
     new Thread {
       override def run() {
         while (try {
