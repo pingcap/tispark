@@ -1,6 +1,6 @@
-def junit_suite_test(name, srcs, deps, size="small", resources=[], classpath_resources=[], jvm_flags=[], tags=[], data=[]):
+def junit_suite_test(name, srcs, deps, size="large", resources=[], classpath_resources=[], jvm_flags=[], tags=[], data=[]):
   tests = []
-  package = PACKAGE_NAME.replace("src/test/java/", "").replace("/", ".")
+  package = native.package_name().replace("tikv-client/src/test/java/", "").replace("/", ".")
   for src in srcs:
     if src.endswith("Test.java"):
       if "/" in src:

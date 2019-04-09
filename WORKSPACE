@@ -1,3 +1,5 @@
+workspace(name = "tispark")
+
 maven_jar(
     name = "com_fasterxml_jackson_core_jackson_annotations",
     artifact = "com.fasterxml.jackson.core:jackson-annotations:2.6.6",
@@ -79,6 +81,11 @@ maven_jar(
 )
 
 maven_jar(
+    name = "com_sangupta_murmur",
+    artifact = "com.sangupta:murmur:1.0.0"
+)
+
+maven_jar(
     name = "org_powermock_powermock_api_support",
     artifact = "org.powermock:powermock-api-support:1.6.6",
 )
@@ -87,7 +94,7 @@ maven_jar(
    name = "net_sf_trove4j_trove4j",
    artifact = "net.sf.trove4j:trove4j:3.0.1",
 )
-
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 git_repository(
   name = "org_pubref_rules_protobuf",
   remote = "https://github.com/pubref/rules_protobuf",
@@ -98,6 +105,7 @@ load("@org_pubref_rules_protobuf//java:rules.bzl", "java_proto_repositories")
 java_proto_repositories()
 
 bazel_shade_version = "master"
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 http_archive(
              name = "com_github_zhexuany_bazel_shade",
              url = "https://github.com/zhexuany/bazel_shade_plugin/archive/%s.zip"%bazel_shade_version,
@@ -110,3 +118,32 @@ load(
     "java_shade"
 )
 java_shade_repositories()
+
+
+# antlr plugin
+http_archive(
+    name = "rules_antlr",
+    sha256 = "acd2a25f31aeeea5f58cdb434ae109d03826ae7cc11fe9efce1740102e3f4531",
+    strip_prefix = "rules_antlr-0.1.0",
+    urls = ["https://github.com/marcohu/rules_antlr/archive/0.1.0.tar.gz"],
+)
+
+load("@rules_antlr//antlr:deps.bzl", "antlr_dependencies")
+antlr_dependencies(4)
+
+git_repository(
+  name = "io_bazel_rules_scala",
+  remote = "https://github.com/bazelbuild/rules_scala",
+  # update to master once we upgrade bazel
+  commit = "f3113fb6e9e35cb8f441d2305542026d98afc0a2",
+)
+
+load("@io_bazel_rules_scala//scala:scala.bzl", "scala_repositories")
+scala_repositories()
+load("@io_bazel_rules_scala//scala:toolchains.bzl", "scala_register_toolchains")
+scala_register_toolchains()
+
+# use bazel-deps to manage transitive maven dependencies
+# https://github.com/johnynek/bazel-deps
+load("//3rdparty:workspace.bzl", "maven_dependencies")
+maven_dependencies()

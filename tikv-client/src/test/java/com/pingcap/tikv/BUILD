@@ -3,14 +3,13 @@ package(default_visibility = ["//visibility:public"])
 load(":rule.bzl", "junit_suite_test")
 
 junit_suite_test(
-    name = "tikv-client-java-test",
+    name = "tikv_client_java_test",
     srcs = glob(
         ["**/*.java"],
     ),
     deps = [
-        "//src/main/java/com/pingcap/tikv:tikv-java-client-lib",
-        "//:java",
-        "//:java_compile_imports",
+        "//tikv-client/src/main/java/com/pingcap/tikv:tikv_java_client_lib",
+        "//tikv-client:tikv_proto_java_lib",
         "@com_fasterxml_jackson_core_jackson_annotations//jar",
         "@com_fasterxml_jackson_core_jackson_core//jar",
         "@com_fasterxml_jackson_core_jackson_databind//jar",
@@ -20,5 +19,11 @@ junit_suite_test(
         "@net_sf_trove4j_trove4j//jar",
         "@junit_junit//jar",
         "@joda_time//jar",
+        "@log4j_log4j//jar",
     ],
 )
+
+#filegroup(
+#    name = "tikv_client_java_tests",
+#    srcs = glob(["**/*.java"]),
+#)

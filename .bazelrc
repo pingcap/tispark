@@ -1,0 +1,5 @@
+build --incompatible_disallow_filetype=false
+build --incompatible_remove_native_http_archive=false
+build --incompatible_package_name_is_a_function=false
+build --strategy=Scalac=worker
+test --strategy=Scalac=worker
