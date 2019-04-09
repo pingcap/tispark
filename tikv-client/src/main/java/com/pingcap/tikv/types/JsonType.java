@@ -12,6 +12,7 @@ public class JsonType extends DataType {
 
   private static final int KEY_ENTRY_LENGTH = 6;
   private static final int VALUE_ENTRY_SIZE = 5;
+  private static final int PREFIX_LENGTH = 8;
 
   // TypeCodeObject indicates the JSON is an object.
   private static final byte TYPE_CODE_OBJECT = 0x01;
@@ -121,11 +122,11 @@ public class JsonType extends DataType {
     switch (type) {
       case TYPE_CODE_OBJECT:
         elementCount = parseUint32(cdi);
-        length = parseUint32(cdi) - 8;
+        length = parseUint32(cdi) - PREFIX_LENGTH;
         return parseObject(cdi, elementCount, length);
       case TYPE_CODE_ARRAY:
         elementCount = parseUint32(cdi);
-        length = parseUint32(cdi) - 8;
+        length = parseUint32(cdi) - PREFIX_LENGTH;
         return parseArray(cdi, elementCount, length);
       case TYPE_CODE_LITERAL:
         return parseLiteralJson(cdi);
@@ -242,7 +243,7 @@ public class JsonType extends DataType {
     if (valueType == TYPE_CODE_LITERAL) {
       return parseLiteralJson(bs);
     } else {
-      int valueOffset = parseUint32(bs) - 8;
+      int valueOffset = parseUint32(bs) - PREFIX_LENGTH;
       return parseValue(valueType, new CodecDataInput(buffer, valueOffset));
     }
   }
@@ -261,7 +262,7 @@ public class JsonType extends DataType {
   }
 
   private KeyEntry parseKeyEntry(CodecDataInput cdi) {
-    int offset = parseUint32(cdi) - 8;
+    int offset = parseUint32(cdi) - PREFIX_LENGTH;
     int length = parseUint16(cdi);
     return new KeyEntry(offset, length);
   }

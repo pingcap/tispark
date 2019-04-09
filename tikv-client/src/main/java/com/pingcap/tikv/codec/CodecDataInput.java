@@ -194,25 +194,6 @@ public class CodecDataInput implements DataInput {
     }
   }
 
-  public int readUnsignedShortLSB() {
-    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
-    try {
-      return ldInputStream.readUnsignedShort();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public int readPartialUnsignedShort() {
-    try {
-      byte[] readBuffer = new byte[2];
-      inputStream.read(readBuffer, 0, 2);
-      return ((readBuffer[0] & 0xff) << 8) + ((readBuffer[1] & 0xff) << 0);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   @Override
   public char readChar() {
     try {
@@ -231,28 +212,10 @@ public class CodecDataInput implements DataInput {
     }
   }
 
-  public int readIntLSB() {
-    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
-    try {
-      return ldInputStream.readInt();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   @Override
   public long readLong() {
     try {
       return inputStream.readLong();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public long readLongLSB() {
-    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
-    try {
-      return ldInputStream.readLong();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -284,28 +247,10 @@ public class CodecDataInput implements DataInput {
     }
   }
 
-  public float readFloatLSB() {
-    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
-    try {
-      return ldInputStream.readFloat();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   @Override
   public double readDouble() {
     try {
       return inputStream.readDouble();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public double readDoubleLSB() {
-    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
-    try {
-      return ldInputStream.readDouble();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -321,9 +266,47 @@ public class CodecDataInput implements DataInput {
   }
 
   @Override
+  @Nonnull
   public String readUTF() {
     try {
       return inputStream.readUTF();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  // Read from input stream with little endian data
+  public int readUnsignedShortLSB() {
+    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
+    try {
+      return ldInputStream.readUnsignedShort();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public int readIntLSB() {
+    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
+    try {
+      return ldInputStream.readInt();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public long readLongLSB() {
+    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
+    try {
+      return ldInputStream.readLong();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public double readDoubleLSB() {
+    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
+    try {
+      return ldInputStream.readDouble();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
