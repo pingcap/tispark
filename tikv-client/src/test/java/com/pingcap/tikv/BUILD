@@ -23,7 +23,3 @@ junit_suite_test(
     ],
 )
 
-#filegroup(
-#    name = "tikv_client_java_tests",
-#    srcs = glob(["**/*.java"]),
-#)
