@@ -5,8 +5,8 @@ import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
+import java.nio.charset.StandardCharsets;
 import javax.annotation.Nullable;
-import org.apache.commons.io.Charsets;
 
 public class JsonType extends DataType {
 
@@ -167,7 +167,7 @@ public class JsonType extends DataType {
   private String parseString(CodecDataInput cdi, int length) {
     byte[] buffer = new byte[length];
     cdi.readFully(buffer, 0, length);
-    return new String(buffer, Charsets.UTF_8);
+    return new String(buffer, StandardCharsets.UTF_8);
   }
 
   /**
