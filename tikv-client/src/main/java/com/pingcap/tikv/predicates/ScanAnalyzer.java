@@ -238,7 +238,7 @@ public class ScanAnalyzer {
         // -INF
         startKey = RowKey.createMin(id);
       } else {
-        // Comparision with null should be filtered since it yields unknown always
+        // Comparison with null should be filtered since it yields unknown always
         startKey = RowKey.toRowKey(id, r.lowerEndpoint());
         if (r.lowerBoundType().equals(BoundType.OPEN)) {
           startKey = startKey.next();
