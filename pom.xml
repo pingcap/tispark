@@ -65,6 +65,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
         <spark.version>2.3.3</spark.version>
+        <spark.scope>provided</spark.scope>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11</scala.version>
         <scalatest.version>3.0.4</scalatest.version>
@@ -94,6 +95,12 @@
             <id>spark-2.3.0</id>
             <properties>
                 <spark.version>2.3.0</spark.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>local-debug</id>
+            <properties>
+                <spark.scope>compile</spark.scope>
             </properties>
         </profile>
     </profiles>
@@ -131,37 +138,37 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>provided</scope>
+            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>provided</scope>
+            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>provided</scope>
+            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>provided</scope>
+            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>provided</scope>
+            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-unsafe_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>provided</scope>
+            <scope>${spark.scope}</scope>
         </dependency>
     </dependencies>
     <build>

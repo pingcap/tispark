@@ -339,8 +339,8 @@ public class MyDecimal {
     for (; strIdx < str.length && Character.isDigit(str[strIdx]); ) {
       strIdx++;
     }
-    // we initialize strIdx in case of sign notation, here we need substract startIdx from strIdx
-    // casue strIdx is used for counting the number of digits.
+    // we initialize strIdx in case of sign notation, here we need subtract startIdx from strIdx
+    // cause strIdx is used for counting the number of digits.
     int digitsInt = strIdx - startIdx;
     int digitsFrac;
     int endIdx;

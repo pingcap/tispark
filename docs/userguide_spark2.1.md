@@ -288,7 +288,7 @@ df.write
 .option("user", "root") // TiDB user here
 .save()
 ``` 
-It is recommended to set `isolationLevel` to `NONE` to avoid large single transactions which may potentialy lead to TiDB OOM.
+It is recommended to set `isolationLevel` to `NONE` to avoid large single transactions which may potentially lead to TiDB OOM.
 
 ## Statistics information
 TiSpark could use TiDB's statistic information for 

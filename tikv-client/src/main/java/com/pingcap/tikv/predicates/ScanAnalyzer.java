@@ -22,11 +22,13 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
+import com.pingcap.tikv.expression.visitor.PrunedPartitionBuilder;
 import com.pingcap.tikv.key.IndexKey;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
@@ -35,7 +37,6 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
-import com.pingcap.tikv.meta.TiPartitionInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
@@ -60,14 +61,14 @@ public class ScanAnalyzer {
         double cost,
         boolean isDoubleRead,
         double estimatedRowCount,
-        TiPartitionInfo partInfo) {
+        List<TiPartitionDef> partDefs) {
       this.filters = filters;
       this.keyRanges = keyRanges;
       this.cost = cost;
       this.index = index;
       this.isDoubleRead = isDoubleRead;
       this.estimatedRowCount = estimatedRowCount;
-      prunedPartInfo = partInfo;
+      this.prunedParts = partDefs;
     }
 
     private final List<KeyRange> keyRanges;
@@ -76,7 +77,7 @@ public class ScanAnalyzer {
     private TiIndexInfo index;
     private final boolean isDoubleRead;
     private final double estimatedRowCount;
-    private final TiPartitionInfo prunedPartInfo;
+    private final List<TiPartitionDef> prunedParts;
 
     public double getEstimatedRowCount() {
       return estimatedRowCount;
@@ -106,8 +107,8 @@ public class ScanAnalyzer {
       return isDoubleRead;
     }
 
-    public TiPartitionInfo getPrunedPartInfo() {
-      return prunedPartInfo;
+    public List<TiPartitionDef> getPrunedParts() {
+      return prunedParts;
     }
   }
 
@@ -141,7 +142,7 @@ public class ScanAnalyzer {
     return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
   }
 
-  public ScanPlan buildIndexScan(
+  ScanPlan buildIndexScan(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiIndexInfo index,
@@ -152,8 +153,6 @@ public class ScanAnalyzer {
 
     MetaResolver.resolve(conditions, table);
 
-    // pruning redundant part here.
-    TiPartitionInfo prunedPartInfo = partPruning(table);
     ScanSpec result = extractConditions(conditions, table, index);
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
@@ -161,6 +160,13 @@ public class ScanAnalyzer {
     List<IndexRange> irs =
         expressionToIndexRanges(
             result.getPointPredicates(), result.getRangePredicate(), table, index);
+
+    List<TiPartitionDef> prunedParts = null;
+    // apply partition pruning here.
+    if (table.getPartitionInfo() != null) {
+      PrunedPartitionBuilder prunedPartBuilder = new PrunedPartitionBuilder();
+      prunedParts = prunedPartBuilder.prune(table, conditions);
+    }
 
     List<KeyRange> keyRanges;
     boolean isDoubleRead = false;
@@ -173,7 +179,7 @@ public class ScanAnalyzer {
         cost = 100.0; // Full table scan cost
         // TODO: Fine-grained statistics usage
       }
-      keyRanges = buildTableScanKeyRange(table, irs, prunedPartInfo);
+      keyRanges = buildTableScanKeyRange(table, irs, prunedParts);
       cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
     } else {
       if (tableStatistics != null) {
@@ -198,8 +204,7 @@ public class ScanAnalyzer {
       } else {
         cost *= indexSize * INDEX_SCAN_COST_FACTOR;
       }
-      // TODO: pruning part info later
-      keyRanges = buildIndexScanKeyRange(table, index, irs, prunedPartInfo);
+      keyRanges = buildIndexScanKeyRange(table, index, irs, prunedParts);
     }
 
     return new ScanPlan(
@@ -209,12 +214,7 @@ public class ScanAnalyzer {
         cost,
         isDoubleRead,
         estimatedRowCount,
-        prunedPartInfo);
-  }
-
-  private TiPartitionInfo partPruning(TiTableInfo tableInfo) {
-    // TODO implement real logic later
-    return tableInfo.getPartitionInfo();
+        prunedParts);
   }
 
   private Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
@@ -238,7 +238,7 @@ public class ScanAnalyzer {
         // -INF
         startKey = RowKey.createMin(id);
       } else {
-        // Comparision with null should be filtered since it yields unknown always
+        // Comparison with null should be filtered since it yields unknown always
         startKey = RowKey.toRowKey(id, r.lowerEndpoint());
         if (r.lowerBoundType().equals(BoundType.OPEN)) {
           startKey = startKey.next();
@@ -260,37 +260,39 @@ public class ScanAnalyzer {
     return new Pair<>(startKey, endKey);
   }
 
+  private List<KeyRange> buildTableScanKeyRangeWithIds(
+      List<Long> ids, List<IndexRange> indexRanges) {
+    List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
+    for (Long id : ids) {
+      indexRanges.forEach(
+          (ir) -> {
+            Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(id, ir);
+            Key startKey = pairKey.first;
+            Key endKey = pairKey.second;
+            // This range only possible when < MIN or > MAX
+            if (!startKey.equals(endKey)) {
+              ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
+            }
+          });
+    }
+    return ranges;
+  }
+
   @VisibleForTesting
   List<KeyRange> buildTableScanKeyRange(
-      TiTableInfo table, List<IndexRange> indexRanges, TiPartitionInfo prunedPartInfo) {
+      TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
 
-    List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
-    for (IndexRange ir : indexRanges) {
-      if (!table.isPartitionEnabled()) {
-        Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(table.getId(), ir);
-        Key startKey = pairKey.first;
-        Key endKey = pairKey.second;
-        // This range only possible when < MIN or > MAX
-        if (!startKey.equals(endKey)) {
-          ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
-        }
-      } else {
-        // TODO: partition pruning can be applied here.
-        for (TiPartitionDef pDef : prunedPartInfo.getDefs()) {
-          Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(pDef.getId(), ir);
-          Key startKey = pairKey.first;
-          Key endKey = pairKey.second;
-          // This range only possible when < MIN or > MAX
-          if (!startKey.equals(endKey)) {
-            ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
-          }
-        }
+    if (table.isPartitionEnabled()) {
+      List<Long> ids = new ArrayList<>();
+      for (TiPartitionDef pDef : prunedParts) {
+        ids.add(pDef.getId());
       }
+      return buildTableScanKeyRangeWithIds(ids, indexRanges);
+    } else {
+      return buildTableScanKeyRangeWithIds(ImmutableList.of(table.getId()), indexRanges);
     }
-
-    return ranges;
   }
 
   private Pair<Key, Key> buildIndexScanKeyRangePerId(long id, TiIndexInfo index, IndexRange ir) {
@@ -342,7 +344,7 @@ public class ScanAnalyzer {
       TiTableInfo table,
       TiIndexInfo index,
       List<IndexRange> indexRanges,
-      TiPartitionInfo prunedPartInfo) {
+      List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(index, "Index cannot be null to encoding keyRange");
     requireNonNull(indexRanges, "indexRanges cannot be null to encoding keyRange");
@@ -356,7 +358,7 @@ public class ScanAnalyzer {
         Key ubsKey = pairKeys.second;
         ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
       } else {
-        for (TiPartitionDef pDef : prunedPartInfo.getDefs()) {
+        for (TiPartitionDef pDef : prunedParts) {
           Pair<Key, Key> pairKeys = buildIndexScanKeyRangePerId(pDef.getId(), index, ir);
           Key lbsKey = pairKeys.first;
           Key ubsKey = pairKeys.second;
