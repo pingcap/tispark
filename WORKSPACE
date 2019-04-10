@@ -142,8 +142,3 @@ load("@io_bazel_rules_scala//scala:scala.bzl", "scala_repositories")
 scala_repositories()
 load("@io_bazel_rules_scala//scala:toolchains.bzl", "scala_register_toolchains")
 scala_register_toolchains()
-
-# use bazel-deps to manage transitive maven dependencies
-# https://github.com/johnynek/bazel-deps
-load("//3rdparty:workspace.bzl", "maven_dependencies")
-maven_dependencies()
