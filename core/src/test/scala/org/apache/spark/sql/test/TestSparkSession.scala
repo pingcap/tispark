@@ -27,6 +27,7 @@ private[spark] class TestSparkSession(sparkConf: SparkConf) { self =>
     .master("local[*]")
     .appName("tispark-integration-test")
     .config(sparkConf.set("spark.sql.testkey", "true"))
+    .enableHiveSupport()
     .getOrCreate()
   SparkSession.setDefaultSession(spark)
   SparkSession.setActiveSession(spark)

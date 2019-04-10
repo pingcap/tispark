@@ -125,4 +125,13 @@ class CatalogTestSuite extends BaseTiSparkSuite {
       rTiDB = columnNames
     )
   }
+
+  test("test support create table like") {
+    setCurrentDatabase("default")
+    spark.sql("drop table if exists t")
+    spark.sql(s"create table t like ${dbPrefix}tpch_test.nation").show
+    spark.sql("show tables").show
+    checkSparkResultContains("show tables", List("default", "t", "false"))
+    spark.sql("show create table t").show(false)
+  }
 }
