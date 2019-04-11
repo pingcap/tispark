@@ -39,6 +39,11 @@ object TiUtils {
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiExpression = com.pingcap.tikv.expression.Expression
 
+  /**
+   * Literal to be used with the Spark DataFrame's .format method
+   */
+  val TIDB_SOURCE_NAME = "com.pingcap.tispark"
+
   private final val logger = Logger.getLogger(getClass.getName)
   private final val MAX_PRECISION = sql.types.DecimalType.MAX_PRECISION
 
