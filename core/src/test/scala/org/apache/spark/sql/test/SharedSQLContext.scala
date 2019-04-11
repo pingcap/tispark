@@ -18,7 +18,7 @@
 package org.apache.spark.sql.test
 
 import java.sql.{Connection, DriverManager, Statement}
-import java.util.{Locale, Properties, TimeZone}
+import java.util.{Locale, Properties, TimeZone, UUID}
 
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
@@ -71,6 +71,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def paramConf(): Properties = SharedSQLContext._tidbConf
 
+  protected var isHiveEnabled: Boolean = false
+
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
    */
@@ -79,7 +81,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     try {
-      SharedSQLContext.init()
+      SharedSQLContext.init(isHiveEnabled = isHiveEnabled)
     } catch {
       case e: Throwable =>
         fail(
@@ -100,6 +102,8 @@ object SharedSQLContext extends Logging {
   DateTimeZone.setDefault(DateTimeZone.forTimeZone(timeZone))
   // Add Locale setting
   Locale.setDefault(Locale.CHINA)
+
+  protected val uuid: UUID = UUID.randomUUID()
 
   protected val logger: Logger = log
   protected val sparkConf = new SparkConf()
@@ -235,7 +239,7 @@ object SharedSQLContext extends Logging {
       }
     }
 
-  private def initializeConf(): Unit =
+  private def initializeConf(isHiveEnabled: Boolean = false): Unit =
     if (_tidbConf == null) {
       val confStream = Thread
         .currentThread()
@@ -265,14 +269,14 @@ object SharedSQLContext extends Logging {
       runTPCDS = tpcdsDBName != ""
 
       _tidbConf = prop
-      _sparkSession = new TestSparkSession(sparkConf).session
+      _sparkSession = new TestSparkSession(sparkConf, uuid, isHiveEnabled).session
     }
 
   /**
    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
    */
-  def init(forceNotLoad: Boolean = false): Unit = {
-    initializeConf()
+  def init(forceNotLoad: Boolean = false, isHiveEnabled: Boolean = false): Unit = {
+    initializeConf(isHiveEnabled)
     initializeSession()
     initializeTiDB(forceNotLoad)
     initializeJDBC()

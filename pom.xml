@@ -197,6 +197,20 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <!--Generate UUID for each build-->
+            <plugin>
+                <groupId>us.springett</groupId>
+                <artifactId>maven-uuid-generator</artifactId>
+                <version>1.0.1</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <!--GPG Signed Components-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

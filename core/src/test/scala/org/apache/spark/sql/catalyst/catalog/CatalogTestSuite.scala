@@ -3,6 +3,7 @@ package org.apache.spark.sql.catalyst.catalog
 import org.apache.spark.sql.BaseTiSparkSuite
 
 class CatalogTestSuite extends BaseTiSparkSuite {
+  isHiveEnabled = true
 
   test("test show databases/tables") {
     spark.sql("show databases").show(false)
