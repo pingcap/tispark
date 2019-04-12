@@ -190,6 +190,16 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
     compSqlResult(sql, querySpark(sql), queryTiDB(sql), checkLimit)
 
+  protected def checkSparkResult(sql: String,
+                                 result: List[List[Any]],
+                                 checkLimit: Boolean = true): Unit =
+    assert(compSqlResult(sql, querySpark(sql), result, checkLimit))
+
+  protected def checkSparkResultContains(sql: String,
+                                         result: List[Any],
+                                         checkLimit: Boolean = true): Unit =
+    assert(querySpark(sql).exists(x => compSqlResult(sql, List(x), List(result), checkLimit)))
+
   protected def execDBTSAndJudge(str: String,
                                  skipped: Boolean = false,
                                  checkLimit: Boolean = true): Boolean =

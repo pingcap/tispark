@@ -71,6 +71,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def paramConf(): Properties = SharedSQLContext._tidbConf
 
+  protected var isHiveEnabled: Boolean = false
+
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
    */
@@ -79,7 +81,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     try {
-      SharedSQLContext.init()
+      SharedSQLContext.init(isHiveEnabled = isHiveEnabled)
     } catch {
       case e: Throwable =>
         fail(
@@ -235,7 +237,7 @@ object SharedSQLContext extends Logging {
       }
     }
 
-  private def initializeConf(): Unit =
+  private def initializeConf(isHiveEnabled: Boolean = false): Unit =
     if (_tidbConf == null) {
       val confStream = Thread
         .currentThread()
@@ -265,14 +267,14 @@ object SharedSQLContext extends Logging {
       runTPCDS = tpcdsDBName != ""
 
       _tidbConf = prop
-      _sparkSession = new TestSparkSession(sparkConf).session
+      _sparkSession = new TestSparkSession(sparkConf, isHiveEnabled).session
     }
 
   /**
    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
    */
-  def init(forceNotLoad: Boolean = false): Unit = {
-    initializeConf()
+  def init(forceNotLoad: Boolean = false, isHiveEnabled: Boolean = false): Unit = {
+    initializeConf(isHiveEnabled)
     initializeSession()
     initializeTiDB(forceNotLoad)
     initializeJDBC()

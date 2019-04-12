@@ -489,7 +489,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           logical.Project(projectList, logical.Sort(order, true, child))
           ) =>
         takeOrderedAndProject(limit, order, child, projectList) :: Nil
-
       // Collapse filters and projections and push plan directly
       case PhysicalOperation(
           projectList,
