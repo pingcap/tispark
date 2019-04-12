@@ -19,7 +19,9 @@ import com.pingcap.tikv.meta.TiDAGRequest
 import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 
 class PartitionTableSuite extends BaseTiSparkSuite {
+  def enablePartitionForTiDB() = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
   test("constant folding does not apply case") {
+    enablePartitionForTiDB()
     tidbStmt.execute(
       "create table t3 (c1 int) partition by range(c1) (partition p0 values less than maxvalue)"
     )
@@ -31,6 +33,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   test("single maxvalue partition table case and part expr is not column") {
+    enablePartitionForTiDB()
     tidbStmt.execute(
       "create table t2 (c1 int) partition by range(c1 + 1) (partition p0 values less than maxvalue)"
     )
@@ -42,6 +45,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   test("index scan on partition table") {
+    enablePartitionForTiDB()
     tidbStmt.execute(
       "CREATE TABLE `p_t` (   `id` int(11) DEFAULT NULL, `y` date DEFAULT NULL,   index `idx_y`(`y`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin PARTITION BY RANGE ( id ) (   PARTITION p0 VALUES LESS THAN (2),   PARTITION p1 VALUES LESS THAN (4),   PARTITION p2 VALUES LESS THAN (6) );"
     )
@@ -55,6 +59,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   test("simple partition pruning test") {
+    enablePartitionForTiDB()
     tidbStmt.execute(
       "CREATE TABLE `pt2` (   `id` int(11) DEFAULT NULL, `y` date DEFAULT NULL,   index `idx_y`(`y`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin " +
         "PARTITION BY RANGE ( id ) (   " +
@@ -72,6 +77,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   private def extractDAGReq(df: DataFrame): TiDAGRequest = {
+    enablePartitionForTiDB()
     val executedPlan = df.queryExecution.executedPlan
     val copRDD = executedPlan.find(e => e.isInstanceOf[CoprocessorRDD])
     val regionTaskExec = executedPlan.find(e => e.isInstanceOf[RegionTaskExec])
@@ -88,6 +94,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   test("part pruning on unix_timestamp") {
+    enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `pt4`")
     tidbStmt.execute("""
                        |CREATE TABLE `pt4` (
@@ -114,6 +121,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   test("part pruning on year function") {
+    enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `pt3`")
     tidbStmt.execute("""
                        |CREATE TABLE `pt3` (
@@ -206,6 +214,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   test("adding part pruning test when index is on partitioned column") {
+    enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `p_t`")
     tidbStmt.execute("""
                        |CREATE TABLE `p_t` (
@@ -300,6 +309,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   test("adding part pruning test") {
+    enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `p_t`")
     tidbStmt.execute("""
                        |CREATE TABLE `p_t` (
@@ -419,6 +429,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   test("partition read(w/o pruning)") {
+    enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `p_t`")
     tidbStmt.execute("""
                        |CREATE TABLE `p_t` (
