@@ -3,11 +3,11 @@ package com.pingcap.tispark.datasource
 import com.pingcap.tispark.TiUtils.TIDB_SOURCE_NAME
 import org.apache.spark.sql.Row
 
-// without TiExtensions
-// will not load tidb_config.properties to SparkConf
-class FilterPushdownSuite extends BaseDataSourceSuite {
+// with TiExtensions
+// will load tidb_config.properties to SparkConf
+class DataSourceWithExtensionsSuite extends BaseDataSourceSuite(true) {
   private val testDatabase: String = "tispark_test"
-  private val testTable: String = "test_data_source_filter_pushdown"
+  private val testTable: String = "test_data_source_with_extensions"
   private val testDBTable = s"$testDatabase.$testTable"
 
   // Values used for comparison
@@ -52,7 +52,6 @@ class FilterPushdownSuite extends BaseDataSourceSuite {
     val database = getTestDatabaseName(testDatabase)
     val loadedDf = sqlContext.read
       .format(TIDB_SOURCE_NAME)
-      .options(tidbOptions)
       .option("dbtable", s"$database.$testTable")
       .load()
       .filter(filter)

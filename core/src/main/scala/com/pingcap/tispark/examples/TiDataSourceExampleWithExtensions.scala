@@ -23,42 +23,34 @@ import com.pingcap.tispark.TiUtils.TIDB_SOURCE_NAME
  * before run the code in IDE, please enable maven profile `local-debug`
  */
 object TiDataSourceExampleWithExtensions {
-
-  private val tidbUser = "root"
-  private val tidbPassword = ""
-  private val tidbAddr = "127.0.0.1"
-  private val tidbPort = 4000
-  private val pdAddresses = "127.0.0.1:2379"
-
-  var sqlContext: SQLContext = _
-
   def main(args: Array[String]): Unit = {
     val sparkConf = new SparkConf()
       .setIfMissing("spark.master", "local[*]")
       .setIfMissing("spark.app.name", getClass.getName)
       .setIfMissing("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-      .setIfMissing("tidb.addr", tidbAddr)
-      .setIfMissing("tidb.password", tidbPassword)
-      .setIfMissing("tidb.port", s"$tidbPort")
-      .setIfMissing("tidb.user", tidbUser)
-      .setIfMissing("spark.tispark.pd.addresses", pdAddresses)
+      .setIfMissing("tidb.addr", "127.0.0.1")
+      .setIfMissing("tidb.password", "")
+      .setIfMissing("tidb.port", "4000")
+      .setIfMissing("tidb.user", "root")
+      .setIfMissing("spark.tispark.pd.addresses", "127.0.0.1:2379")
       .setIfMissing("spark.tispark.plan.allow_index_read", "true")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
-    sqlContext = spark.sqlContext
+    val sqlContext = spark.sqlContext
 
-    dbScan()
+    dbScan(sqlContext)
 
-    pushDown()
+    pushDown(sqlContext)
 
-    batchWrite()
+    batchWrite(sqlContext)
 
-    readUsingPureSQL()
+    readUsingPureSQL(sqlContext)
 
-    //readWithSchemaUsingPureSQL()
+    //readWithSchemaUsingPureSQL(sqlContext)
   }
 
-  def dbScan(): DataFrame = {
+  def dbScan(sqlContext: SQLContext): DataFrame = {
+    // use tidb config in spark config if does not provide in data source config
     val tidbOptions: Map[String, String] = Map()
     val df = sqlContext.read
       .format(TIDB_SOURCE_NAME)
@@ -69,8 +61,17 @@ object TiDataSourceExampleWithExtensions {
     df
   }
 
-  def pushDown(): DataFrame = {
-    val tidbOptions: Map[String, String] = Map()
+  def pushDown(sqlContext: SQLContext): DataFrame = {
+    // tidb config priority: data source config > spark config
+    val tidbOptions: Map[String, String] = Map(
+      "tidb.addr" -> "127.0.0.1",
+      "tidb.password" -> "",
+      "tidb.port" -> "4000",
+      "tidb.user" -> "root",
+      "spark.tispark.pd.addresses" -> "127.0.0.1:2379",
+      "spark.tispark.plan.allow_index_read" -> "true"
+    )
+
     val df = sqlContext.read
       .format(TIDB_SOURCE_NAME)
       .options(tidbOptions)
@@ -82,9 +83,9 @@ object TiDataSourceExampleWithExtensions {
     df
   }
 
-  def batchWrite(): Unit = {
+  def batchWrite(sqlContext: SQLContext): Unit = {
     val tidbOptions: Map[String, String] = Map()
-    val df = dbScan()
+    val df = dbScan(sqlContext)
     df.write
       .format(TIDB_SOURCE_NAME)
       .options(tidbOptions)
@@ -93,7 +94,8 @@ object TiDataSourceExampleWithExtensions {
       .save()
   }
 
-  def readUsingPureSQL(): Unit = {
+  def readUsingPureSQL(sqlContext: SQLContext): Unit = {
+    // use tidb config in spark config if does not provide in data source config
     sqlContext.sql(s"""
                       |CREATE TABLE test1
                       |USING com.pingcap.tispark
@@ -107,7 +109,8 @@ object TiDataSourceExampleWithExtensions {
        """.stripMargin).show()
   }
 
-  def readWithSchemaUsingPureSQL(): Unit = {
+  def readWithSchemaUsingPureSQL(sqlContext: SQLContext): Unit = {
+    // tidb config priority: data source config > spark config
     sqlContext.sql(s"""
                       |CREATE TABLE test2(
                       |  `C_CUSTKEY` integer,
@@ -121,6 +124,12 @@ object TiDataSourceExampleWithExtensions {
                       |USING com.pingcap.tispark
                       |OPTIONS (
                       |  dbtable 'tpch_test.CUSTOMER'
+                      |  tidb.addr '127.0.0.1',
+                      |  tidb.password '',
+                      |  tidb.port '4000',
+                      |  tidb.user 'root',
+                      |  spark.tispark.pd.addresses '127.0.0.1:2379',
+                      |  spark.tispark.plan.allow_index_read 'true'
                       |)
        """.stripMargin)
 

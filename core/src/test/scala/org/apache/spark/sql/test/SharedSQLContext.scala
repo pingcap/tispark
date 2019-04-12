@@ -75,6 +75,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected var enableHive: Boolean = false
 
+  protected var isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true
+
   protected def tidbUser: String = SharedSQLContext.tidbUser
 
   protected def tidbPassword: String = SharedSQLContext.tidbPassword
@@ -93,7 +95,10 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     try {
-      SharedSQLContext.init(isHiveEnabled = enableHive)
+      SharedSQLContext.init(
+        isHiveEnabled = enableHive,
+        isTidbConfigPropertiesInjectedToSparkEnabled = isTidbConfigPropertiesInjectedToSparkEnabled
+      )
     } catch {
       case e: Throwable =>
         fail(
@@ -259,7 +264,8 @@ object SharedSQLContext extends Logging {
       }
     }
 
-  private def initializeConf(isHiveEnabled: Boolean = false): Unit =
+  private def initializeConf(isHiveEnabled: Boolean = false,
+                             isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true): Unit =
     if (_tidbConf == null) {
       val confStream = Thread
         .currentThread()
@@ -274,15 +280,7 @@ object SharedSQLContext extends Logging {
       import com.pingcap.tispark.TiConfigConst._
 
       pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
-
-      sparkConf.set(PD_ADDRESSES, pdAddresses)
-      sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
-      sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
-      sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
-      sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
-      sparkConf.set(DB_PREFIX, dbPrefix)
 
       // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
@@ -292,18 +290,32 @@ object SharedSQLContext extends Logging {
       runTPCDS = tpcdsDBName != ""
 
       _tidbConf = prop
+
+      if (isTidbConfigPropertiesInjectedToSparkEnabled) {
+        sparkConf.set(PD_ADDRESSES, pdAddresses)
+        sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
+        sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
+        sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
+        sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
+        sparkConf.set(DB_PREFIX, dbPrefix)
+      }
+
       _sparkSession = new TestSparkSession(sparkConf, isHiveEnabled).session
     }
 
   /**
    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
    */
-  def init(forceNotLoad: Boolean = false, isHiveEnabled: Boolean = false): Unit = {
-    initializeConf(isHiveEnabled)
+  def init(forceNotLoad: Boolean = false,
+           isHiveEnabled: Boolean = false,
+           isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true): Unit = {
+    initializeConf(isHiveEnabled, isTidbConfigPropertiesInjectedToSparkEnabled)
     initializeSparkSession()
     initializeTiDB(forceNotLoad)
     initializeJDBC()
-    initializeTiContext()
+    if (isTidbConfigPropertiesInjectedToSparkEnabled) {
+      initializeTiContext()
+    }
   }
 
   /**
