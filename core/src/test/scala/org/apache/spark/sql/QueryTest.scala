@@ -55,7 +55,7 @@ abstract class QueryTest extends PlanTest {
   /**
    * Compare whether lhs equals to rhs
    *
-   * @param isOrdered whether the input data `lhs` and `rhs` are sorted
+   * @param isOrdered whether the input data `lhs` and `rhs` should be compared in order
    * @return true if results are the same
    */
   protected def compResult(lhs: List[List[Any]],
@@ -135,9 +135,9 @@ abstract class QueryTest extends PlanTest {
         }
       }
 
-    def comp(lhs: List[List[Any]], rhs: List[List[Any]]): Boolean =
-      !lhs.zipWithIndex.exists {
-        case (row, i) => !compRow(row, rhs(i))
+    def comp(query: List[List[Any]], result: List[List[Any]]): Boolean =
+      !result.zipWithIndex.exists {
+        case (row, i) => !compRow(row, query(i))
       }
 
     if (lhs != null && rhs != null) {

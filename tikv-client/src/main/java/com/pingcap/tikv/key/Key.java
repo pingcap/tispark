@@ -108,16 +108,23 @@ public class Key implements Comparable<Key> {
   }
 
   /**
-   * The next key for bytes domain It first plus one at LSB and if LSB overflows, a zero byte is
-   * appended at the end Original bytes will be reused if possible
+   * Next key simply append a zero byte to previous key.
+   *
+   * @return next key with a zero byte appended
+   */
+  public Key next() {
+    return toRawKey(Arrays.copyOf(value, value.length + 1));
+  }
+
+  /**
+   * The prefixNext key for bytes domain
+   *
+   * <p>It first plus one at LSB and if LSB overflows, a zero byte is appended at the end Original
+   * bytes will be reused if possible
    *
    * @return encoded results
    */
-  public Key next() {
-    return toRawKey(nextValue(value));
-  }
-
-  static byte[] nextValue(byte[] value) {
+  static byte[] prefixNext(byte[] value) {
     int i;
     byte[] newVal = Arrays.copyOf(value, value.length);
     for (i = newVal.length - 1; i >= 0; i--) {

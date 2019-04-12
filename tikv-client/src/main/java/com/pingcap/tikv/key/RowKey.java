@@ -80,7 +80,7 @@ public class RowKey extends Key {
   }
 
   private static byte[] encodeBeyondMaxHandle(long tableId) {
-    return nextValue(encode(tableId, Long.MAX_VALUE));
+    return prefixNext(encode(tableId, Long.MAX_VALUE));
   }
 
   @Override

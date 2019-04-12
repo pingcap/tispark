@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
@@ -147,7 +148,7 @@ public class ScanAnalyzerTest {
         ByteString.copyFrom(
             new byte[] {
               116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
-              0, 0, 0, 1
+              0, 0, 0, 0, 0
             }),
         keyRange.getEnd());
 
@@ -175,7 +176,7 @@ public class ScanAnalyzerTest {
         ByteString.copyFrom(
             new byte[] {
               116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
-              0, 0, 0, 0, 1, 119, 116, 102, 0, 0, 0, 0, 0, -5
+              0, 0, 0, 0, 1, 119, 116, 102, 0, 0, 0, 0, 0, -6, 0
             }),
         keyRange.getEnd());
   }

@@ -44,8 +44,9 @@ public class TypedKey extends Key {
   }
 
   /**
-   * Map a typed value into TypedKey, only encoding first prefixLength bytes When prefixLength is
-   * DataType.UNSPECIFIED_LEN, encode full length of value
+   * Map a typed value into TypedKey, only encoding first prefixLength bytes
+   *
+   * <p>When prefixLength is DataType.UNSPECIFIED_LEN, encode full length of value
    *
    * @param val value
    * @param type type of value
@@ -66,9 +67,9 @@ public class TypedKey extends Key {
   public TypedKey next(int prefixLength) {
     Object val = getValue();
     if (val instanceof String) {
-      return toTypedKey(nextValue(((String) val).getBytes()), type, prefixLength);
+      return toTypedKey(prefixNext(((String) val).getBytes()), type, prefixLength);
     } else if (val instanceof byte[]) {
-      return toTypedKey(nextValue(((byte[]) val)), type, prefixLength);
+      return toTypedKey(prefixNext(((byte[]) val)), type, prefixLength);
     } else {
       throw new TypeException(
           "Type for TypedKey in next() function must be either String or Byte array");

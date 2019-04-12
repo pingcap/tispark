@@ -16,7 +16,7 @@ package org.apache.spark.sql.execution.command
 
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
-import org.apache.spark.sql.catalyst.catalog.{CatalogTable, SessionCatalog, TiSessionCatalog}
+import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructType}
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
@@ -111,7 +111,15 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
         }
 
         result
-      case _: SessionCatalog => super.run(sparkSession)
+      case _: SessionCatalog =>
+        val schema = tiCatalog.getTableMetadata(delegate.table).schema
+        delegate
+          .run(sparkSession)
+          .zipWithIndex
+          .map(
+            (r: (Row, Int)) =>
+              Row(r._1.get(0), r._1.get(1), schema.fields(r._2).nullable.toString, r._1.get(2))
+          )
     }
 
   private def describeSchema(schema: StructType,
@@ -174,5 +182,44 @@ case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsComma
     table.schema.map { c =>
       Row(c.name)
     }
+  }
+}
+
+case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableLikeCommand)
+    extends RunnableCommand {
+
+  override def run(sparkSession: SparkSession): Seq[Row] = {
+    val catalog = tiContext.tiCatalog
+    val sourceTableDesc = catalog.getTempViewOrPermanentTableMetadata(delegate.sourceTable)
+
+    val newProvider = if (sourceTableDesc.tableType == CatalogTableType.VIEW) {
+      Some(sparkSession.sessionState.conf.defaultDataSourceName)
+    } else if (catalog
+                 .catalogOf(sourceTableDesc.identifier.database)
+                 .exists(_.isInstanceOf[TiSessionCatalog])) {
+      // TODO: use tikv datasource
+      Some(sparkSession.sessionState.conf.defaultDataSourceName)
+    } else {
+      sourceTableDesc.provider
+    }
+
+    // If the location is specified, we create an external table internally.
+    // Otherwise create a managed table.
+    val tblType =
+      if (delegate.location.isEmpty) CatalogTableType.MANAGED else CatalogTableType.EXTERNAL
+
+    val newTableDesc =
+      CatalogTable(
+        identifier = delegate.targetTable,
+        tableType = tblType,
+        storage = sourceTableDesc.storage
+          .copy(locationUri = delegate.location.map(CatalogUtils.stringToURI)),
+        schema = sourceTableDesc.schema,
+        provider = newProvider,
+        partitionColumnNames = sourceTableDesc.partitionColumnNames,
+        bucketSpec = sourceTableDesc.bucketSpec
+      )
+    catalog.createTable(newTableDesc, delegate.ifNotExists)
+    Seq.empty[Row]
   }
 }

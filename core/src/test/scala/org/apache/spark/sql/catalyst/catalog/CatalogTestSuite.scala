@@ -3,6 +3,7 @@ package org.apache.spark.sql.catalyst.catalog
 import org.apache.spark.sql.BaseTiSparkSuite
 
 class CatalogTestSuite extends BaseTiSparkSuite {
+  isHiveEnabled = true
 
   test("test show databases/tables") {
     spark.sql("show databases").show(false)
@@ -81,6 +82,11 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     spark.sql("desc extended full_data_type_table").explain()
     spark.sql("desc extended full_data_type_table").show(200, truncate = false)
     spark.sql("desc formatted full_data_type_table").show(200, truncate = false)
+    setCurrentDatabase("default")
+    spark.sql("drop table if exists t")
+    spark.sql("create table t(a int)")
+    spark.sql("desc t").show
+    spark.sql("drop table if exists t")
   }
 
   test("test support show columns") {
@@ -124,5 +130,14 @@ class CatalogTestSuite extends BaseTiSparkSuite {
       skipJDBC = true,
       rTiDB = columnNames
     )
+  }
+
+  test("test support create table like") {
+    setCurrentDatabase("default")
+    spark.sql("drop table if exists t")
+    spark.sql(s"create table t like ${dbPrefix}tpch_test.nation").show
+    spark.sql("show tables").show
+    checkSparkResultContains("show tables", List("default", "t", "false"))
+    spark.sql("show create table t").show(false)
   }
 }
