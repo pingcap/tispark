@@ -18,7 +18,7 @@
 package org.apache.spark.sql.test
 
 import java.sql.{Connection, DriverManager, Statement}
-import java.util.{Locale, Properties, TimeZone, UUID}
+import java.util.{Locale, Properties, TimeZone}
 
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
@@ -102,8 +102,6 @@ object SharedSQLContext extends Logging {
   DateTimeZone.setDefault(DateTimeZone.forTimeZone(timeZone))
   // Add Locale setting
   Locale.setDefault(Locale.CHINA)
-
-  protected val uuid: UUID = UUID.randomUUID()
 
   protected val logger: Logger = log
   protected val sparkConf = new SparkConf()
@@ -269,7 +267,7 @@ object SharedSQLContext extends Logging {
       runTPCDS = tpcdsDBName != ""
 
       _tidbConf = prop
-      _sparkSession = new TestSparkSession(sparkConf, uuid, isHiveEnabled).session
+      _sparkSession = new TestSparkSession(sparkConf, isHiveEnabled).session
     }
 
   /**
