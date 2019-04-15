@@ -20,7 +20,7 @@
 <configuration>
 <property>
   <name>javax.jdo.option.ConnectionURL</name>
-  <value>jdbc:mysql://localhost:4000/metastore_db?createDatabaseIfNotExist=true&amp;useSSL=false</value>
+  <value>jdbc:mysql://localhost:4000/metastore_db?createDatabaseIfNotExist=true&amp;useSSL=false&amp;autoReconnect=true</value>
   <description>JDBC connect string for a JDBC metastore</description>
 </property>
 
