@@ -151,6 +151,8 @@ object TiUtils {
     }
 
   def fromSparkType(tp: DataType): TiDataType =
+    // TODO: review type system
+    // pending: https://internal.pingcap.net/jira/browse/TISPARK-99
     tp match {
       case _: sql.types.BinaryType    => BytesType.BLOB
       case _: sql.types.StringType    => StringType.VARCHAR

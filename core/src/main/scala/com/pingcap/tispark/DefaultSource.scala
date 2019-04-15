@@ -51,6 +51,7 @@ class DefaultSource
                               parameters: Map[String, String],
                               schema: StructType): BaseRelation =
     // TODO: use schema info
+    // pending: https://internal.pingcap.net/jira/browse/TISPARK-98
     createRelation(sqlContext, parameters)
 
   /**
