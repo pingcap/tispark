@@ -38,11 +38,7 @@ import org.slf4j.Logger
  *
  * `tidb_config.properties` must be provided in test resources folder
  */
-trait SharedSQLContext
-    extends SparkFunSuite
-    with Eventually
-    with BeforeAndAfterAll
-    with BeforeAndAfter {
+trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfterAll {
   protected def spark: SparkSession = SharedSQLContext.spark
 
   protected def ti: TiContext = SharedSQLContext.ti
@@ -97,7 +93,10 @@ trait SharedSQLContext
     }
   }
 
-  after(stop())
+  override protected def afterAll(): Unit = {
+    super.afterAll()
+    stop()
+  }
 }
 
 object SharedSQLContext extends Logging {
