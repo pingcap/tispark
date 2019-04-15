@@ -17,6 +17,8 @@ import org.apache.spark.sql.test.TestConstants._
 class BaseDataSourceSuite(_isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = false)
     extends QueryTest
     with SharedSQLContext {
+  protected val testDatabase: String = "tispark_test"
+
   protected var tidbStmt: Statement = _
   protected var tidbOptions: Map[String, String] = _
 

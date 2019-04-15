@@ -8,7 +8,6 @@ import scala.util.Random
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
 class BasicSQLSuite extends BaseDataSourceSuite {
-  private val testDatabase: String = "tispark_test"
   private val testTable: String = "test_data_source_sql"
 
   // Values used for comparison

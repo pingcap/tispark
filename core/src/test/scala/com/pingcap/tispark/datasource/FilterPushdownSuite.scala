@@ -6,7 +6,6 @@ import org.apache.spark.sql.Row
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
 class FilterPushdownSuite extends BaseDataSourceSuite {
-  private val testDatabase: String = "tispark_test"
   private val testTable: String = "test_data_source_filter_pushdown"
 
   // Values used for comparison

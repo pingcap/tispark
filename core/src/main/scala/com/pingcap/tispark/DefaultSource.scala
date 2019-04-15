@@ -39,7 +39,6 @@ class DefaultSource
 
     val options = new TiDBOptions(parameters)
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
-
     val tableRef = TiDBUtils.getTableRef(options.dbtable, tiContext.tiCatalog.getCurrentDatabase)
     TiDBRelation(tiContext.tiSession, tableRef, tiContext.meta, None, parameters)(sqlContext)
   }
@@ -61,10 +60,7 @@ class DefaultSource
                               saveMode: SaveMode,
                               parameters: Map[String, String],
                               df: DataFrame): BaseRelation = {
-    TiSparkConnectorUtils.checkVersionAndEnablePushdown(sqlContext.sparkSession)
-
     TiDBWriter.write(df, sqlContext, saveMode, parameters)
-
     createRelation(sqlContext, parameters)
   }
 }

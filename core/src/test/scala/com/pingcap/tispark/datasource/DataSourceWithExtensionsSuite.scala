@@ -6,7 +6,6 @@ import org.apache.spark.sql.Row
 // with TiExtensions
 // will load tidb_config.properties to SparkConf
 class DataSourceWithExtensionsSuite extends BaseDataSourceSuite(true) {
-  private val testDatabase: String = "tispark_test"
   private val testTable: String = "test_data_source_with_extensions"
 
   // Values used for comparison

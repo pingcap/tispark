@@ -8,7 +8,6 @@ import org.apache.spark.sql.{Row, SaveMode}
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
 class BasicDataSouceSuite extends BaseDataSourceSuite {
-  private val testDatabase: String = "tispark_test"
   private val testTable: String = "test_data_source_basic"
 
   // Values used for comparison
