@@ -28,7 +28,10 @@ object TiDBUtils {
   /**
    * Creates a table with a given schema.
    */
-  def createTable(conn: Connection, df: DataFrame, options: TiDBOptions): Unit = {
+  def createTable(conn: Connection,
+                  df: DataFrame,
+                  options: TiDBOptions,
+                  tiContext: TiContext): Unit = {
     val strSchema = JdbcUtils.schemaString(df, options.url, options.createTableColumnTypes)
     val dbtable = options.dbtable
     val createTableOptions = options.createTableOptions
@@ -43,6 +46,8 @@ object TiDBUtils {
     } finally {
       statement.close()
     }
+
+    tiContext.tiSession.getCatalog.reloadCache()
   }
 
   /**
@@ -101,7 +106,7 @@ object TiDBUtils {
   /**
    * Truncates a table from TiDB without side effects.
    */
-  def truncateTable(conn: Connection, options: TiDBOptions): Unit = {
+  def truncateTable(conn: Connection, options: TiDBOptions, tiContext: TiContext): Unit = {
     val dbtable = options.dbtable
     val sql = s"TRUNCATE TABLE $dbtable"
     val statement = conn.createStatement
@@ -110,6 +115,8 @@ object TiDBUtils {
     } finally {
       statement.close()
     }
+
+    tiContext.tiSession.getCatalog.reloadCache()
   }
 
   /**
@@ -134,13 +141,15 @@ object TiDBUtils {
   /**
    * Drops a table from TiDB.
    */
-  def dropTable(conn: Connection, options: TiDBOptions): Unit = {
+  def dropTable(conn: Connection, options: TiDBOptions, tiContext: TiContext): Unit = {
     val statement = conn.createStatement
     try {
       statement.executeUpdate(s"DROP TABLE ${options.dbtable}")
     } finally {
       statement.close()
     }
+
+    tiContext.tiSession.getCatalog.reloadCache()
   }
 
   def isCascadingTruncateTable(url: String): Option[Boolean] =

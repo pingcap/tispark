@@ -39,7 +39,7 @@ class BaseDataSourceSuite(_isTidbConfigPropertiesInjectedToSparkEnabled: Boolean
   protected def jdbcUpdate(query: String): Unit =
     tidbStmt.executeUpdate(query)
 
-  protected def getTestDatabaseName(database: String): String =
+  protected def getTestDatabaseNameInSpark(database: String): String =
     if (_isTidbConfigPropertiesInjectedToSparkEnabled) {
       s"$dbPrefix$database"
     } else {

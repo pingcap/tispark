@@ -15,14 +15,13 @@
 
 package com.pingcap.tispark.examples
 
-import com.pingcap.tispark.TiUtils.TIDB_SOURCE_NAME
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession}
 
 /**
  * before run the code in IDE, please enable maven profile `local-debug`
  */
-object TiDataSourceExampleWithoutExtensions {
+object TiDataSourceExample {
 
   def main(args: Array[String]): Unit = {
     val sparkConf = new SparkConf()
@@ -32,18 +31,21 @@ object TiDataSourceExampleWithoutExtensions {
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
     val sqlContext = spark.sqlContext
 
-    dbScan(sqlContext)
+    readUsingDataSourceAPI(sqlContext)
 
-    pushDown(sqlContext)
+    pushDownUsingDataSourceAPI(sqlContext)
 
-    batchWrite(sqlContext)
+    writeUsingDataSourceAPI(sqlContext)
 
-    readUsingPureSQL(sqlContext)
+    readWithSparkSQLAPI(sqlContext)
 
-    //readWithSchemaUsingPureSQL(sqlContext)
+    // TODO: to support
+    //readWithSchemaUsingSparkSQLAPI(sqlContext)
+
+    writeUsingSparkSQLAPI(sqlContext)
   }
 
-  private def dbScan(sqlContext: SQLContext): DataFrame = {
+  private def readUsingDataSourceAPI(sqlContext: SQLContext): DataFrame = {
     val tidbOptions: Map[String, String] = Map(
       "tidb.addr" -> "127.0.0.1",
       "tidb.password" -> "",
@@ -54,7 +56,7 @@ object TiDataSourceExampleWithoutExtensions {
     )
 
     val df = sqlContext.read
-      .format(TIDB_SOURCE_NAME)
+      .format("com.pingcap.tispark")
       .options(tidbOptions)
       .option("dbtable", "tpch_test.CUSTOMER")
       .load()
@@ -62,7 +64,7 @@ object TiDataSourceExampleWithoutExtensions {
     df
   }
 
-  private def pushDown(sqlContext: SQLContext): DataFrame = {
+  private def pushDownUsingDataSourceAPI(sqlContext: SQLContext): DataFrame = {
     val tidbOptions: Map[String, String] = Map(
       "tidb.addr" -> "127.0.0.1",
       "tidb.password" -> "",
@@ -73,7 +75,7 @@ object TiDataSourceExampleWithoutExtensions {
     )
 
     val df = sqlContext.read
-      .format(TIDB_SOURCE_NAME)
+      .format("com.pingcap.tispark")
       .options(tidbOptions)
       .option("dbtable", "tpch_test.CUSTOMER")
       .load()
@@ -83,7 +85,7 @@ object TiDataSourceExampleWithoutExtensions {
     df
   }
 
-  private def batchWrite(sqlContext: SQLContext): Unit = {
+  private def writeUsingDataSourceAPI(sqlContext: SQLContext): Unit = {
     val tidbOptions: Map[String, String] = Map(
       "tidb.addr" -> "127.0.0.1",
       "tidb.password" -> "",
@@ -93,16 +95,26 @@ object TiDataSourceExampleWithoutExtensions {
       "spark.tispark.plan.allow_index_read" -> "true"
     )
 
-    val df = dbScan(sqlContext)
+    val df = readUsingDataSourceAPI(sqlContext)
+
+    // Overwrite
     df.write
-      .format(TIDB_SOURCE_NAME)
+      .format("com.pingcap.tispark")
       .options(tidbOptions)
-      .option("dbtable", "tpch_test.DATASOURCE_API_CUSTOMER2")
+      .option("dbtable", "tpch_test.DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
       .mode(SaveMode.Overwrite)
+      .save()
+
+    // Append
+    df.write
+      .format("com.pingcap.tispark")
+      .options(tidbOptions)
+      .option("dbtable", "tpch_test.DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
+      .mode(SaveMode.Append)
       .save()
   }
 
-  private def readUsingPureSQL(sqlContext: SQLContext): Unit = {
+  private def readWithSparkSQLAPI(sqlContext: SQLContext): Unit = {
     sqlContext.sql(s"""
                       |CREATE TABLE test1
                       |USING com.pingcap.tispark
@@ -122,7 +134,7 @@ object TiDataSourceExampleWithoutExtensions {
        """.stripMargin).show()
   }
 
-  private def readWithSchemaUsingPureSQL(sqlContext: SQLContext): Unit = {
+  private def readWithSchemaUsingSparkSQLAPI(sqlContext: SQLContext): Unit = {
     sqlContext.sql(s"""
                       |CREATE TABLE test2(
                       |  `C_CUSTKEY` integer,
@@ -147,6 +159,60 @@ object TiDataSourceExampleWithoutExtensions {
 
     sqlContext.sql(s"""
                       |select C_NAME from test2 where C_CUSTKEY = 1
+       """.stripMargin).show()
+  }
+
+  private def writeUsingSparkSQLAPI(sqlContext: SQLContext): Unit = {
+    // run `create table DATASOURCE_API_CUSTOMER_writeUsingSparkSQLAPI like CUSTOMER` first
+    sqlContext.sql(s"""
+                      |CREATE TABLE writeUsingSparkSQLAPI_src
+                      |USING com.pingcap.tispark
+                      |OPTIONS (
+                      |  dbtable 'tpch_test.CUSTOMER',
+                      |  tidb.addr '127.0.0.1',
+                      |  tidb.password '',
+                      |  tidb.port '4000',
+                      |  tidb.user 'root',
+                      |  spark.tispark.pd.addresses '127.0.0.1:2379',
+                      |  spark.tispark.plan.allow_index_read 'true'
+                      |)
+       """.stripMargin)
+
+    sqlContext.sql(s"""
+                      |CREATE TABLE writeUsingSparkSQLAPI_dest
+                      |USING com.pingcap.tispark
+                      |OPTIONS (
+                      |  dbtable 'tpch_test.DATASOURCE_API_CUSTOMER_writeUsingSparkSQLAPI',
+                      |  tidb.addr '127.0.0.1',
+                      |  tidb.password '',
+                      |  tidb.port '4000',
+                      |  tidb.user 'root',
+                      |  spark.tispark.pd.addresses '127.0.0.1:2379',
+                      |  spark.tispark.plan.allow_index_read 'true'
+                      |)
+       """.stripMargin)
+
+    // append: insert into values
+    sqlContext.sql("""
+                     |insert into writeUsingSparkSQLAPI_dest values
+                     |(1000,
+                     |"Customer#000001000",
+                     |"AnJ5lxtLjioClr2khl9pb8NLxG2",
+                     |9,
+                     |"19-407-425-2584",
+                     |2209.81,
+                     |"AUTOMOBILE",
+                     |". even, express theodolites upo")
+                   """.stripMargin)
+
+    // append: insert into select
+    sqlContext.sql(s"""
+                      |insert into writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
+       """.stripMargin).show()
+
+    // overwrite: insert overwrite values
+    sqlContext.sql(s"""
+                      |insert overwrite table writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
        """.stripMargin).show()
   }
 }

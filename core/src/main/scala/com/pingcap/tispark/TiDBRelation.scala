@@ -18,20 +18,22 @@ package com.pingcap.tispark
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
-import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
 import org.apache.spark.sql.execution._
-import org.apache.spark.sql.sources.BaseRelation
+import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
 
 case class TiDBRelation(session: TiSession,
                         tableRef: TiTableReference,
                         meta: MetaManager,
-                        ts: Option[TiTimestamp] = None)(
+                        ts: Option[TiTimestamp] = None,
+                        parameters: Map[String, String] = Map.empty)(
   @transient val sqlContext: SQLContext
-) extends BaseRelation {
+) extends BaseRelation
+    with InsertableRelation {
   val table: TiTableInfo = meta
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new TiClientInternalException("Table not exist"))
@@ -91,5 +93,14 @@ case class TiDBRelation(session: TiSession,
       this.table.equals(other.table)
     case _ =>
       false
+  }
+
+  override def insert(data: DataFrame, overwrite: Boolean): Unit = {
+    val saveMode = if (overwrite) {
+      SaveMode.Overwrite
+    } else {
+      SaveMode.Append
+    }
+    TiDBWriter.write(data, sqlContext, saveMode, parameters)
   }
 }

@@ -26,7 +26,7 @@ import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
 import org.apache.spark.sql._
-import org.apache.spark.{SparkConf, SparkFunSuite}
+import org.apache.spark.{SparkConf, SparkContext, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.concurrent.Eventually
@@ -91,6 +91,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
    * The [[TestSparkSession]] to use for all tests in this suite.
    */
   protected implicit def sqlContext: SQLContext = spark.sqlContext
+
+  protected implicit def sc: SparkContext = spark.sqlContext.sparkContext
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()

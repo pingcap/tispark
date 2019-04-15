@@ -8,7 +8,6 @@ import org.apache.spark.sql.Row
 class FilterPushdownSuite extends BaseDataSourceSuite {
   private val testDatabase: String = "tispark_test"
   private val testTable: String = "test_data_source_filter_pushdown"
-  private val testDBTable = s"$testDatabase.$testTable"
 
   // Values used for comparison
   private val row1 = Row(null, "Hello")
@@ -16,13 +15,19 @@ class FilterPushdownSuite extends BaseDataSourceSuite {
   private val row3 = Row(3, "Spark")
   private val row4 = Row(4, null)
 
+  // calculated var
+  private val testDBTableInJDBC = s"$testDatabase.$testTable"
+  private var testDBTableInSpark: String = _
+
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    jdbcUpdate(s"drop table if exists $testDBTable")
-    jdbcUpdate(s"create table $testDBTable(i int, s varchar(128))")
+    testDBTableInSpark = s"${getTestDatabaseNameInSpark(testDatabase)}.$testTable"
+
+    jdbcUpdate(s"drop table if exists $testDBTableInJDBC")
+    jdbcUpdate(s"create table $testDBTableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $testDBTable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
+      s"insert into $testDBTableInJDBC values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
   }
 
@@ -49,11 +54,10 @@ class FilterPushdownSuite extends BaseDataSourceSuite {
   }
 
   private def testFilter(filter: String, expectedAnswer: Seq[Row]): Unit = {
-    val database = getTestDatabaseName(testDatabase)
     val loadedDf = sqlContext.read
       .format(TIDB_SOURCE_NAME)
       .options(tidbOptions)
-      .option("dbtable", s"$database.$testTable")
+      .option("dbtable", testDBTableInSpark)
       .load()
       .filter(filter)
       .sort("i")
@@ -62,7 +66,7 @@ class FilterPushdownSuite extends BaseDataSourceSuite {
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $testDBTable")
+      jdbcUpdate(s"drop table if exists $testDBTableInJDBC")
     } finally {
       super.afterAll()
     }
