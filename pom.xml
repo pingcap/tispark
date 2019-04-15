@@ -120,9 +120,6 @@
         <module>tikv-client</module>
     </modules>
 
-    <dependencies>
-
-    </dependencies>
     <build>
         <pluginManagement>
             <plugins>
