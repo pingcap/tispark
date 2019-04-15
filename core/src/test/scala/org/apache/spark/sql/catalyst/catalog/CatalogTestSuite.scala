@@ -140,7 +140,7 @@ class CatalogTestSuite extends BaseTiSparkSuite {
   }
 
   override def beforeAll(): Unit = {
-    isHiveEnabled = true
+    enableHive = true
     super.beforeAll()
   }
 }

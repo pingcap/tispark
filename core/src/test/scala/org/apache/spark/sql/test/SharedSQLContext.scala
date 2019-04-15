@@ -28,7 +28,7 @@ import org.apache.spark.sql.test.Utils._
 import org.apache.spark.sql._
 import org.apache.spark.{SparkConf, SparkFunSuite}
 import org.joda.time.DateTimeZone
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
 
@@ -38,7 +38,11 @@ import org.slf4j.Logger
  *
  * `tidb_config.properties` must be provided in test resources folder
  */
-trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfterAll {
+trait SharedSQLContext
+    extends SparkFunSuite
+    with Eventually
+    with BeforeAndAfterAll
+    with BeforeAndAfter {
   protected def spark: SparkSession = SharedSQLContext.spark
 
   protected def ti: TiContext = SharedSQLContext.ti
@@ -47,7 +51,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def tidbConn: Connection = SharedSQLContext.tidbConn
 
-  protected def sql = spark.sql _
+  protected def sql: String => DataFrame = spark.sql _
 
   protected def jdbcUrl: String = SharedSQLContext.jdbcUrl
 
@@ -69,9 +73,11 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
 
+  protected def stop(): Unit = SharedSQLContext.stop()
+
   protected def paramConf(): Properties = SharedSQLContext._tidbConf
 
-  protected var isHiveEnabled: Boolean = false
+  protected var enableHive: Boolean = false
 
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
@@ -81,7 +87,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     try {
-      SharedSQLContext.init(isHiveEnabled = isHiveEnabled)
+      SharedSQLContext.init(isHiveEnabled = enableHive)
     } catch {
       case e: Throwable =>
         fail(
@@ -90,6 +96,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
         )
     }
   }
+
+  after(stop())
 }
 
 object SharedSQLContext extends Logging {
@@ -137,7 +145,7 @@ object SharedSQLContext extends Logging {
 
   def refreshConnections(): Unit = {
     stop()
-    init(true)
+    init(forceNotLoad = true)
   }
 
   /**
