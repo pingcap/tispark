@@ -57,6 +57,7 @@ class DataSourceWithExtensionsSuite extends BaseDataSourceSuite(true) {
     val loadedDf = sqlContext.read
       .format(TIDB_SOURCE_NAME)
       .option("dbtable", testDBTableInSpark)
+      .options(tidbOptions)
       .load()
       .filter(filter)
       .sort("i")

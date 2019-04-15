@@ -43,7 +43,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val port: String = checkAndGet(TIDB_PORT)
   val user: String = checkAndGet(TIDB_USER)
   val password: String = checkAndGet(TIDB_PASSWORD)
-  lazy val dbtable: String = checkAndGet(TIDB_DBTABLE)
+  val dbtable: String = checkAndGet(TIDB_DBTABLE)
 
   // ------------------------------------------------------------
   // Optional parameters only for writing
@@ -61,8 +61,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // Calculated parameters
   // ------------------------------------------------------------
   val url: String =
-    s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
-
+    s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=false&rewriteBatchedStatements=true"
 }
 
 object TiDBOptions {
