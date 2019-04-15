@@ -15,11 +15,11 @@
 
 package com.pingcap.tikv.codec;
 
+import com.google.common.io.LittleEndianDataInputStream;
 import com.google.protobuf.ByteString;
 import java.io.*;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
-import parquet.bytes.LittleEndianDataInputStream;
 
 public class CodecDataInput implements DataInput {
   /**
