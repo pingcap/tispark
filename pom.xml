@@ -75,26 +75,8 @@
 
     <profiles>
         <profile>
-            <id>spark-2.3.3</id>
+            <id>spark-2.3</id>
             <!--Use Default Global settings-->
-        </profile>
-        <profile>
-            <id>spark-2.3.2</id>
-            <properties>
-                <spark.version>2.3.2</spark.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>spark-2.3.1</id>
-            <properties>
-                <spark.version>2.3.1</spark.version>
-            </properties>
-        </profile>
-        <profile>
-            <id>spark-2.3.0</id>
-            <properties>
-                <spark.version>2.3.0</spark.version>
-            </properties>
         </profile>
         <profile>
             <id>local-debug</id>
