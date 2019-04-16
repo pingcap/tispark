@@ -287,7 +287,8 @@
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
-                    <finalName>${artifactId}-${version}-spark-${spark.version}-jar-with-dependencies</finalName>
+                    <!-- Rename Jar to contain Spark Version -->
+                    <!--<finalName>${artifactId}-${version}-spark-${spark.version}-jar-with-dependencies</finalName>-->
                 </configuration>
             </plugin>
             <!-- Scala Format Plug-in -->
