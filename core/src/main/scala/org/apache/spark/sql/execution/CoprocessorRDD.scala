@@ -42,6 +42,7 @@ import org.apache.spark.sql.{Row, SparkSession}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
 
@@ -58,16 +59,71 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
 
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
-    classOf[RDD[InternalRow]]
-      .getDeclaredMethod("mapPartitionsWithIndexInternal")
-      .invoke(internalRdd, (index: Integer, iter: Iterator[InternalRow]) => {
+    // In Spark 2.3.0 the method declaration is:
+    // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
+    //      f: (Int, Iterator[T]) => Iterator[U],
+    //      preservesPartitioning: Boolean = false): RDD[U]
+    //
+    // In other Spark 2.3.x versions, the method declaration is:
+    // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
+    //      f: (Int, Iterator[T]) => Iterator[U],
+    //      preservesPartitioning: Boolean = false,
+    //      isOrderSensitive: Boolean = false): RDD[U]
+    //
+    // Hereby we use reflection to support different Spark versions.
+    val method = try {
+      classOf[RDD[InternalRow]]
+        .getDeclaredMethod(
+          "mapPartitionsWithIndexInternal",
+          classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+          classOf[Boolean],
+          classOf[Boolean],
+          classOf[ClassTag[UnsafeRow]]
+        )
+    } catch {
+      case _: Throwable =>
+        classOf[RDD[InternalRow]]
+          .getDeclaredMethod(
+            "mapPartitionsWithIndexInternal",
+            classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+            classOf[Boolean],
+            classOf[ClassTag[UnsafeRow]]
+          )
+    }
+    val internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] =
+      (index, iter) => {
         project.initialize(index)
         iter.map { r =>
           numOutputRows += 1
           project(r)
         }
-      })
-      .asInstanceOf[RDD[InternalRow]]
+      }
+    method.getParameterCount match {
+      case 3 =>
+        method
+          .invoke(
+            internalRdd,
+            internalRowToUnsafeRowWithIndex,
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+      case 4 =>
+        method
+          .invoke(
+            internalRdd,
+            internalRowToUnsafeRowWithIndex,
+            Boolean.box(false),
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+      case _ =>
+        throw ScalaReflectionException(
+          "Cannot invoke mapPartitionsWithIndexInternal from org.apache.spark.rdd, parameter count: %d, expected: 3 or 4"
+            .format(method.getParameterCount)
+        )
+    }
   }
 
   override def verboseString: String =
