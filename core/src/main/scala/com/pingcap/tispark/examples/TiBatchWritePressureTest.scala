@@ -60,10 +60,7 @@ object TiBatchWritePressureTest {
     spark.sql(s"use $inputDatabase")
     val df = spark.sql(s"select * from $inputTable")
 
-//    val maxHandleId = df.agg(max(df("_tidb_rowid"))).head().getLong(0)
-//    val minHandleID = df.agg(min(df("_tidb_rowid"))).head().getLong(0)
     // batch write
-    // load tbl again
     val tableRef: TiTableReference = TiTableReference(outputDatabase, outputTable)
     TiBatchWrite.writeToTiDB(df.rdd, tableRef, ti, regionSplitNumber, enableRegionPreSplit)
 

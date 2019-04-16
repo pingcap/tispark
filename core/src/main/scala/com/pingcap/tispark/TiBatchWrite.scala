@@ -70,9 +70,16 @@ object TiBatchWrite {
   def calculateSplitKeys(sampleRDD: RDD[Row],
                          estimatedTotalSize: Long,
                          tblInfo: TiTableInfo,
-                         isUpdate: Boolean): List[SerializableKey] = {
+                         isUpdate: Boolean,
+                         regionSplitNumber: Option[Int]): List[SerializableKey] = {
 
-    val regionNeed = (estimatedTotalSize / 96.0).toLong
+    var regionNeed = (estimatedTotalSize / 96.0).toLong
+    // update region split number if user want more region
+    if (regionSplitNumber.isDefined) {
+      if (regionSplitNumber.get > regionNeed) {
+        regionNeed = regionSplitNumber.get
+      }
+    }
     if (regionNeed == 0) return List.empty
 
     val handleRdd: RDD[Long] = sampleRDD
@@ -116,7 +123,7 @@ object TiBatchWrite {
       val sampleRDD = rdd.sample(withReplacement = false, fraction = fraction)
       val dataSize = estimateDataSize(sampleRDD)
       tiContext.tiSession.splitRegionAndScatter(
-        calculateSplitKeys(sampleRDD, dataSize, tiTableInfo, isUpdate = false)
+        calculateSplitKeys(sampleRDD, dataSize, tiTableInfo, isUpdate = false, regionSplitNumber)
           .map(k => k.bytes)
           .asJava
       )
