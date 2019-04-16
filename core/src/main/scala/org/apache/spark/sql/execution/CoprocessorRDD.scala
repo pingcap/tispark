@@ -19,7 +19,7 @@ import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 
 import org.tikv.kvproto.Coprocessor.KeyRange
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.iterator.CoprocessIterator
 import com.pingcap.tikv.operation.transformer.RowTransformer
@@ -27,7 +27,7 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.{TiConfigConst, TiDBRelation, TiSessionCache, TiUtils}
+import com.pingcap.tispark.{TiConfigConst, TiSessionCache, TiUtils}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
@@ -35,7 +35,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, GenericInternalRow, SortOrder, UnsafeProjection, UnsafeRow}
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
-import org.apache.spark.sql.execution.metric.SQLMetrics
+import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.{ArrayType, DataType, LongType, Metadata}
 import org.apache.spark.sql.{Row, SparkSession}
@@ -45,7 +45,7 @@ import scala.collection.mutable
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
 
-  override lazy val metrics = Map(
+  override lazy val metrics: Map[String, SQLMetric] = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
   )
 
@@ -58,13 +58,16 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
 
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
-    internalRdd.mapPartitionsWithIndexInternal { (index, iter) =>
-      project.initialize(index)
-      iter.map { r =>
-        numOutputRows += 1
-        project(r)
-      }
-    }
+    classOf[RDD[InternalRow]]
+      .getDeclaredMethod("mapPartitionsWithIndexInternal")
+      .invoke(internalRdd, (index: Integer, iter: Iterator[InternalRow]) => {
+        project.initialize(index)
+        iter.map { r =>
+          numOutputRows += 1
+          project(r)
+        }
+      })
+      .asInstanceOf[RDD[InternalRow]]
   }
 
   override def verboseString: String =
