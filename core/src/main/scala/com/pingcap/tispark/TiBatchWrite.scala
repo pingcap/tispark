@@ -149,6 +149,9 @@ object TiBatchWrite {
   @throws(classOf[NoSuchTableException])
   private def getTableInfo(tableRef: TiTableReference,
                            tiContext: TiContext): (TiTableInfo, Array[DataType], TLongArrayList) = {
+    // reload catalog
+    tiContext.tiSession.getCatalog.reloadCache(true)
+
     val tiTableInfo =
       tiContext.tiSession.getCatalog.getTable(tableRef.databaseName, tableRef.tableName)
     if (tiTableInfo == null) {

@@ -39,6 +39,10 @@ class DefaultSource
 
     val options = new TiDBOptions(parameters)
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
+
+    // reload catalog
+    tiContext.tiSession.getCatalog.reloadCache(true)
+
     val tableRef = TiDBUtils.getTableRef(options.dbtable, tiContext.tiCatalog.getCurrentDatabase)
     TiDBRelation(tiContext.tiSession, tableRef, tiContext.meta, None, parameters)(sqlContext)
   }

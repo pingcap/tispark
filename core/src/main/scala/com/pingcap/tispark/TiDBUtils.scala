@@ -47,7 +47,7 @@ object TiDBUtils {
       statement.close()
     }
 
-    tiContext.tiSession.getCatalog.reloadCache()
+    tiContext.tiSession.getCatalog.reloadCache(true)
   }
 
   /**
@@ -116,7 +116,7 @@ object TiDBUtils {
       statement.close()
     }
 
-    tiContext.tiSession.getCatalog.reloadCache()
+    tiContext.tiSession.getCatalog.reloadCache(true)
   }
 
   /**
@@ -149,7 +149,7 @@ object TiDBUtils {
       statement.close()
     }
 
-    tiContext.tiSession.getCatalog.reloadCache()
+    tiContext.tiSession.getCatalog.reloadCache(true)
   }
 
   def isCascadingTruncateTable(url: String): Option[Boolean] =
