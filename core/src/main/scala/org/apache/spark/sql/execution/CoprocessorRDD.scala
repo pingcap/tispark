@@ -19,7 +19,7 @@ import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 
 import org.tikv.kvproto.Coprocessor.KeyRange
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.iterator.CoprocessIterator
 import com.pingcap.tikv.operation.transformer.RowTransformer
@@ -27,7 +27,7 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.{TiConfigConst, TiDBRelation, TiSessionCache, TiUtils}
+import com.pingcap.tispark.{TiConfigConst, TiSessionCache, TiUtils}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
@@ -35,17 +35,18 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, GenericInternalRow, SortOrder, UnsafeProjection, UnsafeRow}
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
-import org.apache.spark.sql.execution.metric.SQLMetrics
+import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.{ArrayType, DataType, LongType, Metadata}
 import org.apache.spark.sql.{Row, SparkSession}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
 
-  override lazy val metrics = Map(
+  override lazy val metrics: Map[String, SQLMetric] = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
   )
 
@@ -56,14 +57,76 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   val internalRdd: RDD[InternalRow] = RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
   private lazy val project = UnsafeProjection.create(schema)
 
-  protected override def doExecute(): RDD[InternalRow] = {
-    val numOutputRows = longMetric("numOutputRows")
-    internalRdd.mapPartitionsWithIndexInternal { (index, iter) =>
+  // In Spark 2.3.0 the method declaration is:
+  // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
+  //      f: (Int, Iterator[T]) => Iterator[U],
+  //      preservesPartitioning: Boolean = false): RDD[U]
+  //
+  // In other Spark 2.3.x versions, the method declaration is:
+  // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
+  //      f: (Int, Iterator[T]) => Iterator[U],
+  //      preservesPartitioning: Boolean = false,
+  //      isOrderSensitive: Boolean = false): RDD[U]
+  //
+  // Hereby we use reflection to support different Spark versions.
+  @transient private val method = try {
+    classOf[RDD[InternalRow]]
+      .getDeclaredMethod(
+        "mapPartitionsWithIndexInternal",
+        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+        classOf[Boolean],
+        classOf[Boolean],
+        classOf[ClassTag[UnsafeRow]]
+      )
+  } catch {
+    case _: Throwable =>
+      classOf[RDD[InternalRow]]
+        .getDeclaredMethod(
+          "mapPartitionsWithIndexInternal",
+          classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+          classOf[Boolean],
+          classOf[ClassTag[UnsafeRow]]
+        )
+  }
+
+  private def internalRowToUnsafeRowWithIndex(
+    numOutputRows: SQLMetric
+  ): (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] =
+    (index, iter) => {
       project.initialize(index)
       iter.map { r =>
         numOutputRows += 1
         project(r)
       }
+    }
+
+  protected override def doExecute(): RDD[InternalRow] = {
+    val numOutputRows = longMetric("numOutputRows")
+    method.getParameterCount match {
+      case 3 =>
+        method
+          .invoke(
+            internalRdd,
+            internalRowToUnsafeRowWithIndex(numOutputRows),
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+      case 4 =>
+        method
+          .invoke(
+            internalRdd,
+            internalRowToUnsafeRowWithIndex(numOutputRows),
+            Boolean.box(false),
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+      case _ =>
+        throw ScalaReflectionException(
+          "Cannot invoke mapPartitionsWithIndexInternal from org.apache.spark.rdd, parameter count: %d, expected: 3 or 4"
+            .format(method.getParameterCount)
+        )
     }
   }
 
@@ -83,7 +146,7 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
 case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   override val nodeName: String = "HandleRDD"
 
-  override lazy val metrics = Map(
+  override lazy val metrics: Map[String, SQLMetric] = Map(
     "numOutputRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions")
   )
 
@@ -144,7 +207,7 @@ case class RegionTaskExec(child: SparkPlan,
                           @transient private val sparkSession: SparkSession)
     extends UnaryExecNode {
 
-  override lazy val metrics = Map(
+  override lazy val metrics: Map[String, SQLMetric] = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
     "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of handles used in double scan"),
     "numDowngradedTasks" -> SQLMetrics.createMetric(sparkContext, "number of downgraded tasks"),
@@ -229,7 +292,7 @@ case class RegionTaskExec(child: SparkPlan,
                 .newSplitter(session.getRegionManager)
                 .splitAndSortHandlesByRegion(dagRequest.getIds, new TLongArrayList(handles))
             )
-            return indexTasks
+            indexTasks
           }
 
           // this indexTaks was made to be used later to determine should we downgrade to
@@ -357,7 +420,7 @@ case class RegionTaskExec(child: SparkPlan,
             }
           }
 
-          val schemaInferrer: SchemaInfer = if (satisfyDowngradeThreshold) {
+          val schemaInferer: SchemaInfer = if (satisfyDowngradeThreshold) {
             // Should downgrade to full table scan for one region
             logger.info(
               s"Index scan task range size = ${indexTaskRanges.size}, " +
@@ -372,7 +435,7 @@ case class RegionTaskExec(child: SparkPlan,
             SchemaInfer.create(dagRequest)
           }
 
-          val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
+          val rowTransformer: RowTransformer = schemaInferer.getRowTransformer
           val finalTypes = rowTransformer.getTypes.toList
           val outputTypes = output.map(_.dataType)
           val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
