@@ -18,6 +18,12 @@
 -->
 
 <configuration>
+
+<property>
+  <name>datanucleus.rdbms.datastoreAdapterClassName</name>
+  <value>com.pingcap.tidb.TiDBAdapter</value>
+</property>
+
 <property>
   <name>javax.jdo.option.ConnectionURL</name>
   <value>jdbc:mysql://localhost:4000/metastore_db?createDatabaseIfNotExist=true&amp;useSSL=false&amp;autoReconnect=true</value>
