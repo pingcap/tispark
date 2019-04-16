@@ -105,6 +105,11 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       return parseIntOrLongOrDec(val);
     }
 
+    if (ctx.ZERO_DECIMAL() != null) {
+      String val = ctx.ZERO_DECIMAL().getSymbol().getText();
+      return parseIntOrLongOrDec(val);
+    }
+
     throw new UnsupportedSyntaxException(ctx.toString() + ": it is not supported.");
   }
 
