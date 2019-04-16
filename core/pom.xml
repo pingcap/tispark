@@ -110,6 +110,13 @@
             <version>${mysql.connector.version}</version>
             <scope>test</scope>
         </dependency>
+      <!--for using tidb datanucleus's adapter-->
+        <dependency>
+            <groupId>com.pingcap.tidb</groupId>
+            <artifactId>tidb-datanucleus-adapter</artifactId>
+            <version>1.0</version>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
