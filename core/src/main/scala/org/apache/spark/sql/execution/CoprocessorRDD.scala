@@ -28,7 +28,7 @@ import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
-import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
+import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiConfigConst, TiSessionCache}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
