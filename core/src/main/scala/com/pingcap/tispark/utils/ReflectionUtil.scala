@@ -52,6 +52,7 @@ object ReflectionUtil {
         classOf[ClassTag[UnsafeRow]]
       )
     case _ =>
+      // Spark version >= 2.3.2
       try {
         classOf[RDD[InternalRow]].getDeclaredMethod(
           "mapPartitionsWithIndexInternal",
