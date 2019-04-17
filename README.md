@@ -49,7 +49,7 @@ git clone https://github.com/pingcap/tispark.git
 ```
 To build all TiSpark modules from sources, please run command under TiSpark root directory:
 ```
-mvn clean install -Dmaven.test.skip=true -Pspark-2.3.3
+mvn clean install -Dmaven.test.skip=true
 ```
 **Please note that after Spark v2.3 you need to specify minor version of Spark as above switching dependency.**
 Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.

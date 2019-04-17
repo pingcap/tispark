@@ -6,8 +6,6 @@ at same directory. The way to address this need is setting tidb up as metastore 
 
 ## Setup TiDB
 
-First you need a TiDB cluster(before 2.1 release), and then use a mysql client log into TiDB cluster. 
-
 You will need to create a TiDB user with its password, e.g., `hive` with password `mine`, for Spark to access the metastore.
 
 ```$xslt
@@ -27,20 +25,6 @@ please do following:
  3. Then switch back to a normal account without any create table and alter table privileges.
 
 This preventing unexpected schema corruption when code changes.
-
-### Why only TiDB before 2.1 release works?
-
-On Dec 10, 2018, a [PR](https://github.com/pingcap/tidb/pull/8625) got merged into TiDB's master.
-The intention of this PR is to restrict the use of setting transaction isolation level such as serialize. 
-After this change, setting transaction isolation level to serialize
-will be an error rather than the noop in the past.
-
-When hive initializes its metastore client; it will explicitly set transaction isolation level to 
-serialize and cannot be adjusted by any configuration. This leads to restrict the specific version
-of TiDB when you want to use tidb as a backend database to store metastore.
-
-That is why we need choose a specific version of TiDB serving as an backend database to store
-metastore.
 
 
 ## Adding hive-site.xml configuration to Spark

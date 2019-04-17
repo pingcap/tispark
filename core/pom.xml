@@ -110,6 +110,13 @@
             <version>${mysql.connector.version}</version>
             <scope>test</scope>
         </dependency>
+      <!--for using tidb datanucleus's adapter-->
+        <dependency>
+            <groupId>com.pingcap.tidb</groupId>
+            <artifactId>tidb-datanucleus-adapter</artifactId>
+            <version>1.0</version>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -287,7 +294,8 @@
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
-                    <finalName>${artifactId}-${version}-spark-${spark.version}-jar-with-dependencies</finalName>
+                    <!-- Rename Jar to contain Spark Version -->
+                    <!--<finalName>${artifactId}-${version}-spark-${spark.version}-jar-with-dependencies</finalName>-->
                 </configuration>
             </plugin>
             <!-- Scala Format Plug-in -->
