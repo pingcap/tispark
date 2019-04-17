@@ -22,13 +22,12 @@ object TiDBUtils {
                   options: TiDBOptions,
                   tiContext: TiContext): Unit = {
     val strSchema = JdbcUtils.schemaString(df, options.url, options.createTableColumnTypes)
-    val dbtable = options.dbtable
     val createTableOptions = options.createTableOptions
     // Create the table if the table does not exist.
     // To allow certain options to append when create a new table, which can be
     // table_options or partition_options.
     // E.g., "CREATE TABLE t (name string) ENGINE=InnoDB DEFAULT CHARSET=utf8"
-    val sql = s"CREATE TABLE $dbtable ($strSchema) $createTableOptions"
+    val sql = s"CREATE TABLE ${options.dbtable} ($strSchema) $createTableOptions"
     val statement = conn.createStatement
     try {
       statement.executeUpdate(sql)
@@ -44,8 +43,7 @@ object TiDBUtils {
    * Returns true if the table already exists in the TiDB.
    */
   def tableExists(conn: Connection, options: TiDBOptions): Boolean = {
-    val dbtable = options.dbtable
-    val sql = s"SELECT * FROM $dbtable WHERE 1=0"
+    val sql = s"SELECT * FROM ${options.dbtable} WHERE 1=0"
     Try {
       val statement = conn.prepareStatement(sql)
       try {
@@ -97,8 +95,7 @@ object TiDBUtils {
    * Truncates a table from TiDB without side effects.
    */
   def truncateTable(conn: Connection, options: TiDBOptions, tiContext: TiContext): Unit = {
-    val dbtable = options.dbtable
-    val sql = s"TRUNCATE TABLE $dbtable"
+    val sql = s"TRUNCATE TABLE ${options.dbtable}"
     val statement = conn.createStatement
     try {
       statement.executeUpdate(sql)

@@ -1,1 +1,1 @@
-com.pingcap.tispark.DefaultSource
+com.pingcap.tispark.TiDBDataSource

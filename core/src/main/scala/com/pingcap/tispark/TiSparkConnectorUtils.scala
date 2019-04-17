@@ -29,7 +29,7 @@ object TiSparkConnectorUtils extends Logging {
     if (!supportVersion) {
       logWarning(
         s"Spark version ${session.version} does not support push down! " +
-          s"Only support ${SUPPORT_SPARK_VERSION.mkString(",")}."
+          s"Only ${SUPPORT_SPARK_VERSION.mkString(",")} support push down."
       )
     }
 

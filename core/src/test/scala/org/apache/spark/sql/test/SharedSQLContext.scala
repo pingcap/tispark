@@ -75,7 +75,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected var enableHive: Boolean = false
 
-  protected var isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true
+  protected var enableTidbConfigPropertiesInjectedToSpark: Boolean = true
 
   protected def tidbUser: String = SharedSQLContext.tidbUser
 
@@ -99,7 +99,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
     try {
       SharedSQLContext.init(
         isHiveEnabled = enableHive,
-        isTidbConfigPropertiesInjectedToSparkEnabled = isTidbConfigPropertiesInjectedToSparkEnabled
+        isTidbConfigPropertiesInjectedToSparkEnabled = enableTidbConfigPropertiesInjectedToSpark
       )
     } catch {
       case e: Throwable =>

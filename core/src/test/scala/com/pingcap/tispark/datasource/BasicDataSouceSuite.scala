@@ -6,9 +6,7 @@ import org.apache.spark.sql.{Row, SaveMode}
 
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
-class BasicDataSouceSuite extends BaseDataSourceSuite {
-  private val testTable: String = "test_data_source_basic"
-
+class BasicDataSouceSuite extends BaseDataSourceSuite("test_data_source_basic") {
   // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
@@ -22,24 +20,18 @@ class BasicDataSouceSuite extends BaseDataSourceSuite {
     )
   )
 
-  // calculated var
-  private val testDBTableInJDBC = s"$testDatabase.$testTable"
-  private var testDBTableInSpark: String = _
-
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    testDBTableInSpark = s"${getTestDatabaseNameInSpark(testDatabase)}.$testTable"
-
-    jdbcUpdate(s"drop table if exists $testDBTableInJDBC")
-    jdbcUpdate(s"create table $testDBTableInJDBC(i int, s varchar(128))")
+    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $testDBTableInJDBC values(null, 'Hello'), (2, 'TiDB')"
+      s"insert into $dbtableInJDBC values(null, 'Hello'), (2, 'TiDB')"
     )
   }
 
   test("Test Select") {
-    testSelect(testDBTableInSpark, Seq(row1, row2))
+    testSelect(dbtableInSpark, Seq(row1, row2))
   }
 
   test("Test Write Append") {
@@ -49,11 +41,12 @@ class BasicDataSouceSuite extends BaseDataSourceSuite {
     df.write
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", testDBTableInSpark)
+      .option("database", databaseInSpark)
+      .option("table", testTable)
       .mode(SaveMode.Append)
       .save()
 
-    testSelect(testDBTableInSpark, Seq(row1, row2, row3, row4))
+    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
   }
 
   test("Test Write Overwrite") {
@@ -63,18 +56,20 @@ class BasicDataSouceSuite extends BaseDataSourceSuite {
     df.write
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", testDBTableInSpark)
+      .option("database", databaseInSpark)
+      .option("table", testTable)
       .mode(SaveMode.Overwrite)
       .save()
 
-    testSelect(testDBTableInSpark, Seq(row3, row4))
+    testSelect(dbtableInSpark, Seq(row3, row4))
   }
 
   private def testSelect(dbtable: String, expectedAnswer: Seq[Row]): Unit = {
     val df = sqlContext.read
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", testDBTableInSpark)
+      .option("database", databaseInSpark)
+      .option("table", testTable)
       .load()
       .sort("i")
 
@@ -83,7 +78,7 @@ class BasicDataSouceSuite extends BaseDataSourceSuite {
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $testDBTableInJDBC")
+      jdbcUpdate(s"drop table if exists $dbtableInJDBC")
     } finally {
       super.afterAll()
     }

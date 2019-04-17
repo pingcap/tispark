@@ -48,7 +48,8 @@ object TiDataSourceExampleWithExtensions {
     val df = sqlContext.read
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", "tpch_test.CUSTOMER")
+      .option("database", "tpch_test")
+      .option("table", "CUSTOMER")
       .load()
       .filter("C_CUSTKEY = 1")
       .select("C_NAME")
@@ -69,7 +70,8 @@ object TiDataSourceExampleWithExtensions {
     val df = sqlContext.read
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", "tpch_test.CUSTOMER")
+      .option("database", "tpch_test")
+      .option("table", "CUSTOMER")
       .load()
       .filter("C_CUSTKEY = 1")
       .select("C_NAME")

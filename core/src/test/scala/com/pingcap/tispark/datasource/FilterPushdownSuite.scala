@@ -4,28 +4,20 @@ import org.apache.spark.sql.Row
 
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
-class FilterPushdownSuite extends BaseDataSourceSuite {
-  private val testTable: String = "test_data_source_filter_pushdown"
-
+class FilterPushdownSuite extends BaseDataSourceSuite("test_data_source_filter_pushdown") {
   // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
   private val row4 = Row(4, null)
 
-  // calculated var
-  private val testDBTableInJDBC = s"$testDatabase.$testTable"
-  private var testDBTableInSpark: String = _
-
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    testDBTableInSpark = s"${getTestDatabaseNameInSpark(testDatabase)}.$testTable"
-
-    jdbcUpdate(s"drop table if exists $testDBTableInJDBC")
-    jdbcUpdate(s"create table $testDBTableInJDBC(i int, s varchar(128))")
+    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $testDBTableInJDBC values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
+      s"insert into $dbtableInJDBC values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
   }
 
@@ -55,7 +47,8 @@ class FilterPushdownSuite extends BaseDataSourceSuite {
     val loadedDf = sqlContext.read
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", testDBTableInSpark)
+      .option("database", databaseInSpark)
+      .option("table", testTable)
       .load()
       .filter(filter)
       .sort("i")
@@ -64,7 +57,7 @@ class FilterPushdownSuite extends BaseDataSourceSuite {
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $testDBTableInJDBC")
+      jdbcUpdate(s"drop table if exists $dbtableInJDBC")
     } finally {
       super.afterAll()
     }

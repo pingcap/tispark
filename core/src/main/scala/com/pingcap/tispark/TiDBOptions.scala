@@ -43,7 +43,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val port: String = checkAndGet(TIDB_PORT)
   val user: String = checkAndGet(TIDB_USER)
   val password: String = checkAndGet(TIDB_PASSWORD)
-  val dbtable: String = checkAndGet(TIDB_DBTABLE)
+  val database: String = checkAndGet(TIDB_DATABASE)
+  val table: String = checkAndGet(TIDB_TABLE)
 
   // ------------------------------------------------------------
   // Optional parameters only for writing
@@ -63,11 +64,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val url: String =
     s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=false&rewriteBatchedStatements=true"
 
-  val (database: String, table: String) = {
-    val splitIndex = dbtable.indexOf(".")
-    require(splitIndex > 0, s"Option 'dbtable' should contains a '.', e.g. 'db_name.table_name'")
-    (dbtable.substring(0, splitIndex), dbtable.substring(splitIndex + 1, dbtable.length))
-  }
+  val dbtable: String = s"$database.$table"
 }
 
 object TiDBOptions {
@@ -78,7 +75,7 @@ object TiDBOptions {
     name
   }
 
-  private def mergeWithSparkConf(parameters: Map[String, String]) = {
+  private def mergeWithSparkConf(parameters: Map[String, String]): Map[String, String] = {
     val sparkConf = SparkContext.getOrCreate().getConf
     if (sparkConf.get("spark.sql.extensions", "").equals("org.apache.spark.sql.TiExtensions")) {
       // priority: data source config > spark config
@@ -92,7 +89,8 @@ object TiDBOptions {
   val TIDB_PORT: String = newOption("tidb.port")
   val TIDB_USER: String = newOption("tidb.user")
   val TIDB_PASSWORD: String = newOption("tidb.password")
-  val TIDB_DBTABLE: String = newOption("dbtable")
+  val TIDB_DATABASE: String = newOption("database")
+  val TIDB_TABLE: String = newOption("table")
   val TIDB_TRUNCATE: String = newOption("truncate")
   val TIDB_CREATE_TABLE_OPTIONS: String = newOption("createTableOptions")
   val TIDB_CREATE_TABLE_COLUMN_TYPES: String = newOption("createTableColumnTypes")

@@ -14,19 +14,25 @@ import org.apache.spark.sql.test.TestConstants._
 // 2. with TiExtensions
 // set isTidbConfigPropertiesInjectedToSparkEnabled = false
 // will load tidb_config.properties to SparkConf
-class BaseDataSourceSuite(_isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = false)
+class BaseDataSourceSuite(val testTable: String,
+                          val _enableTidbConfigPropertiesInjectedToSpark: Boolean = false)
     extends QueryTest
     with SharedSQLContext {
-  protected val testDatabase: String = "tispark_test"
+  protected val database: String = "tispark_test"
+  protected val dbtableInJDBC = s"$database.$testTable"
+  protected var databaseInSpark: String = _
+  protected var dbtableInSpark: String = _
 
   protected var tidbStmt: Statement = _
   protected var tidbOptions: Map[String, String] = _
 
   override def beforeAll(): Unit = {
-    isTidbConfigPropertiesInjectedToSparkEnabled = _isTidbConfigPropertiesInjectedToSparkEnabled
+    enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark
 
     super.beforeAll()
 
+    databaseInSpark = getTestDatabaseNameInSpark(database)
+    dbtableInSpark = s"$databaseInSpark.$testTable"
     tidbStmt = tidbConn.createStatement()
 
     tidbOptions = Map(
@@ -42,7 +48,7 @@ class BaseDataSourceSuite(_isTidbConfigPropertiesInjectedToSparkEnabled: Boolean
     tidbStmt.executeUpdate(query)
 
   protected def getTestDatabaseNameInSpark(database: String): String =
-    if (_isTidbConfigPropertiesInjectedToSparkEnabled) {
+    if (_enableTidbConfigPropertiesInjectedToSpark) {
       s"$dbPrefix$database"
     } else {
       database

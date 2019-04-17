@@ -4,28 +4,21 @@ import org.apache.spark.sql.Row
 
 // with TiExtensions
 // will load tidb_config.properties to SparkConf
-class DataSourceWithExtensionsSuite extends BaseDataSourceSuite(true) {
-  private val testTable: String = "test_data_source_with_extensions"
-
+class DataSourceWithExtensionsSuite
+    extends BaseDataSourceSuite("test_data_source_with_extensions", true) {
   // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
   private val row4 = Row(4, null)
 
-  // calculated var
-  private val testDBTableInJDBC = s"$testDatabase.$testTable"
-  private var testDBTableInSpark: String = _
-
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    testDBTableInSpark = s"${getTestDatabaseNameInSpark(testDatabase)}.$testTable"
-
-    jdbcUpdate(s"drop table if exists $testDBTableInJDBC")
-    jdbcUpdate(s"create table $testDBTableInJDBC(i int, s varchar(128))")
+    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $testDBTableInJDBC values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
+      s"insert into $dbtableInJDBC values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
   }
 
@@ -54,7 +47,8 @@ class DataSourceWithExtensionsSuite extends BaseDataSourceSuite(true) {
   private def testFilter(filter: String, expectedAnswer: Seq[Row]): Unit = {
     val loadedDf = sqlContext.read
       .format("tidb")
-      .option("dbtable", testDBTableInSpark)
+      .option("database", databaseInSpark)
+      .option("table", testTable)
       .options(tidbOptions)
       .load()
       .filter(filter)
@@ -64,7 +58,7 @@ class DataSourceWithExtensionsSuite extends BaseDataSourceSuite(true) {
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $testDBTableInJDBC")
+      jdbcUpdate(s"drop table if exists $dbtableInJDBC")
     } finally {
       super.afterAll()
     }

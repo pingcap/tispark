@@ -58,7 +58,8 @@ object TiDataSourceExample {
     val df = sqlContext.read
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", "tpch_test.CUSTOMER")
+      .option("database", "tpch_test")
+      .option("table", "CUSTOMER")
       .load()
     df.show()
     df
@@ -77,7 +78,8 @@ object TiDataSourceExample {
     val df = sqlContext.read
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", "tpch_test.CUSTOMER")
+      .option("database", "tpch_test")
+      .option("table", "CUSTOMER")
       .load()
       .filter("C_CUSTKEY = 1")
       .select("C_NAME")
@@ -101,7 +103,8 @@ object TiDataSourceExample {
     df.write
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", "tpch_test.DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
+      .option("database", "tpch_test")
+      .option("table", "DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
       .mode(SaveMode.Overwrite)
       .save()
 
@@ -109,7 +112,8 @@ object TiDataSourceExample {
     df.write
       .format("tidb")
       .options(tidbOptions)
-      .option("dbtable", "tpch_test.DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
+      .option("database", "tpch_test")
+      .option("table", "DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
       .mode(SaveMode.Append)
       .save()
   }
@@ -119,7 +123,8 @@ object TiDataSourceExample {
                       |CREATE TABLE test1
                       |USING tidb
                       |OPTIONS (
-                      |  dbtable 'tpch_test.CUSTOMER',
+                      |  database 'tpch_test',
+                      |  table 'CUSTOMER',
                       |  tidb.addr '127.0.0.1',
                       |  tidb.password '',
                       |  tidb.port '4000',
@@ -147,7 +152,8 @@ object TiDataSourceExample {
                       |  `C_COMMENT` string)
                       |USING tidb
                       |OPTIONS (
-                      |  dbtable 'tpch_test.CUSTOMER',
+                      |  database 'tpch_test',
+                      |  table 'CUSTOMER',
                       |  tidb.addr '127.0.0.1',
                       |  tidb.password '',
                       |  tidb.port '4000',
@@ -168,7 +174,8 @@ object TiDataSourceExample {
                       |CREATE TABLE writeUsingSparkSQLAPI_src
                       |USING tidb
                       |OPTIONS (
-                      |  dbtable 'tpch_test.CUSTOMER',
+                      |  database 'tpch_test',
+                      |  table 'CUSTOMER',
                       |  tidb.addr '127.0.0.1',
                       |  tidb.password '',
                       |  tidb.port '4000',
@@ -182,7 +189,8 @@ object TiDataSourceExample {
                       |CREATE TABLE writeUsingSparkSQLAPI_dest
                       |USING tidb
                       |OPTIONS (
-                      |  dbtable 'tpch_test.DATASOURCE_API_CUSTOMER_writeUsingSparkSQLAPI',
+                      |  database 'tpch_test',
+                      |  table 'DATASOURCE_API_CUSTOMER_writeUsingSparkSQLAPI',
                       |  tidb.addr '127.0.0.1',
                       |  tidb.password '',
                       |  tidb.port '4000',
