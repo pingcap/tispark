@@ -200,7 +200,8 @@ public class TiBatchWrite2PCClient {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss,
             new GrpcException(
-                String.format("Txn commit primary key failed, regionId=%s", regionId)));
+                String.format("Txn commit primary key failed, regionId=%s", regionId),
+                commitResult.getException()));
         // re-split keys and commit again.
         this.doCommitPrimaryKey(backOffer, key, commitTs);
       }
