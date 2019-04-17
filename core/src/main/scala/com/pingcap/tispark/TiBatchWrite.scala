@@ -316,10 +316,11 @@ object TiBatchWrite {
         case None =>
           // TODO: auto generate a primary key if does not exists
           // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
-      try {
-        row.getLong(0)
-      } catch {
-        case _: Throwable => row.getInteger(0)
+          try {
+            row.getLong(0)
+          } catch {
+            case _: Throwable => row.getInteger(0)
+          }
       }
     }
     handle
