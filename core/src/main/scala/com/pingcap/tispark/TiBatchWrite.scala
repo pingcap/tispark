@@ -51,7 +51,7 @@ object TiBatchWrite {
       .map(_.mkString(",").getBytes("UTF-8").length.toLong)
       .reduce(_ + _) //add the sizes together
 
-  def estimateDataSize(sampledRDD: RDD[Row]) = {
+  private def estimateDataSize(sampledRDD: RDD[Row]) = {
     // get all data size
     val sampleRDDSize = calcRDDSize(sampledRDD)
     logger.info(s"sample data size is ${sampleRDDSize / (1024 * 1024)} MB")
