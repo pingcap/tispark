@@ -1,41 +1,27 @@
-/*
- * Copyright 2017 PingCAP, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package com.pingcap.tispark
+package com.pingcap.tispark.utils
 
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
+import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.expression.ExpressionBlacklist
 import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
-import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
-import com.pingcap.tikv.{types, TiConfiguration}
+import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
 import org.apache.spark.{sql, SparkConf}
+import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-object TiUtils {
+object TiUtil {
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiExpression = com.pingcap.tikv.expression.Expression
 
@@ -166,7 +152,7 @@ object TiUtils {
         .build()
       fields(i) = StructField(
         col.getName,
-        TiUtils.toSparkDataType(col.getType),
+        TiUtil.toSparkDataType(col.getType),
         nullable = !notNull,
         metadata
       )

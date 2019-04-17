@@ -18,6 +18,7 @@ package com.pingcap.tispark
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.TiClientInternalException
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
@@ -36,7 +37,7 @@ case class TiDBRelation(session: TiSession,
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new TiClientInternalException("Table not exist"))
 
-  override lazy val schema: StructType = TiUtils.getSchemaFromTable(table)
+  override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
 
   override def sizeInBytes: Long = tableRef.sizeInBytes
 
@@ -65,7 +66,7 @@ case class TiDBRelation(session: TiSession,
       NamedExpression.newExprId
     )
 
-    val sortAgg = TiUtils
+    val sortAgg = TiUtil
       .planAggregateWithoutPartial(
         Seq(handlePlan.attributeRef.head), // group by region id
         Seq(aggExpr),
