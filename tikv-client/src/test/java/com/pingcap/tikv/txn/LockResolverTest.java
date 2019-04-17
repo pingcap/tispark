@@ -449,7 +449,6 @@ public class LockResolverTest {
           Collections.singletonList(ByteString.copyFromUtf8("a")));
       fail();
     } catch (KeyException e) {
-      assertNotNull(e.getKeyErr().getRetryable());
     }
     session.getConf().setIsolationLevel(IsolationLevel.RC);
   }

@@ -154,7 +154,7 @@ public class Catalog implements AutoCloseable {
         periodUnit);
   }
 
-  synchronized public void reloadCache(boolean loadTables) {
+  public synchronized void reloadCache(boolean loadTables) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     long latestVersion = newTrx.getLatestSchemaVersion();

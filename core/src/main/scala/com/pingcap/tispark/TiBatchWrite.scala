@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
+import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
 import com.pingcap.tikv.meta.TiTableInfo
@@ -43,18 +43,15 @@ object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
+  val skipCommitSecondaryKey = true
   val fraction = 0.01
-  var splitKeyTaks: Long = _
-  var prewriteSecondKey: Long = _
-  var commitSecondKey: Long = _
-  var estimateDataTime: Long = _
 
   def calcRDDSize(rdd: RDD[Row]): Long =
     rdd
       .map(_.mkString(",").getBytes("UTF-8").length.toLong)
       .reduce(_ + _) //add the sizes together
 
-  def estimateDataSize(sampledRDD: RDD[Row]): Long = {
+  def estimateDataSize(sampledRDD: RDD[Row]) = {
     // get all data size
     val sampleRDDSize = calcRDDSize(sampledRDD)
     logger.info(s"sample data size is ${sampleRDDSize / (1024 * 1024)} MB")
@@ -68,11 +65,12 @@ object TiBatchWrite {
 
     val estimateInMB = estimatedTotalSize / (1024 * 1024)
     logger.info("estimatedTotalSize is %s MB".format(formatter.format(estimateInMB)))
-    estimateInMB.toLong
+    (estimateInMB.toLong, sampleRowCount)
   }
 
   def calculateSplitKeys(sampleRDD: RDD[Row],
                          estimatedTotalSize: Long,
+                         sampleRDDCount: Long,
                          tblInfo: TiTableInfo,
                          isUpdate: Boolean,
                          regionSplitNumber: Option[Int]): List[SerializableKey] = {
@@ -84,16 +82,14 @@ object TiBatchWrite {
         regionNeed = regionSplitNumber.get
       }
     }
+    // if region split is not needed, just return an empty list
     if (regionNeed == 0) return List.empty
 
+    // TODO check this write is update or not
     val handleRdd: RDD[Long] = sampleRDD
       .map(sparkRow2TiKVRow)
       .map(row => extractHandleId(row, tblInfo, isUpdate = false))
-//      .sortBy(k => k)
-    // TODO if handle size is smaller than region split number, we need use
-    // key's next to split region
-    // TODO take care of when regionSplitNumber is empty
-    val step = handleRdd.count() / regionNeed
+    val step = sampleRDDCount / regionNeed
     val splitKeys = handleRdd
       .zipWithIndex()
       .filter {
@@ -121,27 +117,22 @@ object TiBatchWrite {
     val kvClient = tiSession.createTxnClient()
     val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
     val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
-    // 100gb
-    val dataSizeThreshold = 1024
+
     if (enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
+      val sampleRDD = rdd.sample(withReplacement = false, fraction = fraction)
+      val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD)
 
-      val startTime = System.nanoTime()
-      var sampleRDD = rdd.sample(withReplacement = false, fraction = fraction)
-      val dataSize = estimateDataSize(sampleRDD)
-      estimateDataTime = System.nanoTime() - startTime
-      // if data size is too large, then we downgrade to sample method.
-      if (dataSize < dataSizeThreshold) {
-        sampleRDD = rdd
-      }
-
-      val startTime4 = System.nanoTime()
       tiContext.tiSession.splitRegionAndScatter(
-        calculateSplitKeys(sampleRDD, dataSize, tiTableInfo, isUpdate = false, regionSplitNumber)
-          .map(k => k.bytes)
-          .asJava
+        calculateSplitKeys(
+          sampleRDD,
+          dataSize,
+          sampleRDDCount,
+          tiTableInfo,
+          isUpdate = false,
+          regionSplitNumber
+        ).map(k => k.bytes).asJava
       )
-      splitKeyTaks = System.nanoTime() - startTime4
     }
 
     // TODO: lock table
@@ -162,6 +153,7 @@ object TiBatchWrite {
         takeOne(0)
       }
     }
+
     logger.info(s"primary key: $primaryKey primary row: $primaryRow")
 
     // filter primary key
@@ -180,7 +172,6 @@ object TiBatchWrite {
     val encodedRow = encodeTiRow(primaryRow, colDataTypes, colIds)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, encodedRow)
 
-    val startTime2 = System.nanoTime()
     // executors secondary pre-write
     finalWriteRDD.foreachPartition { iterator =>
       val tiSessionOnExecutor = new TiSession(tiConf)
@@ -201,8 +192,6 @@ object TiBatchWrite {
         .prewriteSecondaryKeys(prewriteSecondaryBackoff, primaryKey.bytes, pairs)
     }
 
-    prewriteSecondKey = System.nanoTime() - startTime2
-
     // driver primary commit
     val commitTs = kvClient.getTimestamp.getVersion
     // check commitTS
@@ -214,33 +203,31 @@ object TiBatchWrite {
     val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
 
-    val startTime3 = System.nanoTime()
     // executors secondary commit
-    finalWriteRDD.foreachPartition { iterator =>
-      val tiSessionOnExecutor = new TiSession(tiConf)
-      val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
-      val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
-      val commitSecondaryBackoff =
-        ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
+    if (!skipCommitSecondaryKey) {
+      logger.info("skipping commit secondary key")
+      finalWriteRDD.foreachPartition { iterator =>
+        val tiSessionOnExecutor = new TiSession(tiConf)
+        val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
+        val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
+        val commitSecondaryBackoff =
+          ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
 
-      import scala.collection.JavaConverters._
-      val keys = iterator.map {
-        case (key, _) => new TiBatchWrite2PCClient.ByteWrapper(key.bytes)
-      }.asJava
+        import scala.collection.JavaConverters._
+        val keys = iterator.map {
+          case (key, _) => new TiBatchWrite2PCClient.ByteWrapper(key.bytes)
+        }.asJava
 
-      try {
-        ti2PCClientOnExecutor.commitSecondaryKeys(commitSecondaryBackoff, keys, commitTs)
-      } catch {
-        case e: TiBatchWriteException =>
-          // ignored
-          logger.warn(s"commit secondary key error", e)
+        try {
+          ti2PCClientOnExecutor.commitSecondaryKeys(commitSecondaryBackoff, keys, commitTs)
+        } catch {
+          case e: TiBatchWriteException =>
+            // ignored
+            logger.warn(s"commit secondary key error", e)
+        }
       }
     }
-    commitSecondKey = System.nanoTime() - startTime3
-    logger.info(
-      s"estimate data size $estimateDataTime, split key $splitKeyTaks, " +
-        s"prewrite $prewriteSecondKey, commit $commitSecondKey"
-    )
+
   }
 
   @throws(classOf[NoSuchTableException])
@@ -364,7 +351,7 @@ object TiBatchWrite {
       values.update(i, tiRow.get(i, colDataTypes(i)))
     }
 
-    TableCodec.encodeRow(colDataTypes, colIDs, values, new CodecDataOutput())
+    TableCodec.encodeRow(colDataTypes, colIDs, values)
   }
 }
 
