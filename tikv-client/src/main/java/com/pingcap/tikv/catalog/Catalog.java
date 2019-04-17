@@ -56,8 +56,8 @@ public class Catalog implements AutoCloseable {
     private CatalogCache(CatalogTransaction transaction, String dbPrefix, boolean loadTables) {
       this.transaction = transaction;
       this.dbPrefix = dbPrefix;
-      this.dbCache = loadDatabases(loadTables);
       this.tableCache = new ConcurrentHashMap<>();
+      this.dbCache = loadDatabases(loadTables);
       this.currentVersion = transaction.getLatestSchemaVersion();
     }
 
@@ -154,7 +154,7 @@ public class Catalog implements AutoCloseable {
         periodUnit);
   }
 
-  public void reloadCache(boolean loadTables) {
+  synchronized public void reloadCache(boolean loadTables) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     long latestVersion = newTrx.getLatestSchemaVersion();

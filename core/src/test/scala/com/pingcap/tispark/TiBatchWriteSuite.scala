@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package com.pingcap.tispark
 
-import com.pingcap.tispark.{TiBatchWrite, TiTableReference}
+import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
 class TiBatchWriteSuite extends BaseTiSparkSuite {
@@ -55,9 +55,14 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
         TiTableReference(s"$dbPrefix$database", s"${batchWriteTablePrefix}_$table")
       TiBatchWrite.writeToTiDB(df.rdd, tableRef, ti)
 
-      // assert
+      // refresh
       refreshConnections(TestTables(database, s"${batchWriteTablePrefix}_$table"))
       setCurrentDatabase(database)
+
+      // select
+      tidbStmt.execute(s"select * from ${batchWriteTablePrefix}_$table")
+
+      // assert
       val originCount = querySpark(s"select count(*) from $table").head.head.asInstanceOf[Long]
       val count = querySpark(s"select count(*) from ${batchWriteTablePrefix}_$table").head.head
         .asInstanceOf[Long]

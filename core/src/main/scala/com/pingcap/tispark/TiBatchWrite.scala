@@ -211,7 +211,11 @@ object TiBatchWrite {
     } else {
       // TODO: auto generate a primary key if does not exists
       // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
-      row.getLong(0)
+      try {
+        row.getLong(0)
+      } catch {
+        case _: Throwable => row.getInteger(0)
+      }
     }
 
     val rowKey = RowKey.toRowKey(tableId, handle)

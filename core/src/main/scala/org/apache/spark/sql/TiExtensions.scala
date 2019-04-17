@@ -35,5 +35,7 @@ object TiExtensions {
     tiExtensions
   }
 
+  def enabled(): Boolean = tiExtensions != null
+
   def reset(): Unit = tiExtensions = null
 }

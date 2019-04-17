@@ -26,7 +26,7 @@ import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
 import org.apache.spark.sql._
-import org.apache.spark.{SparkConf, SparkFunSuite}
+import org.apache.spark.{SparkConf, SparkContext, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.concurrent.Eventually
@@ -75,15 +75,32 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected var enableHive: Boolean = false
 
+  protected var enableTidbConfigPropertiesInjectedToSpark: Boolean = true
+
+  protected def tidbUser: String = SharedSQLContext.tidbUser
+
+  protected def tidbPassword: String = SharedSQLContext.tidbPassword
+
+  protected def tidbAddr: String = SharedSQLContext.tidbAddr
+
+  protected def tidbPort: Int = SharedSQLContext.tidbPort
+
+  protected def pdAddresses: String = SharedSQLContext.pdAddresses
+
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
    */
   protected implicit def sqlContext: SQLContext = spark.sqlContext
 
+  protected implicit def sc: SparkContext = spark.sqlContext.sparkContext
+
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     try {
-      SharedSQLContext.init(isHiveEnabled = enableHive)
+      SharedSQLContext.init(
+        isHiveEnabled = enableHive,
+        isTidbConfigPropertiesInjectedToSparkEnabled = enableTidbConfigPropertiesInjectedToSpark
+      )
     } catch {
       case e: Throwable =>
         fail(
@@ -124,6 +141,11 @@ object SharedSQLContext extends Logging {
   protected var runTPCH: Boolean = true
   protected var runTPCDS: Boolean = false
   protected var dbPrefix: String = _
+  protected var tidbUser: String = _
+  protected var tidbPassword: String = _
+  protected var tidbAddr: String = _
+  protected var tidbPort: Int = _
+  protected var pdAddresses: String = _
 
   protected implicit def spark: SparkSession = _spark
 
@@ -188,20 +210,20 @@ object SharedSQLContext extends Logging {
 
   private def initializeTiDB(forceNotLoad: Boolean = false): Unit =
     if (_tidbConnection == null) {
-      val jdbcUsername = getOrElse(_tidbConf, TiDB_USER, "root")
+      tidbUser = getOrElse(_tidbConf, TiDB_USER, "root")
 
-      val jdbcPassword = getOrElse(_tidbConf, TiDB_PASSWORD, "")
+      tidbPassword = getOrElse(_tidbConf, TiDB_PASSWORD, "")
 
-      val jdbcHostname = getOrElse(_tidbConf, TiDB_ADDRESS, "127.0.0.1")
+      tidbAddr = getOrElse(_tidbConf, TiDB_ADDRESS, "127.0.0.1")
 
-      val jdbcPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
+      tidbPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
 
       val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toLowerCase.toBoolean
 
       jdbcUrl =
-        s"jdbc:mysql://address=(protocol=tcp)(host=$jdbcHostname)(port=$jdbcPort)/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
+        s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
 
-      _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+      _tidbConnection = DriverManager.getConnection(jdbcUrl, tidbUser, tidbPassword)
       _statement = _tidbConnection.createStatement()
 
       if (loadData) {
@@ -244,7 +266,8 @@ object SharedSQLContext extends Logging {
       }
     }
 
-  private def initializeConf(isHiveEnabled: Boolean = false): Unit =
+  private def initializeConf(isHiveEnabled: Boolean = false,
+                             isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true): Unit =
     if (_tidbConf == null) {
       val confStream = Thread
         .currentThread()
@@ -257,14 +280,9 @@ object SharedSQLContext extends Logging {
       }
 
       import com.pingcap.tispark.TiConfigConst._
-      sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
-      sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
-      sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
-      sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
-      sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
 
+      pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
-      sparkConf.set(DB_PREFIX, dbPrefix)
 
       // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
@@ -274,18 +292,32 @@ object SharedSQLContext extends Logging {
       runTPCDS = tpcdsDBName != ""
 
       _tidbConf = prop
+
+      if (isTidbConfigPropertiesInjectedToSparkEnabled) {
+        sparkConf.set(PD_ADDRESSES, pdAddresses)
+        sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
+        sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
+        sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
+        sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
+        sparkConf.set(DB_PREFIX, dbPrefix)
+      }
+
       _sparkSession = new TestSparkSession(sparkConf, isHiveEnabled).session
     }
 
   /**
    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
    */
-  def init(forceNotLoad: Boolean = false, isHiveEnabled: Boolean = false): Unit = {
-    initializeConf(isHiveEnabled)
+  def init(forceNotLoad: Boolean = false,
+           isHiveEnabled: Boolean = false,
+           isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true): Unit = {
+    initializeConf(isHiveEnabled, isTidbConfigPropertiesInjectedToSparkEnabled)
     initializeSparkSession()
     initializeTiDB(forceNotLoad)
     initializeJDBC()
-    initializeTiContext()
+    if (isTidbConfigPropertiesInjectedToSparkEnabled) {
+      initializeTiContext()
+    }
   }
 
   /**
