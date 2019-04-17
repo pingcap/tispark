@@ -26,9 +26,10 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
 import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
-import com.pingcap.tispark.TiUtils._
+import com.pingcap.tispark.utils.TiUtil._
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
+import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
@@ -293,7 +294,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
   private def collectLimit(limit: Int, child: LogicalPlan): SparkPlan = child match {
     case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
-        if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
+        if filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) =>
       pruneTopNFilterProject(limit, projectList, filters, source, Nil)
     case _ => planLater(child)
   }
@@ -311,7 +312,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     child match {
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
-          if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
+          if filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) =>
         execution.TakeOrderedAndProjectExec(
           limit,
           sortOrder,
@@ -334,7 +335,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     val (pushdownFilters: Seq[Expression], residualFilters: Seq[Expression]) =
       filterPredicates.partition(
-        (expression: Expression) => TiUtils.isSupportedFilter(expression, source, blacklist)
+        (expression: Expression) => TiUtil.isSupportedFilter(expression, source, blacklist)
       )
 
     val residualFilter: Option[Expression] =
@@ -458,9 +459,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     source: TiDBRelation
   ): Boolean =
     allowAggregationPushdown &&
-      filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) &&
-      groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
-      aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source, blacklist)) &&
+      filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) &&
+      groupingExpressions.forall(TiUtil.isSupportedGroupingExpr(_, source, blacklist)) &&
+      aggregateExpressions.forall(TiUtil.isSupportedAggregate(_, source, blacklist)) &&
       !aggregateExpressions.exists(_.isDistinct)
 
   // We do through similar logic with original Spark as in SparkStrategies.scala

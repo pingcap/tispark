@@ -1,7 +1,6 @@
 package org.apache.spark.sql.catalyst.catalog
 
-import com.pingcap.tispark.TiUtils
-
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, NoSuchTableException}
@@ -23,7 +22,7 @@ class TiExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
     StringUtils.filterPattern(listDatabases(), pattern)
 
   override def getTable(db: String, table: String): CatalogTable = {
-    val schema = TiUtils.getSchemaFromTable(
+    val schema = TiUtil.getSchemaFromTable(
       meta.getTable(db, table).getOrElse(throw new NoSuchTableException(db, table))
     )
 
