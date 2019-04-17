@@ -85,6 +85,7 @@ object TiBatchWrite {
     val handleRdd: RDD[Long] = sampleRDD
       .map(sparkRow2TiKVRow)
       .map(row => extractHandleId(row, tblInfo, isUpdate = false))
+      .sortBy(k => k)
     logger.info("handle rdd's size %d".format(handleRdd.count()))
     // TODO if handle size is smaller than region split number, we need use
     // key's next to split region
@@ -117,11 +118,16 @@ object TiBatchWrite {
     val kvClient = tiSession.createTxnClient()
     val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
     val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
+    val dataSizeThreshold = 1024
 
     if (enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
-      val sampleRDD = rdd.sample(withReplacement = false, fraction = fraction)
+      var sampleRDD = rdd.sample(withReplacement = false, fraction = fraction)
       val dataSize = estimateDataSize(sampleRDD)
+      // if data size is too large, then we downgrade to sample method.
+//      if(dataSize < dataSizeThreshold) {
+//        sampleRDD = rdd
+//      }
       tiContext.tiSession.splitRegionAndScatter(
         calculateSplitKeys(sampleRDD, dataSize, tiTableInfo, isUpdate = false, regionSplitNumber)
           .map(k => k.bytes)
