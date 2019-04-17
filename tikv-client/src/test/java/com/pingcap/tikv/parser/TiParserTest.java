@@ -116,6 +116,10 @@ public class TiParserTest {
     Expression and = parser.parseExpression(sql);
     Assert.assertEquals(and.toString(), "[[[id] LESS_THAN 1] AND [[id] GREATER_EQUAL 3]]");
 
+    sql = "id < 1 and id >= 0";
+    and = parser.parseExpression(sql);
+    Assert.assertEquals(and.toString(), "[[[id] LESS_THAN 1] AND [[id] GREATER_EQUAL 0]]");
+
     sql = "''";
     stringLiteral = parser.parseExpression(sql);
     Assert.assertEquals(stringLiteral, Constant.create("''"));
