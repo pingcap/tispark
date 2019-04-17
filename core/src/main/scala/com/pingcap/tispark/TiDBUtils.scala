@@ -14,17 +14,6 @@ object TiDBUtils {
 
   private val TIDB_DRIVER_CLASS = "com.mysql.jdbc.Driver"
 
-  def getTableRef(dbtable: String, currentDatabase: String): TiTableReference =
-    if (dbtable.contains(".")) {
-      val splitIndex = dbtable.indexOf(".")
-      TiTableReference(
-        dbtable.substring(0, splitIndex),
-        dbtable.substring(splitIndex + 1, dbtable.length)
-      )
-    } else {
-      TiTableReference(currentDatabase, dbtable)
-    }
-
   /**
    * Creates a table with a given schema.
    */
@@ -75,7 +64,7 @@ object TiDBUtils {
                 tableSchema: Option[StructType],
                 options: TiDBOptions): Unit = {
     // TODO: use table schema
-    val tableRef = TiDBUtils.getTableRef(options.dbtable, tiContext.tiCatalog.getCurrentDatabase)
+    val tableRef = TiTableReference(options.database, options.table)
     TiBatchWrite.writeToTiDB(df.rdd, tableRef, tiContext)
   }
 

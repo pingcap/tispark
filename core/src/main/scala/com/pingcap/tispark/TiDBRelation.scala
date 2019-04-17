@@ -30,7 +30,7 @@ case class TiDBRelation(session: TiSession,
                         tableRef: TiTableReference,
                         meta: MetaManager,
                         ts: Option[TiTimestamp] = None,
-                        parameters: Map[String, String] = Map.empty)(
+                        options: Option[TiDBOptions] = None)(
   @transient val sqlContext: SQLContext
 ) extends BaseRelation
     with InsertableRelation {
@@ -101,6 +101,6 @@ case class TiDBRelation(session: TiSession,
     } else {
       SaveMode.Append
     }
-    TiDBWriter.write(data, sqlContext, saveMode, parameters)
+    TiDBWriter.write(data, sqlContext, saveMode, options.get)
   }
 }

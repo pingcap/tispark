@@ -7,8 +7,7 @@ object TiDBWriter {
   def write(df: DataFrame,
             sqlContext: SQLContext,
             saveMode: SaveMode,
-            parameters: Map[String, String]): Unit = {
-    val options = new TiDBOptions(parameters)
+            options: TiDBOptions): Unit = {
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
     val conn = TiDBUtils.createConnectionFactory(options)()
 

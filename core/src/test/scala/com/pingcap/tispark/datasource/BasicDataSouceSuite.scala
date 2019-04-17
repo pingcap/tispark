@@ -1,8 +1,7 @@
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tispark.TiUtils.TIDB_SOURCE_NAME
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.apache.spark.sql.{Row, SaveMode}
 
 // without TiExtensions
@@ -48,7 +47,7 @@ class BasicDataSouceSuite extends BaseDataSourceSuite {
     val df = sqlContext.createDataFrame(data, schema)
 
     df.write
-      .format(TIDB_SOURCE_NAME)
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", testDBTableInSpark)
       .mode(SaveMode.Append)
@@ -62,7 +61,7 @@ class BasicDataSouceSuite extends BaseDataSourceSuite {
     val df = sqlContext.createDataFrame(data, schema)
 
     df.write
-      .format(TIDB_SOURCE_NAME)
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", testDBTableInSpark)
       .mode(SaveMode.Overwrite)
@@ -73,7 +72,7 @@ class BasicDataSouceSuite extends BaseDataSourceSuite {
 
   private def testSelect(dbtable: String, expectedAnswer: Seq[Row]): Unit = {
     val df = sqlContext.read
-      .format(TIDB_SOURCE_NAME)
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", testDBTableInSpark)
       .load()

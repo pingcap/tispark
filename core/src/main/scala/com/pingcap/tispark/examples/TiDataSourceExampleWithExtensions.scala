@@ -42,21 +42,20 @@ object TiDataSourceExampleWithExtensions {
     usingConfigInDataSource(sqlContext)
   }
 
-  def usingConfigInExtensions(sqlContext: SQLContext): DataFrame = {
+  def usingConfigInExtensions(sqlContext: SQLContext): Unit = {
     // use tidb config in spark config if does not provide in data source config
     val tidbOptions: Map[String, String] = Map()
     val df = sqlContext.read
-      .format("com.pingcap.tispark")
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", "tpch_test.CUSTOMER")
       .load()
       .filter("C_CUSTKEY = 1")
       .select("C_NAME")
     df.show()
-    df
   }
 
-  def usingConfigInDataSource(sqlContext: SQLContext): DataFrame = {
+  def usingConfigInDataSource(sqlContext: SQLContext): Unit = {
     // tidb config priority: data source config > spark config
     val tidbOptions: Map[String, String] = Map(
       "tidb.addr" -> "127.0.0.1",
@@ -68,13 +67,12 @@ object TiDataSourceExampleWithExtensions {
     )
 
     val df = sqlContext.read
-      .format("com.pingcap.tispark")
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", "tpch_test.CUSTOMER")
       .load()
       .filter("C_CUSTKEY = 1")
       .select("C_NAME")
     df.show()
-    df
   }
 }

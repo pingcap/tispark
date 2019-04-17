@@ -62,10 +62,15 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // ------------------------------------------------------------
   val url: String =
     s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=false&rewriteBatchedStatements=true"
+
+  val (database: String, table: String) = {
+    val splitIndex = dbtable.indexOf(".")
+    require(splitIndex > 0, s"Option 'dbtable' should contains a '.', e.g. 'db_name.table_name'")
+    (dbtable.substring(0, splitIndex), dbtable.substring(splitIndex + 1, dbtable.length))
+  }
 }
 
 object TiDBOptions {
-  private val curId = new java.util.concurrent.atomic.AtomicLong(0L)
   private val tidbOptionNames = collection.mutable.Set[String]()
 
   private def newOption(name: String): String = {
@@ -75,9 +80,7 @@ object TiDBOptions {
 
   private def mergeWithSparkConf(parameters: Map[String, String]) = {
     val sparkConf = SparkContext.getOrCreate().getConf
-    if (sparkConf.contains("spark.sql.extensions") && "org.apache.spark.sql.TiExtensions".equals(
-          sparkConf.get("spark.sql.extensions")
-        )) {
+    if (sparkConf.get("spark.sql.extensions", "").equals("org.apache.spark.sql.TiExtensions")) {
       // priority: data source config > spark config
       sparkConf.getAll.toMap ++ parameters
     } else {

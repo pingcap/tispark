@@ -30,6 +30,8 @@ class DefaultSource
 
   override def shortName(): String = "tidb"
 
+  override def toString: String = "TIDB"
+
   /**
    * Create a new `TiDBRelation` instance using parameters from Spark SQL DDL.
    */
@@ -39,12 +41,8 @@ class DefaultSource
 
     val options = new TiDBOptions(parameters)
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
-
-    // reload all meta
-    //tiContext.meta.reloadAllMeta()
-
-    val tableRef = TiDBUtils.getTableRef(options.dbtable, tiContext.tiCatalog.getCurrentDatabase)
-    TiDBRelation(tiContext.tiSession, tableRef, tiContext.meta, None, parameters)(sqlContext)
+    val tableRef = TiTableReference(options.database, options.table)
+    TiDBRelation(tiContext.tiSession, tableRef, tiContext.meta, None, Some(options))(sqlContext)
   }
 
   /**
@@ -64,7 +62,8 @@ class DefaultSource
                               saveMode: SaveMode,
                               parameters: Map[String, String],
                               df: DataFrame): BaseRelation = {
-    TiDBWriter.write(df, sqlContext, saveMode, parameters)
+    val options = new TiDBOptions(parameters)
+    TiDBWriter.write(df, sqlContext, saveMode, options)
     createRelation(sqlContext, parameters)
   }
 }

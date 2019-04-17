@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark.examples
+package com.pingcap.tispark
 
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession}
@@ -56,7 +56,7 @@ object TiDataSourceExample {
     )
 
     val df = sqlContext.read
-      .format("com.pingcap.tispark")
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", "tpch_test.CUSTOMER")
       .load()
@@ -75,7 +75,7 @@ object TiDataSourceExample {
     )
 
     val df = sqlContext.read
-      .format("com.pingcap.tispark")
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", "tpch_test.CUSTOMER")
       .load()
@@ -99,7 +99,7 @@ object TiDataSourceExample {
 
     // Overwrite
     df.write
-      .format("com.pingcap.tispark")
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", "tpch_test.DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
       .mode(SaveMode.Overwrite)
@@ -107,7 +107,7 @@ object TiDataSourceExample {
 
     // Append
     df.write
-      .format("com.pingcap.tispark")
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", "tpch_test.DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
       .mode(SaveMode.Append)
@@ -117,7 +117,7 @@ object TiDataSourceExample {
   private def readWithSparkSQLAPI(sqlContext: SQLContext): Unit = {
     sqlContext.sql(s"""
                       |CREATE TABLE test1
-                      |USING com.pingcap.tispark
+                      |USING tidb
                       |OPTIONS (
                       |  dbtable 'tpch_test.CUSTOMER',
                       |  tidb.addr '127.0.0.1',
@@ -145,7 +145,7 @@ object TiDataSourceExample {
                       |  `C_ACCTBAL` double,
                       |  `C_MKTSEGMENT` string,
                       |  `C_COMMENT` string)
-                      |USING com.pingcap.tispark
+                      |USING tidb
                       |OPTIONS (
                       |  dbtable 'tpch_test.CUSTOMER',
                       |  tidb.addr '127.0.0.1',
@@ -166,7 +166,7 @@ object TiDataSourceExample {
     // run `create table DATASOURCE_API_CUSTOMER_writeUsingSparkSQLAPI like CUSTOMER` first
     sqlContext.sql(s"""
                       |CREATE TABLE writeUsingSparkSQLAPI_src
-                      |USING com.pingcap.tispark
+                      |USING tidb
                       |OPTIONS (
                       |  dbtable 'tpch_test.CUSTOMER',
                       |  tidb.addr '127.0.0.1',
@@ -180,7 +180,7 @@ object TiDataSourceExample {
 
     sqlContext.sql(s"""
                       |CREATE TABLE writeUsingSparkSQLAPI_dest
-                      |USING com.pingcap.tispark
+                      |USING tidb
                       |OPTIONS (
                       |  dbtable 'tpch_test.DATASOURCE_API_CUSTOMER_writeUsingSparkSQLAPI',
                       |  tidb.addr '127.0.0.1',

@@ -1,6 +1,5 @@
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tispark.TiUtils.TIDB_SOURCE_NAME
 import org.apache.spark.sql.Row
 
 // without TiExtensions
@@ -54,7 +53,7 @@ class FilterPushdownSuite extends BaseDataSourceSuite {
 
   private def testFilter(filter: String, expectedAnswer: Seq[Row]): Unit = {
     val loadedDf = sqlContext.read
-      .format(TIDB_SOURCE_NAME)
+      .format("tidb")
       .options(tidbOptions)
       .option("dbtable", testDBTableInSpark)
       .load()

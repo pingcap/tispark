@@ -1,6 +1,5 @@
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tispark.TiUtils.TIDB_SOURCE_NAME
 import org.apache.spark.sql.Row
 
 import scala.util.Random
@@ -41,7 +40,7 @@ class BasicSQLSuite extends BaseDataSourceSuite {
     val tmpTable = "testInsert"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
-                      |USING $TIDB_SOURCE_NAME
+                      |USING tidb
                       |OPTIONS (
                       |  dbtable '$dbtable',
                       |  tidb.addr '$tidbAddr',
@@ -64,7 +63,7 @@ class BasicSQLSuite extends BaseDataSourceSuite {
     val tmpTable = "testOverwrite"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
-                      |USING $TIDB_SOURCE_NAME
+                      |USING tidb
                       |OPTIONS (
                       |  dbtable '$dbtable',
                       |  tidb.addr '$tidbAddr',
@@ -86,7 +85,7 @@ class BasicSQLSuite extends BaseDataSourceSuite {
     val tmpName = s"testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpName
-                      |USING $TIDB_SOURCE_NAME
+                      |USING tidb
                       |OPTIONS (
                       |  dbtable '$dbtable',
                       |  tidb.addr '$tidbAddr',
