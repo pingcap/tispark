@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.log4j.Logger;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Metapb;
 
 public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
@@ -115,14 +116,14 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     return currentCache.get(index++);
   }
 
-  private void resolveCurrentLock(Kvrpcpb.KvPair current) {
+  private ByteString resolveCurrentLock(Kvrpcpb.KvPair current) {
     logger.warn(String.format("resolve current key error %s", current.getError().toString()));
     Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByKey(startKey);
     TiRegion region = pair.first;
     Metapb.Store store = pair.second;
     BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
     try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
-      client.get(backOffer, current.getKey(), version);
+      return client.get(backOffer, current.getKey(), version);
     } catch (Exception e) {
       throw new KeyException(current.getError());
     }
@@ -140,7 +141,10 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
 
     Objects.requireNonNull(current, "current kv pair cannot be null");
     if (current.hasError()) {
-      resolveCurrentLock(current);
+      ByteString val = resolveCurrentLock(current);
+      current = KvPair.newBuilder()
+          .setKey(current.getKey())
+          .setValue(val).build();
     }
 
     return current;

@@ -46,7 +46,7 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
@@ -142,7 +142,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
         if (resp.getError().hasLocked()) {
           Lock lock = new Lock(resp.getError().getLocked());
           boolean ok =
-              lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
+              lockResolverClient.resolveLocks(backOffer, new ArrayList<>(
+                  Collections.singletonList(lock)));
           if (!ok) {
             // if not resolve all locks, we wait and retry
             backOffer.doBackOff(
@@ -399,7 +400,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     if (response.hasLocked()) {
       Lock lock = new Lock(response.getLocked());
       logger.debug(String.format("coprocessor encounters locks: %s", lock));
-      boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
+      boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(
+          Collections.singletonList(lock)));
       if (!ok) {
         backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
       }
