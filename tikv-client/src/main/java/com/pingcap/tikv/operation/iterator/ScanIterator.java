@@ -116,7 +116,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   }
 
   private void resolveCurrentLock(Kvrpcpb.KvPair current) {
-    logger.debug(String.format("resolve current key error %s", current.getError().toString()));
+    logger.warn(String.format("resolve current key error %s", current.getError().toString()));
     Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByKey(startKey);
     TiRegion region = pair.first;
     Metapb.Store store = pair.second;
