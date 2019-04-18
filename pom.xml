@@ -69,6 +69,7 @@
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11</scala.version>
         <scalatest.version>3.0.4</scalatest.version>
+        <profile.source.directory>spark-2.3</profile.source.directory>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
     </properties>
@@ -77,6 +78,16 @@
         <profile>
             <id>spark-2.3</id>
             <!--Use Default Global settings-->
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+        </profile>
+        <profile>
+            <id>spark-2.4</id>
+            <properties>
+                <spark.version>2.4.0</spark.version>
+                <profile.source.directory>spark-2.4</profile.source.directory>
+            </properties>
         </profile>
         <profile>
             <id>local-debug</id>
