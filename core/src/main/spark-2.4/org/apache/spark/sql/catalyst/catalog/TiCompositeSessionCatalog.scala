@@ -227,8 +227,10 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
 
   override def getDefaultDBPath(db: String): URI = primaryCatalog.getDefaultDBPath(db)
 
-  def createTable(tableDefinition: CatalogTable, ignoreIfExists: Boolean): Unit =
-    primaryCatalog.createTable(tableDefinition, ignoreIfExists)
+  override def createTable(tableDefinition: CatalogTable,
+                           ignoreIfExists: Boolean,
+                           validateLocation: Boolean = true): Unit =
+    primaryCatalog.createTable(tableDefinition, ignoreIfExists, validateLocation)
 
   override def loadTable(name: TableIdentifier,
                          loadPath: String,

@@ -78,9 +78,6 @@
         <profile>
             <id>spark-2.3</id>
             <!--Use Default Global settings-->
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
         </profile>
         <profile>
             <id>spark-2.4</id>
