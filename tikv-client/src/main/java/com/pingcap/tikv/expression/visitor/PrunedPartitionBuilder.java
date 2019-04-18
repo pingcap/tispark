@@ -17,6 +17,7 @@ package com.pingcap.tikv.expression.visitor;
 
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.pingcap.tikv.exception.UnsupportedPartitionExprException;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
@@ -72,8 +73,11 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     // if query is select * from t, then filter will be null.
     if (filter == null) return false;
 
-    // generate partition expressions
-    partExprs = generateRangePartExprs(tblInfo);
+    try {
+      partExprs = generateRangePartExprs(tblInfo);
+    } catch (UnsupportedPartitionExprException e) {
+      return false;
+    }
 
     return true;
   }
@@ -233,6 +237,12 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     // purchased > 1995
     String partExprStr = tableInfo.getPartitionInfo().getExpr();
     partExpr = parser.parseExpression(partExprStr);
+    // when partExpr is null, it indicates partition expression
+    // is not supported for now
+    if (partExpr == null) {
+      throw new UnsupportedPartitionExprException(
+          String.format("%s is not supported", partExprStr));
+    }
     partExprColRefs = PredicateUtils.extractColumnRefFromExpression(partExpr);
     // when it is not range column case, only first element stores useful info.
     for (int i = 0; i < partInfo.getDefs().size(); i++) {
