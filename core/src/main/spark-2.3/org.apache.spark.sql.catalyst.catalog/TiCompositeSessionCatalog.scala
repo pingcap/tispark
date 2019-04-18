@@ -28,20 +28,20 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.types.StructType
 
 /**
-  * A composition of two catalogs that behaves as a concrete catalog.
-  * @param tiContext
-  */
+ * A composition of two catalogs that behaves as a concrete catalog.
+ * @param tiContext
+ */
 class TiCompositeSessionCatalog(val tiContext: TiContext)
-  extends SessionCatalog(
-    tiContext.tiConcreteCatalog.externalCatalog,
-    EmptyFunctionRegistry,
-    tiContext.sqlContext.conf
-  )
+    extends SessionCatalog(
+      tiContext.tiConcreteCatalog.externalCatalog,
+      EmptyFunctionRegistry,
+      tiContext.sqlContext.conf
+    )
     with TiSessionCatalog {
 
   /**
-    * Policy of operating composite catalog, with one Ti catalog being either primary or secondary catalog.
-    */
+   * Policy of operating composite catalog, with one Ti catalog being either primary or secondary catalog.
+   */
   trait CompositeCatalogPolicy {
     val primaryCatalog: SessionCatalog
     val secondaryCatalog: SessionCatalog
@@ -50,9 +50,9 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
   }
 
   /**
-    * Legacy catalog first policy.
-    * @param tiContext
-    */
+   * Legacy catalog first policy.
+   * @param tiContext
+   */
   case class LegacyFirstPolicy(tiContext: TiContext) extends CompositeCatalogPolicy {
     override val primaryCatalog: SessionCatalog = tiContext.sessionCatalog
     override val secondaryCatalog: SessionCatalog = tiContext.tiConcreteCatalog
@@ -80,7 +80,7 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
             Some(sessionCatalog)
           } else {
             Seq(primaryCatalog, secondaryCatalog).find(_.databaseExists(db))
-          }
+        }
       )
       .getOrElse(Some(currentCatalog))
   }
