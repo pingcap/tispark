@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.RegionManager;
@@ -29,10 +30,13 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
+import org.apache.log4j.Logger;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Metapb;
 
 public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
+  private final Logger logger = Logger.getLogger(ScanIterator.class);
   protected final TiSession session;
   private final RegionManager regionCache;
   protected final long version;
@@ -52,13 +56,13 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     this.version = version;
   }
 
-  // return false if current cache is not loaded or empty
+  // return false if current cache is loaded or not empty.
   private boolean loadCache() {
     if (endOfScan) {
-      return false;
+      return true;
     }
     if (startKey.isEmpty()) {
-      return false;
+      return true;
     }
     Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByKey(startKey);
     TiRegion region = pair.first;
@@ -71,7 +75,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       // an empty region exists due to deletion, region split, e.t.c.
       // See https://github.com/pingcap/tispark/issues/393 for details
       if (currentCache == null) {
-        return false;
+        return true;
       }
       index = 0;
       // Session should be single-threaded itself
@@ -88,7 +92,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     } catch (Exception e) {
       throw new TiClientInternalException("Error scanning data from region.", e);
     }
-    return true;
+    return false;
   }
 
   private boolean isCacheDrained() {
@@ -97,7 +101,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
 
   @Override
   public boolean hasNext() {
-    if (isCacheDrained() && !loadCache()) {
+    if (isCacheDrained() && loadCache()) {
       endOfScan = true;
       return false;
     }
@@ -111,15 +115,34 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     return currentCache.get(index++);
   }
 
+  private void resolveCurrentLock(Kvrpcpb.KvPair current) {
+    logger.debug(String.format("resolve current key error %s", current.getError().toString()));
+    Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByKey(startKey);
+    TiRegion region = pair.first;
+    Metapb.Store store = pair.second;
+    BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+    try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
+      client.get(backOffer, current.getKey(), version);
+    } catch (Exception e) {
+      throw new KeyException(current.getError());
+    }
+  }
+
   @Override
   public Kvrpcpb.KvPair next() {
-    Kvrpcpb.KvPair kv;
+    Kvrpcpb.KvPair current;
     // continue when cache is empty but not null
-    for (kv = getCurrent(); currentCache != null && kv == null; kv = getCurrent()) {
-      if (!loadCache()) {
+    for (current = getCurrent(); currentCache != null && current == null; current = getCurrent()) {
+      if (loadCache()) {
         return null;
       }
     }
-    return kv;
+
+    Objects.requireNonNull(current, "current kv pair cannot be null");
+    if (current.hasError()) {
+      resolveCurrentLock(current);
+    }
+
+    return current;
   }
 }

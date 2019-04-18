@@ -60,6 +60,7 @@ import org.tikv.kvproto.Kvrpcpb.BatchGetResponse;
 import org.tikv.kvproto.Kvrpcpb.Context;
 import org.tikv.kvproto.Kvrpcpb.GetRequest;
 import org.tikv.kvproto.Kvrpcpb.GetResponse;
+import org.tikv.kvproto.Kvrpcpb.KeyError;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Kvrpcpb.RawDeleteRequest;
 import org.tikv.kvproto.Kvrpcpb.RawDeleteResponse;
@@ -69,6 +70,7 @@ import org.tikv.kvproto.Kvrpcpb.RawPutRequest;
 import org.tikv.kvproto.Kvrpcpb.RawPutResponse;
 import org.tikv.kvproto.Kvrpcpb.ScanRequest;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
+import org.tikv.kvproto.Kvrpcpb.WriteConflict;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
@@ -293,43 +295,50 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null);
     ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
-    return scanHelper(resp, backOffer);
+
+    // Check if kvPair contains error, it should be a Lock if hasError is true.
+    List<KvPair> kvPairs = resp.getPairsList();
+    for (int i = 0; i < kvPairs.size(); i++) {
+      KvPair kvPair = kvPairs.get(i);
+      if (kvPair.hasError()) {
+        Lock lock = extractLockFromKeyErr(kvPair.getError());
+        kvPairs.set(
+            i,
+            KvPair.newBuilder()
+                .setError(kvPair.getError())
+                .setValue(kvPair.getValue())
+                .setKey(lock.getKey())
+                .build());
+      }
+    }
+    return kvPairs;
   }
 
-  // TODO: remove helper and change to while style
-  // needs to be fixed as batchGet
-  // which we shoule retry not throw
-  // exception
-  private List<KvPair> scanHelper(ScanResponse resp, BackOffer bo) {
-    List<Lock> locks = new ArrayList<>();
-
-    for (KvPair pair : resp.getPairsList()) {
-      if (pair.hasError()) {
-        if (pair.getError().hasLocked()) {
-          Lock lock = new Lock(pair.getError().getLocked());
-          locks.add(lock);
-        } else {
-          throw new KeyException(pair.getError());
-        }
-      }
+  private Lock extractLockFromKeyErr(KeyError keyError) {
+    if (keyError.hasLocked()) {
+      return new Lock(keyError.getLocked());
     }
 
-    if (locks.size() > 0) {
-      boolean ok = lockResolverClient.resolveLocks(bo, locks);
-      if (!ok) {
-        // if not resolve all locks, we wait and retry
-        bo.doBackOff(BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
-      }
-
-      // TODO: we should retry
-      // fix me
+    if (keyError.hasConflict()) {
+      WriteConflict conflict = keyError.getConflict();
+      throw new KeyException(
+          String.format(
+              "scan meet key conflict on primary key %s at commit ts %s",
+              conflict.getPrimary(), conflict.getConflictTs()));
     }
 
-    if (resp.hasRegionError()) {
-      // TODO, we should redo the split and redo the batchGet
-      throw new RegionException(resp.getRegionError());
+    if (!keyError.getRetryable().equals("")) {
+      throw new KeyException(
+          String.format("tikv restart txn %s", keyError.getRetryableBytes().toStringUtf8()));
     }
-    return resp.getPairsList();
+
+    if (!keyError.getAbort().equals("")) {
+      throw new KeyException(
+          String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
+    }
+
+    throw new KeyException(
+        String.format("unexpected key error meets and it is %s", keyError.toString()));
   }
 
   /**
