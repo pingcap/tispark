@@ -311,6 +311,29 @@ public class TiDAGRequest implements Serializable {
         }
 
         int colCount = indexScanBuilder.getColumnsCount();
+
+        // =================== IMPORTANT ======================
+        // offset for dagRequest should be in accordance with fields
+        for (ColumnRef col : getFields()) {
+          Integer pos = colPosInIndexMap.get(col.getColumnInfo());
+          if (pos != null) {
+            TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
+            if (col.getColumnInfo().equals(columnInfo)) {
+              dagRequestBuilder.addOutputOffsets(pos);
+              colOffsetInFieldMap.put(col, pos);
+            }
+          }
+          // if a column of field is not contained in index selected,
+          // logically it must be the pk column and
+          // the pkIsHandle must be true. Extra check here.
+          else if (col.getColumnInfo().isPrimaryKey() && tableInfo.isPkHandle()) {
+            // offset should be processed for each primary key encountered
+            dagRequestBuilder.addOutputOffsets(colCount);
+            // for index scan, column offset must be in the order of index->handle
+            colOffsetInFieldMap.put(col, indexColOffsets.size());
+          }
+        }
+
         // double read case: need to retrieve handle
         dagRequestBuilder.addOutputOffsets(colCount != 0 ? colCount - 1 : 0);
       } else {
