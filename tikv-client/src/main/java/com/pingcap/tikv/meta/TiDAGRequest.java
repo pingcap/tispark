@@ -319,7 +319,7 @@ public class TiDAGRequest implements Serializable {
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
             if (col.getColumnInfo().equals(columnInfo)) {
-              dagRequestBuilder.addOutputOffsets(pos);
+              // dagRequestBuilder.addOutputOffsets(pos);
               colOffsetInFieldMap.put(col, pos);
             }
           }
@@ -328,7 +328,7 @@ public class TiDAGRequest implements Serializable {
           // the pkIsHandle must be true. Extra check here.
           else if (col.getColumnInfo().isPrimaryKey() && tableInfo.isPkHandle()) {
             // offset should be processed for each primary key encountered
-            dagRequestBuilder.addOutputOffsets(colCount);
+            //dagRequestBuilder.addOutputOffsets(colCount);
             // for index scan, column offset must be in the order of index->handle
             colOffsetInFieldMap.put(col, indexColOffsets.size());
           }

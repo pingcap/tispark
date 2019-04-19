@@ -257,15 +257,27 @@ class IssueTestSuite extends BaseTiSparkSuite {
   test("index double scan with predicate") {
     tidbStmt.execute("drop table if exists test_index")
     tidbStmt.execute(
-      "create table test_index(id bigint(20), c1 text default null, c2 int, c3 int, c4 int, KEY idx_c1(c1(10)))"
+      "create table test_index(id bigint(20), c1 text default null, c2 int, c3 int, c4 int, " +
+        "KEY idx_c1(c1(10)), " +
+        "KEY idx_c3(c3) " +
+        ")"
     )
     tidbStmt.execute("insert into test_index values(1, 'aairy', 10, 20, 30)")
     tidbStmt.execute("insert into test_index values(1, 'dairy', 10, 20, 30)")
     tidbStmt.execute("insert into test_index values(1, 'zairy', 10, 20, 30)")
     refreshConnections() // refresh since we need to load data again
-    explainAndRunTest("select c2 from test_index where c1 > 'dairy'")
-    explainAndRunTest("select c2 from test_index where c1 < 'dairy'")
-    explainAndRunTest("select c2 from test_index where c1 = 'dairy'")
+
+    spark.sql("select * from test_index where c3 > 20").explain()
+    spark.sql("select * from test_index where c3 > 20").collect().foreach(println)
+
+    spark.sql("select * from test_index where c1 > 'dairy'").explain()
+    spark.sql("select * from test_index where c1 > 'dairy'").collect().foreach(println)
+
+    spark.sql("select * from test_index where c1 == 'dairy'").explain()
+    spark.sql("select * from test_index where c1 == 'dairy'").collect().foreach(println)
+
+    spark.sql("select * from test_index where c1 < 'dairy'").explain()
+    spark.sql("select * from test_index where c1 < 'dairy'").collect().foreach(println)
   }
 
   override def afterAll(): Unit =
