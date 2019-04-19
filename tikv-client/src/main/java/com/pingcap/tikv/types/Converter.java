@@ -89,7 +89,7 @@ public class Converter {
     requireNonNull(val, "val is null");
     if (val instanceof byte[]) {
       byte[] valByte = (byte[]) val;
-      return new String(valByte).substring(0, Math.min((valByte).length, prefixLength))
+      return new String(valByte).substring(0, Math.min(valByte.length, prefixLength))
           .getBytes(StandardCharsets.UTF_8);
     } else if (val instanceof String) {
       String valStr = (String)val;
