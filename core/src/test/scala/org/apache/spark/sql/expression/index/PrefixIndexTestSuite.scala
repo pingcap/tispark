@@ -35,6 +35,7 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     explainAndRunTest("select a, b from prefix where a = 1 and b = \"bbb\"")
     explainAndRunTest("select b from prefix where b = \"bbc\"")
     explainAndRunTest("select b from prefix where b != \"bbc\"")
+    explainAndRunTest("select * from prefix where b = 'b'")
     explainAndRunTest("select b from prefix where b >= \"bbc\" and b < \"bbd\"")
     // FIXME: following test results in INDEX range [bb, bb] and TABLE range (-INF, bbc), while the table range should have been [bb, bb]
     // FYI, the predicate is [[b] LESS_THAN "bbc"], Not(IsNull([b])), [[b] EQUAL "bb"]
@@ -57,7 +58,6 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     explainAndRunTest("select a, b from prefix where b LIKE 'ÿ%'", skipJDBC = true)
     explainAndRunTest("select a, b from prefix where b LIKE '%b'")
     explainAndRunTest("select a, b from prefix where b LIKE '%'")
-    explainAndRunTest("select * from prefix where b = 'b'")
   }
 
   // https://github.com/pingcap/tispark/issues/397
