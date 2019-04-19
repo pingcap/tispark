@@ -57,6 +57,7 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     explainAndRunTest("select a, b from prefix where b LIKE 'ÿ%'", skipJDBC = true)
     explainAndRunTest("select a, b from prefix where b LIKE '%b'")
     explainAndRunTest("select a, b from prefix where b LIKE '%'")
+    explainAndRunTest("select * from prefix where b = 'b'")
   }
 
   // https://github.com/pingcap/tispark/issues/397
