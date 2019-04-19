@@ -254,6 +254,20 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge("select cast(count(1) as char(20)) from `tmp_empty_tbl`")
   }
 
+  test("index double scan with predicate") {
+    tidbStmt.execute("drop table if exists test_index")
+    tidbStmt.execute(
+      "create table test_index(id bigint(20), c1 text default null, c2 int, c3 int, c4 int, KEY idx_c1(c1(10)))"
+    )
+    tidbStmt.execute("insert into test_index values(1, 'aairy', 10, 20, 30)")
+    tidbStmt.execute("insert into test_index values(1, 'dairy', 10, 20, 30)")
+    tidbStmt.execute("insert into test_index values(1, 'zairy', 10, 20, 30)")
+    refreshConnections() // refresh since we need to load data again
+    explainAndRunTest("select c2 from test_index where c1 > 'dairy'")
+    explainAndRunTest("select c2 from test_index where c1 < 'dairy'")
+    explainAndRunTest("select c2 from test_index where c1 = 'dairy'")
+  }
+
   override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists t")

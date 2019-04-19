@@ -117,6 +117,15 @@ public class Key implements Comparable<Key> {
   }
 
   /**
+   * nextPrefix key will be key with next available rid.
+   *
+   * @return a new key current rid+1.
+   */
+  public Key nextPrefix() {
+    return toRawKey(prefixNext(value));
+  }
+
+  /**
    * The prefixNext key for bytes domain
    *
    * <p>It first plus one at LSB and if LSB overflows, a zero byte is appended at the end Original
