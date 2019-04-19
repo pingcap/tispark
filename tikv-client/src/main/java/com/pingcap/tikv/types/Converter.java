@@ -88,10 +88,12 @@ public class Converter {
   static byte[] convertUtf8ToBytes(Object val, int prefixLength) {
     requireNonNull(val, "val is null");
     if (val instanceof byte[]) {
-      return new String((byte[]) val).substring(0, Math.min(((byte[]) val).length, prefixLength))
+      byte[] valByte = (byte[]) val;
+      return new String(valByte).substring(0, Math.min((valByte).length, prefixLength))
           .getBytes(StandardCharsets.UTF_8);
     } else if (val instanceof String) {
-      return ((String) val).substring(0, Math.min(((String) val).length(), prefixLength))
+      String valStr = (String)val;
+      return valStr.substring(0, Math.min(valStr.length(), prefixLength))
           .getBytes(StandardCharsets.UTF_8);
     }
     throw new TypeException(
