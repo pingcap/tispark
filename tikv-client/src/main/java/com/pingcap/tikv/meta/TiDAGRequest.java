@@ -314,7 +314,7 @@ public class TiDAGRequest implements Serializable {
 
         // =================== IMPORTANT ======================
         // offset for dagRequest should be in accordance with fields
-        for (ColumnRef col : getFields()) {
+       /* for (ColumnRef col : getFields()) {
           Integer pos = colPosInIndexMap.get(col.getColumnInfo());
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
@@ -333,9 +333,24 @@ public class TiDAGRequest implements Serializable {
             colOffsetInFieldMap.put(col, indexColOffsets.size());
           }
         }
-
+*/
         // double read case: need to retrieve handle
         dagRequestBuilder.addOutputOffsets(colCount != 0 ? colCount - 1 : 0);
+
+        executorBuilder.setTp(ExecType.TypeIndexScan);
+
+        indexScanBuilder.setTableId(id).setIndexId(indexInfo.getId());
+        dagRequestBuilder.addExecutors(executorBuilder.setIdxScan(indexScanBuilder).build());
+
+        DAGRequest request =
+            dagRequestBuilder
+                .setTimeZoneOffset(timeZoneOffset)
+                .setFlags(flags)
+                .setStartTs(startTs.getVersion())
+                .build();
+
+        validateRequest(request);
+        return request;
       } else {
         int colCount = indexScanBuilder.getColumnsCount();
         boolean pkIsNeeded = false;

@@ -267,14 +267,14 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into test_index values(1, 'zairy', 10, 20, 30)")
     refreshConnections() // refresh since we need to load data again
 
-    spark.sql("select * from test_index where c3 > 20").explain()
-    spark.sql("select * from test_index where c3 > 20").collect().foreach(println)
+    //spark.sql("select * from test_index where c3 > 20").explain()
+    //spark.sql("select * from test_index where c3 > 20").collect().foreach(println)
 
     spark.sql("select * from test_index where c1 > 'dairy'").explain()
     spark.sql("select * from test_index where c1 > 'dairy'").collect().foreach(println)
 
-    spark.sql("select * from test_index where c1 == 'dairy'").explain()
-    spark.sql("select * from test_index where c1 == 'dairy'").collect().foreach(println)
+    spark.sql("select * from test_index where c1 = 'dairy'").explain()
+    spark.sql("select * from test_index where c1 = 'dairy'").collect().foreach(println)
 
     spark.sql("select * from test_index where c1 < 'dairy'").explain()
     spark.sql("select * from test_index where c1 < 'dairy'").collect().foreach(println)
