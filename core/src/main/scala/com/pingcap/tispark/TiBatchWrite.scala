@@ -294,7 +294,6 @@ object TiBatchWrite {
     val handle = if (row.fieldCount > tblInfo.getColumns.size && !isUpdate) {
       row.getLong(row.fieldCount - 1)
     } else {
-      tiTableInfo.isPkHandle
       val columnList = tiTableInfo.getColumns.asScala
       columnList.find(_.isPrimaryKey) match {
         case Some(primaryColumn) =>
