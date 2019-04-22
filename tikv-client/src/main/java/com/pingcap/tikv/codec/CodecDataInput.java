@@ -43,7 +43,7 @@ public class CodecDataInput implements DataInput {
       return (pos < count) ? (buf[pos++] & 0xff) : -1;
     }
 
-    public int read(byte b[], int off, int len) {
+    public int read(byte[] b, int off, int len) {
       if (b == null) {
         throw new NullPointerException();
       } else if (off < 0 || len < 0 || len > b.length - off) {
