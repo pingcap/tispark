@@ -225,9 +225,9 @@ object TiBatchWrite {
             logger.warn(s"commit secondary key error", e)
         }
       }
+    } else {
+      logger.info("skipping commit secondary key")
     }
-    logger.info("skipping commit secondary key")
-
   }
 
   @throws(classOf[NoSuchTableException])
