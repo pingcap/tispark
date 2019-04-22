@@ -19,6 +19,7 @@ import java.nio.charset.Charset
 
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.catalyst.util.resourceToString
+import org.apache.spark.sql.execution.HandleRDDExec
 
 class PrefixIndexTestSuite extends BaseTiSparkSuite {
   // https://github.com/pingcap/tispark/issues/272
@@ -74,10 +75,31 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     runTest("select * from t1 where name = '借款策略集_网页'", skipJDBC = true)
   }
 
+  test("index double scan with predicate") {
+    tidbStmt.execute("drop table if exists test_index")
+    tidbStmt.execute(
+      "create table test_index(id bigint(20), c1 text default null, c2 int, c3 int, c4 int, KEY idx_c1(c1(10)))"
+    )
+    tidbStmt.execute("insert into test_index values(1, 'aairy', 10, 20, 30)")
+    tidbStmt.execute("insert into test_index values(1, 'dairy', 10, 20, 30)")
+    tidbStmt.execute("insert into test_index values(1, 'zairy', 10, 20, 30)")
+    refreshConnections() // refresh since we need to load data again
+    judge("select c2 from test_index where c1 > 'dairy'")
+    judge("select c2 from test_index where c1 < 'dairy'")
+    judge("select c2 from test_index where c1 = 'dairy'")
+    judge("select c2, c2 from test_index where c1 > 'dairy'")
+    judge("select c2, c2 from test_index where c1 < 'dairy'")
+    judge("select c2, c2 from test_index where c1 = 'dairy'")
+    judge("select max(c2) from test_index where c1 > 'dairy'")
+    judge("select max(c2) from test_index where c1 < 'dairy'")
+    judge("select max(c2) from test_index where c1 = 'dairy'")
+  }
+
   override def afterAll(): Unit =
     try {
       tidbStmt.execute("DROP TABLE IF EXISTS `prefix`")
       tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
+      tidbStmt.execute("DROP TABLE IF EXISTS `test_index`")
     } finally {
       super.afterAll()
     }
