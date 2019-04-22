@@ -109,7 +109,7 @@ object TiDataSourceExample {
     val df = readUsingDataSourceAPI(sqlContext)
 
     // Overwrite
-    // if target_table_overwrite does not exist, it will be create automatically
+    // if target_table_overwrite does not exist, it will be created automatically
     df.write
       .format("tidb")
       .options(tidbOptions)
@@ -119,7 +119,7 @@ object TiDataSourceExample {
       .save()
 
     // Append
-    // if target_table_append does not exist, it will be create automatically
+    // if target_table_append does not exist, it will be created automatically
     df.write
       .format("tidb")
       .options(tidbOptions)

@@ -81,7 +81,7 @@ val tidbOptions: Map[String, String] = Map(
 val df: DataFrame = _
 
 // Overwrite
-// if target_table_overwrite does not exist, it will be create automatically
+// if target_table_overwrite does not exist, it will be created automatically
 df.write
   .format("tidb")
   .options(tidbOptions)
@@ -91,7 +91,7 @@ df.write
   .save()
 
 // Append
-// if target_table_append does not exist, it will be create automatically
+// if target_table_append does not exist, it will be created automatically
 df.write
   .format("tidb")
   .options(tidbOptions)
@@ -210,7 +210,7 @@ val tidbOptions: Map[String, String] = Map()
 val df: DataFrame = _
 
 // Overwrite
-// if target_table_overwrite does not exist, it will be create automatically
+// if target_table_overwrite does not exist, it will be created automatically
 df.write
   .format("tidb")
   .options(tidbOptions)
@@ -220,7 +220,7 @@ df.write
   .save()
 
 // Append
-// if target_table_append does not exist, it will be create automatically
+// if target_table_append does not exist, it will be created automatically
 df.write
   .format("tidb")
   .options(tidbOptions)
