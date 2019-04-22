@@ -263,9 +263,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into test_index values(1, 'dairy', 10, 20, 30)")
     tidbStmt.execute("insert into test_index values(1, 'zairy', 10, 20, 30)")
     refreshConnections() // refresh since we need to load data again
-    explainAndRunTest("select c2 from test_index where c1 > 'dairy'")
-    explainAndRunTest("select c2 from test_index where c1 < 'dairy'")
-    explainAndRunTest("select c2 from test_index where c1 = 'dairy'")
+    judge("select c2 from test_index where c1 > 'dairy'")
+    judge("select c2 from test_index where c1 < 'dairy'")
+    judge("select c2 from test_index where c1 = 'dairy'")
   }
 
   override def afterAll(): Unit =

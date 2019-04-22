@@ -28,36 +28,16 @@ object TiExtensionsExample {
       .setIfMissing("spark.master", "local[*]")
       .setIfMissing("spark.app.name", getClass.getName)
       .setIfMissing("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-      .setIfMissing("tidb.addr", "pd0")
+      .setIfMissing("tidb.addr", "127.0.0.1")
       .setIfMissing("tidb.port", "4000")
       .setIfMissing("tidb.user", "root")
-      .setIfMissing("spark.tispark.pd.addresses", "pd0:2379")
+      .setIfMissing("spark.tispark.pd.addresses", "127.0.0.1:2379")
       .setIfMissing("spark.tispark.plan.allow_index_read", "true")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
 
-    val df = spark
-      .sql(
-        s"""
-           |select *
-           |from test.idx
-           |where cid_id = "dedede" limit 6
-         """.stripMargin
-      )
-    df.show()
-    df.explain()
-    /*
-    spark
-      .sql(
-        s"""
-           |select stat_date,device_id,city_id as ucity_id,cid_id,diary_service_id
-           |from jerry_prod.data_feed_exposure
-           |where cid_type = "diary" limit 6
-         """.stripMargin
-      )
-      .show(6)
-   */
-
+    spark.sql("use tpch_test")
+    spark.sql("select count(*) from lineitem").show
   }
 
 }

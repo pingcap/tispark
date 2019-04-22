@@ -117,7 +117,8 @@ public class Key implements Comparable<Key> {
   }
 
   /**
-   * nextPrefix key will be key with next available rid.
+   * nextPrefix key will be key with next available rid. For example, if the current key is
+   * prefix_rid, after calling this method, the return value should be prefix_rid+1
    *
    * @return a new key current rid+1.
    */
