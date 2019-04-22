@@ -46,6 +46,9 @@ object TiDataSourceExample {
   }
 
   private def readUsingDataSourceAPI(sqlContext: SQLContext): DataFrame = {
+    // Common options can also be passed in,
+    // e.g. spark.tispark.plan.allow_agg_pushdown, spark.tispark.plan.allow_index_read, etc.
+    // spark.tispark.plan.allow_index_read is optional
     val tidbOptions: Map[String, String] = Map(
       "tidb.addr" -> "127.0.0.1",
       "tidb.password" -> "",
@@ -66,6 +69,9 @@ object TiDataSourceExample {
   }
 
   private def pushDownUsingDataSourceAPI(sqlContext: SQLContext): DataFrame = {
+    // Common options can also be passed in,
+    // e.g. spark.tispark.plan.allow_agg_pushdown, spark.tispark.plan.allow_index_read, etc.
+    // spark.tispark.plan.allow_index_read is optional
     val tidbOptions: Map[String, String] = Map(
       "tidb.addr" -> "127.0.0.1",
       "tidb.password" -> "",
@@ -88,6 +94,9 @@ object TiDataSourceExample {
   }
 
   private def writeUsingDataSourceAPI(sqlContext: SQLContext): Unit = {
+    // Common options can also be passed in,
+    // e.g. spark.tispark.plan.allow_agg_pushdown, spark.tispark.plan.allow_index_read, etc.
+    // spark.tispark.plan.allow_index_read is optional
     val tidbOptions: Map[String, String] = Map(
       "tidb.addr" -> "127.0.0.1",
       "tidb.password" -> "",
@@ -100,20 +109,22 @@ object TiDataSourceExample {
     val df = readUsingDataSourceAPI(sqlContext)
 
     // Overwrite
+    // if target_table_overwrite does not exist, it will be created automatically
     df.write
       .format("tidb")
       .options(tidbOptions)
       .option("database", "tpch_test")
-      .option("table", "DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
+      .option("table", "target_table_overwrite")
       .mode(SaveMode.Overwrite)
       .save()
 
     // Append
+    // if target_table_append does not exist, it will be created automatically
     df.write
       .format("tidb")
       .options(tidbOptions)
       .option("database", "tpch_test")
-      .option("table", "DATASOURCE_API_CUSTOMER_writeUsingDataSourceAPI")
+      .option("table", "target_table_append")
       .mode(SaveMode.Append)
       .save()
   }
@@ -169,7 +180,6 @@ object TiDataSourceExample {
   }
 
   private def writeUsingSparkSQLAPI(sqlContext: SQLContext): Unit = {
-    // run `create table DATASOURCE_API_CUSTOMER_writeUsingSparkSQLAPI like CUSTOMER` first
     sqlContext.sql(s"""
                       |CREATE TABLE writeUsingSparkSQLAPI_src
                       |USING tidb
@@ -185,12 +195,13 @@ object TiDataSourceExample {
                       |)
        """.stripMargin)
 
+    // target_table should exist in tidb
     sqlContext.sql(s"""
                       |CREATE TABLE writeUsingSparkSQLAPI_dest
                       |USING tidb
                       |OPTIONS (
                       |  database 'tpch_test',
-                      |  table 'DATASOURCE_API_CUSTOMER_writeUsingSparkSQLAPI',
+                      |  table 'target_table',
                       |  tidb.addr '127.0.0.1',
                       |  tidb.password '',
                       |  tidb.port '4000',
@@ -200,7 +211,7 @@ object TiDataSourceExample {
                       |)
        """.stripMargin)
 
-    // append: insert into values
+    // insert into values
     sqlContext.sql("""
                      |insert into writeUsingSparkSQLAPI_dest values
                      |(1000,
@@ -213,12 +224,12 @@ object TiDataSourceExample {
                      |". even, express theodolites upo")
                    """.stripMargin)
 
-    // append: insert into select
+    // insert into select
     sqlContext.sql(s"""
                       |insert into writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
        """.stripMargin).show()
 
-    // overwrite: insert overwrite values
+    // insert overwrite select
     sqlContext.sql(s"""
                       |insert overwrite table writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
        """.stripMargin).show()
