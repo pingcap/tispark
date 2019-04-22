@@ -73,7 +73,8 @@ public class KeyTest {
 
     k1 = toRawKey(new byte[] {UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE});
     assertEquals(
-        toRawKey(new byte[] {UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE, 0}), k1.nextPrefix());
+        toRawKey(new byte[] {UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE, 0}),
+        k1.nextPrefix());
   }
 
   @Test

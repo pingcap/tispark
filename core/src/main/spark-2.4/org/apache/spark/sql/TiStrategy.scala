@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -532,7 +532,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 }
 
 object TiAggregation {
-  type ReturnType = PhysicalAggregation.ReturnType
+  type ReturnType =
+    (Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)
 
   def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
     case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
@@ -573,7 +574,9 @@ object TiAggregation {
         (averagesEliminated ++ extraSumsAndCounts).distinct
       }
 
-      Some(groupingExpressions, rewrittenAggregateExpressions, rewrittenResultExpressions, child)
+      Some(groupingExpressions, rewrittenAggregateExpressions.map {
+        _.asInstanceOf[AggregateExpression]
+      }, rewrittenResultExpressions, child)
 
     case _ => Option.empty[ReturnType]
   }
