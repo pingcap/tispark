@@ -32,6 +32,7 @@ import com.pingcap.tikv.txn.type.ClientRPCResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import io.grpc.StatusRuntimeException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,7 +102,7 @@ public class TxnKVClient implements AutoCloseable {
       result.setSuccess(false);
       // mark retryable, region error, should retry prewrite again
       result.setRetry(retrableException(e));
-      result.setError(e.getMessage());
+      result.setException(e);
     }
     return result;
   }
@@ -133,7 +134,7 @@ public class TxnKVClient implements AutoCloseable {
       result.setSuccess(false);
       // mark retryable, region error, should retry prewrite again
       result.setRetry(retrableException(e));
-      result.setError(e.getMessage());
+      result.setException(e);
     }
     return result;
   }
@@ -141,7 +142,8 @@ public class TxnKVClient implements AutoCloseable {
   private boolean retrableException(Exception e) {
     return e instanceof TiClientInternalException
         || e instanceof KeyException
-        || e instanceof RegionException;
+        || e instanceof RegionException
+        || e instanceof StatusRuntimeException;
   }
 
   @Override

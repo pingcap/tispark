@@ -16,14 +16,14 @@
 package com.pingcap.tikv.txn.type;
 
 public class ClientRPCResult {
-  boolean success;
-  boolean retry;
-  String error;
+  private boolean success;
+  private boolean retry;
+  private Exception exception;
 
-  public ClientRPCResult(boolean success, boolean retry, String error) {
+  public ClientRPCResult(boolean success, boolean retry, Exception exception) {
     this.success = success;
     this.retry = retry;
-    this.error = error;
+    this.exception = exception;
   }
 
   public boolean isSuccess() {
@@ -42,11 +42,11 @@ public class ClientRPCResult {
     this.retry = retry;
   }
 
-  public String getError() {
-    return error;
+  public Exception getException() {
+    return exception;
   }
 
-  public void setError(String error) {
-    this.error = error;
+  public void setException(Exception exception) {
+    this.exception = exception;
   }
 }

@@ -66,6 +66,7 @@ import org.tikv.kvproto.Kvrpcpb.BatchGetRequest;
 import org.tikv.kvproto.Kvrpcpb.BatchGetResponse;
 import org.tikv.kvproto.Kvrpcpb.CommitRequest;
 import org.tikv.kvproto.Kvrpcpb.CommitResponse;
+import org.tikv.kvproto.Kvrpcpb.Context;
 import org.tikv.kvproto.Kvrpcpb.GetRequest;
 import org.tikv.kvproto.Kvrpcpb.GetResponse;
 import org.tikv.kvproto.Kvrpcpb.KeyError;
@@ -75,6 +76,8 @@ import org.tikv.kvproto.Kvrpcpb.PrewriteRequest;
 import org.tikv.kvproto.Kvrpcpb.PrewriteResponse;
 import org.tikv.kvproto.Kvrpcpb.ScanRequest;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
+import org.tikv.kvproto.Kvrpcpb.SplitRegionRequest;
+import org.tikv.kvproto.Kvrpcpb.SplitRegionResponse;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
@@ -759,5 +762,44 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               + " address = "
               + addressStr);
     }
+  }
+
+  /**
+   * Send SplitRegion request to tikv split a region at splitKey.
+   * splitKey must between current region's start key and end key.
+   * @param splitKey is the split point for a specific region.
+   * @return a split region info.
+   */
+  public TiRegion splitRegion(ByteString splitKey) {
+    Supplier<SplitRegionRequest> request =
+        () ->
+            SplitRegionRequest.newBuilder()
+                .setContext(
+                    Context.newBuilder()
+                        .setRegionId(region.getId())
+                        .setRegionEpoch(region.getRegionEpoch())
+                        .setPeer(region.getLeader())
+                        .build())
+                .setSplitKey(splitKey)
+                .build();
+
+    KVErrorHandler<SplitRegionResponse> handler =
+        new KVErrorHandler<>(
+            regionManager,
+            this,
+            region,
+            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+
+    SplitRegionResponse resp =
+        callWithRetry(
+            ConcreteBackOffer.newGetBackOff(), TikvGrpc.METHOD_SPLIT_REGION, request, handler);
+    if (resp.hasRegionError()) {
+      throw new TiClientInternalException(
+          String.format(
+              "failed to split region %d at key %s because %s",
+              region.getId(), splitKey.toString(), resp.getRegionError().toString()));
+    }
+
+    return new TiRegion(resp.getLeft(), null, conf.getIsolationLevel(), conf.getCommandPriority());
   }
 }

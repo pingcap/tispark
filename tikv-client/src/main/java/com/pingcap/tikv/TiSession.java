@@ -16,19 +16,29 @@
 package com.pingcap.tikv;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
+import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TiSession implements AutoCloseable {
+  private final Logger logger = LoggerFactory.getLogger(TiSession.class);
   private final TiConfiguration conf;
   private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
@@ -166,6 +176,35 @@ public class TiSession implements AutoCloseable {
    */
   public void injectCallBackFunc(Function<CacheInvalidateEvent, Void> callBackFunc) {
     this.cacheInvalidateCallback = callBackFunc;
+  }
+
+  public void splitRegionAndScatter(List<byte[]> splitKeys) {
+    logger.info(String.format("split key's size is %d", splitKeys.size()));
+    List<Key> rawKeys =
+        splitKeys.parallelStream().map(RowKey::toRawKey).collect(Collectors.toList());
+    rawKeys.forEach(this::splitRegionAndScatter);
+  }
+
+  // splitKey is a row key, but we use a generalized key here.
+  private void splitRegionAndScatter(Key splitKey) {
+    // make sure split key must be row key
+    Key nextKey = splitKey.next();
+    TiRegion region = regionManager.getRegionByKey(splitKey.toByteString());
+    if (nextKey.toByteString().equals(region.getStartKey())
+        || nextKey.toByteString().equals(region.getEndKey())) {
+      logger.warn(
+          "split key equal to region start key or end key. Region splitting " + "is not needed.");
+      return;
+    }
+    TiRegion left =
+        getRegionStoreClientBuilder()
+            .build(region)
+            .splitRegion(ByteString.copyFrom(nextKey.getBytes()));
+    Objects.requireNonNull(left, "Region after split cannot be null");
+    // need invalidate region that is already split.
+    getPDClient().scatterRegion(left);
+    // after split succeed, we need invalidate outdated region info from cache.
+    regionManager.invalidateRegion(region.getId());
   }
 
   @Override

@@ -40,6 +40,7 @@ import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.Metapb.StoreState;
 
+@SuppressWarnings("UnstableApiUsage")
 public class RegionManager {
   private static final Logger logger = Logger.getLogger(RegionManager.class);
   private final RegionCache cache;

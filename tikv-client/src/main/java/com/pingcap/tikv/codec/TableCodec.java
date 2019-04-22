@@ -13,8 +13,9 @@ import java.util.List;
 
 public class TableCodec {
   // Row layout: colID1, value1, colID2, value2, .....
-  public static byte[] encodeRow(
-      DataType[] colTypes, TLongArrayList colIDs, Object[] values, CodecDataOutput cdo)
+  private static final CodecDataOutput cdo = new CodecDataOutput();
+
+  public static byte[] encodeRow(DataType[] colTypes, TLongArrayList colIDs, Object[] values)
       throws IllegalAccessException {
     if (colTypes.length != colIDs.size()) {
       throw new IllegalAccessException(
@@ -33,7 +34,9 @@ public class TableCodec {
       return new byte[] {Codec.NULL_FLAG};
     }
 
-    return cdo.toBytes();
+    byte[] res = cdo.toBytes();
+    cdo.reset();
+    return res;
   }
 
   public static Object[] decodeRow(CodecDataInput cdi, DataType[] colTypes) {

@@ -227,7 +227,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         throw new StatusRuntimeException(Status.UNKNOWN.withDescription(error.toString()));
       }
 
-      logger.warn(String.format("Unknown error for region [%s]", ctxRegion));
+      logger.warn(String.format("Unknown error %s for region [%s]", error.toString(), ctxRegion));
       // For other errors, we only drop cache here.
       // Upper level may split this task.
       invalidateRegionStoreCache(ctxRegion);
