@@ -369,61 +369,62 @@ public class TiDAGRequest implements Serializable {
       }
 
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
-    }
 
-    // clear executorBuilder
-    executorBuilder.clear();
+      // clear executorBuilder
+      executorBuilder.clear();
 
-    // Step2. Add others
-    // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
-    // Or make sure the construction order is below:
-    // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
-    Expression whereExpr = mergeCNFExpressions(getFilters());
-    if (whereExpr != null) {
-      executorBuilder.setTp(ExecType.TypeSelection);
-      dagRequestBuilder.addExecutors(
-          executorBuilder.setSelection(
-              Selection.newBuilder()
-                  .addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))));
-      executorBuilder.clear();
-    }
+      // Step2. Add others
+      // DO NOT EDIT EXPRESSION CONSTRUCTION ORDER
+      // Or make sure the construction order is below:
+      // TableScan/IndexScan > Selection > Aggregation > TopN/Limit
+      Expression whereExpr = mergeCNFExpressions(getFilters());
+      if (whereExpr != null) {
+        executorBuilder.setTp(ExecType.TypeSelection);
+        dagRequestBuilder.addExecutors(
+            executorBuilder.setSelection(
+                Selection.newBuilder()
+                    .addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))));
+        executorBuilder.clear();
+      }
 
-    if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
-      Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
-      getGroupByItems()
-          .forEach(
-              tiByItem ->
-                  aggregationBuilder.addGroupBy(
-                      ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
-      getAggregates()
-          .forEach(
-              tiExpr ->
-                  aggregationBuilder.addAggFunc(
-                      ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
-      executorBuilder.setTp(ExecType.TypeAggregation);
-      dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
-      executorBuilder.clear();
-    }
+      if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
+        Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
+        getGroupByItems()
+            .forEach(
+                tiByItem ->
+                    aggregationBuilder.addGroupBy(
+                        ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
+        getAggregates()
+            .forEach(
+                tiExpr ->
+                    aggregationBuilder.addAggFunc(
+                        ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
+        executorBuilder.setTp(ExecType.TypeAggregation);
+        dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
+        executorBuilder.clear();
+      }
 
-    if (!getOrderByItems().isEmpty()) {
-      TopN.Builder topNBuilder = TopN.newBuilder();
-      getOrderByItems()
-          .forEach(
-              tiByItem ->
-                  topNBuilder.addOrderBy(
-                      com.pingcap.tidb.tipb.ByItem.newBuilder()
-                          .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
-                          .setDesc(tiByItem.isDesc())));
-      executorBuilder.setTp(ExecType.TypeTopN);
-      topNBuilder.setLimit(getLimit());
-      dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
-      executorBuilder.clear();
-    } else if (getLimit() != 0) {
-      Limit.Builder limitBuilder = Limit.newBuilder();
-      limitBuilder.setLimit(getLimit());
-      executorBuilder.setTp(ExecType.TypeLimit);
-      dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
-      executorBuilder.clear();
+      if (!getOrderByItems().isEmpty()) {
+        TopN.Builder topNBuilder = TopN.newBuilder();
+        getOrderByItems()
+            .forEach(
+                tiByItem ->
+                    topNBuilder.addOrderBy(
+                        com.pingcap.tidb.tipb.ByItem.newBuilder()
+                            .setExpr(
+                                ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
+                            .setDesc(tiByItem.isDesc())));
+        executorBuilder.setTp(ExecType.TypeTopN);
+        topNBuilder.setLimit(getLimit());
+        dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
+        executorBuilder.clear();
+      } else if (getLimit() != 0) {
+        Limit.Builder limitBuilder = Limit.newBuilder();
+        limitBuilder.setLimit(getLimit());
+        executorBuilder.setTp(ExecType.TypeLimit);
+        dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
+        executorBuilder.clear();
+      }
     }
 
     DAGRequest request =

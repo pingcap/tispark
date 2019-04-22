@@ -81,7 +81,8 @@ public class IndexStatistics {
         Key convertedKey =
             TypedKey.toTypedKey(pointKey.getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
         Key convertedNext =
-            TypedKey.toTypedKey(pointKey.next().getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
+            TypedKey.toTypedKey(
+                pointKey.nextPrefix().getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
         // TODO: Implement CMSketch point query
         //        if (cmSketch != null) {
         //          rowCount += cmSketch.queryBytes(convertedKey.getBytes());

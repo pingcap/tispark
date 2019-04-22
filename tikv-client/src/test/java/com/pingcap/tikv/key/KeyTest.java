@@ -67,9 +67,19 @@ public class KeyTest {
   }
 
   @Test
+  public void nextPrefixTest() {
+    Key k1 = toRawKey(new byte[] {1, 2, 3});
+    assertEquals(toRawKey(new byte[] {1, 2, 4}), k1.nextPrefix());
+
+    k1 = toRawKey(new byte[] {UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE});
+    assertEquals(
+        toRawKey(new byte[] {UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE, 0}), k1.nextPrefix());
+  }
+
+  @Test
   public void nextTest() throws Exception {
     Key k1 = toRawKey(new byte[] {1, 2, 3});
-    assertEquals(toRawKey(new byte[] {1, 2, 4}), k1.next());
+    assertEquals(toRawKey(new byte[] {1, 2, 3, 0}), k1.next());
 
     k1 = toRawKey(new byte[] {UnsignedBytes.MAX_VALUE, UnsignedBytes.MAX_VALUE});
     assertEquals(
