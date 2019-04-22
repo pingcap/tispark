@@ -47,6 +47,8 @@ object TiBatchWrite {
   private val fraction = 0.01
 
   private def calcRDDSize(rdd: RDD[Row]): Long =
+  // TODO: this is only approximate estimate
+  // change to key value form for better approximation.
     rdd
       .map(_.mkString(",").getBytes("UTF-8").length.toLong)
       .reduce(_ + _) //add the sizes together
