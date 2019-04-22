@@ -30,7 +30,6 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{Row, TiContext}
 import org.slf4j.LoggerFactory
-
 import scala.collection.JavaConverters._
 
 /**
@@ -43,10 +42,11 @@ object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
-  val skipCommitSecondaryKey = true
-  val fraction = 0.01
+  // TODO: port this val into conf
+  private val skipCommitSecondaryKey = true
+  private val fraction = 0.01
 
-  def calcRDDSize(rdd: RDD[Row]): Long =
+  private def calcRDDSize(rdd: RDD[Row]): Long =
     rdd
       .map(_.mkString(",").getBytes("UTF-8").length.toLong)
       .reduce(_ + _) //add the sizes together
@@ -89,6 +89,7 @@ object TiBatchWrite {
     val handleRdd: RDD[Long] = sampleRDD
       .map(sparkRow2TiKVRow)
       .map(row => extractHandleId(row, tblInfo, isUpdate = false))
+      .sortBy(k => k)
     val step = sampleRDDCount / regionNeed
     val splitKeys = handleRdd
       .zipWithIndex()
@@ -167,7 +168,7 @@ object TiBatchWrite {
 
     // driver primary pre-write
     val ti2PCClient = new TiBatchWrite2PCClient(kvClient, startTs)
-    val prewritePrimaryBackoff: ConcreteBackOffer =
+    val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     val encodedRow = encodeTiRow(primaryRow, colDataTypes, colIds)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, encodedRow)
@@ -205,7 +206,6 @@ object TiBatchWrite {
 
     // executors secondary commit
     if (!skipCommitSecondaryKey) {
-      logger.info("skipping commit secondary key")
       finalWriteRDD.foreachPartition { iterator =>
         val tiSessionOnExecutor = new TiSession(tiConf)
         val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
@@ -213,7 +213,6 @@ object TiBatchWrite {
         val commitSecondaryBackoff =
           ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
 
-        import scala.collection.JavaConverters._
         val keys = iterator.map {
           case (key, _) => new TiBatchWrite2PCClient.ByteWrapper(key.bytes)
         }.asJava
@@ -227,6 +226,7 @@ object TiBatchWrite {
         }
       }
     }
+    logger.info("skipping commit secondary key")
 
   }
 

@@ -69,6 +69,10 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private ScheduledExecutorService service;
   private List<URI> pdAddrs;
 
+  /**
+   * Sends request to pd to scatter region.
+   * @param left represents a region info
+   */
   public void scatterRegion(TiRegion left) {
     Supplier<ScatterRegionRequest> request =
         () -> ScatterRegionRequest.newBuilder().setHeader(header).setRegionId(left.getId()).build();
@@ -81,6 +85,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     ScatterRegionResponse resp =
         callWithRetry(
             ConcreteBackOffer.newGetBackOff(), PDGrpc.METHOD_SCATTER_REGION, request, handler);
+    // TODO: maybe we should retry here, need dig into pd's codebase.
     if (resp.hasHeader() && resp.getHeader().hasError()) {
       throw new TiClientInternalException(
           String.format("failed to scatter region because %s", resp.getHeader().getError()));

@@ -47,6 +47,7 @@ public class TiRegion implements Serializable {
       if (meta.getPeersCount() == 0) {
         throw new TiClientInternalException("Empty peer list for region " + meta.getId());
       }
+      // region's first peer is leader.
       this.peer = meta.getPeers(0);
     } else {
       this.peer = peer;

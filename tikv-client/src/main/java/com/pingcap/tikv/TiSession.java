@@ -192,7 +192,7 @@ public class TiSession implements AutoCloseable {
     TiRegion region = regionManager.getRegionByKey(splitKey.toByteString());
     if (nextKey.toByteString().equals(region.getStartKey())
         || nextKey.toByteString().equals(region.getEndKey())) {
-      logger.info(
+      logger.warn(
           "split key equal to region start key or end key. Region splitting " + "is not needed.");
       return;
     }
@@ -202,8 +202,8 @@ public class TiSession implements AutoCloseable {
             .splitRegion(ByteString.copyFrom(nextKey.getBytes()));
     Objects.requireNonNull(left, "Region after split cannot be null");
     // need invalidate region that is already split.
-    logger.info("split succeeded");
     getPDClient().scatterRegion(left);
+    // after split succeed, we need invalidate outdated region info from cache.
     regionManager.invalidateRegion(region.getId());
   }
 

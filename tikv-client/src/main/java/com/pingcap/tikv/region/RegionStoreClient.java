@@ -764,6 +764,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
   }
 
+  /**
+   * Send SplitRegion request to tikv split a region at splitKey.
+   * splitKey must between current region's start key and end key.
+   * @param splitKey is the split point for a specific region.
+   * @return a split region info.
+   */
   public TiRegion splitRegion(ByteString splitKey) {
     Supplier<SplitRegionRequest> request =
         () ->
@@ -787,13 +793,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     SplitRegionResponse resp =
         callWithRetry(
             ConcreteBackOffer.newGetBackOff(), TikvGrpc.METHOD_SPLIT_REGION, request, handler);
-    // region's first peer is leader.
     if (resp.hasRegionError()) {
       throw new TiClientInternalException(
           String.format(
               "failed to split region %d at key %s because %s",
               region.getId(), splitKey.toString(), resp.getRegionError().toString()));
     }
+
     return new TiRegion(resp.getLeft(), null, conf.getIsolationLevel(), conf.getCommandPriority());
   }
 }
