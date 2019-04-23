@@ -17,7 +17,7 @@ The current stable version is 2.0 which is compatible with **Spark 2.3.0+**, the
 
 **When using Spark 2.3.0+, please follow the [document for Spark 2.3+](./docs/userguide.md)**
 
-**When using Spark 2.4.0+, please [build from sources](#How to build from sources) and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using Spark 2.4.0+, please [build from sources](#how-to-build-from-sources) and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
 If you are using maven, add the following to your pom.xml:
 ```xml
