@@ -24,12 +24,14 @@ import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
+import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{Row, TiContext}
 import org.slf4j.LoggerFactory
+
 import scala.collection.JavaConverters._
 
 /**
@@ -329,7 +331,7 @@ object TiBatchWrite {
     for (i <- 0 until fieldCount) {
       val data = sparkRow.get(i)
       val sparkDataType = sparkRow.schema(i).dataType
-      val tiDataType = TiUtils.fromSparkType(sparkDataType)
+      val tiDataType = TiUtil.fromSparkType(sparkDataType)
       tiRow.set(i, tiDataType, data)
     }
     tiRow
