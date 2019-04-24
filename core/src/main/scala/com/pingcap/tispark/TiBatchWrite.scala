@@ -43,7 +43,8 @@ object TiBatchWrite {
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
   // TODO: port this val into conf
-  private val skipCommitSecondaryKey = true
+  // disabled because of this bug: https://internal.pingcap.net/jira/browse/TISPARK-127
+  private val skipCommitSecondaryKey = false
   private val fraction = 0.01
 
   private def calcRDDSize(rdd: RDD[Row]): Long =
