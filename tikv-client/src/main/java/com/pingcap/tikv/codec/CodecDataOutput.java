@@ -46,7 +46,7 @@ public class CodecDataOutput implements DataOutput {
   }
 
   @Override
-  public void write(byte b[]) {
+  public void write(byte[] b) {
     try {
       s.write(b);
     } catch (Exception e) {

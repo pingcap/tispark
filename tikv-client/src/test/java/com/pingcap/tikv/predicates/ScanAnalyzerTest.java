@@ -147,7 +147,7 @@ public class ScanAnalyzerTest {
         ByteString.copyFrom(
             new byte[] {
               116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
-              0, 0, 0, 0, 0
+              0, 0, 0, 1
             }),
         keyRange.getEnd());
 
@@ -171,6 +171,7 @@ public class ScanAnalyzerTest {
               0, 0, 0, 0, 0
             }),
         keyRange.getStart());
+
     assertEquals(
         ByteString.copyFrom(
             new byte[] {

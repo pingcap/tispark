@@ -120,6 +120,7 @@
     </dependencies>
 
     <build>
+        <sourceDirectory>src/main/scala</sourceDirectory>
         <extensions>
             <extension>
                 <groupId>kr.motd.maven</groupId>
@@ -207,6 +208,9 @@
                     <encoding>UTF-8</encoding>
                     <showWarnings>true</showWarnings>
                     <showDeprecation>true</showDeprecation>
+                    <includes>
+                        <include>src/main/${profile.source.directory}</include>
+                    </includes>
                 </configuration>
             </plugin>
             <!-- Jar Plug-in -->
@@ -305,7 +309,8 @@
                 <version>0.10_1.5.1</version>
                 <configuration>
                     <sourceDirectories> <!-- (Optional) Paths to source-directories. Overrides ${project.build.sourceDirectory} -->
-                        <param>${project.basedir}/src/main/scala</param>
+                        <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
+                        <sourceDirectory>${project.basedir}/src/main/${profile.source.directory}</sourceDirectory>
                     </sourceDirectories>
                     <testSourceDirectories> <!-- (Optional) Paths to test-source-directories. Overrides ${project.build.testSourceDirectory} -->
                         <param>${project.basedir}/src/test/scala</param>
@@ -327,7 +332,7 @@
                 <version>2.22.0</version>
                 <configuration>
                     <systemPropertyVariables>
-                        <sparkVersion>${project.activeProfiles[0].id}</sparkVersion>
+                        <sparkVersion>${profile.source.directory}</sparkVersion>
                     </systemPropertyVariables>
                     <skipTests>true</skipTests>
                 </configuration>
@@ -348,6 +353,23 @@
                         <goals>
                             <goal>test</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/main/${profile.source.directory}</source>
+                            </sources>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

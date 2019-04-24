@@ -23,6 +23,7 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.catalog._
@@ -41,7 +42,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
     with Logging {
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
   val conf: SparkConf = mergeWithDataSourceConfig(sparkSession.sparkContext.conf, options)
-  val tiConf: TiConfiguration = TiUtils.sparkConfToTiConf(conf)
+  val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.create(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 

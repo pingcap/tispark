@@ -24,7 +24,7 @@ TiSpark Architecture
 
 ## Environment Setup
 
-+ The current version of TiSpark supports Spark 2.3+. It does not support any versions earlier than Spark 2.3 .
++ The current version of TiSpark supports Spark 2.3+/2.4+. It does not support any versions earlier than Spark 2.3.
 + TiSpark requires JDK 1.8+ and Scala 2.11 (Spark2.0 + default Scala version).
 + TiSpark runs in any Spark mode such as YARN, Mesos, and Standalone.
 
@@ -134,9 +134,9 @@ If you do not have a Spark cluster, we recommend using the Spark Standalone mode
 
 You can download [Apache Spark](https://spark.apache.org/downloads.html)
 
-For the Standalone mode without Hadoop support, use Spark **2.3.x** and any version of Pre-build with Apache Hadoop 2.x with Hadoop dependencies. 
+For the Standalone mode without Hadoop support, use Spark **2.3.x,2.4.x** and any version of Pre-build with Apache Hadoop 2.x with Hadoop dependencies.
 
-If you need to use the Hadoop cluster, please choose the corresponding Hadoop version. You can also choose to build Spark from the [source code](https://spark.apache.org/docs/2.3.0/building-spark.html) to match the previous version of the official Hadoop 2.6.
+If you need to use the Hadoop cluster, please choose the corresponding Hadoop version. You can also choose to build Spark from the [Spark 2.3 source code](https://spark.apache.org/docs/2.3.3/building-spark.html) or [Spark 2.4 source code](https://spark.apache.org/docs/2.4.1/building-spark.html) to match the previous version of the official Hadoop 2.6.
 
 **Please confirm the Spark version your TiSpark version supports.**
 
@@ -167,7 +167,7 @@ After the command returns, you can see if the Slave node is joined to the Spark 
 
 #### Spark SQL shell and JDBC Server
 
-Now that TiSpark supports Spark 2.3, you can use Spark's ThriftServer and SparkSQL directly.
+Now that TiSpark supports Spark 2.3/2.4, you can use Spark's ThriftServer and SparkSQL directly.
 
 
 ## Demo
