@@ -71,6 +71,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   /**
    * Sends request to pd to scatter region.
+   *
    * @param left represents a region info
    */
   public void scatterRegion(TiRegion left) {

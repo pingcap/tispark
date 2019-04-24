@@ -27,12 +27,11 @@ object TiDataSourceExampleWithExtensions {
       .setIfMissing("spark.master", "local[*]")
       .setIfMissing("spark.app.name", getClass.getName)
       .setIfMissing("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-      .setIfMissing("tidb.addr", "127.0.0.1")
-      .setIfMissing("tidb.password", "")
-      .setIfMissing("tidb.port", "4000")
-      .setIfMissing("tidb.user", "root")
-      .setIfMissing("spark.tispark.pd.addresses", "127.0.0.1:2379")
-      .setIfMissing("spark.tispark.plan.allow_index_read", "true")
+      .setIfMissing("spark.tispark.tidb.addr", "tidb")
+      .setIfMissing("spark.tispark.tidb.password", "")
+      .setIfMissing("spark.tispark.tidb.port", "4000")
+      .setIfMissing("spark.tispark.tidb.user", "root")
+      .setIfMissing("spark.tispark.pd.addresses", "pd0:2379")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
     val sqlContext = spark.sqlContext
@@ -59,12 +58,11 @@ object TiDataSourceExampleWithExtensions {
   def usingConfigInDataSource(sqlContext: SQLContext): Unit = {
     // tidb config priority: data source config > spark config
     val tidbOptions: Map[String, String] = Map(
-      "tidb.addr" -> "127.0.0.1",
+      "tidb.addr" -> "tidb",
       "tidb.password" -> "",
       "tidb.port" -> "4000",
       "tidb.user" -> "root",
-      "spark.tispark.pd.addresses" -> "127.0.0.1:2379",
-      "spark.tispark.plan.allow_index_read" -> "true"
+      "spark.tispark.pd.addresses" -> "pd0:2379"
     )
 
     val df = sqlContext.read

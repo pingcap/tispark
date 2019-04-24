@@ -47,12 +47,11 @@ val sqlContext = spark.sqlContext
 // e.g. spark.tispark.plan.allow_agg_pushdown, spark.tispark.plan.allow_index_read, etc.
 // spark.tispark.plan.allow_index_read is optional
 val tidbOptions: Map[String, String] = Map(
-  "tidb.addr" -> "127.0.0.1",
+  "tidb.addr" -> "tidb",
   "tidb.password" -> "",
   "tidb.port" -> "4000",
   "tidb.user" -> "root",
-  "spark.tispark.pd.addresses" -> "127.0.0.1:2379",
-  "spark.tispark.plan.allow_index_read" -> "true"
+  "spark.tispark.pd.addresses" -> "pd0:2379"
 )
 
 val df = sqlContext.read
@@ -68,17 +67,23 @@ df.show()
 
 ## Write using scala
 ```scala
+import org.apache.spark.sql.SaveMode
+
 val tidbOptions: Map[String, String] = Map(
-  "tidb.addr" -> "127.0.0.1",
+  "tidb.addr" -> "tidb",
   "tidb.password" -> "",
   "tidb.port" -> "4000",
   "tidb.user" -> "root",
-  "spark.tispark.pd.addresses" -> "127.0.0.1:2379",
-  "spark.tispark.plan.allow_index_read" -> "true"
+  "spark.tispark.pd.addresses" -> "pd0:2379"
 )
 
 // data to write
-val df: DataFrame = _
+val df = sqlContext.read
+  .format("tidb")
+  .options(tidbOptions)
+  .option("database", "tpch_test")
+  .option("table", "ORDERS")
+  .load()
 
 // Overwrite
 // if target_table_overwrite does not exist, it will be created automatically
@@ -108,15 +113,14 @@ CREATE TABLE test1
   OPTIONS (
     database 'tpch_test',
     table 'CUSTOMER',
-    tidb.addr '127.0.0.1',
+    tidb.addr 'tidb',
     tidb.password '',
     tidb.port '4000',
     tidb.user 'root',
-    spark.tispark.pd.addresses '127.0.0.1:2379',
-    spark.tispark.plan.allow_index_read 'true'
-  );
+    spark.tispark.pd.addresses 'pd0:2379'
+  )
 
-select C_NAME from test1 where C_CUSTKEY = 1;
+select C_NAME from test1 where C_CUSTKEY = 1
 ```
 
 ### Write using spark sql
@@ -125,45 +129,45 @@ CREATE TABLE writeUsingSparkSQLAPI_src
   USING tidb
   OPTIONS (
     database 'tpch_test',
-    table 'CUSTOMER',
-    tidb.addr '127.0.0.1',
+    table 'ORDERS',
+    tidb.addr 'tidb',
     tidb.password '',
     tidb.port '4000',
     tidb.user 'root',
-    spark.tispark.pd.addresses '127.0.0.1:2379',
-    spark.tispark.plan.allow_index_read 'true'
-  );
+    spark.tispark.pd.addresses 'pd0:2379'
+  )
 
 // target_table should exist in tidb
+// create table target_table like ORDERS
 CREATE TABLE writeUsingSparkSQLAPI_dest
   USING tidb
   OPTIONS (
     database 'tpch_test',
     table 'target_table',
-    tidb.addr '127.0.0.1',
+    tidb.addr 'tidb',
     tidb.password '',
     tidb.port '4000',
     tidb.user 'root',
-    spark.tispark.pd.addresses '127.0.0.1:2379',
-    spark.tispark.plan.allow_index_read 'true'
-  );
+    spark.tispark.pd.addresses 'pd0:2379'
+  )
+
+// insert into select
+insert into writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
+
+// insert overwrite select
+insert overwrite table writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
 
 // insert into values
 insert into writeUsingSparkSQLAPI_dest values
-     (1000,
-     "Customer#000001000",
-     "AnJ5lxtLjioClr2khl9pb8NLxG2",
-     9,
-     "19-407-425-2584",
-     2209.81,
-     "AUTOMOBILE",
-     ". even, express theodolites upo");
-
-// insert into select
-insert into writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src;
-
-// insert overwrite select
-insert overwrite table writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src;
+     (888888,
+     370,
+     0,
+     172799.49,
+     "1996-01-02",
+     " 5-LOW",
+     "Clerk#000000951",
+     0,
+     "nstructions sleep furiously among")
 ```
 
 ## Using the Spark Connector With Extensions Enabled
@@ -175,12 +179,12 @@ val sparkConf = new SparkConf()
   .setIfMissing("spark.master", "local[*]")
   .setIfMissing("spark.app.name", getClass.getName)
   .setIfMissing("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-  .setIfMissing("tidb.addr", "127.0.0.1")
-  .setIfMissing("tidb.password", "")
-  .setIfMissing("tidb.port", "4000")
-  .setIfMissing("tidb.user", "root")
-  .setIfMissing("spark.tispark.pd.addresses", "127.0.0.1:2379")
-  .setIfMissing("spark.tispark.plan.allow_index_read", "true")
+  .setIfMissing("spark.tispark.pd.addresses", "pd0:2379")
+  .setIfMissing("spark.tispark.tidb.addr", "tidb")
+  .setIfMissing("spark.tispark.tidb.password", "")
+  .setIfMissing("spark.tispark.tidb.port", "4000")
+  .setIfMissing("spark.tispark.tidb.user", "root")
+ 
 
 val spark = SparkSession.builder.config(sparkConf).getOrCreate()
 val sqlContext = spark.sqlContext
@@ -203,11 +207,18 @@ df.show()
 
 ### Write using scala
 ```scala
+import org.apache.spark.sql.SaveMode
+
 // use tidb config in spark config if does not provide in data source config
 val tidbOptions: Map[String, String] = Map()
 
 // data to write
-val df: DataFrame = _
+val df = sqlContext.read
+  .format("tidb")
+  .options(tidbOptions)
+  .option("database", "tpch_test")
+  .option("table", "ORDERS")
+  .load()
 
 // Overwrite
 // if target_table_overwrite does not exist, it will be created automatically
@@ -236,12 +247,11 @@ TiDB config can be overwrite in data source options, thus one can connect to a d
 ```scala
 // tidb config priority: data source config > spark config
 val tidbOptions: Map[String, String] = Map(
-  "tidb.addr" -> "127.0.0.1",
+  "tidb.addr" -> "tidb",
   "tidb.password" -> "",
   "tidb.port" -> "4000",
   "tidb.user" -> "root",
-  "spark.tispark.pd.addresses" -> "127.0.0.1:2379",
-  "spark.tispark.plan.allow_index_read" -> "true"
+  "spark.tispark.pd.addresses" -> "pd0:2379"
 )
 
 val df = sqlContext.read
@@ -258,14 +268,14 @@ df.show()
 ## TiDB Options
 The following is TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
-|    Key    | required | Description |
-| ---------- | --- | --- |
-| spark.tispark.pd.addresses | true | PD Cluster Addresses, split by comma |
-| tidb.addr | true | TiDB Address, currently only support one instance |
-| tidb.port | true | TiDB Port |
-| tidb.user | true | TiDB User |
-| tidb.password | true | TiDB Password |
-| database | true | TiDB Database |
-| table | true | TiDB Table |
+|    Key    | Short Name | Required | Description |
+| ---------- | --- | --- | --- |
+| spark.tispark.pd.addresses | - | true | PD Cluster Addresses, split by comma |
+| spark.tispark.tidb.addr | tidb.addr | true | TiDB Address, currently only support one instance |
+| spark.tispark.tidb.port | tidb.port | true | TiDB Port |
+| spark.tispark.tidb.user | tidb.user | true | TiDB User |
+| spark.tispark.tidb.password | tidb.password | true | TiDB Password |
+| database | - | true | TiDB Database |
+| table | - | true | TiDB Table |
 
 TiSpark's common options can also be passed in, e.g. `spark.tispark.plan.allow_agg_pushdown`, `spark.tispark.plan.allow_index_read`, etc.

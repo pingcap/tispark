@@ -27,13 +27,22 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   import TiDBOptions._
 
+  private val optParamPrefix = "spark.tispark."
+
   def this(parameters: Map[String, String]) = {
     this(CaseInsensitiveMap(TiDBOptions.mergeWithSparkConf(parameters)))
   }
 
   private def checkAndGet(name: String): String = {
-    require(parameters.isDefinedAt(name), s"Option '$name' is required.")
-    parameters(name)
+    require(
+      parameters.isDefinedAt(name) || parameters.isDefinedAt(s"$optParamPrefix$name"),
+      s"Option '$name' is required."
+    )
+    if (parameters.isDefinedAt(name)) {
+      parameters(name)
+    } else {
+      parameters(s"$optParamPrefix$name")
+    }
   }
 
   // ------------------------------------------------------------
