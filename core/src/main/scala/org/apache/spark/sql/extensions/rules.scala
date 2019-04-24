@@ -19,10 +19,11 @@ import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.{AnalysisException, _}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.catalyst.plans.logical.{Filter, LogicalPlan, Project, SubqueryAlias}
 import org.apache.spark.sql.catalyst.rules.Rule
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
+import org.apache.spark.sql.catalyst.expressions.{Exists, ListQuery, NamedExpression, ScalarSubquery}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 
@@ -40,7 +41,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
 
   protected val resolveTiDBRelation: (TableIdentifier, TiTimestamp) => LogicalPlan =
-    (tableIdentifier: TableIdentifier, ts: TiTimestamp) => {
+    (tableIdentifier, ts) => {
       val dbName = getDatabaseFromIdentifier(tableIdentifier)
       val tableName = tableIdentifier.table
       val table = meta.getTable(dbName, tableName)
@@ -55,7 +56,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
         tiSession,
         TiTableReference(dbName, tableName, sizeInBytes),
         meta,
-        Some(ts)
+        Option.apply(ts)
       )(sqlContext)
       // Use SubqueryAlias so that projects and joins can correctly resolve
       // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
@@ -63,14 +64,37 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     }
 
   override def apply(plan: LogicalPlan): LogicalPlan = {
-    val ts = tiContext.tiSession.getTimestamp
-    plan transformUp {
+    val ts = tiSession.getTimestamp
+
+    def applyTimestamp: PartialFunction[LogicalPlan, LogicalPlan] = {
       case UnresolvedRelation(tableIdentifier)
           if tiCatalog
             .catalogOf(tableIdentifier.database)
             .exists(_.isInstanceOf[TiSessionCatalog]) =>
         resolveTiDBRelation(tableIdentifier, ts)
+      case f @ Filter(condition, _) =>
+        f.copy(
+          condition = condition.transform {
+            case e @ Exists(p, _, _) =>
+              e.copy(plan = p.transform(applyTimestamp))
+            case ls @ ListQuery(p, _, _, _) =>
+              ls.copy(plan = p.transform(applyTimestamp))
+            case s @ ScalarSubquery(p, _, _) =>
+              s.copy(plan = p.transform(applyTimestamp))
+          }
+        )
+      case p @ Project(projectList, _) =>
+        p.copy(
+          projectList = projectList.map {
+            _.transform {
+              case s @ ScalarSubquery(q, _, _) =>
+                s.copy(plan = q.transform(applyTimestamp))
+            }.asInstanceOf[NamedExpression]
+          }
+        )
     }
+
+    plan transformUp applyTimestamp
   }
 }
 

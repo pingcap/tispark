@@ -61,12 +61,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
     private val tiPartition = split.asInstanceOf[TiPartition]
     private val session = TiSessionCache.getSession(tiConf)
     session.injectCallBackFunc(callBackFunc)
-    val ts = if (dagRequest.getStartTs == null) {
-      session.getTimestamp
-    } else {
-      dagRequest.getStartTs
-    }
-    private val snapshot = session.createSnapshot(ts)
+    private val snapshot = session.createSnapshot(dagRequest.getStartTs)
     private[this] val tasks = tiPartition.tasks
 
     private val iterator = snapshot.tableRead(dagRequest, tasks)
