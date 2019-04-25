@@ -252,14 +252,19 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     if (tiColumns.isEmpty) {
       // we cannot send a request with empty columns
-      if (!scanPlan.isIndexScan) {
-        // add a random column so that the plan will contain at least one column.
-        val column = source.table.getColumn(0)
-        dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
-      } else {
+      if (scanPlan.isIndexScan) {
         // add the first index column so that the plan will contain at least one column.
         val idxColumn = scanPlan.getIndex.getIndexColumns.get(0)
         dagRequest.addRequiredColumn(ColumnRef.create(idxColumn.getName))
+      } else {
+        // add a random column so that the plan will contain at least one column.
+        // if the table contains a primary key then use the PK instead.
+        val column = source.table.getColumns.asScala
+          .collectFirst {
+            case e if e.isPrimaryKey => e
+          }
+          .getOrElse(source.table.getColumn(0))
+        dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
       }
     }
 
