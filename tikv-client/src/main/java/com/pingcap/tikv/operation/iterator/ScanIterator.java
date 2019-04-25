@@ -60,10 +60,10 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   // return false if current cache is loaded or not empty.
   private boolean loadCache() {
     if (endOfScan) {
-      return true;
+      return false;
     }
     if (startKey.isEmpty()) {
-      return true;
+      return false;
     }
     Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByKey(startKey);
     TiRegion region = pair.first;
@@ -76,7 +76,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       // an empty region exists due to deletion, region split, e.t.c.
       // See https://github.com/pingcap/tispark/issues/393 for details
       if (currentCache == null) {
-        return true;
+        return false;
       }
       index = 0;
       // Session should be single-threaded itself
@@ -93,7 +93,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     } catch (Exception e) {
       throw new TiClientInternalException("Error scanning data from region.", e);
     }
-    return false;
+    return true;
   }
 
   private boolean isCacheDrained() {
@@ -102,7 +102,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
 
   @Override
   public boolean hasNext() {
-    if (isCacheDrained() && loadCache()) {
+    if (isCacheDrained() && !loadCache()) {
       endOfScan = true;
       return false;
     }
@@ -134,7 +134,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     Kvrpcpb.KvPair current;
     // continue when cache is empty but not null
     for (current = getCurrent(); currentCache != null && current == null; current = getCurrent()) {
-      if (loadCache()) {
+      if (!loadCache()) {
         return null;
       }
     }
@@ -142,9 +142,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     Objects.requireNonNull(current, "current kv pair cannot be null");
     if (current.hasError()) {
       ByteString val = resolveCurrentLock(current);
-      current = KvPair.newBuilder()
-          .setKey(current.getKey())
-          .setValue(val).build();
+      current = KvPair.newBuilder().setKey(current.getKey()).setValue(val).build();
     }
 
     return current;

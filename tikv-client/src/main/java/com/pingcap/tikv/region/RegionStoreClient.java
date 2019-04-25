@@ -142,8 +142,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
         if (resp.getError().hasLocked()) {
           Lock lock = new Lock(resp.getError().getLocked());
           boolean ok =
-              lockResolverClient.resolveLocks(backOffer, new ArrayList<>(
-                  Collections.singletonList(lock)));
+              lockResolverClient.resolveLocks(
+                  backOffer, new ArrayList<>(Collections.singletonList(lock)));
           if (!ok) {
             // if not resolve all locks, we wait and retry
             backOffer.doBackOff(
@@ -328,12 +328,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               conflict.getPrimary(), conflict.getConflictTs()));
     }
 
-    if (!keyError.getRetryable().equals("")) {
+    if (!keyError.getRetryable().isEmpty()) {
       throw new KeyException(
           String.format("tikv restart txn %s", keyError.getRetryableBytes().toStringUtf8()));
     }
 
-    if (!keyError.getAbort().equals("")) {
+    if (!keyError.getAbort().isEmpty()) {
       throw new KeyException(
           String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
     }
@@ -400,8 +400,9 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     if (response.hasLocked()) {
       Lock lock = new Lock(response.getLocked());
       logger.debug(String.format("coprocessor encounters locks: %s", lock));
-      boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(
-          Collections.singletonList(lock)));
+      boolean ok =
+          lockResolverClient.resolveLocks(
+              backOffer, new ArrayList<>(Collections.singletonList(lock)));
       if (!ok) {
         backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
       }
