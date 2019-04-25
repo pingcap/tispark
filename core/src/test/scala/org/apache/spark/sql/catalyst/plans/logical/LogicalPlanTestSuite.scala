@@ -8,7 +8,7 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 class LogicalPlanTestSuite extends BaseTiSparkSuite {
 
-  test("wtf") {
+  test("test timestamp in logical plan") {
     tidbStmt.execute("DROP TABLE IF EXISTS `test1`")
     tidbStmt.execute("DROP TABLE IF EXISTS `test2`")
     tidbStmt.execute("DROP TABLE IF EXISTS `test3`")
