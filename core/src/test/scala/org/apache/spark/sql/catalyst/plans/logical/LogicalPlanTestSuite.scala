@@ -27,34 +27,39 @@ class LogicalPlanTestSuite extends BaseTiSparkSuite {
       "insert into test3 values(1, 2, 3), (2, 1, 3), (2, 1, 4), (3, 2, 3), (4, 2, 1)"
     )
     refreshConnections()
-    val df = spark.sql("""
-                         |select t1.*, (
-                         |select count(*)
-                         |from test2
-                         |where id > 1
-                         |), t1.c1, t2.c1, t3.*, t4.c3
-                         |from (
-                         |select id, c1, c2
-                         |from test1) t1
-                         |left join (
-                         |select id, c1, c2, c1 + coalesce(c2 % 2) as c3
-                         |from test2 where c1 + c2 > 3) t2
-                         |on t1.id = t2.id
-                         |left join (
-                         |select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
-                         |from test3
-                         |where c2 <= 3 and c1 > 0
-                         |group by c2) t3
-                         |on t1.id = t3.id
-                         |left join (
-                         |select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
-                         |from test3
-                         |where id not in (
-                         |select id
-                         |from test1
-                         |where c2 > 2)
-                         |group by c2) t4
-                         |on t1.id = t4.id
+    val df =
+      spark.sql("""
+                  |select t1.*, (
+                  |	select count(*)
+                  |	from test2
+                  |	where id > 1
+                  |), t1.c1, t2.c1, t3.*, t4.c3
+                  |from (
+                  |	select id, c1, c2
+                  |	from test1) t1
+                  |left join (
+                  |	select id, c1, c2, c1 + coalesce(c2 % 2) as c3
+                  |	from test2 where c1 + c2 > 3) t2
+                  |on t1.id = t2.id
+                  |left join (
+                  |	select max(id) as id, min(c1) + c2 as c1, c2, count(*) as c3
+                  |	from test3
+                  |	where c2 <= 3 and exists (
+                  |		select * from (
+                  |			select id as c1 from test3)
+                  |    where (
+                  |      select max(id) from test1) = 4)
+                  |	group by c2) t3
+                  |on t1.id = t3.id
+                  |left join (
+                  |	select max(id) as id, min(c1) as c1, max(c1) as c1, count(*) as c2, c2 as c3
+                  |	from test3
+                  |	where id not in (
+                  |		select id
+                  |		from test1
+                  |		where c2 > 2)
+                  |	group by c2) t4
+                  |on t1.id = t4.id
       """.stripMargin)
 
     var v: Option[TiTimestamp] = None
@@ -93,7 +98,9 @@ class LogicalPlanTestSuite extends BaseTiSparkSuite {
         }
       case _ =>
     }
+    println(df.queryExecution.analyzed)
     df.queryExecution.analyzed.foreach { checkTimestamp }
+    df.show
   }
 
   override def afterAll(): Unit =

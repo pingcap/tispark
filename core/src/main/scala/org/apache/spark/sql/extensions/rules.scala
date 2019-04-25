@@ -56,7 +56,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
         tiSession,
         TiTableReference(dbName, tableName, sizeInBytes),
         meta,
-        Option.apply(ts)
+        Some(ts)
       )(sqlContext)
       // Use SubqueryAlias so that projects and joins can correctly resolve
       // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.

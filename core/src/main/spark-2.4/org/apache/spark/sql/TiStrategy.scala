@@ -250,6 +250,19 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       tableScanPlan
     }
 
+    if (tiColumns.isEmpty) {
+      // we cannot send a request with empty columns
+      if (!scanPlan.isIndexScan) {
+        // add a random column so that the plan will contain at least one column.
+        val column = source.table.getColumn(0)
+        dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
+      } else {
+        // add the first index column so that the plan will contain at least one column.
+        val idxColumn = scanPlan.getIndex.getIndexColumns.get(0)
+        dagRequest.addRequiredColumn(ColumnRef.create(idxColumn.getName))
+      }
+    }
+
     dagRequest.addRanges(scanPlan.getKeyRanges)
     dagRequest.setPrunedParts(scanPlan.getPrunedParts)
     scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
@@ -340,12 +353,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val tiColumns = buildTiColumnRefFromColumnSeq(projectSet ++ filterSet, source)
 
     filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
-
-    if (tiColumns.isEmpty) {
-      // if tiColumns is empty, add a random column so that the plan will contain at least one column.
-      val column = source.table.getColumn(0)
-      dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
-    }
 
     // Right now we still use a projection even if the only evaluation is applying an alias
     // to a column.  Since this is a no-op, it could be avoided. However, using this

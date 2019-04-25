@@ -41,6 +41,7 @@ import com.pingcap.tikv.util.Pair;
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import org.tikv.kvproto.Coprocessor;
 
 /**
@@ -119,7 +120,7 @@ public class TiDAGRequest implements Serializable {
       return this;
     }
 
-    public Builder setStartTs(TiTimestamp ts) {
+    public Builder setStartTs(@Nonnull TiTimestamp ts) {
       this.startTs = ts;
       return this;
     }
@@ -556,7 +557,7 @@ public class TiDAGRequest implements Serializable {
    * @param startTs timestamp
    * @return a TiDAGRequest
    */
-  public TiDAGRequest setStartTs(TiTimestamp startTs) {
+  public TiDAGRequest setStartTs(@Nonnull TiTimestamp startTs) {
     this.startTs = startTs;
     return this;
   }
