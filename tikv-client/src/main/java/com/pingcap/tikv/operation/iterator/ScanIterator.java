@@ -57,7 +57,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     this.version = version;
   }
 
-  // return false if current cache is loaded or not empty.
+  // return false if current cache is not loaded or empty
   private boolean loadCache() {
     if (endOfScan) {
       return false;
