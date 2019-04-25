@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.RegionManager;
@@ -29,10 +30,14 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
+import org.apache.log4j.Logger;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Metapb;
 
 public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
+  private final Logger logger = Logger.getLogger(ScanIterator.class);
   protected final TiSession session;
   private final RegionManager regionCache;
   protected final long version;
@@ -111,15 +116,35 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     return currentCache.get(index++);
   }
 
+  private ByteString resolveCurrentLock(Kvrpcpb.KvPair current) {
+    logger.warn(String.format("resolve current key error %s", current.getError().toString()));
+    Pair<TiRegion, Metapb.Store> pair = regionCache.getRegionStorePairByKey(startKey);
+    TiRegion region = pair.first;
+    Metapb.Store store = pair.second;
+    BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+    try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
+      return client.get(backOffer, current.getKey(), version);
+    } catch (Exception e) {
+      throw new KeyException(current.getError());
+    }
+  }
+
   @Override
   public Kvrpcpb.KvPair next() {
-    Kvrpcpb.KvPair kv;
+    Kvrpcpb.KvPair current;
     // continue when cache is empty but not null
-    for (kv = getCurrent(); currentCache != null && kv == null; kv = getCurrent()) {
+    for (current = getCurrent(); currentCache != null && current == null; current = getCurrent()) {
       if (!loadCache()) {
         return null;
       }
     }
-    return kv;
+
+    Objects.requireNonNull(current, "current kv pair cannot be null");
+    if (current.hasError()) {
+      ByteString val = resolveCurrentLock(current);
+      current = KvPair.newBuilder().setKey(current.getKey()).setValue(val).build();
+    }
+
+    return current;
   }
 }
