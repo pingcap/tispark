@@ -29,7 +29,7 @@ import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.PrunedPartitionBuilder;
-import com.pingcap.tikv.key.IndexKey;
+import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
@@ -295,50 +295,6 @@ public class ScanAnalyzer {
     }
   }
 
-  private Pair<Key, Key> buildIndexScanKeyRangePerId(long id, TiIndexInfo index, IndexRange ir) {
-    Key pointKey = ir.hasAccessKey() ? ir.getAccessKey() : Key.EMPTY;
-
-    Range<TypedKey> range = ir.getRange();
-    Key lPointKey;
-    Key uPointKey;
-
-    Key lKey;
-    Key uKey;
-    if (!ir.hasRange()) {
-      lPointKey = pointKey;
-      uPointKey = pointKey.next();
-
-      lKey = Key.EMPTY;
-      uKey = Key.EMPTY;
-    } else {
-      lPointKey = pointKey;
-      uPointKey = pointKey;
-
-      if (!range.hasLowerBound()) {
-        // -INF
-        lKey = Key.NULL;
-      } else {
-        lKey = range.lowerEndpoint();
-        if (range.lowerBoundType().equals(BoundType.OPEN)) {
-          lKey = lKey.next();
-        }
-      }
-
-      if (!range.hasUpperBound()) {
-        // INF
-        uKey = Key.MAX;
-      } else {
-        uKey = range.upperEndpoint();
-        if (range.upperBoundType().equals(BoundType.CLOSED)) {
-          uKey = uKey.next();
-        }
-      }
-    }
-    IndexKey lbsKey = IndexKey.toIndexKey(id, index.getId(), lPointKey, lKey);
-    IndexKey ubsKey = IndexKey.toIndexKey(id, index.getId(), uPointKey, uKey);
-    return new Pair<>(lbsKey, ubsKey);
-  }
-
   @VisibleForTesting
   List<KeyRange> buildIndexScanKeyRange(
       TiTableInfo table,
@@ -350,19 +306,16 @@ public class ScanAnalyzer {
     requireNonNull(indexRanges, "indexRanges cannot be null to encoding keyRange");
 
     List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
-
     for (IndexRange ir : indexRanges) {
       if (!table.isPartitionEnabled()) {
-        Pair<Key, Key> pairKeys = buildIndexScanKeyRangePerId(table.getId(), index, ir);
-        Key lbsKey = pairKeys.first;
-        Key ubsKey = pairKeys.second;
-        ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
+        IndexScanKeyRangeBuilder indexScanKeyRangeBuilder =
+            new IndexScanKeyRangeBuilder(table.getId(), index, ir);
+        ranges.add(indexScanKeyRangeBuilder.compute());
       } else {
         for (TiPartitionDef pDef : prunedParts) {
-          Pair<Key, Key> pairKeys = buildIndexScanKeyRangePerId(pDef.getId(), index, ir);
-          Key lbsKey = pairKeys.first;
-          Key ubsKey = pairKeys.second;
-          ranges.add(makeCoprocRange(lbsKey.toByteString(), ubsKey.toByteString()));
+          IndexScanKeyRangeBuilder indexScanKeyRangeBuilder =
+              new IndexScanKeyRangeBuilder(pDef.getId(), index, ir);
+          ranges.add(indexScanKeyRangeBuilder.compute());
         }
       }
     }
