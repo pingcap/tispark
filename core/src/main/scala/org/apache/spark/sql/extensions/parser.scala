@@ -15,7 +15,7 @@
 package org.apache.spark.sql.extensions
 
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.catalyst.expressions.{Exists, Expression, ListQuery, NamedExpression, ScalarSubquery}
+import org.apache.spark.sql.catalyst.expressions.{Expression, SubqueryExpression}
 import org.apache.spark.sql.catalyst.parser._
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
@@ -57,41 +57,28 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier) if needQualify(tableIdentifier) =>
       r.copy(qualifyTableIdentifierInternal(tableIdentifier))
-    case f @ Filter(condition, _) =>
-      f.copy(
-        condition = condition.transform {
-          case e @ Exists(plan, _, _) => e.copy(plan = plan.transform(qualifyTableIdentifier))
-          case ls @ ListQuery(plan, _, _, _) =>
-            ls.copy(plan = plan.transform(qualifyTableIdentifier))
-          case s @ ScalarSubquery(plan, _, _) =>
-            s.copy(plan = plan.transform(qualifyTableIdentifier))
-        }
-      )
-    case p @ Project(projectList, _) =>
-      p.copy(
-        projectList = projectList.map(_.transform {
-          case s @ ScalarSubquery(plan, _, _) =>
-            s.copy(plan = plan.transform(qualifyTableIdentifier))
-        }.asInstanceOf[NamedExpression])
-      )
     case w @ With(_, cteRelations) =>
       w.copy(
         cteRelations = cteRelations
           .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias]))
       )
     case cv @ CreateViewCommand(_, _, _, _, _, child, _, _, _) =>
-      cv.copy(child = child.transform(qualifyTableIdentifier))
-    case e @ ExplainCommand(logicalPlan, _, _, _) =>
-      e.copy(logicalPlan = logicalPlan.transform(qualifyTableIdentifier))
+      cv.copy(child = child transform qualifyTableIdentifier)
+    case e @ ExplainCommand(plan, _, _, _) =>
+      e.copy(logicalPlan = plan transform qualifyTableIdentifier)
     case c @ CacheTableCommand(tableIdentifier, plan, _)
         if plan.isEmpty && needQualify(tableIdentifier) =>
       // Caching an unqualified catalog table.
       c.copy(qualifyTableIdentifierInternal(tableIdentifier))
     case c @ CacheTableCommand(_, plan, _) if plan.isDefined =>
-      c.copy(plan = Some(plan.get.transform(qualifyTableIdentifier)))
+      c.copy(plan = Some(plan.get transform qualifyTableIdentifier))
     case u @ UncacheTableCommand(tableIdentifier, _) if needQualify(tableIdentifier) =>
       // Uncaching an unqualified catalog table.
       u.copy(qualifyTableIdentifierInternal(tableIdentifier))
+    case logicalPlan =>
+      logicalPlan transformExpressionsUp {
+        case s: SubqueryExpression => s.withNewPlan(s.plan transform qualifyTableIdentifier)
+      }
   }
 
   override def parsePlan(sqlText: String): LogicalPlan =

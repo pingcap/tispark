@@ -3,7 +3,7 @@ package org.apache.spark.sql.catalyst.plans.logical
 import com.pingcap.tikv.meta.TiTimestamp
 import com.pingcap.tispark.TiDBRelation
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.catalyst.expressions.{Exists, ListQuery, ScalarSubquery}
+import org.apache.spark.sql.catalyst.expressions.{Exists, ListQuery, ScalarSubquery, SubqueryExpression}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 
 class LogicalPlanTestSuite extends BaseTiSparkSuite {
@@ -78,25 +78,12 @@ class LogicalPlanTestSuite extends BaseTiSparkSuite {
     def checkTimestamp: PartialFunction[LogicalPlan, Unit] = {
       case _ @LogicalRelation(r: TiDBRelation, _, _, _) =>
         check(r.ts)
-      case _ @Filter(condition, _) =>
-        condition foreach {
-          case _ @Exists(p, _, _) =>
-            p.foreach(checkTimestamp)
-          case _ @ListQuery(p, _, _, _) =>
-            p.foreach(checkTimestamp)
-          case _ @ScalarSubquery(p, _, _) =>
-            p.foreach(checkTimestamp)
-          case _ =>
+      case plan =>
+        plan transformExpressionsUp {
+          case s: SubqueryExpression =>
+            s.plan.foreach(checkTimestamp)
+            s
         }
-      case _ @Project(projectList, _) =>
-        projectList foreach { u =>
-          u foreach {
-            case _ @ScalarSubquery(p, _, _) =>
-              p.foreach(checkTimestamp)
-            case _ =>
-          }
-        }
-      case _ =>
     }
     println(df.queryExecution.analyzed)
     df.queryExecution.analyzed.foreach { checkTimestamp }
