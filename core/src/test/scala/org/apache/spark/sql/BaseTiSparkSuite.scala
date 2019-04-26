@@ -87,7 +87,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   protected def setCurrentDatabase(dbName: String): Unit =
     if (tiCatalog
-          .catalogOf(Option.apply(dbPrefix + dbName))
+          .catalogOf(Some(dbPrefix + dbName))
           .exists(_.isInstanceOf[TiSessionCatalog])) {
       tidbConn.setCatalog(dbName)
       initializeTimeZone()

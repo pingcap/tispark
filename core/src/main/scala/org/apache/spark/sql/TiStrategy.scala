@@ -109,11 +109,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     output: Seq[Attribute],
     dagRequest: TiDAGRequest
   ): SparkPlan = {
-    val table = source.table
-    val ts = source.ts.getOrElse(source.session.getTimestamp)
-    dagRequest.setTableInfo(table)
-    dagRequest.setStartTs(ts)
-    // Need to resolve column info after add aggregation push downs
+    dagRequest.setTableInfo(source.table)
+    dagRequest.setStartTs(source.ts.get)
     dagRequest.resolve()
 
     val notAllowPushDown = dagRequest.getFields.asScala
@@ -260,9 +257,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       dagRequest.setIsDoubleRead(scanPlan.isDoubleRead)
     }
 
-    val ts = source.ts.getOrElse(source.session.getTimestamp)
     dagRequest.setTableInfo(source.table)
-    dagRequest.setStartTs(ts)
+    dagRequest.setStartTs(source.ts.get)
     dagRequest.setEstimatedCount(scanPlan.getEstimatedRowCount)
     dagRequest
   }
@@ -344,9 +340,21 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
 
     if (tiColumns.isEmpty) {
-      // if tiColumns is empty, add a random column so that the plan will contain at least one column.
-      val column = source.table.getColumn(0)
-      dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
+      // we cannot send a request with empty columns
+      if (dagRequest.hasIndex) {
+        // add the first index column so that the plan will contain at least one column.
+        val idxColumn = dagRequest.getIndexInfo.getIndexColumns.get(0)
+        dagRequest.addRequiredColumn(ColumnRef.create(idxColumn.getName))
+      } else {
+        // add a random column so that the plan will contain at least one column.
+        // if the table contains a primary key then use the PK instead.
+        val column = source.table.getColumns.asScala
+          .collectFirst {
+            case e if e.isPrimaryKey => e
+          }
+          .getOrElse(source.table.getColumn(0))
+        dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
+      }
     }
 
     // Right now we still use a projection even if the only evaluation is applying an alias

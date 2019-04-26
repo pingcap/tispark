@@ -55,7 +55,8 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
   override val outputOrdering: Seq[SortOrder] = Nil
 
-  val internalRDD: RDD[InternalRow] = RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
+  private val internalRDD: RDD[InternalRow] =
+    RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
   private lazy val project = UnsafeProjection.create(schema)
 
   private def internalRowToUnsafeRowWithIndex(

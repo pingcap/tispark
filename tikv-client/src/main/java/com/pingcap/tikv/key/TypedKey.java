@@ -24,10 +24,12 @@ import com.pingcap.tikv.types.DataType;
 
 public class TypedKey extends Key {
   private final DataType type;
+  private final int prefixLength;
 
   public TypedKey(Object val, DataType type, int prefixLength) {
     super(encodeKey(val, type, prefixLength));
     this.type = type;
+    this.prefixLength = prefixLength;
   }
 
   public DataType getType() {
@@ -64,7 +66,12 @@ public class TypedKey extends Key {
     return cdo.toBytes();
   }
 
-  public TypedKey next(int prefixLength) {
+  /**
+   * Next TypedKey be truncated with prefixLength
+   *
+   * @return next TypedKey with same prefix length
+   */
+  public TypedKey next() {
     Object val = getValue();
     if (val instanceof String) {
       return toTypedKey(prefixNext(((String) val).getBytes()), type, prefixLength);
