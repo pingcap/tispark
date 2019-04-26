@@ -31,7 +31,7 @@ object TiDataSourceExampleWithExtensions {
       .setIfMissing("spark.tispark.tidb.password", "")
       .setIfMissing("spark.tispark.tidb.port", "4000")
       .setIfMissing("spark.tispark.tidb.user", "root")
-      .setIfMissing("spark.tispark.pd.addresses", "pd0:2379")
+      .setIfMissing("spark.tispark.pd.addresses", "127.0.0.1:2379")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
     val sqlContext = spark.sqlContext
@@ -58,11 +58,11 @@ object TiDataSourceExampleWithExtensions {
   def usingConfigInDataSource(sqlContext: SQLContext): Unit = {
     // tidb config priority: data source config > spark config
     val tidbOptions: Map[String, String] = Map(
-      "tidb.addr" -> "tidb",
+      "tidb.addr" -> "127.0.0.1",
       "tidb.password" -> "",
       "tidb.port" -> "4000",
       "tidb.user" -> "root",
-      "spark.tispark.pd.addresses" -> "pd0:2379"
+      "spark.tispark.pd.addresses" -> "127.0.0.1:2379"
     )
 
     val df = sqlContext.read
