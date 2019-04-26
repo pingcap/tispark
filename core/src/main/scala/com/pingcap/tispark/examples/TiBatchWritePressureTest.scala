@@ -47,8 +47,6 @@ object TiBatchWritePressureTest {
       .setIfMissing("tidb.port", "4000")
       .setIfMissing("tidb.user", "root")
       .setIfMissing("spark.tispark.pd.addresses", "172.16.30.81:2379")
-      .setIfMissing("spark.tispark.plan.allow_index_read", "true")
-      .setIfMissing("spark.tispark.pd.addresses", "172.16.30.81:2379")
       .setIfMissing("spark.tispark.show_rowid", "true")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()

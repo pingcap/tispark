@@ -24,12 +24,14 @@ import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
+import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{Row, TiContext}
 import org.slf4j.LoggerFactory
+
 import scala.collection.JavaConverters._
 
 /**
@@ -43,12 +45,13 @@ object TiBatchWrite {
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
   // TODO: port this val into conf
-  private val skipCommitSecondaryKey = true
+  // disabled because of this bug: https://internal.pingcap.net/jira/browse/TISPARK-127
+  private val skipCommitSecondaryKey = false
   private val fraction = 0.01
 
   private def calcRDDSize(rdd: RDD[Row]): Long =
-  // TODO: this is only approximate estimate
-  // change to key value form for better approximation.
+    // TODO: this is only approximate estimate
+    // change to key value form for better approximation.
     rdd
       .map(_.mkString(",").getBytes("UTF-8").length.toLong)
       .reduce(_ + _) //add the sizes together
@@ -328,7 +331,7 @@ object TiBatchWrite {
     for (i <- 0 until fieldCount) {
       val data = sparkRow.get(i)
       val sparkDataType = sparkRow.schema(i).dataType
-      val tiDataType = TiUtils.fromSparkType(sparkDataType)
+      val tiDataType = TiUtil.fromSparkType(sparkDataType)
       tiRow.set(i, tiDataType, data)
     }
     tiRow

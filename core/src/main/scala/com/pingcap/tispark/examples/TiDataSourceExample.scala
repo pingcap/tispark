@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark
+package com.pingcap.tispark.examples
 
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession}
@@ -50,12 +50,11 @@ object TiDataSourceExample {
     // e.g. spark.tispark.plan.allow_agg_pushdown, spark.tispark.plan.allow_index_read, etc.
     // spark.tispark.plan.allow_index_read is optional
     val tidbOptions: Map[String, String] = Map(
-      "tidb.addr" -> "127.0.0.1",
+      "tidb.addr" -> "tidb",
       "tidb.password" -> "",
       "tidb.port" -> "4000",
       "tidb.user" -> "root",
-      "spark.tispark.pd.addresses" -> "127.0.0.1:2379",
-      "spark.tispark.plan.allow_index_read" -> "true"
+      "spark.tispark.pd.addresses" -> "pd0:2379"
     )
 
     val df = sqlContext.read
@@ -73,11 +72,11 @@ object TiDataSourceExample {
     // e.g. spark.tispark.plan.allow_agg_pushdown, spark.tispark.plan.allow_index_read, etc.
     // spark.tispark.plan.allow_index_read is optional
     val tidbOptions: Map[String, String] = Map(
-      "tidb.addr" -> "127.0.0.1",
+      "tidb.addr" -> "tidb",
       "tidb.password" -> "",
       "tidb.port" -> "4000",
       "tidb.user" -> "root",
-      "spark.tispark.pd.addresses" -> "127.0.0.1:2379",
+      "spark.tispark.pd.addresses" -> "pd0:2379",
       "spark.tispark.plan.allow_index_read" -> "true"
     )
 
@@ -98,11 +97,11 @@ object TiDataSourceExample {
     // e.g. spark.tispark.plan.allow_agg_pushdown, spark.tispark.plan.allow_index_read, etc.
     // spark.tispark.plan.allow_index_read is optional
     val tidbOptions: Map[String, String] = Map(
-      "tidb.addr" -> "127.0.0.1",
+      "tidb.addr" -> "tidb",
       "tidb.password" -> "",
       "tidb.port" -> "4000",
       "tidb.user" -> "root",
-      "spark.tispark.pd.addresses" -> "127.0.0.1:2379",
+      "spark.tispark.pd.addresses" -> "pd0:2379",
       "spark.tispark.plan.allow_index_read" -> "true"
     )
 
@@ -136,12 +135,11 @@ object TiDataSourceExample {
                       |OPTIONS (
                       |  database 'tpch_test',
                       |  table 'CUSTOMER',
-                      |  tidb.addr '127.0.0.1',
+                      |  tidb.addr 'tidb',
                       |  tidb.password '',
                       |  tidb.port '4000',
                       |  tidb.user 'root',
-                      |  spark.tispark.pd.addresses '127.0.0.1:2379',
-                      |  spark.tispark.plan.allow_index_read 'true'
+                      |  spark.tispark.pd.addresses 'pd0:2379'
                       |)
        """.stripMargin)
 
@@ -165,12 +163,11 @@ object TiDataSourceExample {
                       |OPTIONS (
                       |  database 'tpch_test',
                       |  table 'CUSTOMER',
-                      |  tidb.addr '127.0.0.1',
+                      |  tidb.addr 'tidb',
                       |  tidb.password '',
                       |  tidb.port '4000',
                       |  tidb.user 'root',
-                      |  spark.tispark.pd.addresses '127.0.0.1:2379',
-                      |  spark.tispark.plan.allow_index_read 'true'
+                      |  spark.tispark.pd.addresses 'pd0:2379'
                       |)
        """.stripMargin)
 
@@ -186,12 +183,11 @@ object TiDataSourceExample {
                       |OPTIONS (
                       |  database 'tpch_test',
                       |  table 'CUSTOMER',
-                      |  tidb.addr '127.0.0.1',
+                      |  tidb.addr 'tidb',
                       |  tidb.password '',
                       |  tidb.port '4000',
                       |  tidb.user 'root',
-                      |  spark.tispark.pd.addresses '127.0.0.1:2379',
-                      |  spark.tispark.plan.allow_index_read 'true'
+                      |  spark.tispark.pd.addresses 'pd0:2379'
                       |)
        """.stripMargin)
 
@@ -202,12 +198,11 @@ object TiDataSourceExample {
                       |OPTIONS (
                       |  database 'tpch_test',
                       |  table 'target_table',
-                      |  tidb.addr '127.0.0.1',
+                      |  tidb.addr 'tidb',
                       |  tidb.password '',
                       |  tidb.port '4000',
                       |  tidb.user 'root',
-                      |  spark.tispark.pd.addresses '127.0.0.1:2379',
-                      |  spark.tispark.plan.allow_index_read 'true'
+                      |  spark.tispark.pd.addresses 'pd0:2379'
                       |)
        """.stripMargin)
 

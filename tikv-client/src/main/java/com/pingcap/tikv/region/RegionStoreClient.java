@@ -765,8 +765,9 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   /**
-   * Send SplitRegion request to tikv split a region at splitKey.
-   * splitKey must between current region's start key and end key.
+   * Send SplitRegion request to tikv split a region at splitKey. splitKey must between current
+   * region's start key and end key.
+   *
    * @param splitKey is the split point for a specific region.
    * @return a split region info.
    */
