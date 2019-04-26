@@ -372,6 +372,7 @@ public class TiDAGRequest implements Serializable {
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
     }
 
+    // Should build these executors when performing CoveringIndexScan/TableScan
     if (!buildIndexScan || !isDoubleRead()) {
       // clear executorBuilder
       executorBuilder.clear();
