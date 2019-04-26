@@ -31,16 +31,14 @@ import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Cast, Divide, Expression, IntegerLiteral, Literal, NamedExpression, SortOrder}
-import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Expression, IntegerLiteral, NamedExpression, SortOrder}
+import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.types._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -250,24 +248,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       tableScanPlan
     }
 
-    if (tiColumns.isEmpty) {
-      // we cannot send a request with empty columns
-      if (scanPlan.isIndexScan) {
-        // add the first index column so that the plan will contain at least one column.
-        val idxColumn = scanPlan.getIndex.getIndexColumns.get(0)
-        dagRequest.addRequiredColumn(ColumnRef.create(idxColumn.getName))
-      } else {
-        // add a random column so that the plan will contain at least one column.
-        // if the table contains a primary key then use the PK instead.
-        val column = source.table.getColumns.asScala
-          .collectFirst {
-            case e if e.isPrimaryKey => e
-          }
-          .getOrElse(source.table.getColumn(0))
-        dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
-      }
-    }
-
     dagRequest.addRanges(scanPlan.getKeyRanges)
     dagRequest.setPrunedParts(scanPlan.getPrunedParts)
     scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
@@ -358,6 +338,24 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val tiColumns = buildTiColumnRefFromColumnSeq(projectSet ++ filterSet, source)
 
     filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
+
+    if (tiColumns.isEmpty) {
+      // we cannot send a request with empty columns
+      if (dagRequest.hasIndex) {
+        // add the first index column so that the plan will contain at least one column.
+        val idxColumn = dagRequest.getIndexInfo.getIndexColumns.get(0)
+        dagRequest.addRequiredColumn(ColumnRef.create(idxColumn.getName))
+      } else {
+        // add a random column so that the plan will contain at least one column.
+        // if the table contains a primary key then use the PK instead.
+        val column = source.table.getColumns.asScala
+          .collectFirst {
+            case e if e.isPrimaryKey => e
+          }
+          .getOrElse(source.table.getColumn(0))
+        dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
+      }
+    }
 
     // Right now we still use a projection even if the only evaluation is applying an alias
     // to a column.  Since this is a no-op, it could be avoided. However, using this
@@ -537,65 +535,4 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
         )
       case _ => Nil
     }
-}
-
-object TiAggregation {
-  type ReturnType = PhysicalAggregation.ReturnType
-
-  def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
-    case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
-      // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
-      // converted `Sum`s and `Count`s down to TiKV.
-      val (averages, averagesEliminated) = aggregateExpressions.partition {
-        case AggregateExpression(_: Average, _, _, _) => true
-        case _                                        => false
-      }
-
-      // An auxiliary map that maps result attribute IDs of all detected `Average`s to corresponding
-      // converted `Sum`s and `Count`s.
-      val rewriteMap = averages.map {
-        case a @ AggregateExpression(Average(ref), _, _, _) =>
-          // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
-          // scenarios to stay consistent with original spark's Average behaviour
-          val sum = if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
-          a.resultAttribute -> Seq(
-            a.copy(aggregateFunction = sum, resultId = newExprId),
-            a.copy(aggregateFunction = Count(ref), resultId = newExprId)
-          )
-      }.toMap
-
-      val rewrite: PartialFunction[Expression, Expression] = rewriteMap.map {
-        case (ref, Seq(sum, count)) =>
-          val castedSum = Cast(sum.resultAttribute, DoubleType)
-          val castedCount = Cast(count.resultAttribute, DoubleType)
-          val division = Cast(Divide(castedSum, castedCount), ref.dataType)
-          (ref: Expression) -> Alias(division, ref.name)(exprId = ref.exprId)
-      }
-
-      val rewrittenResultExpressions = resultExpressions
-        .map { _ transform rewrite }
-        .map { case e: NamedExpression => e }
-
-      val rewrittenAggregateExpressions = {
-        val extraSumsAndCounts = rewriteMap.values.reduceOption { _ ++ _ } getOrElse Nil
-        (averagesEliminated ++ extraSumsAndCounts).distinct
-      }
-
-      Some(groupingExpressions, rewrittenAggregateExpressions, rewrittenResultExpressions, child)
-
-    case _ => Option.empty[ReturnType]
-  }
-}
-
-object TiAggregationProjection {
-  type ReturnType = (Seq[Expression], LogicalPlan, TiDBRelation, Seq[NamedExpression])
-
-  def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
-    // Only push down aggregates projection when all filters can be applied and
-    // all projection expressions are column references
-    case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _, _))
-        if projects.forall(_.isInstanceOf[Attribute]) =>
-      Some((filters, rel, source, projects))
-    case _ => Option.empty[ReturnType]
-  }
 }

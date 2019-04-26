@@ -370,7 +370,9 @@ public class TiDAGRequest implements Serializable {
       }
 
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
+    }
 
+    if (!buildIndexScan || !isDoubleRead()) {
       // clear executorBuilder
       executorBuilder.clear();
 

@@ -96,7 +96,7 @@ public class IndexRangeSetBuilder extends RangeSetBuilder<TypedKey> {
 
     switch (node.getRegType()) {
       case STARTS_WITH:
-        ranges.add(Range.atLeast(literal).intersection(Range.lessThan(literal.next(prefixLen))));
+        ranges.add(Range.atLeast(literal).intersection(Range.lessThan(literal.next())));
         break;
       default:
         throwOnError(node);
