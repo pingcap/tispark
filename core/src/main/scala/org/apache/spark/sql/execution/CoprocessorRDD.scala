@@ -216,7 +216,7 @@ case class RegionTaskExec(child: SparkPlan,
   ): (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] = { (index, iter) =>
     // For each partition, we do some initialization work
     val logger = Logger.getLogger(getClass.getName)
-    logger.info(s"In partition No.$index")
+    logger.debug(s"In partition No.$index")
     val session = TiSessionCache.getSession(tiConf)
     session.injectCallBackFunc(callBackFunc)
     val batchSize = tiConf.getIndexScanBatchSize
@@ -287,7 +287,7 @@ case class RegionTaskExec(child: SparkPlan,
             finalTasks += front
           }
         }
-        logger.info(s"Split $task into ${finalTasks.size} tasks.")
+        logger.debug(s"Split $task into ${finalTasks.size} tasks.")
         finalTasks
       }
 
@@ -304,7 +304,7 @@ case class RegionTaskExec(child: SparkPlan,
         while (handleIterator.hasNext) {
           val handleList: TLongArrayList = feedBatch()
           numHandles += handleList.size()
-          logger.info("Single batch handles size:" + handleList.size())
+          logger.debug("Single batch handles size:" + handleList.size())
 
           val indexTasks: util.List[RegionTask] = generateIndexTasks(handleList)
 
@@ -354,10 +354,10 @@ case class RegionTaskExec(child: SparkPlan,
 
         downgradeTasks.foreach { task =>
           val downgradeTaskRanges = task.getRanges
-          logger.info(
+          logger.debug(
             s"Merged ${taskRanges.size} index ranges to ${downgradeTaskRanges.size} ranges."
           )
-          logger.info(
+          logger.debug(
             s"Unary task downgraded, task info:Host={${task.getHost}}, " +
               s"RegionId={${task.getRegion.getId}}, " +
               s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
