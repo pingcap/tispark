@@ -113,13 +113,13 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
         result
       case _: SessionCatalog =>
         val schema = tiCatalog.getTableMetadata(delegate.table).schema
-        delegate
-          .run(sparkSession)
-          .zipWithIndex
-          .map(
-            (r: (Row, Int)) =>
-              Row(r._1.get(0), r._1.get(1), schema.fields(r._2).nullable.toString, r._1.get(2))
-          )
+        val (delegateResult, extendedResult) =
+          delegate.run(sparkSession).zipWithIndex.splitAt(schema.length)
+        delegateResult.map(
+          (r: (Row, Int)) => Row(r._1(0), r._1(1), schema.fields(r._2).nullable.toString, r._1(2))
+        ) ++ extendedResult.map(
+          r => Row(r._1(0), r._1(1), "", r._1(2))
+        )
     }
 
   private def describeSchema(schema: StructType,
