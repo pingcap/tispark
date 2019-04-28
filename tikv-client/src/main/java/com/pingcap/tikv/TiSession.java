@@ -88,7 +88,7 @@ public class TiSession implements AutoCloseable {
     return new Snapshot(ts, this);
   }
 
-  PDClient getPDClient() {
+  public PDClient getPDClient() {
     PDClient res = client;
     if (res == null) {
       synchronized (this) {
