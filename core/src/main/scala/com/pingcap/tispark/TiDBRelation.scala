@@ -48,16 +48,17 @@ case class TiDBRelation(session: TiSession,
     new TiRDD(dagRequest, session.getConf, tableRef, session, sqlContext.sparkSession)
 
   def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
-    val ts: TiTimestamp = if (dagRequest.getStartTs() == null) {
-      session.getTimestamp
-    } else {
-      dagRequest.getStartTs
-    }
-    dagRequest.setStartTs(ts)
-    dagRequest.resolve()
+    val timestamp = dagRequest.getStartTs
 
     val tiHandleRDD =
-      new TiHandleRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
+      new TiHandleRDD(
+        dagRequest,
+        session.getConf,
+        tableRef,
+        timestamp,
+        session,
+        sqlContext.sparkSession
+      )
     val handlePlan = HandleRDDExec(tiHandleRDD)
     // collect handles as a list
     val aggFunc = CollectHandles(handlePlan.attributeRef.last)

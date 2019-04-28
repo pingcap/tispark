@@ -69,7 +69,7 @@ public class IndexScanKeyRangeBuilder {
     } else {
       lKey = range.lowerEndpoint();
       if (range.lowerBoundType().equals(BoundType.OPEN)) {
-        lKey = lKey.next();
+        lKey = lKey.nextPrefix();
       }
     }
 
@@ -79,7 +79,7 @@ public class IndexScanKeyRangeBuilder {
     } else {
       uKey = range.upperEndpoint();
       if (range.upperBoundType().equals(BoundType.CLOSED)) {
-        uKey = uKey.next();
+        uKey = uKey.nextPrefix();
       }
     }
     return toPairKey();
