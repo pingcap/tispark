@@ -84,6 +84,7 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     spark.sql("drop table if exists t")
     spark.sql("create table t(a int)")
     spark.sql("desc t").show
+    spark.sql("desc formatted t").show
     spark.sql("drop table if exists t")
   }
 

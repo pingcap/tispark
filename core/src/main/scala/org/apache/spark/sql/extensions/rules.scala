@@ -23,6 +23,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.catalyst.rules.Rule
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
+import org.apache.spark.sql.catalyst.expressions.SubqueryExpression
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 
@@ -40,7 +41,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
 
   protected val resolveTiDBRelation: (TableIdentifier, TiTimestamp) => LogicalPlan =
-    (tableIdentifier: TableIdentifier, ts: TiTimestamp) => {
+    (tableIdentifier, ts) => {
       val dbName = getDatabaseFromIdentifier(tableIdentifier)
       val tableName = tableIdentifier.table
       val table = meta.getTable(dbName, tableName)
@@ -62,15 +63,22 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
       SubqueryAlias(tableName, LogicalRelation(tiDBRelation))
     }
 
+  protected def resolveRelations(ts: TiTimestamp): PartialFunction[LogicalPlan, LogicalPlan] = {
+    case UnresolvedRelation(tableIdentifier)
+        if tiCatalog
+          .catalogOf(tableIdentifier.database)
+          .exists(_.isInstanceOf[TiSessionCatalog]) =>
+      resolveTiDBRelation(tableIdentifier, ts)
+    case logicalPlan =>
+      logicalPlan transformExpressionsUp {
+        case s: SubqueryExpression =>
+          s.withNewPlan(s.plan.transform(resolveRelations(ts)))
+      }
+  }
+
   override def apply(plan: LogicalPlan): LogicalPlan = {
-    val ts = tiContext.tiSession.getTimestamp
-    plan transformUp {
-      case UnresolvedRelation(tableIdentifier)
-          if tiCatalog
-            .catalogOf(tableIdentifier.database)
-            .exists(_.isInstanceOf[TiSessionCatalog]) =>
-        resolveTiDBRelation(tableIdentifier, ts)
-    }
+    val ts = tiSession.getTimestamp
+    plan transformUp resolveRelations(ts)
   }
 }
 

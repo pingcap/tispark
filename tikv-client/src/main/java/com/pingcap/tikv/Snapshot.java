@@ -38,18 +38,17 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import javax.annotation.Nonnull;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Metapb.Store;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
   private final TiSession session;
-  private final TiConfiguration conf;
 
-  public Snapshot(TiTimestamp timestamp, TiSession session) {
+  public Snapshot(@Nonnull TiTimestamp timestamp, TiSession session) {
     this.timestamp = timestamp;
     this.session = session;
-    this.conf = session.getConf();
   }
 
   public TiSession getSession() {

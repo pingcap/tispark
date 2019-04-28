@@ -51,6 +51,7 @@ import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -78,6 +79,7 @@ import org.tikv.kvproto.Kvrpcpb.ScanRequest;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
 import org.tikv.kvproto.Kvrpcpb.SplitRegionRequest;
 import org.tikv.kvproto.Kvrpcpb.SplitRegionResponse;
+import org.tikv.kvproto.Kvrpcpb.WriteConflict;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
@@ -283,32 +285,49 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
 
     List<Lock> locks = new ArrayList<>();
-
-    for (KvPair pair : resp.getPairsList()) {
-      if (pair.hasError()) {
-        if (pair.getError().hasLocked()) {
-          Lock lock = new Lock(pair.getError().getLocked());
-          locks.add(lock);
-        } else {
-          throw new KeyException(pair.getError());
-        }
+    // Check if kvPair contains error, it should be a Lock if hasError is true.
+    List<KvPair> kvPairs = resp.getPairsList();
+    for (int i = 0; i < kvPairs.size(); i++) {
+      KvPair kvPair = kvPairs.get(i);
+      if (kvPair.hasError()) {
+        Lock lock = extractLockFromKeyErr(kvPair.getError());
+        kvPairs.set(
+            i,
+            KvPair.newBuilder()
+                .setError(kvPair.getError())
+                .setValue(kvPair.getValue())
+                .setKey(lock.getKey())
+                .build());
       }
     }
+    return kvPairs;
+  }
 
-    if (!locks.isEmpty()) {
-      boolean ok = lockResolverClient.resolveLocks(bo, locks);
-      if (!ok) {
-        // if not resolve all locks, we wait and retry
-        bo.doBackOff(BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
-      }
+  private Lock extractLockFromKeyErr(KeyError keyError) {
+    if (keyError.hasLocked()) {
+      return new Lock(keyError.getLocked());
+    }
 
-      // TODO: we should retry
-      // fix me
+    if (keyError.hasConflict()) {
+      WriteConflict conflict = keyError.getConflict();
+      throw new KeyException(
+          String.format(
+              "scan meet key conflict on primary key %s at commit ts %s",
+              conflict.getPrimary(), conflict.getConflictTs()));
     }
-    if (resp.hasRegionError()) {
-      throw new RegionException(resp.getRegionError());
+
+    if (!keyError.getRetryable().isEmpty()) {
+      throw new KeyException(
+          String.format("tikv restart txn %s", keyError.getRetryableBytes().toStringUtf8()));
     }
-    return resp.getPairsList();
+
+    if (!keyError.getAbort().isEmpty()) {
+      throw new KeyException(
+          String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
+    }
+
+    throw new KeyException(
+        String.format("unexpected key error meets and it is %s", keyError.toString()));
   }
 
   public List<KvPair> scan(BackOffer backOffer, ByteString startKey, long version) {
@@ -551,7 +570,9 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     if (response.hasLocked()) {
       Lock lock = new Lock(response.getLocked());
       logger.debug(String.format("coprocessor encounters locks: %s", lock));
-      boolean ok = lockResolverClient.resolveLocks(backOffer, new ArrayList<>(Arrays.asList(lock)));
+      boolean ok =
+          lockResolverClient.resolveLocks(
+              backOffer, new ArrayList<>(Collections.singletonList(lock)));
       if (!ok) {
         backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
       }
