@@ -190,8 +190,8 @@ public class CatalogTransaction {
       });
     }
 
-    throw new IllegalArgumentException("table or database is not existed");
     // TODO: throw exception
+    throw new IllegalArgumentException("table or database is not existed");
   }
 
   public long getAutoTableId(long dbId, long tableId) {

@@ -7,12 +7,11 @@ public class AutoIDGenerator {
   private long start;
   private long end;
   private boolean signed;
-  private TwoPhaseCommitter twoPhaseCommitter;
-  private static final String M_TABLE_PREFIX      = "Table";
   private long dbId;
   private CatalogTransaction catalogTransaction;
 
-  public AutoIDGenerator(long dbId, TwoPhaseCommitter commiter) {
+  public AutoIDGenerator(long dbId, CatalogTransaction catalogTransaction) {
+    this.catalogTransaction = catalogTransaction;
     this.dbId = dbId;
   }
 
@@ -35,7 +34,8 @@ public class AutoIDGenerator {
       long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
       newEnd  = allocID(dbId, tableId, tmpStep);
       if(start == Long.MAX_VALUE) {
-      // TODO: throw new exception indicates we can't allocate any more id for now.
+        // TODO: refine this expcetion
+        throw new IllegalArgumentException("cannot allocate more ids since it ")
       }
       end = newEnd;
     }
@@ -65,8 +65,6 @@ public class AutoIDGenerator {
   }
 
   private long allocID(long dbId, long tableId, long step) {
-    return 0L;
+    return catalogTransaction.getAutoTableId(dbId, tableId, step);
   }
-
-
 }
