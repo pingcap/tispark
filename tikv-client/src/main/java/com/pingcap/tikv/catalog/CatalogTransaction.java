@@ -21,6 +21,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Longs;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
@@ -34,9 +35,11 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.util.Pair;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import org.apache.log4j.Logger;
 import org.tikv.kvproto.Kvrpcpb;
 
@@ -48,6 +51,7 @@ public class CatalogTransaction {
   private static final byte[] META_PREFIX = new byte[] {'m'};
 
   private static final byte HASH_DATA_FLAG = 'h';
+  private static final byte HASH_META_FLAG = 'H';
   private static final byte STR_DATA_FLAG = 's';
 
   private static ByteString KEY_DB = ByteString.copyFromUtf8("DBs");
@@ -56,7 +60,7 @@ public class CatalogTransaction {
 
   private static final String ENCODED_DB_PREFIX = "DB";
 
-  public CatalogTransaction(Snapshot snapshot) {
+  CatalogTransaction(Snapshot snapshot) {
     this.snapshot = snapshot;
     this.prefix = META_PREFIX;
   }
@@ -72,7 +76,21 @@ public class CatalogTransaction {
     BytesCodec.writeBytes(cdo, field);
   }
 
-  private void encodeHashDataKeyPrefix(CodecDataOutput cdo, byte[] key) {
+  private ByteString encodeHashMetaKey(CodecDataOutput cdo, byte[] key) {
+    cdo.write(prefix);
+    BytesCodec.writeBytes(cdo, key);
+    IntegerCodec.writeULong(cdo, HASH_META_FLAG);
+    return cdo.toByteString();
+  }
+  private ByteString autoTableIDKey(long tableId) {
+    return ByteString.copyFromUtf8(String.format("%s:%d", KEY_TABLE, tableId));
+  }
+
+  private ByteString dbKey(long dbId) {
+    return ByteString.copyFromUtf8(String.format("%s:%d", KEY_DB, dbId));
+  }
+
+    private void encodeHashDataKeyPrefix(CodecDataOutput cdo, byte[] key) {
     cdo.write(prefix);
     BytesCodec.writeBytes(cdo, key);
     IntegerCodec.writeULong(cdo, HASH_DATA_FLAG);
@@ -97,6 +115,92 @@ public class CatalogTransaction {
     CodecDataOutput cdo = new CodecDataOutput();
     encodeHashDataKey(cdo, key.toByteArray(), field.toByteArray());
     return snapshot.get(cdo.toByteString());
+  }
+
+  private void hashInc(ByteString dbKey, ByteString tableKey, long step) {
+    // need run inside a txn and need retry
+    // updateHash
+  }
+
+  private boolean isDBExisted(long dbId) {
+    return getDatabase(dbId) != null;
+  }
+
+  private boolean isTableExisted(long dbId, long tableId) {
+    ByteString dbKey = encodeDatabaseID(dbId);
+    ByteString tableKey = autoTableIDKey(tableId);
+    return hashGet(dbKey, tableKey).isEmpty();
+  }
+
+  private void updateMeta(ByteString key, byte[] oldVal) {
+    // 1. encode hash meta key
+    // 2. load meta via hash meta key from TiKV
+    // 3. update meta's filed count and set it back to TiKV
+    CodecDataOutput cdo = new CodecDataOutput();
+    ByteString metaKey = encodeHashMetaKey(cdo, key.toByteArray());
+    long fieldCount = 0;
+    ByteString metaVal = snapshot.get(metaKey);
+
+    // check empty
+    // check length is 8 or not
+
+    // bigendian 8
+    if(oldVal == null) {
+      fieldCount++;
+      cdo.reset();
+      IntegerCodec.writeULong(cdo, fieldCount);
+      snapshot.set(metaKey, cdo.toByteString());
+    }
+  }
+
+  private long updateHash(ByteString key, ByteString field, Function<byte[], byte[]> calculateNewVal) {
+    // 1. encode hash data key
+    // 2. get value in byte from get operation
+    // 3. calculate new value via calculateNewVal
+    // 4. check old value equals to new value or not
+    // 5. set the new value back to TiKV via 2pc
+    // 6. encode a hash meta key
+
+    CodecDataOutput cdo = new CodecDataOutput();
+    encodeHashDataKey(cdo, key.toByteArray(), field.toByteArray());
+    ByteString dataKey = cdo.toByteString();
+    byte[] oldVal = snapshot.get(dataKey.toByteArray());
+
+    byte[] newVal = calculateNewVal.apply(oldVal);
+    if(Arrays.equals(newVal, oldVal)) {
+      // not need to update
+      return 0L;
+    }
+    snapshot.set(dataKey, ByteString.copyFrom(newVal));
+
+    updateMeta(key, oldVal);
+    return 0L;
+  }
+
+  public long getAutoTableId(long dbId, long tableId, long step) {
+    if(!isDBExisted(dbId) && isTableExisted(dbId, tableId)) {
+      return updateHash(dbKey(dbId), autoTableIDKey(dbId), (oldVal) -> {
+        long base = 0;
+        if(oldVal != null) {
+          base = Long.parseLong(new String(oldVal));
+        }
+
+        base += step;
+        return String.valueOf(base).getBytes();
+      });
+    }
+
+    throw new IllegalArgumentException("table or database is not existed");
+    // TODO: throw exception
+  }
+
+  public long getAutoTableId(long dbId, long tableId) {
+    String val = hashGet(dbKey(dbId), autoTableIDKey(tableId)).toString();
+    Long num = Longs.tryParse(val);
+    if(num != null) {
+      return num;
+    }
+    return -1L;
   }
 
   private ByteString bytesGet(ByteString key) {
@@ -130,7 +234,7 @@ public class CatalogTransaction {
     return ByteString.copyFrom(String.format("%s:%d", ENCODED_DB_PREFIX, id).getBytes());
   }
 
-  public long getLatestSchemaVersion() {
+  long getLatestSchemaVersion() {
     ByteString versionBytes = bytesGet(KEY_SCHEMA_VERSION);
     CodecDataInput cdi = new CodecDataInput(versionBytes.toByteArray());
     return Long.parseLong(new String(cdi.toByteArray(), StandardCharsets.UTF_8));
@@ -154,7 +258,7 @@ public class CatalogTransaction {
     return parseFromJson(json, TiDBInfo.class);
   }
 
-  public List<TiTableInfo> getTables(long dbId) {
+  List<TiTableInfo> getTables(long dbId) {
     ByteString dbKey = encodeDatabaseID(dbId);
     List<Pair<ByteString, ByteString>> fields = hashGetFields(dbKey);
     ImmutableList.Builder<TiTableInfo> builder = ImmutableList.builder();

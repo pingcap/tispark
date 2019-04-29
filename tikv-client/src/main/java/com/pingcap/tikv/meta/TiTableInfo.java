@@ -174,33 +174,6 @@ public class TiTableInfo implements Serializable {
         .copyWithoutPrimaryKey();
   }
 
-  public TiTableInfo copyTableWithOutRowId() {
-    boolean isRowID = getColumn(columns.size() - 1).getName().equals("_tidb_rowid");
-    if (isRowID) {
-      ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
-      for (int i = 0; i < columns.size() - 2; i++) {
-        TiColumnInfo col = columns.get(i);
-        newColumns.add(copyColumn(col));
-      }
-      return new TiTableInfo(
-          getId(),
-          CIStr.newCIStr(getName()),
-          getCharset(),
-          getCollate(),
-          true,
-          newColumns.build(),
-          getIndices(),
-          getComment(),
-          getAutoIncId(),
-          getMaxColumnId(),
-          getMaxIndexId(),
-          getOldSchemaId(),
-          partitionInfo);
-    } else {
-      return this;
-    }
-  }
-
   public TiTableInfo copyTableWithRowId() {
     if (!isPkHandle()) {
       ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();

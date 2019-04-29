@@ -18,7 +18,7 @@ package com.pingcap.tispark
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
-import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType
@@ -121,9 +121,11 @@ object TiBatchWrite {
     val tiConf = tiContext.tiConf
     val tiSession = tiContext.tiSession
     val kvClient = tiSession.createTxnClient()
-    val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
+    val (tiDBInfo, tiTableInfo, colDataTypes, colIds) = getDBAndTableInfo(tableRef, tiContext)
     val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
-
+    // TODO: lock table
+    // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
+    val idAllocator = new AutoIDGenerator(tiDBInfo.getId, null)
     if (enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
       val sampleRDD = rdd.sample(withReplacement = false, fraction = fraction)
@@ -140,9 +142,6 @@ object TiBatchWrite {
         ).map(k => k.bytes).asJava
       )
     }
-
-    // TODO: lock table
-    // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
@@ -172,7 +171,7 @@ object TiBatchWrite {
     logger.info(s"startTS: $startTs")
 
     // driver primary pre-write
-    val ti2PCClient = new TiBatchWrite2PCClient(kvClient, startTs)
+    val ti2PCClient = new TwoPhaseCommitter(kvClient, startTs)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     val encodedRow = encodeTiRow(primaryRow, colDataTypes, colIds)
@@ -182,13 +181,13 @@ object TiBatchWrite {
     finalWriteRDD.foreachPartition { iterator =>
       val tiSessionOnExecutor = new TiSession(tiConf)
       val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
-      val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
+      val ti2PCClientOnExecutor = new TwoPhaseCommitter(kvClientOnExecutor, startTs)
       val prewriteSecondaryBackoff =
         ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
 
       val pairs = iterator.map {
         case (key, row) =>
-          new TiBatchWrite2PCClient.BytePairWrapper(
+          new TwoPhaseCommitter.BytePairWrapper(
             key.bytes,
             encodeTiRow(row, colDataTypes, colIds)
           )
@@ -214,12 +213,12 @@ object TiBatchWrite {
       finalWriteRDD.foreachPartition { iterator =>
         val tiSessionOnExecutor = new TiSession(tiConf)
         val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
-        val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
+        val ti2PCClientOnExecutor = new TwoPhaseCommitter(kvClientOnExecutor, startTs)
         val commitSecondaryBackoff =
           ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
 
         val keys = iterator.map {
-          case (key, _) => new TiBatchWrite2PCClient.ByteWrapper(key.bytes)
+          case (key, _) => new TwoPhaseCommitter.ByteWrapper(key.bytes)
         }.asJava
 
         try {
@@ -236,8 +235,9 @@ object TiBatchWrite {
   }
 
   @throws(classOf[NoSuchTableException])
-  private def getTableInfo(tableRef: TiTableReference,
-                           tiContext: TiContext): (TiTableInfo, Array[DataType], TLongArrayList) = {
+  private def getDBAndTableInfo(tableRef: TiTableReference,
+                           tiContext: TiContext): (TiDBInfo, TiTableInfo, Array[DataType], TLongArrayList) = {
+    val tiDBInfo = tiContext.tiSession.getCatalog.getDatabase(tableRef.databaseName)
     val tiTableInfo =
       tiContext.tiSession.getCatalog.getTable(tableRef.databaseName, tableRef.tableName)
     if (tiTableInfo == null) {
@@ -245,14 +245,14 @@ object TiBatchWrite {
     }
     val tableColSize = tiTableInfo.getColumns.size()
     val dataTypes = new Array[DataType](tableColSize)
-    val ids = new TLongArrayList
+    val colIds = new TLongArrayList
 
     for (i <- 0 until tableColSize) {
       val tiColumnInfo = tiTableInfo.getColumn(i)
-      ids.add(tiColumnInfo.getId)
+      colIds.add(tiColumnInfo.getId)
       dataTypes.update(i, tiColumnInfo.getType)
     }
-    (tiTableInfo, dataTypes, ids)
+    (tiDBInfo, tiTableInfo, dataTypes, colIds)
   }
 
   @throws(classOf[NoSuchTableException])
@@ -291,27 +291,21 @@ object TiBatchWrite {
     TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, table).toList
   }
 
-  private def extractHandleId(row: TiRow, tiTableInfo: TiTableInfo, isUpdate: Boolean): Long = {
+  private def extractHandleId(row: TiRow, tableInfo: TiTableInfo, isUpdate: Boolean): Long = {
     // If handle ID is changed when update, update will remove the old record first,
     // and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
-    val tblInfo = tiTableInfo.copyTableWithOutRowId()
-    val handle = if (row.fieldCount > tblInfo.getColumns.size && !isUpdate) {
+    val handle = if (row.fieldCount > tableInfo.getColumns.size && !isUpdate) {
       row.getLong(row.fieldCount - 1)
     } else {
-      val columnList = tiTableInfo.getColumns.asScala
+      val columnList = tableInfo.getColumns.asScala
       columnList.find(_.isPrimaryKey) match {
         case Some(primaryColumn) =>
           row.getLong(primaryColumn.getOffset)
-
         case None =>
           // TODO: auto generate a primary key if does not exists
           // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
-          try {
-            row.getLong(0)
-          } catch {
-            case _: Throwable => row.getInteger(0)
-          }
+          row.getLong(0)
       }
     }
     handle

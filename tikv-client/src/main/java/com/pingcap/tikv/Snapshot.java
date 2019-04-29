@@ -30,6 +30,7 @@ import com.pingcap.tikv.operation.iterator.ScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
@@ -73,6 +74,17 @@ public class Snapshot {
     RegionStoreClient client = session.getRegionStoreClientBuilder().build(key);
     // TODO: Need to deal with lock error after grpc stable
     return client.get(ConcreteBackOffer.newGetBackOff(), key, timestamp.getVersion());
+  }
+
+  public void set(ByteString key, ByteString value) {
+    TxnKVClient txnKVClient = new TxnKVClient(this.session.getConf(),
+        session.getRegionStoreClientBuilder(), session.getPDClient());
+    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(txnKVClient, txnKVClient.getTimestamp().getVersion());
+    twoPhaseCommitter.prewritePrimaryKey(ConcreteBackOffer.
+        newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF), key.toByteArray(), value.toByteArray());
+    long commitTs = txnKVClient.getTimestamp().getVersion();
+    twoPhaseCommitter.commitPrimaryKey(ConcreteBackOffer.
+        newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF), key.toByteArray(), commitTs);
   }
 
   /**
