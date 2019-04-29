@@ -14,16 +14,14 @@
  */
 package org.apache.spark.sql.extensions
 
-import com.pingcap.tikv.meta.TiTimestamp
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.{AnalysisException, _}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoTable, LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.catalyst.rules.Rule
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
-import org.apache.spark.sql.catalyst.expressions.SubqueryExpression
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 
@@ -40,8 +38,8 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
     tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
 
-  protected val resolveTiDBRelation: (TableIdentifier, TiTimestamp) => LogicalPlan =
-    (tableIdentifier, ts) => {
+  protected val resolveTiDBRelation: TableIdentifier => LogicalPlan =
+    tableIdentifier => {
       val dbName = getDatabaseFromIdentifier(tableIdentifier)
       val tableName = tableIdentifier.table
       val table = meta.getTable(dbName, tableName)
@@ -55,31 +53,28 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
       val tiDBRelation = TiDBRelation(
         tiSession,
         TiTableReference(dbName, tableName, sizeInBytes),
-        meta,
-        Some(ts)
+        meta
       )(sqlContext)
       // Use SubqueryAlias so that projects and joins can correctly resolve
       // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
       SubqueryAlias(tableName, LogicalRelation(tiDBRelation))
     }
 
-  protected def resolveRelations(ts: TiTimestamp): PartialFunction[LogicalPlan, LogicalPlan] = {
+  protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
+    case i @ InsertIntoTable(UnresolvedRelation(tableIdentifier), _, _, _, _)
+        if tiCatalog
+          .catalogOf(tableIdentifier.database)
+          .exists(_.isInstanceOf[TiSessionCatalog]) =>
+      i.copy(table = EliminateSubqueryAliases(resolveTiDBRelation(tableIdentifier)))
     case UnresolvedRelation(tableIdentifier)
         if tiCatalog
           .catalogOf(tableIdentifier.database)
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
-      resolveTiDBRelation(tableIdentifier, ts)
-    case logicalPlan =>
-      logicalPlan transformExpressionsUp {
-        case s: SubqueryExpression =>
-          s.withNewPlan(s.plan.transform(resolveRelations(ts)))
-      }
+      resolveTiDBRelation(tableIdentifier)
   }
 
-  override def apply(plan: LogicalPlan): LogicalPlan = {
-    val ts = tiSession.getTimestamp
-    plan transformUp resolveRelations(ts)
-  }
+  override def apply(plan: LogicalPlan): LogicalPlan =
+    plan transformUp resolveTiDBRelations
 }
 
 case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
