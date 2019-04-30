@@ -46,7 +46,7 @@ public class Catalog implements AutoCloseable {
   @Override
   public void close() throws Exception {
     if (service != null) {
-      service.shutdown();
+      service.shutdownNow();
     }
   }
 

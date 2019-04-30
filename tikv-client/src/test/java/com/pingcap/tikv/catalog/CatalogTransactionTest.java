@@ -17,7 +17,6 @@ package com.pingcap.tikv.catalog;
 
 import static org.junit.Assert.assertEquals;
 
-import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -30,7 +29,6 @@ public class CatalogTransactionTest extends CatalogTest {
     MetaMockHelper helper = new MetaMockHelper(pdServer, kvServer);
     helper.preparePDForRegionRead();
     helper.setSchemaVersion(666);
-    TiSession session = TiSession.create(conf);
     CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
     assertEquals(666, trx.getLatestSchemaVersion());
   }
@@ -42,7 +40,6 @@ public class CatalogTransactionTest extends CatalogTest {
     helper.addDatabase(130, "global_temp");
     helper.addDatabase(264, "TPCH_001");
 
-    TiSession session = TiSession.create(conf);
     CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
     List<TiDBInfo> dbs = trx.getDatabases();
     assertEquals(2, dbs.size());
@@ -64,7 +61,6 @@ public class CatalogTransactionTest extends CatalogTest {
     helper.addTable(130, 42, "test");
     helper.addTable(130, 43, "test1");
 
-    TiSession session = TiSession.create(conf);
     CatalogTransaction trx = new CatalogTransaction(session.createSnapshot());
     List<TiTableInfo> tables = trx.getTables(130);
     assertEquals(2, tables.size());

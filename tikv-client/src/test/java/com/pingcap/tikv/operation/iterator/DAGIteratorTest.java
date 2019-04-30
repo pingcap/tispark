@@ -19,11 +19,7 @@ import static junit.framework.TestCase.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.GrpcUtils;
-import com.pingcap.tikv.KVMockServer;
-import com.pingcap.tikv.PDMockServer;
-import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.*;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -34,28 +30,16 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.SchemaInfer;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.List;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor.KeyRange;
-import org.tikv.kvproto.Kvrpcpb.CommandPri;
-import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Metapb;
 
-public class DAGIteratorTest {
-  private KVMockServer server;
-  private PDMockServer pdServer;
-  private static final String LOCAL_ADDR = "127.0.0.1";
-  private static final long CLUSTER_ID = 1024;
-  private int port;
-  private TiSession session;
-  private TiRegion region;
+public class DAGIteratorTest extends MockServerTest {
 
   private static TiTableInfo createTable() {
     return new MetaUtils.TableBuilder()
@@ -63,40 +47,6 @@ public class DAGIteratorTest {
         .addColumn("c1", IntegerType.INT, true)
         .addColumn("c2", StringType.VARCHAR)
         .build();
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    pdServer = new PDMockServer();
-    pdServer.start(CLUSTER_ID);
-    pdServer.addGetMemberResp(
-        GrpcUtils.makeGetMembersResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + pdServer.port),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 1)),
-            GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
-
-    Metapb.Region r =
-        Metapb.Region.newBuilder()
-            .setRegionEpoch(Metapb.RegionEpoch.newBuilder().setConfVer(1).setVersion(2))
-            .setId(233)
-            .setStartKey(ByteString.EMPTY)
-            .setEndKey(ByteString.EMPTY)
-            .addPeers(Metapb.Peer.newBuilder().setId(11).setStoreId(13))
-            .build();
-
-    region = new TiRegion(r, r.getPeers(0), IsolationLevel.RC, CommandPri.Low);
-    server = new KVMockServer();
-    port = server.start(region);
-    // No PD needed in this test
-    TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
-    session = TiSession.create(conf);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    server.stop();
-    session.close();
   }
 
   @Test

@@ -32,17 +32,17 @@ public interface BackOffer {
 
   // Back off types.
   int copBuildTaskMaxBackoff = 5000;
-  int tsoMaxBackoff = 5000;
-  int scannerNextMaxBackoff = 40000;
-  int batchGetMaxBackoff = 40000;
-  int copNextMaxBackoff = 40000;
-  int getMaxBackoff = 40000;
+  int tsoMaxBackoff = 15000;
+  int scannerNextMaxBackoff = 20000;
+  int batchGetMaxBackoff = 20000;
+  int copNextMaxBackoff = 20000;
+  int getMaxBackoff = 20000;
   int prewriteMaxBackoff = 20000;
   int cleanupMaxBackoff = 20000;
   int GcOneRegionMaxBackoff = 20000;
   int GcResolveLockMaxBackoff = 100000;
   int GcDeleteRangeMaxBackoff = 100000;
-  int rawkvMaxBackoff = 40000;
+  int rawkvMaxBackoff = 20000;
   int splitRegionBackoff = 20000;
 
   /**

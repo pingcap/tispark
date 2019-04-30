@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import org.apache.log4j.Logger;
 
 public class TiSession implements AutoCloseable {
   private static final Map<String, ManagedChannel> connPool = new HashMap<>();
@@ -42,6 +43,7 @@ public class TiSession implements AutoCloseable {
   private volatile Catalog catalog;
   private volatile ExecutorService indexScanThreadPool;
   private volatile ExecutorService tableScanThreadPool;
+  private final Logger logger = Logger.getLogger(this.getClass());
 
   public TiSession(TiConfiguration conf) {
     this.conf = conf;
@@ -184,6 +186,11 @@ public class TiSession implements AutoCloseable {
   public void close() throws Exception {
     getThreadPoolForTableScan().shutdownNow();
     getThreadPoolForIndexScan().shutdownNow();
-    getPDClient().close();
+    if (client != null) {
+      getPDClient().close();
+    }
+    if (catalog != null) {
+      getCatalog().close();
+    }
   }
 }
