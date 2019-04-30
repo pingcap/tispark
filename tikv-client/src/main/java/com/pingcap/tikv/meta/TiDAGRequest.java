@@ -823,6 +823,7 @@ public class TiDAGRequest implements Serializable {
       sb.append(", Limit: ");
       sb.append("[").append(limit).append("]");
     }
+    sb.append(", startTs: ").append(startTs.getVersion());
     return sb.toString();
   }
 

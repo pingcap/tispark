@@ -16,9 +16,10 @@
 package org.apache.spark.sql.catalyst.catalog
 
 import org.apache.spark.sql.TiContext
+import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.EmptyFunctionRegistry
 
-class TiConcreteSessionCatalog(val tiContext: TiContext)(tiExternalCatalog: TiExternalCatalog)
+class TiConcreteSessionCatalog(val tiContext: TiContext)(tiExternalCatalog: TiDirectExternalCatalog)
     extends SessionCatalog(
       tiExternalCatalog,
       EmptyFunctionRegistry,
@@ -33,4 +34,9 @@ class TiConcreteSessionCatalog(val tiContext: TiContext)(tiExternalCatalog: TiEx
     else
       None
   }
+
+  override def databaseExists(db: String): Boolean = tiExternalCatalog.databaseExists(db)
+
+  override def tableExists(name: TableIdentifier): Boolean =
+    tiExternalCatalog.tableExists(name.database.getOrElse(getCurrentDatabase), name.table)
 }

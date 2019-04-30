@@ -21,7 +21,7 @@ import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver}
-import com.pingcap.tikv.meta.TiDAGRequest
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
 import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
@@ -32,7 +32,7 @@ import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Expression, IntegerLiteral, NamedExpression, SortOrder}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Expression, IntegerLiteral, NamedExpression, SortOrder, SubqueryExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -56,7 +56,9 @@ import scala.collection.mutable
 case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Strategy
     with Logging {
-  val sqlConf: SQLConf = sparkSession.sqlContext.conf
+  private val tiContext: TiContext = getOrCreateTiContext(sparkSession)
+  private lazy val sqlContext = tiContext.sqlContext
+  private val sqlConf: SQLConf = sqlContext.conf
   type TiExpression = com.pingcap.tikv.expression.Expression
   type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
 
@@ -95,7 +97,23 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       PushDownType.NORMAL
     }
 
-  override def apply(plan: LogicalPlan): Seq[SparkPlan] =
+  // apply StartTs to every logical plan in Spark Planning stage
+  protected def applyStartTs(ts: TiTimestamp): PartialFunction[LogicalPlan, Unit] = {
+    case LogicalRelation(r @ TiDBRelation(_, _, _, timestamp), _, _, _) =>
+      if (timestamp.isEmpty) {
+        r.ts = Some(ts)
+      }
+    case logicalPlan =>
+      logicalPlan transformExpressionsUp {
+        case s: SubqueryExpression =>
+          s.plan.foreachUp(applyStartTs(ts))
+          s
+      }
+  }
+
+  override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
+    val ts = tiContext.tiSession.getTimestamp
+    plan foreachUp applyStartTs(ts)
     plan
       .collectFirst {
         case LogicalRelation(relation: TiDBRelation, _, _, _) =>
@@ -103,6 +121,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
       .toSeq
       .flatten
+  }
 
   private def toCoprocessorRDD(
     source: TiDBRelation,

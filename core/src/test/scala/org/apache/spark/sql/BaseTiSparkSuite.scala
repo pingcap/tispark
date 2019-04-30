@@ -148,9 +148,14 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   protected case class TestTables(dbName: String, tables: String*)
 
-  protected def refreshConnections(testTables: TestTables): Unit = {
-    super.refreshConnections()
+  protected def refreshConnections(testTables: TestTables, isHiveEnabled: Boolean = false): Unit = {
+    super.refreshConnections(isHiveEnabled)
     loadTestData(testTables)
+  }
+
+  override protected def refreshConnections(isHiveEnabled: Boolean): Unit = {
+    super.refreshConnections(isHiveEnabled)
+    loadTestData()
   }
 
   override protected def refreshConnections(): Unit = {

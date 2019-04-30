@@ -24,7 +24,7 @@ import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.util.StringUtils
 import org.apache.spark.sql.types.StructType
 
-class TiExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
+class TiDirectExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
   private def meta = tiContext.meta
 
   // Following are routed to TiSpark Catalog.

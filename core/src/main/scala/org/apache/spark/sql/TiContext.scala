@@ -56,7 +56,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
 
   lazy val tiConcreteCatalog: TiSessionCatalog =
-    new TiConcreteSessionCatalog(this)(new TiExternalCatalog(this))
+    new TiConcreteSessionCatalog(this)(new TiDirectExternalCatalog(this))
 
   lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
 
