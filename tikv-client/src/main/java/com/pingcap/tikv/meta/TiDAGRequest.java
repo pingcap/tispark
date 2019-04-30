@@ -452,11 +452,16 @@ public class TiDAGRequest implements Serializable {
    */
   private void validateRequest(DAGRequest dagRequest) {
     requireNonNull(dagRequest);
+
+    // A DAG request must contain a valid timestamp
+    if (dagRequest.getStartTs() == 0) {
+      throw new DAGRequestException("startTs was not initialized for dagRequest");
+    }
     // A DAG request must has at least one executor.
     if (dagRequest.getExecutorsCount() < 1) {
       throw new DAGRequestException("Invalid executors count:" + dagRequest.getExecutorsCount());
     }
-
+    // A DAG request must start with TableScan or IndexScan Executor
     ExecType formerType = dagRequest.getExecutors(0).getTp();
     if (formerType != ExecType.TypeTableScan && formerType != ExecType.TypeIndexScan) {
       throw new DAGRequestException(
