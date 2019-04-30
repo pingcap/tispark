@@ -185,6 +185,7 @@ public class TiSession implements AutoCloseable {
         splitKeys.parallelStream().map(RowKey::toRawKey).collect(Collectors.toList());
     TLongArrayList regionIds = new TLongArrayList();
     rawKeys.forEach(key -> splitRegionAndScatter(key, regionIds));
+    // TODO: adding a conf let user to decide wait or not.
     for(int i = 0; i< regionIds.size(); i++) {
       getPDClient().waitScatterRegionFinish(regionIds.get(i));
     }

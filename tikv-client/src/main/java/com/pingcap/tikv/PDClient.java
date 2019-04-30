@@ -82,7 +82,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       try {
         GetOperatorResponse resp = getOperator(regionId);
         if(resp != null) {
-          if(resp.getDesc().toString().equals("scatter-region") || resp.getStatus() != OperatorStatus.RUNNING) {
+          if(!resp.getDesc().toString().equals("scatter-region") || resp.getStatus() != OperatorStatus.RUNNING) {
             logger.info(String.format("wait scatter region on %d is finished", regionId));
             return;
           }
