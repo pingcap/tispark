@@ -22,59 +22,17 @@ import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.*;
 import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Kvrpcpb;
-import org.tikv.kvproto.Kvrpcpb.CommandPri;
-import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Metapb;
-import org.tikv.kvproto.Pdpb;
 
-public class RegionStoreClientTest {
-  private KVMockServer server;
-  private PDMockServer pdServer;
-  private static final String LOCAL_ADDR = "127.0.0.1";
-  private static final long CLUSTER_ID = 1024;
-  private int port;
-  private TiSession session;
-  private TiRegion region;
-
-  @Before
-  public void setUp() throws Exception {
-    pdServer = new PDMockServer();
-    pdServer.start(CLUSTER_ID);
-    pdServer.addGetMemberResp(
-        GrpcUtils.makeGetMembersResponse(
-            pdServer.getClusterId(),
-            GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + pdServer.port),
-            GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 1)),
-            GrpcUtils.makeMember(3, "http://" + LOCAL_ADDR + ":" + (pdServer.port + 2))));
-
-    Metapb.Region r =
-        Metapb.Region.newBuilder()
-            .setRegionEpoch(Metapb.RegionEpoch.newBuilder().setConfVer(1).setVersion(2))
-            .setId(233)
-            .setStartKey(ByteString.EMPTY)
-            .setEndKey(ByteString.EMPTY)
-            .addPeers(Metapb.Peer.newBuilder().setId(11).setStoreId(13))
-            .build();
-
-    region = new TiRegion(r, r.getPeers(0), IsolationLevel.RC, CommandPri.Low);
-    pdServer.addGetRegionResp(Pdpb.GetRegionResponse.newBuilder().setRegion(r).build());
-    server = new KVMockServer();
-    port = server.start(region);
-    // No PD needed in this test
-    TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
-    session = TiSession.create(conf);
-  }
+public class RegionStoreClientTest extends MockServerTest {
 
   private RegionStoreClient createClient() {
     Metapb.Store store =
@@ -85,12 +43,6 @@ public class RegionStoreClientTest {
             .build();
 
     return RegionStoreClient.create(region, store, session);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    server.stop();
-    session.close();
   }
 
   @Test
