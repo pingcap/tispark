@@ -94,7 +94,8 @@ object TiBatchWrite {
     // TODO check this write is update or not
     val handleRdd: RDD[Long] = sampleRDD
       .map(sparkRow2TiKVRow)
-      .map(row => extractHandleId(row, tblInfo, isUpdate = false))
+      // TODO: fix allocator issue
+      .map(row => extractHandleId(row, null, tblInfo, isUpdate = false))
       .sortBy(k => k)
     val step = sampleRDDCount / regionNeed
     val splitKeys = handleRdd
@@ -126,7 +127,9 @@ object TiBatchWrite {
     val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
-    val idAllocator = new IDAllocator(tiDBInfo.getId, null, tiTableInfo.isAutoIncColUnsigned)
+    val step = tiKVRowRDD.count()
+    val idAllocator = new IDAllocator(tiDBInfo.getId, tiSession.getCatalog, tiTableInfo.isAutoIncColUnsigned, step)
+
     if (enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
       val sampleRDD = rdd.sample(withReplacement = false, fraction = fraction)
@@ -146,7 +149,7 @@ object TiBatchWrite {
 
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
-      shuffleKeyToSameRegion(tiKVRowRDD, tableRef, tiTableInfo, tiContext)
+      shuffleKeyToSameRegion(tiKVRowRDD, idAllocator, tableRef, tiTableInfo, tiContext)
     }.cache()
 
     // take one row as primary key
@@ -260,6 +263,7 @@ object TiBatchWrite {
 
   @throws(classOf[NoSuchTableException])
   private def shuffleKeyToSameRegion(rdd: RDD[TiRow],
+                                     allocator: IDAllocator,
                                      tableRef: TiTableReference,
                                      tiTableInfo: TiTableInfo,
                                      tiContext: TiContext): RDD[(SerializableKey, TiRow)] = {
@@ -280,7 +284,7 @@ object TiBatchWrite {
     )
 
     rdd
-      .map(row => (tiKVRow2Key(row, tableId, tiTableInfo, isUpdate = false), row))
+      .map(row => (tiKVRow2Key(row, allocator, tableId, tiTableInfo, isUpdate = false), row))
       .groupByKey(tiRegionPartitioner)
       .map {
         case (key, iterable) =>
@@ -294,7 +298,7 @@ object TiBatchWrite {
     TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, table).toList
   }
 
-  private def extractHandleId(row: TiRow, tableInfo: TiTableInfo, isUpdate: Boolean): Long = {
+  private def extractHandleId(row: TiRow, allocator: IDAllocator, tableInfo: TiTableInfo, isUpdate: Boolean): Long = {
     // If handle ID is changed when update, update will remove the old record first,
     // and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
@@ -306,20 +310,20 @@ object TiBatchWrite {
         case Some(primaryColumn) =>
           row.getLong(primaryColumn.getOffset)
         case None =>
-          // TODO: auto generate a primary key if does not exists
-          // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
-          row.getLong(0)
+          // pk is not handle case.
+          allocator.alloc(tableInfo.getId)
       }
     }
     handle
   }
 
   private def tiKVRow2Key(row: TiRow,
+                          allocator: IDAllocator,
                           tableId: Long,
                           tiTableInfo: TiTableInfo,
                           isUpdate: Boolean): SerializableKey =
     new SerializableKey(
-      RowKey.toRowKey(tableId, extractHandleId(row, tiTableInfo, isUpdate)).getBytes
+      RowKey.toRowKey(tableId, extractHandleId(row, allocator, tiTableInfo, isUpdate)).getBytes
     )
 
   private def sparkRow2TiKVRow(sparkRow: SparkRow): TiRow = {
