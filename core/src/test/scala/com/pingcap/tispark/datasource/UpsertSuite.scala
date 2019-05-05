@@ -7,12 +7,15 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
-class BasicDataSouceSuite extends BaseDataSourceSuite("test_datasource_basic") {
+class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
   // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
   private val row4 = Row(4, null)
+  private val row5 = Row(5, "Duplicate")
+
+  private val row3_v2 = Row(3, "TiSpark")
 
   private val schema = StructType(
     List(
@@ -27,47 +30,56 @@ class BasicDataSouceSuite extends BaseDataSourceSuite("test_datasource_basic") {
     jdbcUpdate(s"drop table if exists $dbtableInJDBC")
     jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(null, 'Hello'), (2, 'TiDB')"
+      s"insert into $dbtableInJDBC values(null, 'Hello')"
     )
   }
 
-  test("Test Select") {
-    testSelect(dbtableInSpark, Seq(row1, row2))
+  test("Test upsert to table without primary key") {
+    // insert row2 row3
+    batchWrite(List(row2, row3))
+    testSelect(dbtableInSpark, Seq(row1, row2, row3))
+
+    // insert row4
+    batchWrite(List(row4))
+    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
+
+    // deduplicate=false
+    // insert row5 row5
+    {
+      val caught = intercept[TiBatchWriteException] {
+        batchWrite(List(row5, row5))
+      }
+      assert(
+        caught.getMessage
+          .equals("data conflicts! set the parameter deduplicate.")
+      )
+    }
+
+    // deduplicate=true
+    // insert row5 row5
+    batchWrite(List(row5, row5), Some(Map("deduplicate" -> "true")))
+    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4, row5))
+
+    // test update
+    // insert row3_v2
+    batchWrite(List(row3_v2))
+    testSelect(dbtableInSpark, Seq(row1, row2, row3_v2, row4, row5))
   }
 
-  test("Test Write Append") {
-    val data: RDD[Row] = sc.makeRDD(List(row3, row4))
-    val df = sqlContext.createDataFrame(data, schema)
+  test("Test upsert to table with primary key (primary key is handle)") {
+    //TODO
+  }
 
+  private def batchWrite(rows: List[Row], param: Option[Map[String, String]] = None): Unit = {
+    val data: RDD[Row] = sc.makeRDD(rows)
+    val df = sqlContext.createDataFrame(data, schema)
     df.write
       .format("tidb")
-      .options(tidbOptions)
+      .options(tidbOptions ++ param.getOrElse(Map.empty))
       .option("database", databaseInSpark)
       .option("table", testTable)
       .mode("append")
       .save()
-
-    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
-  }
-
-  test("Test Write Overwrite") {
-    val data: RDD[Row] = sc.makeRDD(List(row3, row4))
-    val df = sqlContext.createDataFrame(data, schema)
-
-    val caught = intercept[TiBatchWriteException] {
-      df.write
-        .format("tidb")
-        .options(tidbOptions)
-        .option("database", databaseInSpark)
-        .option("table", testTable)
-        .mode("overwrite")
-        .save()
-    }
-
-    assert(
-      caught.getMessage
-        .equals("SaveMode: Overwrite is not supported. TiSpark only support SaveMode.Append.")
-    )
   }
 
   private def testSelect(dbtable: String, expectedAnswer: Seq[Row]): Unit = {

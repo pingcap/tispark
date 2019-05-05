@@ -58,14 +58,21 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // ------------------------------------------------------------
   // Optional parameters only for writing
   // ------------------------------------------------------------
-  // if to truncate the table from TiDB
-  val isTruncate: Boolean = parameters.getOrElse(TIDB_TRUNCATE, "false").toBoolean
 
   // the create table option , which can be table_options or partition_options.
   // E.g., "CREATE TABLE t (name string) ENGINE=InnoDB DEFAULT CHARSET=utf8"
   val createTableOptions: String = parameters.getOrElse(TIDB_CREATE_TABLE_OPTIONS, "")
 
   val createTableColumnTypes: Option[String] = parameters.get(TIDB_CREATE_TABLE_COLUMN_TYPES)
+
+  // if deduplicate is true, tispark will remove duplicate rows according to primary key before write to tidb
+  val deduplicate: Boolean = parameters.getOrElse(TIDB_DEDUPLICATE, "false").toBoolean
+
+  // TODO: disabled because of this bug: https://internal.pingcap.net/jira/browse/TISPARK-127
+  val skipCommitSecondaryKey: Boolean =
+    parameters.getOrElse(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
+
+  val sampleFraction: Double = parameters.getOrElse(TIDB_SAMPLE_FRACTION, "0.01").toDouble
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -100,7 +107,9 @@ object TiDBOptions {
   val TIDB_PASSWORD: String = newOption("tidb.password")
   val TIDB_DATABASE: String = newOption("database")
   val TIDB_TABLE: String = newOption("table")
-  val TIDB_TRUNCATE: String = newOption("truncate")
   val TIDB_CREATE_TABLE_OPTIONS: String = newOption("createTableOptions")
   val TIDB_CREATE_TABLE_COLUMN_TYPES: String = newOption("createTableColumnTypes")
+  val TIDB_DEDUPLICATE: String = newOption("deduplicate")
+  val TIDB_SKIP_COMMIT_SECONDARY_KEY = newOption("skipCommitSecondaryKey")
+  val TIDB_SAMPLE_FRACTION = newOption("sampleFraction")
 }

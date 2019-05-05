@@ -12,9 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TableCodec {
-  // Row layout: colID1, value1, colID2, value2, .....
-  private static final CodecDataOutput cdo = new CodecDataOutput();
-
   public static byte[] encodeRow(DataType[] colTypes, TLongArrayList colIDs, Object[] values)
       throws IllegalAccessException {
     if (colTypes.length != colIDs.size()) {
@@ -23,6 +20,9 @@ public class TableCodec {
               "encodeRow error: data and columnID count not " + "match %d vs %d",
               colTypes.length, colIDs.size()));
     }
+
+    // Row layout: colID1, value1, colID2, value2, .....
+    CodecDataOutput cdo = new CodecDataOutput();
 
     for (int i = 0; i < colTypes.length; i++) {
       IntegerCodec.writeLongFully(cdo, colIDs.get(i), false);

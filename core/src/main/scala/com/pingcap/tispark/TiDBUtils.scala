@@ -60,11 +60,9 @@ object TiDBUtils {
   def saveTable(tiContext: TiContext,
                 df: DataFrame,
                 tableSchema: Option[StructType],
-                options: TiDBOptions): Unit = {
+                options: TiDBOptions): Unit =
     // TODO: use table schema
-    val tableRef = TiTableReference(options.database, options.table)
-    TiBatchWrite.writeToTiDB(df.rdd, tableRef, tiContext)
-  }
+    TiBatchWrite.writeToTiDB(df.rdd, tiContext, options)
 
   /**
    * Returns a factory for creating connections to the given TiDB URL.
