@@ -15,6 +15,7 @@
 
 package com.pingcap.tispark
 
+import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
@@ -125,7 +126,7 @@ object TiBatchWrite {
     val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
-    val idAllocator = new AutoIDGenerator(tiDBInfo.getId, null)
+    val idAllocator = new IDAllocator(tiDBInfo.getId, null, tiTableInfo.isAutoIncColUnsigned)
     if (enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
       val sampleRDD = rdd.sample(withReplacement = false, fraction = fraction)

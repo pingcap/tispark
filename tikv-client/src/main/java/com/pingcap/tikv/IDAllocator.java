@@ -1,17 +1,19 @@
 package com.pingcap.tikv;
 
-import com.pingcap.tikv.catalog.CatalogTransaction;
+import com.pingcap.tikv.catalog.Catalog;
 
-public class AutoIDGenerator {
+public class IDAllocator {
   private long start;
   private long end;
-  private boolean signed;
-  private long dbId;
-  private CatalogTransaction catalogTransaction;
+  // it passed when create IDAllocator.
+  private final boolean signed;
+  private final long dbId;
+  private Catalog catalog;
 
-  public AutoIDGenerator(long dbId, CatalogTransaction catalogTransaction) {
-    this.catalogTransaction = catalogTransaction;
+  public IDAllocator(long dbId, Catalog catalog, boolean signed) {
+    this.catalog = catalog;
     this.dbId = dbId;
+    this.signed = signed;
   }
 
   public boolean isSigned() {
@@ -33,7 +35,7 @@ public class AutoIDGenerator {
       long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
       newEnd = allocID(dbId, tableId, tmpStep);
       if (start == Long.MAX_VALUE) {
-        // TODO: refine this expcetion
+        // TODO: refine this exception
         throw new IllegalArgumentException("cannot allocate more ids since it ");
       }
       end = newEnd;
@@ -60,10 +62,10 @@ public class AutoIDGenerator {
   }
 
   private long allocID(long dbId, long tableId) {
-    return catalogTransaction.getAutoTableId(dbId, tableId);
+    return catalog.getAutoTableId(dbId, tableId);
   }
 
   private long allocID(long dbId, long tableId, long step) {
-    return catalogTransaction.getAutoTableId(dbId, tableId, step);
+    return catalog.getAutoTableId(dbId, tableId, step);
   }
 }

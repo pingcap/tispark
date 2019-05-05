@@ -311,6 +311,10 @@ public abstract class DataType implements Serializable {
     return (flag & NumFlag) > 0;
   }
 
+  public boolean isUnsigned() {
+    return (flag & UnsignedFlag) > 0;
+  }
+
   @Override
   public String toString() {
     return String.format("%s:%s", this.getClass().getSimpleName(), getType());
