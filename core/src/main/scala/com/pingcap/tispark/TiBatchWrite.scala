@@ -15,7 +15,6 @@
 
 package com.pingcap.tispark
 
-import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
@@ -128,7 +127,8 @@ object TiBatchWrite {
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
     val step = tiKVRowRDD.count()
-    val idAllocator = new IDAllocator(tiDBInfo.getId, tiSession.getCatalog, tiTableInfo.isAutoIncColUnsigned, step)
+    val idAllocator =
+      new IDAllocator(tiDBInfo.getId, tiSession.getCatalog, tiTableInfo.isAutoIncColUnsigned, step)
 
     if (enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
@@ -298,7 +298,10 @@ object TiBatchWrite {
     TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, table).toList
   }
 
-  private def extractHandleId(row: TiRow, allocator: IDAllocator, tableInfo: TiTableInfo, isUpdate: Boolean): Long = {
+  private def extractHandleId(row: TiRow,
+                              allocator: IDAllocator,
+                              tableInfo: TiTableInfo,
+                              isUpdate: Boolean): Long = {
     // If handle ID is changed when update, update will remove the old record first,
     // and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.

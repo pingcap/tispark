@@ -61,24 +61,22 @@ public class IDAllocator {
   }
 
   private long allocUnSigned(long tableId) {
-        long newEnd;
-        if(start == end) {
-          // get new start from TiKV, and calculate new end and set it back to tikv.
-          long newStart = catalog.getAutoTableId(dbId, tableId);
-          if(newStart < 0) {
+    long newEnd;
+    if (start == end) {
+      // get new start from TiKV, and calculate new end and set it back to TiKV.
+      long newStart = catalog.getAutoTableId(dbId, tableId);
+      // for unsigned long, -1L is max value.
+      long tmpStep = Math.min(-1L - newStart, step);
+      newEnd = allocID(dbId, tableId, tmpStep);
+      // when compare unsigned long, the min value is largest value.
+      if (start == -1L) {
+        // TODO: refine this exception
+        throw new IllegalArgumentException("cannot allocate more ids since it ");
+      }
+      end = newEnd;
+    }
 
-          }
-          long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
-          newEnd  = allocID(dbId, tableId, tmpStep);
-          // when compare unsigned long, the min value is largest value.
-          if(start == Long.MIN_VALUE) {
-            // TODO: refine this exception
-            throw new IllegalArgumentException("cannot allocate more ids since it ");
-          }
-          end = newEnd;
-        }
-
-        return start++;
+    return start++;
   }
 
   private long allocID(long dbId, long tableId) {
