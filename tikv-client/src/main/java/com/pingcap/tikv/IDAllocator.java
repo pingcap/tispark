@@ -14,6 +14,7 @@
  */
 package com.pingcap.tikv;
 
+import com.google.common.primitives.UnsignedLongs;
 import com.pingcap.tikv.catalog.Catalog;
 
 public class IDAllocator {
@@ -66,7 +67,7 @@ public class IDAllocator {
       // get new start from TiKV, and calculate new end and set it back to TiKV.
       long newStart = catalog.getAutoTableId(dbId, tableId);
       // for unsigned long, -1L is max value.
-      long tmpStep = Math.min(-1L - newStart, step);
+      long tmpStep = UnsignedLongs.min(-1L - newStart, step);
       newEnd = allocID(dbId, tableId, tmpStep);
       // when compare unsigned long, the min value is largest value.
       if (start == -1L) {
