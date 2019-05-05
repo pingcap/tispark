@@ -78,6 +78,7 @@ object TiBatchWrite {
                          sampleRDDCount: Long,
                          tblInfo: TiTableInfo,
                          isUpdate: Boolean,
+                         allocator: IDAllocator,
                          regionSplitNumber: Option[Int]): List[SerializableKey] = {
 
     var regionNeed = (estimatedTotalSize / 96.0).toLong
@@ -92,9 +93,10 @@ object TiBatchWrite {
 
     // TODO check this write is update or not
     val handleRdd: RDD[Long] = sampleRDD
-      .map(sparkRow2TiKVRow)
+    // TODO make allocator happy
+      .map(row => sparkRow2TiKVRow(null, row, null, false))
       // TODO: fix allocator issue
-      .map(row => extractHandleId(row, null, tblInfo, isUpdate = false))
+      .map(row => extractHandleId(row, tblInfo, isUpdate = false))
       .sortBy(k => k)
     val step = sampleRDDCount / regionNeed
     val splitKeys = handleRdd
@@ -123,12 +125,14 @@ object TiBatchWrite {
     val tiSession = tiContext.tiSession
     val kvClient = tiSession.createTxnClient()
     val (tiDBInfo, tiTableInfo, colDataTypes, colIds) = getDBAndTableInfo(tableRef, tiContext)
-    val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
-    val step = tiKVRowRDD.count()
+    val step = rdd.count()
+    // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
     val idAllocator =
       new IDAllocator(tiDBInfo.getId, tiSession.getCatalog, tiTableInfo.isAutoIncColUnsigned, step)
+    val tiKVRowRDD =
+      rdd.map(row => sparkRow2TiKVRow(tiTableInfo, row, idAllocator, tiTableInfo.isPkHandle))
 
     if (enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
@@ -142,6 +146,7 @@ object TiBatchWrite {
           sampleRDDCount,
           tiTableInfo,
           isUpdate = false,
+          idAllocator,
           regionSplitNumber
         ).map(k => k.bytes).asJava
       )
@@ -284,7 +289,7 @@ object TiBatchWrite {
     )
 
     rdd
-      .map(row => (tiKVRow2Key(row, allocator, tableId, tiTableInfo, isUpdate = false), row))
+      .map(row => (tiKVRow2Key(row, tableId, tiTableInfo, isUpdate = false), row))
       .groupByKey(tiRegionPartitioner)
       .map {
         case (key, iterable) =>
@@ -298,10 +303,7 @@ object TiBatchWrite {
     TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, table).toList
   }
 
-  private def extractHandleId(row: TiRow,
-                              allocator: IDAllocator,
-                              tableInfo: TiTableInfo,
-                              isUpdate: Boolean): Long = {
+  private def extractHandleId(row: TiRow, tableInfo: TiTableInfo, isUpdate: Boolean): Long = {
     // If handle ID is changed when update, update will remove the old record first,
     // and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
@@ -314,31 +316,42 @@ object TiBatchWrite {
           row.getLong(primaryColumn.getOffset)
         case None =>
           // pk is not handle case.
-          allocator.alloc(tableInfo.getId)
+          row.getLong(0)
       }
     }
     handle
   }
 
   private def tiKVRow2Key(row: TiRow,
-                          allocator: IDAllocator,
                           tableId: Long,
                           tiTableInfo: TiTableInfo,
                           isUpdate: Boolean): SerializableKey =
     new SerializableKey(
-      RowKey.toRowKey(tableId, extractHandleId(row, allocator, tiTableInfo, isUpdate)).getBytes
+      RowKey.toRowKey(tableId, extractHandleId(row, tiTableInfo, isUpdate)).getBytes
     )
 
-  private def sparkRow2TiKVRow(sparkRow: SparkRow): TiRow = {
+  private def sparkRow2TiKVRow(tableInfo: TiTableInfo,
+                               sparkRow: SparkRow,
+                               allocator: IDAllocator,
+                               pkIsHandle: Boolean): TiRow = {
     val fieldCount = sparkRow.size
-    val tiRow = ObjectRowImpl.create(fieldCount)
-    for (i <- 0 until fieldCount) {
-      val data = sparkRow.get(i)
-      val sparkDataType = sparkRow.schema(i).dataType
-      val tiDataType = TiUtil.fromSparkType(sparkDataType)
-      tiRow.set(i, tiDataType, data)
+    if (pkIsHandle) {
+      val tiRow = ObjectRowImpl.create(fieldCount)
+      for (i <- 0 until fieldCount) {
+        val data = sparkRow.get(i)
+        val sparkDataType = sparkRow.schema(i).dataType
+        val tiDataType = TiUtil.fromSparkType(sparkDataType)
+        tiRow.set(i, tiDataType, data)
+      }
+      tiRow
+    } else {
+      // when column is auto_increment, it has to be a primary key
+      // its value will be filled at the beginning according tidb's logic.
+      throw new UnsupportedOperationException(
+        "pk is not handle or pk is not existed is not support for now"
+      )
     }
-    tiRow
+
   }
 
   @throws(classOf[TiBatchWriteException])

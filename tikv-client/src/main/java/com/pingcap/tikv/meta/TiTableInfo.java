@@ -76,7 +76,7 @@ public class TiTableInfo implements Serializable {
     this.partitionInfo = partitionInfo;
   }
 
-  private TiColumnInfo getAutoIncrementColInfo() {
+  public TiColumnInfo getAutoIncrementColInfo() {
     for (int i = 0; i <= columns.size(); i++) {
       TiColumnInfo col = columns.get(i);
       if (col.getType().isAutoIncrement()) {
