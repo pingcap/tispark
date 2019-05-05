@@ -140,11 +140,15 @@ public class TxnKVClient implements AutoCloseable {
 
   // According to TiDB's implementation, when it comes to rpc error
   // commit status remains undecided.
-  // If we fail to receive response for the request that commits primary key, it will be undetermined whether this
+  // If we fail to receive response for the request that commits primary key, it will be
+  // undetermined whether this
   // transaction has been successfully committed.
-  // Under this circumstance,  we can not declare the commit is complete (may lead to data lost), nor can we throw
-  // an error (may lead to the duplicated key error when upper level restarts the transaction). Currently the best
-  // solution is to populate this error and let upper layer drop the connection to the corresponding mysql client.
+  // Under this circumstance,  we can not declare the commit is complete (may lead to data lost),
+  // nor can we throw
+  // an error (may lead to the duplicated key error when upper level restarts the transaction).
+  // Currently the best
+  // solution is to populate this error and let upper layer drop the connection to the corresponding
+  // mysql client.
   // TODO: check this logic to see are we satisfied?
   private boolean retryableException(Exception e) {
     return e instanceof TiClientInternalException

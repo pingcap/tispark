@@ -160,9 +160,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   // set will be run in txn via 2pc protocol.
-  public void set(ByteString key, ByteString value) {
-
-  }
+  public void set(ByteString key, ByteString value) {}
 
   /**
    * @param backOffer

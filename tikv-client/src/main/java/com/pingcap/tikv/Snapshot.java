@@ -77,14 +77,20 @@ public class Snapshot {
   }
 
   public void set(ByteString key, ByteString value) {
-    TxnKVClient txnKVClient = new TxnKVClient(this.session.getConf(),
-        session.getRegionStoreClientBuilder(), session.getPDClient());
-    TwoPhaseCommitter twoPhaseCommitter = new TwoPhaseCommitter(txnKVClient, txnKVClient.getTimestamp().getVersion());
-    twoPhaseCommitter.prewritePrimaryKey(ConcreteBackOffer.
-        newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF), key.toByteArray(), value.toByteArray());
+    TxnKVClient txnKVClient =
+        new TxnKVClient(
+            this.session.getConf(), session.getRegionStoreClientBuilder(), session.getPDClient());
+    TwoPhaseCommitter twoPhaseCommitter =
+        new TwoPhaseCommitter(txnKVClient, txnKVClient.getTimestamp().getVersion());
+    twoPhaseCommitter.prewritePrimaryKey(
+        ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
+        key.toByteArray(),
+        value.toByteArray());
     long commitTs = txnKVClient.getTimestamp().getVersion();
-    twoPhaseCommitter.commitPrimaryKey(ConcreteBackOffer.
-        newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF), key.toByteArray(), commitTs);
+    twoPhaseCommitter.commitPrimaryKey(
+        ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF),
+        key.toByteArray(),
+        commitTs);
   }
 
   /**

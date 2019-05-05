@@ -235,8 +235,10 @@ object TiBatchWrite {
   }
 
   @throws(classOf[NoSuchTableException])
-  private def getDBAndTableInfo(tableRef: TiTableReference,
-                           tiContext: TiContext): (TiDBInfo, TiTableInfo, Array[DataType], TLongArrayList) = {
+  private def getDBAndTableInfo(
+    tableRef: TiTableReference,
+    tiContext: TiContext
+  ): (TiDBInfo, TiTableInfo, Array[DataType], TLongArrayList) = {
     val tiDBInfo = tiContext.tiSession.getCatalog.getDatabase(tableRef.databaseName)
     val tiTableInfo =
       tiContext.tiSession.getCatalog.getTable(tableRef.databaseName, tableRef.tableName)

@@ -1,6 +1,5 @@
 package com.pingcap.tikv;
 
-
 import com.pingcap.tikv.catalog.CatalogTransaction;
 
 public class AutoIDGenerator {
@@ -20,7 +19,7 @@ public class AutoIDGenerator {
   }
 
   public long alloc(long tableId, long step) {
-    if(isSigned()) {
+    if (isSigned()) {
       return allocSigned(tableId, step);
     }
     return allocUnSigned(tableId, step);
@@ -28,14 +27,14 @@ public class AutoIDGenerator {
 
   private long allocSigned(long tableId, long step) {
     long newEnd;
-    if(start == end) {
+    if (start == end) {
       // get new start from tikv, and calculate new end and set it back to tikv.
       long newStart = allocID(dbId, tableId);
       long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
-      newEnd  = allocID(dbId, tableId, tmpStep);
-      if(start == Long.MAX_VALUE) {
+      newEnd = allocID(dbId, tableId, tmpStep);
+      if (start == Long.MAX_VALUE) {
         // TODO: refine this expcetion
-        throw new IllegalArgumentException("cannot allocate more ids since it ")
+        throw new IllegalArgumentException("cannot allocate more ids since it ");
       }
       end = newEnd;
     }
@@ -44,20 +43,20 @@ public class AutoIDGenerator {
   }
 
   private long allocUnSigned(long tableId, long step) {
-//    long newEnd;
-//    if(start == end) {
-//       get new start from tikv, and calculate new end and set it back to tikv.
-//      long newStart = catalogTransaction.getAutoTableId(dbId, tableId);
-//      long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
-//      newEnd  = allocID(dbId, tableId, tmpStep);
-//      if(start == Long.MAX_VALUE) {
-//         TODO: throw new exception indicates we can't allocate any more id for now.
-//      }
-//      end = newEnd;
+    //    long newEnd;
+    //    if(start == end) {
+    //       get new start from tikv, and calculate new end and set it back to tikv.
+    //      long newStart = catalogTransaction.getAutoTableId(dbId, tableId);
+    //      long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
+    //      newEnd  = allocID(dbId, tableId, tmpStep);
+    //      if(start == Long.MAX_VALUE) {
+    //         TODO: throw new exception indicates we can't allocate any more id for now.
+    //      }
+    //      end = newEnd;
     return 0L;
-//    }
+    //    }
 
-//    return start++;
+    //    return start++;
   }
 
   private long allocID(long dbId, long tableId) {

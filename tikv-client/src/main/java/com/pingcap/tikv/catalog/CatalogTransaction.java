@@ -82,6 +82,7 @@ public class CatalogTransaction {
     IntegerCodec.writeULong(cdo, HASH_META_FLAG);
     return cdo.toByteString();
   }
+
   private ByteString autoTableIDKey(long tableId) {
     return ByteString.copyFromUtf8(String.format("%s:%d", KEY_TABLE, tableId));
   }
@@ -90,7 +91,7 @@ public class CatalogTransaction {
     return ByteString.copyFromUtf8(String.format("%s:%d", KEY_DB, dbId));
   }
 
-    private void encodeHashDataKeyPrefix(CodecDataOutput cdo, byte[] key) {
+  private void encodeHashDataKeyPrefix(CodecDataOutput cdo, byte[] key) {
     cdo.write(prefix);
     BytesCodec.writeBytes(cdo, key);
     IntegerCodec.writeULong(cdo, HASH_DATA_FLAG);
@@ -145,7 +146,7 @@ public class CatalogTransaction {
     // check length is 8 or not
 
     // bigendian 8
-    if(oldVal == null) {
+    if (oldVal == null) {
       fieldCount++;
       cdo.reset();
       IntegerCodec.writeULong(cdo, fieldCount);
@@ -153,7 +154,8 @@ public class CatalogTransaction {
     }
   }
 
-  private long updateHash(ByteString key, ByteString field, Function<byte[], byte[]> calculateNewVal) {
+  private long updateHash(
+      ByteString key, ByteString field, Function<byte[], byte[]> calculateNewVal) {
     // 1. encode hash data key
     // 2. get value in byte from get operation
     // 3. calculate new value via calculateNewVal
@@ -167,7 +169,7 @@ public class CatalogTransaction {
     byte[] oldVal = snapshot.get(dataKey.toByteArray());
 
     byte[] newVal = calculateNewVal.apply(oldVal);
-    if(Arrays.equals(newVal, oldVal)) {
+    if (Arrays.equals(newVal, oldVal)) {
       // not need to update
       return 0L;
     }
@@ -178,16 +180,19 @@ public class CatalogTransaction {
   }
 
   public long getAutoTableId(long dbId, long tableId, long step) {
-    if(!isDBExisted(dbId) && isTableExisted(dbId, tableId)) {
-      return updateHash(dbKey(dbId), autoTableIDKey(dbId), (oldVal) -> {
-        long base = 0;
-        if(oldVal != null) {
-          base = Long.parseLong(new String(oldVal));
-        }
+    if (!isDBExisted(dbId) && isTableExisted(dbId, tableId)) {
+      return updateHash(
+          dbKey(dbId),
+          autoTableIDKey(dbId),
+          (oldVal) -> {
+            long base = 0;
+            if (oldVal != null) {
+              base = Long.parseLong(new String(oldVal));
+            }
 
-        base += step;
-        return String.valueOf(base).getBytes();
-      });
+            base += step;
+            return String.valueOf(base).getBytes();
+          });
     }
 
     // TODO: throw exception
@@ -197,7 +202,7 @@ public class CatalogTransaction {
   public long getAutoTableId(long dbId, long tableId) {
     String val = hashGet(dbKey(dbId), autoTableIDKey(tableId)).toString();
     Long num = Longs.tryParse(val);
-    if(num != null) {
+    if (num != null) {
       return num;
     }
     return -1L;
