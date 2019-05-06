@@ -23,6 +23,7 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.FastByteComparisons;
 import java.util.Arrays;
+import javax.annotation.Nonnull;
 
 public class Key implements Comparable<Key> {
   protected static final byte[] TBL_PREFIX = new byte[] {'t'};
@@ -151,8 +152,7 @@ public class Key implements Comparable<Key> {
   }
 
   @Override
-  public int compareTo(Key other) {
-    requireNonNull(other, "other is null");
+  public int compareTo(@Nonnull Key other) {
     if ((this.infFlag | other.infFlag) != 0) {
       return this.infFlag - other.infFlag;
     }

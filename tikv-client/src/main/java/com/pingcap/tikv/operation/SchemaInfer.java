@@ -39,12 +39,16 @@ public class SchemaInfer {
   private RowTransformer rt;
 
   public static SchemaInfer create(TiDAGRequest dagRequest) {
-    return new SchemaInfer(dagRequest);
+    return create(dagRequest, false);
   }
 
-  private SchemaInfer(TiDAGRequest dagRequest) {
+  public static SchemaInfer create(TiDAGRequest dagRequest, boolean readHandle) {
+    return new SchemaInfer(dagRequest, readHandle);
+  }
+
+  private SchemaInfer(TiDAGRequest dagRequest, boolean readHandle) {
     types = new ArrayList<>();
-    extractFieldTypes(dagRequest);
+    extractFieldTypes(dagRequest, readHandle);
     buildTransform(dagRequest);
   }
 
@@ -60,11 +64,11 @@ public class SchemaInfer {
     // 3. for no aggregation case, make only projected columns
 
     // append aggregates if present
-    if (dagRequest.hasAggregate()) {
-      for (Pair<Expression, DataType> pair : dagRequest.getAggregatePairs()) {
+    if (dagRequest.hasPushDownAggregate()) {
+      for (Pair<Expression, DataType> pair : dagRequest.getPushDownAggregatePairs()) {
         rowTrans.addProjection(new Cast(pair.second));
       }
-      if (dagRequest.hasGroupBy()) {
+      if (dagRequest.hasPushDownGroupBy()) {
         for (ByItem byItem : dagRequest.getGroupByItems()) {
           rowTrans.addProjection(new NoOp(dagRequest.getExpressionType(byItem.getExpr())));
         }
@@ -83,14 +87,19 @@ public class SchemaInfer {
    *
    * @param dagRequest is SelectRequest
    */
-  private void extractFieldTypes(TiDAGRequest dagRequest) {
-    if (dagRequest.hasAggregate()) {
-      dagRequest.getAggregates().forEach(expr -> types.add(dagRequest.getExpressionType(expr)));
+  private void extractFieldTypes(TiDAGRequest dagRequest, boolean readHandle) {
+    if (readHandle) {
+      // or extract data from index read
+      types.addAll(dagRequest.getIndexDataTypes());
+    } else if (dagRequest.hasPushDownAggregate()) {
+      dagRequest
+          .getPushDownAggregates()
+          .forEach(expr -> types.add(dagRequest.getExpressionType(expr)));
       // In DAG mode, if there is any group by statement in a request, all the columns specified
       // in group by expression will be returned, so when we decode a result row, we need to pay
       // extra attention to decoding.
-      if (dagRequest.hasGroupBy()) {
-        for (ByItem item : dagRequest.getGroupByItems()) {
+      if (dagRequest.hasPushDownGroupBy()) {
+        for (ByItem item : dagRequest.getPushDownGroupBys()) {
           types.add(dagRequest.getExpressionType(item.getExpr()));
         }
       }

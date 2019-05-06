@@ -51,7 +51,7 @@ import org.tikv.kvproto.Coprocessor.KeyRange;
 public class ScanAnalyzer {
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;
   private static final double TABLE_SCAN_COST_FACTOR = 1.0;
-  private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
+  private static final double DOUBLE_READ_COST_FACTOR = 0.2; // TABLE_SCAN_COST_FACTOR * 3;
 
   public static class ScanPlan {
     ScanPlan(
@@ -172,7 +172,7 @@ public class ScanAnalyzer {
     boolean isDoubleRead = false;
     double estimatedRowCount = -1;
     // table name and columns
-    int tableColSize = table.getColumns().size() + 1;
+    long tableColSize = table.getColumnLength() + 8;
 
     if (index == null || index.isFakePrimaryKey()) {
       if (tableStatistics != null) {
@@ -198,7 +198,7 @@ public class ScanAnalyzer {
       }
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
       // table name, index and handle column
-      int indexSize = index.getIndexColumns().size() + 2;
+      long indexSize = index.getIndexColumnLength() + 16;
       if (isDoubleRead) {
         cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
       } else {

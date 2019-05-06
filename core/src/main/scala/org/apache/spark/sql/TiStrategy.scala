@@ -363,7 +363,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       if (dagRequest.hasIndex) {
         // add the first index column so that the plan will contain at least one column.
         val idxColumn = dagRequest.getIndexInfo.getIndexColumns.get(0)
-        dagRequest.addRequiredColumn(ColumnRef.create(idxColumn.getName))
+        dagRequest.addRequiredColumn(ColumnRef.create(idxColumn.getName, source.table))
       } else {
         // add a random column so that the plan will contain at least one column.
         // if the table contains a primary key then use the PK instead.
@@ -372,7 +372,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
             case e if e.isPrimaryKey => e
           }
           .getOrElse(source.table.getColumn(0))
-        dagRequest.addRequiredColumn(ColumnRef.create(column.getName))
+        dagRequest.addRequiredColumn(ColumnRef.create(column.getName, source.table))
       }
     }
 

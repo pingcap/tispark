@@ -69,6 +69,7 @@ object StatisticsHelper {
                                                neededColIds: mutable.ArrayBuffer[Long],
                                                histTable: TiTableInfo): StatisticsDTO = {
     if (row.fieldCount() < 6) return null
+    assert(row.getLong(0) == table.getId, s"table id not match ${row.getLong(0)}!=${table.getId}")
     val isIndex = row.getLong(1) > 0
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
@@ -87,15 +88,14 @@ object StatisticsHelper {
     // we should only query those columns that user specified before
     if (!loadAll && !neededColIds.contains(histID)) needed = false
 
-    var indexFlag = 1
+    val indexFlag = if (isIndex) 1 else 0
     var dataType: DataType = DataTypeFactory.of(MySQLType.TypeBlob)
     // Columns info found
     if (!isIndex && colInfos.nonEmpty) {
-      indexFlag = 0
       dataType = colInfos.head.getType
-    } else if (!isIndex || indexInfos.isEmpty) {
+    } else if (indexInfos.isEmpty) {
       logger.warn(
-        s"Cannot find histogram id $histID in table info ${table.getName} now. It may be deleted."
+        s"Cannot find histogram id $histID in table info ${table.getName}[${table.getId}] now. It may be deleted."
       )
       needed = false
     }

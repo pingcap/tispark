@@ -83,21 +83,10 @@ public class Snapshot {
    * @return a Iterator that contains all result from this select request.
    */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest) {
-    if (dagRequest.hasIndex()) {
-      Iterator<Long> iter =
-          getHandleIterator(
-              dagRequest,
-              RangeSplitter.newSplitter(session.getRegionManager())
-                  .splitRangeByRegion(dagRequest.getRanges()),
-              session);
-      return new IndexScanIterator(this, dagRequest, iter);
-    } else {
-      return getRowIterator(
-          dagRequest,
-          RangeSplitter.newSplitter(session.getRegionManager())
-              .splitRangeByRegion(dagRequest.getRanges()),
-          session);
-    }
+    return tableRead(
+        dagRequest,
+        RangeSplitter.newSplitter(session.getRegionManager())
+            .splitRangeByRegion(dagRequest.getRanges()));
   }
 
   /**

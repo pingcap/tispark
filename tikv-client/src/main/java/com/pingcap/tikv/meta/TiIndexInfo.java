@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tidb.tipb.IndexInfo;
+import com.pingcap.tikv.types.DataType;
 import java.io.Serializable;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -40,6 +41,7 @@ public class TiIndexInfo implements Serializable {
   private final SchemaState schemaState;
   private final String comment;
   private final IndexType indexType;
+  private final long indexColumnLength;
   private final boolean isFakePrimaryKey;
 
   @JsonCreator
@@ -61,6 +63,12 @@ public class TiIndexInfo implements Serializable {
     this.name = requireNonNull(name, "index name is null").getL();
     this.tableName = requireNonNull(tableName, "table name is null").getL();
     this.indexColumns = ImmutableList.copyOf(requireNonNull(indexColumns, "indexColumns is null"));
+    // TODO: Use more precise predication according to types
+    this.indexColumnLength =
+        indexColumns
+            .stream()
+            .mapToLong(x -> (x.getLength() == DataType.UNSPECIFIED_LEN) ? 8 : x.getLength())
+            .sum();
     this.isUnique = isUnique;
     this.isPrimary = isPrimary;
     this.schemaState = SchemaState.fromValue(schemaState);
@@ -101,6 +109,10 @@ public class TiIndexInfo implements Serializable {
 
   public List<TiIndexColumn> getIndexColumns() {
     return indexColumns;
+  }
+
+  public long getIndexColumnLength() {
+    return indexColumnLength;
   }
 
   public boolean isUnique() {

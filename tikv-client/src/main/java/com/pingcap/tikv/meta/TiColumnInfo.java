@@ -152,6 +152,10 @@ public class TiColumnInfo implements Serializable {
     return type;
   }
 
+  public long getLength() {
+    return getType().getLength();
+  }
+
   SchemaState getSchemaState() {
     return schemaState;
   }

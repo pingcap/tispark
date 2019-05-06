@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
-import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.*;
 
 public class TypedKey extends Key {
   private final DataType type;
@@ -30,6 +30,12 @@ public class TypedKey extends Key {
     super(encodeKey(val, type, prefixLength));
     this.type = type;
     this.prefixLength = prefixLength;
+  }
+
+  private TypedKey(byte[] val, DataType type) {
+    super(val);
+    this.type = type;
+    this.prefixLength = DataType.UNSPECIFIED_LEN;
   }
 
   public DataType getType() {
@@ -60,6 +66,10 @@ public class TypedKey extends Key {
     return new TypedKey(val, type, prefixLength);
   }
 
+  private TypedKey toRawTypedKey(byte[] val, DataType type) {
+    return new TypedKey(val, type);
+  }
+
   private static byte[] encodeKey(Object val, DataType type, int prefixLength) {
     CodecDataOutput cdo = new CodecDataOutput();
     type.encodeKey(cdo, val, type, prefixLength);
@@ -72,14 +82,23 @@ public class TypedKey extends Key {
    * @return next TypedKey with same prefix length
    */
   public TypedKey next() {
+    DataType tp = getType();
     Object val = getValue();
-    if (val instanceof String) {
+    if (tp instanceof StringType) {
       return toTypedKey(prefixNext(((String) val).getBytes()), type, prefixLength);
-    } else if (val instanceof byte[]) {
+    } else if (tp instanceof BytesType) {
       return toTypedKey(prefixNext(((byte[]) val)), type, prefixLength);
+    } else if (prefixLength == -1) {
+      if (tp instanceof IntegerType) {
+        return toTypedKey(((long) val) + 1, type, prefixLength);
+      } else {
+        // use byte array type when next key is hard to identify
+        return toRawTypedKey(prefixNext(value), type);
+      }
     } else {
       throw new TypeException(
-          "Type for TypedKey in next() function must be either String or Byte array");
+          "When prefix length is defined, type for TypedKey in next() function must be either String or Byte array. Actual: "
+              + val.getClass().getName());
     }
   }
 

@@ -44,6 +44,7 @@ public class TiTableInfo implements Serializable {
   private final long maxColumnId;
   private final long maxIndexId;
   private final long oldSchemaId;
+  private final long columnLength;
   private final TiPartitionInfo partitionInfo;
 
   @JsonCreator
@@ -66,6 +67,12 @@ public class TiTableInfo implements Serializable {
     this.charset = charset;
     this.collate = collate;
     this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
+    // TODO: Use more precise predication according to types
+    this.columnLength =
+        columns
+            .stream()
+            .mapToLong(x -> (x.getLength() == DataType.UNSPECIFIED_LEN) ? 8 : x.getLength())
+            .sum();
     this.pkIsHandle = pkIsHandle;
     this.indices = indices != null ? ImmutableList.copyOf(indices) : ImmutableList.of();
     this.comment = comment;
@@ -94,6 +101,10 @@ public class TiTableInfo implements Serializable {
 
   public List<TiColumnInfo> getColumns() {
     return columns;
+  }
+
+  public long getColumnLength() {
+    return columnLength;
   }
 
   public TiColumnInfo getColumn(int offset) {
