@@ -100,8 +100,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   // apply StartTs to every logical plan in Spark Planning stage
   protected def applyStartTs(ts: TiTimestamp): PartialFunction[LogicalPlan, Unit] = {
     case LogicalRelation(r @ TiDBRelation(_, _, _, timestamp), _, _, _) =>
-      if (timestamp.isEmpty) {
-        r.ts = Some(ts)
+      if (timestamp == null) {
+        r.ts = ts
       }
     case logicalPlan =>
       logicalPlan transformExpressionsUp {
@@ -129,7 +129,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagRequest: TiDAGRequest
   ): SparkPlan = {
     dagRequest.setTableInfo(source.table)
-    dagRequest.setStartTs(source.ts.get)
+    dagRequest.setStartTs(source.ts)
     dagRequest.resolve()
 
     val notAllowPushDown = dagRequest.getFields.asScala
@@ -277,7 +277,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     }
 
     dagRequest.setTableInfo(source.table)
-    dagRequest.setStartTs(source.ts.get)
+    dagRequest.setStartTs(source.ts)
     dagRequest.setEstimatedCount(scanPlan.getEstimatedRowCount)
     dagRequest
   }
