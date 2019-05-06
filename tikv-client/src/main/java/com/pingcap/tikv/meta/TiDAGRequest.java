@@ -357,12 +357,12 @@ public class TiDAGRequest implements Serializable {
       }
 
       if (isDoubleRead()) {
-        boolean pkIsNeeded = false;
         int colCount = indexScanBuilder.getColumnsCount();
         // double read case: need to retrieve handle
         // =================== IMPORTANT ======================
         // offset for dagRequest should be in accordance with fields
         // The last pos will be the handle
+        // TODO: we may merge indexDoubleRead and coveringIndexRead logic
         for (ColumnRef col : getFields()) {
           Integer pos = colPosInIndexMap.get(col.getColumnInfo());
           if (pos != null) {
@@ -372,13 +372,7 @@ public class TiDAGRequest implements Serializable {
               colOffsetInFieldMap.put(col, pos);
               addRequiredIndexDataType(col.getType());
             }
-            //          } else if (!hasPk && col.getColumnInfo().isPrimaryKey() &&
-            // tableInfo.isPkHandle()) {
-            //            pkIsNeeded = true;
-            //            // offset should be processed for each primary key encountered
-            //            dagRequestBuilder.addOutputOffsets(colCount);
-            //            // for index scan, column offset must be in the order of index->handle
-            //            colOffsetInFieldMap.put(col, indexColOffsets.size());
+            // TODO: primary key may also be considered if pkIsHandle
           }
         }
         // double read case
@@ -531,11 +525,6 @@ public class TiDAGRequest implements Serializable {
     }
 
     return dagRequestBuilder;
-  }
-
-  public boolean isFilterCoveredByIndex() {
-    Expression whereExpr = mergeCNFExpressions(getFilters());
-    return whereExpr != null && isExpressionCoveredByIndex(whereExpr);
   }
 
   private boolean isExpressionCoveredByIndex(Expression expr) {
