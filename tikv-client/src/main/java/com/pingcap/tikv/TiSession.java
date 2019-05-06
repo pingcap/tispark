@@ -186,11 +186,10 @@ public class TiSession implements AutoCloseable {
     TLongArrayList regionIds = new TLongArrayList();
     rawKeys.forEach(key -> splitRegionAndScatter(key, regionIds));
     // TODO: adding a conf let user to decide wait or not.
-    for(int i = 0; i< regionIds.size(); i++) {
+    for (int i = 0; i < regionIds.size(); i++) {
       getPDClient().waitScatterRegionFinish(regionIds.get(i));
     }
   }
-
 
   // splitKey is a row key, but we use a generalized key here.
   private void splitRegionAndScatter(Key splitKey, TLongArrayList regionIds) {

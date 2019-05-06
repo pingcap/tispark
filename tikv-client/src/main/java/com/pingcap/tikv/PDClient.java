@@ -27,6 +27,7 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiTimestamp;
+import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
@@ -50,10 +51,11 @@ import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
 import org.tikv.kvproto.Pdpb.*;
+import org.tikv.kvproto.Pdpb.Error;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
-  private final Logger logger =  LoggerFactory.getLogger(PDClient.class);
+  private final Logger logger = LoggerFactory.getLogger(PDClient.class);
   private RequestHeader header;
   private TsoRequest tsoReq;
   private volatile LeaderWrapper leaderWrapper;
@@ -62,38 +64,51 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private GetOperatorResponse getOperator(long regionId) {
     Supplier<GetOperatorRequest> request =
-        () -> GetOperatorRequest.newBuilder().setHeader(header)
-            .setRegionId(regionId)
-            .build();
-    PDErrorHandler<GetOperatorResponse> handler =
-        new PDErrorHandler<>(
-            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
-            this);
+        () -> GetOperatorRequest.newBuilder().setHeader(header).setRegionId(regionId).build();
+    // get operator no need to handle error and no need back offer.
+    return callWithRetry(
+        ConcreteBackOffer.newCustomBackOff(0),
+        PDGrpc.METHOD_GET_OPERATOR,
+        request,
+        new NoopHandler<>());
+  }
 
-    // TODO: this should not have any backoff
-    return callWithRetry(ConcreteBackOffer.newGetBackOff(),
-        PDGrpc.METHOD_GET_OPERATOR, request, handler);
+  private boolean isScatterRegionFinish(GetOperatorResponse resp) {
+    // If the current operator of region is not `scatter-region`, we could assume
+    // that `scatter-operator` has finished or timeout.
+    boolean finished =
+        !resp.getDesc().equals(ByteString.copyFromUtf8("scatter-region"))
+            || resp.getStatus() != OperatorStatus.RUNNING;
+
+    if (resp.hasHeader()) {
+      ResponseHeader header = resp.getHeader();
+      if (header.hasError()) {
+        Error error = header.getError();
+        // heartbeat may not send to PD
+        if (error.getType() == ErrorType.REGION_NOT_FOUND) {
+          finished = true;
+        }
+      }
+    }
+    return finished;
   }
 
   public void waitScatterRegionFinish(long regionId) {
     BackOffer backOffer = ConcreteBackOffer.newWaitScatterRegionBackOff();
-    int logFreq = 0;
-    for(;;){
-      try {
-        GetOperatorResponse resp = getOperator(regionId);
-        if(resp != null) {
-          if(!resp.getDesc().toString().equals("scatter-region") || resp.getStatus() != OperatorStatus.RUNNING) {
-            logger.info(String.format("wait scatter region on %d is finished", regionId));
-            return;
-          }
-        if(logFreq % 10 == 0) {
-          logger.info(String.format("wait scatter region %d %s %s", regionId, resp.getDesc().toString(),
-              resp.getStatus().toString()));
+    for (; ; ) {
+      GetOperatorResponse resp = getOperator(regionId);
+      if (resp != null) {
+        if (isScatterRegionFinish(resp)) {
+          logger.info(String.format("wait scatter region on %d is finished", regionId));
+          return;
+        } else {
+          backOffer.doBackOff(
+              BackOffFuncType.BoRegionMiss, new GrpcException("waiting scatter region"));
+          logger.info(
+              String.format(
+                  "wait scatter region %d %s %s",
+                  regionId, resp.getDesc().toString(), resp.getStatus().toString()));
         }
-        logFreq++;
-        }
-      } catch (Exception e) {
-        backOffer.doBackOff(BackOffFuncType.BoRegionMiss, e);
       }
     }
   }

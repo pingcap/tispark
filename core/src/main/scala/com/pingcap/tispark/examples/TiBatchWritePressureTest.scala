@@ -43,10 +43,10 @@ object TiBatchWritePressureTest {
       .setIfMissing("spark.master", "local[*]")
       .setIfMissing("spark.app.name", getClass.getName)
       .setIfMissing("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-      .setIfMissing("tidb.addr", "172.16.30.81")
+      .setIfMissing("tidb.addr", "localhost")
       .setIfMissing("tidb.port", "4000")
       .setIfMissing("tidb.user", "root")
-      .setIfMissing("spark.tispark.pd.addresses", "172.16.30.81:2379")
+      .setIfMissing("spark.tispark.pd.addresses", "localhost:2379")
       .setIfMissing("spark.tispark.show_rowid", "true")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
