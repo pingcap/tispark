@@ -87,9 +87,6 @@ object TiBatchWrite {
 
     // TODO check this write is update or not
     val handleRdd: RDD[Long] = sampleRDD
-    // TODO make allocator happy
-      .map(row => sparkRow2TiKVRow(null, row, null, false))
-      // TODO: fix allocator issue
       .map(obj => extractHandleId(obj._2, tblInfo, isUpdate = false))
       .sortBy(k => k)
     val step = sampleRDDCount / regionNeed
@@ -120,6 +117,7 @@ object TiBatchWrite {
     val tiConf = tiContext.tiConf
     val tiSession = tiContext.tiSession
     val kvClient = tiSession.createTxnClient()
+    val tableRef = TiTableReference(options.database, options.table)
     val (tiDBInfo, tiTableInfo, colDataTypes, colIds) = getDBAndTableInfo(tableRef, tiContext)
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
@@ -127,13 +125,10 @@ object TiBatchWrite {
     // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
     val idAllocator =
       new IDAllocator(tiDBInfo.getId, tiSession.getCatalog, tiTableInfo.isAutoIncColUnsigned, step)
-    val tiKVRowRDD =
-      rdd.map(row => sparkRow2TiKVRow(tiTableInfo, row, idAllocator, tiTableInfo.isPkHandle))
-    val tableRef = TiTableReference(options.database, options.table)
-    val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
 
     // spark row to tikv row
-    val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
+    val tiKVRowRDD =
+      rdd.map(row => sparkRow2TiKVRow(tiTableInfo, row, idAllocator, tiTableInfo.isPkHandle))
 
     // deduplicate
     val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
@@ -157,7 +152,6 @@ object TiBatchWrite {
           sampleRDDCount,
           tiTableInfo,
           isUpdate = false,
-          idAllocator,
           regionSplitNumber
         ).map(k => k.bytes).asJava
       )
@@ -165,7 +159,7 @@ object TiBatchWrite {
 
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
-      shuffleKeyToSameRegion(encodedTiRowRDD, idAllocator, tableRef, tiTableInfo, tiContext)
+      shuffleKeyToSameRegion(encodedTiRowRDD, tableRef, tiTableInfo, tiContext)
     }.cache()
 
     // take one row as primary key
@@ -206,10 +200,7 @@ object TiBatchWrite {
 
       val pairs = iterator.map {
         case (key, row) =>
-          new TwoPhaseCommitter.BytePairWrapper(
-            key.bytes,
-            encodeTiRow(row, colDataTypes, colIds)
-          )
+          new TwoPhaseCommitter.BytePairWrapper(key.bytes, row)
       }.asJava
 
       ti2PCClientOnExecutor
@@ -276,7 +267,6 @@ object TiBatchWrite {
     (tiDBInfo, tiTableInfo, dataTypes, colIds)
   }
 
-  @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def deduplicate(rdd: RDD[TiRow],
                           tableRef: TiTableReference,
@@ -320,7 +310,6 @@ object TiBatchWrite {
 
   @throws(classOf[NoSuchTableException])
   private def shuffleKeyToSameRegion(rdd: RDD[(SerializableKey, TiRow, Array[Byte])],
->>>>>>> batch_write
                                      tableRef: TiTableReference,
                                      tiTableInfo: TiTableInfo,
                                      tiContext: TiContext): RDD[(SerializableKey, Array[Byte])] = {
