@@ -28,6 +28,7 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import gnu.trove.list.array.TLongArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -182,11 +183,15 @@ public class TiSession implements AutoCloseable {
     logger.info(String.format("split key's size is %d", splitKeys.size()));
     List<Key> rawKeys =
         splitKeys.parallelStream().map(RowKey::toRawKey).collect(Collectors.toList());
-    rawKeys.forEach(this::splitRegionAndScatter);
+    TLongArrayList regionIds = new TLongArrayList();
+    rawKeys.forEach(key -> splitRegionAndScatter(key, regionIds));
+    for (int i = 0; i < regionIds.size(); i++) {
+      getPDClient().waitScatterRegionFinish(regionIds.get(i));
+    }
   }
 
   // splitKey is a row key, but we use a generalized key here.
-  private void splitRegionAndScatter(Key splitKey) {
+  private void splitRegionAndScatter(Key splitKey, TLongArrayList regionIds) {
     // make sure split key must be row key
     Key nextKey = splitKey.next();
     TiRegion region = regionManager.getRegionByKey(splitKey.toByteString());
@@ -203,6 +208,7 @@ public class TiSession implements AutoCloseable {
     Objects.requireNonNull(left, "Region after split cannot be null");
     // need invalidate region that is already split.
     getPDClient().scatterRegion(left);
+    regionIds.add(left.getId());
     // after split succeed, we need invalidate outdated region info from cache.
     regionManager.invalidateRegion(region.getId());
   }

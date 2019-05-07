@@ -54,9 +54,9 @@ public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
     if (error != null) {
       switch (error.getErrorType()) {
         case PD_ERROR:
-          client.updateLeader();
           backOffer.doBackOff(
               BackOffFunction.BackOffFuncType.BoPDRPC, new GrpcException(error.toString()));
+          client.updateLeader();
           return true;
         case REGION_PEER_NOT_ELECTED:
           logger.debug(error.getMessage());
