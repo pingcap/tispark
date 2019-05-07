@@ -4,7 +4,7 @@ import org.apache.spark.sql.Row
 
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
-class FilterPushdownSuite extends BaseDataSourceSuite("test_data_source_filter_pushdown") {
+class FilterPushdownSuite extends BaseDataSourceSuite("test_datasource_filter_pushdown") {
   // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")

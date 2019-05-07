@@ -1,12 +1,13 @@
 package com.pingcap.tispark.datasource
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 
 import scala.util.Random
 
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
-class BasicSQLSuite extends BaseDataSourceSuite("test_data_source_sql") {
+class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
 
   // Values used for comparison
   private val row1 = Row(null, "Hello")
@@ -69,11 +70,16 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_data_source_sql") {
                       |)
        """.stripMargin)
 
-    sqlContext.sql(s"""
-                      |insert overwrite table $tmpTable values (3, 'Spark'), (4, null)
+    val caught = intercept[TiBatchWriteException] {
+      sqlContext.sql(s"""
+                        |insert overwrite table $tmpTable values (3, 'Spark'), (4, null)
       """.stripMargin)
+    }
 
-    testSelect(Seq(row3, row4))
+    assert(
+      caught.getMessage
+        .equals("SaveMode: Overwrite is not supported. TiSpark only support SaveMode.Append.")
+    )
   }
 
   private def testSelect(expectedAnswer: Seq[Row]): Unit = {

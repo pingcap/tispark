@@ -5,7 +5,7 @@ import org.apache.spark.sql.Row
 // with TiExtensions
 // will load tidb_config.properties to SparkConf
 class DataSourceWithExtensionsSuite
-    extends BaseDataSourceSuite("test_data_source_with_extensions", true) {
+    extends BaseDataSourceSuite("test_datasource_with_extensions", true) {
   // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
