@@ -632,6 +632,7 @@ public class TiDAGRequest implements Serializable {
 
   public void clearIndexInfo() {
     indexInfo = null;
+    clearPushDownInfo();
   }
 
   public int getLimit() {
@@ -959,12 +960,16 @@ public class TiDAGRequest implements Serializable {
     return estimatedCount;
   }
 
-  private void init() {
-    if (hasIndex()) {
+  public void init(boolean readHandle) {
+    if (readHandle) {
       buildIndexScan();
     } else {
       buildTableScan();
     }
+  }
+
+  private void init() {
+    init(hasIndex());
   }
 
   @Override

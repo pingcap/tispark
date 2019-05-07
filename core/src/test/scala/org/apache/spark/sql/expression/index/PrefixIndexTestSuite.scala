@@ -80,7 +80,7 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
   test("index double scan with predicate") {
     tidbStmt.execute("drop table if exists test_index")
     tidbStmt.execute(
-      "create table test_index(id bigint(20), c1 text default null, c2 int, c3 int, c4 int, KEY idx_c1(c1(4)))"
+      "create table test_index(id bigint(20), c1 text default null, c2 int, c3 int, c4 int, KEY idx_c1(c1(10)))"
     )
     tidbStmt.execute("insert into test_index values(1, 'aairy', 10, 20, 30)")
     tidbStmt.execute("insert into test_index values(2, 'dairy', 20, 30, 40)")

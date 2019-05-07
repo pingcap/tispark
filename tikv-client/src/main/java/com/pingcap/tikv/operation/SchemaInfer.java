@@ -48,6 +48,7 @@ public class SchemaInfer {
 
   private SchemaInfer(TiDAGRequest dagRequest, boolean readHandle) {
     types = new ArrayList<>();
+    dagRequest.init(readHandle);
     extractFieldTypes(dagRequest, readHandle);
     buildTransform(dagRequest);
   }

@@ -237,7 +237,8 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       Map<ColumnRef, Integer> colIdOffsetMap = (Map<ColumnRef, Integer>) context;
       position =
           requireNonNull(
-              colIdOffsetMap.get(node), "Required column position info is not in a valid context.");
+              colIdOffsetMap.get(node),
+              "Required column position info " + node.getName() + " is not in a valid context.");
     }
     Expr.Builder builder = Expr.newBuilder();
     builder.setTp(ExprType.ColumnRef);
