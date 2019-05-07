@@ -27,9 +27,11 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiTimestamp;
+import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
@@ -42,32 +44,80 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
-import org.tikv.kvproto.Pdpb.GetMembersRequest;
-import org.tikv.kvproto.Pdpb.GetMembersResponse;
-import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
-import org.tikv.kvproto.Pdpb.GetRegionRequest;
-import org.tikv.kvproto.Pdpb.GetRegionResponse;
-import org.tikv.kvproto.Pdpb.GetStoreRequest;
-import org.tikv.kvproto.Pdpb.GetStoreResponse;
-import org.tikv.kvproto.Pdpb.RequestHeader;
-import org.tikv.kvproto.Pdpb.ScatterRegionRequest;
-import org.tikv.kvproto.Pdpb.ScatterRegionResponse;
-import org.tikv.kvproto.Pdpb.Timestamp;
-import org.tikv.kvproto.Pdpb.TsoRequest;
-import org.tikv.kvproto.Pdpb.TsoResponse;
+import org.tikv.kvproto.Pdpb.*;
+import org.tikv.kvproto.Pdpb.Error;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
-
+  private final Logger logger = LoggerFactory.getLogger(PDClient.class);
   private RequestHeader header;
   private TsoRequest tsoReq;
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
   private List<URI> pdAddrs;
+
+  /**
+   * get operator associated with the specific region.
+   *
+   * @param regionId is used to locate specific region.
+   * @return
+   */
+  private GetOperatorResponse getOperator(long regionId) {
+    Supplier<GetOperatorRequest> request =
+        () -> GetOperatorRequest.newBuilder().setHeader(header).setRegionId(regionId).build();
+    // get operator no need to handle error and no need back offer.
+    return callWithRetry(
+        ConcreteBackOffer.newCustomBackOff(0),
+        PDGrpc.METHOD_GET_OPERATOR,
+        request,
+        new NoopHandler<>());
+  }
+
+  private boolean isScatterRegionFinish(GetOperatorResponse resp) {
+    // If the current operator of region is not `scatter-region`, we could assume
+    // that `scatter-operator` has finished or timeout.
+    boolean finished =
+        !resp.getDesc().equals(ByteString.copyFromUtf8("scatter-region"))
+            || resp.getStatus() != OperatorStatus.RUNNING;
+
+    if (resp.hasHeader()) {
+      ResponseHeader header = resp.getHeader();
+      if (header.hasError()) {
+        Error error = header.getError();
+        // heartbeat may not send to PD
+        if (error.getType() == ErrorType.REGION_NOT_FOUND) {
+          finished = true;
+        }
+      }
+    }
+    return finished;
+  }
+
+  public void waitScatterRegionFinish(long regionId) {
+    BackOffer backOffer = ConcreteBackOffer.newWaitScatterRegionBackOff();
+    for (; ; ) {
+      GetOperatorResponse resp = getOperator(regionId);
+      if (resp != null) {
+        if (isScatterRegionFinish(resp)) {
+          logger.info(String.format("wait scatter region on %d is finished", regionId));
+          return;
+        } else {
+          backOffer.doBackOff(
+              BackOffFuncType.BoRegionMiss, new GrpcException("waiting scatter region"));
+          logger.info(
+              String.format(
+                  "wait scatter region %d %s %s",
+                  regionId, resp.getDesc().toString(), resp.getStatus().toString()));
+        }
+      }
+    }
+  }
 
   /**
    * Sends request to pd to scatter region.

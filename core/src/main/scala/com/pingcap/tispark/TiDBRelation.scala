@@ -16,7 +16,7 @@
 package com.pingcap.tispark
 
 import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.exception.TiClientInternalException
+import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalException}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import com.pingcap.tispark.utils.TiUtil
@@ -99,11 +99,21 @@ case class TiDBRelation(session: TiSession,
   }
 
   override def insert(data: DataFrame, overwrite: Boolean): Unit = {
-    val saveMode = if (overwrite) {
-      SaveMode.Overwrite
+    // default forbid sql interface
+    // cause tispark provide `upsert` instead of `insert` semantic
+    val allowSparkSQL = sqlContext.getConf("spark.tispark.write.allow_spark_sql", "false").toBoolean
+    if (allowSparkSQL) {
+      val saveMode = if (overwrite) {
+        SaveMode.Overwrite
+      } else {
+        SaveMode.Append
+      }
+      TiDBWriter.write(data, sqlContext, saveMode, options.get)
     } else {
-      SaveMode.Append
+      throw new TiBatchWriteException(
+        "SparkSQL entry for tispark write is disabled. Set spark.tispark.write.allow_spark_sql to enable."
+      )
     }
-    TiDBWriter.write(data, sqlContext, saveMode, options.get)
+
   }
 }

@@ -15,11 +15,9 @@
 
 package com.pingcap.tispark.examples
 
-import com.pingcap.tispark.{TiBatchWrite, TiTableReference}
+import com.pingcap.tispark.{TiBatchWrite, TiDBOptions, TiTableReference}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{SparkSession, TiContext}
-import org.apache.spark.sql.functions.max
-import org.apache.spark.sql.functions.min
 
 object TiBatchWritePressureTest {
   def main(args: Array[String]) = {
@@ -43,10 +41,10 @@ object TiBatchWritePressureTest {
       .setIfMissing("spark.master", "local[*]")
       .setIfMissing("spark.app.name", getClass.getName)
       .setIfMissing("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-      .setIfMissing("tidb.addr", "172.16.30.81")
+      .setIfMissing("tidb.addr", "localhost")
       .setIfMissing("tidb.port", "4000")
       .setIfMissing("tidb.user", "root")
-      .setIfMissing("spark.tispark.pd.addresses", "172.16.30.81:2379")
+      .setIfMissing("spark.tispark.pd.addresses", "localhost:2379")
       .setIfMissing("spark.tispark.show_rowid", "true")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
@@ -59,8 +57,10 @@ object TiBatchWritePressureTest {
     val df = spark.sql(s"select * from $inputTable")
 
     // batch write
-    val tableRef: TiTableReference = TiTableReference(outputDatabase, outputTable)
-    TiBatchWrite.writeToTiDB(df.rdd, tableRef, ti, regionSplitNumber, enableRegionPreSplit)
+    val options = new TiDBOptions(
+      sparkConf.getAll.toMap ++ Map("database" -> outputDatabase, "table" -> outputTable)
+    )
+    TiBatchWrite.writeToTiDB(df.rdd, ti, options, regionSplitNumber, enableRegionPreSplit)
 
     // time
     val end = System.currentTimeMillis()

@@ -18,14 +18,17 @@
 package org.apache.spark.sql.test
 
 import java.sql.{Connection, DriverManager, Statement}
+import java.util
 import java.util.{Locale, Properties, TimeZone}
 
+import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
+import com.pingcap.tispark.TiDBOptions
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
-import org.apache.spark.sql._
 import org.apache.spark.{SparkConf, SparkContext, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.BeforeAndAfterAll
@@ -46,6 +49,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def jdbc: SparkSession = SharedSQLContext.jdbc
 
   protected def tidbConn: Connection = SharedSQLContext.tidbConn
+
+  protected def tidbOptions: Map[String, String] = SharedSQLContext.tidbOptions
 
   protected def sql: String => DataFrame = spark.sql _
 
@@ -133,6 +138,7 @@ object SharedSQLContext extends Logging {
   private var _ti: TiContext = _
   private var _tidbConf: Properties = _
   private var _tidbConnection: Connection = _
+  private var _tidbOptions: Map[String, String] = _
   private var _statement: Statement = _
   private var _sparkJDBC: SparkSession = _
   protected var jdbcUrl: String = _
@@ -154,6 +160,8 @@ object SharedSQLContext extends Logging {
   protected implicit def jdbc: SparkSession = _sparkJDBC
 
   protected implicit def tidbConn: Connection = _tidbConnection
+
+  protected implicit def tidbOptions: Map[String, String] = _tidbOptions
 
   protected implicit def tidbStmt: Statement = _statement
 
@@ -217,6 +225,14 @@ object SharedSQLContext extends Logging {
       tidbAddr = getOrElse(_tidbConf, TiDB_ADDRESS, "127.0.0.1")
 
       tidbPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
+
+      _tidbOptions = Map(
+        TiDB_ADDRESS -> tidbAddr,
+        TiDB_PASSWORD -> tidbPassword,
+        TiDB_PORT -> s"$tidbPort",
+        TiDB_USER -> tidbUser,
+        PD_ADDRESSES -> pdAddresses
+      )
 
       val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toLowerCase.toBoolean
 
@@ -301,6 +317,8 @@ object SharedSQLContext extends Logging {
         sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
         sparkConf.set(DB_PREFIX, dbPrefix)
       }
+
+      sparkConf.set("spark.tispark.write.allow_spark_sql", "true")
 
       _sparkSession = new TestSparkSession(sparkConf, isHiveEnabled).session
     }

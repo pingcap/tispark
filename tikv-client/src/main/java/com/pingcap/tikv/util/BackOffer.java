@@ -47,6 +47,7 @@ public interface BackOffer {
   int SPLIT_REGION_BACKOFF = 20 * seconds;
   int BATCH_PREWRITE_BACKOFF = 20 * seconds;
   int BATCH_COMMIT_BACKOFF = 3 * seconds;
+  int WAIT_SCATTER_REGION_FINISH = 120 * seconds;
 
   /**
    * doBackOff sleeps a while base on the BackOffType and records the error message. Will stop until

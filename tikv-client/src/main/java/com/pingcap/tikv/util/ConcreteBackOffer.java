@@ -52,6 +52,10 @@ public class ConcreteBackOffer implements BackOffer {
     return new ConcreteBackOffer(GET_MAX_BACKOFF);
   }
 
+  public static ConcreteBackOffer newWaitScatterRegionBackOff() {
+    return new ConcreteBackOffer(WAIT_SCATTER_REGION_FINISH);
+  }
+
   public static ConcreteBackOffer newRawKVBackOff() {
     return new ConcreteBackOffer(RAWKV_MAX_BACKOFF);
   }

@@ -15,6 +15,8 @@
 
 package com.pingcap.tispark
 
+import java.util
+
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
@@ -28,8 +30,8 @@ import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.{Row, TiContext}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -44,19 +46,12 @@ object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
-  // TODO: port this val into conf
-  // disabled because of this bug: https://internal.pingcap.net/jira/browse/TISPARK-127
-  private val skipCommitSecondaryKey = false
-  private val fraction = 0.01
 
-  private def calcRDDSize(rdd: RDD[Row]): Long =
-    // TODO: this is only approximate estimate
-    // change to key value form for better approximation.
-    rdd
-      .map(_.mkString(",").getBytes("UTF-8").length.toLong)
-      .reduce(_ + _) //add the sizes together
+  private def calcRDDSize(rdd: RDD[(SerializableKey, TiRow, Array[Byte])]): Long =
+    rdd.map(_._3.length).reduce(_ + _)
 
-  private def estimateDataSize(sampledRDD: RDD[Row]) = {
+  private def estimateDataSize(sampledRDD: RDD[(SerializableKey, TiRow, Array[Byte])],
+                               options: TiDBOptions) = {
     // get all data size
     val sampleRDDSize = calcRDDSize(sampledRDD)
     logger.info(s"sample data size is ${sampleRDDSize / (1024 * 1024)} MB")
@@ -65,7 +60,7 @@ object TiBatchWrite {
     val sampleAvgRowSize = sampleRDDSize / sampleRowCount
     logger.info(s"sample avg row size is $sampleAvgRowSize")
 
-    val estimatedTotalSize = (sampleRowCount * sampleAvgRowSize) / fraction
+    val estimatedTotalSize = (sampleRowCount * sampleAvgRowSize) / options.sampleFraction
     val formatter = java.text.NumberFormat.getIntegerInstance
 
     val estimateInMB = estimatedTotalSize / (1024 * 1024)
@@ -73,13 +68,12 @@ object TiBatchWrite {
     (estimateInMB.toLong, sampleRowCount)
   }
 
-  def calculateSplitKeys(sampleRDD: RDD[Row],
-                         estimatedTotalSize: Long,
-                         sampleRDDCount: Long,
-                         tblInfo: TiTableInfo,
-                         isUpdate: Boolean,
-                         allocator: IDAllocator,
-                         regionSplitNumber: Option[Int]): List[SerializableKey] = {
+  private def calculateSplitKeys(sampleRDD: RDD[(SerializableKey, TiRow, Array[Byte])],
+                                 estimatedTotalSize: Long,
+                                 sampleRDDCount: Long,
+                                 tblInfo: TiTableInfo,
+                                 isUpdate: Boolean,
+                                 regionSplitNumber: Option[Int]): List[SerializableKey] = {
 
     var regionNeed = (estimatedTotalSize / 96.0).toLong
     // update region split number if user want more region
@@ -96,7 +90,7 @@ object TiBatchWrite {
     // TODO make allocator happy
       .map(row => sparkRow2TiKVRow(null, row, null, false))
       // TODO: fix allocator issue
-      .map(row => extractHandleId(row, tblInfo, isUpdate = false))
+      .map(obj => extractHandleId(obj._2, tblInfo, isUpdate = false))
       .sortBy(k => k)
     val step = sampleRDDCount / regionNeed
     val splitKeys = handleRdd
@@ -104,7 +98,9 @@ object TiBatchWrite {
       .filter {
         case (_, idx) => idx % step == 0
       }
-      .map { _._1 }
+      .map {
+        _._1
+      }
       .map(h => new SerializableKey(RowKey.toRowKey(tblInfo.getId, h).getBytes))
       .collect()
       .toList
@@ -116,8 +112,8 @@ object TiBatchWrite {
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   def writeToTiDB(rdd: RDD[SparkRow],
-                  tableRef: TiTableReference,
                   tiContext: TiContext,
+                  options: TiDBOptions,
                   regionSplitNumber: Option[Int] = None,
                   enableRegionPreSplit: Boolean = false) {
     // initialize
@@ -133,15 +129,30 @@ object TiBatchWrite {
       new IDAllocator(tiDBInfo.getId, tiSession.getCatalog, tiTableInfo.isAutoIncColUnsigned, step)
     val tiKVRowRDD =
       rdd.map(row => sparkRow2TiKVRow(tiTableInfo, row, idAllocator, tiTableInfo.isPkHandle))
+    val tableRef = TiTableReference(options.database, options.table)
+    val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
 
+    // spark row to tikv row
+    val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
+
+    // deduplicate
+    val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
+
+    // encode tirow
+    val encodedTiRowRDD = deduplicateRDD.map {
+      case (key, tiRow) => (key, tiRow, encodeTiRow(tiRow, colDataTypes, colIds))
+    }
+
+    // region pre-split
     if (enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
-      val sampleRDD = rdd.sample(withReplacement = false, fraction = fraction)
-      val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD)
+      val sampleRDD =
+        encodedTiRowRDD.sample(withReplacement = false, fraction = options.sampleFraction)
+      val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
 
       tiContext.tiSession.splitRegionAndScatter(
         calculateSplitKeys(
-          sampleRDD,
+          encodedTiRowRDD,
           dataSize,
           sampleRDDCount,
           tiTableInfo,
@@ -154,11 +165,11 @@ object TiBatchWrite {
 
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
-      shuffleKeyToSameRegion(tiKVRowRDD, idAllocator, tableRef, tiTableInfo, tiContext)
+      shuffleKeyToSameRegion(encodedTiRowRDD, idAllocator, tableRef, tiTableInfo, tiContext)
     }.cache()
 
     // take one row as primary key
-    val (primaryKey: SerializableKey, primaryRow: TiRow) = {
+    val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
       val takeOne = shuffledRDD.take(1)
       if (takeOne.length == 0) {
         logger.warn("there is no data in source rdd")
@@ -183,8 +194,7 @@ object TiBatchWrite {
     val ti2PCClient = new TwoPhaseCommitter(kvClient, startTs)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
-    val encodedRow = encodeTiRow(primaryRow, colDataTypes, colIds)
-    ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, encodedRow)
+    ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
 
     // executors secondary pre-write
     finalWriteRDD.foreachPartition { iterator =>
@@ -218,7 +228,7 @@ object TiBatchWrite {
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
 
     // executors secondary commit
-    if (!skipCommitSecondaryKey) {
+    if (!options.skipCommitSecondaryKey) {
       finalWriteRDD.foreachPartition { iterator =>
         val tiSessionOnExecutor = new TiSession(tiConf)
         val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
@@ -267,11 +277,53 @@ object TiBatchWrite {
   }
 
   @throws(classOf[NoSuchTableException])
-  private def shuffleKeyToSameRegion(rdd: RDD[TiRow],
-                                     allocator: IDAllocator,
+  @throws(classOf[TiBatchWriteException])
+  private def deduplicate(rdd: RDD[TiRow],
+                          tableRef: TiTableReference,
+                          tiTableInfo: TiTableInfo,
+                          tiContext: TiContext,
+                          options: TiDBOptions): RDD[(SerializableKey, TiRow)] = {
+    val databaseName = tableRef.databaseName
+    val tableName = tableRef.tableName
+    val session = tiContext.tiSession
+    val table = session.getCatalog.getTable(databaseName, tableName)
+    if (table == null) {
+      throw new NoSuchTableException(databaseName, tableName)
+    }
+    val tableId = table.getId
+
+    val shuffledRDD = rdd
+      .map(row => (tiKVRow2Key(row, tableId, tiTableInfo, isUpdate = false), row))
+      .groupByKey()
+
+    if (!options.deduplicate) {
+      val duplicateCountRDD = shuffledRDD.flatMap {
+        case (_, iterable) =>
+          if (iterable.size > 1) {
+            Some(iterable.size)
+          } else {
+            None
+          }
+      }
+
+      if (!duplicateCountRDD.isEmpty()) {
+        throw new TiBatchWriteException("data conflicts! set the parameter deduplicate.")
+      }
+    }
+
+    shuffledRDD.map {
+      case (key, iterable) =>
+        // remove duplicate rows if key equals
+        (key, iterable.head)
+    }
+  }
+
+  @throws(classOf[NoSuchTableException])
+  private def shuffleKeyToSameRegion(rdd: RDD[(SerializableKey, TiRow, Array[Byte])],
+>>>>>>> batch_write
                                      tableRef: TiTableReference,
                                      tiTableInfo: TiTableInfo,
-                                     tiContext: TiContext): RDD[(SerializableKey, TiRow)] = {
+                                     tiContext: TiContext): RDD[(SerializableKey, Array[Byte])] = {
     val databaseName = tableRef.databaseName
     val tableName = tableRef.tableName
     val session = tiContext.tiSession
@@ -289,11 +341,11 @@ object TiBatchWrite {
     )
 
     rdd
-      .map(row => (tiKVRow2Key(row, tableId, tiTableInfo, isUpdate = false), row))
+      .map(obj => (obj._1, obj._3))
       .groupByKey(tiRegionPartitioner)
       .map {
         case (key, iterable) =>
-          // remove duplicate rows if key equals
+          // remove duplicate rows if key equals (should not happen, cause already deduplicated)
           (key, iterable.head)
       }
   }
@@ -402,4 +454,7 @@ class SerializableKey(val bytes: Array[Byte]) extends Serializable {
       case that: SerializableKey => this.bytes.sameElements(that.bytes)
       case _                     => false
     }
+
+  override def hashCode(): Int =
+    util.Arrays.hashCode(bytes)
 }
