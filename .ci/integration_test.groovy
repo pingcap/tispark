@@ -194,3 +194,5 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
         }
     }
 }
+
+return this

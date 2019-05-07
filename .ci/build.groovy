@@ -49,3 +49,4 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
     }
 }
 
+return this
