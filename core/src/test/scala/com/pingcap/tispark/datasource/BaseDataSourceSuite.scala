@@ -24,7 +24,6 @@ class BaseDataSourceSuite(val testTable: String,
   protected var dbtableInSpark: String = _
 
   protected var tidbStmt: Statement = _
-  protected var tidbOptions: Map[String, String] = _
 
   override def beforeAll(): Unit = {
     enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark
@@ -34,14 +33,6 @@ class BaseDataSourceSuite(val testTable: String,
     databaseInSpark = getTestDatabaseNameInSpark(database)
     dbtableInSpark = s"$databaseInSpark.$testTable"
     tidbStmt = tidbConn.createStatement()
-
-    tidbOptions = Map(
-      TiDB_ADDRESS -> tidbAddr,
-      TiDB_PASSWORD -> tidbPassword,
-      TiDB_PORT -> s"$tidbPort",
-      TiDB_USER -> tidbUser,
-      PD_ADDRESSES -> pdAddresses
-    )
   }
 
   protected def jdbcUpdate(query: String): Unit =

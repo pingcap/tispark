@@ -16,7 +16,7 @@
 package com.pingcap.tispark.examples
 
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, SQLContext, SparkSession}
 
 /**
  * before run the code in IDE, please enable maven profile `local-debug`
@@ -107,16 +107,6 @@ object TiDataSourceExample {
 
     val df = readUsingDataSourceAPI(sqlContext)
 
-    // Overwrite
-    // if target_table_overwrite does not exist, it will be created automatically
-    df.write
-      .format("tidb")
-      .options(tidbOptions)
-      .option("database", "tpch_test")
-      .option("table", "target_table_overwrite")
-      .mode(SaveMode.Overwrite)
-      .save()
-
     // Append
     // if target_table_append does not exist, it will be created automatically
     df.write
@@ -124,7 +114,7 @@ object TiDataSourceExample {
       .options(tidbOptions)
       .option("database", "tpch_test")
       .option("table", "target_table_append")
-      .mode(SaveMode.Append)
+      .mode("append")
       .save()
   }
 
@@ -217,16 +207,11 @@ object TiDataSourceExample {
                      |2209.81,
                      |"AUTOMOBILE",
                      |". even, express theodolites upo")
-                   """.stripMargin)
+      """.stripMargin)
 
     // insert into select
     sqlContext.sql(s"""
                       |insert into writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
-       """.stripMargin).show()
-
-    // insert overwrite select
-    sqlContext.sql(s"""
-                      |insert overwrite table writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
        """.stripMargin).show()
   }
 }

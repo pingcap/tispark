@@ -23,6 +23,25 @@ Since TiDB is a database that supports transaction, TiDB Spark Connector also su
 2. no data in DataFrame will be written to TiDB successfully, if conflicts exist
 3. no partial changes is visible to other session until commit.
 
+## Upsert Semantics
+TiSpark only support `Append` SaveMode.
+
+`Append` in TiSpark means `upsert`,
+1. if primary key exists in db, data will be updated
+2. if no same primary key exists, data will be inserted.
+
+| SaveMode | Support | Semantics |
+| -------- | ------- | --------- |
+| Append | true | TiSpark's `Append` means upsert. If primary key is same, data will be updated; if no same primary key exists, data will be inserted.  |
+| Overwrite | false |  - |
+| ErrorIfExists | false | - |
+| Ignore | false | - |
+
+Currently TiSpark only support writing data to such tables:
+1. the table does not contain a primary key
+2. the table's primary key is `TINYINT`、`SMALLINT`、`MEDIUMINT` or `INTEGER`
+3. the table's primary key is `auto increment`
+
 ## Using the Spark Connector With Extensions Enabled
 The connector adheres to the standard Spark API, but with the addition of TiDB-specific options.
 
@@ -62,8 +81,6 @@ df.show()
 
 ### Write using scala
 ```scala
-import org.apache.spark.sql.SaveMode
-
 // use tidb config in spark config if does not provide in data source config
 val tidbOptions: Map[String, String] = Map()
 
@@ -75,16 +92,6 @@ val df = sqlContext.read
   .option("table", "ORDERS")
   .load()
 
-// Overwrite
-// if target_table_overwrite does not exist, it will be created automatically
-df.write
-  .format("tidb")
-  .options(tidbOptions)
-  .option("database", "tpch_test")
-  .option("table", "target_table_overwrite")
-  .mode(SaveMode.Overwrite)
-  .save()
-
 // Append
 // if target_table_append does not exist, it will be created automatically
 df.write
@@ -92,38 +99,8 @@ df.write
   .options(tidbOptions)
   .option("database", "tpch_test")
   .option("table", "target_table_append")
-  .mode(SaveMode.Append)
+  .mode("append")
   .save()
-```
-
-### Write using spark sql
-```sql
-// target_table should exist in tidb
-// create table target_table like ORDERS
-CREATE TABLE writeUsingSparkSQLAPI_dest
-  USING tidb
-  OPTIONS (
-    database 'tpch_test',
-    table 'target_table'
-  )
-
-// insert into values
-insert into writeUsingSparkSQLAPI_dest values
-     (888888,
-     370,
-     0,
-     172799.49,
-     "1996-01-02",
-     " 5-LOW",
-     "Clerk#000000951",
-     0,
-     "nstructions sleep furiously among")
-
-// insert into select
-insert into writeUsingSparkSQLAPI_dest select * from tpch_test.ORDERS
-
-// insert overwrite select
-insert overwrite table writeUsingSparkSQLAPI_dest select * from tpch_test.ORDERS
 ```
 
 ### Use another TiDB
@@ -156,7 +133,7 @@ Let's see how to use the connector without extensions enabled.
 ### init SparkConf
 ```scala
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, SQLContext, SparkSession}
 
 val sparkConf = new SparkConf()
   .setIfMissing("spark.master", "local[*]")
@@ -192,8 +169,6 @@ df.show()
 
 ## Write using scala
 ```scala
-import org.apache.spark.sql.SaveMode
-
 val tidbOptions: Map[String, String] = Map(
   "tidb.addr" -> "tidb",
   "tidb.password" -> "",
@@ -210,16 +185,6 @@ val df = sqlContext.read
   .option("table", "ORDERS")
   .load()
 
-// Overwrite
-// if target_table_overwrite does not exist, it will be created automatically
-df.write
-  .format("tidb")
-  .options(tidbOptions)
-  .option("database", "tpch_test")
-  .option("table", "target_table_overwrite")
-  .mode(SaveMode.Overwrite)
-  .save()
-
 // Append
 // if target_table_append does not exist, it will be created automatically
 df.write
@@ -227,87 +192,24 @@ df.write
   .options(tidbOptions)
   .option("database", "tpch_test")
   .option("table", "target_table_append")
-  .mode(SaveMode.Append)
+  .mode("append")
   .save()
 ```
-
-### Read using spark sql
-```sql
-CREATE TABLE test1
-  USING tidb
-  OPTIONS (
-    database 'tpch_test',
-    table 'CUSTOMER',
-    tidb.addr 'tidb',
-    tidb.password '',
-    tidb.port '4000',
-    tidb.user 'root',
-    spark.tispark.pd.addresses 'pd0:2379'
-  )
-
-select C_NAME from test1 where C_CUSTKEY = 1
-```
-
-### Write using spark sql
-```sql
-CREATE TABLE writeUsingSparkSQLAPI_src
-  USING tidb
-  OPTIONS (
-    database 'tpch_test',
-    table 'ORDERS',
-    tidb.addr 'tidb',
-    tidb.password '',
-    tidb.port '4000',
-    tidb.user 'root',
-    spark.tispark.pd.addresses 'pd0:2379'
-  )
-
-// target_table should exist in tidb
-// create table target_table like ORDERS
-CREATE TABLE writeUsingSparkSQLAPI_dest
-  USING tidb
-  OPTIONS (
-    database 'tpch_test',
-    table 'target_table',
-    tidb.addr 'tidb',
-    tidb.password '',
-    tidb.port '4000',
-    tidb.user 'root',
-    spark.tispark.pd.addresses 'pd0:2379'
-  )
-  
-// insert into values
-insert into writeUsingSparkSQLAPI_dest values
-     (888888,
-     370,
-     0,
-     172799.49,
-     "1996-01-02",
-     " 5-LOW",
-     "Clerk#000000951",
-     0,
-     "nstructions sleep furiously among")
-     
-// insert into select
-insert into writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
-
-// insert overwrite select
-insert overwrite table writeUsingSparkSQLAPI_dest select * from writeUsingSparkSQLAPI_src
-```
-
-
 
 ## TiDB Options
 The following is TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
-|    Key    | Short Name | Required | Description |
-| ---------- | --- | --- | --- |
-| spark.tispark.pd.addresses | - | true | PD Cluster Addresses, split by comma |
-| spark.tispark.tidb.addr | tidb.addr | true | TiDB Address, currently only support one instance |
-| spark.tispark.tidb.port | tidb.port | true | TiDB Port |
-| spark.tispark.tidb.user | tidb.user | true | TiDB User |
-| spark.tispark.tidb.password | tidb.password | true | TiDB Password |
-| database | - | true | TiDB Database |
-| table | - | true | TiDB Table |
+|    Key    | Short Name | Required | Description | Default |
+| ---------- | --------- | -------- | ----------- | ------- |
+| spark.tispark.pd.addresses | - | true | PD Cluster Addresses, split by comma | - |
+| spark.tispark.tidb.addr | tidb.addr | true | TiDB Address, currently only support one instance | - |
+| spark.tispark.tidb.port | tidb.port | true | TiDB Port | - |
+| spark.tispark.tidb.user | tidb.user | true | TiDB User | - |
+| spark.tispark.tidb.password | tidb.password | true | TiDB Password | - |
+| database | - | true | TiDB Database | - |
+| table | - | true | TiDB Table | - |
+| deduplicate | - | false | Duplicate rows (same primary key) will be removed from DataFrame before writing to TiDB. Only one row with same primary key will be written successfully. | false |
+| skipCommitSecondaryKey | - | false | skip commit secondary key | false |
+| sampleFraction | - | false | sample fraction, from 0 to 1 | 0.01 |
 
 TiSpark's common options can also be passed in, e.g. `spark.tispark.plan.allow_agg_pushdown`, `spark.tispark.plan.allow_index_read`, etc.

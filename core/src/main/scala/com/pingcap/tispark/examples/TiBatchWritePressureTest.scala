@@ -15,11 +15,9 @@
 
 package com.pingcap.tispark.examples
 
-import com.pingcap.tispark.{TiBatchWrite, TiTableReference}
+import com.pingcap.tispark.{TiBatchWrite, TiDBOptions, TiTableReference}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{SparkSession, TiContext}
-import org.apache.spark.sql.functions.max
-import org.apache.spark.sql.functions.min
 
 object TiBatchWritePressureTest {
   def main(args: Array[String]) = {
@@ -59,8 +57,10 @@ object TiBatchWritePressureTest {
     val df = spark.sql(s"select * from $inputTable")
 
     // batch write
-    val tableRef: TiTableReference = TiTableReference(outputDatabase, outputTable)
-    TiBatchWrite.writeToTiDB(df.rdd, tableRef, ti, regionSplitNumber, enableRegionPreSplit)
+    val options = new TiDBOptions(
+      sparkConf.getAll.toMap ++ Map("database" -> outputDatabase, "table" -> outputTable)
+    )
+    TiBatchWrite.writeToTiDB(df.rdd, ti, options, regionSplitNumber, enableRegionPreSplit)
 
     // time
     val end = System.currentTimeMillis()

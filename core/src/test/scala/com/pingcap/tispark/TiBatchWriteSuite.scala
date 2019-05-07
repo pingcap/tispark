@@ -51,9 +51,13 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
       val df = sql(s"select * from $table")
 
       // batch write
-      val tableRef: TiTableReference =
-        TiTableReference(s"$dbPrefix$database", s"${batchWriteTablePrefix}_$table")
-      TiBatchWrite.writeToTiDB(df.rdd, tableRef, ti)
+      TiBatchWrite.writeToTiDB(
+        df.rdd,
+        ti,
+        new TiDBOptions(
+          tidbOptions + ("database" -> s"$dbPrefix$database", "table" -> s"${batchWriteTablePrefix}_$table")
+        )
+      )
 
       // refresh
       refreshConnections(TestTables(database, s"${batchWriteTablePrefix}_$table"))
@@ -75,14 +79,14 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
     val df = sql(s"select * from CUSTOMER")
 
     // batch write
-    val tableRef: TiTableReference =
-      TiTableReference(
-        s"$dbPrefix$database",
-        s"${batchWriteTablePrefix}_TABLE_NOT_EXISTS"
-      )
-
     intercept[NoSuchTableException] {
-      TiBatchWrite.writeToTiDB(df.rdd, tableRef, ti)
+      TiBatchWrite.writeToTiDB(
+        df.rdd,
+        ti,
+        new TiDBOptions(
+          tidbOptions + ("database" -> s"$dbPrefix$database", "table" -> s"${batchWriteTablePrefix}_TABLE_NOT_EXISTS")
+        )
+      )
     }
   }
 
