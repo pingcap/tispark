@@ -43,4 +43,9 @@ public class IndexRange {
   public Range<TypedKey> getRange() {
     return range;
   }
+
+  @Override
+  public String toString() {
+    return "accessKey: " + accessKey + " range: " + range;
+  }
 }

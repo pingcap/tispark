@@ -161,6 +161,9 @@ public class Histogram {
 
   /** lessRowCount estimates the row count where the column less than values. */
   private double lessRowCount(Key values) {
+    if (values.compareTo(Key.NULL) <= 0) {
+      return 0;
+    }
     int index = lowerBound(values);
     // index not in range
     if (index == -buckets.size() - 1) {
@@ -176,7 +179,7 @@ public class Histogram {
     if (index > 0) {
       preCount = buckets.get(index - 1).count;
     }
-    double lessThanBucketValueCount = curCount - buckets.get(index).getRepeats();
+    double lessThanBucketValueCount = curCount + nullCount - buckets.get(index).getRepeats();
     Key lowerBound = buckets.get(index).getLowerBound();
     int c;
     if (lowerBound != null) {
@@ -260,5 +263,18 @@ public class Histogram {
       return 1.0;
     }
     return (double) totalCount / (double) columnCount;
+  }
+
+  @Override
+  public String toString() {
+    return "Histogram {\n id:"
+        + id
+        + ",\n ndv:"
+        + numberOfDistinctValue
+        + ",\n nullCount:"
+        + nullCount
+        + ", buckets:["
+        + buckets
+        + "]\n}";
   }
 }
