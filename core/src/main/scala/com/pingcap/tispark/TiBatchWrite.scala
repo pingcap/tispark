@@ -126,14 +126,14 @@ object TiBatchWrite {
     val idAllocator =
       new IDAllocator(tiDBInfo.getId, tiSession.getCatalog, tiTableInfo.isAutoIncColUnsigned, step)
 
-    // spark row to tikv row
+    // spark row to TiKV row
     val tiKVRowRDD =
       rdd.map(row => sparkRow2TiKVRow(tiTableInfo, row, idAllocator, tiTableInfo.isPkHandle))
 
     // deduplicate
     val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
 
-    // encode tirow
+    // encode TiROW
     val encodedTiRowRDD = deduplicateRDD.map {
       case (key, tiRow) => (key, tiRow, encodeTiRow(tiRow, colDataTypes, colIds))
     }
@@ -386,11 +386,32 @@ object TiBatchWrite {
       }
       tiRow
     } else {
-      // when column is auto_increment, it has to be a primary key
+      // when column is auto_increment, it must has a primary key
       // its value will be filled at the beginning according tidb's logic.
-      throw new UnsupportedOperationException(
-        "pk is not handle or pk is not existed is not support for now"
-      )
+      val autoincrementCol = tableInfo.getAutoIncrementColInfo
+      if (autoincrementCol != null) {
+        val tiRow = ObjectRowImpl.create(fieldCount)
+        for (i <- 0 until fieldCount) {
+          var data = sparkRow.get(i)
+          val sparkDataType = sparkRow.schema(i).dataType
+          val colName = sparkRow.schema(i).name
+          // check do we need fill auto increment column
+          if (colName.equals(autoincrementCol.getName)) {
+            if (data == null) {
+              data = allocator.alloc(tableInfo.getId)
+            }
+          }
+          val tiDataType = TiUtil.fromSparkType(sparkDataType)
+          tiRow.set(i, tiDataType, data)
+        }
+        tiRow
+      } else {
+        throw new UnsupportedOperationException(
+          "pk is not handle or pk is not existed is not " +
+            "support for now"
+        )
+      }
+
     }
 
   }
