@@ -14,6 +14,7 @@ import java.util.List;
 public class TableCodec {
   /**
    * Row layout: colID1, value1, colID2, value2, .....
+   *
    * @param colTypes
    * @param colIDs
    * @param values
@@ -22,7 +23,6 @@ public class TableCodec {
    */
   public static byte[] encodeRow(DataType[] colTypes, TLongArrayList colIDs, Object[] values)
       throws IllegalAccessException {
-    CodecDataOutput cdo = new CodecDataOutput();
     if (colTypes.length != colIDs.size()) {
       throw new IllegalAccessException(
           String.format(

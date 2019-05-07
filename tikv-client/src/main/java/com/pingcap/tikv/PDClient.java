@@ -62,6 +62,12 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private ScheduledExecutorService service;
   private List<URI> pdAddrs;
 
+  /**
+   * get operator associated with the specific region.
+   *
+   * @param regionId is used to locate specific region.
+   * @return
+   */
   private GetOperatorResponse getOperator(long regionId) {
     Supplier<GetOperatorRequest> request =
         () -> GetOperatorRequest.newBuilder().setHeader(header).setRegionId(regionId).build();
