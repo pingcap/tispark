@@ -17,6 +17,12 @@ package com.pingcap.tikv;
 import com.google.common.primitives.UnsignedLongs;
 import com.pingcap.tikv.catalog.Catalog;
 
+/**
+ * IDAllocator allocates unique value for each row associated with the database id and table id.
+ * It first reads from TiKV and calculate the new value with step, then write the new value back to
+ * TiKV.
+ * The [start, end) range will be lost if job finished or crashed.
+ */
 public class IDAllocator {
   private long start;
   private long end;
@@ -44,7 +50,7 @@ public class IDAllocator {
     return unsigned;
   }
 
-  public long alloc(long tableId) {
+  public synchronized long alloc(long tableId) {
     if (isUnsigned()) {
       return allocUnSigned(tableId);
     }
