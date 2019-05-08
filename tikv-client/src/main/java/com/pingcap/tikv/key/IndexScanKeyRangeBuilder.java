@@ -21,7 +21,7 @@ import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.predicates.IndexRange;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
-// IndexScanKeyRangeBuilder accepts a table id, a index info, and a index range.
+// IndexScanKeyRangeBuilder accepts a table id, an index info, and an index range.
 // With these info, it can build a key range which can be used for index scan.
 // TODO: more refactoring on the way
 public class IndexScanKeyRangeBuilder extends KeyRangeBuilder {

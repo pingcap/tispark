@@ -44,7 +44,8 @@ class PartitionTableSuite extends BaseTiSparkSuite {
     judge("select * from t2 where c1 = 2")
   }
 
-  test("index scan on partition table") {
+  // FIXME: https://github.com/pingcap/tispark/issues/701
+  ignore("index scan on partition table") {
     enablePartitionForTiDB()
     tidbStmt.execute(
       "CREATE TABLE `p_t` (   `id` int(11) DEFAULT NULL, `y` date DEFAULT NULL,   index `idx_y`(`y`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin PARTITION BY RANGE ( id ) (   PARTITION p0 VALUES LESS THAN (2),   PARTITION p1 VALUES LESS THAN (4),   PARTITION p2 VALUES LESS THAN (6) );"

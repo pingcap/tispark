@@ -19,6 +19,9 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.predicates.IndexRange;
 
+// An abstract class that computes key range from IndexRange
+// After computing lower and upper boundaries, the builder should
+// build a key range according to its own rules.
 abstract class KeyRangeBuilder {
 
   private final IndexRange ir;

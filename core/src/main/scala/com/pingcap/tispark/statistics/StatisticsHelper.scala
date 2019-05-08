@@ -69,7 +69,11 @@ object StatisticsHelper {
                                                neededColIds: mutable.ArrayBuffer[Long],
                                                histTable: TiTableInfo): StatisticsDTO = {
     if (row.fieldCount() < 6) return null
-    assert(row.getLong(0) == table.getId, s"table id not match ${row.getLong(0)}!=${table.getId}")
+    if (row.getLong(0) != table.getId) {
+      // table id should be the same as what we fetched via coprocessor
+      logger.warn(s"table id not match ${row.getLong(0)}!=${table.getId}")
+      return null
+    }
     val isIndex = row.getLong(1) > 0
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
