@@ -40,6 +40,7 @@ public class TiIndexInfo implements Serializable {
   private final SchemaState schemaState;
   private final String comment;
   private final IndexType indexType;
+  private final long indexColumnLength;
   private final boolean isFakePrimaryKey;
 
   @JsonCreator
@@ -61,6 +62,9 @@ public class TiIndexInfo implements Serializable {
     this.name = requireNonNull(name, "index name is null").getL();
     this.tableName = requireNonNull(tableName, "table name is null").getL();
     this.indexColumns = ImmutableList.copyOf(requireNonNull(indexColumns, "indexColumns is null"));
+    // TODO: Use more precise predication according to types
+    this.indexColumnLength =
+        indexColumns.stream().mapToLong(x -> x.isLengthUnspecified() ? 8 : x.getLength()).sum();
     this.isUnique = isUnique;
     this.isPrimary = isPrimary;
     this.schemaState = SchemaState.fromValue(schemaState);
@@ -101,6 +105,10 @@ public class TiIndexInfo implements Serializable {
 
   public List<TiIndexColumn> getIndexColumns() {
     return indexColumns;
+  }
+
+  public long getIndexColumnLength() {
+    return indexColumnLength;
   }
 
   public boolean isUnique() {

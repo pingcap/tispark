@@ -254,6 +254,26 @@ class IssueTestSuite extends BaseTiSparkSuite {
     judge("select cast(count(1) as char(20)) from `tmp_empty_tbl`")
   }
 
+  test("test push down filters when using index double read") {
+    def explainTestAndCollect(sql: String): Unit = {
+      val df = spark.sql(sql)
+      df.explain
+      df.collect.foreach(println)
+    }
+    explainTestAndCollect(
+      "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx limit 10"
+    )
+    explainTestAndCollect(
+      "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx where tp_int > 200 limit 10"
+    )
+    explainTestAndCollect(
+      "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx where tp_int > 200 order by tp_varchar limit 10"
+    )
+    explainTestAndCollect(
+      "select max(tp_double) from full_data_type_table_idx where tp_int > 200 group by tp_bigint limit 10"
+    )
+  }
+
   override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists t")

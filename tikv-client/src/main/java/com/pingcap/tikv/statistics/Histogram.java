@@ -115,7 +115,7 @@ public class Histogram {
   }
 
   /** equalRowCount estimates the row count where the column equals to value. */
-  double equalRowCount(Key values) {
+  private double equalRowCount(Key values) {
     int index = lowerBound(values);
     // index not in range
     if (index == -buckets.size() - 1) {
@@ -141,7 +141,7 @@ public class Histogram {
   }
 
   /** greaterRowCount estimates the row count where the column greater than value. */
-  double greaterRowCount(Key values) {
+  private double greaterRowCount(Key values) {
     double lessCount = lessRowCount(values);
     double equalCount = equalRowCount(values);
     double greaterCount;
@@ -160,7 +160,10 @@ public class Histogram {
   }
 
   /** lessRowCount estimates the row count where the column less than values. */
-  double lessRowCount(Key values) {
+  private double lessRowCount(Key values) {
+    if (values.compareTo(Key.NULL) <= 0) {
+      return 0;
+    }
     int index = lowerBound(values);
     // index not in range
     if (index == -buckets.size() - 1) {
@@ -176,7 +179,7 @@ public class Histogram {
     if (index > 0) {
       preCount = buckets.get(index - 1).count;
     }
-    double lessThanBucketValueCount = curCount - buckets.get(index).getRepeats();
+    double lessThanBucketValueCount = curCount + nullCount - buckets.get(index).getRepeats();
     Key lowerBound = buckets.get(index).getLowerBound();
     int c;
     if (lowerBound != null) {
@@ -226,7 +229,7 @@ public class Histogram {
    * if the key is not found in buckets where [insertion point] denotes the index of the first
    * element greater than the key
    */
-  public int lowerBound(Key key) {
+  private int lowerBound(Key key) {
     assert key.getClass() == buckets.get(0).getUpperBound().getClass();
     return Arrays.binarySearch(buckets.toArray(), new Bucket(key));
   }
@@ -260,5 +263,18 @@ public class Histogram {
       return 1.0;
     }
     return (double) totalCount / (double) columnCount;
+  }
+
+  @Override
+  public String toString() {
+    return "Histogram {\n id:"
+        + id
+        + ",\n ndv:"
+        + numberOfDistinctValue
+        + ",\n nullCount:"
+        + nullCount
+        + ", buckets:["
+        + buckets
+        + "]\n}";
   }
 }

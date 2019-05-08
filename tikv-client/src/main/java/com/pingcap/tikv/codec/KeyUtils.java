@@ -17,6 +17,7 @@ package com.pingcap.tikv.codec;
 
 import com.google.common.primitives.UnsignedBytes;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.TextFormat;
 import org.tikv.kvproto.Coprocessor;
 
 public class KeyUtils {
@@ -41,6 +42,24 @@ public class KeyUtils {
 
   public static String formatBytes(Coprocessor.KeyRange keyRange) {
     return "([" + formatBytes(keyRange.getStart()) + "], [" + formatBytes(keyRange.getEnd()) + "])";
+  }
+
+  public static String formatBytesUTF8(byte[] bytes) {
+    if (bytes == null) return "null";
+    return TextFormat.escapeBytes(bytes);
+  }
+
+  public static String formatBytesUTF8(ByteString bytes) {
+    if (bytes == null) return "null";
+    return formatBytesUTF8(bytes.toByteArray());
+  }
+
+  public static String formatBytesUTF8(Coprocessor.KeyRange keyRange) {
+    return "(["
+        + formatBytesUTF8(keyRange.getStart())
+        + "], ["
+        + formatBytesUTF8(keyRange.getEnd())
+        + "])";
   }
 
   public static boolean hasPrefix(ByteString str, ByteString prefix) {

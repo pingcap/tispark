@@ -19,12 +19,12 @@ package com.pingcap.tispark.statistics
 
 import com.google.common.primitives.UnsignedLong
 import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
-import com.pingcap.tikv.key.{Key, TypedKey}
+import com.pingcap.tikv.key.Key
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo, TiTableInfo, TiTimestamp}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
-import com.pingcap.tikv.types.{DataType, DataTypeFactory, MySQLType}
+import com.pingcap.tikv.types.BytesType
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -69,6 +69,11 @@ object StatisticsHelper {
                                                neededColIds: mutable.ArrayBuffer[Long],
                                                histTable: TiTableInfo): StatisticsDTO = {
     if (row.fieldCount() < 6) return null
+    if (row.getLong(0) != table.getId) {
+      // table id should be the same as what we fetched via coprocessor
+      logger.warn(s"table id not match ${row.getLong(0)}!=${table.getId}")
+      return null
+    }
     val isIndex = row.getLong(1) > 0
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
@@ -76,28 +81,37 @@ object StatisticsHelper {
     val histVer = row.getUnsignedLong(5)
     val cMSketch = if (checkColExists(histTable, "cm_sketch")) row.getBytes(6) else null
     // get index/col info for StatisticsDTO
-    val indexInfos = table.getIndices
-      .filter { _.getId == histID }
+    var indexInfos: mutable.Buffer[TiIndexInfo] = mutable.Buffer.empty[TiIndexInfo]
 
-    val colInfos = table.getColumns
-      .filter { _.getId == histID }
+    var colInfos: mutable.Buffer[TiColumnInfo] = mutable.Buffer.empty[TiColumnInfo]
 
     var needed = true
 
     // we should only query those columns that user specified before
     if (!loadAll && !neededColIds.contains(histID)) needed = false
 
-    var indexFlag = 1
-    var dataType: DataType = DataTypeFactory.of(MySQLType.TypeBlob)
-    // Columns info found
-    if (!isIndex && colInfos.nonEmpty) {
-      indexFlag = 0
-      dataType = colInfos.head.getType
-    } else if (!isIndex || indexInfos.isEmpty) {
-      logger.warn(
-        s"Cannot find histogram id $histID in table info ${table.getName} now. It may be deleted."
-      )
-      needed = false
+    val (indexFlag, dataType) = if (isIndex) {
+      indexInfos = table.getIndices.filter { _.getId == histID }
+      if (indexInfos.isEmpty) {
+        logger.warn(
+          s"Cannot find index histogram id $histID in table info ${table.getName}[${table.getId}] now. It may be deleted."
+        )
+        needed = false
+        (1, null)
+      } else {
+        (1, BytesType.BLOB)
+      }
+    } else {
+      colInfos = table.getColumns.filter { _.getId == histID }
+      if (colInfos.isEmpty) {
+        logger.warn(
+          s"Cannot find column histogram id $histID in table info ${table.getName}[${table.getId}] now. It may be deleted."
+        )
+        needed = false
+        (0, null)
+      } else {
+        (0, colInfos.head.getType)
+      }
     }
 
     if (needed) {
@@ -158,8 +172,8 @@ object StatisticsHelper {
           var lowerBound: Key = null
           var upperBound: Key = null
           // all bounds are stored as blob in bucketTable currently, decode using blob type
-          lowerBound = TypedKey.toTypedKey(row.getBytes(6), DataTypeFactory.of(MySQLType.TypeBlob))
-          upperBound = TypedKey.toTypedKey(row.getBytes(7), DataTypeFactory.of(MySQLType.TypeBlob))
+          lowerBound = Key.toRawKey(row.getBytes(6))
+          upperBound = Key.toRawKey(row.getBytes(7))
           totalCount += count
           buckets += new Bucket(totalCount, repeats, lowerBound, upperBound)
         }

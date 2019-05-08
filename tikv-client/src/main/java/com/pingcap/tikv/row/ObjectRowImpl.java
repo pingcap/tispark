@@ -171,4 +171,14 @@ public class ObjectRowImpl implements Row {
   public int fieldCount() {
     return values.length;
   }
+
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    for (Object x : values) {
+      builder.append(x);
+      builder.append(",");
+    }
+    return builder.toString();
+  }
 }

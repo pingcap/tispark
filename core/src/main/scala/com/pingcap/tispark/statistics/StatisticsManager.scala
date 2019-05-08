@@ -62,6 +62,7 @@ private[statistics] case class StatisticsResult(histId: Long,
  */
 object StatisticsManager {
 
+  private var session: TiSession = _
   private var snapshot: Snapshot = _
   private var catalog: Catalog = _
   private var dbPrefix: String = _
@@ -150,7 +151,7 @@ object StatisticsManager {
     // load count, modify_count, version info
     loadMetaToTblStats(tblId, tblStatistic)
     val req = StatisticsHelper
-      .buildHistogramsRequest(histTable, tblId, snapshot.getTimestamp)
+      .buildHistogramsRequest(histTable, tblId, session.getTimestamp)
 
     val rows = readDAGRequest(req)
     if (rows.isEmpty) return
@@ -197,7 +198,7 @@ object StatisticsManager {
 
   private def loadMetaToTblStats(tableId: Long, tableStatistics: TableStatistics): Unit = {
     val req =
-      StatisticsHelper.buildMetaRequest(metaTable, tableId, snapshot.getTimestamp)
+      StatisticsHelper.buildMetaRequest(metaTable, tableId, session.getTimestamp)
 
     val rows = readDAGRequest(req)
     if (rows.isEmpty) return
@@ -211,7 +212,7 @@ object StatisticsManager {
   private def statisticsResultFromStorage(tableId: Long,
                                           requests: Seq[StatisticsDTO]): Seq[StatisticsResult] = {
     val req =
-      StatisticsHelper.buildBucketRequest(bucketTable, tableId, snapshot.getTimestamp)
+      StatisticsHelper.buildBucketRequest(bucketTable, tableId, session.getTimestamp)
 
     val rows = readDAGRequest(req)
     if (rows.isEmpty) return Nil
@@ -256,6 +257,7 @@ object StatisticsManager {
   protected var initialized: Boolean = false
 
   protected def initialize(tiSession: TiSession): Unit = {
+    session = tiSession
     snapshot = tiSession.createSnapshot()
     catalog = tiSession.getCatalog
     dbPrefix = tiSession.getConf.getDBPrefix

@@ -17,7 +17,6 @@
 
 package com.pingcap.tikv.statistics;
 
-import com.google.protobuf.ByteString;
 import com.pingcap.tikv.key.Key;
 
 /**
@@ -41,13 +40,6 @@ public class Bucket implements Comparable<Bucket> {
   private long repeats;
   private Key lowerBound;
   private Key upperBound;
-
-  public Bucket(long count, long repeats, ByteString lowerBound, ByteString upperBound) {
-    this.count = count;
-    this.repeats = repeats;
-    this.lowerBound = Key.toRawKey(lowerBound);
-    this.upperBound = Key.toRawKey(upperBound);
-  }
 
   public Bucket(long count, long repeats, Key lowerBound, Key upperBound) {
     this.count = count;
@@ -110,7 +102,7 @@ public class Bucket implements Comparable<Bucket> {
         + ", range=["
         + lowerBound
         + ", "
-        + upperBound.toString()
+        + upperBound
         + "]}";
   }
 }
