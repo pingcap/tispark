@@ -95,7 +95,7 @@ public class TypedKey extends Key {
       return toTypedKey(prefixNext(((String) val).getBytes()), type, prefixLength);
     } else if (tp instanceof BytesType) {
       return toTypedKey(prefixNext(((byte[]) val)), type, prefixLength);
-    } else if (prefixLength == -1) {
+    } else if (DataType.isLengthSpecified(prefixLength)) {
       if (tp instanceof IntegerType) {
         return toTypedKey(((long) val) + 1, type);
       } else {
@@ -111,15 +111,6 @@ public class TypedKey extends Key {
 
   @Override
   public String toString() {
-    try {
-      CodecDataInput cdi = new CodecDataInput(value);
-      Object val = type.decode(cdi);
-      if (val instanceof byte[]) {
-        return KeyUtils.formatBytes(value);
-      }
-      return val.toString();
-    } catch (Exception e) {
-      return "raw value:" + KeyUtils.formatBytes(value);
-    }
+    return KeyUtils.formatBytesUTF8(value);
   }
 }

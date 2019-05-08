@@ -55,7 +55,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into `p_t` values(4, '1998-10-10')")
     tidbStmt.execute("insert into `p_t` values(5, '1999-10-10')")
     refreshConnections()
-    judge("select * from p_t where y = date'1996-10-10'")
+    explainAndRunTest("select * from p_t where y = date'1996-10-10'", skipJDBC = true)
   }
 
   test("simple partition pruning test") {

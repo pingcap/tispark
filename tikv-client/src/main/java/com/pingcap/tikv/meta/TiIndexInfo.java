@@ -25,7 +25,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tidb.tipb.IndexInfo;
-import com.pingcap.tikv.types.DataType;
 import java.io.Serializable;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -65,10 +64,7 @@ public class TiIndexInfo implements Serializable {
     this.indexColumns = ImmutableList.copyOf(requireNonNull(indexColumns, "indexColumns is null"));
     // TODO: Use more precise predication according to types
     this.indexColumnLength =
-        indexColumns
-            .stream()
-            .mapToLong(x -> (x.getLength() == DataType.UNSPECIFIED_LEN) ? 8 : x.getLength())
-            .sum();
+        indexColumns.stream().mapToLong(x -> x.isLengthUnspecified() ? 8 : x.getLength()).sum();
     this.isUnique = isUnique;
     this.isPrimary = isPrimary;
     this.schemaState = SchemaState.fromValue(schemaState);

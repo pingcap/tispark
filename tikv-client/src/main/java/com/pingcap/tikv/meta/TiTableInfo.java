@@ -69,10 +69,7 @@ public class TiTableInfo implements Serializable {
     this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
     // TODO: Use more precise predication according to types
     this.columnLength =
-        columns
-            .stream()
-            .mapToLong(x -> (x.getLength() == DataType.UNSPECIFIED_LEN) ? 8 : x.getLength())
-            .sum();
+        columns.stream().mapToLong(x -> x.isLengthUnspecified() ? 8 : x.getLength()).sum();
     this.pkIsHandle = pkIsHandle;
     this.indices = indices != null ? ImmutableList.copyOf(indices) : ImmutableList.of();
     this.comment = comment;
@@ -105,6 +102,10 @@ public class TiTableInfo implements Serializable {
 
   public long getColumnLength() {
     return columnLength;
+  }
+
+  public boolean isLengthSpecified() {
+    return DataType.isLengthSpecified(columnLength);
   }
 
   public TiColumnInfo getColumn(int offset) {

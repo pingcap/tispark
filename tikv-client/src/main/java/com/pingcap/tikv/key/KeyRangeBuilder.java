@@ -19,7 +19,7 @@ import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.predicates.IndexRange;
 
-class KeyRangeBuilder {
+abstract class KeyRangeBuilder {
 
   private final IndexRange ir;
   private final Key pointKey;

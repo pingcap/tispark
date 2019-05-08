@@ -133,7 +133,7 @@ public class TiDAGRequest implements Serializable {
       req.addRanges(ranges);
       filters.forEach(req::addFilter);
       // this request will push down all filters
-      req.setPushDownFilters();
+      req.addPushDownFilters();
       if (!orderBys.isEmpty()) {
         orderBys.forEach(req::addOrderByItem);
       }
@@ -192,8 +192,6 @@ public class TiDAGRequest implements Serializable {
   private TiTableInfo tableInfo;
   private List<TiPartitionDef> prunedParts;
   private TiIndexInfo indexInfo;
-  private transient DAGRequest.Builder tableScanDAGRequest;
-  private transient DAGRequest.Builder indexScanDAGRequest;
   private final List<ColumnRef> fields = new ArrayList<>();
   private final List<DataType> indexDataTypes = new ArrayList<>();
   private final List<Expression> filters = new ArrayList<>();
@@ -263,20 +261,12 @@ public class TiDAGRequest implements Serializable {
 
   public DAGRequest buildIndexScan() {
     DAGRequest.Builder builder = buildScan(true);
-    if (indexScanDAGRequest == null) {
-      indexScanDAGRequest = builder;
-    }
     return buildRequest(builder);
   }
 
   public DAGRequest buildTableScan() {
     boolean isCoveringIndex = isCoveringIndexScan();
     DAGRequest.Builder builder = buildScan(isCoveringIndex);
-    if (isCoveringIndex && indexScanDAGRequest == null) {
-      indexScanDAGRequest = builder;
-    } else if (!isCoveringIndex && tableScanDAGRequest == null) {
-      tableScanDAGRequest = builder;
-    }
     return buildRequest(builder);
   }
 
@@ -306,13 +296,7 @@ public class TiDAGRequest implements Serializable {
    *     com.pingcap.tidb.tipb.IndexScan}
    * @return final DAGRequest built
    */
-  DAGRequest.Builder buildScan(boolean buildIndexScan) {
-    if (!buildIndexScan && tableScanDAGRequest != null) {
-      return tableScanDAGRequest;
-    }
-    if (buildIndexScan && indexScanDAGRequest != null) {
-      return indexScanDAGRequest;
-    }
+  private DAGRequest.Builder buildScan(boolean buildIndexScan) {
     long id = tableInfo.getId();
     checkNotNull(startTs, "startTs is null");
     checkArgument(startTs.getVersion() != 0, "timestamp is 0");
@@ -467,14 +451,14 @@ public class TiDAGRequest implements Serializable {
                 Selection.newBuilder()
                     .addConditions(ProtoConverter.toProto(whereExpr, colOffsetInFieldMap))));
         executorBuilder.clear();
-        setPushDownFilters();
+        addPushDownFilters();
       } else {
         return dagRequestBuilder;
       }
     }
 
     if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
-      if (!isIndexDoubleScan || isGroupByCoveredByIndex() || isAggregateCoveredByIndex()) {
+      if (!isIndexDoubleScan || (isGroupByCoveredByIndex() && isAggregateCoveredByIndex())) {
         Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
         getGroupByItems()
             .forEach(
@@ -489,8 +473,8 @@ public class TiDAGRequest implements Serializable {
         executorBuilder.setTp(ExecType.TypeAggregation);
         dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
         executorBuilder.clear();
-        setPushDownGroupBys();
-        setPushDownAggregates();
+        addPushDownGroupBys();
+        addPushDownAggregates();
       } else {
         return dagRequestBuilder;
       }
@@ -511,7 +495,7 @@ public class TiDAGRequest implements Serializable {
         topNBuilder.setLimit(getLimit());
         dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
         executorBuilder.clear();
-        setPushDownOrderBys();
+        addPushDownOrderBys();
       }
     } else if (getLimit() != 0) {
       if (!isIndexDoubleScan) {
@@ -520,7 +504,7 @@ public class TiDAGRequest implements Serializable {
         executorBuilder.setTp(ExecType.TypeLimit);
         dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
         executorBuilder.clear();
-        setPushDownLimits();
+        addPushDownLimits();
       }
     }
 
@@ -831,7 +815,7 @@ public class TiDAGRequest implements Serializable {
     return downgradeFilters;
   }
 
-  private void setPushDownFilters() {
+  private void addPushDownFilters() {
     // all filters will be pushed down
     // TODO: choose some filters to push down
     this.pushDownFilters.addAll(filters);
@@ -841,7 +825,7 @@ public class TiDAGRequest implements Serializable {
     return pushDownFilters;
   }
 
-  private void setPushDownAggregates() {
+  private void addPushDownAggregates() {
     this.pushDownAggregates.addAll(aggregates);
   }
 
@@ -853,7 +837,7 @@ public class TiDAGRequest implements Serializable {
     return pushDownAggregates;
   }
 
-  private void setPushDownGroupBys() {
+  private void addPushDownGroupBys() {
     this.pushDownGroupBys.addAll(getGroupByItems());
   }
 
@@ -861,7 +845,7 @@ public class TiDAGRequest implements Serializable {
     return pushDownGroupBys;
   }
 
-  private void setPushDownOrderBys() {
+  private void addPushDownOrderBys() {
     this.pushDownOrderBys.addAll(getOrderByItems());
   }
 
@@ -869,7 +853,7 @@ public class TiDAGRequest implements Serializable {
     return pushDownOrderBys;
   }
 
-  private void setPushDownLimits() {
+  private void addPushDownLimits() {
     this.pushDownLimits = limit;
   }
 
@@ -1011,7 +995,7 @@ public class TiDAGRequest implements Serializable {
     // Key ranges might be also useful
     if (!getRanges().isEmpty()) {
       sb.append(", KeyRange: ");
-      getRanges().forEach(x -> sb.append(KeyUtils.formatBytes(x)));
+      getRanges().forEach(x -> sb.append(KeyUtils.formatBytesUTF8(x)));
     }
 
     if (!getPushDownAggregatePairs().isEmpty()) {

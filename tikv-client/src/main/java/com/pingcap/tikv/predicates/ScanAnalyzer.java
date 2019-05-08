@@ -40,7 +40,6 @@ import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
-import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -335,8 +334,7 @@ public class ScanAnalyzer {
       boolean isIndexColumn = false;
       for (TiIndexColumn indexCol : indexColumns.getIndexColumns()) {
         boolean isFullLength =
-            indexCol.getLength() == DataType.UNSPECIFIED_LEN
-                || indexCol.getLength() == colInfo.getType().getLength();
+            indexCol.isLengthUnspecified() || indexCol.getLength() == colInfo.getType().getLength();
         if (colInfo.getName().equalsIgnoreCase(indexCol.getName()) && isFullLength) {
           isIndexColumn = true;
           break;

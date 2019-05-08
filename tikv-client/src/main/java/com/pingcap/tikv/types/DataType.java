@@ -180,7 +180,7 @@ public abstract class DataType implements Serializable {
     requireNonNull(cdo, "cdo is null");
     if (value == null) {
       encodeNull(cdo);
-    } else if (prefixLength == DataType.UNSPECIFIED_LEN) {
+    } else if (DataType.isLengthSpecified(prefixLength)) {
       encodeKey(cdo, value);
     } else if (isPrefixIndexSupported()) {
       byte[] bytes;
@@ -227,6 +227,10 @@ public abstract class DataType implements Serializable {
 
   public long getLength() {
     return length;
+  }
+
+  public boolean isLengthSpecified() {
+    return DataType.isLengthSpecified(length);
   }
 
   public int getDecimal() {
@@ -307,6 +311,10 @@ public abstract class DataType implements Serializable {
 
   public boolean isNum() {
     return (flag & NumFlag) > 0;
+  }
+
+  public static boolean isLengthSpecified(long length) {
+    return length == UNSPECIFIED_LEN;
   }
 
   @Override
