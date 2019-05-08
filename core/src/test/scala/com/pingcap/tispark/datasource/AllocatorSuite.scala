@@ -16,9 +16,9 @@ class AllocatorSuite extends BaseTiSparkSuite {
     val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =
       ti.tiSession.getCatalog.getTable(dbName, tableName)
-    val allocator = new IDAllocator(3, ti.tiSession.getCatalog, false, 1000)
-    allocator.alloc(19)
-    assert(allocator.getEnd - allocator.getStart == 1000)
+    val allocator = new IDAllocator(tiDBInfo.getId, ti.tiSession.getCatalog, false, 1000)
+    allocator.alloc(tiTableInfo.getId)
+    assert(allocator.getEnd - allocator.getStart == 999)
   }
 
 }

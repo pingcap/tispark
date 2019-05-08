@@ -54,13 +54,13 @@ public class CatalogTransaction {
   private static final byte STR_DATA_FLAG = 's';
 
   private static ByteString KEY_DBs = ByteString.copyFromUtf8("DBs");
-  private static ByteString KEY_TABLE = ByteString.copyFromUtf8("Table");
+  private static String KEY_TABLE = "Table";
   private static ByteString KEY_SCHEMA_VERSION = ByteString.copyFromUtf8("SchemaVersionKey");
 
   private static final String ENCODED_DB_PREFIX = "DB";
   private static final String KEY_TID = "TID";
 
-  CatalogTransaction(Snapshot snapshot) {
+  public CatalogTransaction(Snapshot snapshot) {
     this.snapshot = snapshot;
     this.prefix = META_PREFIX;
   }
@@ -110,6 +110,10 @@ public class CatalogTransaction {
     return ByteString.copyFrom(String.format("%s:%d", KEY_TID, tableId).getBytes());
   }
 
+  private static ByteString tableKey(long tableId) {
+    return ByteString.copyFrom(String.format("%s:%d", KEY_TABLE, tableId).getBytes());
+  }
+
   private static ByteString encodeDatabaseID(long id) {
     return ByteString.copyFrom(String.format("%s:%d", ENCODED_DB_PREFIX, id).getBytes());
   }
@@ -120,7 +124,7 @@ public class CatalogTransaction {
 
   private boolean isTableExisted(long dbId, long tableId) {
     ByteString dbKey = encodeDatabaseID(dbId);
-    ByteString tableKey = autoTableIDKey(tableId);
+    ByteString tableKey = tableKey(tableId);
     return !hashGet(dbKey, tableKey).isEmpty();
   }
 
@@ -177,7 +181,7 @@ public class CatalogTransaction {
           autoTableIDKey(tableId),
           (oldVal) -> {
             long base = 0;
-            if (oldVal != null) {
+            if (oldVal != null && oldVal.length != 0) {
               base = Long.parseLong(new String(oldVal));
             }
 
@@ -193,6 +197,7 @@ public class CatalogTransaction {
     ByteString dbKey = encodeDatabaseID(dbId);
     ByteString tblKey = autoTableIDKey(tableId);
     ByteString val = hashGet(dbKey, tblKey);
+    if (val.isEmpty()) return 0L;
     return Long.parseLong(val.toStringUtf8());
   }
 
@@ -258,7 +263,7 @@ public class CatalogTransaction {
     List<Pair<ByteString, ByteString>> fields = hashGetFields(dbKey);
     ImmutableList.Builder<TiTableInfo> builder = ImmutableList.builder();
     for (Pair<ByteString, ByteString> pair : fields) {
-      if (KeyUtils.hasPrefix(pair.first, KEY_TABLE)) {
+      if (KeyUtils.hasPrefix(pair.first, ByteString.copyFromUtf8(KEY_TABLE))) {
         builder.add(parseFromJson(pair.second, TiTableInfo.class));
       }
     }
