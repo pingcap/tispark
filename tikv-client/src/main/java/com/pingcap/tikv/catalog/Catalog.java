@@ -154,13 +154,13 @@ public class Catalog implements AutoCloseable {
         periodUnit);
   }
 
-  public long getAutoTableId(long dbId, long tableId, long step) {
+  public synchronized long getAutoTableId(long dbId, long tableId, long step) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     return newTrx.getAutoTableId(dbId, tableId, step);
   }
 
-  public long getAutoTableId(long dbId, long tableId) {
+  public synchronized long getAutoTableId(long dbId, long tableId) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     return newTrx.getAutoTableId(dbId, tableId);

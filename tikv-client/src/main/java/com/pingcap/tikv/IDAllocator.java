@@ -32,6 +32,14 @@ public class IDAllocator {
     this.step = step;
   }
 
+  public long getStart() {
+    return start;
+  }
+
+  public long getEnd() {
+    return end;
+  }
+
   public boolean isUnsigned() {
     return unsigned;
   }
