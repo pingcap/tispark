@@ -111,6 +111,15 @@ public class TypedKey extends Key {
 
   @Override
   public String toString() {
-    return KeyUtils.formatBytesUTF8(value);
+    try {
+      CodecDataInput cdi = new CodecDataInput(value);
+      Object val = type.decode(cdi);
+      if (val instanceof byte[]) {
+        return KeyUtils.formatBytes(value);
+      }
+      return val.toString();
+    } catch (Exception e) {
+      return "raw value:" + KeyUtils.formatBytesUTF8(value);
+    }
   }
 }
