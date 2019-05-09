@@ -40,4 +40,6 @@ class MetaManager(catalog: Catalog) {
 
   def getDatabase(dbName: String): Option[TiDBInfo] =
     Option(catalog.getDatabase(dbName))
+
+  def close() = catalog.close()
 }

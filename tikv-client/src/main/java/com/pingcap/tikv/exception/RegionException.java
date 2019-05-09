@@ -17,10 +17,13 @@ package com.pingcap.tikv.exception;
 
 import org.tikv.kvproto.Errorpb.Error;
 
-public class RegionException extends RuntimeException {
+public class RegionException extends TiKVException {
+  private static final long serialVersionUID = -4941554316743094356L;
+
   private final Error regionErr;
 
   public RegionException(Error regionErr) {
+    super("Region Exception occurred" + regionErr.getMessage());
     this.regionErr = regionErr;
   }
 

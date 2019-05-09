@@ -168,26 +168,56 @@ public class TiTableInfo implements Serializable {
     return null;
   }
 
+  private TiColumnInfo copyColumn(TiColumnInfo col) {
+    DataType type = col.getType();
+    InternalTypeHolder typeHolder = type.toTypeHolder();
+    typeHolder.setFlag(type.getFlag() & (~DataType.PriKeyFlag));
+    DataType newType = DataTypeFactory.of(typeHolder);
+    return new TiColumnInfo(
+            col.getId(),
+            col.getName(),
+            col.getOffset(),
+            newType,
+            col.getSchemaState(),
+            col.getOriginDefaultValue(),
+            col.getDefaultValue(),
+            col.getComment(),
+            col.getVersion())
+        .copyWithoutPrimaryKey();
+  }
+
+  public TiTableInfo copyTableWithOutRowId() {
+    boolean isRowID = getColumn(columns.size() - 1).getName().equals("_tidb_rowid");
+    if (isRowID) {
+      ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
+      for (int i = 0; i < columns.size() - 2; i++) {
+        TiColumnInfo col = columns.get(i);
+        newColumns.add(copyColumn(col));
+      }
+      return new TiTableInfo(
+          getId(),
+          CIStr.newCIStr(getName()),
+          getCharset(),
+          getCollate(),
+          true,
+          newColumns.build(),
+          getIndices(),
+          getComment(),
+          getAutoIncId(),
+          getMaxColumnId(),
+          getMaxIndexId(),
+          getOldSchemaId(),
+          partitionInfo);
+    } else {
+      return this;
+    }
+  }
+
   public TiTableInfo copyTableWithRowId() {
     if (!isPkHandle()) {
       ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
       for (TiColumnInfo col : getColumns()) {
-        DataType type = col.getType();
-        InternalTypeHolder typeHolder = type.toTypeHolder();
-        typeHolder.setFlag(type.getFlag() & (~DataType.PriKeyFlag));
-        DataType newType = DataTypeFactory.of(typeHolder);
-        TiColumnInfo newCol =
-            new TiColumnInfo(
-                col.getId(),
-                col.getName(),
-                col.getOffset(),
-                newType,
-                col.getSchemaState(),
-                col.getOriginDefaultValue(),
-                col.getDefaultValue(),
-                col.getComment(),
-                col.getVersion());
-        newColumns.add(newCol.copyWithoutPrimaryKey());
+        newColumns.add(copyColumn(col));
       }
       newColumns.add(TiColumnInfo.getRowIdColumn(getColumns().size()));
       return new TiTableInfo(

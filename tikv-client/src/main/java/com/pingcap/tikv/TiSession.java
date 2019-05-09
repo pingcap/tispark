@@ -16,25 +16,32 @@
 package com.pingcap.tikv;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.meta.TiTimestamp;
-import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.region.RegionStoreClient;
+import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.txn.TxnKVClient;
+import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
+import gnu.trove.list.array.TLongArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TiSession implements AutoCloseable {
-  private static final Map<String, ManagedChannel> connPool = new HashMap<>();
+  private final Logger logger = LoggerFactory.getLogger(TiSession.class);
   private final TiConfiguration conf;
+  private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
   // below object creation is either heavy or making connection (pd), pending for lazy loading
   private volatile RegionManager regionManager;
@@ -43,8 +50,27 @@ public class TiSession implements AutoCloseable {
   private volatile ExecutorService indexScanThreadPool;
   private volatile ExecutorService tableScanThreadPool;
 
+  private final RegionStoreClient.RegionStoreClientBuilder clientBuilder;
+
   public TiSession(TiConfiguration conf) {
     this.conf = conf;
+    this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
+    this.regionManager = new RegionManager(this.getPDClient(), this.cacheInvalidateCallback);
+    this.clientBuilder =
+        new RegionStoreClient.RegionStoreClientBuilder(
+            conf, this.channelFactory, this.regionManager, this);
+  }
+
+  public TxnKVClient createTxnClient() {
+    // Create new Region Manager avoiding thread contentions
+    RegionManager regionMgr = new RegionManager(this.getPDClient(), this.cacheInvalidateCallback);
+    RegionStoreClient.RegionStoreClientBuilder builder =
+        new RegionStoreClient.RegionStoreClientBuilder(conf, this.channelFactory, regionMgr, this);
+    return new TxnKVClient(conf, builder, this.getPDClient());
+  }
+
+  public RegionStoreClient.RegionStoreClientBuilder getRegionStoreClientBuilder() {
+    return this.clientBuilder;
   }
 
   public TiConfiguration getConf() {
@@ -68,7 +94,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (client == null) {
-          client = PDClient.createRaw(this);
+          client = PDClient.createRaw(this.getConf(), channelFactory);
         }
         res = client;
       }
@@ -100,35 +126,12 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (regionManager == null) {
-          regionManager = new RegionManager(getPDClient());
+          regionManager = new RegionManager(getPDClient(), this.cacheInvalidateCallback);
         }
         res = regionManager;
       }
     }
     return res;
-  }
-
-  public synchronized ManagedChannel getChannel(String addressStr) {
-    ManagedChannel channel = connPool.get(addressStr);
-    if (channel == null) {
-      URI address;
-      try {
-        address = PDUtils.addrToUrl(addressStr);
-      } catch (Exception e) {
-        throw new IllegalArgumentException("failed to form address " + addressStr);
-      }
-
-      // Channel should be lazy without actual connection until first call
-      // So a coarse grain lock is ok here
-      channel =
-          ManagedChannelBuilder.forAddress(address.getHost(), address.getPort())
-              .maxInboundMessageSize(conf.getMaxFrameSize())
-              .usePlaintext(true)
-              .idleTimeout(60, TimeUnit.SECONDS)
-              .build();
-      connPool.put(addressStr, channel);
-    }
-    return channel;
   }
 
   public ExecutorService getThreadPoolForIndexScan() {
@@ -167,10 +170,6 @@ public class TiSession implements AutoCloseable {
     return new TiSession(conf);
   }
 
-  public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
-    return cacheInvalidateCallback;
-  }
-
   /**
    * This is used for setting call back function to invalidate cache information
    *
@@ -178,6 +177,40 @@ public class TiSession implements AutoCloseable {
    */
   public void injectCallBackFunc(Function<CacheInvalidateEvent, Void> callBackFunc) {
     this.cacheInvalidateCallback = callBackFunc;
+  }
+
+  public void splitRegionAndScatter(List<byte[]> splitKeys) {
+    logger.info(String.format("split key's size is %d", splitKeys.size()));
+    List<Key> rawKeys =
+        splitKeys.parallelStream().map(RowKey::toRawKey).collect(Collectors.toList());
+    TLongArrayList regionIds = new TLongArrayList();
+    rawKeys.forEach(key -> splitRegionAndScatter(key, regionIds));
+    for (int i = 0; i < regionIds.size(); i++) {
+      getPDClient().waitScatterRegionFinish(regionIds.get(i));
+    }
+  }
+
+  // splitKey is a row key, but we use a generalized key here.
+  private void splitRegionAndScatter(Key splitKey, TLongArrayList regionIds) {
+    // make sure split key must be row key
+    Key nextKey = splitKey.next();
+    TiRegion region = regionManager.getRegionByKey(splitKey.toByteString());
+    if (nextKey.toByteString().equals(region.getStartKey())
+        || nextKey.toByteString().equals(region.getEndKey())) {
+      logger.warn(
+          "split key equal to region start key or end key. Region splitting " + "is not needed.");
+      return;
+    }
+    TiRegion left =
+        getRegionStoreClientBuilder()
+            .build(region)
+            .splitRegion(ByteString.copyFrom(nextKey.getBytes()));
+    Objects.requireNonNull(left, "Region after split cannot be null");
+    // need invalidate region that is already split.
+    getPDClient().scatterRegion(left);
+    regionIds.add(left.getId());
+    // after split succeed, we need invalidate outdated region info from cache.
+    regionManager.invalidateRegion(region.getId());
   }
 
   @Override

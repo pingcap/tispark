@@ -72,6 +72,7 @@
         <profile.source.directory>spark-2.3</profile.source.directory>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
+        <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
     </properties>
 
     <profiles>

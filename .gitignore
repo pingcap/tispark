@@ -10,7 +10,7 @@ target
 core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
 tikv-client/src/main/java/com/pingcap/tikv/TiVersion.java
 
-# ignore eclipse configuration 
+# ignore eclipse configuration
 .project
 
 # ignore maven related files

@@ -31,19 +31,23 @@ public interface BackOffer {
   }
 
   // Back off types.
-  int copBuildTaskMaxBackoff = 5000;
-  int tsoMaxBackoff = 15000;
-  int scannerNextMaxBackoff = 20000;
-  int batchGetMaxBackoff = 20000;
-  int copNextMaxBackoff = 20000;
-  int getMaxBackoff = 20000;
-  int prewriteMaxBackoff = 20000;
-  int cleanupMaxBackoff = 20000;
-  int GcOneRegionMaxBackoff = 20000;
-  int GcResolveLockMaxBackoff = 100000;
-  int GcDeleteRangeMaxBackoff = 100000;
-  int rawkvMaxBackoff = 20000;
-  int splitRegionBackoff = 20000;
+  int seconds = 1000;
+  int COP_BUILD_TASK_MAX_BACKOFF = 5 * seconds;
+  int TSO_MAX_BACKOFF = 5 * seconds;
+  int SCANNER_NEXT_MAX_BACKOFF = 40 * seconds;
+  int BATCH_GET_MAX_BACKOFF = 40 * seconds;
+  int COP_NEXT_MAX_BACKOFF = 40 * seconds;
+  int GET_MAX_BACKOFF = 40 * seconds;
+  int PREWRITE_MAX_BACKOFF = 20 * seconds;
+  int CLEANUP_MAX_BACKOFF = 20 * seconds;
+  int GC_ONE_REGION_MAX_BACKOFF = 20 * seconds;
+  int GC_RESOLVE_LOCK_MAX_BACKOFF = 100 * seconds;
+  int GC_DELETE_RANGE_MAX_BACKOFF = 100 * seconds;
+  int RAWKV_MAX_BACKOFF = 40 * seconds;
+  int SPLIT_REGION_BACKOFF = 20 * seconds;
+  int BATCH_PREWRITE_BACKOFF = 20 * seconds;
+  int BATCH_COMMIT_BACKOFF = 3 * seconds;
+  int WAIT_SCATTER_REGION_FINISH = 120 * seconds;
 
   /**
    * doBackOff sleeps a while base on the BackOffType and records the error message. Will stop until

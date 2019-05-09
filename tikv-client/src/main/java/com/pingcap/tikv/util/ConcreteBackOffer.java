@@ -37,27 +37,31 @@ public class ConcreteBackOffer implements BackOffer {
   }
 
   public static ConcreteBackOffer newScannerNextMaxBackOff() {
-    return new ConcreteBackOffer(scannerNextMaxBackoff);
+    return new ConcreteBackOffer(SCANNER_NEXT_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer newBatchGetMaxBackOff() {
-    return new ConcreteBackOffer(batchGetMaxBackoff);
+    return new ConcreteBackOffer(BATCH_GET_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer newCopNextMaxBackOff() {
-    return new ConcreteBackOffer(copNextMaxBackoff);
+    return new ConcreteBackOffer(COP_NEXT_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer newGetBackOff() {
-    return new ConcreteBackOffer(getMaxBackoff);
+    return new ConcreteBackOffer(GET_MAX_BACKOFF);
+  }
+
+  public static ConcreteBackOffer newWaitScatterRegionBackOff() {
+    return new ConcreteBackOffer(WAIT_SCATTER_REGION_FINISH);
   }
 
   public static ConcreteBackOffer newRawKVBackOff() {
-    return new ConcreteBackOffer(rawkvMaxBackoff);
+    return new ConcreteBackOffer(RAWKV_MAX_BACKOFF);
   }
 
   public static ConcreteBackOffer newTsoBackOff() {
-    return new ConcreteBackOffer(tsoMaxBackoff);
+    return new ConcreteBackOffer(TSO_MAX_BACKOFF);
   }
 
   private ConcreteBackOffer(int maxSleep) {

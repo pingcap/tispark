@@ -32,7 +32,6 @@ object TiExtensionsExample {
       .setIfMissing("tidb.port", "4000")
       .setIfMissing("tidb.user", "root")
       .setIfMissing("spark.tispark.pd.addresses", "127.0.0.1:2379")
-      .setIfMissing("spark.tispark.plan.allow_index_read", "true")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
 

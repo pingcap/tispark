@@ -110,6 +110,9 @@ spark.sql("select count(*) from lineitem").show
 spark.sql("select ti_version()").show
 ```
 
+## TiDB Data Source API
+When using the TiDB Data Source API, please follow the document for [TiDB Data Source API User Guide](./docs/datasource_api_userguide.md).
+
 ## Configuration
 
 Below configurations can be put together with spark-defaults.conf or passed in the same way as other Spark config properties.

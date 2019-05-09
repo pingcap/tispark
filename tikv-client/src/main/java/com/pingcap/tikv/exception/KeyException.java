@@ -17,19 +17,15 @@ package com.pingcap.tikv.exception;
 
 import org.tikv.kvproto.Kvrpcpb;
 
-public class KeyException extends RuntimeException {
-  private final Kvrpcpb.KeyError keyErr;
+public class KeyException extends TiKVException {
+
+  private static final long serialVersionUID = 6649195220216182286L;
 
   public KeyException(String errMsg) {
     super(errMsg);
-    keyErr = null;
   }
 
   public KeyException(Kvrpcpb.KeyError keyErr) {
-    this.keyErr = keyErr;
-  }
-
-  public Kvrpcpb.KeyError getKeyErr() {
-    return keyErr;
+    super(String.format("Key exception occurred and the reason is %s", keyErr.toString()));
   }
 }

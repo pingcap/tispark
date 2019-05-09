@@ -19,15 +19,18 @@ package org.apache.spark.sql.test
 
 import java.io.File
 import java.sql.{Connection, DriverManager, Statement}
+import java.util
 import java.util.{Locale, Properties, TimeZone}
 
+import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
+import com.pingcap.tispark.TiDBOptions
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
-import org.apache.spark.sql._
-import org.apache.spark.{SparkConf, SparkFunSuite}
+import org.apache.spark.{SparkConf, SparkContext, SparkFunSuite}
 import org.joda.time.DateTimeZone
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
@@ -40,8 +43,6 @@ import org.slf4j.Logger
  * `tidb_config.properties` must be provided in test resources folder
  */
 trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfterAll {
-  protected var enableHive: Boolean = false
-
   protected def spark: SparkSession = SharedSQLContext.spark
 
   protected def ti: TiContext = SharedSQLContext.ti
@@ -49,6 +50,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def jdbc: SparkSession = SharedSQLContext.jdbc
 
   protected def tidbConn: Connection = SharedSQLContext.tidbConn
+
+  protected def tidbOptions: Map[String, String] = SharedSQLContext.tidbOptions
 
   protected def sql: String => DataFrame = spark.sql _
 
@@ -79,15 +82,34 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def paramConf(): Properties = SharedSQLContext._tidbConf
 
+  protected var enableHive: Boolean = false
+
+  protected var enableTidbConfigPropertiesInjectedToSpark: Boolean = true
+
+  protected def tidbUser: String = SharedSQLContext.tidbUser
+
+  protected def tidbPassword: String = SharedSQLContext.tidbPassword
+
+  protected def tidbAddr: String = SharedSQLContext.tidbAddr
+
+  protected def tidbPort: Int = SharedSQLContext.tidbPort
+
+  protected def pdAddresses: String = SharedSQLContext.pdAddresses
+
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
    */
   protected implicit def sqlContext: SQLContext = spark.sqlContext
 
+  protected implicit def sc: SparkContext = spark.sqlContext.sparkContext
+
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     try {
-      SharedSQLContext.init(isHiveEnabled = enableHive)
+      SharedSQLContext.init(
+        isHiveEnabled = enableHive,
+        isTidbConfigPropertiesInjectedToSparkEnabled = enableTidbConfigPropertiesInjectedToSpark
+      )
     } catch {
       case e: Throwable =>
         fail(
@@ -120,6 +142,7 @@ object SharedSQLContext extends Logging {
   private var _ti: TiContext = _
   private var _tidbConf: Properties = _
   private var _tidbConnection: Connection = _
+  private var _tidbOptions: Map[String, String] = _
   private var _statement: Statement = _
   private var _sparkJDBC: SparkSession = _
   protected var jdbcUrl: String = _
@@ -128,6 +151,11 @@ object SharedSQLContext extends Logging {
   protected var runTPCH: Boolean = true
   protected var runTPCDS: Boolean = false
   protected var dbPrefix: String = _
+  protected var tidbUser: String = _
+  protected var tidbPassword: String = _
+  protected var tidbAddr: String = _
+  protected var tidbPort: Int = _
+  protected var pdAddresses: String = _
 
   protected implicit def spark: SparkSession = _spark
 
@@ -136,6 +164,8 @@ object SharedSQLContext extends Logging {
   protected implicit def jdbc: SparkSession = _sparkJDBC
 
   protected implicit def tidbConn: Connection = _tidbConnection
+
+  protected implicit def tidbOptions: Map[String, String] = _tidbOptions
 
   protected implicit def tidbStmt: Statement = _statement
 
@@ -148,7 +178,7 @@ object SharedSQLContext extends Logging {
 
   def refreshConnections(isHiveEnabled: Boolean): Unit = {
     stop()
-    init(forceNotLoad = true, isHiveEnabled)
+    init(forceNotLoad = true, isHiveEnabled = isHiveEnabled)
   }
 
   /**
@@ -160,7 +190,7 @@ object SharedSQLContext extends Logging {
    * 'initializeSession' between a 'describe' and an 'it' call than it does to
    * call 'beforeAll'.
    */
-  protected def initializeSession(): Unit =
+  protected def initializeSparkSession(): Unit =
     if (_spark == null) {
       _spark = _sparkSession
     }
@@ -192,20 +222,28 @@ object SharedSQLContext extends Logging {
 
   private def initializeTiDB(forceNotLoad: Boolean = false): Unit =
     if (_tidbConnection == null) {
-      val jdbcUsername = getOrElse(_tidbConf, TiDB_USER, "root")
+      tidbUser = getOrElse(_tidbConf, TiDB_USER, "root")
 
-      val jdbcPassword = getOrElse(_tidbConf, TiDB_PASSWORD, "")
+      tidbPassword = getOrElse(_tidbConf, TiDB_PASSWORD, "")
 
-      val jdbcHostname = getOrElse(_tidbConf, TiDB_ADDRESS, "127.0.0.1")
+      tidbAddr = getOrElse(_tidbConf, TiDB_ADDRESS, "127.0.0.1")
 
-      val jdbcPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
+      tidbPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
+
+      _tidbOptions = Map(
+        TiDB_ADDRESS -> tidbAddr,
+        TiDB_PASSWORD -> tidbPassword,
+        TiDB_PORT -> s"$tidbPort",
+        TiDB_USER -> tidbUser,
+        PD_ADDRESSES -> pdAddresses
+      )
 
       val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toLowerCase.toBoolean
 
       jdbcUrl =
-        s"jdbc:mysql://address=(protocol=tcp)(host=$jdbcHostname)(port=$jdbcPort)/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
+        s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
 
-      _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+      _tidbConnection = DriverManager.getConnection(jdbcUrl, tidbUser, tidbPassword)
       _statement = _tidbConnection.createStatement()
 
       if (loadData) {
@@ -248,7 +286,8 @@ object SharedSQLContext extends Logging {
       }
     }
 
-  private def initializeConf(isHiveEnabled: Boolean = false): Unit =
+  private def initializeConf(isHiveEnabled: Boolean = false,
+                             isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true): Unit =
     if (_tidbConf == null) {
       val confStream = Thread
         .currentThread()
@@ -261,15 +300,8 @@ object SharedSQLContext extends Logging {
       }
 
       import com.pingcap.tispark.TiConfigConst._
-      sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
-      sparkConf.set(ALLOW_INDEX_READ, getFlagOrTrue(prop, ALLOW_INDEX_READ).toString)
-      sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
-      sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
-      sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
-      sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-
+      pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
-      sparkConf.set(DB_PREFIX, dbPrefix)
 
       // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
@@ -279,6 +311,18 @@ object SharedSQLContext extends Logging {
       runTPCDS = tpcdsDBName != ""
 
       _tidbConf = prop
+
+      if (isTidbConfigPropertiesInjectedToSparkEnabled) {
+        sparkConf.set(PD_ADDRESSES, pdAddresses)
+        sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
+        sparkConf.set(ALLOW_INDEX_READ, getFlagOrTrue(prop, ALLOW_INDEX_READ).toString)
+        sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
+        sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
+        sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
+        sparkConf.set(DB_PREFIX, dbPrefix)
+      }
+
+      sparkConf.set("spark.tispark.write.allow_spark_sql", "true")
 
       if (isHiveEnabled) {
         // delete meta store directory to avoid multiple derby instances SPARK-10872
@@ -298,12 +342,16 @@ object SharedSQLContext extends Logging {
   /**
    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
    */
-  def init(forceNotLoad: Boolean = false, isHiveEnabled: Boolean = false): Unit = {
-    initializeConf(isHiveEnabled)
-    initializeSession()
+  def init(forceNotLoad: Boolean = false,
+           isHiveEnabled: Boolean = false,
+           isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true): Unit = {
+    initializeConf(isHiveEnabled, isTidbConfigPropertiesInjectedToSparkEnabled)
+    initializeSparkSession()
     initializeTiDB(forceNotLoad)
     initializeJDBC()
-    initializeTiContext()
+    if (isTidbConfigPropertiesInjectedToSparkEnabled) {
+      initializeTiContext()
+    }
   }
 
   /**
@@ -318,6 +366,7 @@ object SharedSQLContext extends Logging {
 
     if (_ti != null) {
       _ti.sparkSession.sessionState.catalog.reset()
+      _ti.meta.close()
       _ti.sparkSession.close()
       _ti.tiSession.close()
       _ti = null

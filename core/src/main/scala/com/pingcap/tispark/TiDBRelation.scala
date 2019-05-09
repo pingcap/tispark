@@ -16,23 +16,26 @@
 package com.pingcap.tispark
 
 import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.exception.TiClientInternalException
+import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalException}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
 import org.apache.spark.sql.execution._
-import org.apache.spark.sql.sources.BaseRelation
+import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
 
 case class TiDBRelation(session: TiSession,
                         tableRef: TiTableReference,
                         meta: MetaManager,
-                        var ts: TiTimestamp = null)(
+                        var ts: TiTimestamp = null,
+                        options: Option[TiDBOptions] = None)(
   @transient val sqlContext: SQLContext
-) extends BaseRelation {
+) extends BaseRelation
+    with InsertableRelation {
   val table: TiTableInfo = meta
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new TiClientInternalException("Table not exist"))
@@ -93,5 +96,24 @@ case class TiDBRelation(session: TiSession,
       this.table.equals(other.table)
     case _ =>
       false
+  }
+
+  override def insert(data: DataFrame, overwrite: Boolean): Unit = {
+    // default forbid sql interface
+    // cause tispark provide `upsert` instead of `insert` semantic
+    val allowSparkSQL = sqlContext.getConf("spark.tispark.write.allow_spark_sql", "false").toBoolean
+    if (allowSparkSQL) {
+      val saveMode = if (overwrite) {
+        SaveMode.Overwrite
+      } else {
+        SaveMode.Append
+      }
+      TiDBWriter.write(data, sqlContext, saveMode, options.get)
+    } else {
+      throw new TiBatchWriteException(
+        "SparkSQL entry for tispark write is disabled. Set spark.tispark.write.allow_spark_sql to enable."
+      )
+    }
+
   }
 }

@@ -99,7 +99,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
   // apply StartTs to every logical plan in Spark Planning stage
   protected def applyStartTs(ts: TiTimestamp): PartialFunction[LogicalPlan, Unit] = {
-    case LogicalRelation(r @ TiDBRelation(_, _, _, timestamp), _, _, _) =>
+    case LogicalRelation(r @ TiDBRelation(_, _, _, timestamp, _), _, _, _) =>
       if (timestamp == null) {
         r.ts = ts
       }
