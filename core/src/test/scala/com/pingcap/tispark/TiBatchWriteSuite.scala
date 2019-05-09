@@ -25,7 +25,7 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
   private val tables =
     "CUSTOMER" ::
       //"LINEITEM" no primary key, current not support
-      "NATION" ::
+      // "NATION" has index, current not support
       "ORDERS" ::
       "PART" ::
       //"PARTSUPP" no primary key, current not support

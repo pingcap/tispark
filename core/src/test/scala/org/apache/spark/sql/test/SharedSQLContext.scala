@@ -312,10 +312,8 @@ object SharedSQLContext extends Logging {
 
       _tidbConf = prop
 
-      // TODO https://github.com/pingcap/tispark/issues/703
-      // move set pd_addresses inside the if branch.
-      sparkConf.set(PD_ADDRESSES, pdAddresses)
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
+        sparkConf.set(PD_ADDRESSES, pdAddresses)
         sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
         sparkConf.set(ALLOW_INDEX_READ, getFlagOrTrue(prop, ALLOW_INDEX_READ).toString)
         sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
