@@ -312,6 +312,8 @@ object SharedSQLContext extends Logging {
 
       _tidbConf = prop
 
+      // TODO https://github.com/pingcap/tispark/issues/703
+      // move set pd_addresses inside the if branch.
       sparkConf.set(PD_ADDRESSES, pdAddresses)
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
         sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
