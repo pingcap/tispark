@@ -118,7 +118,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
             def run_tikvclient_test = { chunk_suffix ->
                 dir("go/src/github.com/pingcap/tispark") {
                     sh """
-                        mvn test -am -pl tikv-client
+                        mvn verify -am -pl tikv-client
                     """
                 }
             }
