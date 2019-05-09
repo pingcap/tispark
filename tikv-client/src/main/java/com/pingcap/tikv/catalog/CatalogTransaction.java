@@ -43,7 +43,7 @@ import org.apache.log4j.Logger;
 import org.tikv.kvproto.Kvrpcpb;
 
 public class CatalogTransaction {
-  protected static final Logger logger = Logger.getLogger(Catalog.class);
+  protected static final Logger logger = Logger.getLogger(CatalogTransaction.class);
   private final Snapshot snapshot;
   private final byte[] prefix;
 
@@ -60,7 +60,7 @@ public class CatalogTransaction {
   private static final String ENCODED_DB_PREFIX = "DB";
   private static final String KEY_TID = "TID";
 
-  public CatalogTransaction(Snapshot snapshot) {
+  CatalogTransaction(Snapshot snapshot) {
     this.snapshot = snapshot;
     this.prefix = META_PREFIX;
   }
@@ -249,7 +249,7 @@ public class CatalogTransaction {
     return builder.build();
   }
 
-  public TiDBInfo getDatabase(long id) {
+  TiDBInfo getDatabase(long id) {
     ByteString dbKey = encodeDatabaseID(id);
     ByteString json = hashGet(KEY_DBs, dbKey);
     if (json == null || json.isEmpty()) {

@@ -60,7 +60,7 @@ public class TiDAGRequestTest {
     dagRequest.setLimit(0);
     dagRequest.setTableInfo(table);
     dagRequest.setStartTs(new TiTimestamp(0, 1));
-    dagRequest.buildScan(false);
+    dagRequest.buildTableScan();
   }
 
   @Test

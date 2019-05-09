@@ -17,7 +17,6 @@ package com.pingcap.tispark
 
 import java.util
 
-import com.pingcap.tikv.catalog.CatalogTransaction
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
@@ -414,7 +413,6 @@ object TiBatchWrite {
       }
 
     }
-
   }
 
   @throws(classOf[TiBatchWriteException])

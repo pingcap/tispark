@@ -173,22 +173,20 @@ public abstract class DataType implements Serializable {
    *
    * @param cdo destination of data.
    * @param value value to be encoded.
-   * @param type data value type.
    * @param prefixLength specifies prefix length of value to be encoded. When prefixLength is
    *     DataType.UNSPECIFIED_LEN, encode full length of value.
    */
-  public void encodeKey(CodecDataOutput cdo, Object value, DataType type, int prefixLength) {
+  public void encodeKey(CodecDataOutput cdo, Object value, int prefixLength) {
     requireNonNull(cdo, "cdo is null");
     if (value == null) {
       encodeNull(cdo);
-    } else if (prefixLength == DataType.UNSPECIFIED_LEN) {
+    } else if (DataType.isLengthSpecified(prefixLength)) {
       encodeKey(cdo, value);
     } else if (isPrefixIndexSupported()) {
       byte[] bytes;
       // When charset is utf8/utf8mb4, prefix length should be the number of utf8 characters
       // rather than length of its encoded byte value.
-      if (type.getCharset().equalsIgnoreCase("utf8")
-          || type.getCharset().equalsIgnoreCase("utf8mb4")) {
+      if (getCharset().equalsIgnoreCase("utf8") || getCharset().equalsIgnoreCase("utf8mb4")) {
         bytes = Converter.convertUtf8ToBytes(value, prefixLength);
       } else {
         bytes = Converter.convertToBytes(value, prefixLength);
@@ -229,6 +227,10 @@ public abstract class DataType implements Serializable {
 
   public long getLength() {
     return length;
+  }
+
+  public boolean isLengthSpecified() {
+    return DataType.isLengthSpecified(length);
   }
 
   public int getDecimal() {
@@ -313,6 +315,10 @@ public abstract class DataType implements Serializable {
 
   public boolean isUnsigned() {
     return (flag & UnsignedFlag) > 0;
+  }
+
+  public static boolean isLengthSpecified(long length) {
+    return length == UNSPECIFIED_LEN;
   }
 
   @Override

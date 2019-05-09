@@ -1,10 +1,8 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import com.pingcap.tikv.meta.TiTimestamp
-import com.pingcap.tispark.TiDBRelation
 import org.apache.spark.sql.BaseTiSparkSuite
-import org.apache.spark.sql.catalyst.expressions.{Exists, ListQuery, ScalarSubquery, SubqueryExpression}
-import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.execution.{CoprocessorRDD, HandleRDDExec, RegionTaskExec, SparkPlan}
 
 class LogicalPlanTestSuite extends BaseTiSparkSuite {
 
@@ -62,31 +60,31 @@ class LogicalPlanTestSuite extends BaseTiSparkSuite {
                   |on t1.id = t4.id
       """.stripMargin)
 
-    var v: Option[TiTimestamp] = None
-    def check(version: Option[TiTimestamp]): Unit =
-      if (version.isEmpty) {
+    var v: TiTimestamp = null
+    def check(version: TiTimestamp): Unit =
+      if (version == null) {
         fail("timestamp is not defined!")
-      } else if (v.isEmpty) {
-        println("initialize timestamp should be " + version.get.getVersion)
+      } else if (v == null) {
+        println("initialize timestamp should be " + version.getVersion)
         v = version
-      } else if (v.get.getVersion != version.get.getVersion) {
+      } else if (v.getVersion != version.getVersion) {
         fail("multiple timestamp found in plan")
       } else {
-        println("check ok " + v.get.getVersion)
+        println("check ok " + v.getVersion)
       }
 
-    def checkTimestamp: PartialFunction[LogicalPlan, Unit] = {
-      case _ @LogicalRelation(r: TiDBRelation, _, _, _) =>
-        check(r.ts)
-      case plan =>
-        plan transformExpressionsUp {
-          case s: SubqueryExpression =>
-            s.plan.foreach(checkTimestamp)
-            s
-        }
+    def checkTimestamp: PartialFunction[SparkPlan, Unit] = {
+      case plan: CoprocessorRDD =>
+        check(plan.tiRdd.dagRequest.getStartTs)
+      case plan: HandleRDDExec =>
+        check(plan.tiHandleRDD.dagRequest.getStartTs)
+      case plan: RegionTaskExec =>
+        check(plan.dagRequest.getStartTs)
+      case _ =>
     }
-    println(df.queryExecution.analyzed)
-    df.queryExecution.analyzed.foreach { checkTimestamp }
+    df.explain
+    println(df.queryExecution.executedPlan)
+    df.queryExecution.executedPlan.foreach { checkTimestamp }
     df.show
   }
 

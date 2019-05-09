@@ -72,7 +72,9 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     refreshConnections()
 
     spark.sql("select * from t1").show
-    runTest("select * from t1 where name = '借款策略集_网页'", skipJDBC = true)
+    explainAndRunTest("select * from t1 where name = '中文字符集_测试'", skipJDBC = true)
+    explainAndRunTest("select * from t1 where name < '中文字符集_测试'", skipJDBC = true)
+    explainAndRunTest("select * from t1 where name > '中文字符集_测试'", skipJDBC = true)
   }
 
   test("index double scan with predicate") {
@@ -81,18 +83,20 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
       "create table test_index(id bigint(20), c1 text default null, c2 int, c3 int, c4 int, KEY idx_c1(c1(10)))"
     )
     tidbStmt.execute("insert into test_index values(1, 'aairy', 10, 20, 30)")
-    tidbStmt.execute("insert into test_index values(1, 'dairy', 10, 20, 30)")
-    tidbStmt.execute("insert into test_index values(1, 'zairy', 10, 20, 30)")
+    tidbStmt.execute("insert into test_index values(2, 'dairy', 20, 30, 40)")
+    tidbStmt.execute("insert into test_index values(3, 'zairy', 30, 40, 50)")
     refreshConnections() // refresh since we need to load data again
-    judge("select c2 from test_index where c1 > 'dairy'")
+    explainAndRunTest("select c1, c2 from test_index where c1 < 'dairy' and c2 > 20")
+    explainAndRunTest("select c1, c2 from test_index where c1 = 'dairy'")
+    explainAndRunTest("select c1, c2 from test_index where c1 > 'dairy'")
     judge("select c2 from test_index where c1 < 'dairy'")
     judge("select c2 from test_index where c1 = 'dairy'")
     judge("select c2, c2 from test_index where c1 > 'dairy'")
     judge("select c2, c2 from test_index where c1 < 'dairy'")
     judge("select c2, c2 from test_index where c1 = 'dairy'")
-    judge("select max(c2) from test_index where c1 > 'dairy'")
-    judge("select max(c2) from test_index where c1 < 'dairy'")
-    judge("select max(c2) from test_index where c1 = 'dairy'")
+    explainAndRunTest("select max(c2) from test_index where c1 > 'dairy'")
+    explainAndRunTest("select max(c2) from test_index where c1 < 'dairy'")
+    explainAndRunTest("select max(c2) from test_index where c1 = 'dairy'")
   }
 
   override def afterAll(): Unit =

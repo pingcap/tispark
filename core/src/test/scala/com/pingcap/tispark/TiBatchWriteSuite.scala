@@ -25,7 +25,7 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
   private val tables =
     "CUSTOMER" ::
       //"LINEITEM" no primary key, current not support
-      "NATION" ::
+      // "NATION" has index, current not support
       "ORDERS" ::
       "PART" ::
       //"PARTSUPP" no primary key, current not support
@@ -68,7 +68,8 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
 
       // assert
       val originCount = querySpark(s"select count(*) from $table").head.head.asInstanceOf[Long]
-      val count = querySpark(s"select count(*) from ${batchWriteTablePrefix}_$table").head.head
+      // cannot use count since batch write is not support index writing yet.
+      val count = querySpark(s"select * from ${batchWriteTablePrefix}_$table").length
         .asInstanceOf[Long]
       assert(count == originCount)
     }

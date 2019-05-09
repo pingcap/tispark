@@ -79,7 +79,7 @@ public class ConcreteBackOffer implements BackOffer {
     BackOffFunction backOffFunction = null;
     switch (funcType) {
       case BoUpdateLeader:
-        backOffFunction = BackOffFunction.create(1, 100, BackOffStrategy.NoJitter);
+        backOffFunction = BackOffFunction.create(1, 10, BackOffStrategy.NoJitter);
         break;
       case BoTxnLockFast:
         backOffFunction = BackOffFunction.create(100, 3000, BackOffStrategy.EqualJitter);
@@ -88,16 +88,16 @@ public class ConcreteBackOffer implements BackOffer {
         backOffFunction = BackOffFunction.create(2000, 10000, BackOffStrategy.EqualJitter);
         break;
       case BoRegionMiss:
-        backOffFunction = BackOffFunction.create(500, 1000, BackOffStrategy.NoJitter);
+        backOffFunction = BackOffFunction.create(100, 500, BackOffStrategy.NoJitter);
         break;
       case BoTxnLock:
         backOffFunction = BackOffFunction.create(200, 3000, BackOffStrategy.EqualJitter);
         break;
       case BoPDRPC:
-        backOffFunction = BackOffFunction.create(500, 5000, BackOffStrategy.EqualJitter);
+        backOffFunction = BackOffFunction.create(500, 3000, BackOffStrategy.EqualJitter);
         break;
       case BoTiKVRPC:
-        backOffFunction = BackOffFunction.create(500, 5000, BackOffStrategy.EqualJitter);
+        backOffFunction = BackOffFunction.create(100, 2000, BackOffStrategy.EqualJitter);
         break;
     }
     return backOffFunction;
@@ -118,7 +118,7 @@ public class ConcreteBackOffer implements BackOffer {
     if (maxSleep > 0 && totalSleep >= maxSleep) {
       StringBuilder errMsg =
           new StringBuilder(
-              String.format("backoffer.maxSleep %dms is exceeded, errors:", maxSleep));
+              String.format("BackOffer.maxSleep %dms is exceeded, errors:", maxSleep));
       for (int i = 0; i < errors.size(); i++) {
         Exception curErr = errors.get(i);
         // Print only last 3 errors for non-DEBUG log levels.

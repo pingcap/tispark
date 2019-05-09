@@ -27,7 +27,6 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.Iterator;
 import java.util.List;
@@ -37,7 +36,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
   protected final TiSession session;
   protected final List<RegionTask> regionTasks;
   protected DAGRequest dagRequest;
-  protected static final DataType[] handleTypes = new DataType[] {IntegerType.INT};
+  protected final DataType[] handleTypes;
   //  protected final ExecutorCompletionService<Iterator<SelectResponse>> completionService;
   protected RowReader rowReader;
   protected CodecDataInput dataInput;
@@ -53,6 +52,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
     this.session = session;
     this.regionTasks = regionTasks;
     this.schemaInfer = infer;
+    this.handleTypes = infer.getTypes().toArray(new DataType[] {});
   }
 
   abstract void submitTasks();
@@ -72,7 +72,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
   public static CoprocessIterator<Row> getRowIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     return new DAGIterator<Row>(
-        req.buildScan(req.isCoveringIndexScan()),
+        req.buildTableScan(),
         regionTasks,
         session,
         SchemaInfer.create(req),
@@ -101,11 +101,15 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
   public static CoprocessIterator<Long> getHandleIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     return new DAGIterator<Long>(
-        req.buildScan(true), regionTasks, session, SchemaInfer.create(req), req.getPushDownType()) {
+        req.buildIndexScan(),
+        regionTasks,
+        session,
+        SchemaInfer.create(req, true),
+        req.getPushDownType()) {
       @Override
       public Long next() {
         if (hasNext()) {
-          return rowReader.readRow(handleTypes).getLong(0);
+          return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
         } else {
           throw new NoSuchElementException();
         }

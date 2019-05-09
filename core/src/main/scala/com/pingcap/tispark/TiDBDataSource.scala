@@ -38,13 +38,13 @@ class TiDBDataSource
    */
   override def createRelation(sqlContext: SQLContext,
                               parameters: Map[String, String]): BaseRelation = {
-    TiSparkConnectorUtils.checkVersionAndEnablePushdown(sqlContext.sparkSession)
 
     val options = new TiDBOptions(parameters)
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
     val tableRef = TiTableReference(options.database, options.table)
+    TiSparkConnectorUtils.checkVersionAndEnablePushdown(sqlContext.sparkSession, tiContext)
     val ts = tiContext.tiSession.createTxnClient().getTimestamp
-    TiDBRelation(tiContext.tiSession, tableRef, tiContext.meta, Some(ts), Some(options))(sqlContext)
+    TiDBRelation(tiContext.tiSession, tableRef, tiContext.meta, ts, Some(options))(sqlContext)
   }
 
   /**
