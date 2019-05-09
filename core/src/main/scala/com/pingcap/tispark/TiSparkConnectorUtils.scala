@@ -33,6 +33,8 @@ object TiSparkConnectorUtils extends Logging {
       )
     }
 
+    // put tiContext into map, this will be used later when
+    // create tiStrategy.
     sessionToContextMap.put(session, tiContext)
     if (supportVersion && !tiExtensionsEnabled) {
       enablePushdownSession(session)

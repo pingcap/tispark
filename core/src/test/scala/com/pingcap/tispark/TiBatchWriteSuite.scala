@@ -45,7 +45,6 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
   }
 
   test("ti batch write") {
-
     for (table <- tables) {
       // select
       refreshConnections(TestTables(database, s"${batchWriteTablePrefix}_$table"))
