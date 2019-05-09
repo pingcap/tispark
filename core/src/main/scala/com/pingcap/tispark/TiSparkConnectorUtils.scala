@@ -16,7 +16,7 @@ object TiSparkConnectorUtils extends Logging {
    */
   private val SUPPORT_SPARK_VERSION = "2.3" :: Nil
 
-  def checkVersionAndEnablePushdown(session: SparkSession): Boolean = {
+  def checkVersionAndEnablePushdown(session: SparkSession, tiContext: TiContext): Boolean = {
     val tiExtensionsEnabled = TiExtensions.enabled()
     if (tiExtensionsEnabled) {
       logWarning("TiExtensions already enabled! Do not need to enable push down!")
@@ -33,6 +33,7 @@ object TiSparkConnectorUtils extends Logging {
       )
     }
 
+    sessionToContextMap.put(session, tiContext)
     if (supportVersion && !tiExtensionsEnabled) {
       enablePushdownSession(session)
       true

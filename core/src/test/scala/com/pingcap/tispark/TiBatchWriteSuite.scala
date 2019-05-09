@@ -45,6 +45,7 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
   }
 
   test("ti batch write") {
+
     for (table <- tables) {
       // select
       refreshConnections(TestTables(database, s"${batchWriteTablePrefix}_$table"))
@@ -68,7 +69,8 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
 
       // assert
       val originCount = querySpark(s"select count(*) from $table").head.head.asInstanceOf[Long]
-      val count = querySpark(s"select count(*) from ${batchWriteTablePrefix}_$table").head.head
+      // cannot use count since batch write is not support index writing yet.
+      val count = querySpark(s"select * from ${batchWriteTablePrefix}_$table").length
         .asInstanceOf[Long]
       assert(count == originCount)
     }
