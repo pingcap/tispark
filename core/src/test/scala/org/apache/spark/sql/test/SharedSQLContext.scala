@@ -301,7 +301,6 @@ object SharedSQLContext extends Logging {
 
       import com.pingcap.tispark.TiConfigConst._
 //      sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
-//      sparkConf.set(ALLOW_INDEX_READ, getFlagOrTrue(prop, ALLOW_INDEX_READ).toString)
 //      sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
 //      sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
 //      sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
@@ -323,6 +322,7 @@ object SharedSQLContext extends Logging {
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
         sparkConf.set(PD_ADDRESSES, pdAddresses)
         sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
+        sparkConf.set(ALLOW_INDEX_READ, getFlagOrTrue(prop, ALLOW_INDEX_READ).toString)
         sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
         sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
         sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
