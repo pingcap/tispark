@@ -320,7 +320,6 @@ object SharedSQLContext extends Logging {
 
       sparkConf.set(PD_ADDRESSES, pdAddresses)
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
-        sparkConf.set(PD_ADDRESSES, pdAddresses)
         sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
         sparkConf.set(ALLOW_INDEX_READ, getFlagOrTrue(prop, ALLOW_INDEX_READ).toString)
         sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
