@@ -50,9 +50,9 @@ public class CatalogTransaction {
   private static final byte HASH_DATA_FLAG = 'h';
   private static final byte STR_DATA_FLAG = 's';
 
-  private static ByteString KEY_DB = ByteString.copyFromUtf8("DBs");
-  private static ByteString KEY_TABLE = ByteString.copyFromUtf8("Table");
-  private static ByteString KEY_SCHEMA_VERSION = ByteString.copyFromUtf8("SchemaVersionKey");
+  private static ByteString KEY_DB = KeyUtils.getKeyFromUtf8("DBs");
+  private static ByteString KEY_TABLE = KeyUtils.getKeyFromUtf8("Table");
+  private static ByteString KEY_SCHEMA_VERSION = KeyUtils.getKeyFromUtf8("SchemaVersionKey");
 
   private static final String ENCODED_DB_PREFIX = "DB";
 

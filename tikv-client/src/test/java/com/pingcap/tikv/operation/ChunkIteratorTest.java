@@ -23,6 +23,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.RowMeta;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.operation.iterator.ChunkIterator;
 import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
@@ -44,7 +45,7 @@ public class ChunkIteratorTest {
     String chunkStr = "\b\u0002\u0002\u0002a\b\u0004\u0002\u0002b\b\u0006\u0002\u0002c";
     Chunk chunk =
         Chunk.newBuilder()
-            .setRowsData(ByteString.copyFromUtf8(chunkStr))
+            .setRowsData(KeyUtils.getKeyFromUtf8(chunkStr))
             .addRowsMeta(0, RowMeta.newBuilder().setHandle(1).setLength(5))
             .addRowsMeta(1, RowMeta.newBuilder().setHandle(2).setLength(5))
             .addRowsMeta(2, RowMeta.newBuilder().setHandle(3).setLength(5))

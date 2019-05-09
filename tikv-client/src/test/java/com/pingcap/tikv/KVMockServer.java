@@ -22,6 +22,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.TiRegion;
 import io.grpc.Server;
@@ -79,15 +80,15 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   }
 
   void put(String key, String value) {
-    put(ByteString.copyFromUtf8(key), ByteString.copyFromUtf8(value));
+    put(KeyUtils.getKeyFromUtf8(key), KeyUtils.getKeyFromUtf8(value));
   }
 
   public void put(String key, ByteString data) {
-    put(ByteString.copyFromUtf8(key), data);
+    put(KeyUtils.getKeyFromUtf8(key), data);
   }
 
   public void putError(String key, int code) {
-    errorMap.put(ByteString.copyFromUtf8(key), code);
+    errorMap.put(KeyUtils.getKeyFromUtf8(key), code);
   }
 
   void clearAllMap() {

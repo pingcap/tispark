@@ -995,7 +995,7 @@ public class TiDAGRequest implements Serializable {
     // Key ranges might be also useful
     if (!getRanges().isEmpty()) {
       sb.append(", KeyRange: ");
-      getRanges().forEach(x -> sb.append(KeyUtils.formatBytesUTF8(x)));
+      getRanges().forEach(x -> sb.append(KeyUtils.formatBytesUtf8(x)));
     }
 
     if (!getPushDownAggregatePairs().isEmpty()) {

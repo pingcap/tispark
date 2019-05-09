@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiTimestamp;
@@ -83,7 +84,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     // If the current operator of region is not `scatter-region`, we could assume
     // that `scatter-operator` has finished or timeout.
     boolean finished =
-        !resp.getDesc().equals(ByteString.copyFromUtf8("scatter-region"))
+        !resp.getDesc().equals(KeyUtils.getKeyFromUtf8("scatter-region"))
             || resp.getStatus() != OperatorStatus.RUNNING;
 
     if (resp.hasHeader()) {

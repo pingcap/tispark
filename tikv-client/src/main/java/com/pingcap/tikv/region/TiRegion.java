@@ -191,7 +191,7 @@ public class TiRegion implements Serializable {
         getRegionEpoch().getConfVer(),
         getRegionEpoch().getVersion(),
         getLeader().getStoreId(),
-        KeyUtils.formatBytesUTF8(getStartKey()),
-        KeyUtils.formatBytesUTF8(getEndKey()));
+        KeyUtils.formatBytesUtf8(getStartKey()),
+        KeyUtils.formatBytesUtf8(getEndKey()));
   }
 }

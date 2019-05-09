@@ -23,6 +23,7 @@ import com.pingcap.tikv.PDMockServer;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiPartitionInfo.PartitionType;
 import com.pingcap.tikv.types.DataType;
@@ -189,7 +190,7 @@ public class MetaUtils {
                   + "}",
               id, name, name.toLowerCase());
 
-      kvServer.put(getDBKey(id), ByteString.copyFromUtf8(dbJson));
+      kvServer.put(getDBKey(id), KeyUtils.getKeyFromUtf8(dbJson));
     }
 
     public void dropDatabase(long id) {
@@ -222,7 +223,7 @@ public class MetaUtils {
       cdo.write(new byte[] {'m'});
       BytesCodec.writeBytes(cdo, "SchemaVersionKey".getBytes());
       IntegerCodec.writeULong(cdo, 's');
-      kvServer.put(getSchemaVersionKey(), ByteString.copyFromUtf8(String.format("%d", version)));
+      kvServer.put(getSchemaVersionKey(), KeyUtils.getKeyFromUtf8(String.format("%d", version)));
     }
 
     public void addTable(int dbId, int tableId, String tableName) {
@@ -271,7 +272,7 @@ public class MetaUtils {
                   + "}",
               tableId, tableName, tableName.toLowerCase());
 
-      kvServer.put(getKeyForTable(dbId, tableId), ByteString.copyFromUtf8(tableJson));
+      kvServer.put(getKeyForTable(dbId, tableId), KeyUtils.getKeyFromUtf8(tableJson));
     }
 
     public void dropTable(long dbId, long tableId) {

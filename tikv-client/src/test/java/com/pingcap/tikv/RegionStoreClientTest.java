@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.*;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
@@ -51,12 +52,12 @@ public class RegionStoreClientTest extends MockServerTest {
   public void getTest() throws Exception {
     RegionStoreClient client = createClient();
     server.put("key1", "value1");
-    ByteString value = client.get(defaultBackOff(), ByteString.copyFromUtf8("key1"), 1);
-    assertEquals(ByteString.copyFromUtf8("value1"), value);
+    ByteString value = client.get(defaultBackOff(), KeyUtils.getKeyFromUtf8("key1"), 1);
+    assertEquals(KeyUtils.getKeyFromUtf8("value1"), value);
 
     server.putError("error1", KVMockServer.ABORT);
     try {
-      client.get(defaultBackOff(), ByteString.copyFromUtf8("error1"), 1);
+      client.get(defaultBackOff(), KeyUtils.getKeyFromUtf8("error1"), 1);
       fail();
     } catch (Exception e) {
       assertTrue(true);
@@ -76,7 +77,7 @@ public class RegionStoreClientTest extends MockServerTest {
     List<Kvrpcpb.KvPair> kvs =
         client.batchGet(
             defaultBackOff(),
-            ImmutableList.of(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key2")),
+            ImmutableList.of(KeyUtils.getKeyFromUtf8("key1"), KeyUtils.getKeyFromUtf8("key2")),
             1);
     assertEquals(2, kvs.size());
     kvs.forEach(
@@ -88,7 +89,7 @@ public class RegionStoreClientTest extends MockServerTest {
     try {
       client.batchGet(
           defaultBackOff(),
-          ImmutableList.of(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("error1")),
+          ImmutableList.of(KeyUtils.getKeyFromUtf8("key1"), KeyUtils.getKeyFromUtf8("error1")),
           1);
       fail();
     } catch (Exception e) {
@@ -106,7 +107,7 @@ public class RegionStoreClientTest extends MockServerTest {
     server.put("key2", "value2");
     server.put("key4", "value4");
     server.put("key5", "value5");
-    List<Kvrpcpb.KvPair> kvs = client.scan(defaultBackOff(), ByteString.copyFromUtf8("key2"), 1);
+    List<Kvrpcpb.KvPair> kvs = client.scan(defaultBackOff(), KeyUtils.getKeyFromUtf8("key2"), 1);
     assertEquals(3, kvs.size());
     kvs.forEach(
         kv ->
@@ -115,7 +116,7 @@ public class RegionStoreClientTest extends MockServerTest {
 
     server.putError("error1", KVMockServer.ABORT);
     try {
-      client.scan(defaultBackOff(), ByteString.copyFromUtf8("error1"), 1);
+      client.scan(defaultBackOff(), KeyUtils.getKeyFromUtf8("error1"), 1);
       fail();
     } catch (Exception e) {
       assertTrue(true);
@@ -143,9 +144,9 @@ public class RegionStoreClientTest extends MockServerTest {
     builder.addExecutors(Executor.newBuilder().setTp(ExecType.TypeTableScan).build());
     List<KeyRange> keyRanges =
         ImmutableList.of(
-            createByteStringRange(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key4")),
+            createByteStringRange(KeyUtils.getKeyFromUtf8("key1"), KeyUtils.getKeyFromUtf8("key4")),
             createByteStringRange(
-                ByteString.copyFromUtf8("key6"), ByteString.copyFromUtf8("key7")));
+                KeyUtils.getKeyFromUtf8("key6"), KeyUtils.getKeyFromUtf8("key7")));
 
     SelectResponse resp = coprocess(client, builder.build(), keyRanges);
     assertEquals(5, resp.getChunksCount());
@@ -163,7 +164,7 @@ public class RegionStoreClientTest extends MockServerTest {
     keyRanges =
         ImmutableList.of(
             createByteStringRange(
-                ByteString.copyFromUtf8("error1"), ByteString.copyFromUtf8("error2")));
+                KeyUtils.getKeyFromUtf8("error1"), KeyUtils.getKeyFromUtf8("error2")));
 
     server.putError("error1", KVMockServer.ABORT);
     try {

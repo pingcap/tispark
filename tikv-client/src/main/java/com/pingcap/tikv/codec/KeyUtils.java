@@ -18,6 +18,7 @@ package com.pingcap.tikv.codec;
 import com.google.common.primitives.UnsignedBytes;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
+import java.nio.charset.StandardCharsets;
 import org.tikv.kvproto.Coprocessor;
 
 public class KeyUtils {
@@ -44,22 +45,28 @@ public class KeyUtils {
     return "([" + formatBytes(keyRange.getStart()) + "], [" + formatBytes(keyRange.getEnd()) + "])";
   }
 
-  public static String formatBytesUTF8(byte[] bytes) {
+  public static String formatBytesUtf8(byte[] bytes) {
     if (bytes == null) return "null";
     return TextFormat.escapeBytes(bytes);
   }
 
-  public static String formatBytesUTF8(ByteString bytes) {
+  public static String formatBytesUtf8(ByteString bytes) {
     if (bytes == null) return "null";
-    return formatBytesUTF8(bytes.toByteArray());
+    return formatBytesUtf8(bytes.toByteArray());
   }
 
-  public static String formatBytesUTF8(Coprocessor.KeyRange keyRange) {
+  public static String formatBytesUtf8(Coprocessor.KeyRange keyRange) {
     return "(["
-        + formatBytesUTF8(keyRange.getStart())
+        + formatBytesUtf8(keyRange.getStart())
         + "], ["
-        + formatBytesUTF8(keyRange.getEnd())
+        + formatBytesUtf8(keyRange.getEnd())
         + "])";
+  }
+
+  // please use getKeyFromUtf8 instead of ByteString.copyFromUtf8
+  // because copyFromUtf8 uses Charset UTF8 rather than ISO_8859_1
+  public static ByteString getKeyFromUtf8(String value) {
+    return ByteString.copyFrom(value, StandardCharsets.ISO_8859_1);
   }
 
   public static boolean hasPrefix(ByteString str, ByteString prefix) {

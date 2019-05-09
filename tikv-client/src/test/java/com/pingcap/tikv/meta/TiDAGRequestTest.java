@@ -21,8 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Expr;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
@@ -95,8 +95,8 @@ public class TiDAGRequestTest {
         .addRanges(
             ImmutableList.of(
                 Coprocessor.KeyRange.newBuilder()
-                    .setStart(ByteString.copyFromUtf8("startkey"))
-                    .setEnd(ByteString.copyFromUtf8("endkey"))
+                    .setStart(KeyUtils.getKeyFromUtf8("startkey"))
+                    .setEnd(KeyUtils.getKeyFromUtf8("endkey"))
                     .build()));
 
     ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();

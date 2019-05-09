@@ -23,6 +23,7 @@ import com.pingcap.tikv.*;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiDAGRequest;
@@ -69,7 +70,7 @@ public class DAGIteratorTest extends MockServerTest {
     List<KeyRange> keyRanges =
         ImmutableList.of(
             createByteStringRange(
-                ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key4")));
+                KeyUtils.getKeyFromUtf8("key1"), KeyUtils.getKeyFromUtf8("key4")));
 
     pdServer.addGetRegionResp(
         GrpcUtils.makeGetRegionResponse(pdServer.getClusterId(), region.getMeta()));

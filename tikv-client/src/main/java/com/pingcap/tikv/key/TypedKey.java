@@ -119,7 +119,7 @@ public class TypedKey extends Key {
       }
       return val.toString();
     } catch (Exception e) {
-      return "raw value:" + KeyUtils.formatBytesUTF8(value);
+      return "raw value:" + KeyUtils.formatBytesUtf8(value);
     }
   }
 }
