@@ -119,6 +119,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                 dir("go/src/github.com/pingcap/tispark") {
                     sh """
                         mvn verify -am -pl tikv-client
+                        bash <(curl -s https://codecov.io/bash)
                     """
                 }
             }
