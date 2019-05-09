@@ -81,7 +81,7 @@ public class TiTableInfo implements Serializable {
   }
 
   public TiColumnInfo getAutoIncrementColInfo() {
-    for (int i = 0; i <= columns.size(); i++) {
+    for (int i = 0; i < columns.size(); i++) {
       TiColumnInfo col = columns.get(i);
       if (col.getType().isAutoIncrement()) {
         return col;
@@ -173,7 +173,7 @@ public class TiTableInfo implements Serializable {
 
   // Only Integer Column will be a PK column
   // and there exists only one PK column
-  TiColumnInfo getPrimaryKeyColumn() {
+  public TiColumnInfo getPrimaryKeyColumn() {
     if (isPkHandle()) {
       for (TiColumnInfo col : getColumns()) {
         if (col.isPrimaryKey()) {

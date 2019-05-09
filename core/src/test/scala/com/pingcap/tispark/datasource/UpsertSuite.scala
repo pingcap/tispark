@@ -45,25 +45,29 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
 
     // deduplicate=false
     // insert row5 row5
-    {
-      val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row5, row5))
-      }
-      assert(
-        caught.getMessage
-          .equals("data conflicts! set the parameter deduplicate.")
-      )
-    }
+//    {
+//      val caught = intercept[TiBatchWriteException] {
+//        batchWrite(List(row5, row5))
+//      }
+//      assert(
+//        caught.getMessage
+//          .equals("data conflicts! set the parameter deduplicate.")
+//      )
+//    }
 
     // deduplicate=true
     // insert row5 row5
-    batchWrite(List(row5, row5), Some(Map("deduplicate" -> "true")))
-    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4, row5))
+//    batchWrite(List(row5, row5), Some(Map("deduplicate" -> "true")))
+//    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4, row5, row5))
+
+    // deduplicate=false
+    batchWrite(List(row5, row5), Some(Map("deduplicate" -> "false")))
+    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4, row5, row5))
 
     // test update
     // insert row3_v2
     batchWrite(List(row3_v2))
-    testSelect(dbtableInSpark, Seq(row1, row2, row3_v2, row4, row5))
+    testSelect(dbtableInSpark, Seq(row1, row2, row3, row3_v2, row4, row5, row5))
   }
 
   test("Test upsert to table with primary key (primary key is handle)") {

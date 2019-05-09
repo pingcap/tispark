@@ -12,30 +12,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.pingcap.tikv;
+package com.pingcap.tikv.allocator;
 
 import com.google.common.primitives.UnsignedLongs;
 import com.pingcap.tikv.catalog.Catalog;
+import java.io.Serializable;
 
 /**
- * IDAllocator allocates unique value for each row associated with the database id and table id.
- * It first reads from TiKV and calculate the new value with step, then write the new value back to
- * TiKV.
- * The [start, end) range will be lost if job finished or crashed.
+ * IDAllocator allocates unique value for each row associated with the database id and table id. It
+ * first reads from TiKV and calculate the new value with step, then write the new value back to
+ * TiKV. The [start, end) range will be lost if job finished or crashed.
  */
-public class IDAllocator {
+public class IDAllocator implements Serializable {
   private long start;
   private long end;
-  private final boolean unsigned;
   private final long dbId;
-  private Catalog catalog;
   private long step;
 
-  public IDAllocator(long dbId, Catalog catalog, boolean unsigned, long step) {
-    this.catalog = catalog;
+  private IDAllocator(long dbId, long step) {
     this.dbId = dbId;
-    this.unsigned = unsigned;
     this.step = step;
+  }
+
+  public static IDAllocator create(
+      long dbId, long tableId, Catalog catalog, boolean unsigned, long step) {
+    IDAllocator allocator = new IDAllocator(dbId, step);
+    if (unsigned) {
+      allocator.initUnsigned(catalog, tableId);
+    } else {
+      allocator.initSigned(catalog, tableId);
+    }
+    return allocator;
   }
 
   public long getStart() {
@@ -46,40 +53,32 @@ public class IDAllocator {
     return end;
   }
 
-  public boolean isUnsigned() {
-    return unsigned;
-  }
-
-  public synchronized long alloc(long tableId) {
-    if (isUnsigned()) {
-      return allocUnSigned(tableId);
+  public synchronized long alloc() throws IllegalAccessException {
+    if (start == end) {
+      throw new IllegalAccessException("cannot allocate any more");
     }
-    return allocSigned(tableId);
+    return ++start;
   }
 
-  // TODO: refine this exception
-  private long allocSigned(long tableId) {
+  private void initSigned(Catalog catalog, long tableId) {
     long newEnd;
     if (start == end) {
       // get new start from TiKV, and calculate new end and set it back to TiKV.
-      long newStart = allocID(dbId, tableId);
+      long newStart = catalog.getAutoTableId(dbId, tableId);
       long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
       if (tmpStep != step) {
         throw new IllegalArgumentException("cannot allocate ids for this write");
       }
-      newEnd = allocID(dbId, tableId, tmpStep);
+      newEnd = catalog.getAutoTableId(dbId, tableId, tmpStep);
       if (newStart == Long.MAX_VALUE) {
         throw new IllegalArgumentException("cannot allocate more ids since it ");
       }
       start = newStart;
       end = newEnd;
     }
-
-    return start++;
   }
 
-  // TODO: refine this exception
-  private long allocUnSigned(long tableId) {
+  private void initUnsigned(Catalog catalog, long tableId) {
     long newEnd;
     if (start == end) {
       // get new start from TiKV, and calculate new end and set it back to TiKV.
@@ -89,7 +88,7 @@ public class IDAllocator {
       if (tmpStep != step) {
         throw new IllegalArgumentException("cannot allocate ids for this write");
       }
-      newEnd = allocID(dbId, tableId, tmpStep);
+      newEnd = catalog.getAutoTableId(dbId, tableId, tmpStep);
       // when compare unsigned long, the min value is largest value.
       if (start == -1L) {
         throw new IllegalArgumentException(
@@ -97,15 +96,5 @@ public class IDAllocator {
       }
       end = newEnd;
     }
-
-    return start++;
-  }
-
-  private long allocID(long dbId, long tableId) {
-    return catalog.getAutoTableId(dbId, tableId);
-  }
-
-  private long allocID(long dbId, long tableId, long step) {
-    return catalog.getAutoTableId(dbId, tableId, step);
   }
 }

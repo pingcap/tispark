@@ -1,6 +1,6 @@
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tikv.IDAllocator
+import com.pingcap.tikv.allocator.IDAllocator
 import org.apache.spark.sql.BaseTiSparkSuite
 
 class AllocatorSuite extends BaseTiSparkSuite {
@@ -17,9 +17,9 @@ class AllocatorSuite extends BaseTiSparkSuite {
     val tiTableInfo =
       ti.tiSession.getCatalog.getTable(dbName, tableName)
     // corner case allocate unsigned long's max value.
-    val allocator = new IDAllocator(tiDBInfo.getId, ti.tiSession.getCatalog, true, -1L)
-    allocator.alloc(tiTableInfo.getId)
-    assert(allocator.getEnd - allocator.getStart == -2L)
+    val allocator =
+      IDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog, true, -1L)
+    assert(allocator.getEnd - allocator.getStart == -1L)
   }
 
   test("test signed allocator") {
@@ -34,8 +34,12 @@ class AllocatorSuite extends BaseTiSparkSuite {
     val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =
       ti.tiSession.getCatalog.getTable(dbName, tableName)
-    val allocator = new IDAllocator(tiDBInfo.getId, ti.tiSession.getCatalog, false, 1000)
-    allocator.alloc(tiTableInfo.getId)
+    val allocator =
+      IDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog, false, 1000)
+    assert(allocator.getEnd - allocator.getStart == 1000)
+
+    // use one space
+    allocator.alloc()
     assert(allocator.getEnd - allocator.getStart == 999)
   }
 

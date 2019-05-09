@@ -17,13 +17,14 @@ package com.pingcap.tispark
 
 import java.util
 
+import com.pingcap.tikv.allocator.IDAllocator
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
 import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
-import com.pingcap.tikv.types.DataType
+import com.pingcap.tikv.types.{DataType, IntegerType}
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
 import com.pingcap.tispark.utils.TiUtil
@@ -46,6 +47,8 @@ object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
+
+  var idAllocator: IDAllocator = _
 
   private def calcRDDSize(rdd: RDD[(SerializableKey, TiRow, Array[Byte])]): Long =
     rdd.map(_._3.length).reduce(_ + _)
@@ -123,13 +126,23 @@ object TiBatchWrite {
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
     val step = rdd.count()
     // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
-    val idAllocator =
-      new IDAllocator(tiDBInfo.getId, tiSession.getCatalog, tiTableInfo.isAutoIncColUnsigned, step)
+    idAllocator = IDAllocator.create(
+      tiDBInfo.getId,
+      tiTableInfo.getId,
+      tiSession.getCatalog,
+      tiTableInfo.isAutoIncColUnsigned,
+      step
+    )
 
     // spark row to TiKV row
     val tiKVRowRDD =
-      rdd.map(row => sparkRow2TiKVRow(tiTableInfo, row, idAllocator, tiTableInfo.isPkHandle))
+      rdd.map(row => sparkRow2TiKVRow(tiTableInfo, row, tiTableInfo.isPkHandle))
 
+//    rdd.foreachPartition { iterator =>
+    // count each partition's size
+//      val partStep = iterator.count(_ => true)
+//      iterator.map(row => sparkRow2TiKVRow(tiTableInfo, row, idAllocator, tiTableInfo.isPkHandle))
+//    }
     // deduplicate
     val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
 
@@ -282,7 +295,7 @@ object TiBatchWrite {
     }
     val tableId = table.getId
 
-    val shuffledRDD = rdd
+    val shuffledRDD: RDD[(SerializableKey, Iterable[TiRow])] = rdd
       .map(row => (tiKVRow2Key(row, tableId, tiTableInfo, isUpdate = false), row))
       .groupByKey()
 
@@ -373,24 +386,23 @@ object TiBatchWrite {
 
   private def sparkRow2TiKVRow(tableInfo: TiTableInfo,
                                sparkRow: SparkRow,
-                               allocator: IDAllocator,
                                pkIsHandle: Boolean): TiRow = {
     val fieldCount = sparkRow.size
-    if (pkIsHandle) {
-      val tiRow = ObjectRowImpl.create(fieldCount)
-      for (i <- 0 until fieldCount) {
-        val data = sparkRow.get(i)
-        val sparkDataType = sparkRow.schema(i).dataType
-        val tiDataType = TiUtil.fromSparkType(sparkDataType)
-        tiRow.set(i, tiDataType, data)
-      }
-      tiRow
-    } else {
-      // when column is auto_increment, it must has a primary key
-      // its value will be filled at the beginning according tidb's logic.
-      val autoincrementCol = tableInfo.getAutoIncrementColInfo
-      if (autoincrementCol != null) {
-        val tiRow = ObjectRowImpl.create(fieldCount)
+    var tiRow: TiRow = null
+    if (tableInfo.getPrimaryKeyColumn != null) {
+      if (pkIsHandle) {
+        tiRow = ObjectRowImpl.create(fieldCount)
+        for (i <- 0 until fieldCount) {
+          val data = sparkRow.get(i)
+          val sparkDataType = sparkRow.schema(i).dataType
+          val tiDataType = TiUtil.fromSparkType(sparkDataType)
+          tiRow.set(i, tiDataType, data)
+        }
+      } else if (tableInfo.getAutoIncrementColInfo != null) {
+        // when column is auto_increment, it must has a primary key
+        // its value will be filled at the beginning according tidb's logic.
+        val autoincrementCol = tableInfo.getAutoIncrementColInfo
+        tiRow = ObjectRowImpl.create(fieldCount)
         for (i <- 0 until fieldCount) {
           var data = sparkRow.get(i)
           val sparkDataType = sparkRow.schema(i).dataType
@@ -398,34 +410,52 @@ object TiBatchWrite {
           // check do we need fill auto increment column
           if (colName.equals(autoincrementCol.getName)) {
             if (data == null) {
-              data = allocator.alloc(tableInfo.getId)
+              data = idAllocator.alloc()
             }
           }
           val tiDataType = TiUtil.fromSparkType(sparkDataType)
           tiRow.set(i, tiDataType, data)
         }
-        tiRow
       } else {
-        throw new UnsupportedOperationException(
-          "pk is not handle or pk is not existed is not " +
-            "support for now"
+        throw new IllegalAccessException(
+          "cannot insert on a table with primary key but it's not a handle" +
+            "or auto increment"
         )
       }
-
+    } else {
+      // table does not have primary key, we can just insert and do not need consider
+      // the constraint of primary key.
+      tiRow = ObjectRowImpl.create(fieldCount + 1)
+      for (i <- 0 until fieldCount) {
+        val data = sparkRow.get(i)
+        val sparkDataType = sparkRow.schema(i).dataType
+        val tiDataType = TiUtil.fromSparkType(sparkDataType)
+        tiRow.set(i, tiDataType, data)
+      }
+      // append _tidb_rowid at the end
+      tiRow.set(fieldCount, IntegerType.BIGINT, idAllocator.alloc())
     }
+    tiRow
   }
 
   @throws(classOf[TiBatchWriteException])
   private def encodeTiRow(tiRow: TiRow,
                           colDataTypes: Array[DataType],
                           colIDs: TLongArrayList): Array[Byte] = {
-    val colSize = tiRow.fieldCount()
+    var colSize = tiRow.fieldCount()
     val tableColSize = colDataTypes.length
 
-    if (colSize != tableColSize) {
+    // an hidden row _tidb_rowid may exist
+    if (colSize < (tableColSize + 1)) {
       throw new TiBatchWriteException(s"col size $colSize != table column size $tableColSize")
     }
+    val hasHiddenRow = colSize == tableColSize + 1
 
+    // when we have an hidden row, we do not need
+    // write such column into TiKV
+    if (hasHiddenRow) {
+      colSize = colSize - 1
+    }
     // TODO: ddl state change
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-82
     val values = new Array[AnyRef](colSize)
