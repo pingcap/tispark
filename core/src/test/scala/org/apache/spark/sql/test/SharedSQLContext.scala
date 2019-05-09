@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.test
 
+import java.io.File
 import java.sql.{Connection, DriverManager, Statement}
 import java.util
 import java.util.{Locale, Properties, TimeZone}
@@ -72,7 +73,10 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
 
-  protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
+  protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections(false)
+
+  protected def refreshConnections(isHiveEnabled: Boolean): Unit =
+    SharedSQLContext.refreshConnections(isHiveEnabled)
 
   protected def stop(): Unit = SharedSQLContext.stop()
 
@@ -172,9 +176,9 @@ object SharedSQLContext extends Logging {
 
   protected var _sparkSession: SparkSession = _
 
-  def refreshConnections(): Unit = {
+  def refreshConnections(isHiveEnabled: Boolean): Unit = {
     stop()
-    init(forceNotLoad = true)
+    init(forceNotLoad = true, isHiveEnabled = isHiveEnabled)
   }
 
   /**
@@ -296,6 +300,12 @@ object SharedSQLContext extends Logging {
       }
 
       import com.pingcap.tispark.TiConfigConst._
+//      sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
+//      sparkConf.set(ALLOW_INDEX_READ, getFlagOrTrue(prop, ALLOW_INDEX_READ).toString)
+//      sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
+//      sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
+//      sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
+//      sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
 
       pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
@@ -309,6 +319,7 @@ object SharedSQLContext extends Logging {
 
       _tidbConf = prop
 
+      sparkConf.set(PD_ADDRESSES, pdAddresses)
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
         sparkConf.set(PD_ADDRESSES, pdAddresses)
         sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
@@ -319,6 +330,18 @@ object SharedSQLContext extends Logging {
       }
 
       sparkConf.set("spark.tispark.write.allow_spark_sql", "true")
+
+      if (isHiveEnabled) {
+        // delete meta store directory to avoid multiple derby instances SPARK-10872
+        import org.apache.commons.io.FileUtils
+        import java.io.IOException
+        val hiveLocalMetaStorePath = new File("metastore_db")
+        try FileUtils.deleteDirectory(hiveLocalMetaStorePath)
+        catch {
+          case e: IOException =>
+            e.printStackTrace()
+        }
+      }
 
       _sparkSession = new TestSparkSession(sparkConf, isHiveEnabled).session
     }
@@ -344,21 +367,21 @@ object SharedSQLContext extends Logging {
   def stop(): Unit = {
     if (_spark != null) {
       _spark.sessionState.catalog.reset()
-      _spark.stop()
+      _spark.close()
       _spark = null
     }
 
     if (_ti != null) {
       _ti.sparkSession.sessionState.catalog.reset()
-      _ti.sparkSession.stop()
       _ti.meta.close()
+      _ti.sparkSession.close()
       _ti.tiSession.close()
       _ti = null
     }
 
     if (_sparkJDBC != null) {
       _sparkJDBC.sessionState.catalog.reset()
-      _sparkJDBC.stop()
+      _sparkJDBC.close()
       _sparkJDBC = null
     }
 

@@ -31,7 +31,7 @@ import org.apache.spark.sql.types.StructType
 case class TiDBRelation(session: TiSession,
                         tableRef: TiTableReference,
                         meta: MetaManager,
-                        ts: Option[TiTimestamp] = None,
+                        var ts: TiTimestamp = null,
                         options: Option[TiDBOptions] = None)(
   @transient val sqlContext: SQLContext
 ) extends BaseRelation

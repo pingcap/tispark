@@ -16,15 +16,10 @@
 
 package com.pingcap.tikv.statistics;
 
-import com.google.common.collect.BoundType;
-import com.google.common.collect.Range;
-import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.key.Key;
-import com.pingcap.tikv.key.TypedKey;
+import com.pingcap.tikv.key.*;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.predicates.IndexRange;
-import com.pingcap.tikv.types.DataTypeFactory;
-import com.pingcap.tikv.types.MySQLType;
+import com.pingcap.tikv.util.Pair;
 import java.util.List;
 
 /**
@@ -69,60 +64,15 @@ public class IndexStatistics {
   public double getRowCount(List<IndexRange> indexRanges) {
     double rowCount = 0.0;
     for (IndexRange ir : indexRanges) {
-      double cnt = 0.0;
-      Key pointKey = ir.hasAccessKey() ? ir.getAccessKey() : Key.EMPTY;
-      Range<TypedKey> range = ir.getRange();
-      Key lPointKey;
-      Key uPointKey;
-
-      Key lKey;
-      Key uKey;
-      if (pointKey != Key.EMPTY) {
-        Key convertedKey =
-            TypedKey.toTypedKey(pointKey.getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
-        Key convertedNext =
-            TypedKey.toTypedKey(
-                pointKey.nextPrefix().getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
-        // TODO: Implement CMSketch point query
-        //        if (cmSketch != null) {
-        //          rowCount += cmSketch.queryBytes(convertedKey.getBytes());
-        //        } else {
-        rowCount += histogram.betweenRowCount(convertedKey, convertedNext);
-        //        }
-      }
-      if (range != null) {
-        lPointKey = pointKey;
-        uPointKey = pointKey;
-
-        if (!range.hasLowerBound()) {
-          // -INF
-          lKey = Key.MIN;
-        } else {
-          lKey = range.lowerEndpoint();
-          if (range.lowerBoundType().equals(BoundType.OPEN)) {
-            lKey = lKey.next();
-          }
-        }
-        if (!range.hasUpperBound()) {
-          // INF
-          uKey = Key.MAX;
-        } else {
-          uKey = range.upperEndpoint();
-          if (range.upperBoundType().equals(BoundType.CLOSED)) {
-            uKey = uKey.next();
-          }
-        }
-        CodecDataOutput cdo = new CodecDataOutput();
-        cdo.write(lPointKey.getBytes());
-        cdo.write(lKey.getBytes());
-        Key lowerBound = TypedKey.toTypedKey(cdo.toBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
-        cdo.reset();
-        cdo.write(uPointKey.getBytes());
-        cdo.write(uKey.getBytes());
-        Key upperBound = TypedKey.toTypedKey(cdo.toBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
-        cnt += histogram.betweenRowCount(lowerBound, upperBound);
-      }
-      rowCount += cnt;
+      StatisticsKeyRangeBuilder builder = new StatisticsKeyRangeBuilder(ir);
+      Pair<Key, Key> range = builder.compute();
+      // TODO: Implement CMSketch point query
+      //        if (cmSketch != null) {
+      //          rowCount += cmSketch.queryBytes(convertedKey.getBytes());
+      //        } else {
+      //          rowCount += histogram.betweenRowCount(convertedKey, convertedNext);
+      //        }
+      rowCount += histogram.betweenRowCount(range.first, range.second);
     }
     if (rowCount > histogram.totalRowCount()) {
       rowCount = histogram.totalRowCount();

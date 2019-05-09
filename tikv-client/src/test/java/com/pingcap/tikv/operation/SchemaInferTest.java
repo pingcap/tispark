@@ -31,8 +31,10 @@ import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DecimalType;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,19 +46,21 @@ public class SchemaInferTest {
   private final ByteString table29Bs = ByteString.copyFromUtf8(table29);
 
   private TiTableInfo table = CatalogTransaction.parseFromJson(table29Bs, TiTableInfo.class);
-  private Expression number = ColumnRef.create("number", table);
   private ColumnRef name = ColumnRef.create("name", table);
+  private ColumnRef number = ColumnRef.create("number", table);
   private Expression sum = AggregateFunction.newCall(FunctionType.Sum, number);
-  private ByItem simpleGroupBy = ByItem.create(name, false);
+  private ByItem simpleGroupBy = ByItem.create(number, false);
   private ByItem complexGroupBy =
-      ByItem.create(plus(name, Constant.create("1", StringType.VARCHAR)), false);
+      ByItem.create(plus(number, Constant.create(1, IntegerType.BIGINT)), false);
+  private TiTimestamp ts = new TiTimestamp(0, 1);
 
   @Test
   public void simpleSelectSchemaInferTest() {
     // select name from t1;
     TiDAGRequest tiDAGRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
-    tiDAGRequest.getFields().add(name);
+    tiDAGRequest.addRequiredColumn(name);
     tiDAGRequest.setTableInfo(table);
+    tiDAGRequest.setStartTs(ts);
     tiDAGRequest.resolve();
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
@@ -67,8 +71,10 @@ public class SchemaInferTest {
   public void selectAggSchemaInferTest() {
     // select sum(number) from t1;
     TiDAGRequest tiDAGRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
+    tiDAGRequest.addRequiredColumn(number);
     tiDAGRequest.addAggregate(sum, inferType(sum));
     tiDAGRequest.setTableInfo(table);
+    tiDAGRequest.setStartTs(ts);
     tiDAGRequest.resolve();
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
@@ -81,9 +87,11 @@ public class SchemaInferTest {
       // select sum(number) from t1 group by name;
       TiDAGRequest dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
       dagRequest.setTableInfo(table);
-      dagRequest.getFields().add(name);
+      dagRequest.addRequiredColumn(name);
+      dagRequest.addRequiredColumn(number);
       dagRequest.addAggregate(sum, inferType(sum));
       dagRequest.getGroupByItems().add(byItem);
+      dagRequest.setStartTs(ts);
       dagRequest.resolve();
       reqs.add(dagRequest);
     }
@@ -99,7 +107,7 @@ public class SchemaInferTest {
       List<DataType> dataTypes = SchemaInfer.create(req).getTypes();
       assertEquals(2, dataTypes.size());
       assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
-      assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(1).getClass());
+      assertEquals(IntegerType.BIGINT.getClass(), dataTypes.get(1).getClass());
     }
   }
 }

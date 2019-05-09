@@ -346,7 +346,7 @@
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                     <junitxml>.</junitxml>
                     <filereports>WDF TestSuite.txt</filereports>
-                    <argLine>${argLine}</argLine>
+                    <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8 -Dio.netty.leakDetection.level=paranoid</argLine>
                 </configuration>
                 <executions>
                     <execution>
@@ -360,6 +360,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <phase>generate-sources</phase>

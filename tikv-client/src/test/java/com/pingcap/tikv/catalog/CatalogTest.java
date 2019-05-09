@@ -1,18 +1,31 @@
+/*
+ * Copyright 2019 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.pingcap.tikv.catalog;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.pingcap.tikv.KVMockServer;
-import com.pingcap.tikv.PDMockServer;
-import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.*;
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.ReflectionWrapper;
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.Before;
@@ -20,16 +33,13 @@ import org.junit.Test;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 
-public class CatalogTest {
+public class CatalogTest extends PDMockServerTest {
   KVMockServer kvServer;
-  PDMockServer pdServer;
-  private static final long CLUSTER_ID = 1024;
-  TiConfiguration conf;
 
   @Before
-  public void setUp() throws Exception {
-    pdServer = new PDMockServer();
-    pdServer.start(CLUSTER_ID);
+  @Override
+  public void setUp() throws IOException {
+    super.setUp();
     kvServer = new KVMockServer();
     kvServer.start(
         new TiRegion(
@@ -37,8 +47,6 @@ public class CatalogTest {
             MetaMockHelper.region.getPeers(0),
             IsolationLevel.RC,
             CommandPri.Low));
-    // No PD needed in this test
-    conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
   }
 
   @Test
@@ -50,7 +58,6 @@ public class CatalogTest {
     helper.addDatabase(130, "global_temp");
     helper.addDatabase(264, "TPCH_001");
 
-    TiSession session = TiSession.create(conf);
     Catalog cat = session.getCatalog();
     List<TiDBInfo> dbs = cat.listDatabases();
     List<String> names = dbs.stream().map(TiDBInfo::getName).sorted().collect(Collectors.toList());
@@ -87,7 +94,6 @@ public class CatalogTest {
     helper.addTable(130, 42, "test");
     helper.addTable(130, 43, "test1");
 
-    TiSession session = TiSession.create(conf);
     Catalog cat = session.getCatalog();
     TiDBInfo db = cat.getDatabase("gLObal_temp");
     List<TiTableInfo> tables = cat.listTables(db);

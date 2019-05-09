@@ -223,7 +223,7 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         logger.error(
             String.format(
                 "Key not in region [%s] for key [%s], this error should not happen here.",
-                ctxRegion, KeyUtils.formatBytes(invalidKey)));
+                ctxRegion, KeyUtils.formatBytesUTF8(invalidKey)));
         throw new StatusRuntimeException(Status.UNKNOWN.withDescription(error.toString()));
       }
 

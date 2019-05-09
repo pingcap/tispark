@@ -40,7 +40,6 @@ import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
-import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -172,7 +171,7 @@ public class ScanAnalyzer {
     boolean isDoubleRead = false;
     double estimatedRowCount = -1;
     // table name and columns
-    int tableColSize = table.getColumns().size() + 1;
+    long tableColSize = table.getColumnLength() + 8;
 
     if (index == null || index.isFakePrimaryKey()) {
       if (tableStatistics != null) {
@@ -198,7 +197,7 @@ public class ScanAnalyzer {
       }
       isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
       // table name, index and handle column
-      int indexSize = index.getIndexColumns().size() + 2;
+      long indexSize = index.getIndexColumnLength() + 16;
       if (isDoubleRead) {
         cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
       } else {
@@ -335,8 +334,7 @@ public class ScanAnalyzer {
       boolean isIndexColumn = false;
       for (TiIndexColumn indexCol : indexColumns.getIndexColumns()) {
         boolean isFullLength =
-            indexCol.getLength() == DataType.UNSPECIFIED_LEN
-                || indexCol.getLength() == colInfo.getType().getLength();
+            indexCol.isLengthUnspecified() || indexCol.getLength() == colInfo.getType().getLength();
         if (colInfo.getName().equalsIgnoreCase(indexCol.getName()) && isFullLength) {
           isIndexColumn = true;
           break;

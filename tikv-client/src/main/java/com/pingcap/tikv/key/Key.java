@@ -18,11 +18,13 @@ package com.pingcap.tikv.key;
 import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.FastByteComparisons;
 import java.util.Arrays;
+import javax.annotation.Nonnull;
 
 public class Key implements Comparable<Key> {
   protected static final byte[] TBL_PREFIX = new byte[] {'t'};
@@ -151,8 +153,7 @@ public class Key implements Comparable<Key> {
   }
 
   @Override
-  public int compareTo(Key other) {
-    requireNonNull(other, "other is null");
+  public int compareTo(@Nonnull Key other) {
     if ((this.infFlag | other.infFlag) != 0) {
       return this.infFlag - other.infFlag;
     }
@@ -169,6 +170,13 @@ public class Key implements Comparable<Key> {
     } else {
       return false;
     }
+  }
+
+  public Key append(Key other) {
+    if (other == null) {
+      return this;
+    }
+    return Key.toRawKey(Bytes.concat(getBytes(), other.getBytes()));
   }
 
   @Override

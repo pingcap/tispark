@@ -46,7 +46,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     StatisticsManager.loadStatisticsInfo(fDataIdxTbl)
   }
 
-  ignore("Test fixed table size estimation") {
+  test("Test fixed table size estimation") {
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_float`")
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_int`")
     tidbStmt.execute("DROP TABLE IF EXISTS `tb_fixed_time`")
@@ -102,7 +102,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     assert(timeBytes >= 19 * 2)
   }
 
-  ignore("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
+  test("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
     val indexes = fDataIdxTbl.getIndices
     val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
 
@@ -115,7 +115,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     testSelectRowCount(expressions, idx, 46)
   }
 
-  ignore(
+  test(
     "select tp_int from full_data_type_table_idx where tp_int < 5390653 and tp_int > -46759812"
   ) {
     val indexes = fDataIdxTbl.getIndices
@@ -144,7 +144,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     assert(rc == expectedCount)
   }
 
-  val indexSelectionCases = Map(
+  private val indexSelectionCases = Map(
     // double read case
     "select tp_bigint, tp_real from full_data_type_table_idx where tp_int = 2333" -> "idx_tp_int",
     "select * from full_data_type_table_idx where id_dt = 2333" -> "",
@@ -157,7 +157,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
   indexSelectionCases.foreach((t: (String, String)) => {
     val query = t._1
     val idxName = t._2
-    ignore(query) {
+    test(query) {
       val executedPlan = spark.sql(query).queryExecution.executedPlan
       val usedIdxName = {
         if (isDoubleRead(executedPlan)) {
@@ -168,6 +168,8 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
           extractUsedIndex(coprocessorRDD)
         }
       }
+      spark.sql(query).show()
+      println(usedIdxName, idxName)
       assert(usedIdxName.equals(idxName))
     }
   })

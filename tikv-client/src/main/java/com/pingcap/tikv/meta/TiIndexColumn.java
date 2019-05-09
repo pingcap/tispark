@@ -49,8 +49,12 @@ public class TiIndexColumn implements Serializable {
     return length;
   }
 
+  public boolean isLengthUnspecified() {
+    return DataType.isLengthSpecified(length);
+  }
+
   public boolean isPrefixIndex() {
-    return length != DataType.UNSPECIFIED_LEN;
+    return !isLengthUnspecified();
   }
 
   public boolean matchName(String otherName) {

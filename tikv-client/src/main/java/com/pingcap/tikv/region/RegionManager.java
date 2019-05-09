@@ -17,7 +17,7 @@
 
 package com.pingcap.tikv.region;
 
-import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
+import static com.pingcap.tikv.codec.KeyUtils.formatBytesUTF8;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
 import com.google.common.collect.RangeMap;
@@ -73,11 +73,12 @@ public class RegionManager {
       Long regionId;
       regionId = keyToRegionIdCache.get(Key.toRawKey(key));
       if (logger.isDebugEnabled()) {
-        logger.debug(String.format("getRegionByKey key[%s] -> ID[%s]", formatBytes(key), regionId));
+        logger.debug(
+            String.format("getRegionByKey key[%s] -> ID[%s]", formatBytesUTF8(key), regionId));
       }
 
       if (regionId == null) {
-        logger.debug("Key not find in keyToRegionIdCache:" + formatBytes(key));
+        logger.debug("Key not find in keyToRegionIdCache:" + formatBytesUTF8(key));
         TiRegion region = pdClient.getRegionByKey(ConcreteBackOffer.newGetBackOff(), key);
         if (!putRegion(region)) {
           throw new TiClientInternalException("Invalid Region: " + region.toString());
@@ -183,7 +184,7 @@ public class RegionManager {
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key) {
     TiRegion region = cache.getRegionByKey(key);
     if (region == null) {
-      throw new TiClientInternalException("Region not exist for key:" + formatBytes(key));
+      throw new TiClientInternalException("Region not exist for key:" + formatBytesUTF8(key));
     }
     if (!region.isValid()) {
       throw new TiClientInternalException("Region invalid: " + region.toString());

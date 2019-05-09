@@ -44,7 +44,7 @@ class TiDBDataSource
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
     val tableRef = TiTableReference(options.database, options.table)
     val ts = tiContext.tiSession.createTxnClient().getTimestamp
-    TiDBRelation(tiContext.tiSession, tableRef, tiContext.meta, Some(ts), Some(options))(sqlContext)
+    TiDBRelation(tiContext.tiSession, tableRef, tiContext.meta, ts, Some(options))(sqlContext)
   }
 
   /**

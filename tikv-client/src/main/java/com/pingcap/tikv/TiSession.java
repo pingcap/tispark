@@ -217,6 +217,11 @@ public class TiSession implements AutoCloseable {
   public void close() throws Exception {
     getThreadPoolForTableScan().shutdownNow();
     getThreadPoolForIndexScan().shutdownNow();
-    getPDClient().close();
+    if (client != null) {
+      getPDClient().close();
+    }
+    if (catalog != null) {
+      getCatalog().close();
+    }
   }
 }

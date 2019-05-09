@@ -58,7 +58,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
 
   lazy val tiConcreteCatalog: TiSessionCatalog =
-    new TiConcreteSessionCatalog(this)(new TiExternalCatalog(this))
+    new TiConcreteSessionCatalog(this)(new TiDirectExternalCatalog(this))
 
   lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
 
@@ -159,7 +159,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
       tiSession,
       TiTableReference(dbName, tableName),
       meta,
-      Some(tiSession.getTimestamp)
+      tiSession.getTimestamp
     )(sqlContext)
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
@@ -215,7 +215,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
           tiSession,
           TiTableReference(dbName, tableName, sizeInBytes),
           meta,
-          Some(tiSession.getTimestamp)
+          tiSession.getTimestamp
         )(sqlContext)
 
         val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
