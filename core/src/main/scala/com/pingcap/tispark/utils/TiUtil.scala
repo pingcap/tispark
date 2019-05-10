@@ -112,16 +112,25 @@ object TiUtil {
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
   // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp: TiDataType): DataType =
+  def toSparkDataType(tp: TiDataType, version: Int): DataType =
     tp match {
       case _: StringType => sql.types.StringType
       case _: BytesType  => sql.types.BinaryType
-      case _: IntegerType =>
-        if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
+      case i: IntegerType =>
+        if (i.isUnsignedLong) {
           DataTypes.createDecimalType(20, 0)
         } else {
-          sql.types.LongType
+          if (version == 0) {
+            sql.types.LongType
+          } else {
+            tp.getType match {
+              case MySQLType.TypeLong     => sql.types.IntegerType
+              case MySQLType.TypeLonglong => sql.types.LongType
+              case _                      => sql.types.IntegerType
+            }
+          }
         }
+
       case _: RealType => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
       // Decimal precision cannot exceed MAX_PRECISION.
@@ -160,7 +169,7 @@ object TiUtil {
       case _: sql.types.DateType      => DateType.DATE
     }
 
-  def getSchemaFromTable(table: TiTableInfo): StructType = {
+  def getSchemaFromTable(table: TiTableInfo, version: Int): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {
       val col = table.getColumns.get(i)
@@ -170,7 +179,7 @@ object TiUtil {
         .build()
       fields(i) = StructField(
         col.getName,
-        TiUtil.toSparkDataType(col.getType),
+        TiUtil.toSparkDataType(col.getType, version),
         nullable = !notNull,
         metadata
       )
@@ -227,6 +236,10 @@ object TiUtil {
 
     if (conf.contains(TiConfigConst.DB_PREFIX)) {
       tiConf.setDBPrefix(conf.get(TiConfigConst.DB_PREFIX))
+    }
+
+    if (conf.contains(TiConfigConst.TYPE_SYSTEM_VERSION)) {
+      tiConf.setTypeSystemVersion(conf.get(TiConfigConst.TYPE_SYSTEM_VERSION).toInt)
     }
     tiConf
   }

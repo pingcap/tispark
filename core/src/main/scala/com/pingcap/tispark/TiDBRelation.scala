@@ -40,7 +40,11 @@ case class TiDBRelation(session: TiSession,
     .getTable(tableRef.databaseName, tableRef.tableName)
     .getOrElse(throw new TiClientInternalException("Table not exist"))
 
-  override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
+  override lazy val schema: StructType =
+    TiUtil.getSchemaFromTable(
+      table,
+      sqlContext.sparkSession.conf.get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toInt
+    )
 
   override def sizeInBytes: Long = tableRef.sizeInBytes
 
