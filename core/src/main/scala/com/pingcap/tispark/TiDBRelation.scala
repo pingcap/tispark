@@ -113,5 +113,4 @@ case class TiDBRelation(session: TiSession,
         "SparkSQL entry for tispark write is disabled. Set spark.tispark.write.allow_spark_sql to enable."
       )
     }
-
 }

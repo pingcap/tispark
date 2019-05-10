@@ -65,7 +65,7 @@ public class TiConfiguration implements Serializable {
   private String dbPrefix = DEF_DB_PREFIX;
 
   private boolean writeAllowSparkSQL = DEF_WRITE_ALLOW_SPARK_SQL;
-  private boolean writeEnable =  DEF_WRITE_ENABLE;
+  private boolean writeEnable = DEF_WRITE_ENABLE;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
