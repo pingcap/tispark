@@ -54,6 +54,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
         def trimStr = total_chunks[total_chunks.size() - 1]
         mvnStr = mvnStr + "${trimStr}"
         mvnStr = mvnStr + " -DfailIfNoTests=false"
+        mvnStr = mvnStr + " -DskipAfterFailureCount=1"
         return mvnStr
     }
     
