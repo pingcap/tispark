@@ -137,7 +137,7 @@ object SharedSQLContext extends Logging {
   Locale.setDefault(Locale.CHINA)
 
   protected val logger: Logger = log
-  protected val sparkConf = new SparkConf()
+  protected var sparkConf: SparkConf = _
   private var _spark: SparkSession = _
   private var _ti: TiContext = _
   private var _tidbConf: Properties = _
@@ -311,6 +311,7 @@ object SharedSQLContext extends Logging {
       runTPCDS = tpcdsDBName != ""
 
       _tidbConf = prop
+      sparkConf = new SparkConf()
 
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
         sparkConf.set(PD_ADDRESSES, pdAddresses)
