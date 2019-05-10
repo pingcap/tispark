@@ -48,8 +48,6 @@ object TiBatchWrite {
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
 
-  var idAllocator: IDAllocator = _
-
   private def calcRDDSize(rdd: RDD[(SerializableKey, TiRow, Array[Byte])]): Long =
     rdd.map(_._3.length).reduce(_ + _)
 
@@ -126,7 +124,7 @@ object TiBatchWrite {
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
     val step = rdd.count()
     // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
-    idAllocator = IDAllocator.create(
+    val idAllocator = IDAllocator.create(
       tiDBInfo.getId,
       tiTableInfo.getId,
       tiSession.getCatalog,
@@ -134,15 +132,12 @@ object TiBatchWrite {
       step
     )
 
-    // spark row to TiKV row
-    val tiKVRowRDD =
-      rdd.map(row => sparkRow2TiKVRow(tiTableInfo, row, tiTableInfo.isPkHandle))
+    // i + current start will be handle id
+    val tiKVRowRDD =  rdd.zipWithIndex.map {
+      case(row, i) => sparkRow2TiKVRow(tiTableInfo, i + idAllocator.getStart,
+        row, tiTableInfo.isPkHandle)
+    }
 
-//    rdd.foreachPartition { iterator =>
-    // count each partition's size
-//      val partStep = iterator.count(_ => true)
-//      iterator.map(row => sparkRow2TiKVRow(tiTableInfo, row, idAllocator, tiTableInfo.isPkHandle))
-//    }
     // deduplicate
     val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
 
@@ -385,6 +380,7 @@ object TiBatchWrite {
     )
 
   private def sparkRow2TiKVRow(tableInfo: TiTableInfo,
+                               handleId: Long,
                                sparkRow: SparkRow,
                                pkIsHandle: Boolean): TiRow = {
     val fieldCount = sparkRow.size
@@ -410,7 +406,7 @@ object TiBatchWrite {
           // check do we need fill auto increment column
           if (colName.equals(autoincrementCol.getName)) {
             if (data == null) {
-              data = idAllocator.alloc()
+              data = handleId
             }
           }
           val tiDataType = TiUtil.fromSparkType(sparkDataType)
