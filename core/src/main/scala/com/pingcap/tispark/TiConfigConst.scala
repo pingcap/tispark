@@ -39,6 +39,8 @@ object TiConfigConst {
   val CACHE_EXPIRE_AFTER_ACCESS: String = "spark.tispark.statistics.expire_after_access"
   val SHOW_ROWID: String = "spark.tispark.show_rowid"
   val DB_PREFIX: String = "spark.tispark.db_prefix"
+  val WRITE_ALLOW_SPARK_SQL: String = "spark.tispark.write.allow_spark_sql"
+  val WRITE_ENABLE: String = "spark.tispark.write.enable"
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"
