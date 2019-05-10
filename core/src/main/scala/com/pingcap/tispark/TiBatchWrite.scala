@@ -429,7 +429,7 @@ object TiBatchWrite {
         tiRow.set(i, tiDataType, data)
       }
       // append _tidb_rowid at the end
-      tiRow.set(fieldCount, IntegerType.BIGINT, idAllocator.alloc())
+      tiRow.set(fieldCount, IntegerType.BIGINT, handleId)
     }
     tiRow
   }
