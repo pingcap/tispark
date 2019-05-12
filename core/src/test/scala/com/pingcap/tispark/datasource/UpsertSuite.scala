@@ -1,6 +1,5 @@
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
@@ -44,23 +43,7 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
     testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
 
     // deduplicate=false
-    // insert row5 row5
-//    {
-//      val caught = intercept[TiBatchWriteException] {
-//        batchWrite(List(row5, row5))
-//      }
-//      assert(
-//        caught.getMessage
-//          .equals("data conflicts! set the parameter deduplicate.")
-//      )
-//    }
-
-    // deduplicate=true
-    // insert row5 row5
-//    batchWrite(List(row5, row5), Some(Map("deduplicate" -> "true")))
-//    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4, row5, row5))
-
-    // deduplicate=false
+    // a table does not need to check duplicate if it does not have a primary key
     batchWrite(List(row5, row5), Some(Map("deduplicate" -> "false")))
     testSelect(dbtableInSpark, Seq(row1, row2, row3, row4, row5, row5))
 

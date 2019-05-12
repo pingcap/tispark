@@ -16,14 +16,11 @@ package com.pingcap.tikv.allocator;
 
 import com.google.common.primitives.UnsignedLongs;
 import com.pingcap.tikv.catalog.Catalog;
-import java.io.Serializable;
 
 /**
- * IDAllocator allocates unique value for each row associated with the database id and table id. It
- * first reads from TiKV and calculate the new value with step, then write the new value back to
- * TiKV. The [start, end) range will be lost if job finished or crashed.
+ *
  */
-public class IDAllocator implements Serializable {
+public final class IDAllocator {
   private long start;
   private long end;
   private final long dbId;
@@ -51,13 +48,6 @@ public class IDAllocator implements Serializable {
 
   public long getEnd() {
     return end;
-  }
-
-  public synchronized long alloc() throws IllegalAccessException {
-    if (start == end) {
-      throw new IllegalAccessException("cannot allocate any more");
-    }
-    return ++start;
   }
 
   private void initSigned(Catalog catalog, long tableId) {

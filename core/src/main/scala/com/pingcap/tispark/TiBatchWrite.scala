@@ -132,9 +132,10 @@ object TiBatchWrite {
       step
     )
 
+    val offset = idAllocator.getStart
     // i + current start will be handle id
     val tiKVRowRDD =  rdd.zipWithIndex.map {
-      case(row, i) => sparkRow2TiKVRow(tiTableInfo, i + idAllocator.getStart,
+      case(row, i) => sparkRow2TiKVRow(tiTableInfo, i + offset,
         row, tiTableInfo.isPkHandle)
     }
 

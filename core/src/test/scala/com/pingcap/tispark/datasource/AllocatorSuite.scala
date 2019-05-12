@@ -39,7 +39,6 @@ class AllocatorSuite extends BaseTiSparkSuite {
     assert(allocator.getEnd - allocator.getStart == 1000)
 
     // use one space
-    allocator.alloc()
     assert(allocator.getEnd - allocator.getStart == 999)
   }
 
