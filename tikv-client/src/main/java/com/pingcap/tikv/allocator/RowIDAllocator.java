@@ -16,24 +16,27 @@ package com.pingcap.tikv.allocator;
 
 import com.google.common.primitives.UnsignedLongs;
 import com.pingcap.tikv.catalog.Catalog;
+import com.pingcap.tikv.exception.TiBatchWriteException;
+import java.io.Serializable;
 
 /**
- *
+ * RowIDAllocator read current start from TiKV and write back 'start+step' back to TiKV. It designs
+ * to allocate all id for data to be written at once, hence it does not need run inside a txn.
  */
-public final class IDAllocator {
+public final class RowIDAllocator implements Serializable {
   private long start;
   private long end;
   private final long dbId;
   private long step;
 
-  private IDAllocator(long dbId, long step) {
+  private RowIDAllocator(long dbId, long step) {
     this.dbId = dbId;
     this.step = step;
   }
 
-  public static IDAllocator create(
+  public static RowIDAllocator create(
       long dbId, long tableId, Catalog catalog, boolean unsigned, long step) {
-    IDAllocator allocator = new IDAllocator(dbId, step);
+    RowIDAllocator allocator = new RowIDAllocator(dbId, step);
     if (unsigned) {
       allocator.initUnsigned(catalog, tableId);
     } else {
@@ -57,11 +60,11 @@ public final class IDAllocator {
       long newStart = catalog.getAutoTableId(dbId, tableId);
       long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
       if (tmpStep != step) {
-        throw new IllegalArgumentException("cannot allocate ids for this write");
+        throw new TiBatchWriteException("cannot allocate ids for this write");
       }
       newEnd = catalog.getAutoTableId(dbId, tableId, tmpStep);
       if (newStart == Long.MAX_VALUE) {
-        throw new IllegalArgumentException("cannot allocate more ids since it ");
+        throw new TiBatchWriteException("cannot allocate more ids since it ");
       }
       start = newStart;
       end = newEnd;
@@ -81,7 +84,7 @@ public final class IDAllocator {
       newEnd = catalog.getAutoTableId(dbId, tableId, tmpStep);
       // when compare unsigned long, the min value is largest value.
       if (start == -1L) {
-        throw new IllegalArgumentException(
+        throw new TiBatchWriteException(
             "cannot allocate more ids since the start reaches " + "unsigned long's max value ");
       }
       end = newEnd;

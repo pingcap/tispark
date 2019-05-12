@@ -17,7 +17,7 @@ package com.pingcap.tispark
 
 import java.util
 
-import com.pingcap.tikv.allocator.IDAllocator
+import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
@@ -122,21 +122,20 @@ object TiBatchWrite {
     val (tiDBInfo, tiTableInfo, colDataTypes, colIds) = getDBAndTableInfo(tableRef, tiContext)
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
-    val step = rdd.count()
+
     // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
-    val idAllocator = IDAllocator.create(
+    val rowIDAllocator = RowIDAllocator.create(
       tiDBInfo.getId,
       tiTableInfo.getId,
       tiSession.getCatalog,
       tiTableInfo.isAutoIncColUnsigned,
-      step
+      rdd.count
     )
 
-    val offset = idAllocator.getStart
-    // i + current start will be handle id
-    val tiKVRowRDD =  rdd.zipWithIndex.map {
-      case(row, i) => sparkRow2TiKVRow(tiTableInfo, i + offset,
-        row, tiTableInfo.isPkHandle)
+    // i + start will be handle id
+    val tiKVRowRDD = rdd.zipWithIndex.map {
+      case (row, i) =>
+        sparkRow2TiKVRow(tiTableInfo, i + rowIDAllocator.getStart, row, tiTableInfo.isPkHandle)
     }
 
     // deduplicate
