@@ -131,18 +131,26 @@ object TiBatchWrite {
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
     // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
-    val rowIDAllocator = RowIDAllocator.create(
+
+    // when primary is handle, it does not require allocate ids for each row.
+    val offset = if(tiTableInfo.isPkHandle) {
+      val rowIDAllocator = RowIDAllocator.create(
       tiDBInfo.getId,
       tiTableInfo.getId,
       tiSession.getCatalog,
       tiTableInfo.isAutoIncColUnsigned,
       rdd.count
     )
+      rowIDAllocator.getStart
+    } else {
+      0
+    }
 
-    // i + start will be handle id
+
+    // i + start will be handle id if primary key is not handle
     val tiKVRowRDD = rdd.zipWithIndex.map {
       case (row, i) =>
-        sparkRow2TiKVRow(tiTableInfo, i + rowIDAllocator.getStart, row, tiTableInfo.isPkHandle)
+        sparkRow2TiKVRow(tiTableInfo, i + offset, row, tiTableInfo.isPkHandle)
     }
 
     // deduplicate
@@ -429,7 +437,7 @@ object TiBatchWrite {
         tiRow.set(i, tiDataType, data)
       }
       // append _tidb_rowid at the end
-      tiRow.set(fieldCount, IntegerType.BIGINT, handleId)
+      tiRow.set(fieldCount, IntegerType.BIGI, handleIda
     }
     tiRow
   }
@@ -454,7 +462,7 @@ object TiBatchWrite {
 
     // an hidden row _tidb_rowid may exist
     if (colSize > (tableColSize + 1)) {
-      throw new TiBatchWriteException(s"col size $colSize != table column size $tableColSize")
+      throw new TiBatchWriteException(s"col size $colSize > table column size $tableColSize + 1")
     }
     val hasHiddenRow = colSize == tableColSize + 1
 
@@ -468,12 +476,10 @@ object TiBatchWrite {
     val values = new Array[AnyRef](colSize)
     for (i <- 0 until colSize) {
       // pk is handle can be skipped
-      if(!tblInfo.getColumn(i).canSkip(tblInfo.isPkHandle)) {
         values.update(i, tiRow.get(i, colDataTypes(i)))
-      }
     }
 
-    TableCodec.encodeRow(colDataTypes, colIds, values)
+    TableCodec.encodeRow(columnInfos, colIds, values, tblInfo.isPkHandle)
   }
 }
 

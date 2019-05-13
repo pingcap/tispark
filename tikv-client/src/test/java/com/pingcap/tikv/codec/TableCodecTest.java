@@ -2,9 +2,14 @@ package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.*;
 
+import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.meta.MetaUtils;
+import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateTimeType;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.RealType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.TimestampType;
 import gnu.trove.list.array.TLongArrayList;
@@ -18,8 +23,21 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 public class TableCodecTest {
+  private static TiTableInfo createTable() {
+    return new MetaUtils.TableBuilder()
+        .name("testTable")
+        .addColumn("c1", IntegerType.INT, true)
+        .addColumn("c2", IntegerType.BIGINT)
+        .addColumn("c3", DateTimeType.DATETIME)
+        .addColumn("c4", TimestampType.TIMESTAMP)
+        .addColumn("c5", StringType.VARCHAR)
+        .addColumn("c6", StringType.VARCHAR)
+//        .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
+        .build();
+  }
+
   private Object[] values;
-  private DataType[] colsType;
+  private TiTableInfo tblInfo = createTable();
   private TLongArrayList colIds;
 
   private void makeValues() {
@@ -32,17 +50,6 @@ public class TableCodecTest {
     values.add("abc");
     values.add("中");
     this.values = values.toArray();
-  }
-
-  private void makeRowTypes() {
-    List<DataType> dateTypes = new ArrayList<>();
-    dateTypes.add(IntegerType.INT);
-    dateTypes.add(IntegerType.BIGINT);
-    dateTypes.add(DateTimeType.DATETIME);
-    dateTypes.add(TimestampType.TIMESTAMP);
-    dateTypes.add(StringType.VARCHAR);
-    dateTypes.add(StringType.VARCHAR);
-    this.colsType = dateTypes.toArray(new DataType[0]);
   }
 
   private void makeColIds() {
@@ -59,7 +66,6 @@ public class TableCodecTest {
   @Before
   public void setUp() {
     makeColIds();
-    makeRowTypes();
     makeValues();
   }
 
@@ -69,7 +75,7 @@ public class TableCodecTest {
   public void testRowCodecThrowException() {
     TLongArrayList fakeColIds = TLongArrayList.wrap(new long[] {1, 2});
     try {
-      TableCodec.encodeRow(colsType, fakeColIds, values);
+      TableCodec.encodeRow(tblInfo.getColumns(), fakeColIds, values, tblInfo.isPkHandle());
       expectedEx.expect(IllegalAccessException.class);
       expectedEx.expectMessage("encodeRow error: data and columnID count not match 6 vs 2");
     } catch (IllegalAccessException ignored) {
@@ -81,7 +87,7 @@ public class TableCodecTest {
     try {
       byte[] bytes =
           TableCodec.encodeRow(
-              new DataType[] {}, TLongArrayList.wrap(new long[] {}), new Object[] {});
+              new ArrayList<>(), TLongArrayList.wrap(new long[] {}), new Object[] {}, false);
       assertEquals(1, bytes.length);
       assertEquals(Codec.NULL_FLAG, bytes[0]);
     } catch (IllegalAccessException ignored) {
@@ -93,10 +99,10 @@ public class TableCodecTest {
     // multiple test was added since encodeRow refuse its cdo
     for (int i = 0; i < 4; i++) {
       try {
-        byte[] bytes = TableCodec.encodeRow(colsType, colIds, values);
+        byte[] bytes = TableCodec.encodeRow(tblInfo.getColumns(), colIds, values, tblInfo.isPkHandle());
         // testing the correctness via decodeRow
-        Object[] res = TableCodec.decodeRow(new CodecDataInput(bytes), colsType);
-        for (int j = 0; j < colsType.length; j++) {
+        Object[] res = TableCodec.decodeRow(new CodecDataInput(bytes), tblInfo.getColumns());
+        for (int j = 0; j < tblInfo.getColumns().size(); j++) {
           assertEquals(res[2 * j], colIds.get(j));
           assertEquals(res[2 * j + 1], values[j]);
         }

@@ -23,7 +23,7 @@ import java.io.Serializable;
  * RowIDAllocator read current start from TiKV and write back 'start+step' back to TiKV. It designs
  * to allocate all id for data to be written at once, hence it does not need run inside a txn.
  */
-public final class RowIDAllocator implements Serializable {
+public final class RowIDAllocator {
   private long start;
   private long end;
   private final long dbId;
