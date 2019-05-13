@@ -228,6 +228,15 @@ object TiUtil {
     if (conf.contains(TiConfigConst.DB_PREFIX)) {
       tiConf.setDBPrefix(conf.get(TiConfigConst.DB_PREFIX))
     }
+
+    if (conf.contains(TiConfigConst.WRITE_ENABLE)) {
+      tiConf.setWriteEnable(conf.get(TiConfigConst.WRITE_ENABLE).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.WRITE_ALLOW_SPARK_SQL)) {
+      tiConf.setWriteAllowSparkSQL(conf.get(TiConfigConst.WRITE_ALLOW_SPARK_SQL).toBoolean)
+    }
+
     tiConf
   }
 

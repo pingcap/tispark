@@ -44,6 +44,8 @@ public class TiConfiguration implements Serializable {
   private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.RC;
   private static final boolean DEF_SHOW_ROWID = false;
   private static final String DEF_DB_PREFIX = "";
+  private static final boolean DEF_WRITE_ENABLE = false;
+  private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -61,6 +63,9 @@ public class TiConfiguration implements Serializable {
   private int maxRequestKeyRangeSize = MAX_REQUEST_KEY_RANGE_SIZE;
   private boolean showRowId = DEF_SHOW_ROWID;
   private String dbPrefix = DEF_DB_PREFIX;
+
+  private boolean writeAllowSparkSQL = DEF_WRITE_ALLOW_SPARK_SQL;
+  private boolean writeEnable = DEF_WRITE_ENABLE;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -211,5 +216,21 @@ public class TiConfiguration implements Serializable {
 
   public void setDBPrefix(String dbPrefix) {
     this.dbPrefix = dbPrefix;
+  }
+
+  public boolean isWriteEnable() {
+    return writeEnable;
+  }
+
+  public void setWriteEnable(boolean writeEnable) {
+    this.writeEnable = writeEnable;
+  }
+
+  public boolean isWriteAllowSparkSQL() {
+    return writeAllowSparkSQL;
+  }
+
+  public void setWriteAllowSparkSQL(boolean writeAllowSparkSQL) {
+    this.writeAllowSparkSQL = writeAllowSparkSQL;
   }
 }

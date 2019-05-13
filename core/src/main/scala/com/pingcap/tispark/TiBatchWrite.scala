@@ -114,6 +114,13 @@ object TiBatchWrite {
                   options: TiDBOptions,
                   regionSplitNumber: Option[Int] = None,
                   enableRegionPreSplit: Boolean = false) {
+    // check
+    if (!tiContext.tiConf.isWriteEnable) {
+      throw new TiBatchWriteException(
+        "tispark batch write is disabled! set spark.tispark.write.enable to enable."
+      )
+    }
+
     // initialize
     val tiConf = tiContext.tiConf
     val tiSession = tiContext.tiSession
