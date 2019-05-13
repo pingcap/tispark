@@ -281,6 +281,7 @@ object TiBatchWrite {
     (tiDBInfo, tiTableInfo)
   }
 
+  @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def deduplicate(rdd: RDD[TiRow],
                           tableRef: TiTableReference,
