@@ -180,6 +180,7 @@ case class RegionTaskExec(child: SparkPlan,
   private val downgradeThreshold =
     sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
   private lazy val project = UnsafeProjection.create(schema)
+  private val logger = Logger.getLogger(getClass.getName)
 
   type TiRow = com.pingcap.tikv.row.Row
 
@@ -215,7 +216,6 @@ case class RegionTaskExec(child: SparkPlan,
     downgradeDagRequest: TiDAGRequest
   ): (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] = { (index, iter) =>
     // For each partition, we do some initialization work
-    val logger = Logger.getLogger(getClass.getName)
     logger.debug(s"In partition No.$index")
     val session = TiSessionCache.getSession(tiConf)
     session.injectCallBackFunc(callBackFunc)
@@ -261,7 +261,7 @@ case class RegionTaskExec(child: SparkPlan,
         taskCount += 1
         val task = new Callable[util.Iterator[TiRow]] {
           override def call(): util.Iterator[TiRow] =
-            CoprocessIterator.getRowIterator(dagRequest.copy(), tasks, session)
+            CoprocessIterator.getRowIterator(dagRequest, tasks, session)
         }
         completionService.submit(task)
       }
