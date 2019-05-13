@@ -362,7 +362,8 @@ object TiBatchWrite {
       val columnList = tableInfo.getColumns.asScala
       columnList.find(_.isPrimaryKey) match {
         case Some(primaryColumn) =>
-          row.getLong(primaryColumn.getOffset)
+          row.get(primaryColumn.getOffset, primaryColumn.getType).
+            asInstanceOf[Number].longValue()
         case None =>
           throw new TiBatchWriteException("should never happen")
       }
@@ -441,7 +442,7 @@ object TiBatchWrite {
     val tableColSize = colDataTypes.length
 
     // an hidden row _tidb_rowid may exist
-    if (colSize < (tableColSize + 1)) {
+    if (colSize > (tableColSize + 1)) {
       throw new TiBatchWriteException(s"col size $colSize != table column size $tableColSize")
     }
     val hasHiddenRow = colSize == tableColSize + 1

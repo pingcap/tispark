@@ -5,8 +5,8 @@ import org.apache.spark.sql.BaseTiSparkSuite
 
 class RowIDAllocatorSuite extends BaseTiSparkSuite {
   test("test unsigned allocator") {
-    tidbStmt.execute("drop table if exists t")
-    tidbStmt.execute("""CREATE TABLE `t` (
+    tidbStmt.execute("drop table if exists rowid_allocator")
+    tidbStmt.execute("""CREATE TABLE `rowid_allocator` (
                        |  `a` int(11) DEFAULT NULL
                        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
       """.stripMargin)
