@@ -119,7 +119,7 @@ object TiBatchWrite {
     val tiSession = tiContext.tiSession
     val kvClient = tiSession.createTxnClient()
     val tableRef = TiTableReference(options.database, options.table)
-    val (tiDBInfo, tiTableInfo, colDataTypes, colIds) = getDBAndTableInfo(tableRef, tiContext)
+    val (tiDBInfo, tiTableInfo) = getDBAndTableInfo(tableRef, tiContext)
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
@@ -143,7 +143,7 @@ object TiBatchWrite {
 
     // encode TiROW
     val encodedTiRowRDD = deduplicateRDD.map {
-      case (key, tiRow) => (key, tiRow, encodeTiRow(tiRow, colDataTypes, colIds))
+      case (key, tiRow) => (key, tiRow, encodeTiRow(tiRow, tiTableInfo))
     }
 
     // region pre-split
@@ -256,23 +256,15 @@ object TiBatchWrite {
   private def getDBAndTableInfo(
     tableRef: TiTableReference,
     tiContext: TiContext
-  ): (TiDBInfo, TiTableInfo, Array[DataType], TLongArrayList) = {
+  ): (TiDBInfo, TiTableInfo) = {
     val tiDBInfo = tiContext.tiSession.getCatalog.getDatabase(tableRef.databaseName)
     val tiTableInfo =
       tiContext.tiSession.getCatalog.getTable(tableRef.databaseName, tableRef.tableName)
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName)
     }
-    val tableColSize = tiTableInfo.getColumns.size()
-    val dataTypes = new Array[DataType](tableColSize)
-    val colIds = new TLongArrayList
 
-    for (i <- 0 until tableColSize) {
-      val tiColumnInfo = tiTableInfo.getColumn(i)
-      colIds.add(tiColumnInfo.getId)
-      dataTypes.update(i, tiColumnInfo.getType)
-    }
-    (tiDBInfo, tiTableInfo, dataTypes, colIds)
+    (tiDBInfo, tiTableInfo)
   }
 
   @throws(classOf[TiBatchWriteException])
@@ -362,6 +354,7 @@ object TiBatchWrite {
       val columnList = tableInfo.getColumns.asScala
       columnList.find(_.isPrimaryKey) match {
         case Some(primaryColumn) =>
+          // it is a workaround. pk is handle must be a number
           row.get(primaryColumn.getOffset, primaryColumn.getType).
             asInstanceOf[Number].longValue()
         case None =>
@@ -436,9 +429,20 @@ object TiBatchWrite {
 
   @throws(classOf[TiBatchWriteException])
   private def encodeTiRow(tiRow: TiRow,
-                          colDataTypes: Array[DataType],
-                          colIDs: TLongArrayList): Array[Byte] = {
+                          tblInfo: TiTableInfo
+                          ): Array[Byte] = {
     var colSize = tiRow.fieldCount()
+    val columnInfos = tblInfo.getColumns
+
+    val colDataTypes = new Array[DataType](columnInfos.size)
+    val colIds = new TLongArrayList
+
+    for (i <- 0 until columnInfos.size) {
+      val tiColumnInfo = tblInfo.getColumn(i)
+      colIds.add(tiColumnInfo.getId)
+      colDataTypes.update(i, tiColumnInfo.getType)
+    }
+
     val tableColSize = colDataTypes.length
 
     // an hidden row _tidb_rowid may exist
@@ -456,10 +460,13 @@ object TiBatchWrite {
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-82
     val values = new Array[AnyRef](colSize)
     for (i <- 0 until colSize) {
-      values.update(i, tiRow.get(i, colDataTypes(i)))
+      // pk is handle can be skipped
+      if(!tblInfo.getColumn(i).canSkip(tblInfo.isPkHandle)) {
+        values.update(i, tiRow.get(i, colDataTypes(i)))
+      }
     }
 
-    TableCodec.encodeRow(colDataTypes, colIDs, values)
+    TableCodec.encodeRow(colDataTypes, colIds, values)
   }
 }
 
