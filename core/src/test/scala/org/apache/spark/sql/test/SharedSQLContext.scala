@@ -368,7 +368,6 @@ object SharedSQLContext extends Logging {
     if (_ti != null) {
       _ti.sparkSession.sessionState.catalog.reset()
       _ti.meta.close()
-      _ti.meta.close()
       _ti.sparkSession.close()
       _ti.tiSession.close()
       _ti = null
