@@ -6,7 +6,6 @@ import org.apache.spark.sql.Row
 // will load tidb_config.properties to SparkConf
 class DataSourceWithExtensionsSuite
     extends BaseDataSourceSuite("test_datasource_with_extensions", true) {
-  // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -15,7 +14,7 @@ class DataSourceWithExtensionsSuite
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
     jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtableInJDBC values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
@@ -46,7 +45,7 @@ class DataSourceWithExtensionsSuite
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+      dropTable()
     } finally {
       super.afterAll()
     }
