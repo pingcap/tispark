@@ -413,7 +413,7 @@ object TiBatchWrite {
           tiRow.set(i, tiDataType, data)
         }
       } else {
-        throw new IllegalAccessException(
+        throw new TiBatchWriteException(
           "cannot insert on a table with primary key but it's not a handle" +
             "or auto increment"
         )
