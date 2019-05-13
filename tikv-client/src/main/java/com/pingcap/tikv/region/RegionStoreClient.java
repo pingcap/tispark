@@ -42,7 +42,6 @@ import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.txn.Lock;
 import com.pingcap.tikv.txn.LockResolverClient;
-import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;

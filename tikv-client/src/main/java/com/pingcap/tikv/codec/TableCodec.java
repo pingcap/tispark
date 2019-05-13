@@ -22,7 +22,8 @@ public class TableCodec {
    * @return
    * @throws IllegalAccessException
    */
-  public static byte[] encodeRow(List<TiColumnInfo> columnInfos, TLongArrayList colIDs, Object[] values, boolean isPkHandle)
+  public static byte[] encodeRow(
+      List<TiColumnInfo> columnInfos, TLongArrayList colIDs, Object[] values, boolean isPkHandle)
       throws IllegalAccessException {
     if (columnInfos.size() != colIDs.size()) {
       throw new IllegalAccessException(
@@ -36,7 +37,7 @@ public class TableCodec {
     for (int i = 0; i < columnInfos.size(); i++) {
       IntegerCodec.writeLongFully(cdo, colIDs.get(i), false);
       TiColumnInfo col = columnInfos.get(i);
-      if(!col.canSkip(isPkHandle)) {
+      if (!col.canSkip(isPkHandle)) {
         col.getType().encode(cdo, EncodeType.VALUE, values[i]);
       }
     }

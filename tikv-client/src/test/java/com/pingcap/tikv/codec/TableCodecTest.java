@@ -2,14 +2,10 @@ package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.*;
 
-import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.meta.MetaUtils;
-import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateTimeType;
 import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.RealType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.TimestampType;
 import gnu.trove.list.array.TLongArrayList;
@@ -32,7 +28,7 @@ public class TableCodecTest {
         .addColumn("c4", TimestampType.TIMESTAMP)
         .addColumn("c5", StringType.VARCHAR)
         .addColumn("c6", StringType.VARCHAR)
-//        .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
+        //        .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
         .build();
   }
 
@@ -99,7 +95,8 @@ public class TableCodecTest {
     // multiple test was added since encodeRow refuse its cdo
     for (int i = 0; i < 4; i++) {
       try {
-        byte[] bytes = TableCodec.encodeRow(tblInfo.getColumns(), colIds, values, tblInfo.isPkHandle());
+        byte[] bytes =
+            TableCodec.encodeRow(tblInfo.getColumns(), colIds, values, tblInfo.isPkHandle());
         // testing the correctness via decodeRow
         Object[] res = TableCodec.decodeRow(new CodecDataInput(bytes), tblInfo.getColumns());
         for (int j = 0; j < tblInfo.getColumns().size(); j++) {

@@ -17,7 +17,6 @@ package com.pingcap.tikv.allocator;
 import com.google.common.primitives.UnsignedLongs;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.exception.TiBatchWriteException;
-import java.io.Serializable;
 
 /**
  * RowIDAllocator read current start from TiKV and write back 'start+step' back to TiKV. It designs

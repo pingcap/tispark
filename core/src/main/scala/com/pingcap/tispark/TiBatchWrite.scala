@@ -133,19 +133,18 @@ object TiBatchWrite {
     // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
 
     // when primary is handle, it does not require allocate ids for each row.
-    val offset = if(tiTableInfo.isPkHandle) {
+    val offset = if (tiTableInfo.isPkHandle) {
       val rowIDAllocator = RowIDAllocator.create(
-      tiDBInfo.getId,
-      tiTableInfo.getId,
-      tiSession.getCatalog,
-      tiTableInfo.isAutoIncColUnsigned,
-      rdd.count
-    )
+        tiDBInfo.getId,
+        tiTableInfo.getId,
+        tiSession.getCatalog,
+        tiTableInfo.isAutoIncColUnsigned,
+        rdd.count
+      )
       rowIDAllocator.getStart
     } else {
       0
     }
-
 
     // i + start will be handle id if primary key is not handle
     val tiKVRowRDD = rdd.zipWithIndex.map {
@@ -370,8 +369,7 @@ object TiBatchWrite {
       columnList.find(_.isPrimaryKey) match {
         case Some(primaryColumn) =>
           // it is a workaround. pk is handle must be a number
-          row.get(primaryColumn.getOffset, primaryColumn.getType).
-            asInstanceOf[Number].longValue()
+          row.get(primaryColumn.getOffset, primaryColumn.getType).asInstanceOf[Number].longValue()
         case None =>
           throw new TiBatchWriteException("should never happen")
       }
@@ -437,15 +435,13 @@ object TiBatchWrite {
         tiRow.set(i, tiDataType, data)
       }
       // append _tidb_rowid at the end
-      tiRow.set(fieldCount, IntegerType.BIGI, handleIda
+      tiRow.set(fieldCount, IntegerType.BIGINT, handleId)
     }
     tiRow
   }
 
   @throws(classOf[TiBatchWriteException])
-  private def encodeTiRow(tiRow: TiRow,
-                          tblInfo: TiTableInfo
-                          ): Array[Byte] = {
+  private def encodeTiRow(tiRow: TiRow, tblInfo: TiTableInfo): Array[Byte] = {
     var colSize = tiRow.fieldCount()
     val columnInfos = tblInfo.getColumns
 
@@ -476,7 +472,7 @@ object TiBatchWrite {
     val values = new Array[AnyRef](colSize)
     for (i <- 0 until colSize) {
       // pk is handle can be skipped
-        values.update(i, tiRow.get(i, colDataTypes(i)))
+      values.update(i, tiRow.get(i, colDataTypes(i)))
     }
 
     TableCodec.encodeRow(columnInfos, colIds, values, tblInfo.isPkHandle)

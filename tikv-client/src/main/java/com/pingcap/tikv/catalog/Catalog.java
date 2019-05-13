@@ -155,8 +155,8 @@ public class Catalog implements AutoCloseable {
   }
 
   /**
-   * read current row id from TiKV and write the calculated value back to TiKV.
-   * The calculation rule is start(read from TiKV) + step.
+   * read current row id from TiKV and write the calculated value back to TiKV. The calculation rule
+   * is start(read from TiKV) + step.
    */
   public synchronized long getAutoTableId(long dbId, long tableId, long step) {
     Snapshot snapshot = snapshotProvider.get();
@@ -164,9 +164,7 @@ public class Catalog implements AutoCloseable {
     return newTrx.getAutoTableId(dbId, tableId, step);
   }
 
-  /**
-   * read current row id from TiKV according to database id and table id.
-   */
+  /** read current row id from TiKV according to database id and table id. */
   public synchronized long getAutoTableId(long dbId, long tableId) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
