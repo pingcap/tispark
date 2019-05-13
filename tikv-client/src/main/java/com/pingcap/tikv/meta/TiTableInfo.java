@@ -155,6 +155,15 @@ public class TiTableInfo implements Serializable {
         .build();
   }
 
+  public boolean hasPrimaryKey() {
+    for (TiColumnInfo col : getColumns()) {
+      if (col.isPrimaryKey()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Only Integer Column will be a PK column
   // and there exists only one PK column
   TiColumnInfo getPrimaryKeyColumn() {

@@ -70,18 +70,6 @@ class BasicDataSourceSuite extends BaseDataSourceSuite("test_datasource_basic") 
     )
   }
 
-  private def testSelect(dbtable: String, expectedAnswer: Seq[Row]): Unit = {
-    val df = sqlContext.read
-      .format("tidb")
-      .options(tidbOptions)
-      .option("database", databaseInSpark)
-      .option("table", testTable)
-      .load()
-      .sort("i")
-
-    checkAnswer(df, expectedAnswer)
-  }
-
   override def afterAll(): Unit =
     try {
       jdbcUpdate(s"drop table if exists $dbtableInJDBC")
