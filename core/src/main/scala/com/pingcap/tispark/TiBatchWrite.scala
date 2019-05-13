@@ -364,8 +364,7 @@ object TiBatchWrite {
         case Some(primaryColumn) =>
           row.getLong(primaryColumn.getOffset)
         case None =>
-          // pk is not handle case.
-          row.getLong(0)
+          throw new TiBatchWriteException("should never happen")
       }
     }
     handle

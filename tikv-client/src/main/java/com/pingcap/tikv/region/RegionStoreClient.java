@@ -109,7 +109,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private static final Logger logger = Logger.getLogger(RegionStoreClient.class);
   private TiRegion region;
   private final RegionManager regionManager;
-  private TxnKVClient txnKVClient;
   private final TiSession session;
 
   @VisibleForTesting public final LockResolverClient lockResolverClient;
@@ -158,9 +157,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       }
     }
   }
-
-  // set will be run in txn via 2pc protocol.
-  public void set(ByteString key, ByteString value) {}
 
   /**
    * @param backOffer
