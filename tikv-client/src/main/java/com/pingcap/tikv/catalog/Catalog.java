@@ -154,12 +154,19 @@ public class Catalog implements AutoCloseable {
         periodUnit);
   }
 
+  /**
+   * read current row id from TiKV and write the calculated value back to TiKV.
+   * The calculation rule is start(read from TiKV) + step.
+   */
   public synchronized long getAutoTableId(long dbId, long tableId, long step) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     return newTrx.getAutoTableId(dbId, tableId, step);
   }
 
+  /**
+   * read current row id from TiKV according to database id and table id.
+   */
   public synchronized long getAutoTableId(long dbId, long tableId) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
