@@ -324,6 +324,7 @@ object SharedSQLContext extends Logging {
       }
 
       sparkConf.set("spark.tispark.write.allow_spark_sql", "true")
+      sparkConf.set("spark.tispark.write.enable", "true")
 
       if (isHiveEnabled) {
         // delete meta store directory to avoid multiple derby instances SPARK-10872
