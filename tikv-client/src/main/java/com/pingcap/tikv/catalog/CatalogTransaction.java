@@ -134,17 +134,18 @@ public class CatalogTransaction {
     // 3. update meta's filed count and set it back to TiKV
     CodecDataOutput cdo = new CodecDataOutput();
     ByteString metaKey = encodeHashMetaKey(cdo, key.toByteArray());
-    long fieldCount = 0;
+    long fieldCount;
     ByteString metaVal = snapshot.get(metaKey);
 
-    // check empty
-    // check length is 8 or not
+    // decode long from bytes
+    // big endian the 8 bytes
+    fieldCount = new CodecDataInput(metaVal.toByteArray()).readLong();
 
-    // bigendian 8
-    if (oldVal == null) {
+    // update meta field count only oldVal is null
+    if (oldVal == null || oldVal.length == 0) {
       fieldCount++;
       cdo.reset();
-      IntegerCodec.writeULong(cdo, fieldCount);
+      cdo.writeLong(fieldCount);
       snapshot.set(metaKey, cdo.toByteString());
     }
   }
@@ -157,6 +158,7 @@ public class CatalogTransaction {
     // 4. check old value equals to new value or not
     // 5. set the new value back to TiKV via 2pc
     // 6. encode a hash meta key
+    // 7. update a hash meta field count if needed
 
     CodecDataOutput cdo = new CodecDataOutput();
     encodeHashDataKey(cdo, key.toByteArray(), field.toByteArray());
