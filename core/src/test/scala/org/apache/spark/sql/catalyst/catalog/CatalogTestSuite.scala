@@ -299,17 +299,13 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     spark.sql("select * from testLogic3").show
     spark.sql("insert overwrite table testLogic3 select * from testTempView2 where t1_id <= 3")
     spark.sql("select * from testLogic3").show
+    spark.sql("drop table if exists testLogic1")
+    spark.sql("drop table if exists testLogic2")
+    spark.sql("drop table if exists testLogic3")
   }
 
   override def beforeAll(): Unit = {
     enableHive = true
     super.beforeAll()
-  }
-
-  override def afterAll(): Unit = {
-    super.afterAll()
-    spark.sql("drop table if exists testLogic1")
-    spark.sql("drop table if exists testLogic2")
-    spark.sql("drop table if exists testLogic3")
   }
 }
