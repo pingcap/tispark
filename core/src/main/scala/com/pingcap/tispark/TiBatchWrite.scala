@@ -133,7 +133,7 @@ object TiBatchWrite {
     // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
 
     // when primary is handle, it does not require allocate ids for each row.
-    val offset = if (tiTableInfo.isPkHandle) {
+    val offset = if (!tiTableInfo.isPkHandle) {
       val rowIDAllocator = RowIDAllocator.create(
         tiDBInfo.getId,
         tiTableInfo.getId,
