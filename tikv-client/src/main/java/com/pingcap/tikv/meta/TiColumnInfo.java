@@ -331,4 +331,10 @@ public class TiColumnInfo implements Serializable {
     return Objects.hash(
         id, name, type, schemaState, isPrimaryKey, defaultValue, originDefaultValue);
   }
+
+  public boolean canSkip(boolean isPkHandle) {
+    // TODO: 1. get default value if its null or value is null
+    //      2. if generated or generatedStored is false
+    return isPrimaryKey & isPkHandle;
+  }
 }

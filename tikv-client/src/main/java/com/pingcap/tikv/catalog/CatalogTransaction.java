@@ -34,9 +34,11 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.util.Pair;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import org.apache.log4j.Logger;
 import org.tikv.kvproto.Kvrpcpb;
 
@@ -48,13 +50,15 @@ public class CatalogTransaction {
   private static final byte[] META_PREFIX = new byte[] {'m'};
 
   private static final byte HASH_DATA_FLAG = 'h';
+  private static final byte HASH_META_FLAG = 'H';
   private static final byte STR_DATA_FLAG = 's';
 
-  private static ByteString KEY_DB = ByteString.copyFromUtf8("DBs");
-  private static ByteString KEY_TABLE = ByteString.copyFromUtf8("Table");
+  private static ByteString KEY_DBs = ByteString.copyFromUtf8("DBs");
+  private static String KEY_TABLE = "Table";
   private static ByteString KEY_SCHEMA_VERSION = ByteString.copyFromUtf8("SchemaVersionKey");
 
   private static final String ENCODED_DB_PREFIX = "DB";
+  private static final String KEY_TID = "TID";
 
   CatalogTransaction(Snapshot snapshot) {
     this.snapshot = snapshot;
@@ -68,8 +72,17 @@ public class CatalogTransaction {
   }
 
   private void encodeHashDataKey(CodecDataOutput cdo, byte[] key, byte[] field) {
-    encodeHashDataKeyPrefix(cdo, key);
+    cdo.write(prefix);
+    BytesCodec.writeBytes(cdo, key);
+    IntegerCodec.writeULong(cdo, HASH_DATA_FLAG);
     BytesCodec.writeBytes(cdo, field);
+  }
+
+  private ByteString encodeHashMetaKey(CodecDataOutput cdo, byte[] key) {
+    cdo.write(prefix);
+    BytesCodec.writeBytes(cdo, key);
+    IntegerCodec.writeULong(cdo, HASH_META_FLAG);
+    return cdo.toByteString();
   }
 
   private void encodeHashDataKeyPrefix(CodecDataOutput cdo, byte[] key) {
@@ -91,6 +104,103 @@ public class CatalogTransaction {
     }
     byte[] field = BytesCodec.readBytes(cdi);
     return Pair.create(ByteString.copyFrom(key), ByteString.copyFrom(field));
+  }
+
+  private static ByteString autoTableIDKey(long tableId) {
+    return ByteString.copyFrom(String.format("%s:%d", KEY_TID, tableId).getBytes());
+  }
+
+  private static ByteString tableKey(long tableId) {
+    return ByteString.copyFrom(String.format("%s:%d", KEY_TABLE, tableId).getBytes());
+  }
+
+  private static ByteString encodeDatabaseID(long id) {
+    return ByteString.copyFrom(String.format("%s:%d", ENCODED_DB_PREFIX, id).getBytes());
+  }
+
+  private boolean isDBExisted(long dbId) {
+    return getDatabase(dbId) != null;
+  }
+
+  private boolean isTableExisted(long dbId, long tableId) {
+    ByteString dbKey = encodeDatabaseID(dbId);
+    ByteString tableKey = tableKey(tableId);
+    return !hashGet(dbKey, tableKey).isEmpty();
+  }
+
+  private void updateMeta(ByteString key, byte[] oldVal) {
+    // 1. encode hash meta key
+    // 2. load meta via hash meta key from TiKV
+    // 3. update meta's filed count and set it back to TiKV
+    CodecDataOutput cdo = new CodecDataOutput();
+    ByteString metaKey = encodeHashMetaKey(cdo, key.toByteArray());
+    long fieldCount;
+    ByteString metaVal = snapshot.get(metaKey);
+
+    // decode long from bytes
+    // big endian the 8 bytes
+    fieldCount = new CodecDataInput(metaVal.toByteArray()).readLong();
+
+    // update meta field count only oldVal is null
+    if (oldVal == null || oldVal.length == 0) {
+      fieldCount++;
+      cdo.reset();
+      cdo.writeLong(fieldCount);
+      snapshot.set(metaKey, cdo.toByteString());
+    }
+  }
+
+  private long updateHash(
+      ByteString key, ByteString field, Function<byte[], byte[]> calculateNewVal) {
+    // 1. encode hash data key
+    // 2. get value in byte from get operation
+    // 3. calculate new value via calculateNewVal
+    // 4. check old value equals to new value or not
+    // 5. set the new value back to TiKV via 2pc
+    // 6. encode a hash meta key
+    // 7. update a hash meta field count if needed
+
+    CodecDataOutput cdo = new CodecDataOutput();
+    encodeHashDataKey(cdo, key.toByteArray(), field.toByteArray());
+    ByteString dataKey = cdo.toByteString();
+    byte[] oldVal = snapshot.get(dataKey.toByteArray());
+
+    byte[] newVal = calculateNewVal.apply(oldVal);
+    if (Arrays.equals(newVal, oldVal)) {
+      // not need to update
+      return 0L;
+    }
+    snapshot.set(dataKey, ByteString.copyFrom(newVal));
+
+    updateMeta(key, oldVal);
+    return Long.parseLong(new String(newVal));
+  }
+
+  public long getAutoTableId(long dbId, long tableId, long step) {
+    if (isDBExisted(dbId) && isTableExisted(dbId, tableId)) {
+      return updateHash(
+          encodeDatabaseID(dbId),
+          autoTableIDKey(tableId),
+          (oldVal) -> {
+            long base = 0;
+            if (oldVal != null && oldVal.length != 0) {
+              base = Long.parseLong(new String(oldVal));
+            }
+
+            base += step;
+            return String.valueOf(base).getBytes();
+          });
+    }
+
+    throw new IllegalArgumentException("table or database is not existed");
+  }
+
+  public long getAutoTableId(long dbId, long tableId) {
+    ByteString dbKey = encodeDatabaseID(dbId);
+    ByteString tblKey = autoTableIDKey(tableId);
+    ByteString val = hashGet(dbKey, tblKey);
+    if (val.isEmpty()) return 0L;
+    return Long.parseLong(val.toStringUtf8());
   }
 
   private ByteString hashGet(ByteString key, ByteString field) {
@@ -126,18 +236,14 @@ public class CatalogTransaction {
     return fields;
   }
 
-  private static ByteString encodeDatabaseID(long id) {
-    return ByteString.copyFrom(String.format("%s:%d", ENCODED_DB_PREFIX, id).getBytes());
-  }
-
   long getLatestSchemaVersion() {
     ByteString versionBytes = bytesGet(KEY_SCHEMA_VERSION);
     CodecDataInput cdi = new CodecDataInput(versionBytes.toByteArray());
     return Long.parseLong(new String(cdi.toByteArray(), StandardCharsets.UTF_8));
   }
 
-  List<TiDBInfo> getDatabases() {
-    List<Pair<ByteString, ByteString>> fields = hashGetFields(KEY_DB);
+  public List<TiDBInfo> getDatabases() {
+    List<Pair<ByteString, ByteString>> fields = hashGetFields(KEY_DBs);
     ImmutableList.Builder<TiDBInfo> builder = ImmutableList.builder();
     for (Pair<ByteString, ByteString> pair : fields) {
       builder.add(parseFromJson(pair.second, TiDBInfo.class));
@@ -147,7 +253,7 @@ public class CatalogTransaction {
 
   TiDBInfo getDatabase(long id) {
     ByteString dbKey = encodeDatabaseID(id);
-    ByteString json = hashGet(KEY_DB, dbKey);
+    ByteString json = hashGet(KEY_DBs, dbKey);
     if (json == null || json.isEmpty()) {
       return null;
     }
@@ -159,7 +265,7 @@ public class CatalogTransaction {
     List<Pair<ByteString, ByteString>> fields = hashGetFields(dbKey);
     ImmutableList.Builder<TiTableInfo> builder = ImmutableList.builder();
     for (Pair<ByteString, ByteString> pair : fields) {
-      if (KeyUtils.hasPrefix(pair.first, KEY_TABLE)) {
+      if (KeyUtils.hasPrefix(pair.first, ByteString.copyFromUtf8(KEY_TABLE))) {
         builder.add(parseFromJson(pair.second, TiTableInfo.class));
       }
     }

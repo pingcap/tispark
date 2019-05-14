@@ -24,17 +24,13 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
     )
   )
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-
+  test("Test upsert to table without primary key") {
+    // insert row2 row3
     jdbcUpdate(s"drop table if exists $dbtableInJDBC")
     jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtableInJDBC values(null, 'Hello')"
     )
-  }
-
-  test("Test upsert to table without primary key") {
     // insert row2 row3
     batchWrite(List(row2, row3), schema)
     testSelect(dbtableInSpark, Seq(row1, row2, row3))
@@ -42,6 +38,23 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
     // insert row4
     batchWrite(List(row4), schema)
     testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
+
+    // deduplicate=false
+    // a table does not need to check duplicate if it does not have a primary key
+    batchWrite(List(row5, row5), schema, Some(Map("deduplicate" -> "false")))
+    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4, row5, row5))
+
+    // test update
+    // insert row3_v2
+    batchWrite(List(row3_v2), schema)
+    testSelect(dbtableInSpark, Seq(row1, row2, row3, row3_v2, row4, row5, row5))
+  }
+
+  test("Test upsert to table with primary key (primary key is handle)") {
+    tidbStmt.execute(s"drop table if exists $dbtableInJDBC")
+    tidbStmt.execute(s"create table $dbtableInJDBC(i int primary key, s varchar(128))")
+    batchWrite(List(row2, row3, row4), schema)
+    testSelect(dbtableInSpark, Seq(row2, row3, row4))
 
     // deduplicate=false
     // insert row5 row5
@@ -58,16 +71,11 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
     // deduplicate=true
     // insert row5 row5
     batchWrite(List(row5, row5), schema, Some(Map("deduplicate" -> "true")))
-    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4, row5))
+    testSelect(dbtableInSpark, Seq(row2, row3, row4, row5))
 
     // test update
-    // insert row3_v2
     batchWrite(List(row3_v2), schema)
-    testSelect(dbtableInSpark, Seq(row1, row2, row3_v2, row4, row5))
-  }
-
-  test("Test upsert to table with primary key (primary key is handle)") {
-    //TODO
+    testSelect(dbtableInSpark, Seq(row2, row3_v2, row4, row5))
   }
 
   override def afterAll(): Unit =

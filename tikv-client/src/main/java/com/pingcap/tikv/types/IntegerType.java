@@ -129,10 +129,6 @@ public class IntegerType extends DataType {
     return tp == MySQLType.TypeLonglong && isUnsigned();
   }
 
-  public boolean isUnsigned() {
-    return (flag & UnsignedFlag) > 0;
-  }
-
   /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value, long version) {
