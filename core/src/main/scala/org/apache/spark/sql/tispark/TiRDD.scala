@@ -54,6 +54,8 @@ class TiRDD(val dagRequest: TiDAGRequest,
   // cache invalidation call back function
   // used for driver to update PD cache
   private val callBackFunc = CacheInvalidateListener.getInstance()
+  private val typeVersion = sparkSession.conf.
+    get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toInt
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
     dagRequest.resolve()
@@ -66,7 +68,6 @@ class TiRDD(val dagRequest: TiDAGRequest,
     private[this] val tasks = tiPartition.tasks
 
     private val iterator = snapshot.tableRead(dagRequest, tasks)
-    private val finalTypes = rowTransformer.getTypes.toList
 
     override def hasNext: Boolean = {
       // Kill the task in case it has been marked as killed. This logic is from
@@ -79,7 +80,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
     }
 
     override def next(): Row =
-      TiUtil.toSparkRow(iterator.next, rowTransformer, tiConf.getTypeSystemVersion)
+      TiUtil.toSparkRow(iterator.next, rowTransformer, typeVersion)
   }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =

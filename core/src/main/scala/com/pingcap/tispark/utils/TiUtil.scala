@@ -263,9 +263,6 @@ object TiUtil {
       tiConf.setWriteAllowSparkSQL(conf.get(TiConfigConst.WRITE_ALLOW_SPARK_SQL).toBoolean)
     }
 
-    if (conf.contains(TiConfigConst.TYPE_SYSTEM_VERSION)) {
-      tiConf.setTypeSystemVersion(conf.get(TiConfigConst.TYPE_SYSTEM_VERSION).toInt)
-    }
     tiConf
   }
 

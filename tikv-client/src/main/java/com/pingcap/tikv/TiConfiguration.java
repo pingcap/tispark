@@ -46,7 +46,6 @@ public class TiConfiguration implements Serializable {
   private static final String DEF_DB_PREFIX = "";
   private static final boolean DEF_WRITE_ENABLE = false;
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
-  private static final int TYPE_SYSTEM_VERSION = 0;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -234,13 +233,5 @@ public class TiConfiguration implements Serializable {
 
   public void setWriteAllowSparkSQL(boolean writeAllowSparkSQL) {
     this.writeAllowSparkSQL = writeAllowSparkSQL;
-  }
-
-  public int getTypeSystemVersion() {
-    return typeSystemVersion;
-  }
-
-  public void setTypeSystemVersion(int version) {
-    this.typeSystemVersion = version;
   }
 }

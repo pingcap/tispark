@@ -180,6 +180,8 @@ case class RegionTaskExec(child: SparkPlan,
   private val downgradeThreshold =
     sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
   private lazy val project = UnsafeProjection.create(schema)
+  private val typeVersion = sparkSession.conf.
+    get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toInt
 
   type TiRow = com.pingcap.tikv.row.Row
 
@@ -412,7 +414,7 @@ case class RegionTaskExec(child: SparkPlan,
           numOutputRows += 1
           // Unsafe row projection
           project.initialize(index)
-          val sparkRow = TiUtil.toSparkRow(rowIterator.next, rowTransformer, tiConf.getTypeSystemVersion)
+          val sparkRow = TiUtil.toSparkRow(rowIterator.next, rowTransformer, typeVersion)
           // Need to convert spark row to internal row for Catalyst
           project(rowToInternalRow(sparkRow, outputTypes, converters))
         }
