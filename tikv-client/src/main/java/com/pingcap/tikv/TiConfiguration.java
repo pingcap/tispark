@@ -63,8 +63,6 @@ public class TiConfiguration implements Serializable {
   private int maxRequestKeyRangeSize = MAX_REQUEST_KEY_RANGE_SIZE;
   private boolean showRowId = DEF_SHOW_ROWID;
   private String dbPrefix = DEF_DB_PREFIX;
-  private int typeSystemVersion = TYPE_SYSTEM_VERSION;
-
   private boolean writeAllowSparkSQL = DEF_WRITE_ALLOW_SPARK_SQL;
   private boolean writeEnable = DEF_WRITE_ENABLE;
 
