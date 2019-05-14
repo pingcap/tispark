@@ -31,35 +31,36 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
     jdbcUpdate(
       s"insert into $dbtableInJDBC values(null, 'Hello')"
     )
-    batchWrite(List(row2, row3))
+    // insert row2 row3
+    batchWrite(List(row2, row3), schema)
     testSelect(dbtableInSpark, Seq(row1, row2, row3))
 
     // insert row4
-    batchWrite(List(row4))
+    batchWrite(List(row4), schema)
     testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
 
     // deduplicate=false
     // a table does not need to check duplicate if it does not have a primary key
-    batchWrite(List(row5, row5), Some(Map("deduplicate" -> "false")))
+    batchWrite(List(row5, row5), schema, Some(Map("deduplicate" -> "false")))
     testSelect(dbtableInSpark, Seq(row1, row2, row3, row4, row5, row5))
 
     // test update
     // insert row3_v2
-    batchWrite(List(row3_v2))
+    batchWrite(List(row3_v2), schema)
     testSelect(dbtableInSpark, Seq(row1, row2, row3, row3_v2, row4, row5, row5))
   }
 
   test("Test upsert to table with primary key (primary key is handle)") {
     tidbStmt.execute(s"drop table if exists $dbtableInJDBC")
     tidbStmt.execute(s"create table $dbtableInJDBC(i int primary key, s varchar(128))")
-    batchWrite(List(row2, row3, row4))
+    batchWrite(List(row2, row3, row4), schema)
     testSelect(dbtableInSpark, Seq(row2, row3, row4))
 
     // deduplicate=false
     // insert row5 row5
     {
       val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row5, row5))
+        batchWrite(List(row5, row5), schema)
       }
       assert(
         caught.getMessage
@@ -69,36 +70,12 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
 
     // deduplicate=true
     // insert row5 row5
-    batchWrite(List(row5, row5), Some(Map("deduplicate" -> "true")))
+    batchWrite(List(row5, row5), schema, Some(Map("deduplicate" -> "true")))
     testSelect(dbtableInSpark, Seq(row2, row3, row4, row5))
 
     // test update
-    batchWrite(List(row3_v2))
+    batchWrite(List(row3_v2), schema)
     testSelect(dbtableInSpark, Seq(row2, row3_v2, row4, row5))
-  }
-
-  private def batchWrite(rows: List[Row], param: Option[Map[String, String]] = None): Unit = {
-    val data: RDD[Row] = sc.makeRDD(rows)
-    val df = sqlContext.createDataFrame(data, schema)
-    df.write
-      .format("tidb")
-      .options(tidbOptions ++ param.getOrElse(Map.empty))
-      .option("database", databaseInSpark)
-      .option("table", testTable)
-      .mode("append")
-      .save()
-  }
-
-  private def testSelect(dbtable: String, expectedAnswer: Seq[Row]): Unit = {
-    val df = sqlContext.read
-      .format("tidb")
-      .options(tidbOptions)
-      .option("database", databaseInSpark)
-      .option("table", testTable)
-      .load()
-      .sort("i")
-
-    checkAnswer(df, expectedAnswer)
   }
 
   override def afterAll(): Unit =

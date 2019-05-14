@@ -47,6 +47,8 @@ public class TiTableInfo implements Serializable {
   private final long columnLength;
   private final TiPartitionInfo partitionInfo;
 
+  private final TiColumnInfo primaryKeyColumn;
+
   @JsonCreator
   public TiTableInfo(
       @JsonProperty("id") long id,
@@ -78,6 +80,15 @@ public class TiTableInfo implements Serializable {
     this.maxIndexId = maxIndexId;
     this.oldSchemaId = oldSchemaId;
     this.partitionInfo = partitionInfo;
+
+    TiColumnInfo primaryKey = null;
+    for (TiColumnInfo col : this.columns) {
+      if (col.isPrimaryKey()) {
+        primaryKey = col;
+        break;
+      }
+    }
+    primaryKeyColumn = primaryKey;
   }
 
   public TiColumnInfo getAutoIncrementColInfo() {
@@ -169,6 +180,10 @@ public class TiTableInfo implements Serializable {
         .addAllColumns(
             getColumns().stream().map(col -> col.toProto(this)).collect(Collectors.toList()))
         .build();
+  }
+
+  public boolean hasPrimaryKey() {
+    return primaryKeyColumn != null;
   }
 
   // Only Integer Column will be a PK column

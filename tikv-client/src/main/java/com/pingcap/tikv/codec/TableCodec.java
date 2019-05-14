@@ -16,7 +16,7 @@ public class TableCodec {
   /**
    * Row layout: colID1, value1, colID2, value2, .....
    *
-   * @param colTypes
+   * @param columnInfos
    * @param colIDs
    * @param values
    * @return
@@ -35,9 +35,9 @@ public class TableCodec {
     CodecDataOutput cdo = new CodecDataOutput();
 
     for (int i = 0; i < columnInfos.size(); i++) {
-      IntegerCodec.writeLongFully(cdo, colIDs.get(i), false);
       TiColumnInfo col = columnInfos.get(i);
       if (!col.canSkip(isPkHandle)) {
+        IntegerCodec.writeLongFully(cdo, colIDs.get(i), false);
         col.getType().encode(cdo, EncodeType.VALUE, values[i]);
       }
     }

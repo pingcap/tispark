@@ -114,7 +114,7 @@ object TiBatchWrite {
                   options: TiDBOptions,
                   regionSplitNumber: Option[Int] = None,
                   enableRegionPreSplit: Boolean = false) {
-    // check
+    // check if write enable
     if (!tiContext.tiConf.isWriteEnable) {
       throw new TiBatchWriteException(
         "tispark batch write is disabled! set spark.tispark.write.enable to enable."
@@ -153,6 +153,9 @@ object TiBatchWrite {
       case (row, i) =>
         sparkRow2TiKVRow(tiTableInfo, i + offset, row, tiTableInfo.isPkHandle)
     }
+
+    // check unsupported
+    unsupportCheck(tiTableInfo)
 
     // deduplicate
     val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
@@ -265,6 +268,33 @@ object TiBatchWrite {
       }
     } else {
       logger.info("skipping commit secondary key")
+    }
+  }
+
+  @throws(classOf[TiBatchWriteException])
+  private def unsupportCheck(tiTableInfo: TiTableInfo): Unit = {
+    // write to table with secondary index (KEY & UNIQUE KEY)
+    for (i <- 0 until tiTableInfo.getIndices.size()) {
+      val tiIndexInfo = tiTableInfo.getIndices.get(i)
+      if (!tiIndexInfo.isPrimary) {
+        throw new TiBatchWriteException(
+          "tispark currently does not support write data table with secondary index(KEY & UNIQUE KEY)!"
+        )
+      }
+    }
+
+    // write to partition table
+    if (tiTableInfo.isPartitionEnabled) {
+      throw new TiBatchWriteException(
+        "tispark currently does not support write data to partition table!"
+      )
+    }
+
+    // table with primary key & primary key is not handle (TINYINT、SMALLINT、MEDIUMINT、INTEGER)
+    if (tiTableInfo.hasPrimaryKey && !tiTableInfo.isPkHandle) {
+      throw new TiBatchWriteException(
+        "tispark currently does not support write data to table with primary key, but type is not TINYINT、SMALLINT、MEDIUMINT、INTEGER!"
+      )
     }
   }
 
