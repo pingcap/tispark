@@ -180,8 +180,7 @@ case class RegionTaskExec(child: SparkPlan,
   private val downgradeThreshold =
     sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
   private lazy val project = UnsafeProjection.create(schema)
-  private val typeVersion = sparkSession.conf.
-    get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toInt
+  private val typeVersion = sparkSession.conf.get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toInt
 
   type TiRow = com.pingcap.tikv.row.Row
 

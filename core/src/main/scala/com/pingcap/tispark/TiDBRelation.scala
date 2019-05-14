@@ -51,7 +51,6 @@ case class TiDBRelation(session: TiSession,
   def logicalPlanToRDD(dagRequest: TiDAGRequest): TiRDD =
     new TiRDD(dagRequest, session.getConf, tableRef, session, sqlContext.sparkSession)
 
-
   def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
     val timestamp = dagRequest.getStartTs
 

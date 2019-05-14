@@ -54,8 +54,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
   // cache invalidation call back function
   // used for driver to update PD cache
   private val callBackFunc = CacheInvalidateListener.getInstance()
-  private val typeVersion = sparkSession.conf.
-    get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toInt
+  private val typeVersion = sparkSession.conf.get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toInt
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
     dagRequest.resolve()
