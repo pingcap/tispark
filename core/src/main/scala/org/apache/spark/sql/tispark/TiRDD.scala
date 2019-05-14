@@ -23,6 +23,7 @@ import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
+import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
@@ -67,17 +68,6 @@ class TiRDD(val dagRequest: TiDAGRequest,
     private val iterator = snapshot.tableRead(dagRequest, tasks)
     private val finalTypes = rowTransformer.getTypes.toList
 
-    def toSparkRow(row: TiRow): Row = {
-      val transRow = rowTransformer.transform(row)
-      val rowArray = new Array[Any](finalTypes.size)
-
-      for (i <- 0 until transRow.fieldCount) {
-        rowArray(i) = transRow.get(i, finalTypes(i))
-      }
-
-      Row.fromSeq(rowArray)
-    }
-
     override def hasNext: Boolean = {
       // Kill the task in case it has been marked as killed. This logic is from
       // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
@@ -88,7 +78,8 @@ class TiRDD(val dagRequest: TiDAGRequest,
       iterator.hasNext
     }
 
-    override def next(): Row = toSparkRow(iterator.next)
+    override def next(): Row =
+      TiUtil.toSparkRow(iterator.next, rowTransformer, tiConf.getTypeSystemVersion)
   }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =

@@ -22,15 +22,18 @@ import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.expression.ExpressionBlacklist
 import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
+import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
+import com.pingcap.tispark.TiBatchWrite.TiRow
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
 import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
-import org.apache.spark.{sql, SparkConf}
+import org.apache.spark.{SparkConf, sql}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import scala.collection.JavaConversions._
@@ -111,6 +114,20 @@ object TiUtil {
                               blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
+  def toSparkRow(row: TiRow, rowTransformer: RowTransformer, version: Int): Row = {
+    val transRow = rowTransformer.transform(row)
+    val finalTypes = rowTransformer.getTypes.toList
+    val rowArray = new Array[Any](finalTypes.size)
+    for (i <- 0 until transRow.fieldCount) {
+      var row = transRow.get(i, finalTypes(i))
+      if (version > 0 && finalTypes(i).getType == MySQLType.TypeLong) {
+        row = row.asInstanceOf[Long].intValue().asInstanceOf[Object]
+      }
+      rowArray(i) = row
+    }
+
+    Row.fromSeq(rowArray)
+  }
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType, version: Int): DataType =
     tp match {

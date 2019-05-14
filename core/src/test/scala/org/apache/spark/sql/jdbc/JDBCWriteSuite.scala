@@ -9,11 +9,14 @@ import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType}
 class JDBCWriteSuite extends BaseTiSparkSuite {
   test("write into tidb using jdbc") {
     setCurrentDatabase("tispark_test")
+    tidbStmt.execute("drop table if exists t1")
+    tidbStmt.execute("drop table if exists t3")
     tidbStmt.execute("create table t1 (c1 int)")
     tidbStmt.execute("create table t3 (c1 int, d1 double)")
     tidbStmt.execute("insert into t1 values(2)")
     refreshConnections()
 
+    spark.conf.set(TiConfigConst.TYPE_SYSTEM_VERSION, 1)
     val jdbcDf = spark.sql("select round(c1) from t3_j")
     val df1 = spark.sql("select * from t1")
     val rows = df1.collect()
@@ -30,7 +33,6 @@ class JDBCWriteSuite extends BaseTiSparkSuite {
       value.anyNull
       i += 1
     }
-    spark.conf.set(TiConfigConst.TYPE_SYSTEM_VERSION, 1)
 
     val df2 = spark.sql("select * from t1")
     assert(df2.schema.fields(0).dataType == IntegerType)
