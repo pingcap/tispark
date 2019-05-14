@@ -38,7 +38,6 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
     testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
   }
 
-  // need this patch: https://github.com/pingcap/tispark/pull/692
   test("Write to table with one column (primary key int type)") {
     val row1 = Row(1)
     val row2 = Row(2)
