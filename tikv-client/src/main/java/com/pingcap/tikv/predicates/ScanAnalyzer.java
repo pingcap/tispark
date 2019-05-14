@@ -50,7 +50,7 @@ import org.tikv.kvproto.Coprocessor.KeyRange;
 public class ScanAnalyzer {
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;
   private static final double TABLE_SCAN_COST_FACTOR = 1.0;
-  private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
+  private static final double DOUBLE_READ_COST_FACTOR = 0.1; // TABLE_SCAN_COST_FACTOR * 3;
 
   public static class ScanPlan {
     ScanPlan(

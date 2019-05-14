@@ -61,38 +61,6 @@ public class KeyRangeUtils {
   }
 
   /**
-   * Merge potential discrete ranges into one large range.
-   *
-   * @param ranges the range list to merge
-   * @return the minimal range which encloses all ranges in this range list.
-   */
-  public static List<KeyRange> mergeRanges(List<KeyRange> ranges) {
-    if (ranges == null || ranges.isEmpty() || ranges.size() == 1) {
-      return ranges;
-    }
-
-    KeyRange first = ranges.get(0);
-    Key lowMin = toRawKey(first.getStart(), true);
-    Key upperMax = toRawKey(first.getEnd(), false);
-
-    for (int i = 1; i < ranges.size(); i++) {
-      KeyRange keyRange = ranges.get(i);
-      Key start = toRawKey(keyRange.getStart(), true);
-      Key end = toRawKey(keyRange.getEnd(), false);
-      if (start.compareTo(lowMin) < 0) {
-        lowMin = start;
-      }
-      if (end.compareTo(upperMax) > 0) {
-        upperMax = end;
-      }
-    }
-
-    ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
-    rangeBuilder.add(makeCoprocRange(lowMin.toByteString(), upperMax.toByteString()));
-    return rangeBuilder.build();
-  }
-
-  /**
    * Merge SORTED potential discrete ranges into one large range.
    *
    * @param ranges the sorted range list to merge
@@ -109,7 +77,7 @@ public class KeyRangeUtils {
    * @param splitNum upper bound of number of ranges to merge into
    * @return the minimal range which encloses all ranges in this range list.
    */
-  public static List<KeyRange> mergeSortedRanges(List<KeyRange> ranges, int splitNum) {
+  private static List<KeyRange> mergeSortedRanges(List<KeyRange> ranges, int splitNum) {
     if (splitNum <= 0) {
       throw new RuntimeException("Cannot split ranges by non-positive integer");
     }

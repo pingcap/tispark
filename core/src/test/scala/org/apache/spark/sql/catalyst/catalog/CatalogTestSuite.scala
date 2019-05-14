@@ -151,7 +151,7 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     )
     tidbStmt.execute("CREATE TABLE `test2` (`id` int, `c1` int, `c2` int)")
     tidbStmt.execute("CREATE TABLE `test3` (`id` int, `c1` int, `c2` int, KEY idx(c2))")
-    tidbStmt.execute("CREATE TABLE `test4` (`id` int primary key, `c1` int, `c2` int, KEY idx(c2))")
+    tidbStmt.execute("CREATE TABLE `test4` (`id` int primary key, `c1` int, `c2` int, KEY idx(c1))")
     tidbStmt.execute(
       "insert into test1 values(1, 2, 3), /*(1, 3, 2), */(2, 2, 4), (3, 1, 3), (4, 2, 1)"
     )
@@ -293,10 +293,23 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     df2.show
     df3.explain
     df3.show
+    spark.sql("select * from testLogic2").show
+    spark.sql("insert overwrite table testLogic2 select * from testTempView3 where t1_id <= 3")
+    spark.sql("select * from testLogic2").show
+    spark.sql("select * from testLogic3").show
+    spark.sql("insert overwrite table testLogic3 select * from testTempView2 where t1_id <= 3")
+    spark.sql("select * from testLogic3").show
   }
 
   override def beforeAll(): Unit = {
     enableHive = true
     super.beforeAll()
+  }
+
+  override def afterAll(): Unit = {
+    super.afterAll()
+    spark.sql("drop table if exists testLogic1")
+    spark.sql("drop table if exists testLogic2")
+    spark.sql("drop table if exists testLogic3")
   }
 }

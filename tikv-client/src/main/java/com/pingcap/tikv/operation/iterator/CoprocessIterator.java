@@ -71,12 +71,13 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
    */
   public static CoprocessIterator<Row> getRowIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
+    TiDAGRequest dagRequest = req.copy();
     return new DAGIterator<Row>(
-        req.buildTableScan(),
+        dagRequest.buildTableScan(),
         regionTasks,
         session,
-        SchemaInfer.create(req),
-        req.getPushDownType()) {
+        SchemaInfer.create(dagRequest),
+        dagRequest.getPushDownType()) {
       @Override
       public Row next() {
         if (hasNext()) {

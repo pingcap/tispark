@@ -16,7 +16,7 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType

@@ -19,11 +19,9 @@ package org.apache.spark.sql.test
 
 import java.io.File
 import java.sql.{Connection, DriverManager, Statement}
-import java.util
 import java.util.{Locale, Properties, TimeZone}
 
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
-import com.pingcap.tispark.TiDBOptions
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._

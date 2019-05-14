@@ -44,4 +44,5 @@ object TiConfigConst {
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"
+  val TYPE_SYSTEM_VERSION: String = "spark.tispark.type_system_version"
 }

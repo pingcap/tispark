@@ -270,6 +270,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
       "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx where tp_int > 200 order by tp_varchar limit 10"
     )
     explainTestAndCollect(
+      "select count(*) from full_data_type_table_idx where tp_int > 200 limit 10"
+    )
+    explainTestAndCollect(
       "select max(tp_double) from full_data_type_table_idx where tp_int > 200 group by tp_bigint limit 10"
     )
   }
