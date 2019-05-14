@@ -131,6 +131,8 @@ object TiBatchWrite {
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
     // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
+    // TODO: 1. fill column with its default value if it is null
+    //       2. refactor the writing process
 
     // when primary is handle, it does not require allocate ids for each row.
     val offset = if (!tiTableInfo.isPkHandle) {
@@ -412,6 +414,7 @@ object TiBatchWrite {
           val colName = sparkRow.schema(i).name
           // check do we need fill auto increment column
           if (colName.equals(autoincrementCol.getName)) {
+            // only update auto increment column when the value is null
             if (data == null) {
               data = handleId
             }
