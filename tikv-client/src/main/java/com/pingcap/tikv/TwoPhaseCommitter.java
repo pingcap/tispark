@@ -288,6 +288,10 @@ public class TwoPhaseCommitter {
         Kvrpcpb.Mutation mutation =
             Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
         mutations.put(key, mutation);
+      } else {
+        Kvrpcpb.Mutation mutation =
+            Kvrpcpb.Mutation.newBuilder().setKey(key).setOp(Kvrpcpb.Op.Put).build();
+        mutations.put(key, mutation);
       }
     }
 

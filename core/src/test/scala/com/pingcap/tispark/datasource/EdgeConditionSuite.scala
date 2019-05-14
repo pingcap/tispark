@@ -87,26 +87,26 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
   }
 
   test("Write to table with one column (no primary key)") {
-    val row1 = Row("Hello")
-    val row2 = Row("TiDB")
+    val row1 = Row(null)
+    val row2 = Row("Hello")
     val row3 = Row("Spark")
-    val row4 = Row(null)
+    val row4 = Row("TiDB")
 
     val schema = StructType(
       List(
-        StructField("s", StringType)
+        StructField("i", StringType)
       )
     )
 
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(s varchar(128))"
+      s"create table $dbtableInJDBC(i varchar(128))"
     )
     jdbcUpdate(
       s"insert into $dbtableInJDBC values('Hello')"
     )
-    batchWrite(List(row2, row3, row4), schema)
+    batchWrite(List(row1, row3, row4), schema)
     testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
   }
 
