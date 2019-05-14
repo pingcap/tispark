@@ -78,7 +78,7 @@ public final class RowIDAllocator {
       // for unsigned long, -1L is max value.
       long tmpStep = UnsignedLongs.min(-1L - newStart, step);
       if (tmpStep != step) {
-        throw new IllegalArgumentException("cannot allocate ids for this write");
+        throw new TiBatchWriteException("cannot allocate ids for this write");
       }
       newEnd = catalog.getAutoTableId(dbId, tableId, tmpStep);
       // when compare unsigned long, the min value is largest value.

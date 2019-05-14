@@ -12,14 +12,15 @@ class RowIDAllocatorSuite extends BaseTiSparkSuite {
       """.stripMargin)
     refreshConnections()
     val dbName = "tidb_tispark_test"
-    val tableName = "t"
+    val tableName = "rowid_allocator"
     val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =
       ti.tiSession.getCatalog.getTable(dbName, tableName)
     // corner case allocate unsigned long's max value.
     val allocator =
-      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog, true, -1L)
-    assert(allocator.getEnd - allocator.getStart == -1L)
+      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog,
+        true, -2L)
+    assert(allocator.getEnd - allocator.getStart == -2L)
   }
 
   test("test signed allocator") {
@@ -34,9 +35,20 @@ class RowIDAllocatorSuite extends BaseTiSparkSuite {
     val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =
       ti.tiSession.getCatalog.getTable(dbName, tableName)
-    val allocator =
-      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog, false, 1000)
+    var allocator =
+      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog,
+        false, 1000)
     assert(allocator.getEnd - allocator.getStart == 1000)
+
+
+    allocator = RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog,
+      false, 10000)
+    assert(allocator.getEnd - allocator.getStart == 10000)
+  }
+
+  override def afterAll() = {
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("drop table if exists rowid_allocator")
   }
 
 }
