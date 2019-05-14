@@ -12,6 +12,10 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
             container("java") {
                 stage('Checkout') {
                     dir("/home/jenkins/git/tispark") {
+                        sh """
+                        archive_url=http://172.16.30.25/download/builds/pingcap/tiflash/cache/tiflash-m2-cache_latest.tar.gz
+                        if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
+                        """
                         if (sh(returnStatus: true, script: '[ -d .git ] && [ -f Makefile ] && git rev-parse --git-dir > /dev/null 2>&1') != 0) {
                             deleteDir()
                         }
