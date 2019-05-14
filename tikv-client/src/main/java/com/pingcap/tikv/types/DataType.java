@@ -313,6 +313,10 @@ public abstract class DataType implements Serializable {
     return (flag & NumFlag) > 0;
   }
 
+  public boolean isUnsigned() {
+    return (flag & UnsignedFlag) > 0;
+  }
+
   public static boolean isLengthSpecified(long length) {
     return length == UNSPECIFIED_LEN;
   }

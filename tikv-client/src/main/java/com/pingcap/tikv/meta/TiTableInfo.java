@@ -47,6 +47,8 @@ public class TiTableInfo implements Serializable {
   private final long columnLength;
   private final TiPartitionInfo partitionInfo;
 
+  private final TiColumnInfo primaryKeyColumn;
+
   @JsonCreator
   public TiTableInfo(
       @JsonProperty("id") long id,
@@ -78,6 +80,31 @@ public class TiTableInfo implements Serializable {
     this.maxIndexId = maxIndexId;
     this.oldSchemaId = oldSchemaId;
     this.partitionInfo = partitionInfo;
+
+    TiColumnInfo primaryKey = null;
+    for (TiColumnInfo col : this.columns) {
+      if (col.isPrimaryKey()) {
+        primaryKey = col;
+        break;
+      }
+    }
+    primaryKeyColumn = primaryKey;
+  }
+
+  public TiColumnInfo getAutoIncrementColInfo() {
+    for (int i = 0; i < columns.size(); i++) {
+      TiColumnInfo col = columns.get(i);
+      if (col.getType().isAutoIncrement()) {
+        return col;
+      }
+    }
+    return null;
+  }
+
+  public boolean isAutoIncColUnsigned() {
+    TiColumnInfo col = getAutoIncrementColInfo();
+    if (col == null) return false;
+    return col.getType().isUnsigned();
   }
 
   public long getId() {
@@ -155,9 +182,13 @@ public class TiTableInfo implements Serializable {
         .build();
   }
 
+  public boolean hasPrimaryKey() {
+    return primaryKeyColumn != null;
+  }
+
   // Only Integer Column will be a PK column
   // and there exists only one PK column
-  TiColumnInfo getPrimaryKeyColumn() {
+  public TiColumnInfo getPrimaryKeyColumn() {
     if (isPkHandle()) {
       for (TiColumnInfo col : getColumns()) {
         if (col.isPrimaryKey()) {
@@ -184,33 +215,6 @@ public class TiTableInfo implements Serializable {
             col.getComment(),
             col.getVersion())
         .copyWithoutPrimaryKey();
-  }
-
-  public TiTableInfo copyTableWithOutRowId() {
-    boolean isRowID = getColumn(columns.size() - 1).getName().equals("_tidb_rowid");
-    if (isRowID) {
-      ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
-      for (int i = 0; i < columns.size() - 2; i++) {
-        TiColumnInfo col = columns.get(i);
-        newColumns.add(copyColumn(col));
-      }
-      return new TiTableInfo(
-          getId(),
-          CIStr.newCIStr(getName()),
-          getCharset(),
-          getCollate(),
-          true,
-          newColumns.build(),
-          getIndices(),
-          getComment(),
-          getAutoIncId(),
-          getMaxColumnId(),
-          getMaxIndexId(),
-          getOldSchemaId(),
-          partitionInfo);
-    } else {
-      return this;
-    }
   }
 
   public TiTableInfo copyTableWithRowId() {

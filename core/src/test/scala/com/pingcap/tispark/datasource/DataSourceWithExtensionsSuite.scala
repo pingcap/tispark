@@ -44,18 +44,6 @@ class DataSourceWithExtensionsSuite
     testFilter("i IN ( 2, 3)", Seq(row2, row3))
   }
 
-  private def testFilter(filter: String, expectedAnswer: Seq[Row]): Unit = {
-    val loadedDf = sqlContext.read
-      .format("tidb")
-      .option("database", databaseInSpark)
-      .option("table", testTable)
-      .options(tidbOptions)
-      .load()
-      .filter(filter)
-      .sort("i")
-    checkAnswer(loadedDf, expectedAnswer)
-  }
-
   override def afterAll(): Unit =
     try {
       jdbcUpdate(s"drop table if exists $dbtableInJDBC")

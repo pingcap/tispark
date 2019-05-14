@@ -28,7 +28,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
   }
 
   test("Test Select") {
-    testSelect(Seq(row1, row2))
+    testSelectSQL(Seq(row1, row2))
   }
 
   test("Test Insert Into") {
@@ -51,7 +51,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
                       |insert into $tmpTable values (3, 'Spark'), (4, null)
       """.stripMargin)
 
-    testSelect(Seq(row1, row2, row3, row4))
+    testSelectSQL(Seq(row1, row2, row3, row4))
   }
 
   test("Test Insert Overwrite") {
@@ -82,7 +82,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
     )
   }
 
-  private def testSelect(expectedAnswer: Seq[Row]): Unit = {
+  private def testSelectSQL(expectedAnswer: Seq[Row]): Unit = {
     val tmpName = s"testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpName
