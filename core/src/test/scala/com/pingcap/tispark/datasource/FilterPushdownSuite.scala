@@ -5,7 +5,6 @@ import org.apache.spark.sql.Row
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
 class FilterPushdownSuite extends BaseDataSourceSuite("test_datasource_filter_pushdown") {
-  // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -14,7 +13,7 @@ class FilterPushdownSuite extends BaseDataSourceSuite("test_datasource_filter_pu
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
     jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtableInJDBC values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
@@ -45,7 +44,7 @@ class FilterPushdownSuite extends BaseDataSourceSuite("test_datasource_filter_pu
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+      dropTable()
     } finally {
       super.afterAll()
     }

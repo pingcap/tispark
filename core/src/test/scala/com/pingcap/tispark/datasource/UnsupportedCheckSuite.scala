@@ -25,7 +25,7 @@ class UnsupportedCheckSuite extends BaseDataSourceSuite("test_datasource_unsuppo
     super.beforeAll()
 
   test("Test write to table with secondary index: UNIQUE") {
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
 
     jdbcUpdate(
       s"create table $dbtableInJDBC(i int, s varchar(128), UNIQUE (i))"
@@ -50,7 +50,7 @@ class UnsupportedCheckSuite extends BaseDataSourceSuite("test_datasource_unsuppo
   }
 
   test("Test write to table with secondary index: KEY") {
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
 
     jdbcUpdate(
       s"create table $dbtableInJDBC(i int, s varchar(128), KEY (s))"
@@ -76,7 +76,7 @@ class UnsupportedCheckSuite extends BaseDataSourceSuite("test_datasource_unsuppo
 
   test("Test write to partition table") {
     enablePartitionForTiDB()
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
 
     jdbcUpdate(
       s"create table $dbtableInJDBC(i int, s varchar(128)) partition by range(i) (partition p0 values less than maxvalue)"
@@ -101,7 +101,7 @@ class UnsupportedCheckSuite extends BaseDataSourceSuite("test_datasource_unsuppo
   test(
     "Test write to table with primary key & primary key is not handle (TINYINT、SMALLINT、MEDIUMINT、INTEGER)"
   ) {
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
 
     jdbcUpdate(
       s"create table $dbtableInJDBC(i int, s varchar(128), primary key(s))"
@@ -127,7 +127,7 @@ class UnsupportedCheckSuite extends BaseDataSourceSuite("test_datasource_unsuppo
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+      dropTable()
     } finally {
       super.afterAll()
     }

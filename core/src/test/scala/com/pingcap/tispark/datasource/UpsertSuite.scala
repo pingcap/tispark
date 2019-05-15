@@ -1,14 +1,12 @@
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
 class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
-  // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -25,8 +23,7 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
   )
 
   test("Test upsert to table without primary key") {
-    // insert row2 row3
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
     jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtableInJDBC values(null, 'Hello')"
@@ -51,8 +48,8 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
   }
 
   test("Test upsert to table with primary key (primary key is handle)") {
-    tidbStmt.execute(s"drop table if exists $dbtableInJDBC")
-    tidbStmt.execute(s"create table $dbtableInJDBC(i int primary key, s varchar(128))")
+    dropTable()
+    jdbcUpdate(s"create table $dbtableInJDBC(i int primary key, s varchar(128))")
     batchWrite(List(row2, row3, row4), schema)
     testSelect(dbtableInSpark, Seq(row2, row3, row4))
 
@@ -80,7 +77,7 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+      dropTable()
     } finally {
       super.afterAll()
     }
