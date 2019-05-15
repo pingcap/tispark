@@ -155,7 +155,7 @@ object TiBatchWrite {
     }
 
     // check check check
-    unsupportCheck(tiTableInfo)
+    checkUnsupport(tiTableInfo)
     checkColumnNumbers(tiTableInfo, rdd)
     checkNotNull(tiTableInfo, rdd)
 
@@ -274,7 +274,7 @@ object TiBatchWrite {
   }
 
   @throws(classOf[TiBatchWriteException])
-  private def unsupportCheck(tiTableInfo: TiTableInfo): Unit = {
+  private def checkUnsupport(tiTableInfo: TiTableInfo): Unit = {
     // write to table with secondary index (KEY & UNIQUE KEY)
     for (i <- 0 until tiTableInfo.getIndices.size()) {
       val tiIndexInfo = tiTableInfo.getIndices.get(i)
