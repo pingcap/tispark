@@ -108,7 +108,6 @@ class ErrorSuite extends BaseDataSourceSuite("test_datasource_error") {
       val caught = intercept[TiBatchWriteException] {
         batchWrite(List(row1, row2), schema)
       }
-      println(caught.getMessage)
       assert(
         caught.getMessage
           .equals(
