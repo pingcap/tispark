@@ -26,8 +26,9 @@ object TiDBWriter {
             )
         }
       } else {
-        TiDBUtils.createTable(conn, df, options, tiContext)
-        TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
+        throw new TiBatchWriteException(s"table ${options.dbtable} does not exists!")
+        // TiDBUtils.createTable(conn, df, options, tiContext)
+        // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
       }
     } finally {
       conn.close()

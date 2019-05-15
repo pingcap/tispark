@@ -21,7 +21,7 @@ import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
-import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.{DataType, IntegerType}
@@ -154,8 +154,10 @@ object TiBatchWrite {
         sparkRow2TiKVRow(tiTableInfo, i + offset, row, tiTableInfo.isPkHandle)
     }
 
-    // check unsupported
+    // check check check
     unsupportCheck(tiTableInfo)
+    checkColumnNumbers(tiTableInfo, rdd)
+    checkNotNull(tiTableInfo, rdd)
 
     // deduplicate
     val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
@@ -295,6 +297,56 @@ object TiBatchWrite {
       throw new TiBatchWriteException(
         "tispark currently does not support write data to table with primary key, but type is not TINYINT、SMALLINT、MEDIUMINT、INTEGER!"
       )
+    }
+  }
+
+  private def checkColumnNumbers(tiTableInfo: TiTableInfo, rdd: RDD[SparkRow]): Unit = {
+    // TODO: use DataFrame
+    val colSize = rdd.take(1)(0).size
+    val tableColSize = tiTableInfo.getColumns.size()
+
+    if (!tiTableInfo.hasAutoIncrementColInfo && colSize != tableColSize) {
+      throw new TiBatchWriteException(
+        s"table without auto increment column, but data col size $colSize != table column size $tableColSize"
+      )
+    }
+
+    if (tiTableInfo.hasAutoIncrementColInfo && (colSize != tableColSize || colSize != tableColSize - 1)) {
+      throw new TiBatchWriteException(
+        s"table with auto increment column, but data col size $colSize != table column size $tableColSize or table column size - 1 ${tableColSize - 1} "
+      )
+    }
+  }
+
+  private def checkNotNull(tiTableInfo: TiTableInfo, rdd: RDD[SparkRow]): Unit = {
+    // TODO: what if rdd col size = table col size - 1 (auto increase col)
+    // we should do col mapping
+    var notNullColumnIndex: List[Int] = Nil
+
+    for (i <- 0 until tiTableInfo.getColumns.size) {
+      val tiColumnInfo = tiTableInfo.getColumn(i)
+      if (tiColumnInfo.getType.isNotNull) {
+        notNullColumnIndex = i :: notNullColumnIndex
+      }
+    }
+
+    if (notNullColumnIndex.nonEmpty) {
+      val nullRowCount = rdd
+        .flatMap { row =>
+          var result: Option[SparkRow] = None
+          notNullColumnIndex.foreach { col =>
+            if (row.isNullAt(col)) {
+              result = Some(row)
+            }
+          }
+          result
+        }
+        .count()
+      if (nullRowCount > 0) {
+        throw new TiBatchWriteException(
+          s"Insert null value to not null column! $nullRowCount rows contain illegal null values!"
+        )
+      }
     }
   }
 
@@ -492,7 +544,9 @@ object TiBatchWrite {
 
     // an hidden row _tidb_rowid may exist
     if (colSize > (tableColSize + 1)) {
-      throw new TiBatchWriteException(s"col size $colSize > table column size $tableColSize + 1")
+      throw new TiBatchWriteException(
+        s"data col size $colSize > table column size $tableColSize + 1"
+      )
     }
     val hasHiddenRow = colSize == tableColSize + 1
 
