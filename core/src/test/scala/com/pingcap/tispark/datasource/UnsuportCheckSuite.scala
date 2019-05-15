@@ -8,7 +8,6 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
 class UnsuportCheckSuite extends BaseDataSourceSuite("test_datasource_unsupport_check") {
-  // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -25,7 +24,7 @@ class UnsuportCheckSuite extends BaseDataSourceSuite("test_datasource_unsupport_
     super.beforeAll()
 
   test("Test write to table with secondary index: UNIQUE") {
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
 
     jdbcUpdate(
       s"create table $dbtableInJDBC(i int, s varchar(128), UNIQUE (i))"
@@ -50,7 +49,7 @@ class UnsuportCheckSuite extends BaseDataSourceSuite("test_datasource_unsupport_
   }
 
   test("Test write to table with secondary index: KEY") {
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
 
     jdbcUpdate(
       s"create table $dbtableInJDBC(i int, s varchar(128), KEY (s))"
@@ -75,7 +74,7 @@ class UnsuportCheckSuite extends BaseDataSourceSuite("test_datasource_unsupport_
   }
 
   test("Test write to partition table") {
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
 
     jdbcUpdate(
       s"create table $dbtableInJDBC(i int, s varchar(128)) partition by range(i) (partition p0 values less than maxvalue)"
@@ -100,7 +99,7 @@ class UnsuportCheckSuite extends BaseDataSourceSuite("test_datasource_unsupport_
   test(
     "Test write to table with primary key & primary key is not handle (TINYINT、SMALLINT、MEDIUMINT、INTEGER)"
   ) {
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
 
     jdbcUpdate(
       s"create table $dbtableInJDBC(i int, s varchar(128), primary key(s))"
@@ -126,7 +125,7 @@ class UnsuportCheckSuite extends BaseDataSourceSuite("test_datasource_unsupport_
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+      dropTable()
     } finally {
       super.afterAll()
     }

@@ -38,6 +38,8 @@ class BaseDataSourceSuite(val testTable: String,
   protected def jdbcUpdate(query: String): Unit =
     tidbStmt.executeUpdate(query)
 
+  protected def dropTable(): Unit = jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+
   protected def batchWrite(rows: List[Row],
                            schema: StructType,
                            param: Option[Map[String, String]] = None): Unit = {
@@ -52,14 +54,16 @@ class BaseDataSourceSuite(val testTable: String,
       .save()
   }
 
-  protected def testSelect(dbtable: String, expectedAnswer: Seq[Row]): Unit = {
+  protected def testSelect(dbtable: String,
+                           expectedAnswer: Seq[Row],
+                           sortCol: String = "i"): Unit = {
     val df = sqlContext.read
       .format("tidb")
       .options(tidbOptions)
       .option("database", databaseInSpark)
       .option("table", testTable)
       .load()
-      .sort("i")
+      .sort(sortCol)
 
     checkAnswer(df, expectedAnswer)
   }
