@@ -51,7 +51,8 @@ public class Codec {
     }
 
     /**
-     * Encoding a long value to byte buffer with type flag at the beginning
+     * Encoding a long value to byte buffer with type flag at the beginning If we are encoding a
+     * key, the comparable is must true; otherwise the comparable is false.
      *
      * @param cdo For outputting data in bytes array
      * @param lVal The data to encode

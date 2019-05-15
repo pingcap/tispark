@@ -17,13 +17,14 @@ package com.pingcap.tispark
 
 import java.util
 
+import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
-import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
-import com.pingcap.tikv.types.DataType
+import com.pingcap.tikv.types.{DataType, IntegerType}
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
 import com.pingcap.tispark.utils.TiUtil
@@ -113,7 +114,7 @@ object TiBatchWrite {
                   options: TiDBOptions,
                   regionSplitNumber: Option[Int] = None,
                   enableRegionPreSplit: Boolean = false) {
-    // check
+    // check if write enable
     if (!tiContext.tiConf.isWriteEnable) {
       throw new TiBatchWriteException(
         "tispark batch write is disabled! set spark.tispark.write.enable to enable."
@@ -125,17 +126,43 @@ object TiBatchWrite {
     val tiSession = tiContext.tiSession
     val kvClient = tiSession.createTxnClient()
     val tableRef = TiTableReference(options.database, options.table)
-    val (tiTableInfo, colDataTypes, colIds) = getTableInfo(tableRef, tiContext)
+    val (tiDBInfo, tiTableInfo) = getDBAndTableInfo(tableRef, tiContext)
+    // TODO: lock table
+    // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
-    // spark row to tikv row
-    val tiKVRowRDD = rdd.map(sparkRow2TiKVRow)
+    // TODO: if this write is update, TiDB reuses row_id. We need adopt this behavior.
+    // TODO: 1. fill column with its default value if it is null
+    //       2. refactor the writing process
+
+    // when primary is handle, it does not require allocate ids for each row.
+    val offset = if (!tiTableInfo.isPkHandle) {
+      val rowIDAllocator = RowIDAllocator.create(
+        tiDBInfo.getId,
+        tiTableInfo.getId,
+        tiSession.getCatalog,
+        tiTableInfo.isAutoIncColUnsigned,
+        rdd.count
+      )
+      rowIDAllocator.getStart
+    } else {
+      0
+    }
+
+    // i + start will be handle id if primary key is not handle
+    val tiKVRowRDD = rdd.zipWithIndex.map {
+      case (row, i) =>
+        sparkRow2TiKVRow(tiTableInfo, i + offset, row, tiTableInfo.isPkHandle)
+    }
+
+    // check unsupported
+    unsupportCheck(tiTableInfo)
 
     // deduplicate
     val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
 
-    // encode tirow
+    // encode TiROW
     val encodedTiRowRDD = deduplicateRDD.map {
-      case (key, tiRow) => (key, tiRow, encodeTiRow(tiRow, colDataTypes, colIds))
+      case (key, tiRow) => (key, tiRow, encodeTiRow(tiRow, tiTableInfo))
     }
 
     // region pre-split
@@ -156,9 +183,6 @@ object TiBatchWrite {
         ).map(k => k.bytes).asJava
       )
     }
-
-    // TODO: lock table
-    // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
@@ -188,7 +212,7 @@ object TiBatchWrite {
     logger.info(s"startTS: $startTs")
 
     // driver primary pre-write
-    val ti2PCClient = new TiBatchWrite2PCClient(kvClient, startTs)
+    val ti2PCClient = new TwoPhaseCommitter(kvClient, startTs)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
@@ -197,13 +221,13 @@ object TiBatchWrite {
     finalWriteRDD.foreachPartition { iterator =>
       val tiSessionOnExecutor = new TiSession(tiConf)
       val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
-      val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
+      val ti2PCClientOnExecutor = new TwoPhaseCommitter(kvClientOnExecutor, startTs)
       val prewriteSecondaryBackoff =
         ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
 
       val pairs = iterator.map {
         case (key, row) =>
-          new TiBatchWrite2PCClient.BytePairWrapper(key.bytes, row)
+          new TwoPhaseCommitter.BytePairWrapper(key.bytes, row)
       }.asJava
 
       ti2PCClientOnExecutor
@@ -226,12 +250,12 @@ object TiBatchWrite {
       finalWriteRDD.foreachPartition { iterator =>
         val tiSessionOnExecutor = new TiSession(tiConf)
         val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
-        val ti2PCClientOnExecutor = new TiBatchWrite2PCClient(kvClientOnExecutor, startTs)
+        val ti2PCClientOnExecutor = new TwoPhaseCommitter(kvClientOnExecutor, startTs)
         val commitSecondaryBackoff =
           ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
 
         val keys = iterator.map {
-          case (key, _) => new TiBatchWrite2PCClient.ByteWrapper(key.bytes)
+          case (key, _) => new TwoPhaseCommitter.ByteWrapper(key.bytes)
         }.asJava
 
         try {
@@ -247,24 +271,46 @@ object TiBatchWrite {
     }
   }
 
+  @throws(classOf[TiBatchWriteException])
+  private def unsupportCheck(tiTableInfo: TiTableInfo): Unit = {
+    // write to table with secondary index (KEY & UNIQUE KEY)
+    for (i <- 0 until tiTableInfo.getIndices.size()) {
+      val tiIndexInfo = tiTableInfo.getIndices.get(i)
+      if (!tiIndexInfo.isPrimary) {
+        throw new TiBatchWriteException(
+          "tispark currently does not support write data table with secondary index(KEY & UNIQUE KEY)!"
+        )
+      }
+    }
+
+    // write to partition table
+    if (tiTableInfo.isPartitionEnabled) {
+      throw new TiBatchWriteException(
+        "tispark currently does not support write data to partition table!"
+      )
+    }
+
+    // table with primary key & primary key is not handle (TINYINT、SMALLINT、MEDIUMINT、INTEGER)
+    if (tiTableInfo.hasPrimaryKey && !tiTableInfo.isPkHandle) {
+      throw new TiBatchWriteException(
+        "tispark currently does not support write data to table with primary key, but type is not TINYINT、SMALLINT、MEDIUMINT、INTEGER!"
+      )
+    }
+  }
+
   @throws(classOf[NoSuchTableException])
-  private def getTableInfo(tableRef: TiTableReference,
-                           tiContext: TiContext): (TiTableInfo, Array[DataType], TLongArrayList) = {
+  private def getDBAndTableInfo(
+    tableRef: TiTableReference,
+    tiContext: TiContext
+  ): (TiDBInfo, TiTableInfo) = {
+    val tiDBInfo = tiContext.tiSession.getCatalog.getDatabase(tableRef.databaseName)
     val tiTableInfo =
       tiContext.tiSession.getCatalog.getTable(tableRef.databaseName, tableRef.tableName)
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName)
     }
-    val tableColSize = tiTableInfo.getColumns.size()
-    val dataTypes = new Array[DataType](tableColSize)
-    val ids = new TLongArrayList
 
-    for (i <- 0 until tableColSize) {
-      val tiColumnInfo = tiTableInfo.getColumn(i)
-      ids.add(tiColumnInfo.getId)
-      dataTypes.update(i, tiColumnInfo.getType)
-    }
-    (tiTableInfo, dataTypes, ids)
+    (tiDBInfo, tiTableInfo)
   }
 
   @throws(classOf[NoSuchTableException])
@@ -283,7 +329,7 @@ object TiBatchWrite {
     }
     val tableId = table.getId
 
-    val shuffledRDD = rdd
+    val shuffledRDD: RDD[(SerializableKey, Iterable[TiRow])] = rdd
       .map(row => (tiKVRow2Key(row, tableId, tiTableInfo, isUpdate = false), row))
       .groupByKey()
 
@@ -345,27 +391,20 @@ object TiBatchWrite {
     TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, table).toList
   }
 
-  private def extractHandleId(row: TiRow, tiTableInfo: TiTableInfo, isUpdate: Boolean): Long = {
+  private def extractHandleId(row: TiRow, tableInfo: TiTableInfo, isUpdate: Boolean): Long = {
     // If handle ID is changed when update, update will remove the old record first,
     // and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
-    val tblInfo = tiTableInfo.copyTableWithOutRowId()
-    val handle = if (row.fieldCount > tblInfo.getColumns.size && !isUpdate) {
+    val handle = if (row.fieldCount > tableInfo.getColumns.size && !isUpdate) {
       row.getLong(row.fieldCount - 1)
     } else {
-      val columnList = tiTableInfo.getColumns.asScala
+      val columnList = tableInfo.getColumns.asScala
       columnList.find(_.isPrimaryKey) match {
         case Some(primaryColumn) =>
-          row.getLong(primaryColumn.getOffset)
-
+          // it is a workaround. pk is handle must be a number
+          row.get(primaryColumn.getOffset, primaryColumn.getType).asInstanceOf[Number].longValue()
         case None =>
-          // TODO: auto generate a primary key if does not exists
-          // pending: https://internal.pingcap.net/jira/browse/TISPARK-70
-          try {
-            row.getLong(0)
-          } catch {
-            case _: Throwable => row.getInteger(0)
-          }
+          throw new TiBatchWriteException("should never happen")
       }
     }
     handle
@@ -379,37 +418,98 @@ object TiBatchWrite {
       RowKey.toRowKey(tableId, extractHandleId(row, tiTableInfo, isUpdate)).getBytes
     )
 
-  private def sparkRow2TiKVRow(sparkRow: SparkRow): TiRow = {
+  private def sparkRow2TiKVRow(tableInfo: TiTableInfo,
+                               handleId: Long,
+                               sparkRow: SparkRow,
+                               pkIsHandle: Boolean): TiRow = {
     val fieldCount = sparkRow.size
-    val tiRow = ObjectRowImpl.create(fieldCount)
-    for (i <- 0 until fieldCount) {
-      val data = sparkRow.get(i)
-      val sparkDataType = sparkRow.schema(i).dataType
-      val tiDataType = TiUtil.fromSparkType(sparkDataType)
-      tiRow.set(i, tiDataType, data)
+    var tiRow: TiRow = null
+    if (tableInfo.getPrimaryKeyColumn != null) {
+      if (pkIsHandle) {
+        tiRow = ObjectRowImpl.create(fieldCount)
+        for (i <- 0 until fieldCount) {
+          val data = sparkRow.get(i)
+          val sparkDataType = sparkRow.schema(i).dataType
+          val tiDataType = TiUtil.fromSparkType(sparkDataType)
+          tiRow.set(i, tiDataType, data)
+        }
+      } else if (tableInfo.getAutoIncrementColInfo != null) {
+        // when column is auto_increment, it must has a primary key
+        // its value will be filled at the beginning according tidb's logic.
+        val autoincrementCol = tableInfo.getAutoIncrementColInfo
+        tiRow = ObjectRowImpl.create(fieldCount)
+        for (i <- 0 until fieldCount) {
+          var data = sparkRow.get(i)
+          val sparkDataType = sparkRow.schema(i).dataType
+          val colName = sparkRow.schema(i).name
+          // check do we need fill auto increment column
+          if (colName.equals(autoincrementCol.getName)) {
+            // only update auto increment column when the value is null
+            if (data == null) {
+              data = handleId
+            }
+          }
+          val tiDataType = TiUtil.fromSparkType(sparkDataType)
+          tiRow.set(i, tiDataType, data)
+        }
+      } else {
+        throw new TiBatchWriteException(
+          "cannot insert on a table with primary key but it's not a handle" +
+            "or auto increment"
+        )
+      }
+    } else {
+      // table does not have primary key, we can just insert and do not need consider
+      // the constraint of primary key.
+      tiRow = ObjectRowImpl.create(fieldCount + 1)
+      for (i <- 0 until fieldCount) {
+        val data = sparkRow.get(i)
+        val sparkDataType = sparkRow.schema(i).dataType
+        val tiDataType = TiUtil.fromSparkType(sparkDataType)
+        tiRow.set(i, tiDataType, data)
+      }
+      // append _tidb_rowid at the end
+      tiRow.set(fieldCount, IntegerType.BIGINT, handleId)
     }
     tiRow
   }
 
   @throws(classOf[TiBatchWriteException])
-  private def encodeTiRow(tiRow: TiRow,
-                          colDataTypes: Array[DataType],
-                          colIDs: TLongArrayList): Array[Byte] = {
-    val colSize = tiRow.fieldCount()
-    val tableColSize = colDataTypes.length
+  private def encodeTiRow(tiRow: TiRow, tblInfo: TiTableInfo): Array[Byte] = {
+    var colSize = tiRow.fieldCount()
+    val columnInfos = tblInfo.getColumns
 
-    if (colSize != tableColSize) {
-      throw new TiBatchWriteException(s"col size $colSize != table column size $tableColSize")
+    val colDataTypes = new Array[DataType](columnInfos.size)
+    val colIds = new TLongArrayList
+
+    for (i <- 0 until columnInfos.size) {
+      val tiColumnInfo = tblInfo.getColumn(i)
+      colIds.add(tiColumnInfo.getId)
+      colDataTypes.update(i, tiColumnInfo.getType)
     }
 
+    val tableColSize = colDataTypes.length
+
+    // an hidden row _tidb_rowid may exist
+    if (colSize > (tableColSize + 1)) {
+      throw new TiBatchWriteException(s"col size $colSize > table column size $tableColSize + 1")
+    }
+    val hasHiddenRow = colSize == tableColSize + 1
+
+    // when we have an hidden row, we do not need
+    // write such column into TiKV
+    if (hasHiddenRow) {
+      colSize = colSize - 1
+    }
     // TODO: ddl state change
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-82
     val values = new Array[AnyRef](colSize)
     for (i <- 0 until colSize) {
+      // pk is handle can be skipped
       values.update(i, tiRow.get(i, colDataTypes(i)))
     }
 
-    TableCodec.encodeRow(colDataTypes, colIDs, values)
+    TableCodec.encodeRow(columnInfos, colIds, values, tblInfo.isPkHandle)
   }
 }
 

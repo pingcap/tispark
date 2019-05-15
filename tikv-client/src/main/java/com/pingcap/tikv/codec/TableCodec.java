@@ -1,6 +1,7 @@
 package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
+import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.row.DefaultRowReader;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
@@ -15,26 +16,30 @@ public class TableCodec {
   /**
    * Row layout: colID1, value1, colID2, value2, .....
    *
-   * @param colTypes
+   * @param columnInfos
    * @param colIDs
    * @param values
    * @return
    * @throws IllegalAccessException
    */
-  public static byte[] encodeRow(DataType[] colTypes, TLongArrayList colIDs, Object[] values)
+  public static byte[] encodeRow(
+      List<TiColumnInfo> columnInfos, TLongArrayList colIDs, Object[] values, boolean isPkHandle)
       throws IllegalAccessException {
-    if (colTypes.length != colIDs.size()) {
+    if (columnInfos.size() != colIDs.size()) {
       throw new IllegalAccessException(
           String.format(
               "encodeRow error: data and columnID count not " + "match %d vs %d",
-              colTypes.length, colIDs.size()));
+              columnInfos.size(), colIDs.size()));
     }
 
     CodecDataOutput cdo = new CodecDataOutput();
 
-    for (int i = 0; i < colTypes.length; i++) {
-      IntegerCodec.writeLongFully(cdo, colIDs.get(i), false);
-      colTypes[i].encode(cdo, EncodeType.VALUE, values[i]);
+    for (int i = 0; i < columnInfos.size(); i++) {
+      TiColumnInfo col = columnInfos.get(i);
+      if (!col.canSkip(isPkHandle)) {
+        IntegerCodec.writeLongFully(cdo, colIDs.get(i), false);
+        col.getType().encode(cdo, EncodeType.VALUE, values[i]);
+      }
     }
 
     // We could not set nil value into kv.
@@ -45,18 +50,18 @@ public class TableCodec {
     return cdo.toBytes();
   }
 
-  public static Object[] decodeRow(CodecDataInput cdi, DataType[] colTypes) {
+  public static Object[] decodeRow(CodecDataInput cdi, List<TiColumnInfo> cols) {
     List<DataType> newColTypes = new ArrayList<>();
-    for (DataType row1 : colTypes) {
+    for (TiColumnInfo col : cols) {
       newColTypes.add(IntegerType.BIGINT);
-      newColTypes.add(row1);
+      newColTypes.add(col.getType());
     }
     RowReader rowReader = DefaultRowReader.create(cdi);
     Row row = rowReader.readRow(newColTypes.toArray(new DataType[0]));
-    Object[] res = new Object[2 * colTypes.length];
-    for (int i = 0; i < colTypes.length; i++) {
+    Object[] res = new Object[2 * cols.size()];
+    for (int i = 0; i < cols.size(); i++) {
       res[2 * i] = row.get(2 * i, IntegerType.BIGINT);
-      res[2 * i + 1] = row.get(2 * i + 1, colTypes[i]);
+      res[2 * i + 1] = row.get(2 * i + 1, cols.get(i).getType());
     }
     return res;
   }

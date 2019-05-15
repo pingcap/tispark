@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 
-public class TiBatchWrite2PCClient {
+public class TwoPhaseCommitter {
 
   public static class ByteWrapper {
     private byte[] bytes;
@@ -104,7 +104,7 @@ public class TiBatchWrite2PCClient {
   /** unit is second */
   private static final long DEFAULT_BATCH_WRITE_LOCK_TTL = 3000;
 
-  private static final Logger LOG = LoggerFactory.getLogger(TiBatchWrite2PCClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TwoPhaseCommitter.class);
 
   private TxnKVClient kvClient;
   private RegionManager regionManager;
@@ -112,7 +112,7 @@ public class TiBatchWrite2PCClient {
   /** start timestamp of transaction which get from PD */
   private final long startTs;
 
-  public TiBatchWrite2PCClient(TxnKVClient kvClient, long startTime) {
+  public TwoPhaseCommitter(TxnKVClient kvClient, long startTime) {
     this.kvClient = kvClient;
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
@@ -284,11 +284,16 @@ public class TiBatchWrite2PCClient {
       ByteString key = keys[i];
       ByteString value = values[i];
 
+      Kvrpcpb.Mutation mutation;
       if (!value.isEmpty()) {
-        Kvrpcpb.Mutation mutation =
+        mutation =
             Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
-        mutations.put(key, mutation);
+      } else {
+        // value can be null (table with one primary key integer column, data is encoded in key)
+       mutation =
+            Kvrpcpb.Mutation.newBuilder().setKey(key).setOp(Kvrpcpb.Op.Put).build();
       }
+      mutations.put(key, mutation);
     }
 
     // groups keys by region

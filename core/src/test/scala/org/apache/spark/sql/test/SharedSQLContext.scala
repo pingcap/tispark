@@ -298,6 +298,7 @@ object SharedSQLContext extends Logging {
       }
 
       import com.pingcap.tispark.TiConfigConst._
+
       pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
 

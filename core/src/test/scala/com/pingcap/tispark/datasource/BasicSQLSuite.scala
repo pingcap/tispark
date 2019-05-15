@@ -8,8 +8,6 @@ import scala.util.Random
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
 class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
-
-  // Values used for comparison
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -20,7 +18,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+    dropTable()
     jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtableInJDBC values(null, 'Hello'), (2, 'TiDB')"
@@ -28,7 +26,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
   }
 
   test("Test Select") {
-    testSelect(Seq(row1, row2))
+    testSelectSQL(Seq(row1, row2))
   }
 
   test("Test Insert Into") {
@@ -51,7 +49,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
                       |insert into $tmpTable values (3, 'Spark'), (4, null)
       """.stripMargin)
 
-    testSelect(Seq(row1, row2, row3, row4))
+    testSelectSQL(Seq(row1, row2, row3, row4))
   }
 
   test("Test Insert Overwrite") {
@@ -82,7 +80,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
     )
   }
 
-  private def testSelect(expectedAnswer: Seq[Row]): Unit = {
+  private def testSelectSQL(expectedAnswer: Seq[Row]): Unit = {
     val tmpName = s"testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpName
@@ -103,7 +101,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
 
   override def afterAll(): Unit =
     try {
-      jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+      dropTable()
     } finally {
       super.afterAll()
     }
