@@ -132,7 +132,7 @@ object TiBatchWrite {
     if (rdd.isEmpty()) {
       return
     }
-    checkUnsupport(tiTableInfo)
+    checkUnsupported(tiTableInfo)
     checkColumnNumbers(tiTableInfo, rdd)
     checkNotNull(tiTableInfo, rdd)
 
@@ -278,7 +278,7 @@ object TiBatchWrite {
   }
 
   @throws(classOf[TiBatchWriteException])
-  private def checkUnsupport(tiTableInfo: TiTableInfo): Unit = {
+  private def checkUnsupported(tiTableInfo: TiTableInfo): Unit = {
     // write to table with secondary index (KEY & UNIQUE KEY)
     for (i <- 0 until tiTableInfo.getIndices.size()) {
       val tiIndexInfo = tiTableInfo.getIndices.get(i)
@@ -309,13 +309,13 @@ object TiBatchWrite {
     val colSize = rdd.take(1)(0).size
     val tableColSize = tiTableInfo.getColumns.size()
 
-    if (!tiTableInfo.hasAutoIncrementColInfo && colSize != tableColSize) {
+    if (!tiTableInfo.hasAutoIncrementColumn && colSize != tableColSize) {
       throw new TiBatchWriteException(
         s"table without auto increment column, but data col size $colSize != table column size $tableColSize"
       )
     }
 
-    if (tiTableInfo.hasAutoIncrementColInfo && colSize != tableColSize && colSize != tableColSize - 1) {
+    if (tiTableInfo.hasAutoIncrementColumn && colSize != tableColSize && colSize != tableColSize - 1) {
       throw new TiBatchWriteException(
         s"table with auto increment column, but data col size $colSize != table column size $tableColSize and table column size - 1 ${tableColSize - 1} "
       )

@@ -91,7 +91,7 @@ public class TiTableInfo implements Serializable {
     primaryKeyColumn = primaryKey;
   }
 
-  public boolean hasAutoIncrementColInfo() {
+  public boolean hasAutoIncrementColumn() {
     return getAutoIncrementColInfo() != null;
   }
 
