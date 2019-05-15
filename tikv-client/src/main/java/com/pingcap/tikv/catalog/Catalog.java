@@ -144,7 +144,7 @@ public class Catalog implements AutoCloseable {
         () -> {
           // Wrap this with a try catch block in case schedule update fails
           try {
-            reloadCache();
+            reloadCache(true);
           } catch (Exception e) {
             logger.warn("Reload Cache failed", e);
           }
@@ -203,7 +203,13 @@ public class Catalog implements AutoCloseable {
 
   public TiDBInfo getDatabase(String dbName) {
     Objects.requireNonNull(dbName, "dbName is null");
-    return metaCache.getDatabase(dbName);
+    TiDBInfo dbInfo = metaCache.getDatabase(dbName);
+    if (dbInfo == null) {
+      // reload cache if database does not exist
+      reloadCache(true);
+      dbInfo = metaCache.getDatabase(dbName);
+    }
+    return dbInfo;
   }
 
   public TiTableInfo getTable(String dbName, String tableName) {
@@ -218,13 +224,11 @@ public class Catalog implements AutoCloseable {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
     TiTableInfo table = metaCache.getTable(database, tableName);
-
     if (table == null) {
-      // reload cache if table not exists
-      reloadCache();
+      // reload cache if table does not exist
+      reloadCache(true);
       table = metaCache.getTable(database, tableName);
     }
-
     if (showRowId && table != null) {
       return table.copyTableWithRowId();
     } else {
