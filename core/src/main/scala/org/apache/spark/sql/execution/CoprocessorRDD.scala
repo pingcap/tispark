@@ -261,7 +261,7 @@ case class RegionTaskExec(child: SparkPlan,
         taskCount += 1
         val task = new Callable[util.Iterator[TiRow]] {
           override def call(): util.Iterator[TiRow] =
-            CoprocessIterator.getRowIterator(dagRequest.copy(), tasks, session)
+            CoprocessIterator.getRowIterator(dagRequest, tasks, session)
         }
         completionService.submit(task)
       }
