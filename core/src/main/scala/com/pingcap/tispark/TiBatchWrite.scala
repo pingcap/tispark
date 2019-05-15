@@ -127,6 +127,15 @@ object TiBatchWrite {
     val kvClient = tiSession.createTxnClient()
     val tableRef = TiTableReference(options.database, options.table)
     val (tiDBInfo, tiTableInfo) = getDBAndTableInfo(tableRef, tiContext)
+
+    // check check check
+    if (rdd.isEmpty()) {
+      return
+    }
+    checkUnsupport(tiTableInfo)
+    checkColumnNumbers(tiTableInfo, rdd)
+    checkNotNull(tiTableInfo, rdd)
+
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
@@ -153,11 +162,6 @@ object TiBatchWrite {
       case (row, i) =>
         sparkRow2TiKVRow(tiTableInfo, i + offset, row, tiTableInfo.isPkHandle)
     }
-
-    // check check check
-    checkUnsupport(tiTableInfo)
-    checkColumnNumbers(tiTableInfo, rdd)
-    checkNotNull(tiTableInfo, rdd)
 
     // deduplicate
     val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
@@ -311,9 +315,9 @@ object TiBatchWrite {
       )
     }
 
-    if (tiTableInfo.hasAutoIncrementColInfo && (colSize != tableColSize || colSize != tableColSize - 1)) {
+    if (tiTableInfo.hasAutoIncrementColInfo && colSize != tableColSize && colSize != tableColSize - 1) {
       throw new TiBatchWriteException(
-        s"table with auto increment column, but data col size $colSize != table column size $tableColSize or table column size - 1 ${tableColSize - 1} "
+        s"table with auto increment column, but data col size $colSize != table column size $tableColSize and table column size - 1 ${tableColSize - 1} "
       )
     }
   }
