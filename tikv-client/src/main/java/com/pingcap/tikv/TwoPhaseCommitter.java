@@ -284,15 +284,16 @@ public class TwoPhaseCommitter {
       ByteString key = keys[i];
       ByteString value = values[i];
 
+      Kvrpcpb.Mutation mutation;
       if (!value.isEmpty()) {
-        Kvrpcpb.Mutation mutation =
+        mutation =
             Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
-        mutations.put(key, mutation);
       } else {
-        Kvrpcpb.Mutation mutation =
+        // value can be null (table with one primary key integer column, data is encoded in key)
+       mutation =
             Kvrpcpb.Mutation.newBuilder().setKey(key).setOp(Kvrpcpb.Op.Put).build();
-        mutations.put(key, mutation);
       }
+      mutations.put(key, mutation);
     }
 
     // groups keys by region
