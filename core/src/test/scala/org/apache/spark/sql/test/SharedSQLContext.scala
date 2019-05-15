@@ -103,6 +103,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected implicit def sc: SparkContext = spark.sqlContext.sparkContext
 
+  protected def enablePartitionForTiDB(): Boolean = SharedSQLContext.enablePartitionForTiDB()
+
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     try {
@@ -175,6 +177,8 @@ object SharedSQLContext extends Logging {
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
   protected var _sparkSession: SparkSession = _
+
+  def enablePartitionForTiDB() = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 
   def refreshConnections(isHiveEnabled: Boolean): Unit = {
     stop()

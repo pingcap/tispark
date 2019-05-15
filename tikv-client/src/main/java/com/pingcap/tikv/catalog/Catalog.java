@@ -218,6 +218,13 @@ public class Catalog implements AutoCloseable {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
     TiTableInfo table = metaCache.getTable(database, tableName);
+
+    if (table == null) {
+      // reload cache if table not exists
+      reloadCache();
+      table = metaCache.getTable(database, tableName);
+    }
+
     if (showRowId && table != null) {
       return table.copyTableWithRowId();
     } else {

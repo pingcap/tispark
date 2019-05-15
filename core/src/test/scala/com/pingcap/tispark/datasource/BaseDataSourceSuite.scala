@@ -36,7 +36,7 @@ class BaseDataSourceSuite(val testTable: String,
   }
 
   protected def jdbcUpdate(query: String): Unit =
-    tidbStmt.executeUpdate(query)
+    tidbStmt.execute(query)
 
   protected def batchWrite(rows: List[Row],
                            schema: StructType,
