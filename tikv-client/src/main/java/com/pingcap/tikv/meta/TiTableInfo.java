@@ -91,6 +91,10 @@ public class TiTableInfo implements Serializable {
     primaryKeyColumn = primaryKey;
   }
 
+  public boolean hasAutoIncrementColInfo() {
+    return getAutoIncrementColInfo() != null;
+  }
+
   public TiColumnInfo getAutoIncrementColInfo() {
     for (int i = 0; i < columns.size(); i++) {
       TiColumnInfo col = columns.get(i);
