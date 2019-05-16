@@ -302,6 +302,6 @@ public class RangeSplitterTest {
     assertEquals(3, result.get(3).size());
     assertEquals(2, result.get(4).size());
     assertEquals(2, result.get(5).size());
-    assertEquals(1, result.get(6).size());
+    assertEquals(3, result.get(6).size());
   }
 }
