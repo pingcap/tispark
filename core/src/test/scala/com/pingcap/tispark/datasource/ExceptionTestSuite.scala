@@ -2,11 +2,9 @@ package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 
-// without TiExtensions
-// will not load tidb_config.properties to SparkConf
-class ErrorSuite extends BaseDataSourceSuite("test_datasource_error") {
+class ExceptionTestSuite extends BaseDataSourceSuite("test_datasource_exception_test") {
 
   override def beforeAll(): Unit =
     super.beforeAll()
@@ -47,7 +45,7 @@ class ErrorSuite extends BaseDataSourceSuite("test_datasource_error") {
 
     dropTable()
 
-    jdbcUpdate(s"create table $dbtableInJDBC(i int)")
+    jdbcUpdate(s"create table $dbtable(i int)")
 
     {
       val caught = intercept[TiBatchWriteException] {
@@ -74,7 +72,7 @@ class ErrorSuite extends BaseDataSourceSuite("test_datasource_error") {
 
     dropTable()
 
-    jdbcUpdate(s"create table $dbtableInJDBC(i int, i2 int, i3 int)")
+    jdbcUpdate(s"create table $dbtable(i int, i2 int, i3 int)")
 
     {
       val caught = intercept[TiBatchWriteException] {
@@ -102,7 +100,7 @@ class ErrorSuite extends BaseDataSourceSuite("test_datasource_error") {
 
     dropTable()
 
-    jdbcUpdate(s"create table $dbtableInJDBC(i int, i2 int NOT NULL)")
+    jdbcUpdate(s"create table $dbtable(i int, i2 int NOT NULL)")
 
     {
       val caught = intercept[TiBatchWriteException] {

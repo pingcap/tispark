@@ -24,11 +24,11 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
 
   private val tables =
     "CUSTOMER" ::
-      //"LINEITEM" no primary key, current not support
+      // "LINEITEM" has index, current not support
       // "NATION" has index, current not support
       "ORDERS" ::
       "PART" ::
-      //"PARTSUPP" no primary key, current not support
+      "PARTSUPP" ::
       "REGION" ::
       "SUPPLIER" ::
       Nil
@@ -46,6 +46,8 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
 
   test("ti batch write") {
     for (table <- tables) {
+      println(table)
+
       // select
       refreshConnections(TestTables(database, s"${batchWriteTablePrefix}_$table"))
       val df = sql(s"select * from $table")
@@ -55,7 +57,7 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
         df.rdd,
         ti,
         new TiDBOptions(
-          tidbOptions + ("database" -> s"$dbPrefix$database", "table" -> s"${batchWriteTablePrefix}_$table")
+          tidbOptions + ("database" -> s"$database", "table" -> s"${batchWriteTablePrefix}_$table")
         )
       )
 

@@ -3,8 +3,6 @@ package com.pingcap.tispark.datasource
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
 
-// without TiExtensions
-// will not load tidb_config.properties to SparkConf
 class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condition") {
 
   private val TEST_LARGE_DATA_SIZE = 102400
@@ -29,13 +27,13 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i int, primary key (i))"
+      s"create table $dbtable(i int, primary key (i))"
     )
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(1)"
+      s"insert into $dbtable values(1)"
     )
     batchWrite(List(row2, row3, row4), schema)
-    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
+    testSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Write to table with one column (primary key int type)") {
@@ -53,13 +51,13 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i int, primary key (i))"
+      s"create table $dbtable(i int, primary key (i))"
     )
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(1)"
+      s"insert into $dbtable values(1)"
     )
     batchWrite(List(row2, row3, row4), schema)
-    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
+    testSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Write to table with one column (primary key + auto increase)") {
@@ -77,13 +75,13 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i int NOT NULL AUTO_INCREMENT, primary key (i))"
+      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, primary key (i))"
     )
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(1)"
+      s"insert into $dbtable values(1)"
     )
     batchWrite(List(row2, row3, row4), schema)
-    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
+    testSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Write to table with one column (no primary key)") {
@@ -101,13 +99,13 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i varchar(128))"
+      s"create table $dbtable(i varchar(128))"
     )
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values('Hello')"
+      s"insert into $dbtable values('Hello')"
     )
     batchWrite(List(row1, row3, row4), schema)
-    testSelect(dbtableInSpark, Seq(row1, row2, row3, row4))
+    testSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Write to table with many columns") {
@@ -143,11 +141,11 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC($createTableSchemaStr)"
+      s"create table $dbtable($createTableSchemaStr)"
     )
 
     batchWrite(List(row1, row2), schema)
-    testSelect(dbtableInSpark, Seq(row1, row2), "c0")
+    testSelect(Seq(row1, row2), "c0")
   }
 
   test("Write Empty data") {
@@ -162,13 +160,13 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i int, primary key (i))"
+      s"create table $dbtable(i int, primary key (i))"
     )
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(1)"
+      s"insert into $dbtable values(1)"
     )
     batchWrite(List(), schema)
-    testSelect(dbtableInSpark, Seq(row1))
+    testSelect(Seq(row1))
   }
 
   test("Write large amount of data") {
@@ -187,10 +185,10 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i int, primary key (i))"
+      s"create table $dbtable(i int, primary key (i))"
     )
     batchWrite(list, schema)
-    testSelect(dbtableInSpark, list)
+    testSelect(list)
 
     var list2: List[Row] = Nil
     for (i <- TEST_LARGE_DATA_SIZE until TEST_LARGE_DATA_SIZE * 2) {
@@ -199,7 +197,7 @@ class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condi
     list2 = list2.reverse
 
     batchWrite(list2, schema)
-    testSelect(dbtableInSpark, list ::: list2)
+    testSelect(list ::: list2)
   }
 
   override def afterAll(): Unit =
