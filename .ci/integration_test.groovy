@@ -119,13 +119,14 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     """
                 }
             }
-    
+
             def run_tikvclient_test = { chunk_suffix ->
                 dir("go/src/github.com/pingcap/tispark") {
                     sh """
                         mvn verify -am -pl tikv-client
                     """
-                    sh 'curl -s https://codecov.io/bash | bash -s'
+                    unstash "CODECOV_TOKEN"
+                    sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'
                 }
             }
     
