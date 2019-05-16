@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
-class UnsuportCheckSuite extends BaseDataSourceSuite("test_datasource_unsupport_check") {
+class CheckUnsupportedSuite extends BaseDataSourceSuite("test_datasource_check_unsupported") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
