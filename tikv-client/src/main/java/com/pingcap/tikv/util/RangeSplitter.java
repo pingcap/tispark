@@ -21,11 +21,7 @@ import static com.pingcap.tikv.util.KeyRangeUtils.makeCoprocRange;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
-import com.pingcap.tikv.key.RowKey.DecodeResult;
-import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
@@ -127,51 +123,27 @@ public class RangeSplitter {
     TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
     handles.sort();
 
-    int startPos = 0;
-    DecodeResult decodeResult = new DecodeResult();
-    while (startPos < handles.size()) {
-      long curHandle = handles.get(startPos);
+    byte[] endKey = null;
+    TiRegion curRegion = null;
+    TLongArrayList handlesInCurRegion = new TLongArrayList();
+    for (int i = 0; i < handles.size(); i++) {
+      long curHandle = handles.get(i);
       RowKey key = RowKey.toRowKey(tableId, curHandle);
-      Pair<TiRegion, Metapb.Store> regionStorePair =
-          regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes()));
-      byte[] endKey = regionStorePair.first.getEndKey().toByteArray();
-      RowKey.tryDecodeRowKey(tableId, endKey, decodeResult);
-      if (decodeResult.status == Status.MIN) {
-        throw new TiExpressionException("EndKey is less than current rowKey");
-      } else if (decodeResult.status == Status.MAX || decodeResult.status == Status.UNKNOWN_INF) {
-        result.put(
-            regionStorePair.first.getId(), createHandleList(startPos, handles.size(), handles));
-        break;
+      if (endKey == null || (endKey.length != 0 && FastByteComparisons.compareTo(key.getBytes(), endKey) >= 0)) {
+        if (curRegion != null) {
+          result.put(curRegion.getId(), handlesInCurRegion);
+          handlesInCurRegion = new TLongArrayList();
+        }
+        Pair<TiRegion, Metapb.Store> regionStorePair =
+            regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes()));
+        curRegion = regionStorePair.first;
+        endKey = curRegion.getEndKey().toByteArray();
       }
-
-      // Region range is a close-open range
-      // If region end key match exactly or slightly less than a handle,
-      // that handle should be excluded from current region
-      // If region end key is greater than the handle, that handle should be included
-      long regionEndHandle = decodeResult.handle;
-      int pos = handles.binarySearch(regionEndHandle, startPos, handles.size());
-
-      if (pos < 0) {
-        // not found in handles, pos is the next greater pos
-        // [startPos, pos) all included
-        pos = -(pos + 1);
-      } else if (decodeResult.status == Status.GREATER) {
-        // found handle and then further consider decode status
-        // End key decode to a value v: regionEndHandle < v < regionEndHandle + 1
-        // handle at pos included
-        pos++;
-      }
-      result.put(regionStorePair.first.getId(), createHandleList(startPos, pos, handles));
-      // pos equals to start leads to an dead loop
-      // startPos and its handle is used for searching region in PD.
-      // The returning close-open range should at least include startPos's handle
-      // so only if PD error and startPos is not included in current region then startPos == pos
-      if (startPos >= pos) {
-        throw new TiExpressionException("searchKey is not included in region returned by PD");
-      }
-      startPos = pos;
+      handlesInCurRegion.add(curHandle);
     }
-
+    if (!handlesInCurRegion.isEmpty() && curRegion != null) {
+      result.put(curRegion.getId(), handlesInCurRegion);
+    }
     return result;
   }
 
@@ -303,67 +275,6 @@ public class RangeSplitter {
       resultBuilder.add(
           new RegionTask(regionStorePair.first, regionStorePair.second, entry.getValue()));
     }
-    return resultBuilder.build();
-  }
-
-  /**
-   * Split SORTED key ranges with same region id into corresponding region tasks
-   *
-   * @param keyRanges List of key ranges
-   * @param splitNum upper bound of number of ranges to merge into
-   * @return List of RegionTask, each task corresponds to a different region.
-   */
-  public List<RegionTask> splitSortedRangeInRegion(List<KeyRange> keyRanges, int splitNum) {
-
-    List<KeyRange> mergedKeyRanges = KeyRangeUtils.mergeSortedRanges(keyRanges, splitNum);
-
-    if (mergedKeyRanges == null || mergedKeyRanges.size() == 0) {
-      return ImmutableList.of();
-    }
-
-    if (mergedKeyRanges.size() > splitNum) {
-      throw new RuntimeException("Sorted ranges were merged into more key ranges than splitNum");
-    }
-
-    int i = 0;
-    KeyRange range = mergedKeyRanges.get(i++);
-    Pair<TiRegion, Metapb.Store> baseRegionStorePair =
-        regionManager.getRegionStorePairByKey(range.getStart());
-    TiRegion region = baseRegionStorePair.first;
-    Key regionEndKey = toRawKey(region.getEndKey());
-    long regionId = region.getId();
-    ImmutableList.Builder<RegionTask> resultBuilder = ImmutableList.builder();
-    ImmutableList.Builder<KeyRange> ranges = ImmutableList.builder();
-
-    while (true) {
-      Pair<TiRegion, Metapb.Store> startKeyRegionStorePair =
-          regionManager.getRegionStorePairByKey(range.getStart());
-
-      if (startKeyRegionStorePair == null) {
-        throw new NullPointerException(
-            "fail to get region/store pair by key " + formatByteString(range.getStart()));
-      }
-      if (startKeyRegionStorePair.first.getId() != regionId) {
-        throw new RuntimeException("Something went wrong: key range not in current region");
-      }
-      // both key range is close-opened
-      // initial range inside PD is guaranteed to be -INF to +INF
-      // Both keys are at right hand side and then always not -INF
-      if (toRawKey(range.getEnd()).compareTo(regionEndKey) > 0) {
-        throw new RuntimeException("Something went wrong: key range not in current region");
-      }
-      ranges.add(range);
-      if (i >= mergedKeyRanges.size()) {
-        break;
-      }
-      range = mergedKeyRanges.get(i++);
-    }
-
-    // since all ranges are guaranteed to be in same region,
-    // current range is covered by region
-    resultBuilder.add(
-        new RegionTask(baseRegionStorePair.first, baseRegionStorePair.second, ranges.build()));
-
     return resultBuilder.build();
   }
 }

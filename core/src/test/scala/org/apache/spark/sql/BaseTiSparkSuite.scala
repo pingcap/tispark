@@ -190,7 +190,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   }
 
   protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
-    assert(execDBTSAndJudge(str, skipped, checkLimit))
+    runTest(str, skipped = skipped, skipJDBC = true, checkLimit = checkLimit)
 
   private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
     compSqlResult(sql, querySpark(sql), queryTiDB(sql), checkLimit)
@@ -204,20 +204,6 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
                                          result: List[Any],
                                          checkLimit: Boolean = true): Unit =
     assert(querySpark(sql).exists(x => compSqlResult(sql, List(x), List(result), checkLimit)))
-
-  protected def execDBTSAndJudge(str: String,
-                                 skipped: Boolean = false,
-                                 checkLimit: Boolean = true): Boolean =
-    try {
-      if (skipped) {
-        logger.warn(s"Test is skipped. [With Spark SQL: $str]")
-        true
-      } else {
-        compSparkWithTiDB(str, checkLimit)
-      }
-    } catch {
-      case e: Throwable => fail(e)
-    }
 
   protected def explainSpark(str: String, skipped: Boolean = false): Unit =
     try {
