@@ -38,6 +38,7 @@ object TiBatchWritePressureTest {
     // init
     val start = System.currentTimeMillis()
     val sparkConf = new SparkConf()
+      .setIfMissing("spark.tispark.write.enable", "true")
       .setIfMissing("spark.master", "local[*]")
       .setIfMissing("spark.app.name", getClass.getName)
       .setIfMissing("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")

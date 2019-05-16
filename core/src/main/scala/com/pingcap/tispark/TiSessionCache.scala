@@ -17,17 +17,20 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 
+import scala.collection.mutable
+
 object TiSessionCache {
-  private var sessionCached: TiSession = null
+  private val sessionCachedMap = mutable.Map[String, TiSession]()
 
   // Since we create session as singleton now, configuration change will not
   // reflect change
   def getSession(conf: TiConfiguration): TiSession = this.synchronized {
+    val pdfAddrs = conf.getPdAddrsString
+    var sessionCached = sessionCachedMap.getOrElse(pdfAddrs, null)
     if (sessionCached == null) {
       sessionCached = TiSession.create(conf)
-      sessionCached
-    } else {
-      sessionCached
+      sessionCachedMap.put(pdfAddrs, sessionCached)
     }
+    sessionCached
   }
 }

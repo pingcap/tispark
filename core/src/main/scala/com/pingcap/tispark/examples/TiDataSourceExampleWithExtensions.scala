@@ -24,6 +24,8 @@ import org.apache.spark.sql.{SQLContext, SparkSession}
 object TiDataSourceExampleWithExtensions {
   def main(args: Array[String]): Unit = {
     val sparkConf = new SparkConf()
+      .setIfMissing("spark.tispark.write.enable", "true")
+      .setIfMissing("spark.tispark.write.allow_spark_sql", "true")
       .setIfMissing("spark.master", "local[*]")
       .setIfMissing("spark.app.name", getClass.getName)
       .setIfMissing("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")

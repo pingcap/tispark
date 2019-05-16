@@ -120,6 +120,10 @@ public class TiConfiguration implements Serializable {
     return pdAddrs;
   }
 
+  public String getPdAddrsString() {
+    return pdAddrs.toString();
+  }
+
   public int getScanBatchSize() {
     return DEF_SCAN_BATCH_SIZE;
   }

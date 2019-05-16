@@ -25,6 +25,8 @@ object TiDataSourceExample {
 
   def main(args: Array[String]): Unit = {
     val sparkConf = new SparkConf()
+      .setIfMissing("spark.tispark.write.enable", "true")
+      .setIfMissing("spark.tispark.write.allow_spark_sql", "true")
       .setIfMissing("spark.master", "local[*]")
       .setIfMissing("spark.app.name", getClass.getName)
 
@@ -108,7 +110,7 @@ object TiDataSourceExample {
     val df = readUsingDataSourceAPI(sqlContext)
 
     // Append
-    // if target_table_append does not exist, it will be created automatically
+    // target_table_append should exists in tidb
     df.write
       .format("tidb")
       .options(tidbOptions)
