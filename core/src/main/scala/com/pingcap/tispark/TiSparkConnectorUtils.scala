@@ -14,7 +14,7 @@ object TiSparkConnectorUtils extends Logging {
    * Check Spark version, if Spark version matches SUPPORT_SPARK_VERSION enable PushDown,
    * otherwise disable it.
    */
-  private val SUPPORT_SPARK_VERSION = "2.3" :: Nil
+  private val SUPPORT_SPARK_VERSION = "2.3" :: "2.4" :: Nil
 
   def checkVersionAndEnablePushdown(session: SparkSession, tiContext: TiContext): Boolean = {
     val tiExtensionsEnabled = TiExtensions.enabled()

@@ -96,7 +96,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       // should be an existing database in hive/meta_store
       try {
         spark.sql(s"use `$dbName`")
-        logger.warn(s"using database $dbName which does not belong to TiDB")
+        logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
       } catch {
         case e: NoSuchDatabaseException => fail(e)
       }
