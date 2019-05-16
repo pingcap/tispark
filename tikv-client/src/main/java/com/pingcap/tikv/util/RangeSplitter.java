@@ -30,10 +30,14 @@ import gnu.trove.map.hash.TLongObjectHashMap;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
+import org.tikv.kvproto.Metapb.Region;
 
 public class RangeSplitter {
   public static class RegionTask implements Serializable {
@@ -75,6 +79,25 @@ public class RangeSplitter {
       return host;
     }
 
+    @Override
+    public boolean equals(Object another) {
+      if(!(another instanceof RegionTask)) return false;
+      RegionTask regionTask = (RegionTask) another;
+      return regionTask.host.equals(this.host)
+          && regionTask.ranges.equals(this.ranges)
+          && regionTask.region.equals(this.region)
+          && regionTask.store.equals(this.store);
+    }
+
+    @Override
+    public int hashCode() {
+      int hash = 7;
+      hash = 31 * hash * this.region.hashCode();
+      hash = 31 * hash * this.store.hashCode();
+      hash = 31 * hash * this.ranges.hashCode();
+      hash = 31 * hash * this.store.hashCode();
+      return hash;
+    }
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
@@ -156,11 +179,11 @@ public class RangeSplitter {
   }
 
   public List<RegionTask> splitAndSortHandlesByRegion(List<Long> ids, TLongArrayList handles) {
-    List<RegionTask> regionTasks = new ArrayList<>();
+    Set<RegionTask> regionTasks = new HashSet<>();
     for (Long id : ids) {
       regionTasks.addAll(splitAndSortHandlesByRegion(id, handles));
     }
-    return regionTasks;
+    return new ArrayList<>(regionTasks);
   }
 
   /**

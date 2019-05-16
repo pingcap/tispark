@@ -184,6 +184,27 @@ public class TiRegion implements Serializable {
   }
 
   @Override
+  public boolean equals(final Object another) {
+    if(!(another instanceof TiRegion)) return false;
+    TiRegion anotherRegion = ((TiRegion) another);
+    return anotherRegion.meta.equals(this.meta)
+        && anotherRegion.peer.equals(this.peer)
+        && anotherRegion.commandPri.equals(this.commandPri)
+        && anotherRegion.isolationLevel.equals(this.isolationLevel);
+
+  }
+
+  @Override
+  public int hashCode() {
+    int hash = 7;
+    hash = 31 * hash * meta.hashCode();
+    hash = 31 * hash * peer.hashCode();
+    hash = 31 * hash * commandPri.hashCode();
+    hash = 31 * hash * isolationLevel.hashCode();
+    return hash;
+  }
+
+  @Override
   public String toString() {
     return String.format(
         "{Region[%d] ConfVer[%d] Version[%d] Store[%d] KeyRange[%s]:[%s]}",

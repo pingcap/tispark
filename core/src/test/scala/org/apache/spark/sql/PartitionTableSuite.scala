@@ -45,10 +45,11 @@ class PartitionTableSuite extends BaseTiSparkSuite {
   }
 
   // FIXME: https://github.com/pingcap/tispark/issues/701
-  ignore("index scan on partition table") {
+  test("index scan on partition table") {
     enablePartitionForTiDB()
+    tidbStmt.execute("drop table if exists p_t")
     tidbStmt.execute(
-      "CREATE TABLE `p_t` (   `id` int(11) DEFAULT NULL, `y` date DEFAULT NULL,   index `idx_y`(`y`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin PARTITION BY RANGE ( id ) (   PARTITION p0 VALUES LESS THAN (2),   PARTITION p1 VALUES LESS THAN (4),   PARTITION p2 VALUES LESS THAN (6) );"
+      "CREATE TABLE `p_t` (`id` int(11) DEFAULT NULL, `y` date DEFAULT NULL,   index `idx_y`(`y`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin PARTITION BY RANGE ( id ) (   PARTITION p0 VALUES LESS THAN (2),   PARTITION p1 VALUES LESS THAN (4),   PARTITION p2 VALUES LESS THAN (6) );"
     )
     tidbStmt.execute("insert into `p_t` values(1, '1995-10-10')")
     tidbStmt.execute("insert into `p_t` values(2, '1996-10-10')")
