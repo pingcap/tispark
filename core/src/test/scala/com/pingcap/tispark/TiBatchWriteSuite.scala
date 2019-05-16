@@ -54,7 +54,7 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
 
       // batch write
       TiBatchWrite.writeToTiDB(
-        df.rdd,
+        df,
         ti,
         new TiDBOptions(
           tidbOptions + ("database" -> s"$database", "table" -> s"${batchWriteTablePrefix}_$table")
@@ -84,7 +84,7 @@ class TiBatchWriteSuite extends BaseTiSparkSuite {
     // batch write
     intercept[NoSuchTableException] {
       TiBatchWrite.writeToTiDB(
-        df.rdd,
+        df,
         ti,
         new TiDBOptions(
           tidbOptions + ("database" -> s"$dbPrefix$database", "table" -> s"${batchWriteTablePrefix}_TABLE_NOT_EXISTS")

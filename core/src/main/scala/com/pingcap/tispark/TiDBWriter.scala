@@ -17,7 +17,7 @@ object TiDBWriter {
       if (tableExists) {
         saveMode match {
           case SaveMode.Append =>
-            TiBatchWrite.writeToTiDB(df.rdd, tiContext, options)
+            TiBatchWrite.writeToTiDB(df, tiContext, options)
 
           case _ =>
             throw new TiBatchWriteException(
