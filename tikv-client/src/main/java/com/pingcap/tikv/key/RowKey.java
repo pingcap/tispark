@@ -17,14 +17,9 @@ package com.pingcap.tikv.key;
 
 import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
 
-import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiExpressionException;
-import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
-import com.pingcap.tikv.util.FastByteComparisons;
-import java.util.Objects;
 
 public class RowKey extends Key {
   private static final byte[] REC_PREFIX_SEP = new byte[] {'_', 'r'};
@@ -132,45 +127,5 @@ public class RowKey extends Key {
     }
 
     public Status status;
-  }
-
-  public static void tryDecodeRowKey(long tableId, byte[] rowKey, DecodeResult outResult) {
-    Objects.requireNonNull(rowKey, "rowKey cannot be null");
-    if (rowKey.length == 0) {
-      outResult.status = Status.UNKNOWN_INF;
-      return;
-    }
-    CodecDataOutput cdo = new CodecDataOutput();
-    encodePrefix(cdo, tableId);
-    byte[] tablePrefix = cdo.toBytes();
-
-    int res =
-        FastByteComparisons.compareTo(
-            tablePrefix,
-            0,
-            tablePrefix.length,
-            rowKey,
-            0,
-            Math.min(rowKey.length, tablePrefix.length));
-
-    if (res > 0) {
-      outResult.status = Status.MIN;
-      return;
-    }
-    if (res < 0) {
-      outResult.status = Status.MAX;
-      return;
-    }
-
-    CodecDataInput cdi = new CodecDataInput(rowKey);
-    cdi.skipBytes(tablePrefix.length);
-    if (cdi.available() == 8) {
-      outResult.status = Status.EQUAL;
-    } else if (cdi.available() < 8) {
-      outResult.status = Status.LESS;
-    } else if (cdi.available() > 8) {
-      outResult.status = Status.GREATER;
-    }
-    outResult.handle = IntegerCodec.readPartialLong(cdi);
   }
 }
