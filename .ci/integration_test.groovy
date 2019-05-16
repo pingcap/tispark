@@ -87,10 +87,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     dir("go/src/github.com/pingcap/tispark") {
                         deleteDir()
                         sh """
-                        archive_url=http://172.16.30.25/download/builds/pingcap/tiflash/cache/tiflash-m2-cache_latest.tar.gz
-                        if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
-                        """
-                        sh """
                         cp -R /home/jenkins/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
                         find core/src -name '*Suite*' > test
@@ -115,6 +111,10 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     print run_chunks
                     def mvnStr = get_mvn_str(run_chunks)
                     sh """
+                        archive_url=http://172.16.30.25/download/builds/pingcap/tiflash/cache/tiflash-m2-cache_latest.tar.gz
+                        if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
+                    """
+                    sh """
                         mvn  test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
                     """
                 }
@@ -122,6 +122,10 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
 
             def run_tikvclient_test = { chunk_suffix ->
                 dir("go/src/github.com/pingcap/tispark") {
+                    sh """
+                        archive_url=http://172.16.30.25/download/builds/pingcap/tiflash/cache/tiflash-m2-cache_latest.tar.gz
+                        if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
+                    """
                     sh """
                         mvn verify -am -pl tikv-client
                     """
