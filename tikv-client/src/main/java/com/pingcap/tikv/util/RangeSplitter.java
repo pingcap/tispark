@@ -129,7 +129,7 @@ public class RangeSplitter {
     for (int i = 0; i < handles.size(); i++) {
       long curHandle = handles.get(i);
       RowKey key = RowKey.toRowKey(tableId, curHandle);
-      if (endKey == null || FastByteComparisons.compareTo(key.getBytes(), endKey) >= 0) {
+      if (endKey == null || (endKey.length != 0 && FastByteComparisons.compareTo(key.getBytes(), endKey) >= 0)) {
         if (curRegion != null) {
           result.put(curRegion.getId(), handlesInCurRegion);
           handlesInCurRegion = new TLongArrayList();
