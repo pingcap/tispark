@@ -177,7 +177,8 @@ case class RegionTaskExec(child: SparkPlan,
   )
 
   private val downgradeThreshold = 1000000000
-  // FIXME: enable downgrade sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
+  // FIXME: https://github.com/pingcap/tispark/issues/731
+  // enable downgrade sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
   private lazy val project = UnsafeProjection.create(schema)
 
   type TiRow = com.pingcap.tikv.row.Row
