@@ -15,31 +15,6 @@ object TiDBUtils {
   private val TIDB_DRIVER_CLASS = "com.mysql.jdbc.Driver"
 
   /**
-   * Creates a table with a given schema.
-   */
-  def createTable(conn: Connection,
-                  df: DataFrame,
-                  options: TiDBOptions,
-                  tiContext: TiContext): Unit = {
-    val strSchema = JdbcUtils.schemaString(df, options.url, options.createTableColumnTypes)
-    val createTableOptions = options.createTableOptions
-    // Create the table if the table does not exist.
-    // To allow certain options to append when create a new table, which can be
-    // table_options or partition_options.
-    // E.g., "CREATE TABLE t (name string) ENGINE=InnoDB DEFAULT CHARSET=utf8"
-    val sql = s"CREATE TABLE ${options.dbtable} ($strSchema) $createTableOptions"
-    val statement = conn.createStatement
-    try {
-      statement.executeUpdate(sql)
-    } finally {
-      statement.close()
-    }
-
-    // reload all meta
-    tiContext.meta.reloadAllMeta()
-  }
-
-  /**
    * Returns true if the table already exists in the TiDB.
    */
   def tableExists(conn: Connection, options: TiDBOptions): Boolean = {
@@ -53,16 +28,6 @@ object TiDBUtils {
       }
     }.isSuccess
   }
-
-  /**
-   * Save DataFrame to TiDB
-   */
-  def saveTable(tiContext: TiContext,
-                df: DataFrame,
-                tableSchema: Option[StructType],
-                options: TiDBOptions): Unit =
-    // TODO: use table schema
-    TiBatchWrite.writeToTiDB(df.rdd, tiContext, options)
 
   /**
    * Returns a factory for creating connections to the given TiDB URL.
@@ -88,57 +53,4 @@ object TiDBUtils {
         driver.connect(options.url, new Properties())
       }
   }
-
-  /**
-   * Truncates a table from TiDB without side effects.
-   */
-  def truncateTable(conn: Connection, options: TiDBOptions, tiContext: TiContext): Unit = {
-    val sql = s"TRUNCATE TABLE ${options.dbtable}"
-    val statement = conn.createStatement
-    try {
-      statement.executeUpdate(sql)
-    } finally {
-      statement.close()
-    }
-
-    // reload all meta
-    tiContext.meta.reloadAllMeta()
-  }
-
-  /**
-   * Returns the schema if the table already exists in TiDB.
-   */
-  def getSchemaOption(conn: Connection, options: TiDBOptions): Option[StructType] = {
-    val dialect = JdbcDialects.get(options.url)
-    try {
-      val statement = conn.prepareStatement(dialect.getSchemaQuery(options.dbtable))
-      try {
-        Some(JdbcUtils.getSchema(statement.executeQuery(), dialect))
-      } catch {
-        case _: SQLException => None
-      } finally {
-        statement.close()
-      }
-    } catch {
-      case _: SQLException => None
-    }
-  }
-
-  /**
-   * Drops a table from TiDB.
-   */
-  def dropTable(conn: Connection, options: TiDBOptions, tiContext: TiContext): Unit = {
-    val statement = conn.createStatement
-    try {
-      statement.executeUpdate(s"DROP TABLE ${options.dbtable}")
-    } finally {
-      statement.close()
-    }
-
-    // reload all meta
-    tiContext.meta.reloadAllMeta()
-  }
-
-  def isCascadingTruncateTable(url: String): Option[Boolean] =
-    JdbcDialects.get(url).isCascadingTruncateTable()
 }

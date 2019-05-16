@@ -43,7 +43,7 @@ class RowIDAllocatorSuite extends BaseTiSparkSuite {
     assert(allocator.getEnd - allocator.getStart == 10000)
   }
 
-  override def afterAll() =
+  override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists t")
       tidbStmt.execute("drop table if exists rowid_allocator")

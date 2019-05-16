@@ -41,10 +41,11 @@ class TiDBDataSource
 
     val options = new TiDBOptions(parameters)
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
-    val tableRef = TiTableReference(options.database, options.table)
     TiSparkConnectorUtils.checkVersionAndEnablePushdown(sqlContext.sparkSession, tiContext)
     val ts = tiContext.tiSession.createTxnClient().getTimestamp
-    TiDBRelation(tiContext.tiSession, tableRef, tiContext.meta, ts, Some(options))(sqlContext)
+    TiDBRelation(tiContext.tiSession, options.tiTableRef, tiContext.meta, ts, Some(options))(
+      sqlContext
+    )
   }
 
   /**

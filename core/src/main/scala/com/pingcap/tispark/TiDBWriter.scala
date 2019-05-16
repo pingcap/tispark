@@ -17,8 +17,7 @@ object TiDBWriter {
       if (tableExists) {
         saveMode match {
           case SaveMode.Append =>
-            val tableSchema = TiDBUtils.getSchemaOption(conn, options)
-            TiDBUtils.saveTable(tiContext, df, tableSchema, options)
+            TiBatchWrite.writeToTiDB(df.rdd, tiContext, options)
 
           case _ =>
             throw new TiBatchWriteException(

@@ -19,6 +19,7 @@ import com.pingcap.tikv.pd.PDUtils;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -77,6 +78,7 @@ public class TiConfiguration implements Serializable {
   private static List<URI> strToURI(String addressStr) {
     Objects.requireNonNull(addressStr);
     String[] addrs = addressStr.split(",");
+    Arrays.sort(addrs);
     return PDUtils.addrsToUrls(addrs);
   }
 
@@ -118,6 +120,10 @@ public class TiConfiguration implements Serializable {
 
   public List<URI> getPdAddrs() {
     return pdAddrs;
+  }
+
+  public String getPdAddrsString() {
+    return pdAddrs.toString();
   }
 
   public int getScanBatchSize() {

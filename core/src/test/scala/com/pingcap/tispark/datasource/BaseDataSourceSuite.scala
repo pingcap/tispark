@@ -9,19 +9,17 @@ import org.apache.spark.sql.{QueryTest, Row}
 
 // Tow modes:
 // 1. without TiExtensions:
-// set isTidbConfigPropertiesInjectedToSparkEnabled = true
+// set isTidbConfigPropertiesInjectedToSparkEnabled = false
 // will not load tidb_config.properties to SparkConf
 // 2. with TiExtensions
-// set isTidbConfigPropertiesInjectedToSparkEnabled = false
+// set isTidbConfigPropertiesInjectedToSparkEnabled = true
 // will load tidb_config.properties to SparkConf
-class BaseDataSourceSuite(val testTable: String,
-                          val _enableTidbConfigPropertiesInjectedToSpark: Boolean = false)
+class BaseDataSourceSuite(val table: String,
+                          val _enableTidbConfigPropertiesInjectedToSpark: Boolean = true)
     extends QueryTest
     with SharedSQLContext {
   protected val database: String = "tispark_test"
-  protected val dbtableInJDBC = s"$database.$testTable"
-  protected var databaseInSpark: String = _
-  protected var dbtableInSpark: String = _
+  protected val dbtable = s"$database.$table"
 
   protected var tidbStmt: Statement = _
 
@@ -30,15 +28,13 @@ class BaseDataSourceSuite(val testTable: String,
 
     super.beforeAll()
 
-    databaseInSpark = getTestDatabaseNameInSpark(database)
-    dbtableInSpark = s"$databaseInSpark.$testTable"
     tidbStmt = tidbConn.createStatement()
   }
 
   protected def jdbcUpdate(query: String): Unit =
     tidbStmt.execute(query)
 
-  protected def dropTable(): Unit = jdbcUpdate(s"drop table if exists $dbtableInJDBC")
+  protected def dropTable(): Unit = jdbcUpdate(s"drop table if exists $dbtable")
 
   protected def batchWrite(rows: List[Row],
                            schema: StructType,
@@ -48,20 +44,18 @@ class BaseDataSourceSuite(val testTable: String,
     df.write
       .format("tidb")
       .options(tidbOptions ++ param.getOrElse(Map.empty))
-      .option("database", databaseInSpark)
-      .option("table", testTable)
+      .option("database", database)
+      .option("table", table)
       .mode("append")
       .save()
   }
 
-  protected def testSelect(dbtable: String,
-                           expectedAnswer: Seq[Row],
-                           sortCol: String = "i"): Unit = {
+  protected def testSelect(expectedAnswer: Seq[Row], sortCol: String = "i"): Unit = {
     val df = sqlContext.read
       .format("tidb")
       .options(tidbOptions)
-      .option("database", databaseInSpark)
-      .option("table", testTable)
+      .option("database", database)
+      .option("table", table)
       .load()
       .sort(sortCol)
 
@@ -71,8 +65,8 @@ class BaseDataSourceSuite(val testTable: String,
   protected def testFilter(filter: String, expectedAnswer: Seq[Row]): Unit = {
     val loadedDf = sqlContext.read
       .format("tidb")
-      .option("database", databaseInSpark)
-      .option("table", testTable)
+      .option("database", database)
+      .option("table", table)
       .options(tidbOptions)
       .load()
       .filter(filter)
