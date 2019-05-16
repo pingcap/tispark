@@ -38,7 +38,7 @@ case class TiDBRelation(session: TiSession,
     with InsertableRelation {
   val table: TiTableInfo = meta
     .getTable(tableRef.databaseName, tableRef.tableName)
-    .getOrElse(throw new TiClientInternalException("Table not exist " + tableRef))
+    .getOrElse(throw new TiClientInternalException("Table not exist"))
 
   override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
 
