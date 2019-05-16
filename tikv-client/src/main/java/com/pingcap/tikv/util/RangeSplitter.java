@@ -84,7 +84,6 @@ public class RangeSplitter {
       if(!(another instanceof RegionTask)) return false;
       RegionTask regionTask = (RegionTask) another;
       return regionTask.host.equals(this.host)
-          && regionTask.ranges.equals(this.ranges)
           && regionTask.region.equals(this.region)
           && regionTask.store.equals(this.store);
     }
@@ -98,6 +97,7 @@ public class RangeSplitter {
       hash = 31 * hash * this.store.hashCode();
       return hash;
     }
+
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
@@ -166,14 +166,6 @@ public class RangeSplitter {
     }
     if (!handlesInCurRegion.isEmpty() && curRegion != null) {
       result.put(curRegion.getId(), handlesInCurRegion);
-    }
-    return result;
-  }
-
-  private TLongArrayList createHandleList(int startPos, int endPos, TLongArrayList handles) {
-    TLongArrayList result = new TLongArrayList();
-    for (int i = startPos; i < endPos; i++) {
-      result.add(handles.get(i));
     }
     return result;
   }

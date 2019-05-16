@@ -62,7 +62,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
         val lst = new TLongArrayList()
         handleIterator.asScala.foreach {
           // Kill the task in case it has been marked as killed. This logic is from
-          // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
+          // InterruptedIterator, but we inline it here instead of wrapping the iterator in order
           // to avoid performance overhead.
           if (context.isInterrupted()) {
             throw new TaskKilledException
@@ -115,7 +115,6 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
         result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
         index += 1
         hostTasksMap.remove(task.getHost)
-
       }
     }
     // add rest
@@ -124,6 +123,5 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       index += 1
     }
     result.toArray
-
   }
 }
