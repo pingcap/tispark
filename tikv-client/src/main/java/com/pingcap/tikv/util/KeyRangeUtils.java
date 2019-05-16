@@ -109,7 +109,7 @@ public class KeyRangeUtils {
    * @param splitNum upper bound of number of ranges to merge into
    * @return the minimal range which encloses all ranges in this range list.
    */
-  public static List<KeyRange> mergeSortedRanges(List<KeyRange> ranges, int splitNum) {
+  private static List<KeyRange> mergeSortedRanges(List<KeyRange> ranges, int splitNum) {
     if (splitNum <= 0) {
       throw new RuntimeException("Cannot split ranges by non-positive integer");
     }

@@ -187,7 +187,6 @@ case class RegionTaskExec(child: SparkPlan,
   // cache invalidation call back function
   // used for driver to update PD cache
   private val callBackFunc = CacheInvalidateListener.getInstance()
-  private val downgradeSplitFactor = 4
 
   def rowToInternalRow(row: Row,
                        outputTypes: Seq[DataType],
@@ -337,20 +336,9 @@ case class RegionTaskExec(child: SparkPlan,
       def doDowngradeScan(taskRanges: List[KeyRange]): Unit = {
         // Restore original filters to perform downgraded table scan logic
         // TODO: Maybe we can optimize splitRangeByRegion if we are sure the key ranges are in the same region?
-        val downgradeTasks =
-          try {
-            RangeSplitter
-              .newSplitter(session.getRegionManager)
-              .splitSortedRangeInRegion(taskRanges, downgradeSplitFactor)
-          } catch {
-            case e: Exception =>
-              logger.warn("Encountered problems when splitting range for single region.")
-              logger.warn("Retrying split with unified logic")
-              logger.warn("Exception message: " + e.getMessage)
-              RangeSplitter
-                .newSplitter(session.getRegionManager)
-                .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges))
-          }
+        val downgradeTasks = RangeSplitter
+          .newSplitter(session.getRegionManager)
+          .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges))
 
         downgradeTasks.foreach { task =>
           val downgradeTaskRanges = task.getRanges
