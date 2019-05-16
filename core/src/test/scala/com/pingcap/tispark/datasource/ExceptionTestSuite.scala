@@ -25,12 +25,7 @@ class ExceptionTestSuite extends BaseDataSourceSuite("test_datasource_exception_
     val caught = intercept[TiBatchWriteException] {
       batchWrite(List(row1, row2), schema)
     }
-    assert(
-      caught.getMessage
-        .equals(
-          "table tispark_test.test_datasource_error does not exists!"
-        )
-    )
+    assert(caught.getMessage.equals(s"table $dbtable does not exists!"))
   }
 
   test("Test column does not exist") {
