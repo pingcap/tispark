@@ -110,7 +110,7 @@ object TiDataSourceExample {
     val df = readUsingDataSourceAPI(sqlContext)
 
     // Append
-    // target_table_append should exists in tidb
+    // target_table_append should exist in tidb
     df.write
       .format("tidb")
       .options(tidbOptions)

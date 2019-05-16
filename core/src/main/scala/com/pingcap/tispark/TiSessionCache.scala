@@ -25,12 +25,6 @@ object TiSessionCache {
   // Since we create session as singleton now, configuration change will not
   // reflect change
   def getSession(conf: TiConfiguration): TiSession = this.synchronized {
-    val pdfAddrs = conf.getPdAddrsString
-    var sessionCached = sessionCachedMap.getOrElse(pdfAddrs, null)
-    if (sessionCached == null) {
-      sessionCached = TiSession.create(conf)
-      sessionCachedMap.put(pdfAddrs, sessionCached)
-    }
-    sessionCached
+    sessionCachedMap.getOrElseUpdate(conf.getPdAddrsString, TiSession.create(conf))
   }
 }
