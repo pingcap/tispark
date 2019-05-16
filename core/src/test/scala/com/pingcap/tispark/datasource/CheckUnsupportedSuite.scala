@@ -1,17 +1,13 @@
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-// without TiExtensions
-// will not load tidb_config.properties to SparkConf
 class CheckUnsupportedSuite extends BaseDataSourceSuite("test_datasource_check_unsupported") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
-  private val row4 = Row(4, null)
 
   private val schema = StructType(
     List(
@@ -27,10 +23,10 @@ class CheckUnsupportedSuite extends BaseDataSourceSuite("test_datasource_check_u
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i int, s varchar(128), UNIQUE (i))"
+      s"create table $dbtable(i int, s varchar(128), UNIQUE (i))"
     )
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(null, 'Hello')"
+      s"insert into $dbtable values(null, 'Hello')"
     )
 
     {
@@ -45,17 +41,17 @@ class CheckUnsupportedSuite extends BaseDataSourceSuite("test_datasource_check_u
       )
     }
 
-    testSelect(dbtableInSpark, Seq(row1))
+    testSelect(Seq(row1))
   }
 
   test("Test write to table with secondary index: KEY") {
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i int, s varchar(128), KEY (s))"
+      s"create table $dbtable(i int, s varchar(128), KEY (s))"
     )
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(null, 'Hello')"
+      s"insert into $dbtable values(null, 'Hello')"
     )
 
     {
@@ -70,17 +66,17 @@ class CheckUnsupportedSuite extends BaseDataSourceSuite("test_datasource_check_u
       )
     }
 
-    testSelect(dbtableInSpark, Seq(row1))
+    testSelect(Seq(row1))
   }
 
   test("Test write to partition table") {
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i int, s varchar(128)) partition by range(i) (partition p0 values less than maxvalue)"
+      s"create table $dbtable(i int, s varchar(128)) partition by range(i) (partition p0 values less than maxvalue)"
     )
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(null, 'Hello')"
+      s"insert into $dbtable values(null, 'Hello')"
     )
 
     {
@@ -93,7 +89,7 @@ class CheckUnsupportedSuite extends BaseDataSourceSuite("test_datasource_check_u
       )
     }
 
-    testSelect(dbtableInSpark, Seq(row1))
+    testSelect(Seq(row1))
   }
 
   test(
@@ -102,10 +98,10 @@ class CheckUnsupportedSuite extends BaseDataSourceSuite("test_datasource_check_u
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtableInJDBC(i int, s varchar(128), primary key(s))"
+      s"create table $dbtable(i int, s varchar(128), primary key(s))"
     )
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(null, 'Hello')"
+      s"insert into $dbtable values(null, 'Hello')"
     )
 
     {
@@ -120,7 +116,7 @@ class CheckUnsupportedSuite extends BaseDataSourceSuite("test_datasource_check_u
       )
     }
 
-    testSelect(dbtableInSpark, Seq(row1))
+    testSelect(Seq(row1))
   }
 
   override def afterAll(): Unit =

@@ -125,8 +125,7 @@ object TiBatchWrite {
     val tiConf = tiContext.tiConf
     val tiSession = tiContext.tiSession
     val kvClient = tiSession.createTxnClient()
-    val tableRef = TiTableReference(options.database, options.table)
-    val (tiDBInfo, tiTableInfo) = getDBAndTableInfo(tableRef, tiContext)
+    val (tiDBInfo, tiTableInfo) = getDBAndTableInfo(options.tiTableRef, tiContext)
 
     // check check check
     if (rdd.isEmpty()) {
@@ -164,7 +163,8 @@ object TiBatchWrite {
     }
 
     // deduplicate
-    val deduplicateRDD = deduplicate(tiKVRowRDD, tableRef, tiTableInfo, tiContext, options)
+    val deduplicateRDD =
+      deduplicate(tiKVRowRDD, options.tiTableRef, tiTableInfo, tiContext, options)
 
     // encode TiROW
     val encodedTiRowRDD = deduplicateRDD.map {
@@ -192,7 +192,7 @@ object TiBatchWrite {
 
     // shuffle data in same task which belong to same region
     val shuffledRDD = {
-      shuffleKeyToSameRegion(encodedTiRowRDD, tableRef, tiTableInfo, tiContext)
+      shuffleKeyToSameRegion(encodedTiRowRDD, options.tiTableRef, tiTableInfo, tiContext)
     }.cache()
 
     // take one row as primary key

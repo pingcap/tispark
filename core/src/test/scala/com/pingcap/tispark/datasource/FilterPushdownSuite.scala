@@ -2,8 +2,6 @@ package com.pingcap.tispark.datasource
 
 import org.apache.spark.sql.Row
 
-// without TiExtensions
-// will not load tidb_config.properties to SparkConf
 class FilterPushdownSuite extends BaseDataSourceSuite("test_datasource_filter_pushdown") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
@@ -14,9 +12,9 @@ class FilterPushdownSuite extends BaseDataSourceSuite("test_datasource_filter_pu
     super.beforeAll()
 
     dropTable()
-    jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
+      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
   }
 

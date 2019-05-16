@@ -290,8 +290,7 @@ public class TwoPhaseCommitter {
             Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
       } else {
         // value can be null (table with one primary key integer column, data is encoded in key)
-       mutation =
-            Kvrpcpb.Mutation.newBuilder().setKey(key).setOp(Kvrpcpb.Op.Put).build();
+        mutation = Kvrpcpb.Mutation.newBuilder().setKey(key).setOp(Kvrpcpb.Op.Put).build();
       }
       mutations.put(key, mutation);
     }

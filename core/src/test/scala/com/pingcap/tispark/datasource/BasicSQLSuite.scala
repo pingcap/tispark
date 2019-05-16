@@ -5,23 +5,19 @@ import org.apache.spark.sql.Row
 
 import scala.util.Random
 
-// without TiExtensions
-// will not load tidb_config.properties to SparkConf
 class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
   private val row4 = Row(4, null)
 
-  // calculated var
-
   override def beforeAll(): Unit = {
     super.beforeAll()
 
     dropTable()
-    jdbcUpdate(s"create table $dbtableInJDBC(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtableInJDBC values(null, 'Hello'), (2, 'TiDB')"
+      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
     )
   }
 
@@ -36,7 +32,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
                       |USING tidb
                       |OPTIONS (
                       |  database '$database',
-                      |  table '$testTable',
+                      |  table '$table',
                       |  tidb.addr '$tidbAddr',
                       |  tidb.password '$tidbPassword',
                       |  tidb.port '$tidbPort',
@@ -59,7 +55,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
                       |USING tidb
                       |OPTIONS (
                       |  database '$database',
-                      |  table '$testTable',
+                      |  table '$table',
                       |  tidb.addr '$tidbAddr',
                       |  tidb.password '$tidbPassword',
                       |  tidb.port '$tidbPort',
@@ -87,7 +83,7 @@ class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
                       |USING tidb
                       |OPTIONS (
                       |  database '$database',
-                      |  table '$testTable',
+                      |  table '$table',
                       |  tidb.addr '$tidbAddr',
                       |  tidb.password '$tidbPassword',
                       |  tidb.port '$tidbPort',
