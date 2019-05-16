@@ -7,8 +7,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
 // without TiExtensions
 // will not load tidb_config.properties to SparkConf
-class UnsupportedCheckSuite extends BaseDataSourceSuite("test_datasource_unsupported_check") {
-  // Values used for comparison
+class UnsuportCheckSuite extends BaseDataSourceSuite("test_datasource_unsupport_check") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -75,7 +74,6 @@ class UnsupportedCheckSuite extends BaseDataSourceSuite("test_datasource_unsuppo
   }
 
   test("Test write to partition table") {
-    enablePartitionForTiDB()
     dropTable()
 
     jdbcUpdate(

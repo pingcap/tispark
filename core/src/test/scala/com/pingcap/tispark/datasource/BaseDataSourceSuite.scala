@@ -36,7 +36,7 @@ class BaseDataSourceSuite(val testTable: String,
   }
 
   protected def jdbcUpdate(query: String): Unit =
-    tidbStmt.execute(query)
+    tidbStmt.executeUpdate(query)
 
   protected def dropTable(): Unit = jdbcUpdate(s"drop table if exists $dbtableInJDBC")
 
