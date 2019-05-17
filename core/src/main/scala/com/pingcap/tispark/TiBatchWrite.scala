@@ -28,14 +28,13 @@ import com.pingcap.tikv.txn.TxnKVClient
 import com.pingcap.tikv.types.{DataType, IntegerType}
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
-import com.pingcap.tispark.TiBatchWrite.SparkRow
 import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, TiContext}
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
+import org.apache.spark.sql.{DataFrame, TiContext}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -103,7 +102,7 @@ class TiBatchWrite(@transient df: DataFrame,
     // check check check
     checkUnsupported()
     checkColumnNumbers()
-    checkNotNull()
+    checkValueNotNull()
 
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
@@ -289,7 +288,7 @@ class TiBatchWrite(@transient df: DataFrame,
     }
   }
 
-  private def checkNotNull(): Unit = {
+  private def checkValueNotNull(): Unit = {
     // TODO: what if rdd col size = table col size - 1 (auto increase col)
     // we should do col mapping
     var notNullColumnIndex: List[Int] = Nil
