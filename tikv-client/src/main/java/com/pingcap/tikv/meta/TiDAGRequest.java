@@ -25,7 +25,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.*;
-import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
@@ -80,12 +79,18 @@ public class TiDAGRequest implements Serializable {
       if (!tableInfo.isPartitionEnabled()) {
         RowKey start = RowKey.createMin(tableInfo.getId());
         RowKey end = RowKey.createBeyondMax(tableInfo.getId());
-        ranges.put(tableInfo.getId(), ImmutableList.of(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
+        ranges.put(
+            tableInfo.getId(),
+            ImmutableList.of(
+                KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
       } else {
         for (TiPartitionDef pDef : tableInfo.getPartitionInfo().getDefs()) {
           RowKey start = RowKey.createMin(pDef.getId());
           RowKey end = RowKey.createBeyondMax(pDef.getId());
-          ranges.put(pDef.getId(), ImmutableList.of(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
+          ranges.put(
+              pDef.getId(),
+              ImmutableList.of(
+                  KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
         }
       }
 
@@ -1000,7 +1005,7 @@ public class TiDAGRequest implements Serializable {
     if (!getRanges().isEmpty()) {
       sb.append(", KeyRange: ");
       // TODO fix me
-//      getRanges().forEach( (k, v) -> sb.append(KeyUtils.formatBytesUTF8(v)));
+      //      getRanges().forEach( (k, v) -> sb.append(KeyUtils.formatBytesUTF8(v)));
     }
 
     if (!getPushDownAggregatePairs().isEmpty()) {

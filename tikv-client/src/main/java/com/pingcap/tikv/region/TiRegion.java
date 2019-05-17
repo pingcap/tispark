@@ -185,13 +185,12 @@ public class TiRegion implements Serializable {
 
   @Override
   public boolean equals(final Object another) {
-    if(!(another instanceof TiRegion)) return false;
+    if (!(another instanceof TiRegion)) return false;
     TiRegion anotherRegion = ((TiRegion) another);
     return anotherRegion.meta.equals(this.meta)
         && anotherRegion.peer.equals(this.peer)
         && anotherRegion.commandPri.equals(this.commandPri)
         && anotherRegion.isolationLevel.equals(this.isolationLevel);
-
   }
 
   @Override

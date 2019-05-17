@@ -294,8 +294,7 @@ public class RangeSplitterTest {
                 keyRangeByHandle(tableId, 16000L, Status.EQUAL, null, Status.EQUAL)));
 
     TLongObjectHashMap<TLongArrayList> result =
-        RangeSplitter.newSplitter(mgr)
-            .groupByAndSortHandlesByRegionId(tableId, handles);
+        RangeSplitter.newSplitter(mgr).groupByAndSortHandlesByRegionId(tableId, handles);
     assertEquals(2, result.get(0).size());
     assertEquals(10, result.get(1).size());
     assertEquals(2, result.get(2).size());

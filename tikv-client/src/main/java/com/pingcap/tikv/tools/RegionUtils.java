@@ -64,10 +64,7 @@ public class RegionUtils {
     ScanAnalyzer.ScanPlan scanPlan =
         builder.buildScan(ImmutableList.of(), ImmutableList.of(), table);
     List<KeyRange> ranges = new ArrayList<>();
-    scanPlan.getKeyRanges().forEach(
-        (k, v) -> ranges.addAll(v)
-    );
-    return RangeSplitter.newSplitter(session.getRegionManager())
-        .splitRangeByRegion(ranges);
+    scanPlan.getKeyRanges().forEach((k, v) -> ranges.addAll(v));
+    return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);
   }
 }

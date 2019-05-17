@@ -299,24 +299,22 @@ public class ScanAnalyzer {
     }
   }
 
-    @VisibleForTesting
+  @VisibleForTesting
   private Map<Long, List<KeyRange>> buildIndexScanKeyRangeWithIds(
-      List<Long> ids,
-      TiIndexInfo index,
-      List<IndexRange> indexRanges) {
+      List<Long> ids, TiIndexInfo index, List<IndexRange> indexRanges) {
     Map<Long, List<KeyRange>> idRanes = new HashMap<>();
-      for(long id : ids) {
-        List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
-        for (IndexRange ir : indexRanges) {
-          IndexScanKeyRangeBuilder indexScanKeyRangeBuilder =
-              new IndexScanKeyRangeBuilder(id, index, ir);
-          ranges.add(indexScanKeyRangeBuilder.compute());
-        }
-
-        idRanes.put(id, ranges);
+    for (long id : ids) {
+      List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
+      for (IndexRange ir : indexRanges) {
+        IndexScanKeyRangeBuilder indexScanKeyRangeBuilder =
+            new IndexScanKeyRangeBuilder(id, index, ir);
+        ranges.add(indexScanKeyRangeBuilder.compute());
       }
-      return idRanes;
+
+      idRanes.put(id, ranges);
     }
+    return idRanes;
+  }
 
   @VisibleForTesting
   Map<Long, List<KeyRange>> buildIndexScanKeyRange(

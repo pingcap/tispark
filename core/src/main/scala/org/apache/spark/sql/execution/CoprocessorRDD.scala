@@ -55,9 +55,8 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
   override val outputOrdering: Seq[SortOrder] = Nil
 
-  private val internalRDDs: List[RDD[InternalRow]] = tiRdds.map(rdd =>
-    RDDConversions.rowToRowRdd(rdd, output.map(_.dataType))
-  )
+  private val internalRDDs: List[RDD[InternalRow]] =
+    tiRdds.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
   private lazy val project = UnsafeProjection.create(schema)
 
   private def internalRowToUnsafeRowWithIndex(
@@ -74,12 +73,15 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
   protected override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
 
-    internalRDDs.map(rdd  =>
-       ReflectionMapPartitionWithIndexInternal(
-         rdd,
-      internalRowToUnsafeRowWithIndex(numOutputRows)
-    ).invoke()
-    ).reduce(_ union _)
+    internalRDDs
+      .map(
+        rdd =>
+          ReflectionMapPartitionWithIndexInternal(
+            rdd,
+            internalRowToUnsafeRowWithIndex(numOutputRows)
+          ).invoke()
+      )
+      .reduce(_ union _)
 
   }
 
@@ -105,9 +107,8 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
 
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
 
-  val internalRDDs: List[RDD[InternalRow]] = tiHandleRDDs.map( rdd =>
-    RDDConversions.rowToRowRdd(rdd, output.map(_.dataType))
-  )
+  val internalRDDs: List[RDD[InternalRow]] =
+    tiHandleRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
   private lazy val project = UnsafeProjection.create(schema)
 
   private def internalRowToUnsafeRowWithIndex(
@@ -124,13 +125,15 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRegions = longMetric("numOutputRegions")
 
-    internalRDDs.map(
-      rdd =>
-    ReflectionMapPartitionWithIndexInternal(
-      rdd,
-      internalRowToUnsafeRowWithIndex(numOutputRegions)
-    ).invoke()
-    ).reduce(_ union _)
+    internalRDDs
+      .map(
+        rdd =>
+          ReflectionMapPartitionWithIndexInternal(
+            rdd,
+            internalRowToUnsafeRowWithIndex(numOutputRegions)
+          ).invoke()
+      )
+      .reduce(_ union _)
   }
 
   final lazy val attributeRef = Seq(
@@ -240,7 +243,6 @@ case class RegionTaskExec(child: SparkPlan,
       var rowIterator: util.Iterator[TiRow] = null
 
       // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
-      // TODO: Maybe we can optimize splitAndSortHandlesByRegion if we are sure the handles are in same region?
       def generateIndexTasks(handles: TLongArrayList): util.List[RegionTask] = {
         val indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
         indexTasks.addAll(

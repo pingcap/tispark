@@ -1,4 +1,4 @@
-///*
+/// *
 // * Copyright 2017 PingCAP, Inc.
 // *
 // * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,32 +13,32 @@
 // * limitations under the License.
 // */
 //
-//package com.pingcap.tikv.predicates;
+// package com.pingcap.tikv.predicates;
 //
-//import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
-//import static com.pingcap.tikv.expression.LogicalBinaryExpression.*;
-//import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
-//import static java.util.Objects.requireNonNull;
-//import static org.junit.Assert.*;
+// import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
+// import static com.pingcap.tikv.expression.LogicalBinaryExpression.*;
+// import static com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges;
+// import static java.util.Objects.requireNonNull;
+// import static org.junit.Assert.*;
 //
-//import com.google.common.collect.ImmutableList;
-//import com.google.common.collect.ImmutableSet;
-//import com.google.common.collect.Range;
-//import com.google.protobuf.ByteString;
-//import com.pingcap.tikv.expression.ColumnRef;
-//import com.pingcap.tikv.expression.Constant;
-//import com.pingcap.tikv.expression.Expression;
-//import com.pingcap.tikv.key.RowKey;
-//import com.pingcap.tikv.key.TypedKey;
-//import com.pingcap.tikv.meta.*;
-//import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
-//import com.pingcap.tikv.types.*;
-//import java.util.*;
-//import java.util.function.BiConsumer;
-//import org.junit.Test;
-//import org.tikv.kvproto.Coprocessor;
+// import com.google.common.collect.ImmutableList;
+// import com.google.common.collect.ImmutableSet;
+// import com.google.common.collect.Range;
+// import com.google.protobuf.ByteString;
+// import com.pingcap.tikv.expression.ColumnRef;
+// import com.pingcap.tikv.expression.Constant;
+// import com.pingcap.tikv.expression.Expression;
+// import com.pingcap.tikv.key.RowKey;
+// import com.pingcap.tikv.key.TypedKey;
+// import com.pingcap.tikv.meta.*;
+// import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
+// import com.pingcap.tikv.types.*;
+// import java.util.*;
+// import java.util.function.BiConsumer;
+// import org.junit.Test;
+// import org.tikv.kvproto.Coprocessor;
 //
-//public class ScanAnalyzerTest {
+// public class ScanAnalyzerTest {
 //  private static TiTableInfo createTable() {
 //    return createTableWithIndex(1, 1);
 //  }
@@ -139,14 +139,16 @@
 //    assertEquals(
 //        ByteString.copyFrom(
 //            new byte[] {
-//              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
+//              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0,
+// 0,
 //              0, 0, 0, 0
 //            }),
 //        keyRange.getStart());
 //    assertEquals(
 //        ByteString.copyFrom(
 //            new byte[] {
-//              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
+//              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0,
+// 0,
 //              0, 0, 0, 1
 //            }),
 //        keyRange.getEnd());
@@ -167,7 +169,8 @@
 //    assertEquals(
 //        ByteString.copyFrom(
 //            new byte[] {
-//              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
+//              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0,
+// 0,
 //              0, 0, 0, 0, 0
 //            }),
 //        keyRange.getStart());
@@ -175,7 +178,8 @@
 //    assertEquals(
 //        ByteString.copyFrom(
 //            new byte[] {
-//              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0, 0,
+//              116, -128, 0, 0, 0, 0, 0, 0, 6, 95, 105, -128, 0, 0, 0, 0, 0, 0, 5, 3, -128, 0, 0,
+// 0,
 //              0, 0, 0, 0, 1, 119, 116, 102, 0, 0, 0, 0, 0, -5
 //            }),
 //        keyRange.getEnd());
@@ -461,4 +465,4 @@
 //      assertEquals(isCovering, t.isCovering);
 //    }
 //  }
-//}
+// }

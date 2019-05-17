@@ -52,7 +52,14 @@ case class TiDBRelation(session: TiSession,
     var tiRDDs = new ListBuffer[TiRDD]
     ids.foreach(
       id => {
-        tiRDDs += new TiRDD(dagRequest, id, session.getConf, tableRef, session, sqlContext.sparkSession)
+        tiRDDs += new TiRDD(
+          dagRequest,
+          id,
+          session.getConf,
+          tableRef,
+          session,
+          sqlContext.sparkSession
+        )
       }
     )
     tiRDDs.toList
@@ -66,19 +73,17 @@ case class TiDBRelation(session: TiSession,
     ids.foreach(
       id => {
         tiHandleRDDs +=
-      new TiHandleRDD(
-        dagRequest,
-        id,
-        session.getConf,
-        tableRef,
-        timestamp,
-        session,
-        sqlContext.sparkSession
-      )
+          new TiHandleRDD(
+            dagRequest,
+            id,
+            session.getConf,
+            tableRef,
+            timestamp,
+            session,
+            sqlContext.sparkSession
+          )
       }
     )
-
-
 
     val handlePlan = HandleRDDExec(tiHandleRDDs.toList)
     // collect handles as a list

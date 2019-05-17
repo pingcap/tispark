@@ -34,10 +34,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
-import org.tikv.kvproto.Metapb.Region;
 
 public class RangeSplitter {
   public static class RegionTask implements Serializable {
@@ -86,7 +84,7 @@ public class RangeSplitter {
 
     @Override
     public boolean equals(Object another) {
-      if(!(another instanceof RegionTask)) return false;
+      if (!(another instanceof RegionTask)) return false;
       RegionTask regionTask = (RegionTask) another;
       return regionTask.host.equals(this.host)
           && regionTask.region.equals(this.region)
@@ -130,15 +128,6 @@ public class RangeSplitter {
 
   private final RegionManager regionManager;
 
-  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionIds(
-      List<Long> ids, TLongArrayList handles) {
-    TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
-    for (Long id : ids) {
-      result.putAll(groupByAndSortHandlesByRegionId(id, handles));
-    }
-    return result;
-  }
-
   /**
    * Group by a list of handles by the handles' region id, handles will be sorted.
    *
@@ -157,7 +146,8 @@ public class RangeSplitter {
     for (int i = 0; i < handles.size(); i++) {
       long curHandle = handles.get(i);
       RowKey key = RowKey.toRowKey(tableId, curHandle);
-      if (endKey == null || (endKey.length != 0 && FastByteComparisons.compareTo(key.getBytes(), endKey) >= 0)) {
+      if (endKey == null
+          || (endKey.length != 0 && FastByteComparisons.compareTo(key.getBytes(), endKey) >= 0)) {
         if (curRegion != null) {
           result.put(curRegion.getId(), handlesInCurRegion);
           handlesInCurRegion = new TLongArrayList();
