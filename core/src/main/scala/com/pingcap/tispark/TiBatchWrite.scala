@@ -21,9 +21,10 @@ import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
-import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo}
+import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
+import com.pingcap.tikv.txn.TxnKVClient
 import com.pingcap.tikv.types.{DataType, IntegerType}
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
@@ -31,89 +32,49 @@ import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+import org.apache.spark.sql.catalyst.encoders.RowEncoder
+import org.apache.spark.sql.{DataFrame, TiContext}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
-/**
- * An ugly implementation of batch write framework, which will be
- * replaced by spark api.
- */
 object TiBatchWrite {
-  private final val logger = LoggerFactory.getLogger(getClass.getName)
-
   type SparkRow = org.apache.spark.sql.Row
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
 
-  private def calcRDDSize(rdd: RDD[(SerializableKey, TiRow, Array[Byte])]): Long =
-    rdd.map(_._3.length).reduce(_ + _)
-
-  private def estimateDataSize(sampledRDD: RDD[(SerializableKey, TiRow, Array[Byte])],
-                               options: TiDBOptions) = {
-    // get all data size
-    val sampleRDDSize = calcRDDSize(sampledRDD)
-    logger.info(s"sample data size is ${sampleRDDSize / (1024 * 1024)} MB")
-
-    val sampleRowCount = sampledRDD.count()
-    val sampleAvgRowSize = sampleRDDSize / sampleRowCount
-    logger.info(s"sample avg row size is $sampleAvgRowSize")
-
-    val estimatedTotalSize = (sampleRowCount * sampleAvgRowSize) / options.sampleFraction
-    val formatter = java.text.NumberFormat.getIntegerInstance
-
-    val estimateInMB = estimatedTotalSize / (1024 * 1024)
-    logger.info("estimatedTotalSize is %s MB".format(formatter.format(estimateInMB)))
-    (estimateInMB.toLong, sampleRowCount)
-  }
-
-  private def calculateSplitKeys(sampleRDD: RDD[(SerializableKey, TiRow, Array[Byte])],
-                                 estimatedTotalSize: Long,
-                                 sampleRDDCount: Long,
-                                 tblInfo: TiTableInfo,
-                                 isUpdate: Boolean,
-                                 regionSplitNumber: Option[Int]): List[SerializableKey] = {
-
-    var regionNeed = (estimatedTotalSize / 96.0).toLong
-    // update region split number if user want more region
-    if (regionSplitNumber.isDefined) {
-      if (regionSplitNumber.get > regionNeed) {
-        regionNeed = regionSplitNumber.get
-      }
-    }
-    // if region split is not needed, just return an empty list
-    if (regionNeed == 0) return List.empty
-
-    // TODO check this write is update or not
-    val handleRdd: RDD[Long] = sampleRDD
-      .map(obj => extractHandleId(obj._2, tblInfo, isUpdate = false))
-      .sortBy(k => k)
-    val step = sampleRDDCount / regionNeed
-    val splitKeys = handleRdd
-      .zipWithIndex()
-      .filter {
-        case (_, idx) => idx % step == 0
-      }
-      .map {
-        _._1
-      }
-      .map(h => new SerializableKey(RowKey.toRowKey(tblInfo.getId, h).getBytes))
-      .collect()
-      .toList
-
-    logger.info("region need split %d times".format(splitKeys.length))
-    splitKeys
-  }
-
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
-  def writeToTiDB(rdd: RDD[SparkRow],
+  def writeToTiDB(df: DataFrame,
                   tiContext: TiContext,
                   options: TiDBOptions,
                   regionSplitNumber: Option[Int] = None,
-                  enableRegionPreSplit: Boolean = false) {
+                  enableRegionPreSplit: Boolean = false): Unit =
+    new TiBatchWrite(df, tiContext, options, regionSplitNumber, enableRegionPreSplit).write()
+}
+
+class TiBatchWrite(@transient df: DataFrame,
+                   @transient tiContext: TiContext,
+                   options: TiDBOptions,
+                   regionSplitNumber: Option[Int],
+                   enableRegionPreSplit: Boolean)
+    extends Serializable {
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
+
+  import TiBatchWrite._
+
+  private var tiConf: TiConfiguration = _
+  @transient private var tiSession: TiSession = _
+  @transient private var kvClient: TxnKVClient = _
+
+  private var tiTableRef: TiTableReference = _
+  private var tiDBInfo: TiDBInfo = _
+  private var tiTableInfo: TiTableInfo = _
+
+  @throws(classOf[NoSuchTableException])
+  @throws(classOf[TiBatchWriteException])
+  private def write(): Unit = {
     // check if write enable
     if (!tiContext.tiConf.isWriteEnable) {
       throw new TiBatchWriteException(
@@ -121,19 +82,27 @@ object TiBatchWrite {
       )
     }
 
-    // initialize
-    val tiConf = tiContext.tiConf
-    val tiSession = tiContext.tiSession
-    val kvClient = tiSession.createTxnClient()
-    val (tiDBInfo, tiTableInfo) = getDBAndTableInfo(options.tiTableRef, tiContext)
-
-    // check check check
-    if (rdd.isEmpty()) {
+    // check empty
+    if (df.count() == 0) {
+      logger.warn("data is empty!")
       return
     }
-    checkUnsupported(tiTableInfo)
-    checkColumnNumbers(tiTableInfo, rdd)
-    checkNotNull(tiTableInfo, rdd)
+
+    // initialize
+    tiConf = tiContext.tiConf
+    tiSession = tiContext.tiSession
+    kvClient = tiSession.createTxnClient()
+    tiTableRef = options.tiTableRef
+    tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
+    tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
+    if (tiTableInfo == null) {
+      throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
+    }
+
+    // check check check
+    checkUnsupported()
+    checkColumnNumbers()
+    checkValueNotNull()
 
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
@@ -149,7 +118,7 @@ object TiBatchWrite {
         tiTableInfo.getId,
         tiSession.getCatalog,
         tiTableInfo.isAutoIncColUnsigned,
-        rdd.count
+        df.count
       )
       rowIDAllocator.getStart
     } else {
@@ -157,18 +126,18 @@ object TiBatchWrite {
     }
 
     // i + start will be handle id if primary key is not handle
-    val tiKVRowRDD = rdd.zipWithIndex.map {
+    val tiKVRowRDD = df.rdd.zipWithIndex.map {
       case (row, i) =>
-        sparkRow2TiKVRow(tiTableInfo, i + offset, row, tiTableInfo.isPkHandle)
+        sparkRow2TiKVRow(i + offset, row)
     }
 
     // deduplicate
     val deduplicateRDD =
-      deduplicate(tiKVRowRDD, options.tiTableRef, tiTableInfo, tiContext, options)
+      deduplicate(tiKVRowRDD)
 
     // encode TiROW
     val encodedTiRowRDD = deduplicateRDD.map {
-      case (key, tiRow) => (key, tiRow, encodeTiRow(tiRow, tiTableInfo))
+      case (key, tiRow) => (key, tiRow, encodeTiRow(tiRow))
     }
 
     // region pre-split
@@ -191,9 +160,7 @@ object TiBatchWrite {
     }
 
     // shuffle data in same task which belong to same region
-    val shuffledRDD = {
-      shuffleKeyToSameRegion(encodedTiRowRDD, options.tiTableRef, tiTableInfo, tiContext)
-    }.cache()
+    val shuffledRDD = shuffleKeyToSameRegion(encodedTiRowRDD).cache()
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
@@ -278,7 +245,7 @@ object TiBatchWrite {
   }
 
   @throws(classOf[TiBatchWriteException])
-  private def checkUnsupported(tiTableInfo: TiTableInfo): Unit = {
+  private def checkUnsupported(): Unit = {
     // write to table with secondary index (KEY & UNIQUE KEY)
     for (i <- 0 until tiTableInfo.getIndices.size()) {
       val tiIndexInfo = tiTableInfo.getIndices.get(i)
@@ -304,9 +271,8 @@ object TiBatchWrite {
     }
   }
 
-  private def checkColumnNumbers(tiTableInfo: TiTableInfo, rdd: RDD[SparkRow]): Unit = {
-    // TODO: use DataFrame
-    val colSize = rdd.take(1)(0).size
+  private def checkColumnNumbers(): Unit = {
+    val colSize = df.columns.length
     val tableColSize = tiTableInfo.getColumns.size()
 
     if (!tiTableInfo.hasAutoIncrementColumn && colSize != tableColSize) {
@@ -322,7 +288,7 @@ object TiBatchWrite {
     }
   }
 
-  private def checkNotNull(tiTableInfo: TiTableInfo, rdd: RDD[SparkRow]): Unit = {
+  private def checkValueNotNull(): Unit = {
     // TODO: what if rdd col size = table col size - 1 (auto increase col)
     // we should do col mapping
     var notNullColumnIndex: List[Int] = Nil
@@ -335,7 +301,8 @@ object TiBatchWrite {
     }
 
     if (notNullColumnIndex.nonEmpty) {
-      val nullRowCount = rdd
+      val encoder = RowEncoder(df.schema)
+      val nullRowCount = df
         .flatMap { row =>
           var result: Option[SparkRow] = None
           notNullColumnIndex.foreach { col =>
@@ -344,7 +311,7 @@ object TiBatchWrite {
             }
           }
           result
-        }
+        }(encoder)
         .count()
       if (nullRowCount > 0) {
         throw new TiBatchWriteException(
@@ -354,39 +321,71 @@ object TiBatchWrite {
     }
   }
 
-  @throws(classOf[NoSuchTableException])
-  private def getDBAndTableInfo(
-    tableRef: TiTableReference,
-    tiContext: TiContext
-  ): (TiDBInfo, TiTableInfo) = {
-    val tiDBInfo = tiContext.tiSession.getCatalog.getDatabase(tableRef.databaseName)
-    val tiTableInfo =
-      tiContext.tiSession.getCatalog.getTable(tableRef.databaseName, tableRef.tableName)
-    if (tiTableInfo == null) {
-      throw new NoSuchTableException(tableRef.databaseName, tableRef.tableName)
-    }
+  private def calcRDDSize(rdd: RDD[(SerializableKey, TiRow, Array[Byte])]): Long =
+    rdd.map(_._3.length).reduce(_ + _)
 
-    (tiDBInfo, tiTableInfo)
+  private def estimateDataSize(sampledRDD: RDD[(SerializableKey, TiRow, Array[Byte])],
+                               options: TiDBOptions) = {
+    // get all data size
+    val sampleRDDSize = calcRDDSize(sampledRDD)
+    logger.info(s"sample data size is ${sampleRDDSize / (1024 * 1024)} MB")
+
+    val sampleRowCount = sampledRDD.count()
+    val sampleAvgRowSize = sampleRDDSize / sampleRowCount
+    logger.info(s"sample avg row size is $sampleAvgRowSize")
+
+    val estimatedTotalSize = (sampleRowCount * sampleAvgRowSize) / options.sampleFraction
+    val formatter = java.text.NumberFormat.getIntegerInstance
+
+    val estimateInMB = estimatedTotalSize / (1024 * 1024)
+    logger.info("estimatedTotalSize is %s MB".format(formatter.format(estimateInMB)))
+    (estimateInMB.toLong, sampleRowCount)
   }
 
-  @throws(classOf[NoSuchTableException])
-  @throws(classOf[TiBatchWriteException])
-  private def deduplicate(rdd: RDD[TiRow],
-                          tableRef: TiTableReference,
-                          tiTableInfo: TiTableInfo,
-                          tiContext: TiContext,
-                          options: TiDBOptions): RDD[(SerializableKey, TiRow)] = {
-    val databaseName = tableRef.databaseName
-    val tableName = tableRef.tableName
-    val session = tiContext.tiSession
-    val table = session.getCatalog.getTable(databaseName, tableName)
-    if (table == null) {
-      throw new NoSuchTableException(databaseName, tableName)
+  private def calculateSplitKeys(sampleRDD: RDD[(SerializableKey, TiRow, Array[Byte])],
+                                 estimatedTotalSize: Long,
+                                 sampleRDDCount: Long,
+                                 tblInfo: TiTableInfo,
+                                 isUpdate: Boolean,
+                                 regionSplitNumber: Option[Int]): List[SerializableKey] = {
+
+    var regionNeed = (estimatedTotalSize / 96.0).toLong
+    // update region split number if user want more region
+    if (regionSplitNumber.isDefined) {
+      if (regionSplitNumber.get > regionNeed) {
+        regionNeed = regionSplitNumber.get
+      }
     }
-    val tableId = table.getId
+    // if region split is not needed, just return an empty list
+    if (regionNeed == 0) return List.empty
+
+    // TODO check this write is update or not
+    val handleRdd: RDD[Long] = sampleRDD
+      .map(obj => extractHandleId(obj._2, isUpdate = false))
+      .sortBy(k => k)
+    val step = sampleRDDCount / regionNeed
+    val splitKeys = handleRdd
+      .zipWithIndex()
+      .filter {
+        case (_, idx) => idx % step == 0
+      }
+      .map {
+        _._1
+      }
+      .map(h => new SerializableKey(RowKey.toRowKey(tblInfo.getId, h).getBytes))
+      .collect()
+      .toList
+
+    logger.info("region need split %d times".format(splitKeys.length))
+    splitKeys
+  }
+
+  @throws(classOf[TiBatchWriteException])
+  private def deduplicate(rdd: RDD[TiRow]): RDD[(SerializableKey, TiRow)] = {
+    val tableId = tiTableInfo.getId
 
     val shuffledRDD: RDD[(SerializableKey, Iterable[TiRow])] = rdd
-      .map(row => (tiKVRow2Key(row, tableId, tiTableInfo, isUpdate = false), row))
+      .map(row => (tiKVRow2Key(row, isUpdate = false), row))
       .groupByKey()
 
     if (!options.deduplicate) {
@@ -412,24 +411,16 @@ object TiBatchWrite {
   }
 
   @throws(classOf[NoSuchTableException])
-  private def shuffleKeyToSameRegion(rdd: RDD[(SerializableKey, TiRow, Array[Byte])],
-                                     tableRef: TiTableReference,
-                                     tiTableInfo: TiTableInfo,
-                                     tiContext: TiContext): RDD[(SerializableKey, Array[Byte])] = {
-    val databaseName = tableRef.databaseName
-    val tableName = tableRef.tableName
-    val session = tiContext.tiSession
-    val table = session.getCatalog.getTable(databaseName, tableName)
-    if (table == null) {
-      throw new NoSuchTableException(databaseName, tableName)
-    }
-    val tableId = table.getId
+  private def shuffleKeyToSameRegion(
+    rdd: RDD[(SerializableKey, TiRow, Array[Byte])]
+  ): RDD[(SerializableKey, Array[Byte])] = {
+    val tableId = tiTableInfo.getId
 
-    val regions = getRegions(table, tiContext)
+    val regions = getRegions
     val tiRegionPartitioner = new TiRegionPartitioner(regions)
 
     logger.info(
-      s"find ${regions.size} regions in database: $databaseName table: $tableName tableId: $tableId"
+      s"find ${regions.size} regions in $tiTableRef tableId: $tableId"
     )
 
     rdd
@@ -442,19 +433,19 @@ object TiBatchWrite {
       }
   }
 
-  private def getRegions(table: TiTableInfo, tiContext: TiContext): List[TiRegion] = {
+  private def getRegions: List[TiRegion] = {
     import scala.collection.JavaConversions._
-    TiBatchWriteUtils.getRegionsByTable(tiContext.tiSession, table).toList
+    TiBatchWriteUtils.getRegionsByTable(tiSession, tiTableInfo).toList
   }
 
-  private def extractHandleId(row: TiRow, tableInfo: TiTableInfo, isUpdate: Boolean): Long = {
+  private def extractHandleId(row: TiRow, isUpdate: Boolean): Long = {
     // If handle ID is changed when update, update will remove the old record first,
     // and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
-    val handle = if (row.fieldCount > tableInfo.getColumns.size && !isUpdate) {
+    val handle = if (row.fieldCount > tiTableInfo.getColumns.size && !isUpdate) {
       row.getLong(row.fieldCount - 1)
     } else {
-      val columnList = tableInfo.getColumns.asScala
+      val columnList = tiTableInfo.getColumns.asScala
       columnList.find(_.isPrimaryKey) match {
         case Some(primaryColumn) =>
           // it is a workaround. pk is handle must be a number
@@ -466,22 +457,16 @@ object TiBatchWrite {
     handle
   }
 
-  private def tiKVRow2Key(row: TiRow,
-                          tableId: Long,
-                          tiTableInfo: TiTableInfo,
-                          isUpdate: Boolean): SerializableKey =
+  private def tiKVRow2Key(row: TiRow, isUpdate: Boolean): SerializableKey =
     new SerializableKey(
-      RowKey.toRowKey(tableId, extractHandleId(row, tiTableInfo, isUpdate)).getBytes
+      RowKey.toRowKey(tiTableInfo.getId, extractHandleId(row, isUpdate)).getBytes
     )
 
-  private def sparkRow2TiKVRow(tableInfo: TiTableInfo,
-                               handleId: Long,
-                               sparkRow: SparkRow,
-                               pkIsHandle: Boolean): TiRow = {
+  private def sparkRow2TiKVRow(handleId: Long, sparkRow: SparkRow): TiRow = {
     val fieldCount = sparkRow.size
     var tiRow: TiRow = null
-    if (tableInfo.getPrimaryKeyColumn != null) {
-      if (pkIsHandle) {
+    if (tiTableInfo.getPrimaryKeyColumn != null) {
+      if (tiTableInfo.isPkHandle) {
         tiRow = ObjectRowImpl.create(fieldCount)
         for (i <- 0 until fieldCount) {
           val data = sparkRow.get(i)
@@ -489,10 +474,10 @@ object TiBatchWrite {
           val tiDataType = TiUtil.fromSparkType(sparkDataType)
           tiRow.set(i, tiDataType, data)
         }
-      } else if (tableInfo.getAutoIncrementColInfo != null) {
+      } else if (tiTableInfo.getAutoIncrementColInfo != null) {
         // when column is auto_increment, it must has a primary key
         // its value will be filled at the beginning according tidb's logic.
-        val autoincrementCol = tableInfo.getAutoIncrementColInfo
+        val autoincrementCol = tiTableInfo.getAutoIncrementColInfo
         tiRow = ObjectRowImpl.create(fieldCount)
         for (i <- 0 until fieldCount) {
           var data = sparkRow.get(i)
@@ -531,15 +516,15 @@ object TiBatchWrite {
   }
 
   @throws(classOf[TiBatchWriteException])
-  private def encodeTiRow(tiRow: TiRow, tblInfo: TiTableInfo): Array[Byte] = {
+  private def encodeTiRow(tiRow: TiRow): Array[Byte] = {
     var colSize = tiRow.fieldCount()
-    val columnInfos = tblInfo.getColumns
+    val columnInfos = tiTableInfo.getColumns
 
     val colDataTypes = new Array[DataType](columnInfos.size)
     val colIds = new TLongArrayList
 
     for (i <- 0 until columnInfos.size) {
-      val tiColumnInfo = tblInfo.getColumn(i)
+      val tiColumnInfo = tiTableInfo.getColumn(i)
       colIds.add(tiColumnInfo.getId)
       colDataTypes.update(i, tiColumnInfo.getType)
     }
@@ -567,7 +552,7 @@ object TiBatchWrite {
       values.update(i, tiRow.get(i, colDataTypes(i)))
     }
 
-    TableCodec.encodeRow(columnInfos, colIds, values, tblInfo.isPkHandle)
+    TableCodec.encodeRow(columnInfos, colIds, values, tiTableInfo.isPkHandle)
   }
 }
 

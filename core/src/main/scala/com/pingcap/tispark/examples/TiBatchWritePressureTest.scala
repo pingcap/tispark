@@ -60,7 +60,7 @@ object TiBatchWritePressureTest {
     val options = new TiDBOptions(
       sparkConf.getAll.toMap ++ Map("database" -> outputDatabase, "table" -> outputTable)
     )
-    TiBatchWrite.writeToTiDB(df.rdd, ti, options, regionSplitNumber, enableRegionPreSplit)
+    TiBatchWrite.writeToTiDB(df, ti, options, regionSplitNumber, enableRegionPreSplit)
 
     // time
     val end = System.currentTimeMillis()
