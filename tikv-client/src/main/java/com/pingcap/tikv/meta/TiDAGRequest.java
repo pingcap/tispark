@@ -65,7 +65,7 @@ public class TiDAGRequest implements Serializable {
     private List<String> requiredCols = new ArrayList<>();
     private List<Expression> filters = new ArrayList<>();
     private List<ByItem> orderBys = new ArrayList<>();
-    private List<Coprocessor.KeyRange> ranges = new ArrayList<>();
+    private Map<Long, List<Coprocessor.KeyRange>> ranges = new HashMap<>();
     private TiTableInfo tableInfo;
     private int limit;
     private TiTimestamp startTs;
@@ -80,12 +80,12 @@ public class TiDAGRequest implements Serializable {
       if (!tableInfo.isPartitionEnabled()) {
         RowKey start = RowKey.createMin(tableInfo.getId());
         RowKey end = RowKey.createBeyondMax(tableInfo.getId());
-        ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+        ranges.put(tableInfo.getId(), ImmutableList.of(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
       } else {
         for (TiPartitionDef pDef : tableInfo.getPartitionInfo().getDefs()) {
           RowKey start = RowKey.createMin(pDef.getId());
           RowKey end = RowKey.createBeyondMax(pDef.getId());
-          ranges.add(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString()));
+          ranges.put(pDef.getId(), ImmutableList.of(KeyRangeUtils.makeCoprocRange(start.toByteString(), end.toByteString())));
         }
       }
 
@@ -200,7 +200,7 @@ public class TiDAGRequest implements Serializable {
   // System like Spark has different type promotion rules
   // we need a cast to target when given
   private final List<Pair<Expression, DataType>> aggregates = new ArrayList<>();
-  private final List<Coprocessor.KeyRange> keyRanges = new ArrayList<>();
+  private final Map<Long, List<Coprocessor.KeyRange>> keyRanges = new HashMap<>();
   // If index scanning of this request is not possible in some scenario, we downgrade it
   // to a table scan and use downGradeRanges instead of index scan ranges stored in
   // keyRanges along with downgradeFilters to perform a table scan.
@@ -783,8 +783,8 @@ public class TiDAGRequest implements Serializable {
    *
    * @param ranges key range of scan
    */
-  public TiDAGRequest addRanges(List<Coprocessor.KeyRange> ranges) {
-    keyRanges.addAll(requireNonNull(ranges, "KeyRange is null"));
+  public TiDAGRequest addRanges(Map<Long, List<Coprocessor.KeyRange>> ranges) {
+    keyRanges.putAll(requireNonNull(ranges, "KeyRange is null"));
     return this;
   }
 
@@ -793,7 +793,11 @@ public class TiDAGRequest implements Serializable {
     this.filters.addAll(filters);
   }
 
-  public List<Coprocessor.KeyRange> getRanges() {
+  public List<Coprocessor.KeyRange> getRanges(long physicalId) {
+    return keyRanges.get(physicalId);
+  }
+
+  public Map<Long, List<Coprocessor.KeyRange>> getRanges() {
     return keyRanges;
   }
 
@@ -995,7 +999,8 @@ public class TiDAGRequest implements Serializable {
     // Key ranges might be also useful
     if (!getRanges().isEmpty()) {
       sb.append(", KeyRange: ");
-      getRanges().forEach(x -> sb.append(KeyUtils.formatBytesUTF8(x)));
+      // TODO fix me
+//      getRanges().forEach( (k, v) -> sb.append(KeyUtils.formatBytesUTF8(v)));
     }
 
     if (!getPushDownAggregatePairs().isEmpty()) {

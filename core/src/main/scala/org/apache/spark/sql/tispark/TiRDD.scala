@@ -33,6 +33,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class TiRDD(val dagRequest: TiDAGRequest,
+            val physicalId: Long,
             val tiConf: TiConfiguration,
             val tableRef: TiTableReference,
             @transient private val session: TiSession,
@@ -98,7 +99,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
     val conf = sparkSession.conf
     val keyWithRegionTasks = RangeSplitter
       .newSplitter(session.getRegionManager)
-      .splitRangeByRegion(dagRequest.getRanges)
+      .splitRangeByRegion(dagRequest.getRanges(physicalId))
 
     val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]

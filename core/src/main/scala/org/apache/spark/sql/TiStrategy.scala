@@ -142,8 +142,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       if (dagRequest.isDoubleRead) {
         source.dagRequestToRegionTaskExec(dagRequest, output)
       } else {
-        val tiRdd = source.logicalPlanToRDD(dagRequest)
-        CoprocessorRDD(output, tiRdd)
+        val tiRdds = source.logicalPlanToRDD(dagRequest)
+        CoprocessorRDD(output, tiRdds)
       }
     }
   }

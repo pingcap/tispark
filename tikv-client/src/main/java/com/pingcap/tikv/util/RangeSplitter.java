@@ -45,6 +45,7 @@ public class RangeSplitter {
     private final Metapb.Store store;
     private final List<KeyRange> ranges;
     private final String host;
+    private final long physicalId = 0;
 
     public static RegionTask newInstance(
         TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
@@ -77,6 +78,10 @@ public class RangeSplitter {
 
     public String getHost() {
       return host;
+    }
+
+    public long getPhysicalId() {
+      return physicalId;
     }
 
     @Override
@@ -141,7 +146,7 @@ public class RangeSplitter {
    * @param handles Handle list
    * @return <RegionId, HandleList> map
    */
-  private TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(
+  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(
       long tableId, TLongArrayList handles) {
     TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
     handles.sort();

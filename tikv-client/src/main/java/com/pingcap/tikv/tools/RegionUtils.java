@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class RegionUtils {
   public static Map<String, Integer> getRegionDistribution(
@@ -62,7 +63,11 @@ public class RegionUtils {
     ScanAnalyzer builder = new ScanAnalyzer();
     ScanAnalyzer.ScanPlan scanPlan =
         builder.buildScan(ImmutableList.of(), ImmutableList.of(), table);
+    List<KeyRange> ranges = new ArrayList<>();
+    scanPlan.getKeyRanges().forEach(
+        (k, v) -> ranges.addAll(v)
+    );
     return RangeSplitter.newSplitter(session.getRegionManager())
-        .splitRangeByRegion(scanPlan.getKeyRanges());
+        .splitRangeByRegion(ranges);
   }
 }

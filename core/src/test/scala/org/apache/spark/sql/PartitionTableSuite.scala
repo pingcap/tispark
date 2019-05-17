@@ -86,7 +86,7 @@ class PartitionTableSuite extends BaseTiSparkSuite {
     if (copRDD.isDefined) {
       copRDD.get
         .asInstanceOf[CoprocessorRDD]
-        .tiRdd
+        .tiRdds(0)
         .dagRequest
     } else {
       regionTaskExec.get

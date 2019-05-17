@@ -42,8 +42,10 @@ import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
@@ -54,7 +56,7 @@ public class ScanAnalyzer {
 
   public static class ScanPlan {
     ScanPlan(
-        List<KeyRange> keyRanges,
+        Map<Long, List<KeyRange>> keyRanges,
         Set<Expression> filters,
         TiIndexInfo index,
         double cost,
@@ -70,7 +72,7 @@ public class ScanAnalyzer {
       this.prunedParts = partDefs;
     }
 
-    private final List<KeyRange> keyRanges;
+    private final Map<Long, List<KeyRange>> keyRanges;
     private final Set<Expression> filters;
     private final double cost;
     private TiIndexInfo index;
@@ -82,7 +84,7 @@ public class ScanAnalyzer {
       return estimatedRowCount;
     }
 
-    public List<KeyRange> getKeyRanges() {
+    public Map<Long, List<KeyRange>> getKeyRanges() {
       return keyRanges;
     }
 
@@ -167,7 +169,7 @@ public class ScanAnalyzer {
       prunedParts = prunedPartBuilder.prune(table, conditions);
     }
 
-    List<KeyRange> keyRanges;
+    Map<Long, List<KeyRange>> keyRanges;
     boolean isDoubleRead = false;
     double estimatedRowCount = -1;
     // table name and columns
@@ -259,10 +261,11 @@ public class ScanAnalyzer {
     return new Pair<>(startKey, endKey);
   }
 
-  private List<KeyRange> buildTableScanKeyRangeWithIds(
+  private Map<Long, List<KeyRange>> buildTableScanKeyRangeWithIds(
       List<Long> ids, List<IndexRange> indexRanges) {
-    List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
+    Map<Long, List<KeyRange>> idRanges = new HashMap<>(ids.size());
     for (Long id : ids) {
+      List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       indexRanges.forEach(
           (ir) -> {
             Pair<Key, Key> pairKey = buildTableScanKeyRangePerId(id, ir);
@@ -273,12 +276,14 @@ public class ScanAnalyzer {
               ranges.add(makeCoprocRange(startKey.toByteString(), endKey.toByteString()));
             }
           });
+
+      idRanges.put(id, ranges);
     }
-    return ranges;
+    return idRanges;
   }
 
   @VisibleForTesting
-  List<KeyRange> buildTableScanKeyRange(
+  Map<Long, List<KeyRange>> buildTableScanKeyRange(
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
@@ -294,8 +299,27 @@ public class ScanAnalyzer {
     }
   }
 
+    @VisibleForTesting
+  private Map<Long, List<KeyRange>> buildIndexScanKeyRangeWithIds(
+      List<Long> ids,
+      TiIndexInfo index,
+      List<IndexRange> indexRanges) {
+    Map<Long, List<KeyRange>> idRanes = new HashMap<>();
+      for(long id : ids) {
+        List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
+        for (IndexRange ir : indexRanges) {
+          IndexScanKeyRangeBuilder indexScanKeyRangeBuilder =
+              new IndexScanKeyRangeBuilder(id, index, ir);
+          ranges.add(indexScanKeyRangeBuilder.compute());
+        }
+
+        idRanes.put(id, ranges);
+      }
+      return idRanes;
+    }
+
   @VisibleForTesting
-  List<KeyRange> buildIndexScanKeyRange(
+  Map<Long, List<KeyRange>> buildIndexScanKeyRange(
       TiTableInfo table,
       TiIndexInfo index,
       List<IndexRange> indexRanges,
@@ -304,22 +328,15 @@ public class ScanAnalyzer {
     requireNonNull(index, "Index cannot be null to encoding keyRange");
     requireNonNull(indexRanges, "indexRanges cannot be null to encoding keyRange");
 
-    List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
-    for (IndexRange ir : indexRanges) {
-      if (!table.isPartitionEnabled()) {
-        IndexScanKeyRangeBuilder indexScanKeyRangeBuilder =
-            new IndexScanKeyRangeBuilder(table.getId(), index, ir);
-        ranges.add(indexScanKeyRangeBuilder.compute());
-      } else {
-        for (TiPartitionDef pDef : prunedParts) {
-          IndexScanKeyRangeBuilder indexScanKeyRangeBuilder =
-              new IndexScanKeyRangeBuilder(pDef.getId(), index, ir);
-          ranges.add(indexScanKeyRangeBuilder.compute());
-        }
+    if (table.isPartitionEnabled()) {
+      List<Long> ids = new ArrayList<>();
+      for (TiPartitionDef pDef : prunedParts) {
+        ids.add(pDef.getId());
       }
+      return buildIndexScanKeyRangeWithIds(ids, index, indexRanges);
+    } else {
+      return buildIndexScanKeyRangeWithIds(ImmutableList.of(table.getId()), index, indexRanges);
     }
-
-    return ranges;
   }
 
   boolean isCoveringIndex(

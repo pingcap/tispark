@@ -202,10 +202,10 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
       .asInstanceOf[HandleRDDExec]
 
   private def extractUsedIndex(coprocessorRDD: CoprocessorRDD): String =
-    getIndexName(coprocessorRDD.tiRdd.dagRequest.getIndexInfo)
+    getIndexName(coprocessorRDD.tiRdds(0).dagRequest.getIndexInfo)
 
   private def extractUsedIndex(handleRDDExec: HandleRDDExec): String =
-    getIndexName(handleRDDExec.tiHandleRDD.dagRequest.getIndexInfo)
+    getIndexName(handleRDDExec.tiHandleRDDs(0).dagRequest.getIndexInfo)
 
   private def getIndexName(indexInfo: TiIndexInfo): String =
     if (indexInfo != null) {

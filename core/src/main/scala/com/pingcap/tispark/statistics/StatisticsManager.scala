@@ -141,7 +141,7 @@ object StatisticsManager {
     loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
   }
 
-  private[statistics] def readDAGRequest(req: TiDAGRequest): Iterator[Row] = snapshot.tableRead(req)
+  private[statistics] def readDAGRequest(req: TiDAGRequest, physicalId: Long): Iterator[Row] = snapshot.tableRead(req, physicalId)
 
   private def loadStatsFromStorage(tblId: Long,
                                    tblStatistic: TableStatistics,
@@ -153,7 +153,7 @@ object StatisticsManager {
     val req = StatisticsHelper
       .buildHistogramsRequest(histTable, tblId, session.getTimestamp)
 
-    val rows = readDAGRequest(req)
+    val rows = readDAGRequest(req, tblId)
     if (rows.isEmpty) return
 
     val requests = rows
@@ -200,7 +200,7 @@ object StatisticsManager {
     val req =
       StatisticsHelper.buildMetaRequest(metaTable, tableId, session.getTimestamp)
 
-    val rows = readDAGRequest(req)
+    val rows = readDAGRequest(req, tableId)
     if (rows.isEmpty) return
 
     val row = rows.next()
@@ -214,7 +214,7 @@ object StatisticsManager {
     val req =
       StatisticsHelper.buildBucketRequest(bucketTable, tableId, session.getTimestamp)
 
-    val rows = readDAGRequest(req)
+    val rows = readDAGRequest(req, tableId)
     if (rows.isEmpty) return Nil
     // Group by hist_id(column_id)
     rows.toList

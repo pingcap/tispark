@@ -99,11 +99,11 @@ public class Snapshot {
    * @param dagRequest DAG request for coprocessor
    * @return a Iterator that contains all result from this select request.
    */
-  public Iterator<Row> tableRead(TiDAGRequest dagRequest) {
+  public Iterator<Row> tableRead(TiDAGRequest dagRequest, long physicalId) {
     return tableRead(
         dagRequest,
         RangeSplitter.newSplitter(session.getRegionManager())
-            .splitRangeByRegion(dagRequest.getRanges()));
+            .splitRangeByRegion(dagRequest.getRanges(physicalId)));
   }
 
   /**

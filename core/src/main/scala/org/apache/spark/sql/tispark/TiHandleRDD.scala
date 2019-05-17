@@ -40,6 +40,7 @@ import scala.collection.mutable.ListBuffer
  *
  */
 class TiHandleRDD(val dagRequest: TiDAGRequest,
+                  val physicalId: Long,
                   val tiConf: TiConfiguration,
                   val tableRef: TiTableReference,
                   val ts: TiTimestamp,
@@ -56,7 +57,6 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       private[this] val tasks = tiPartition.tasks
 
       private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
-      private val tableIdList = dagRequest.getIds
       private val regionManager = session.getRegionManager
       private lazy val handleList = {
         val lst = new TLongArrayList()
@@ -74,7 +74,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       // Fetch all handles and group by region id
       private val regionHandleMap = RangeSplitter
         .newSplitter(regionManager)
-        .groupByAndSortHandlesByRegionIds(tableIdList, handleList)
+        .groupByAndSortHandlesByRegionId(physicalId, handleList)
 
       private val iterator = regionHandleMap.iterator()
 
@@ -100,7 +100,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
     val conf = sparkSession.conf
     val keyWithRegionTasks = RangeSplitter
       .newSplitter(session.getRegionManager)
-      .splitRangeByRegion(dagRequest.getRanges)
+      .splitRangeByRegion(dagRequest.getRanges(physicalId))
 
     val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
