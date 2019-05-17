@@ -16,10 +16,8 @@
 package com.pingcap.tikv.predicates;
 
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.*;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -33,12 +31,17 @@ import com.pingcap.tikv.key.CompoundKey;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.MetaUtils;
+import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
+
 import org.junit.Test;
 
 public class PredicateUtilsTest {
@@ -123,5 +126,81 @@ public class PredicateUtilsTest {
       assertTrue(baselineKeys.contains(range.getAccessKey()));
       assertTrue(baselineRanges.contains(range.getRange()));
     }
+  }
+
+  private class Tests<K, V> {
+    List<K> input = new ArrayList<>();
+    List<V> output = new ArrayList<>();
+
+    void addTestCase(K in, V out) {
+      input.add(in);
+      output.add(out);
+    }
+
+    void test(BiConsumer<K, V> c) {
+      for (int i = 0; i < input.size(); i++) {
+        c.accept(input.get(i), output.get(i));
+      }
+    }
+  }
+
+  @Test
+  public void logicalBinaryExpressionToIndexRangesTest() {
+    TiTableInfo table = createTable();
+    TiIndexInfo index = table.getIndices().get(0);
+
+    TypedKey zero = TypedKey.toTypedKey(0, IntegerType.INT);
+    TypedKey one = TypedKey.toTypedKey(1, IntegerType.INT);
+    TypedKey two = TypedKey.toTypedKey(2, IntegerType.INT);
+
+    ColumnRef col1 = ColumnRef.create("c1", table);
+
+    Expression eq1 = greaterThan(col1, Constant.create(0));
+    Expression eq2 = lessThan(col1, Constant.create(2));
+    Expression eq3 = lessEqual(col1, Constant.create(1));
+    Expression eq4 = greaterThan(col1, Constant.create(2));
+    Expression and1 = and(eq1, eq2);
+    Expression and2 = and(eq1, eq3);
+    Expression and3 = and(eq2, eq3);
+    Expression or1 = or(eq1, eq2);
+    Expression or2 = or(eq1, eq4);
+    Expression or3 = or(eq3, eq4);
+    Expression xor1 = xor(eq1, eq2);
+    Expression xor2 = xor(eq1, eq3);
+    Expression xor3 = xor(eq2, eq3);
+
+    List<Range> ans1 = ImmutableList.of(Range.open(zero, two));
+    List<Range> ans2 = ImmutableList.of(Range.openClosed(zero, one));
+    List<Range> ans3 = ImmutableList.of(Range.atMost(one));
+    List<Range> ans4 = ImmutableList.of(Range.all());
+    List<Range> ans5 = ImmutableList.of(Range.greaterThan(zero));
+    List<Range> ans6 = ImmutableList.of(Range.atMost(one), Range.greaterThan(two));
+    List<Range> ans7 = ImmutableList.of(Range.atMost(zero), Range.atLeast(two));
+    List<Range> ans8 = ImmutableList.of(Range.atMost(zero), Range.greaterThan(one));
+    List<Range> ans9 = ImmutableList.of(Range.open(one, two));
+
+    Tests<Expression, List<Range>> logicalTests = new Tests<>();
+    logicalTests.addTestCase(and1, ans1);
+    logicalTests.addTestCase(and2, ans2);
+    logicalTests.addTestCase(and3, ans3);
+    logicalTests.addTestCase(or1, ans4);
+    logicalTests.addTestCase(or2, ans5);
+    logicalTests.addTestCase(or3, ans6);
+    logicalTests.addTestCase(xor1, ans7);
+    logicalTests.addTestCase(xor2, ans8);
+    logicalTests.addTestCase(xor3, ans9);
+
+    logicalTests.test(
+        (k, v) -> {
+          List<Expression> exprs = ImmutableList.of(k);
+          ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+          List<IndexRange> irs =
+              PredicateUtils.expressionToIndexRanges(
+                  result.getPointPredicates(), result.getRangePredicate(), table, index);
+          assertEquals(irs.size(), v.size());
+          for (int i = 0; i < irs.size(); i++) {
+            assertEquals(irs.get(i).getRange(), v.get(i));
+          }
+        });
   }
 }

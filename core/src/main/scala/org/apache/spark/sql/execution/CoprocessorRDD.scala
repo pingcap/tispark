@@ -29,7 +29,7 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
 import com.pingcap.tispark.utils.TiUtil
-import com.pingcap.tispark.{TiConfigConst, TiSessionCache}
+import com.pingcap.tispark.TiSessionCache
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
@@ -242,7 +242,7 @@ case class RegionTaskExec(child: SparkPlan,
         indexTasks
       }
 
-      // this indexTaks was made to be used later to determine should we downgrade to
+      // this indexTasks was made to be used later to determine should we downgrade to
       // table scan or not.
       val indexTasks: util.List[RegionTask] = generateIndexTasks(new TLongArrayList(handles))
       val indexTaskRanges = indexTasks.flatMap {
@@ -342,15 +342,17 @@ case class RegionTaskExec(child: SparkPlan,
 
         downgradeTasks.foreach { task =>
           val downgradeTaskRanges = task.getRanges
-          logger.debug(
-            s"Merged ${taskRanges.size} index ranges to ${downgradeTaskRanges.size} ranges."
-          )
-          logger.debug(
-            s"Unary task downgraded, task info:Host={${task.getHost}}, " +
-              s"RegionId={${task.getRegion.getId}}, " +
-              s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
-              s"RangesListSize=${downgradeTaskRanges.size}}"
-          )
+          if (logger.isDebugEnabled) {
+            logger.debug(
+              s"Merged ${taskRanges.size} index ranges to ${downgradeTaskRanges.size} ranges."
+            )
+            logger.debug(
+              s"Unary task downgraded, task info:Host={${task.getHost}}, " +
+                s"RegionId={${task.getRegion.getId}}, " +
+                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
+                s"RangesListSize=${downgradeTaskRanges.size}}"
+            )
+          }
           numDowngradedTasks += 1
           numDowngradeRangesScanned += downgradeTaskRanges.size
 
