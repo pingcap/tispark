@@ -89,12 +89,12 @@
 //
 //    List<Expression> exprs = ImmutableList.of(eq1);
 //
-//    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, pkIndex);
+//    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, pkIndex);
 //    List<IndexRange> irs =
 //        expressionToIndexRanges(
 //            result.getPointPredicates(), result.getRangePredicate(), table, pkIndex);
 //
-//    ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
+//    TiKVScanAnalyzer scanAnalyzer = new TiKVScanAnalyzer();
 //
 //    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildTableScanKeyRange(table, irs, null);
 //
@@ -122,12 +122,12 @@
 //
 //    List<Expression> exprs = ImmutableList.of(eq1);
 //
-//    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+//    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
 //    List<IndexRange> irs =
 //        expressionToIndexRanges(
 //            result.getPointPredicates(), result.getRangePredicate(), table, index);
 //
-//    ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
+//    TiKVScanAnalyzer scanAnalyzer = new TiKVScanAnalyzer();
 //
 //    List<Coprocessor.KeyRange> keyRanges =
 //        scanAnalyzer.buildIndexScanKeyRange(table, index, irs, null);
@@ -154,7 +154,7 @@
 //        keyRange.getEnd());
 //
 //    exprs = ImmutableList.of(eq1, eq2);
-//    result = ScanAnalyzer.extractConditions(exprs, table, index);
+//    result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
 //
 //    irs =
 //        expressionToIndexRanges(
@@ -248,7 +248,7 @@
 //    logicalTests.test(
 //        (k, v) -> {
 //          List<Expression> exprs = ImmutableList.of(k);
-//          ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+//          ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
 //          List<IndexRange> irs =
 //              expressionToIndexRanges(
 //                  result.getPointPredicates(), result.getRangePredicate(), table, index);
@@ -275,7 +275,7 @@
 //
 //    List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 //
-//    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+//    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
 //    assertEquals(1, result.getResidualPredicates().size());
 //    assertEquals(eq3, result.getResidualPredicates().toArray()[0]);
 //
@@ -304,7 +304,7 @@
 //    List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 //    Set<Expression> baselineSet = ImmutableSet.of(eq2, le1, eq3);
 //
-//    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+//    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
 //    // 3 remains since c2 condition pushed back as well
 //    assertEquals(baselineSet, result.getResidualPredicates());
 //
@@ -334,7 +334,7 @@
 //
 //    List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 //
-//    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+//    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
 //
 //    Set<Expression> baselineSet = ImmutableSet.of(eq2, le1, eq3);
 //    // 3 remains since c2 condition pushed back as well
@@ -350,8 +350,8 @@
 //  public void testKeyRangeGenWithNoFilterTest() {
 //    TiTableInfo table = createTableWithPrefix();
 //    TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-//    ScanAnalyzer scanBuilder = new ScanAnalyzer();
-//    ScanAnalyzer.ScanPlan scanPlan =
+//    TiKVScanAnalyzer scanBuilder = new TiKVScanAnalyzer();
+//    TiKVScanAnalyzer.TiKVScanPlan scanPlan =
 //        scanBuilder.buildIndexScan(ImmutableList.of(), ImmutableList.of(), index, table, null);
 //
 //    ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
@@ -425,7 +425,7 @@
 //      new test(new String[] {"id", "a"}, new String[] {"a", "b"}, new int[] {-1, -1}, true)
 //    };
 //
-//    ScanAnalyzer scanBuilder = new ScanAnalyzer();
+//    TiKVScanAnalyzer scanBuilder = new TiKVScanAnalyzer();
 //
 //    for (test t : tests) {
 //      List<TiColumnInfo> columns = new ArrayList<>();

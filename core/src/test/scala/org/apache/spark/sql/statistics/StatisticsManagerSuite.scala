@@ -22,7 +22,7 @@ import com.pingcap.tikv.expression.ComparisonBinaryExpression._
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.meta.{TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
-import com.pingcap.tikv.predicates.ScanAnalyzer
+import com.pingcap.tikv.predicates.TiKVScanAnalyzer
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.BaseTiSparkSuite
 import org.apache.spark.sql.execution.{CoprocessorRDD, HandleRDDExec, SparkPlan}
@@ -134,7 +134,7 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
   def testSelectRowCount(expressions: Seq[Expression],
                          idx: TiIndexInfo,
                          expectedCount: Long): Unit = {
-    val result = ScanAnalyzer.extractConditions(expressions, fDataIdxTbl, idx)
+    val result = TiKVScanAnalyzer.extractConditions(expressions, fDataIdxTbl, idx)
     val irs =
       expressionToIndexRanges(result.getPointPredicates, result.getRangePredicate, fDataIdxTbl, idx)
     initTable()

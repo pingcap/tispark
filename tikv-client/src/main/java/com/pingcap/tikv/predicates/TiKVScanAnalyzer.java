@@ -47,15 +47,101 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
-public class ScanAnalyzer {
+public class TiKVScanAnalyzer {
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;
   private static final double TABLE_SCAN_COST_FACTOR = 1.0;
   private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
 
-  public static class ScanPlan {
-    ScanPlan(
+  public static class TiKVScanPlan {
+    public static class Builder {
+      private Map<Long, List<KeyRange>> keyRanges;
+      private Set<Expression> filters;
+      private double cost;
+      private TiIndexInfo index;
+      private boolean isDoubleRead;
+      private double estimatedRowCount = -1;
+      private List<TiPartitionDef> prunedParts;
+
+      private Builder() {}
+
+      public static Builder newBuilder() {
+        return new Builder();
+      }
+
+      public void setKeyRanges(Map<Long, List<KeyRange>> keyRanges) {
+        this.keyRanges = keyRanges;
+      }
+
+      public void setFilters(Set<Expression> filters) {
+        this.filters = filters;
+      }
+
+      public void setCost(double cost) {
+        this.cost = cost;
+      }
+
+      public void setIndex(TiIndexInfo index) {
+        this.index = index;
+      }
+
+      public void setDoubleRead(boolean doubleRead) {
+        isDoubleRead = doubleRead;
+      }
+
+      public void setEstimatedRowCount(double estimatedRowCount) {
+        this.estimatedRowCount = estimatedRowCount;
+      }
+
+      public void setPrunedParts(List<TiPartitionDef> prunedParts) {
+        this.prunedParts = prunedParts;
+      }
+
+      public TiKVScanPlan build() {
+        return new TiKVScanPlan(
+            keyRanges, filters, index, cost, isDoubleRead, estimatedRowCount, prunedParts);
+      }
+
+      // TODO: Fine-grained statistics usage
+      Builder calculateCostAndEstimateCount(TableStatistics tableStatistics, long tableColSize) {
+        cost = 100.0;
+        cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
+        return this;
+      }
+
+      Builder calculateCostAndEstimateCount(
+          TableStatistics tableStatistics,
+          List<Expression> conditions,
+          List<IndexRange> irs,
+          long indexSize,
+          long tableColSize) {
+        if (tableStatistics != null) {
+          long totalRowCount = tableStatistics.getCount();
+          IndexStatistics indexStatistics = tableStatistics.getIndexHistMap().get(index.getId());
+          if (conditions.isEmpty()) {
+            cost = 100.0; // Full index scan cost
+            // TODO: Fine-grained statistics usage
+            estimatedRowCount = totalRowCount;
+          } else if (indexStatistics != null) {
+            double idxRangeRowCnt = indexStatistics.getRowCount(irs);
+            // guess the percentage of rows hit
+            cost = 100.0 * idxRangeRowCnt / totalRowCount;
+            estimatedRowCount = idxRangeRowCnt;
+          }
+
+          if (isDoubleRead) {
+            cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
+          } else {
+            cost *= indexSize * INDEX_SCAN_COST_FACTOR;
+          }
+        }
+        return this;
+      }
+    }
+
+    TiKVScanPlan(
         Map<Long, List<KeyRange>> keyRanges,
         Set<Expression> filters,
         TiIndexInfo index,
@@ -114,21 +200,21 @@ public class ScanAnalyzer {
   }
 
   // build a scan for debug purpose.
-  public ScanPlan buildScan(
+  public TiKVScanPlan buildScan(
       List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
     return buildScan(columnList, conditions, table, null);
   }
 
   // Build scan plan picking access path with lowest cost by estimation
-  public ScanPlan buildScan(
+  public TiKVScanPlan buildScan(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiTableInfo table,
       TableStatistics tableStatistics) {
-    ScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
+    TiKVScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
     double minCost = minPlan.getCost();
     for (TiIndexInfo index : table.getIndices()) {
-      ScanPlan plan = buildIndexScan(columnList, conditions, index, table, tableStatistics);
+      TiKVScanPlan plan = buildIndexScan(columnList, conditions, index, table, tableStatistics);
       if (plan.getCost() < minCost) {
         minPlan = plan;
         minCost = plan.getCost();
@@ -137,13 +223,13 @@ public class ScanAnalyzer {
     return minPlan;
   }
 
-  public ScanPlan buildTableScan(
+  public TiKVScanPlan buildTableScan(
       List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
   }
 
-  ScanPlan buildIndexScan(
+  private TiKVScanPlan buildIndexScan(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiIndexInfo index,
@@ -154,9 +240,11 @@ public class ScanAnalyzer {
 
     MetaResolver.resolve(conditions, table);
 
+    TiKVScanPlan.Builder planBuilder = TiKVScanPlan.Builder.newBuilder();
     ScanSpec result = extractConditions(conditions, table, index);
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
+    planBuilder.setCost(cost);
 
     List<IndexRange> irs =
         expressionToIndexRanges(
@@ -169,53 +257,25 @@ public class ScanAnalyzer {
       prunedParts = prunedPartBuilder.prune(table, conditions);
     }
 
-    Map<Long, List<KeyRange>> keyRanges;
-    boolean isDoubleRead = false;
-    double estimatedRowCount = -1;
     // table name and columns
     long tableColSize = table.getColumnLength() + 8;
 
     if (index == null || index.isFakePrimaryKey()) {
-      if (tableStatistics != null) {
-        cost = 100.0; // Full table scan cost
-        // TODO: Fine-grained statistics usage
-      }
-      keyRanges = buildTableScanKeyRange(table, irs, prunedParts);
-      cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
+      planBuilder.setDoubleRead(false);
+      planBuilder.calculateCostAndEstimateCount(tableStatistics, tableColSize);
+      planBuilder.setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
     } else {
-      if (tableStatistics != null) {
-        long totalRowCount = tableStatistics.getCount();
-        IndexStatistics indexStatistics = tableStatistics.getIndexHistMap().get(index.getId());
-        if (conditions.isEmpty()) {
-          cost = 100.0; // Full index scan cost
-          // TODO: Fine-grained statistics usage
-          estimatedRowCount = totalRowCount;
-        } else if (indexStatistics != null) {
-          double idxRangeRowCnt = indexStatistics.getRowCount(irs);
-          // guess the percentage of rows hit
-          cost = 100.0 * idxRangeRowCnt / totalRowCount;
-          estimatedRowCount = idxRangeRowCnt;
-        }
-      }
-      isDoubleRead = !isCoveringIndex(columnList, index, table.isPkHandle());
+      planBuilder.setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()));
       // table name, index and handle column
       long indexSize = index.getIndexColumnLength() + 16;
-      if (isDoubleRead) {
-        cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
-      } else {
-        cost *= indexSize * INDEX_SCAN_COST_FACTOR;
-      }
-      keyRanges = buildIndexScanKeyRange(table, index, irs, prunedParts);
+      planBuilder.calculateCostAndEstimateCount(
+          tableStatistics, conditions, irs, indexSize, tableColSize);
+      planBuilder.setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts));
     }
 
-    return new ScanPlan(
-        keyRanges,
-        result.getResidualPredicates(),
-        index,
-        cost,
-        isDoubleRead,
-        estimatedRowCount,
-        prunedParts);
+    planBuilder.setFilters(result.getResidualPredicates());
+    planBuilder.setPrunedParts(prunedParts);
+    return planBuilder.build();
   }
 
   private Pair<Key, Key> buildTableScanKeyRangePerId(long id, IndexRange ir) {
@@ -337,8 +397,15 @@ public class ScanAnalyzer {
     }
   }
 
+  // If all the columns requested in the select list of query, are available in the index, then the
+  // query engine doesn't have to lookup the table again compared with double read.
   boolean isCoveringIndex(
       List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
+    Map<String, TiIndexColumn> colInIndex =
+        indexColumns
+            .getIndexColumns()
+            .stream()
+            .collect(Collectors.toMap(TiIndexColumn::getName, col -> col));
     for (TiColumnInfo colInfo : columns) {
       if (pkIsHandle && colInfo.isPrimaryKey()) {
         continue;
@@ -346,16 +413,14 @@ public class ScanAnalyzer {
       if (colInfo.getId() == -1) {
         continue;
       }
-      boolean isIndexColumn = false;
-      for (TiIndexColumn indexCol : indexColumns.getIndexColumns()) {
-        boolean isFullLength =
-            indexCol.isLengthUnspecified() || indexCol.getLength() == colInfo.getType().getLength();
-        if (colInfo.getName().equalsIgnoreCase(indexCol.getName()) && isFullLength) {
-          isIndexColumn = true;
-          break;
-        }
+      boolean colNotInIndex = false;
+      TiIndexColumn indexCol = colInIndex.get(colInfo.getName());
+      boolean isFullLength =
+          indexCol.isLengthUnspecified() || indexCol.getLength() == colInfo.getType().getLength();
+      if (colInfo.getName().equalsIgnoreCase(indexCol.getName()) && isFullLength) {
+        colNotInIndex = true;
       }
-      if (!isIndexColumn) {
+      if (!colNotInIndex) {
         return false;
       }
     }
