@@ -205,10 +205,10 @@ public class TiDAGRequest implements Serializable {
   // System like Spark has different type promotion rules
   // we need a cast to target when given
   private final List<Pair<Expression, DataType>> aggregates = new ArrayList<>();
-  private final Map<Long, List<Coprocessor.KeyRange>> keyRanges = new HashMap<>();
+  private final Map<Long, List<Coprocessor.KeyRange>> idToRanges = new HashMap<>();
   // If index scanning of this request is not possible in some scenario, we downgrade it
   // to a table scan and use downGradeRanges instead of index scan ranges stored in
-  // keyRanges along with downgradeFilters to perform a table scan.
+  // idToRanges along with downgradeFilters to perform a table scan.
   private final List<Expression> downgradeFilters = new ArrayList<>();
 
   private final List<Expression> pushDownFilters = new ArrayList<>();
@@ -789,7 +789,7 @@ public class TiDAGRequest implements Serializable {
    * @param ranges key range of scan
    */
   public TiDAGRequest addRanges(Map<Long, List<Coprocessor.KeyRange>> ranges) {
-    keyRanges.putAll(requireNonNull(ranges, "KeyRange is null"));
+    idToRanges.putAll(requireNonNull(ranges, "KeyRange is null"));
     return this;
   }
 
@@ -798,12 +798,12 @@ public class TiDAGRequest implements Serializable {
     this.filters.addAll(filters);
   }
 
-  public List<Coprocessor.KeyRange> getRanges(long physicalId) {
-    return keyRanges.get(physicalId);
+  public List<Coprocessor.KeyRange> getRangesByPhysicalId(long physicalId) {
+    return idToRanges.get(physicalId);
   }
 
-  public Map<Long, List<Coprocessor.KeyRange>> getRanges() {
-    return keyRanges;
+  public Map<Long, List<Coprocessor.KeyRange>> getRangesMpas() {
+    return idToRanges;
   }
 
   public TiDAGRequest addFilter(Expression filter) {
@@ -1002,10 +1002,10 @@ public class TiDAGRequest implements Serializable {
     }
 
     // Key ranges might be also useful
-    if (!getRanges().isEmpty()) {
+    if (!getRangesByPhysicalId().isEmpty()) {
       sb.append(", KeyRange: ");
       // TODO fix me
-      //      getRanges().forEach( (k, v) -> sb.append(KeyUtils.formatBytesUTF8(v)));
+      //      getRangesByPhysicalId().forEach( (k, v) -> sb.append(KeyUtils.formatBytesUTF8(v)));
     }
 
     if (!getPushDownAggregatePairs().isEmpty()) {

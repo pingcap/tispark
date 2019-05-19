@@ -85,10 +85,9 @@ class TiRDD(val dagRequest: TiDAGRequest,
     split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
 
   override protected def getPartitions: Array[Partition] = {
-    val conf = sparkSession.conf
     val keyWithRegionTasks = RangeSplitter
       .newSplitter(session.getRegionManager)
-      .splitRangeByRegion(dagRequest.getRanges(physicalId))
+      .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId))
 
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
     with mutable.MultiMap[String, RegionTask]

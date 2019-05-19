@@ -153,10 +153,10 @@
 //      if (!lhsItem.toProto(lhsMap).equals(rhsItem.toProto(rhsMap))) return false;
 //    }
 //
-//    assertEquals(lhs.getRanges().size(), rhs.getRanges().size());
-//    for (int i = 0; i < lhs.getRanges().size(); i++) {
-//      Coprocessor.KeyRange lhsItem = lhs.getRanges().get(i);
-//      Coprocessor.KeyRange rhsItem = rhs.getRanges().get(i);
+//    assertEquals(lhs.getRangesByPhysicalId().size(), rhs.getRangesByPhysicalId().size());
+//    for (int i = 0; i < lhs.getRangesByPhysicalId().size(); i++) {
+//      Coprocessor.KeyRange lhsItem = lhs.getRangesByPhysicalId().get(i);
+//      Coprocessor.KeyRange rhsItem = rhs.getRangesByPhysicalId().get(i);
 //      if (!lhsItem.equals(rhsItem)) return false;
 //    }
 //
