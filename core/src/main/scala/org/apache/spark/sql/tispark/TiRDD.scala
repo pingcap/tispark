@@ -90,7 +90,6 @@ class TiRDD(val dagRequest: TiDAGRequest,
       .newSplitter(session.getRegionManager)
       .splitRangeByRegion(dagRequest.getRanges(physicalId))
 
-    val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
     with mutable.MultiMap[String, RegionTask]
 
@@ -99,12 +98,9 @@ class TiRDD(val dagRequest: TiDAGRequest,
     for (task <- keyWithRegionTasks) {
       hostTasksMap.addBinding(task.getHost, task)
       val tasks = hostTasksMap(task.getHost)
-      if (tasks.size >= taskPerSplit) {
-        result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
-        index += 1
-        hostTasksMap.remove(task.getHost)
-
-      }
+      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+      index += 1
+      hostTasksMap.remove(task.getHost)
     }
     // add rest
     for (tasks <- hostTasksMap.values) {

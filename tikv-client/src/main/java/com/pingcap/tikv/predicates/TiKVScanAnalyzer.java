@@ -343,7 +343,7 @@ public class TiKVScanAnalyzer {
   }
 
   @VisibleForTesting
-  Map<Long, List<KeyRange>> buildTableScanKeyRange(
+  private Map<Long, List<KeyRange>> buildTableScanKeyRange(
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
@@ -377,7 +377,7 @@ public class TiKVScanAnalyzer {
   }
 
   @VisibleForTesting
-  Map<Long, List<KeyRange>> buildIndexScanKeyRange(
+  private Map<Long, List<KeyRange>> buildIndexScanKeyRange(
       TiTableInfo table,
       TiIndexInfo index,
       List<IndexRange> indexRanges,
@@ -399,7 +399,7 @@ public class TiKVScanAnalyzer {
 
   // If all the columns requested in the select list of query, are available in the index, then the
   // query engine doesn't have to lookup the table again compared with double read.
-  boolean isCoveringIndex(
+  private boolean isCoveringIndex(
       List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
     Map<String, TiIndexColumn> colInIndex =
         indexColumns
