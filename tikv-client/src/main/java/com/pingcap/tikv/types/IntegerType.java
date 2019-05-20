@@ -132,7 +132,7 @@ public class IntegerType extends DataType {
   /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value, long version) {
-    return Integer.parseInt(value);
+    return Long.parseLong(value);
   }
 
   protected IntegerType(TiColumnInfo.InternalTypeHolder holder) {
