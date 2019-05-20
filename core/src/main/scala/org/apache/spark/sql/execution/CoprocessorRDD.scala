@@ -89,10 +89,10 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
     if (tiRdds.size > 1) {
       val b = new StringBuilder
       b.append(s"TiSpark $nodeName on partition table:\n")
-      // (_, i) => s"partition p$i"
       tiRdds.zipWithIndex.map {
         case (_, i) => b.append(s"partition p$i")
       }
+      b.append(s"with dag request: ${tiRdds.head.dagRequest.toString}")
       b.toString()
     } else {
       s"TiSpark $nodeName{${tiRdds.head.dagRequest.toString}}" +
@@ -166,6 +166,7 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
       tiHandleRDDs.zipWithIndex.map {
         case (_, i) => b.append(s"partition p$i")
       }
+      b.append(s"with dag request: ${tiHandleRDDs.head.dagRequest.toString}")
       b.toString()
     } else {
       s"TiDB $nodeName{${tiHandleRDDs.head.dagRequest.toString}}" +
