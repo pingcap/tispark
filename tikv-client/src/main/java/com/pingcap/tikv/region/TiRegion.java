@@ -115,7 +115,7 @@ public class TiRegion implements Serializable {
     return builder.build();
   }
 
-  public static class RegionVerID {
+  public class RegionVerID {
     public final long id;
     public final long confVer;
     public final long ver;
