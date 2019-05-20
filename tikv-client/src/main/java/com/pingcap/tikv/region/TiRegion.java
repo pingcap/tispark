@@ -115,7 +115,7 @@ public class TiRegion implements Serializable {
     return builder.build();
   }
 
-  public class RegionVerID {
+  public static class RegionVerID {
     public final long id;
     public final long confVer;
     public final long ver;
@@ -140,7 +140,7 @@ public class TiRegion implements Serializable {
    * @param leaderStoreID is leader peer id.
    * @return false if no peers matches the store id.
    */
-  public boolean switchPeer(long leaderStoreID) {
+  boolean switchPeer(long leaderStoreID) {
     List<Peer> peers = meta.getPeersList();
     for (Peer p : peers) {
       if (p.getStoreId() == leaderStoreID) {

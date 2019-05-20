@@ -86,8 +86,19 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
   }
 
   override def verboseString: String =
-    s"TiSpark $nodeName{${tiRdds(0).dagRequest.toString}}" +
-      s"${TiUtil.getReqEstCountStr(tiRdds(0).dagRequest)}"
+    if (tiRdds.size > 1) {
+      val b = new StringBuilder
+      b.append(s"TiSpark $nodeName on partition table:\n")
+      // (_, i) => s"partition p$i"
+      tiRdds.zipWithIndex.map {
+        case (_, i) => b.append(s"partition p$i")
+      }
+      b.toString()
+    } else {
+      s"TiSpark $nodeName{${tiRdds.head.dagRequest.toString}}" +
+        s"${TiUtil.getReqEstCountStr(tiRdds.head.dagRequest)}"
+
+    }
 
   override def simpleString: String = verboseString
 }
@@ -149,8 +160,17 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
   override def output: Seq[Attribute] = attributeRef
 
   override def verboseString: String =
-    s"TiDB $nodeName{${tiHandleRDDs(0).dagRequest.toString}}" +
-      s"${TiUtil.getReqEstCountStr(tiHandleRDDs(0).dagRequest)}"
+    if (tiHandleRDDs.size > 1) {
+      val b = new mutable.StringBuilder()
+      b.append(s"TiSpark $nodeName on partition table:\n")
+      tiHandleRDDs.zipWithIndex.map {
+        case (_, i) => b.append(s"partition p$i")
+      }
+      b.toString()
+    } else {
+      s"TiDB $nodeName{${tiHandleRDDs.head.dagRequest.toString}}" +
+        s"${TiUtil.getReqEstCountStr(tiHandleRDDs.head.dagRequest)}"
+    }
 
   override def simpleString: String = verboseString
 }

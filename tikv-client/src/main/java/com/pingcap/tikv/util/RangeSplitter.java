@@ -43,7 +43,6 @@ public class RangeSplitter {
     private final Metapb.Store store;
     private final List<KeyRange> ranges;
     private final String host;
-    private final long physicalId = 0;
 
     public static RegionTask newInstance(
         TiRegion region, Metapb.Store store, List<KeyRange> ranges) {
@@ -76,29 +75,6 @@ public class RangeSplitter {
 
     public String getHost() {
       return host;
-    }
-
-    public long getPhysicalId() {
-      return physicalId;
-    }
-
-    @Override
-    public boolean equals(Object another) {
-      if (!(another instanceof RegionTask)) return false;
-      RegionTask regionTask = (RegionTask) another;
-      return regionTask.host.equals(this.host)
-          && regionTask.region.equals(this.region)
-          && regionTask.store.equals(this.store);
-    }
-
-    @Override
-    public int hashCode() {
-      int hash = 7;
-      hash = 31 * hash * this.region.hashCode();
-      hash = 31 * hash * this.store.hashCode();
-      hash = 31 * hash * this.ranges.hashCode();
-      hash = 31 * hash * this.store.hashCode();
-      return hash;
     }
 
     @Override

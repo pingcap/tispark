@@ -52,14 +52,6 @@ import org.tikv.kvproto.Coprocessor;
  */
 public class TiDAGRequest implements Serializable {
 
-  public List<TiPartitionDef> getPrunedParts() {
-    return prunedParts;
-  }
-
-  public void setPrunedParts(List<TiPartitionDef> prunedParts) {
-    this.prunedParts = prunedParts;
-  }
-
   public static class Builder {
     private List<String> requiredCols = new ArrayList<>();
     private List<Expression> filters = new ArrayList<>();
@@ -151,6 +143,14 @@ public class TiDAGRequest implements Serializable {
       req.resolve();
       return req;
     }
+  }
+
+  public List<TiPartitionDef> getPrunedParts() {
+    return prunedParts;
+  }
+
+  public void setPrunedParts(List<TiPartitionDef> prunedParts) {
+    this.prunedParts = prunedParts;
   }
 
   public TiDAGRequest(PushDownType pushDownType) {
@@ -802,7 +802,7 @@ public class TiDAGRequest implements Serializable {
     return idToRanges.get(physicalId);
   }
 
-  public Map<Long, List<Coprocessor.KeyRange>> getRangesMpas() {
+  public Map<Long, List<Coprocessor.KeyRange>> getRangesMaps() {
     return idToRanges;
   }
 
@@ -1002,7 +1002,7 @@ public class TiDAGRequest implements Serializable {
     }
 
     // Key ranges might be also useful
-    if (!getRangesByPhysicalId().isEmpty()) {
+    if (!getRangesMaps().isEmpty()) {
       sb.append(", KeyRange: ");
       // TODO fix me
       //      getRangesByPhysicalId().forEach( (k, v) -> sb.append(KeyUtils.formatBytesUTF8(v)));
