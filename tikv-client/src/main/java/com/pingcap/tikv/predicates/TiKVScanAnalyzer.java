@@ -71,32 +71,39 @@ public class TiKVScanAnalyzer {
         return new Builder();
       }
 
-      public void setKeyRanges(Map<Long, List<KeyRange>> keyRanges) {
+      public Builder setKeyRanges(Map<Long, List<KeyRange>> keyRanges) {
         this.keyRanges = keyRanges;
+        return this;
       }
 
-      public void setFilters(Set<Expression> filters) {
+      public Builder setFilters(Set<Expression> filters) {
         this.filters = filters;
+        return this;
       }
 
-      public void setCost(double cost) {
+      public Builder setCost(double cost) {
         this.cost = cost;
+        return this;
       }
 
-      public void setIndex(TiIndexInfo index) {
+      public Builder setIndex(TiIndexInfo index) {
         this.index = index;
+        return this;
       }
 
-      public void setDoubleRead(boolean doubleRead) {
+      public Builder setDoubleRead(boolean doubleRead) {
         isDoubleRead = doubleRead;
+        return this;
       }
 
-      public void setEstimatedRowCount(double estimatedRowCount) {
+      public Builder setEstimatedRowCount(double estimatedRowCount) {
         this.estimatedRowCount = estimatedRowCount;
+        return this;
       }
 
-      public void setPrunedParts(List<TiPartitionDef> prunedParts) {
+      public Builder setPrunedParts(List<TiPartitionDef> prunedParts) {
         this.prunedParts = prunedParts;
+        return this;
       }
 
       public TiKVScanPlan build() {
@@ -261,21 +268,20 @@ public class TiKVScanAnalyzer {
     long tableColSize = table.getColumnLength() + 8;
 
     if (index == null || index.isFakePrimaryKey()) {
-      planBuilder.setDoubleRead(false);
-      planBuilder.calculateCostAndEstimateCount(tableStatistics, tableColSize);
-      planBuilder.setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
+      planBuilder
+          .setDoubleRead(false)
+          .calculateCostAndEstimateCount(tableStatistics, tableColSize)
+          .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
     } else {
-      planBuilder.setIndex(index);
-      planBuilder.setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()));
-      // table name, index and handle column
       long indexSize = index.getIndexColumnLength() + 16;
-      planBuilder.calculateCostAndEstimateCount(
-          tableStatistics, conditions, irs, indexSize, tableColSize);
-      planBuilder.setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts));
+      planBuilder.setIndex(index)
+          .setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()))
+      // table name, index and handle column
+          .calculateCostAndEstimateCount(tableStatistics, conditions, irs, indexSize, tableColSize)
+          .setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts));
     }
 
-    planBuilder.setFilters(result.getResidualPredicates());
-    planBuilder.setPrunedParts(prunedParts);
+    planBuilder.setFilters(result.getResidualPredicates()).setPrunedParts(prunedParts);
     return planBuilder.build();
   }
 
