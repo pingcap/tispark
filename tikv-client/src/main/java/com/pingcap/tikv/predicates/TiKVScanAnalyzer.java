@@ -229,7 +229,7 @@ public class TiKVScanAnalyzer {
     return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
   }
 
-  public TiKVScanPlan buildIndexScan(
+  TiKVScanPlan buildIndexScan(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiIndexInfo index,
@@ -344,7 +344,7 @@ public class TiKVScanAnalyzer {
   }
 
   @VisibleForTesting
-  public Map<Long, List<KeyRange>> buildTableScanKeyRange(
+  Map<Long, List<KeyRange>> buildTableScanKeyRange(
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
