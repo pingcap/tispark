@@ -38,7 +38,7 @@ import java.util.function.BiConsumer;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor;
 
-public class ScanAnalyzerTest {
+public class TiKVScanAnalyzerTest {
   private static TiTableInfo createTable() {
     return createTableWithIndex(1, 1);
   }
