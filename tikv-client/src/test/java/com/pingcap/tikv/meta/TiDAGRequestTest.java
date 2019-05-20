@@ -13,33 +13,33 @@
  * limitations under the License.
  */
 
- package com.pingcap.tikv.meta;
+package com.pingcap.tikv.meta;
 
- import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
- import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
- import static org.junit.Assert.assertEquals;
- import static org.junit.Assert.assertTrue;
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
- import com.google.common.collect.ImmutableList;
- import com.google.common.collect.ImmutableMap;
- import com.google.protobuf.ByteString;
- import com.pingcap.tidb.tipb.Expr;
- import com.pingcap.tikv.expression.*;
- import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
- import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
- import com.pingcap.tikv.expression.visitor.ProtoConverter;
- import com.pingcap.tikv.types.IntegerType;
- import com.pingcap.tikv.types.StringType;
- import java.io.ByteArrayInputStream;
- import java.io.ByteArrayOutputStream;
- import java.io.ObjectInputStream;
- import java.io.ObjectOutputStream;
- import java.util.HashMap;
- import java.util.Map;
- import org.junit.Test;
- import org.tikv.kvproto.Coprocessor;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.ByteString;
+import com.pingcap.tidb.tipb.Expr;
+import com.pingcap.tikv.expression.*;
+import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
+import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
+import com.pingcap.tikv.expression.visitor.ProtoConverter;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.StringType;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.HashMap;
+import java.util.Map;
+import org.junit.Test;
+import org.tikv.kvproto.Coprocessor;
 
- public class TiDAGRequestTest {
+public class TiDAGRequestTest {
   private static TiTableInfo createTable() {
     return new MetaUtils.TableBuilder()
         .name("testTable")
@@ -94,14 +94,13 @@
         .setHaving(lessEqual(col3, c2))
         .setLimit(100)
         .addRanges(
-            ImmutableMap.of(table.getId(),
+            ImmutableMap.of(
+                table.getId(),
                 ImmutableList.of(
-                Coprocessor.KeyRange.newBuilder()
-                    .setStart(ByteString.copyFromUtf8("startkey"))
-                    .setEnd(ByteString.copyFromUtf8("endkey"))
-                    .build())
-                )
-            );
+                    Coprocessor.KeyRange.newBuilder()
+                        .setStart(ByteString.copyFromUtf8("startkey"))
+                        .setEnd(ByteString.copyFromUtf8("endkey"))
+                        .build())));
 
     ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
     ObjectOutputStream oos = new ObjectOutputStream(byteOutStream);
@@ -182,4 +181,4 @@
     assertEquals(lhs.getFlags(), rhs.getFlags());
     return true;
   }
- }
+}

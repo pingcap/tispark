@@ -229,7 +229,7 @@ public class TiKVScanAnalyzer {
     return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
   }
 
-  private TiKVScanPlan buildIndexScan(
+  public TiKVScanPlan buildIndexScan(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiIndexInfo index,
@@ -343,7 +343,7 @@ public class TiKVScanAnalyzer {
   }
 
   @VisibleForTesting
-  private Map<Long, List<KeyRange>> buildTableScanKeyRange(
+  public Map<Long, List<KeyRange>> buildTableScanKeyRange(
       TiTableInfo table, List<IndexRange> indexRanges, List<TiPartitionDef> prunedParts) {
     requireNonNull(table, "Table is null");
     requireNonNull(indexRanges, "indexRanges is null");
@@ -377,7 +377,7 @@ public class TiKVScanAnalyzer {
   }
 
   @VisibleForTesting
-  private Map<Long, List<KeyRange>> buildIndexScanKeyRange(
+  Map<Long, List<KeyRange>> buildIndexScanKeyRange(
       TiTableInfo table,
       TiIndexInfo index,
       List<IndexRange> indexRanges,
@@ -399,7 +399,7 @@ public class TiKVScanAnalyzer {
 
   // If all the columns requested in the select list of query, are available in the index, then the
   // query engine doesn't have to lookup the table again compared with double read.
-  private boolean isCoveringIndex(
+  boolean isCoveringIndex(
       List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
     Map<String, TiIndexColumn> colInIndex =
         indexColumns
@@ -414,13 +414,17 @@ public class TiKVScanAnalyzer {
         continue;
       }
       boolean colNotInIndex = false;
-      TiIndexColumn indexCol = colInIndex.get(colInfo.getName());
-      boolean isFullLength =
-          indexCol.isLengthUnspecified() || indexCol.getLength() == colInfo.getType().getLength();
-      if (colInfo.getName().equalsIgnoreCase(indexCol.getName()) && isFullLength) {
+      if (colInIndex.containsKey(colInfo.getName())) {
+        TiIndexColumn indexCol = colInIndex.get(colInfo.getName());
+        boolean isFullLength =
+            indexCol.isLengthUnspecified() || indexCol.getLength() == colInfo.getType().getLength();
+        if (!colInfo.getName().equalsIgnoreCase(indexCol.getName()) || !isFullLength) {
+          colNotInIndex = true;
+        }
+      } else {
         colNotInIndex = true;
       }
-      if (!colNotInIndex) {
+      if (colNotInIndex) {
         return false;
       }
     }
