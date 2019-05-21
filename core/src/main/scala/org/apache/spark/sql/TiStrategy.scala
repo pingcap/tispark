@@ -77,7 +77,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toLowerCase.toBoolean
 
   private def allowIndexRead(): Boolean =
-    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "false").toLowerCase.toBoolean
+    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "true").toLowerCase.toBoolean
 
   private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
