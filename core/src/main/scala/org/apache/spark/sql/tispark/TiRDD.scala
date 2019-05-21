@@ -16,13 +16,14 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
+import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
@@ -33,6 +34,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class TiRDD(val dagRequest: TiDAGRequest,
+            val physicalId: Long,
             val tiConf: TiConfiguration,
             val tableRef: TiTableReference,
             @transient private val session: TiSession,
@@ -65,22 +67,10 @@ class TiRDD(val dagRequest: TiDAGRequest,
     private[this] val tasks = tiPartition.tasks
 
     private val iterator = snapshot.tableRead(dagRequest, tasks)
-    private val finalTypes = rowTransformer.getTypes.toList
-
-    def toSparkRow(row: TiRow): Row = {
-      val transRow = rowTransformer.transform(row)
-      val rowArray = new Array[Any](finalTypes.size)
-
-      for (i <- 0 until transRow.fieldCount) {
-        rowArray(i) = transRow.get(i, finalTypes(i))
-      }
-
-      Row.fromSeq(rowArray)
-    }
 
     override def hasNext: Boolean = {
       // Kill the task in case it has been marked as killed. This logic is from
-      // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
+      // Interrupted Iterator, but we inline it here instead of wrapping the iterator in order
       // to avoid performance overhead.
       if (context.isInterrupted()) {
         throw new TaskKilledException
@@ -88,19 +78,17 @@ class TiRDD(val dagRequest: TiDAGRequest,
       iterator.hasNext
     }
 
-    override def next(): Row = toSparkRow(iterator.next)
+    override def next(): Row = TiUtil.toSparkRow(iterator.next, rowTransformer)
   }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =
     split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
 
   override protected def getPartitions: Array[Partition] = {
-    val conf = sparkSession.conf
     val keyWithRegionTasks = RangeSplitter
       .newSplitter(session.getRegionManager)
-      .splitRangeByRegion(dagRequest.getRanges)
+      .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId))
 
-    val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
     with mutable.MultiMap[String, RegionTask]
 
@@ -109,12 +97,9 @@ class TiRDD(val dagRequest: TiDAGRequest,
     for (task <- keyWithRegionTasks) {
       hostTasksMap.addBinding(task.getHost, task)
       val tasks = hostTasksMap(task.getHost)
-      if (tasks.size >= taskPerSplit) {
-        result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
-        index += 1
-        hostTasksMap.remove(task.getHost)
-
-      }
+      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+      index += 1
+      hostTasksMap.remove(task.getHost)
     }
     // add rest
     for (tasks <- hostTasksMap.values) {

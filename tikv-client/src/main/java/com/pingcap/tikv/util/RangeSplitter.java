@@ -30,8 +30,10 @@ import gnu.trove.map.hash.TLongObjectHashMap;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
 
@@ -102,15 +104,6 @@ public class RangeSplitter {
 
   private final RegionManager regionManager;
 
-  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionIds(
-      List<Long> ids, TLongArrayList handles) {
-    TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
-    for (Long id : ids) {
-      result.putAll(groupByAndSortHandlesByRegionId(id, handles));
-    }
-    return result;
-  }
-
   /**
    * Group by a list of handles by the handles' region id, handles will be sorted.
    *
@@ -118,7 +111,7 @@ public class RangeSplitter {
    * @param handles Handle list
    * @return <RegionId, HandleList> map
    */
-  private TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(
+  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(
       long tableId, TLongArrayList handles) {
     TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
     handles.sort();
@@ -129,7 +122,8 @@ public class RangeSplitter {
     for (int i = 0; i < handles.size(); i++) {
       long curHandle = handles.get(i);
       RowKey key = RowKey.toRowKey(tableId, curHandle);
-      if (endKey == null || (endKey.length != 0 && FastByteComparisons.compareTo(key.getBytes(), endKey) >= 0)) {
+      if (endKey == null
+          || (endKey.length != 0 && FastByteComparisons.compareTo(key.getBytes(), endKey) >= 0)) {
         if (curRegion != null) {
           result.put(curRegion.getId(), handlesInCurRegion);
           handlesInCurRegion = new TLongArrayList();
@@ -147,20 +141,12 @@ public class RangeSplitter {
     return result;
   }
 
-  private TLongArrayList createHandleList(int startPos, int endPos, TLongArrayList handles) {
-    TLongArrayList result = new TLongArrayList();
-    for (int i = startPos; i < endPos; i++) {
-      result.add(handles.get(i));
-    }
-    return result;
-  }
-
   public List<RegionTask> splitAndSortHandlesByRegion(List<Long> ids, TLongArrayList handles) {
-    List<RegionTask> regionTasks = new ArrayList<>();
+    Set<RegionTask> regionTasks = new HashSet<>();
     for (Long id : ids) {
       regionTasks.addAll(splitAndSortHandlesByRegion(id, handles));
     }
-    return regionTasks;
+    return new ArrayList<>(regionTasks);
   }
 
   /**
