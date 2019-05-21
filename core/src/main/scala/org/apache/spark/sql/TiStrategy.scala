@@ -76,6 +76,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def allowAggregationPushdown(): Boolean =
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toLowerCase.toBoolean
 
+  private def allowIndexRead(): Boolean =
+    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "true").toLowerCase.toBoolean
+
   private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
@@ -247,14 +250,21 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     val tblStatistics: TableStatistics = StatisticsManager.getTableStatistics(source.table.getId)
 
-    // TODO: refactor how to generate a dag request.
-    val scanPlan: TiKVScanPlan = scanBuilder.buildScan(
+    val tableScanPlan: TiKVScanPlan =
+      scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)
+    val scanPlan: TiKVScanPlan = if (allowIndexRead()) {
+      // We need to prepare downgrade information in case of index scan downgrade happens.
+      tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
+      scanBuilder.buildScan(
         // need to bind all columns needed
         tiColumns.map { _.getColumnInfo }.asJava,
         tiFilters.asJava,
         source.table,
         tblStatistics
       )
+    } else {
+      tableScanPlan
+    }
 
     dagRequest.addRanges(scanPlan.getKeyRanges)
     dagRequest.setPrunedParts(scanPlan.getPrunedParts)
