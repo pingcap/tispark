@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Expr;
 import com.pingcap.tikv.expression.*;
@@ -93,11 +94,13 @@ public class TiDAGRequestTest {
         .setHaving(lessEqual(col3, c2))
         .setLimit(100)
         .addRanges(
-            ImmutableList.of(
-                Coprocessor.KeyRange.newBuilder()
-                    .setStart(ByteString.copyFromUtf8("startkey"))
-                    .setEnd(ByteString.copyFromUtf8("endkey"))
-                    .build()));
+            ImmutableMap.of(
+                table.getId(),
+                ImmutableList.of(
+                    Coprocessor.KeyRange.newBuilder()
+                        .setStart(ByteString.copyFromUtf8("startkey"))
+                        .setEnd(ByteString.copyFromUtf8("endkey"))
+                        .build())));
 
     ByteArrayOutputStream byteOutStream = new ByteArrayOutputStream();
     ObjectOutputStream oos = new ObjectOutputStream(byteOutStream);
@@ -153,12 +156,8 @@ public class TiDAGRequestTest {
       if (!lhsItem.toProto(lhsMap).equals(rhsItem.toProto(rhsMap))) return false;
     }
 
-    assertEquals(lhs.getRanges().size(), rhs.getRanges().size());
-    for (int i = 0; i < lhs.getRanges().size(); i++) {
-      Coprocessor.KeyRange lhsItem = lhs.getRanges().get(i);
-      Coprocessor.KeyRange rhsItem = rhs.getRanges().get(i);
-      if (!lhsItem.equals(rhsItem)) return false;
-    }
+    assertEquals(lhs.getRangesMaps().size(), rhs.getRangesMaps().size());
+    assertEquals(lhs.getRangesMaps(), rhs.getRangesMaps());
 
     assertEquals(lhs.getFilters().size(), rhs.getFilters().size());
     for (int i = 0; i < lhs.getFilters().size(); i++) {

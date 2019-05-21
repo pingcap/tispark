@@ -19,7 +19,7 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
+import com.pingcap.tispark.{TiPartition, TiSessionCache, TiTableReference}
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
@@ -40,6 +40,7 @@ import scala.collection.mutable.ListBuffer
  *
  */
 class TiHandleRDD(val dagRequest: TiDAGRequest,
+                  val physicalId: Long,
                   val tiConf: TiConfiguration,
                   val tableRef: TiTableReference,
                   val ts: TiTimestamp,
@@ -56,13 +57,12 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       private[this] val tasks = tiPartition.tasks
 
       private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
-      private val tableIdList = dagRequest.getIds
       private val regionManager = session.getRegionManager
       private lazy val handleList = {
         val lst = new TLongArrayList()
         handleIterator.asScala.foreach {
           // Kill the task in case it has been marked as killed. This logic is from
-          // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
+          // InterruptedIterator, but we inline it here instead of wrapping the iterator in order
           // to avoid performance overhead.
           if (context.isInterrupted()) {
             throw new TaskKilledException
@@ -74,7 +74,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       // Fetch all handles and group by region id
       private val regionHandleMap = RangeSplitter
         .newSplitter(regionManager)
-        .groupByAndSortHandlesByRegionIds(tableIdList, handleList)
+        .groupByAndSortHandlesByRegionId(physicalId, handleList)
 
       private val iterator = regionHandleMap.iterator()
 
@@ -97,12 +97,10 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
     }
 
   override protected def getPartitions: Array[Partition] = {
-    val conf = sparkSession.conf
     val keyWithRegionTasks = RangeSplitter
       .newSplitter(session.getRegionManager)
-      .splitRangeByRegion(dagRequest.getRanges)
+      .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId))
 
-    val taskPerSplit = conf.get(TiConfigConst.TASK_PER_SPLIT, "1").toInt
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
     with mutable.MultiMap[String, RegionTask]
 
@@ -111,12 +109,9 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
     for (task <- keyWithRegionTasks) {
       hostTasksMap.addBinding(task.getHost, task)
       val tasks = hostTasksMap(task.getHost)
-      if (tasks.size >= taskPerSplit) {
-        result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
-        index += 1
-        hostTasksMap.remove(task.getHost)
-
-      }
+      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+      index += 1
+      hostTasksMap.remove(task.getHost)
     }
     // add rest
     for (tasks <- hostTasksMap.values) {
@@ -124,6 +119,5 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       index += 1
     }
     result.toArray
-
   }
 }

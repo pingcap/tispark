@@ -22,9 +22,12 @@ import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.expression.ExpressionBlacklist
 import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
+import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
+import com.pingcap.tispark.TiBatchWrite.TiRow
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
@@ -110,6 +113,18 @@ object TiUtil {
                               source: TiDBRelation,
                               blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
+
+  def toSparkRow(row: TiRow, rowTransformer: RowTransformer): Row = {
+    val finalTypes = rowTransformer.getTypes.toList
+    val transRow = rowTransformer.transform(row)
+    val rowArray = new Array[Any](finalTypes.size)
+
+    for (i <- 0 until transRow.fieldCount) {
+      rowArray(i) = transRow.get(i, finalTypes(i))
+    }
+
+    Row.fromSeq(rowArray)
+  }
 
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType =

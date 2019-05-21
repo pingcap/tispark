@@ -23,8 +23,8 @@ import com.pingcap.tikv.expression._
 import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
-import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
+import com.pingcap.tikv.predicates.TiKVScanAnalyzer.TiKVScanPlan
+import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.utils.TiUtil._
 import com.pingcap.tispark.statistics.StatisticsManager
@@ -77,7 +77,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toLowerCase.toBoolean
 
   private def allowIndexRead(): Boolean =
-    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "false").toLowerCase.toBoolean
+    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "true").toLowerCase.toBoolean
 
   private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
@@ -142,8 +142,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       if (dagRequest.isDoubleRead) {
         source.dagRequestToRegionTaskExec(dagRequest, output)
       } else {
-        val tiRdd = source.logicalPlanToRDD(dagRequest)
-        CoprocessorRDD(output, tiRdd)
+        CoprocessorRDD(output, source.logicalPlanToRDD(dagRequest))
       }
     }
   }
@@ -247,13 +246,13 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
-    val scanBuilder: ScanAnalyzer = new ScanAnalyzer
+    val scanBuilder: TiKVScanAnalyzer = new TiKVScanAnalyzer
 
     val tblStatistics: TableStatistics = StatisticsManager.getTableStatistics(source.table.getId)
 
-    val tableScanPlan: ScanPlan =
+    val tableScanPlan: TiKVScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)
-    val scanPlan: ScanPlan = if (allowIndexRead()) {
+    val scanPlan: TiKVScanPlan = if (allowIndexRead()) {
       // We need to prepare downgrade information in case of index scan downgrade happens.
       tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
       scanBuilder.buildScan(
