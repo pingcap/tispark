@@ -18,6 +18,7 @@ package com.pingcap.tikv.predicates;
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.*;
 import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
 import static com.pingcap.tikv.expression.LogicalBinaryExpression.*;
+import static com.pingcap.tikv.predicates.TiKVScanAnalyzer.extractConditions;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -193,7 +194,7 @@ public class PredicateUtilsTest {
     logicalTests.test(
         (k, v) -> {
           List<Expression> exprs = ImmutableList.of(k);
-          ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+          ScanSpec result = extractConditions(exprs, table, index);
           List<IndexRange> irs =
               PredicateUtils.expressionToIndexRanges(
                   result.getPointPredicates(), result.getRangePredicate(), table, index);
