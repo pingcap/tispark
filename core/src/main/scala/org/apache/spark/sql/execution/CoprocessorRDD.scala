@@ -274,7 +274,7 @@ case class RegionTaskExec(child: SparkPlan,
         indexTasks
       }
 
-      // indexTasks was made to be used later to determine should we downgrade to
+      // indexTasks was made to be used later to determine whether we should downgrade to
       // table scan or not.
       val indexTasks: util.List[RegionTask] = generateIndexTasks(new TLongArrayList(handles))
       val indexTaskRanges = indexTasks.flatMap {

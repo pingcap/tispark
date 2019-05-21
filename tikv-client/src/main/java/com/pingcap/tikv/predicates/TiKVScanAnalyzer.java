@@ -274,9 +274,10 @@ public class TiKVScanAnalyzer {
           .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
     } else {
       long indexSize = index.getIndexColumnLength() + 16;
-      planBuilder.setIndex(index)
+      planBuilder
+          .setIndex(index)
           .setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()))
-      // table name, index and handle column
+          // table name, index and handle column
           .calculateCostAndEstimateCount(tableStatistics, conditions, irs, indexSize, tableColSize)
           .setKeyRanges(buildIndexScanKeyRange(table, index, irs, prunedParts));
     }
