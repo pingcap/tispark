@@ -124,10 +124,7 @@ public class KeyRangeUtils {
       KeyRange first = ranges.get(nowPos);
       KeyRange last = ranges.get(nextPos);
 
-      Key lowerMin = toRawKey(first.getStart(), true);
-      Key upperMax = toRawKey(last.getEnd(), false);
-
-      rangeBuilder.add(makeCoprocRange(lowerMin.toByteString(), upperMax.toByteString()));
+      rangeBuilder.add(makeCoprocRange(first.getStart(), last.getEnd()));
       nowPos = nowPos + step;
     }
     return rangeBuilder.build();

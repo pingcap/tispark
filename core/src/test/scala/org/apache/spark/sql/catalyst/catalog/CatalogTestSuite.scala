@@ -293,6 +293,11 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     df2.show
     df3.explain
     df3.show
+    spark.sql("insert overwrite table testLogic2 select * from testTempView3 where t1_id <= 3")
+    spark.sql("insert overwrite table testLogic3 select * from testTempView2 where t1_id <= 3")
+    spark.sql("drop table if exists testLogic1")
+    spark.sql("drop table if exists testLogic2")
+    spark.sql("drop table if exists testLogic3")
   }
 
   override def beforeAll(): Unit = {
