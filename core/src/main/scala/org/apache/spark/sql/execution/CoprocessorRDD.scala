@@ -274,7 +274,7 @@ case class RegionTaskExec(child: SparkPlan,
         indexTasks
       }
 
-      // this index tasks was made to be used later to determine should we downgrade to
+      // indexTasks was made to be used later to determine whether we should downgrade to
       // table scan or not.
       val indexTasks: util.List[RegionTask] = generateIndexTasks(new TLongArrayList(handles))
       val indexTaskRanges = indexTasks.flatMap {
@@ -374,15 +374,17 @@ case class RegionTaskExec(child: SparkPlan,
 
         downgradeTasks.foreach { task =>
           val downgradeTaskRanges = task.getRanges
-          logger.debug(
-            s"Merged ${taskRanges.size} index ranges to ${downgradeTaskRanges.size} ranges."
-          )
-          logger.debug(
-            s"Unary task downgraded, task info:Host={${task.getHost}}, " +
-              s"RegionId={${task.getRegion.getId}}, " +
-              s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
-              s"RangesListSize=${downgradeTaskRanges.size}}"
-          )
+          if (logger.isDebugEnabled) {
+            logger.debug(
+              s"Merged ${taskRanges.size} index ranges to ${downgradeTaskRanges.size} ranges."
+            )
+            logger.debug(
+              s"Unary task downgraded, task info:Host={${task.getHost}}, " +
+                s"RegionId={${task.getRegion.getId}}, " +
+                s"Store={id=${task.getStore.getId},addr=${task.getStore.getAddress}}, " +
+                s"RangesListSize=${downgradeTaskRanges.size}}"
+            )
+          }
           numDowngradedTasks += 1
           numDowngradeRangesScanned += downgradeTaskRanges.size
 
