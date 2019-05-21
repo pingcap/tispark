@@ -31,6 +31,8 @@ import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ChannelFactory;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.FutureObserver;
 import io.grpc.ManagedChannel;
 import java.net.URI;
@@ -40,29 +42,46 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
-import org.tikv.kvproto.Pdpb.GetMembersRequest;
-import org.tikv.kvproto.Pdpb.GetMembersResponse;
-import org.tikv.kvproto.Pdpb.GetRegionByIDRequest;
-import org.tikv.kvproto.Pdpb.GetRegionRequest;
-import org.tikv.kvproto.Pdpb.GetRegionResponse;
-import org.tikv.kvproto.Pdpb.GetStoreRequest;
-import org.tikv.kvproto.Pdpb.GetStoreResponse;
-import org.tikv.kvproto.Pdpb.RequestHeader;
-import org.tikv.kvproto.Pdpb.Timestamp;
-import org.tikv.kvproto.Pdpb.TsoRequest;
-import org.tikv.kvproto.Pdpb.TsoResponse;
+import org.tikv.kvproto.Pdpb.*;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
+  private final Logger logger = LoggerFactory.getLogger(PDClient.class);
   private RequestHeader header;
   private TsoRequest tsoReq;
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
   private List<URI> pdAddrs;
+
+  /**
+   * Sends request to pd to scatter region.
+   *
+   * @param left represents a region info
+   */
+  public void scatterRegion(TiRegion left) {
+    Supplier<ScatterRegionRequest> request =
+        () -> ScatterRegionRequest.newBuilder().setHeader(header).setRegionId(left.getId()).build();
+
+    PDErrorHandler<ScatterRegionResponse> handler =
+        new PDErrorHandler<>(
+            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
+            this);
+
+    ScatterRegionResponse resp =
+        callWithRetry(
+            ConcreteBackOffer.newGetBackOff(), PDGrpc.METHOD_SCATTER_REGION, request, handler);
+    // TODO: maybe we should retry here, need dig into pd's codebase.
+    if (resp.hasHeader() && resp.getHeader().hasError()) {
+      throw new TiClientInternalException(
+          String.format("failed to scatter region because %s", resp.getHeader().getError()));
+    }
+  }
 
   @Override
   public TiTimestamp getTimestamp(BackOffer backOffer) {
@@ -184,11 +203,15 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   public void close() throws InterruptedException {
     if (service != null) {
       service.shutdownNow();
+      service.awaitTermination(1, TimeUnit.SECONDS);
+    }
+    if (channelFactory != null) {
+      channelFactory.close();
     }
   }
 
-  public static ReadOnlyPDClient create(TiSession session) {
-    return createRaw(session);
+  public static ReadOnlyPDClient create(TiConfiguration conf, ChannelFactory channelFactory) {
+    return createRaw(conf, channelFactory);
   }
 
   @VisibleForTesting
@@ -242,7 +265,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private GetMembersResponse getMembers(URI url) {
     try {
-      ManagedChannel probChan = session.getChannel(url.getHost() + ":" + url.getPort());
+      ManagedChannel probChan = channelFactory.getChannel(url.getHost() + ":" + url.getPort());
       PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);
       GetMembersRequest request =
           GetMembersRequest.newBuilder().setHeader(RequestHeader.getDefaultInstance()).build();
@@ -273,7 +296,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       }
 
       // create new Leader
-      ManagedChannel clientChannel = session.getChannel(leaderUrlStr);
+      ManagedChannel clientChannel = channelFactory.getChannel(leaderUrlStr);
       leaderWrapper =
           new LeaderWrapper(
               leaderUrlStr,
@@ -324,13 +347,13 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         .withDeadlineAfter(getConf().getTimeout(), getConf().getTimeoutUnit());
   }
 
-  private PDClient(TiSession session) {
-    super(session);
+  private PDClient(TiConfiguration conf, ChannelFactory channelFactory) {
+    super(conf, channelFactory);
   }
 
   private void initCluster() {
     GetMembersResponse resp = null;
-    List<URI> pdAddrs = getSession().getConf().getPdAddrs();
+    List<URI> pdAddrs = getConf().getPdAddrs();
     for (URI u : pdAddrs) {
       resp = getMembers(u);
       if (resp != null) {
@@ -360,10 +383,10 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         TimeUnit.MINUTES);
   }
 
-  static PDClient createRaw(TiSession session) {
+  static PDClient createRaw(TiConfiguration conf, ChannelFactory channelFactory) {
     PDClient client = null;
     try {
-      client = new PDClient(session);
+      client = new PDClient(conf, channelFactory);
       client.initCluster();
     } catch (Exception e) {
       if (client != null) {

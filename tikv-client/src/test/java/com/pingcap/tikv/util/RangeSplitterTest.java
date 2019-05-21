@@ -30,7 +30,7 @@ public class RangeSplitterTest {
     private final Map<KeyRange, TiRegion> mockRegionMap;
 
     MockRegionManager(List<KeyRange> ranges) {
-      super(null);
+      super(null, null);
       mockRegionMap =
           ranges.stream().collect(Collectors.toMap(kr -> kr, kr -> region(ranges.indexOf(kr), kr)));
     }

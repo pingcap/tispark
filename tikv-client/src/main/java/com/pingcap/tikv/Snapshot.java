@@ -17,30 +17,21 @@ package com.pingcap.tikv;
 
 import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getHandleIterator;
 import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getRowIterator;
-import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
-import com.google.common.collect.Range;
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.operation.iterator.ScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import com.pingcap.tikv.util.Pair;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
-import org.tikv.kvproto.Metapb.Store;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
@@ -70,8 +61,7 @@ public class Snapshot {
   }
 
   public ByteString get(ByteString key) {
-    Pair<TiRegion, Store> pair = session.getRegionManager().getRegionStorePairByKey(key);
-    RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, getSession());
+    RegionStoreClient client = session.getRegionStoreClientBuilder().build(key);
     // TODO: Need to deal with lock error after grpc stable
     return client.get(ConcreteBackOffer.newGetBackOff(), key, timestamp.getVersion());
   }
@@ -120,37 +110,5 @@ public class Snapshot {
 
   public Iterator<KvPair> scan(ByteString startKey) {
     return new ScanIterator(startKey, session, timestamp.getVersion());
-  }
-
-  // TODO: Need faster implementation, say concurrent version
-  // Assume keys sorted
-  public List<KvPair> batchGet(List<ByteString> keys) {
-    TiRegion curRegion = null;
-    Range<Key> curKeyRange = null;
-    Pair<TiRegion, Store> lastPair;
-    List<ByteString> keyBuffer = new ArrayList<>();
-    List<KvPair> result = new ArrayList<>(keys.size());
-    BackOffer backOffer = ConcreteBackOffer.newBatchGetMaxBackOff();
-    for (ByteString key : keys) {
-      if (curRegion == null || !curKeyRange.contains(Key.toRawKey(key))) {
-        Pair<TiRegion, Store> pair = session.getRegionManager().getRegionStorePairByKey(key);
-        lastPair = pair;
-        curRegion = pair.first;
-        curKeyRange = makeRange(curRegion.getStartKey(), curRegion.getEndKey());
-
-        try (RegionStoreClient client =
-            RegionStoreClient.create(lastPair.first, lastPair.second, getSession())) {
-          List<KvPair> partialResult =
-              client.batchGet(backOffer, keyBuffer, timestamp.getVersion());
-          // TODO: Add lock check
-          result.addAll(partialResult);
-        } catch (Exception e) {
-          throw new TiClientInternalException("Error Closing Store client.", e);
-        }
-        keyBuffer = new ArrayList<>();
-        keyBuffer.add(key);
-      }
-    }
-    return result;
   }
 }
