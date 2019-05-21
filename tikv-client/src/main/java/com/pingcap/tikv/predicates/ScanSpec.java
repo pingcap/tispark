@@ -44,15 +44,15 @@ public class ScanSpec {
       this.index = index;
     }
 
-    public void addResidualPredicate(Expression predicate) {
+    void addResidualPredicate(Expression predicate) {
       residualPredicates.add(predicate);
     }
 
-    public void addAllPredicates(List<Expression> predicates) {
+    void addAllPredicates(List<Expression> predicates) {
       residualCandidates.addAll(predicates);
     }
 
-    public void addPointPredicate(TiIndexColumn col, Expression predicate) {
+    void addPointPredicate(TiIndexColumn col, Expression predicate) {
       requireNonNull(col, "index column is null");
       requireNonNull(predicate, "predicate is null");
       if (pointPredicates.containsKey(col)) {
@@ -65,7 +65,7 @@ public class ScanSpec {
       }
     }
 
-    public void addRangePredicate(TiIndexColumn col, Expression predicate) {
+    void addRangePredicate(TiIndexColumn col, Expression predicate) {
       requireNonNull(col, "col is null");
       if (rangeColumn == null) {
         rangeColumn = col;
