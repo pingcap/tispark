@@ -112,7 +112,7 @@ public class TiKVScanAnalyzer {
       }
 
       // TODO: Fine-grained statistics usage
-      Builder calculateCostAndEstimateCount(TableStatistics tableStatistics, long tableColSize) {
+      Builder calculateCostAndEstimateCount(long tableColSize) {
         cost = 100.0;
         cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
         return this;
@@ -270,7 +270,7 @@ public class TiKVScanAnalyzer {
     if (index == null || index.isFakePrimaryKey()) {
       planBuilder
           .setDoubleRead(false)
-          .calculateCostAndEstimateCount(tableStatistics, tableColSize)
+          .calculateCostAndEstimateCount(tableColSize)
           .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
     } else {
       long indexSize = index.getIndexColumnLength() + 16;

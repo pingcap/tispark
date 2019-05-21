@@ -195,12 +195,7 @@ public class TiRegion implements Serializable {
 
   @Override
   public int hashCode() {
-    int hash = 7;
-    hash = 31 * hash * meta.hashCode();
-    hash = 31 * hash * peer.hashCode();
-    hash = 31 * hash * commandPri.hashCode();
-    hash = 31 * hash * isolationLevel.hashCode();
-    return hash;
+    return Objects.hash(meta, peer, isolationLevel, commandPri);
   }
 
   @Override
