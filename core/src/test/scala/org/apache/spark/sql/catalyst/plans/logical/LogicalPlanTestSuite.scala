@@ -75,9 +75,9 @@ class LogicalPlanTestSuite extends BaseTiSparkSuite {
 
     def checkTimestamp: PartialFunction[SparkPlan, Unit] = {
       case plan: CoprocessorRDD =>
-        check(plan.tiRdd.dagRequest.getStartTs)
+        check(plan.tiRdds(0).dagRequest.getStartTs)
       case plan: HandleRDDExec =>
-        check(plan.tiHandleRDD.dagRequest.getStartTs)
+        check(plan.tiHandleRDDs(0).dagRequest.getStartTs)
       case plan: RegionTaskExec =>
         check(plan.dagRequest.getStartTs)
       case _ =>

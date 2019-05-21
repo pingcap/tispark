@@ -38,7 +38,7 @@ import java.util.function.BiConsumer;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor;
 
-public class ScanAnalyzerTest {
+public class TiKVScanAnalyzerTest {
   private static TiTableInfo createTable() {
     return createTableWithIndex(1, 1);
   }
@@ -89,18 +89,19 @@ public class ScanAnalyzerTest {
 
     List<Expression> exprs = ImmutableList.of(eq1);
 
-    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, pkIndex);
+    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, pkIndex);
     List<IndexRange> irs =
         expressionToIndexRanges(
             result.getPointPredicates(), result.getRangePredicate(), table, pkIndex);
 
-    ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
+    TiKVScanAnalyzer scanAnalyzer = new TiKVScanAnalyzer();
 
-    List<Coprocessor.KeyRange> keyRanges = scanAnalyzer.buildTableScanKeyRange(table, irs, null);
+    Map<Long, List<Coprocessor.KeyRange>> keyRanges =
+        scanAnalyzer.buildTableScanKeyRange(table, irs, null);
 
     assertEquals(keyRanges.size(), 1);
 
-    Coprocessor.KeyRange keyRange = keyRanges.get(0);
+    Coprocessor.KeyRange keyRange = keyRanges.get(table.getId()).get(0);
 
     assertEquals(
         ByteString.copyFrom(
@@ -122,19 +123,19 @@ public class ScanAnalyzerTest {
 
     List<Expression> exprs = ImmutableList.of(eq1);
 
-    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
     List<IndexRange> irs =
         expressionToIndexRanges(
             result.getPointPredicates(), result.getRangePredicate(), table, index);
 
-    ScanAnalyzer scanAnalyzer = new ScanAnalyzer();
+    TiKVScanAnalyzer scanAnalyzer = new TiKVScanAnalyzer();
 
-    List<Coprocessor.KeyRange> keyRanges =
+    Map<Long, List<Coprocessor.KeyRange>> keyRanges =
         scanAnalyzer.buildIndexScanKeyRange(table, index, irs, null);
 
     assertEquals(keyRanges.size(), 1);
 
-    Coprocessor.KeyRange keyRange = keyRanges.get(0);
+    Coprocessor.KeyRange keyRange = keyRanges.get(table.getId()).get(0);
 
     assertEquals(
         ByteString.copyFrom(
@@ -152,7 +153,7 @@ public class ScanAnalyzerTest {
         keyRange.getEnd());
 
     exprs = ImmutableList.of(eq1, eq2);
-    result = ScanAnalyzer.extractConditions(exprs, table, index);
+    result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
 
     irs =
         expressionToIndexRanges(
@@ -162,7 +163,7 @@ public class ScanAnalyzerTest {
 
     assertEquals(keyRanges.size(), 1);
 
-    keyRange = keyRanges.get(0);
+    keyRange = keyRanges.get(table.getId()).get(0);
 
     assertEquals(
         ByteString.copyFrom(
@@ -244,7 +245,7 @@ public class ScanAnalyzerTest {
     logicalTests.test(
         (k, v) -> {
           List<Expression> exprs = ImmutableList.of(k);
-          ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+          ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
           List<IndexRange> irs =
               expressionToIndexRanges(
                   result.getPointPredicates(), result.getRangePredicate(), table, index);
@@ -271,7 +272,7 @@ public class ScanAnalyzerTest {
 
     List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 
-    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
     assertEquals(1, result.getResidualPredicates().size());
     assertEquals(eq3, result.getResidualPredicates().toArray()[0]);
 
@@ -300,7 +301,7 @@ public class ScanAnalyzerTest {
     List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
     Set<Expression> baselineSet = ImmutableSet.of(eq2, le1, eq3);
 
-    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
     // 3 remains since c2 condition pushed back as well
     assertEquals(baselineSet, result.getResidualPredicates());
 
@@ -330,7 +331,7 @@ public class ScanAnalyzerTest {
 
     List<Expression> exprs = ImmutableList.of(eq1, eq2, le1, eq3);
 
-    ScanSpec result = ScanAnalyzer.extractConditions(exprs, table, index);
+    ScanSpec result = TiKVScanAnalyzer.extractConditions(exprs, table, index);
 
     Set<Expression> baselineSet = ImmutableSet.of(eq2, le1, eq3);
     // 3 remains since c2 condition pushed back as well
@@ -346,16 +347,16 @@ public class ScanAnalyzerTest {
   public void testKeyRangeGenWithNoFilterTest() {
     TiTableInfo table = createTableWithPrefix();
     TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    ScanAnalyzer scanBuilder = new ScanAnalyzer();
-    ScanAnalyzer.ScanPlan scanPlan =
+    TiKVScanAnalyzer scanBuilder = new TiKVScanAnalyzer();
+    TiKVScanAnalyzer.TiKVScanPlan scanPlan =
         scanBuilder.buildIndexScan(ImmutableList.of(), ImmutableList.of(), index, table, null);
 
     ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
     ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();
 
     assertEquals(1, scanPlan.getKeyRanges().size());
-    assertEquals(startKey, scanPlan.getKeyRanges().get(0).getStart());
-    assertEquals(endKey, scanPlan.getKeyRanges().get(0).getEnd());
+    assertEquals(startKey, scanPlan.getKeyRanges().get(table.getId()).get(0).getStart());
+    assertEquals(endKey, scanPlan.getKeyRanges().get(table.getId()).get(0).getEnd());
   }
 
   @Test
@@ -421,7 +422,7 @@ public class ScanAnalyzerTest {
       new test(new String[] {"id", "a"}, new String[] {"a", "b"}, new int[] {-1, -1}, true)
     };
 
-    ScanAnalyzer scanBuilder = new ScanAnalyzer();
+    TiKVScanAnalyzer scanBuilder = new TiKVScanAnalyzer();
 
     for (test t : tests) {
       List<TiColumnInfo> columns = new ArrayList<>();
@@ -458,7 +459,7 @@ public class ScanAnalyzerTest {
               IndexType.IndexTypeBtree.getTypeCode(),
               false);
       boolean isCovering = scanBuilder.isCoveringIndex(columns, indexInfo, pkIsHandle);
-      assertEquals(isCovering, t.isCovering);
+      assertEquals(t.isCovering, isCovering);
     }
   }
 }

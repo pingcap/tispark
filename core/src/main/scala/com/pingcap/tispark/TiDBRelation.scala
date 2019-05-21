@@ -28,6 +28,8 @@ import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
 
+import scala.collection.mutable.ListBuffer
+
 case class TiDBRelation(session: TiSession,
                         tableRef: TiTableReference,
                         meta: MetaManager,
@@ -44,22 +46,46 @@ case class TiDBRelation(session: TiSession,
 
   override def sizeInBytes: Long = tableRef.sizeInBytes
 
-  def logicalPlanToRDD(dagRequest: TiDAGRequest): TiRDD =
-    new TiRDD(dagRequest, session.getConf, tableRef, session, sqlContext.sparkSession)
+  def logicalPlanToRDD(dagRequest: TiDAGRequest): List[TiRDD] = {
+    import scala.collection.JavaConverters._
+    val ids = dagRequest.getIds.asScala
+    var tiRDDs = new ListBuffer[TiRDD]
+    ids.foreach(
+      id => {
+        tiRDDs += new TiRDD(
+          dagRequest,
+          id,
+          session.getConf,
+          tableRef,
+          session,
+          sqlContext.sparkSession
+        )
+      }
+    )
+    tiRDDs.toList
+  }
 
   def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
     val timestamp = dagRequest.getStartTs
+    import scala.collection.JavaConverters._
+    val ids = dagRequest.getIds.asScala
+    var tiHandleRDDs = new ListBuffer[TiHandleRDD]()
+    ids.foreach(
+      id => {
+        tiHandleRDDs +=
+          new TiHandleRDD(
+            dagRequest,
+            id,
+            session.getConf,
+            tableRef,
+            timestamp,
+            session,
+            sqlContext.sparkSession
+          )
+      }
+    )
 
-    val tiHandleRDD =
-      new TiHandleRDD(
-        dagRequest,
-        session.getConf,
-        tableRef,
-        timestamp,
-        session,
-        sqlContext.sparkSession
-      )
-    val handlePlan = HandleRDDExec(tiHandleRDD)
+    val handlePlan = HandleRDDExec(tiHandleRDDs.toList)
     // collect handles as a list
     val aggFunc = CollectHandles(handlePlan.attributeRef.last)
 
