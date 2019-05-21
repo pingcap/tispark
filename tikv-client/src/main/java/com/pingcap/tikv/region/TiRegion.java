@@ -119,14 +119,35 @@ public class TiRegion implements Serializable {
   }
 
   public class RegionVerID {
-    public final long id;
-    public final long confVer;
-    public final long ver;
+    final long id;
+    final long confVer;
+    final long ver;
 
-    public RegionVerID(long id, long confVer, long ver) {
+    RegionVerID(long id, long confVer, long ver) {
       this.id = id;
       this.confVer = confVer;
       this.ver = ver;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (this == other) {
+        return true;
+      }
+      if (!(other instanceof RegionVerID)) {
+        return false;
+      }
+
+      RegionVerID that = (RegionVerID) other;
+      return id == that.id && confVer == that.confVer && ver == that.ver;
+    }
+
+    @Override
+    public int hashCode() {
+      int hash = Long.hashCode(id);
+      hash = hash * 31 + Long.hashCode(confVer);
+      hash = hash * 31 + Long.hashCode(ver);
+      return hash;
     }
   }
 

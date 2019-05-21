@@ -25,7 +25,6 @@ import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
-import com.pingcap.tispark.TiBatchWrite.TiRow
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.aggregate._
@@ -42,6 +41,7 @@ import scala.collection.mutable
 object TiUtil {
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiExpression = com.pingcap.tikv.expression.Expression
+  type TiRow = com.pingcap.tikv.row.Row
 
   private final val logger = Logger.getLogger(getClass.getName)
   private final val MAX_PRECISION = sql.types.DecimalType.MAX_PRECISION

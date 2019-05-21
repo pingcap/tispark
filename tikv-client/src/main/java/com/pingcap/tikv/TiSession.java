@@ -19,22 +19,20 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.catalog.Catalog;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.meta.TiTimestamp;
-import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.region.RegionStoreClient;
+import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TiSession implements AutoCloseable {
-  private static final Map<String, ManagedChannel> connPool = new HashMap<>();
+  private final Logger logger = LoggerFactory.getLogger(TiSession.class);
   private final TiConfiguration conf;
+  private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
   // below object creation is either heavy or making connection (pd), pending for lazy loading
   private volatile RegionManager regionManager;
@@ -43,8 +41,19 @@ public class TiSession implements AutoCloseable {
   private volatile ExecutorService indexScanThreadPool;
   private volatile ExecutorService tableScanThreadPool;
 
+  private final RegionStoreClient.RegionStoreClientBuilder clientBuilder;
+
   public TiSession(TiConfiguration conf) {
     this.conf = conf;
+    this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
+    this.regionManager = new RegionManager(this.getPDClient(), this.cacheInvalidateCallback);
+    this.clientBuilder =
+        new RegionStoreClient.RegionStoreClientBuilder(
+            conf, this.channelFactory, this.regionManager, this);
+  }
+
+  public RegionStoreClient.RegionStoreClientBuilder getRegionStoreClientBuilder() {
+    return this.clientBuilder;
   }
 
   public TiConfiguration getConf() {
@@ -68,7 +77,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (client == null) {
-          client = PDClient.createRaw(this);
+          client = PDClient.createRaw(this.getConf(), channelFactory);
         }
         res = client;
       }
@@ -100,35 +109,12 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (regionManager == null) {
-          regionManager = new RegionManager(getPDClient());
+          regionManager = new RegionManager(getPDClient(), this.cacheInvalidateCallback);
         }
         res = regionManager;
       }
     }
     return res;
-  }
-
-  public synchronized ManagedChannel getChannel(String addressStr) {
-    ManagedChannel channel = connPool.get(addressStr);
-    if (channel == null) {
-      URI address;
-      try {
-        address = PDUtils.addrToUrl(addressStr);
-      } catch (Exception e) {
-        throw new IllegalArgumentException("failed to form address " + addressStr);
-      }
-
-      // Channel should be lazy without actual connection until first call
-      // So a coarse grain lock is ok here
-      channel =
-          ManagedChannelBuilder.forAddress(address.getHost(), address.getPort())
-              .maxInboundMessageSize(conf.getMaxFrameSize())
-              .usePlaintext(true)
-              .idleTimeout(60, TimeUnit.SECONDS)
-              .build();
-      connPool.put(addressStr, channel);
-    }
-    return channel;
   }
 
   public ExecutorService getThreadPoolForIndexScan() {
@@ -165,10 +151,6 @@ public class TiSession implements AutoCloseable {
 
   public static TiSession create(TiConfiguration conf) {
     return new TiSession(conf);
-  }
-
-  public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
-    return cacheInvalidateCallback;
   }
 
   /**

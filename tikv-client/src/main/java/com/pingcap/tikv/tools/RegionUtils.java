@@ -19,9 +19,10 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.meta.TiDAGRequest;
+import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.predicates.TiKVScanAnalyzer;
-import com.pingcap.tikv.predicates.TiKVScanAnalyzer.TiKVScanPlan;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
@@ -62,9 +63,15 @@ public class RegionUtils {
     TiTableInfo table = session.getCatalog().getTable(databaseName, tableName);
     requireNonNull(table, String.format("Table not found %s.%s", databaseName, tableName));
     TiKVScanAnalyzer builder = new TiKVScanAnalyzer();
-    TiKVScanPlan tiKVScanPlan = builder.buildScan(ImmutableList.of(), ImmutableList.of(), table);
+    TiDAGRequest dagRequest =
+        builder.buildTiDAGReq(
+            ImmutableList.of(),
+            ImmutableList.of(),
+            table,
+            session.getTimestamp(),
+            new TiDAGRequest(PushDownType.NORMAL));
     List<KeyRange> ranges = new ArrayList<>();
-    tiKVScanPlan.getKeyRanges().forEach((k, v) -> ranges.addAll(v));
+    dagRequest.getRangesMaps().forEach((k, v) -> ranges.addAll(v));
     return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);
   }
 }
