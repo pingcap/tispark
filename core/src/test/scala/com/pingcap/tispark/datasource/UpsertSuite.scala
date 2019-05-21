@@ -87,7 +87,7 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
   }
 
   // TODO: support auto increment
-  test("Test upsert to table with primary key (auto increase case 2)") {
+  ignore("Test upsert to table with primary key (auto increase case 2)") {
     val rowWithoutPK2 = Row("TiDB")
     val rowWithoutPK3 = Row("Spark")
     val rowWithoutPK4 = Row(null)
@@ -105,13 +105,8 @@ class UpsertSuite extends BaseDataSourceSuite("test_datasource_upsert") {
       s"insert into $dbtable(s) values('Hello')"
     )
 
-    val schema2 = StructType(
-      List(
-        StructField("s", StringType)
-      )
-    )
     // insert row2 row3
-    batchWrite(List(rowWithoutPK2, rowWithoutPK3), schema2)
+    batchWrite(List(rowWithoutPK2, rowWithoutPK3), schema)
     testSelect(Seq(row1, row2, row3))
 
     // insert row4 row5
