@@ -250,35 +250,15 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     val tblStatistics: TableStatistics = StatisticsManager.getTableStatistics(source.table.getId)
 
-    val tableScanPlan: TiKVScanPlan =
-      scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)
-    val scanPlan: TiKVScanPlan = if (allowIndexRead()) {
-      // We need to prepare downgrade information in case of index scan downgrade happens.
-      tableScanPlan.getFilters.asScala.foreach { dagRequest.addDowngradeFilter }
-      scanBuilder.buildScan(
-        // need to bind all columns needed
-        tiColumns.map { _.getColumnInfo }.asJava,
-        tiFilters.asJava,
-        source.table,
-        tblStatistics
-      )
-    } else {
-      tableScanPlan
-    }
-
-    dagRequest.addRanges(scanPlan.getKeyRanges)
-    dagRequest.setPrunedParts(scanPlan.getPrunedParts)
-    scanPlan.getFilters.asScala.foreach { dagRequest.addFilter }
-    if (scanPlan.isIndexScan) {
-      dagRequest.setIndexInfo(scanPlan.getIndex)
-      // need to set isDoubleRead to true for dagRequest in case of double read
-      dagRequest.setIsDoubleRead(scanPlan.isDoubleRead)
-    }
-
-    dagRequest.setTableInfo(source.table)
-    dagRequest.setStartTs(source.ts)
-    dagRequest.setEstimatedCount(scanPlan.getEstimatedRowCount)
-    dagRequest
+    scanBuilder.buildTiDAGReq(
+      allowIndexRead(),
+      tiColumns.map { _.getColumnInfo }.asJava,
+      tiFilters.asJava,
+      source.table,
+      tblStatistics,
+      source.ts,
+      dagRequest
+    )
   }
 
   private def addSortOrder(request: TiDAGRequest, sortOrder: Seq[SortOrder]): Unit =
