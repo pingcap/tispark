@@ -166,6 +166,7 @@ object TiUtil {
       case _: sql.types.BinaryType    => BytesType.BLOB
       case _: sql.types.StringType    => StringType.VARCHAR
       case _: sql.types.LongType      => IntegerType.BIGINT
+      case _: sql.types.IntegerType   => IntegerType.INT
       case _: sql.types.DoubleType    => RealType.DOUBLE
       case _: sql.types.DecimalType   => DecimalType.DECIMAL
       case _: sql.types.TimestampType => TimestampType.TIMESTAMP
