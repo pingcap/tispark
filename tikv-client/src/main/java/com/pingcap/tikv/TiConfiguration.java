@@ -42,7 +42,7 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_INDEX_SCAN_CONCURRENCY = 5;
   private static final int DEF_TABLE_SCAN_CONCURRENCY = 512;
   private static final CommandPri DEF_COMMAND_PRIORITY = CommandPri.Low;
-  private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.RC;
+  private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.SI;
   private static final boolean DEF_SHOW_ROWID = false;
   private static final String DEF_DB_PREFIX = "";
   private static final boolean DEF_WRITE_ENABLE = false;
