@@ -54,8 +54,8 @@ object TiBatchWrite {
     new TiBatchWrite(df, tiContext, options, regionSplitNumber, enableRegionPreSplit).write()
 }
 
-class TiBatchWrite(@transient df: DataFrame,
-                   @transient tiContext: TiContext,
+class TiBatchWrite(@transient val df: DataFrame,
+                   @transient val tiContext: TiContext,
                    options: TiDBOptions,
                    regionSplitNumber: Option[Int],
                    enableRegionPreSplit: Boolean)
