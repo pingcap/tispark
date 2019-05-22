@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.*;
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
@@ -128,7 +129,7 @@ public class TiDAGRequest implements Serializable {
       TiDAGRequest req = new TiDAGRequest(pushDownType);
       req.setTableInfo(tableInfo);
       req.addRanges(ranges);
-      filters.forEach(req::addFilter);
+      req.addFilters(filters);
       // this request will push down all filters
       req.addPushDownFilters();
       if (!orderBys.isEmpty()) {
@@ -806,8 +807,8 @@ public class TiDAGRequest implements Serializable {
     return idToRanges;
   }
 
-  public TiDAGRequest addFilter(Expression filter) {
-    this.filters.add(requireNonNull(filter, "filters expr is null"));
+  public TiDAGRequest addFilters(List<Expression> filters) {
+    this.filters.addAll(requireNonNull(filters, "filters expr is null"));
     return this;
   }
 
@@ -1004,8 +1005,26 @@ public class TiDAGRequest implements Serializable {
     // Key ranges might be also useful
     if (!getRangesMaps().isEmpty()) {
       sb.append(", KeyRange: ");
-      // TODO fix me
-      //      getRangesByPhysicalId().forEach( (k, v) -> sb.append(KeyUtils.formatBytesUTF8(v)));
+      if (tableInfo.isPartitionEnabled()) {
+        getRangesMaps()
+            .values()
+            .forEach(
+                vList -> {
+                  for (int i = 9; i < vList.size(); i++) {
+                    sb.append(String.format("partition p%d", i));
+                    sb.append(KeyUtils.formatBytesUTF8(vList.get(i)));
+                  }
+                });
+      } else {
+        getRangesMaps()
+            .values()
+            .forEach(
+                vList -> {
+                  for (Coprocessor.KeyRange range : vList) {
+                    sb.append(KeyUtils.formatBytesUTF8(range));
+                  }
+                });
+      }
     }
 
     if (!getPushDownAggregatePairs().isEmpty()) {

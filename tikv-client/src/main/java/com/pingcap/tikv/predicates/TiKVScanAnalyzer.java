@@ -34,10 +34,12 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiPartitionDef;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.util.Pair;
@@ -207,30 +209,53 @@ public class TiKVScanAnalyzer {
   }
 
   // build a scan for debug purpose.
-  public TiKVScanPlan buildScan(
-      List<TiColumnInfo> columnList, List<Expression> conditions, TiTableInfo table) {
-    return buildScan(columnList, conditions, table, null);
-  }
-
-  // Build scan plan picking access path with lowest cost by estimation
-  public TiKVScanPlan buildScan(
+  public TiDAGRequest buildTiDAGReq(
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiTableInfo table,
-      TableStatistics tableStatistics) {
-    TiKVScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
-    double minCost = minPlan.getCost();
-    for (TiIndexInfo index : table.getIndices()) {
-      TiKVScanPlan plan = buildIndexScan(columnList, conditions, index, table, tableStatistics);
-      if (plan.getCost() < minCost) {
-        minPlan = plan;
-        minCost = plan.getCost();
-      }
-    }
-    return minPlan;
+      TiTimestamp ts,
+      TiDAGRequest dagRequest) {
+    return buildTiDAGReq(true, columnList, conditions, table, null, ts, dagRequest);
   }
 
-  public TiKVScanPlan buildTableScan(
+  // Build scan plan picking access path with lowest cost by estimation
+  public TiDAGRequest buildTiDAGReq(
+      boolean allowIndexScan,
+      List<TiColumnInfo> columnList,
+      List<Expression> conditions,
+      TiTableInfo table,
+      TableStatistics tableStatistics,
+      TiTimestamp ts,
+      TiDAGRequest dagRequest) {
+    TiKVScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
+    if (allowIndexScan) {
+      minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
+      double minCost = minPlan.getCost();
+      for (TiIndexInfo index : table.getIndices()) {
+        TiKVScanPlan plan = buildIndexScan(columnList, conditions, index, table, tableStatistics);
+        if (plan.getCost() < minCost) {
+          minPlan = plan;
+          minCost = plan.getCost();
+        }
+      }
+    }
+
+    dagRequest.addRanges(minPlan.getKeyRanges());
+    dagRequest.setPrunedParts(minPlan.getPrunedParts());
+    dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
+    if (minPlan.isIndexScan()) {
+      dagRequest.setIndexInfo(minPlan.getIndex());
+      // need to set isDoubleRead to true for dagRequest in case of double read
+      dagRequest.setIsDoubleRead(minPlan.isDoubleRead);
+    }
+
+    dagRequest.setTableInfo(table);
+    dagRequest.setStartTs(ts);
+    dagRequest.setEstimatedCount(minPlan.getEstimatedRowCount());
+    return dagRequest;
+  }
+
+  private TiKVScanPlan buildTableScan(
       List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);

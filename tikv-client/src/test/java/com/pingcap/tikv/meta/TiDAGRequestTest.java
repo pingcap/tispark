@@ -83,7 +83,7 @@ public class TiDAGRequestTest {
         .addRequiredColumn(col3)
         .addAggregate(sum, ExpressionTypeCoercer.inferType(sum))
         .addAggregate(min, ExpressionTypeCoercer.inferType(min))
-        .addFilter(plus(c1, c2))
+        .addFilters(ImmutableList.of(plus(c1, c2)))
         .addGroupByItem(ByItem.create(ColumnRef.create("c2", table), true))
         .addOrderByItem(ByItem.create(ColumnRef.create("c3", table), false))
         .setTableInfo(table)

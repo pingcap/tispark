@@ -105,15 +105,18 @@ public class RangeSplitter {
   private final RegionManager regionManager;
 
   /**
-   * Group by a list of handles by the handles' region id, handles will be sorted.
+   * Group by a list of handles by the handles' region, handles will be sorted.
    *
    * @param tableId Table id used for the handle
    * @param handles Handle list
-   * @return <RegionId, HandleList> map
+   * @return <Region, HandleList> map
    */
-  public TLongObjectHashMap<TLongArrayList> groupByAndSortHandlesByRegionId(
+  public Map<Pair<TiRegion, Metapb.Store>, TLongArrayList> groupByAndSortHandlesByRegionId(
       long tableId, TLongArrayList handles) {
-    TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
+    TLongObjectHashMap<TLongArrayList> regionHandles = new TLongObjectHashMap<>();
+    TLongObjectHashMap<Pair<TiRegion, Metapb.Store>> idToRegionStorePair =
+        new TLongObjectHashMap<>();
+    Map<Pair<TiRegion, Metapb.Store>, TLongArrayList> result = new HashMap<>();
     handles.sort();
 
     byte[] endKey = null;
@@ -125,19 +128,26 @@ public class RangeSplitter {
       if (endKey == null
           || (endKey.length != 0 && FastByteComparisons.compareTo(key.getBytes(), endKey) >= 0)) {
         if (curRegion != null) {
-          result.put(curRegion.getId(), handlesInCurRegion);
+          regionHandles.put(curRegion.getId(), handlesInCurRegion);
           handlesInCurRegion = new TLongArrayList();
         }
         Pair<TiRegion, Metapb.Store> regionStorePair =
             regionManager.getRegionStorePairByKey(ByteString.copyFrom(key.getBytes()));
         curRegion = regionStorePair.first;
+        idToRegionStorePair.put(curRegion.getId(), regionStorePair);
         endKey = curRegion.getEndKey().toByteArray();
       }
       handlesInCurRegion.add(curHandle);
     }
     if (!handlesInCurRegion.isEmpty() && curRegion != null) {
-      result.put(curRegion.getId(), handlesInCurRegion);
+      regionHandles.put(curRegion.getId(), handlesInCurRegion);
     }
+    regionHandles.forEachEntry(
+        (k, v) -> {
+          Pair<TiRegion, Metapb.Store> regionStorePair = idToRegionStorePair.get(k);
+          result.put(regionStorePair, v);
+          return true;
+        });
     return result;
   }
 
@@ -160,16 +170,10 @@ public class RangeSplitter {
     // Max value for current index handle range
     ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
 
-    TLongObjectHashMap<TLongArrayList> regionHandlesMap =
+    Map<Pair<TiRegion, Metapb.Store>, TLongArrayList> regionHandlesMap =
         groupByAndSortHandlesByRegionId(tableId, handles);
 
-    regionHandlesMap.forEachEntry(
-        (k, v) -> {
-          Pair<TiRegion, Metapb.Store> regionStorePair =
-              regionManager.getRegionStorePairByRegionId(k);
-          createTask(0, v.size(), tableId, v, regionStorePair, regionTasks);
-          return true;
-        });
+    regionHandlesMap.forEach((k, v) -> createTask(0, v.size(), tableId, v, k, regionTasks));
 
     return regionTasks.build();
   }
@@ -256,11 +260,11 @@ public class RangeSplitter {
     }
 
     ImmutableList.Builder<RegionTask> resultBuilder = ImmutableList.builder();
-    for (Map.Entry<Long, List<KeyRange>> entry : idToRange.entrySet()) {
-      Pair<TiRegion, Metapb.Store> regionStorePair = idToRegion.get(entry.getKey());
-      resultBuilder.add(
-          new RegionTask(regionStorePair.first, regionStorePair.second, entry.getValue()));
-    }
+    idToRange.forEach(
+        (k, v) -> {
+          Pair<TiRegion, Metapb.Store> regionStorePair = idToRegion.get(k);
+          resultBuilder.add(new RegionTask(regionStorePair.first, regionStorePair.second, v));
+        });
     return resultBuilder.build();
   }
 }
