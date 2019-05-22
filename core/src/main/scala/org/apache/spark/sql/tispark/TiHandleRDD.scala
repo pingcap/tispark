@@ -75,8 +75,9 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       private val regionHandleMap = RangeSplitter
         .newSplitter(regionManager)
         .groupByAndSortHandlesByRegionId(physicalId, handleList)
+        .map(x => (x._1.first.getId, x._2))
 
-      private val iterator = regionHandleMap.iterator()
+      private val iterator = regionHandleMap.iterator
 
       override def hasNext: Boolean = {
         // Kill the task in case it has been marked as killed.
@@ -87,9 +88,9 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       }
 
       override def next(): Row = {
-        iterator.advance()
-        val regionId = iterator.key
-        val handleList = iterator.value
+        val next = iterator.next
+        val regionId = next._1
+        val handleList = next._2
 
         // Returns RegionId:[handle1, handle2, handle3...] K-V pair
         Row.apply(regionId, handleList.toArray())
