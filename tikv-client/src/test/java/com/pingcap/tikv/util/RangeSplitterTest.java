@@ -293,8 +293,10 @@ public class RangeSplitterTest {
                 keyRangeByHandle(tableId, 0x2300L /*8960*/, Status.LESS, 16000L, Status.EQUAL),
                 keyRangeByHandle(tableId, 16000L, Status.EQUAL, null, Status.EQUAL)));
 
-    TLongObjectHashMap<TLongArrayList> result =
-        RangeSplitter.newSplitter(mgr).groupByAndSortHandlesByRegionId(tableId, handles);
+    TLongObjectHashMap<TLongArrayList> result = new TLongObjectHashMap<>();
+    RangeSplitter.newSplitter(mgr)
+        .groupByAndSortHandlesByRegionId(tableId, handles)
+        .forEach((k, v) -> result.put(k.first.getId(), v));
     assertEquals(2, result.get(0).size());
     assertEquals(10, result.get(1).size());
     assertEquals(2, result.get(2).size());
