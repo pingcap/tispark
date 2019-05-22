@@ -1005,27 +1005,26 @@ public class TiDAGRequest implements Serializable {
     // Key ranges might be also useful
     if (!getRangesMaps().isEmpty()) {
       sb.append(", KeyRange: ");
-      if(tableInfo.isPartitionEnabled()) {
+      if (tableInfo.isPartitionEnabled()) {
         getRangesMaps()
-          .values()
-          .forEach(
-              vList -> {
-                for (int i = 9; i < vList.size(); i++) {
-                  sb.append(String.format("partition p%d", i));
-                  sb.append(KeyUtils.formatBytesUTF8(vList.get(i)));
-                }
-              });
+            .values()
+            .forEach(
+                vList -> {
+                  for (int i = 9; i < vList.size(); i++) {
+                    sb.append(String.format("partition p%d", i));
+                    sb.append(KeyUtils.formatBytesUTF8(vList.get(i)));
+                  }
+                });
       } else {
         getRangesMaps()
-          .values()
-          .forEach(
-              vList -> {
-                for (Coprocessor.KeyRange range : vList) {
-                  sb.append(KeyUtils.formatBytesUTF8(range));
-                }
-              });
+            .values()
+            .forEach(
+                vList -> {
+                  for (Coprocessor.KeyRange range : vList) {
+                    sb.append(KeyUtils.formatBytesUTF8(range));
+                  }
+                });
       }
-
     }
 
     if (!getPushDownAggregatePairs().isEmpty()) {
