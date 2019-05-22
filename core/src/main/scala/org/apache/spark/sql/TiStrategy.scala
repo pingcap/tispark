@@ -56,9 +56,9 @@ import scala.collection.mutable
 case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Strategy
     with Logging {
-  private val tiContext: TiContext = getOrCreateTiContext(sparkSession)
+  private lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val sqlContext = tiContext.sqlContext
-  private val sqlConf: SQLConf = sqlContext.conf
+  private lazy val sqlConf: SQLConf = sqlContext.conf
   type TiExpression = com.pingcap.tikv.expression.Expression
   type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
 

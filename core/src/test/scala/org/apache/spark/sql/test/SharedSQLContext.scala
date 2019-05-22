@@ -46,8 +46,6 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def ti: TiContext = SharedSQLContext.ti
 
-  protected def jdbc: SparkSession = SharedSQLContext.jdbc
-
   protected def tidbConn: Connection = SharedSQLContext.tidbConn
 
   protected def sql: String => DataFrame = spark.sql _
@@ -117,11 +115,9 @@ object SharedSQLContext extends Logging {
   protected val logger: Logger = log
   protected val sparkConf = new SparkConf()
   private var _spark: SparkSession = _
-  private var _ti: TiContext = _
   private var _tidbConf: Properties = _
   private var _tidbConnection: Connection = _
   private var _statement: Statement = _
-  private var _sparkJDBC: SparkSession = _
   protected var jdbcUrl: String = _
   protected var tpchDBName: String = _
   protected var tpcdsDBName: String = _
@@ -131,9 +127,30 @@ object SharedSQLContext extends Logging {
 
   protected implicit def spark: SparkSession = _spark
 
-  protected implicit def ti: TiContext = _ti
+  private class TiContextCache {
+    private var _ti: TiContext = _
+    private[test] def get: TiContext = {
+      if (_ti == null) {
+        _ti = _spark.sessionState.planner.extraPlanningStrategies.head
+          .asInstanceOf[TiStrategy]
+          .getOrCreateTiContext(_spark)
+      }
+      _ti
+    }
+    private[test] def clear(): Unit =
+      if (_ti != null) {
+        _ti.sparkSession.sessionState.catalog.reset()
+        _ti.meta.close()
+        _ti.sparkSession.close()
+        _ti.tiSession.close()
+        _ti = null
+      }
+  }
 
-  protected implicit def jdbc: SparkSession = _sparkJDBC
+  private val tiContextCache = new TiContextCache
+
+  // get the current TiContext lazily
+  protected implicit def ti: TiContext = tiContextCache.get
 
   protected implicit def tidbConn: Connection = _tidbConnection
 
@@ -163,18 +180,6 @@ object SharedSQLContext extends Logging {
   protected def initializeSession(): Unit =
     if (_spark == null) {
       _spark = _sparkSession
-    }
-
-  private def initializeJDBC(): Unit =
-    if (_sparkJDBC == null) {
-      _sparkJDBC = _sparkSession
-    }
-
-  protected def initializeTiContext(): Unit =
-    if (_spark != null && _ti == null) {
-      _ti = _spark.sessionState.planner.extraPlanningStrategies.head
-        .asInstanceOf[TiStrategy]
-        .getOrCreateTiContext(_spark)
     }
 
   protected def initStatistics(): Unit = {
@@ -302,8 +307,6 @@ object SharedSQLContext extends Logging {
     initializeConf(isHiveEnabled)
     initializeSession()
     initializeTiDB(forceNotLoad)
-    initializeJDBC()
-    initializeTiContext()
   }
 
   /**
@@ -316,18 +319,7 @@ object SharedSQLContext extends Logging {
       _spark = null
     }
 
-    if (_ti != null) {
-      _ti.sparkSession.sessionState.catalog.reset()
-      _ti.sparkSession.close()
-      _ti.tiSession.close()
-      _ti = null
-    }
-
-    if (_sparkJDBC != null) {
-      _sparkJDBC.sessionState.catalog.reset()
-      _sparkJDBC.close()
-      _sparkJDBC = null
-    }
+    tiContextCache.clear()
 
     if (_tidbConnection != null) {
       _tidbConnection.close()
