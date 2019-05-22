@@ -22,10 +22,11 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.iterator.CoprocessIterator
 import com.pingcap.tikv.operation.transformer.RowTransformer
+import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.TiSessionCache
+import com.pingcap.tispark.{TiConfigConst, TiSessionCache}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
 import com.pingcap.tispark.utils.TiUtil
@@ -221,6 +222,8 @@ case class RegionTaskExec(child: SparkPlan,
   // used for driver to update PD cache
   private val callBackFunc = CacheInvalidateListener.getInstance()
 
+  private val version = sparkSession.conf.get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toLong
+
   def rowToInternalRow(row: Row,
                        outputTypes: Seq[DataType],
                        converters: Seq[Any => Any]): InternalRow = {
@@ -412,17 +415,6 @@ case class RegionTaskExec(child: SparkPlan,
       val outputTypes = output.map(_.dataType)
       val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
 
-      def toSparkRow(row: TiRow): Row = {
-        val transRow = rowTransformer.transform(row)
-        val rowArray = new Array[Any](finalTypes.size)
-
-        for (i <- 0 until transRow.fieldCount) {
-          rowArray(i) = transRow.get(i, finalTypes(i))
-        }
-
-        Row.fromSeq(rowArray)
-      }
-
       // The result iterator serves as an wrapper to the final result we fetched from region tasks
       val resultIter = new util.Iterator[UnsafeRow] {
         override def hasNext: Boolean = {
@@ -457,7 +449,7 @@ case class RegionTaskExec(child: SparkPlan,
           numOutputRows += 1
           // Unsafe row projection
           project.initialize(index)
-          val sparkRow = toSparkRow(rowIterator.next())
+          val sparkRow = TiUtil.toSparkRow(rowIterator.next(), rowTransformer, version)
           // Need to convert spark row to internal row for Catalyst
           project(rowToInternalRow(sparkRow, outputTypes, converters))
         }

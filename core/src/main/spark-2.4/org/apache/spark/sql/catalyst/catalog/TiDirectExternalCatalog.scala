@@ -38,8 +38,8 @@ class TiDirectExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
 
   override def getTable(db: String, table: String): CatalogTable = {
     val schema = TiUtil.getSchemaFromTable(
-      meta.getTable(db, table).getOrElse(throw new NoSuchTableException(db, table))
-    )
+      meta.getTable(db, table).getOrElse(throw new NoSuchTableException(db, table)),
+      tiContext.sparkSession.conf.get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toLong)
 
     CatalogTable(
       TableIdentifier(table, Some(db)),

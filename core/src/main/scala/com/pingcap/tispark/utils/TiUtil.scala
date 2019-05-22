@@ -114,20 +114,25 @@ object TiUtil {
                               blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
-  def toSparkRow(row: TiRow, rowTransformer: RowTransformer): Row = {
+  def toSparkRow(row: TiRow, rowTransformer: RowTransformer, version: Long): Row = {
     val finalTypes = rowTransformer.getTypes.toList
     val transRow = rowTransformer.transform(row)
     val rowArray = new Array[Any](finalTypes.size)
 
     for (i <- 0 until transRow.fieldCount) {
-      rowArray(i) = transRow.get(i, finalTypes(i))
+      val colTp = finalTypes(i)
+      val isLongLong = colTp.getType.equals(MySQLType.TypeLonglong)
+      if(!isLongLong && version == 1) {
+        val row = transRow.get(i, colTp).asInstanceOf[Number].intValue()
+        rowArray(i) = row
+      }
     }
 
     Row.fromSeq(rowArray)
   }
 
   // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp: TiDataType): DataType =
+  def toSparkDataType(tp: TiDataType, version: Long): DataType =
     tp match {
       case _: StringType => sql.types.StringType
       case _: BytesType  => sql.types.BinaryType
@@ -135,7 +140,15 @@ object TiUtil {
         if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
           DataTypes.createDecimalType(20, 0)
         } else {
-          sql.types.LongType
+          if (version == 0) {
+            sql.types.LongType
+          } else {
+            tp.getType match {
+              case MySQLType.TypeLong     => sql.types.IntegerType
+              case MySQLType.TypeLonglong => sql.types.LongType
+              case _                      => sql.types.IntegerType
+            }
+          }
         }
       case _: RealType => sql.types.DoubleType
       // we need to make sure that tp.getLength does not result in negative number when casting.
@@ -175,7 +188,7 @@ object TiUtil {
       case _: sql.types.DateType      => DateType.DATE
     }
 
-  def getSchemaFromTable(table: TiTableInfo): StructType = {
+  def getSchemaFromTable(table: TiTableInfo, version: Long): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {
       val col = table.getColumns.get(i)
@@ -185,7 +198,7 @@ object TiUtil {
         .build()
       fields(i) = StructField(
         col.getName,
-        TiUtil.toSparkDataType(col.getType),
+        TiUtil.toSparkDataType(col.getType, version),
         nullable = !notNull,
         metadata
       )

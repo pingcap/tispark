@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
+import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.TableIdentifier
@@ -38,7 +39,8 @@ class TiDirectExternalCatalog(tiContext: TiContext) extends ExternalCatalog {
 
   override def getTable(db: String, table: String): CatalogTable = {
     val schema = TiUtil.getSchemaFromTable(
-      meta.getTable(db, table).getOrElse(throw new NoSuchTableException(db, table))
+      meta.getTable(db, table).getOrElse(throw new NoSuchTableException(db, table)),
+      tiContext.sparkSession.conf.get(TiConfigConst.TYPE_SYSTEM_VERSION, "0").toLong
     )
 
     CatalogTable(
