@@ -60,15 +60,29 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
     override val sessionCatalog: SessionCatalog = tiContext.sessionCatalog
   }
 
-  val policy: CompositeCatalogPolicy = TiLegacyPolicy(tiContext)
+  lazy val policy: CompositeCatalogPolicy = TiLegacyPolicy(tiContext)
 
-  val primaryCatalog: SessionCatalog = policy.primaryCatalog
-  val secondaryCatalog: SessionCatalog = policy.secondaryCatalog
-  val tiCatalog: TiSessionCatalog = policy.tiCatalog
-  val sessionCatalog: SessionCatalog = policy.sessionCatalog
+  lazy val primaryCatalog: SessionCatalog = policy.primaryCatalog
+  lazy val secondaryCatalog: SessionCatalog = policy.secondaryCatalog
+  lazy val tiCatalog: TiSessionCatalog = policy.tiCatalog
+  lazy val sessionCatalog: SessionCatalog = policy.sessionCatalog
+
+  class CatalogCache {
+    private var _catalog: SessionCatalog = _
+    private[catalog] def getCatalog: SessionCatalog = {
+      if (_catalog == null) {
+        _catalog = primaryCatalog
+      }
+      _catalog
+    }
+    private[catalog] def setCatalog(catalog: SessionCatalog): Unit =
+      _catalog = catalog
+  }
+
+  lazy val catalogCache = new CatalogCache
 
   // Used to manage catalog change by setting current database.
-  private var currentCatalog: SessionCatalog = primaryCatalog
+  private def currentCatalog: SessionCatalog = catalogCache.getCatalog
 
   // Following are routed to Ti catalog.
   override def catalogOf(database: Option[String]): Option[SessionCatalog] = synchronized {
@@ -113,7 +127,7 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
   override def getCurrentDatabase: String = currentCatalog.getCurrentDatabase
 
   override def setCurrentDatabase(db: String): Unit = synchronized {
-    currentCatalog = catalogOf(Some(db)).getOrElse(throw new NoSuchDatabaseException(db))
+    catalogCache.setCatalog(catalogOf(Some(db)).getOrElse(throw new NoSuchDatabaseException(db)))
     currentCatalog.setCurrentDatabase(db)
   }
 
