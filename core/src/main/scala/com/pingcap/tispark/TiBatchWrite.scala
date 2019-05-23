@@ -113,7 +113,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     dfTiColumnInfo = new Array[TiColumnInfo](dfColSize)
     for (i <- 0 until dfColSize) {
       if (dfColSize == tableColSize - 1) {
-        // auto increment: use auto generated id from TiKV
+        // auto increment case, use auto generated id
         val offset = tiTableInfo.getAutoIncrementColInfo.getOffset
         if (i < offset) {
           dfTiColumnInfo(i) = tiTableInfo.getColumn(i)
