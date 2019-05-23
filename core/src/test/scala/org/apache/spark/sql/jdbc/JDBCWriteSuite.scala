@@ -9,9 +9,9 @@ class JDBCWriteSuite extends BaseTiSparkSuite {
     setCurrentDatabase("tispark_test")
     tidbStmt.execute("drop table if exists t1")
     tidbStmt.execute("drop table if exists t3")
-    tidbStmt.execute("create table t1 (c1 int)")
+    tidbStmt.execute("create table t1 (c1 int, c2 varchar(64))")
     tidbStmt.execute("create table t3 (c1 int, d1 double)")
-    tidbStmt.execute("insert into t1 values(2)")
+    tidbStmt.execute("insert into t1 values(2, '222')")
     refreshConnections()
 
     spark.conf.set(TiConfigConst.TYPE_SYSTEM_VERSION, 1)

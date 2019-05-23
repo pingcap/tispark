@@ -119,10 +119,13 @@ object TiUtil {
     val transRow = rowTransformer.transform(row)
     val rowArray = new Array[Any](finalTypes.size)
 
+    // before int -> long
+    // now int -> int
+    // toSparkRow need aware this
     for (i <- 0 until transRow.fieldCount) {
       val colTp = finalTypes(i)
-      val isLongLong = colTp.getType.equals(MySQLType.TypeLonglong)
-      if(!isLongLong && version == 1) {
+      val isLong = colTp.getType.equals(MySQLType.TypeLong)
+      if (isLong && version == 1) {
         val row = transRow.get(i, colTp).asInstanceOf[Number].intValue()
         rowArray(i) = row
       }
