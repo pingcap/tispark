@@ -14,7 +14,7 @@
 #   limitations under the License.
 #
 
-
+cd ..
 TiSparkReleaseVersion=2.1-SNAPSHOT
 TiSparkBuildTS=`date -u '+%Y-%m-%d %I:%M:%S'`
 TiSparkGitHash=`git rev-parse HEAD`
@@ -34,4 +34,4 @@ object TiSparkVersion {
   if (confStream != null) {
     prop.load(confStream)
   }
-  val version: String = "Release Version: '${TiSparkReleaseVersion}'\\nSupported Spark Version: " + prop.getProperty("spark.supported_version", "spark-2.3") + "\\nGit Commit Hash: '${TiSparkGitHash}'\\nGit Branch: '${TiSparkGitBranch}'\\nUTC Build Time: '${TiSparkBuildTS}'" }' > src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
+  val version: String = "Release Version: '${TiSparkReleaseVersion}'\\nSupported Spark Version: " + prop.getProperty("spark.supported_version", "spark-2.3") + "\\nGit Commit Hash: '${TiSparkGitHash}'\\nGit Branch: '${TiSparkGitBranch}'\\nUTC Build Time: '${TiSparkBuildTS}'" }' > core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
