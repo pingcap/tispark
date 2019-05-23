@@ -21,7 +21,7 @@ import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{Key, RowKey}
-import com.pingcap.tikv.meta.{TiDBInfo, TiTableInfo}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.txn.TxnKVClient
@@ -72,6 +72,10 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var tiDBInfo: TiDBInfo = _
   private var tiTableInfo: TiTableInfo = _
 
+  private var dfColSize: Int = _
+  private var tableColSize: Int = _
+  private var dfTiColumnInfo: Array[TiColumnInfo] = _
+
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def write(): Unit = {
@@ -98,10 +102,30 @@ class TiBatchWrite(@transient val df: DataFrame,
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
     }
+    dfColSize = df.columns.length
+    tableColSize = tiTableInfo.getColumns.size()
 
     // check check check
     checkUnsupported()
     checkColumnNumbers()
+
+    // initialize dfTiColumnInfo
+    dfTiColumnInfo = new Array[TiColumnInfo](dfColSize)
+    for (i <- 0 until dfColSize) {
+      if (dfColSize == tableColSize - 1) {
+        // auto increment case, use auto generated id
+        val offset = tiTableInfo.getAutoIncrementColInfo.getOffset
+        if (i < offset) {
+          dfTiColumnInfo(i) = tiTableInfo.getColumn(i)
+        } else {
+          dfTiColumnInfo(i) = tiTableInfo.getColumn(i + 1)
+        }
+      } else {
+        dfTiColumnInfo(i) = tiTableInfo.getColumn(i)
+      }
+    }
+
+    // continue check check check
     checkValueNotNull()
 
     // TODO: lock table
@@ -272,29 +296,24 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   private def checkColumnNumbers(): Unit = {
-    val colSize = df.columns.length
-    val tableColSize = tiTableInfo.getColumns.size()
-
-    if (!tiTableInfo.hasAutoIncrementColumn && colSize != tableColSize) {
+    if (!tiTableInfo.hasAutoIncrementColumn && dfColSize != tableColSize) {
       throw new TiBatchWriteException(
-        s"table without auto increment column, but data col size $colSize != table column size $tableColSize"
+        s"table without auto increment column, but data col size $dfColSize != table column size $tableColSize"
       )
     }
 
-    if (tiTableInfo.hasAutoIncrementColumn && colSize != tableColSize && colSize != tableColSize - 1) {
+    if (tiTableInfo.hasAutoIncrementColumn && dfColSize != tableColSize && dfColSize != tableColSize - 1) {
       throw new TiBatchWriteException(
-        s"table with auto increment column, but data col size $colSize != table column size $tableColSize and table column size - 1 ${tableColSize - 1} "
+        s"table with auto increment column, but data col size $dfColSize != table column size $tableColSize and table column size - 1 ${tableColSize - 1} "
       )
     }
   }
 
   private def checkValueNotNull(): Unit = {
-    // TODO: what if rdd col size = table col size - 1 (auto increase col)
-    // we should do col mapping
     var notNullColumnIndex: List[Int] = Nil
 
-    for (i <- 0 until tiTableInfo.getColumns.size) {
-      val tiColumnInfo = tiTableInfo.getColumn(i)
+    for (i <- 0 until dfColSize) {
+      val tiColumnInfo = dfTiColumnInfo(i)
       if (tiColumnInfo.getType.isNotNull) {
         notNullColumnIndex = i :: notNullColumnIndex
       }
@@ -442,16 +461,18 @@ class TiBatchWrite(@transient val df: DataFrame,
     // If handle ID is changed when update, update will remove the old record first,
     // and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
-    val handle = if (row.fieldCount > tiTableInfo.getColumns.size && !isUpdate) {
+    val handle = if (row.fieldCount > tableColSize && !isUpdate) {
       row.getLong(row.fieldCount - 1)
     } else {
-      val columnList = tiTableInfo.getColumns.asScala
-      columnList.find(_.isPrimaryKey) match {
-        case Some(primaryColumn) =>
-          // it is a workaround. pk is handle must be a number
-          row.get(primaryColumn.getOffset, primaryColumn.getType).asInstanceOf[Number].longValue()
-        case None =>
-          throw new TiBatchWriteException("should never happen")
+      val primaryKeyColumn = tiTableInfo.getPrimaryKeyColumn
+      if (primaryKeyColumn == null) {
+        throw new TiBatchWriteException("should never happen")
+      } else {
+        // it is a workaround. pk is handle must be a number
+        row
+          .get(primaryKeyColumn.getOffset, primaryKeyColumn.getType)
+          .asInstanceOf[Number]
+          .longValue()
       }
     }
     handle
