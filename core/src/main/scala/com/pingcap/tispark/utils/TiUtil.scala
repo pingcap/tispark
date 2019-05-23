@@ -125,10 +125,16 @@ object TiUtil {
     for (i <- 0 until transRow.fieldCount) {
       val colTp = finalTypes(i)
       val isLong = colTp.getType.equals(MySQLType.TypeLong)
-      if (isLong && version == 1) {
-        val row = transRow.get(i, colTp).asInstanceOf[Number].intValue()
-        rowArray(i) = row
+      val row = if (isLong && version == 1) {
+        if (transRow.isNull(i)) {
+          null
+        } else {
+          transRow.get(i, colTp).asInstanceOf[Number].intValue()
+        }
+      } else {
+        transRow.get(i, colTp)
       }
+      rowArray(i) = row
     }
 
     Row.fromSeq(rowArray)
