@@ -71,7 +71,7 @@ public class TableCodecTest {
   public void testRowCodecThrowException() {
     TLongArrayList fakeColIds = TLongArrayList.wrap(new long[] {1, 2});
     try {
-      TableCodec.encodeRow(tblInfo.getColumns(), fakeColIds, values, tblInfo.isPkHandle());
+      TableCodec.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
       expectedEx.expect(IllegalAccessException.class);
       expectedEx.expectMessage("encodeRow error: data and columnID count not match 6 vs 2");
     } catch (IllegalAccessException ignored) {
@@ -81,9 +81,7 @@ public class TableCodecTest {
   @Test
   public void testEmptyValues() {
     try {
-      byte[] bytes =
-          TableCodec.encodeRow(
-              new ArrayList<>(), TLongArrayList.wrap(new long[] {}), new Object[] {}, false);
+      byte[] bytes = TableCodec.encodeRow(new ArrayList<>(), new Object[] {}, false);
       assertEquals(1, bytes.length);
       assertEquals(Codec.NULL_FLAG, bytes[0]);
     } catch (IllegalAccessException ignored) {
@@ -95,8 +93,7 @@ public class TableCodecTest {
     // multiple test was added since encodeRow refuse its cdo
     for (int i = 0; i < 4; i++) {
       try {
-        byte[] bytes =
-            TableCodec.encodeRow(tblInfo.getColumns(), colIds, values, tblInfo.isPkHandle());
+        byte[] bytes = TableCodec.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
         // testing the correctness via decodeRow
         Object[] res = TableCodec.decodeRow(new CodecDataInput(bytes), tblInfo.getColumns());
         for (int j = 0; j < tblInfo.getColumns().size(); j++) {
