@@ -94,6 +94,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         sed -i 's/core\\/src\\/test\\/scala\\///g' test
                         sed -i 's/\\//\\./g' test
                         sed -i 's/\\.scala//g' test
+                        shuf test -o  test2
+                        mv test2 test
                         split test -n r/$PARALLEL_NUMBER test_unit_ -a 1 --numeric-suffixes=1
                         """
                     }
