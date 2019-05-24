@@ -8,7 +8,6 @@ import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataType.EncodeType;
 import com.pingcap.tikv.types.IntegerType;
-import gnu.trove.list.array.TLongArrayList;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,19 +16,18 @@ public class TableCodec {
    * Row layout: colID1, value1, colID2, value2, .....
    *
    * @param columnInfos
-   * @param colIDs
    * @param values
    * @return
    * @throws IllegalAccessException
    */
   public static byte[] encodeRow(
-      List<TiColumnInfo> columnInfos, TLongArrayList colIDs, Object[] values, boolean isPkHandle)
+      List<TiColumnInfo> columnInfos, Object[] values, boolean isPkHandle)
       throws IllegalAccessException {
-    if (columnInfos.size() != colIDs.size()) {
+    if (columnInfos.size() != values.length) {
       throw new IllegalAccessException(
           String.format(
               "encodeRow error: data and columnID count not " + "match %d vs %d",
-              columnInfos.size(), colIDs.size()));
+              columnInfos.size(), values.length));
     }
 
     CodecDataOutput cdo = new CodecDataOutput();
@@ -37,7 +35,7 @@ public class TableCodec {
     for (int i = 0; i < columnInfos.size(); i++) {
       TiColumnInfo col = columnInfos.get(i);
       if (!col.canSkip(isPkHandle)) {
-        IntegerCodec.writeLongFully(cdo, colIDs.get(i), false);
+        IntegerCodec.writeLongFully(cdo, col.getId(), false);
         col.getType().encode(cdo, EncodeType.VALUE, values[i]);
       }
     }
