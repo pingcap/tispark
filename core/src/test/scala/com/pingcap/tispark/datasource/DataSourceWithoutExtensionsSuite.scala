@@ -22,7 +22,7 @@ class DataSourceWithoutExtensionsSuite
   override def beforeAll(): Unit =
     super.beforeAll()
 
-  test("Test Select") {
+  test("Test Select without extensions") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
@@ -31,7 +31,7 @@ class DataSourceWithoutExtensionsSuite
     testDataSourceSelect(Seq(row1, row2, row3, row4))
   }
 
-  test("Test Write Append") {
+  test("Test Write Append without extensions") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
@@ -52,7 +52,7 @@ class DataSourceWithoutExtensionsSuite
     testDataSourceSelect(Seq(row1, row2, row3, row4))
   }
 
-  test("Test Write Overwrite") {
+  test("Test Write Overwrite without extensions") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
 
@@ -75,7 +75,7 @@ class DataSourceWithoutExtensionsSuite
     )
   }
 
-  test("Test Simple Comparisons") {
+  test("Test Simple Comparisons without extensions") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
