@@ -133,12 +133,14 @@ object TiConverter {
     }
 
     targetColumnInfo.getType match {
-      //case BitType       =>
-      //case BytesType     =>
-      //case DateTimeType  =>
-      //case DateType      =>
-      //case DecimalType   =>
-      //case EnumType      =>
+      //case _: BitType       =>
+      //case _: BytesType     =>
+      //case _: DateTimeType  =>
+      // TODO: add test for DateType
+      case _: DateType => value
+      // TODO: add test for DecimalType
+      case _: DecimalType => value
+      //case _: EnumType      =>
       case _: IntegerType =>
         if (targetColumnInfo.getType.isUnsigned) {
           convertToUnsigned(targetColumnInfo, value)
@@ -148,9 +150,10 @@ object TiConverter {
       //case JsonType      =>
       case _: RealType => convertToReal(targetColumnInfo, value)
       //case SetType       =>
-      //case StringType    =>
-      //case TimeType      =>
-      //case TimestampType =>
+      // TODO: add test for StringType
+      case _: StringType => value
+      //case _: TimeType      =>
+      //case _: TimestampType =>
       case _ =>
         throw new TiBatchWriteException(
           s"do not support writing to column type: ${targetColumnInfo.getType}"
