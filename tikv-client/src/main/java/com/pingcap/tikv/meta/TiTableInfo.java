@@ -46,8 +46,8 @@ public class TiTableInfo implements Serializable {
   private final long oldSchemaId;
   private final long columnLength;
   private final TiPartitionInfo partitionInfo;
-
   private final TiColumnInfo primaryKeyColumn;
+  private final TiIndexInfo uniqueIndex;
 
   @JsonCreator
   public TiTableInfo(
@@ -89,18 +89,31 @@ public class TiTableInfo implements Serializable {
       }
     }
     primaryKeyColumn = primaryKey;
-  }
 
-  public boolean hasAutoIncrementColumn() {
-    return getAutoIncrementColInfo() != null;
-  }
-
-  public TiColumnInfo getAutoIncrementColInfo() {
-    for (int i = 0; i < columns.size(); i++) {
-      TiColumnInfo col = columns.get(i);
-      if (col.getType().isAutoIncrement()) {
-        return col;
+    TiIndexInfo uniqueIndex = null;
+    // find unique index
+    for (TiIndexInfo indexInfo : getIndices()) {
+      if (indexInfo.isUnique()) {
+        uniqueIndex = indexInfo;
+        break;
       }
+    }
+    this.uniqueIndex = uniqueIndex;
+  }
+
+  // auto increment column must be a primary key column
+  public boolean hasAutoIncrementColumn() {
+    if (primaryKeyColumn != null) {
+      return primaryKeyColumn.isAutoIncrement();
+    }
+    return false;
+  }
+
+  // auto increment column must be a primary key column
+  public TiColumnInfo getAutoIncrementColInfo() {
+    if (primaryKeyColumn == null) return null;
+    if (primaryKeyColumn.isAutoIncrement()) {
+      return primaryKeyColumn;
     }
     return null;
   }
@@ -255,5 +268,13 @@ public class TiTableInfo implements Serializable {
   public boolean isPartitionEnabled() {
     if (partitionInfo == null) return false;
     return partitionInfo.isEnable();
+  }
+
+  public TiIndexInfo getUniqueIndex() {
+    return uniqueIndex;
+  }
+
+  public boolean hasUniqueIndex() {
+    return uniqueIndex != null;
   }
 }

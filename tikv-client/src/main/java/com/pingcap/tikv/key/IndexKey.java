@@ -19,6 +19,11 @@ import com.google.common.base.Joiner;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
+import com.pingcap.tikv.meta.TiIndexColumn;
+import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.types.DataType;
+import java.util.List;
 
 public class IndexKey extends Key {
   private static final byte[] IDX_PREFIX_SEP = new byte[] {'_', 'i'};
@@ -36,6 +41,18 @@ public class IndexKey extends Key {
 
   public static IndexKey toIndexKey(long tableId, long indexId, Key... dataKeys) {
     return new IndexKey(tableId, indexId, dataKeys);
+  }
+
+  public static Key[] encodeIndexDataValues(
+      Row row, List<TiIndexColumn> indexColumns, TiTableInfo tableInfo) {
+    Key[] keys = new Key[indexColumns.size()];
+    for (int i = 0; i < indexColumns.size(); i++) {
+      TiIndexColumn col = indexColumns.get(i);
+      DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
+      Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp);
+      keys[i] = key;
+    }
+    return keys;
   }
 
   private static byte[] encode(long tableId, long indexId, Key[] dataKeys) {

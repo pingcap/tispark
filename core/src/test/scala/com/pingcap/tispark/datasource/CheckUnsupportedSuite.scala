@@ -19,56 +19,6 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
   override def beforeAll(): Unit =
     super.beforeAll()
 
-  test("Test write to table with secondary index: UNIQUE") {
-    dropTable()
-
-    jdbcUpdate(
-      s"create table $dbtable(i int, s varchar(128), UNIQUE (i))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello')"
-    )
-
-    {
-      val caught = intercept[TiBatchWriteException] {
-        tidbWrite(List(row2, row3), schema)
-      }
-      assert(
-        caught.getMessage
-          .equals(
-            "tispark currently does not support write data table with secondary index(KEY & UNIQUE KEY)!"
-          )
-      )
-    }
-
-    testTiDBSelect(Seq(row1))
-  }
-
-  test("Test write to table with secondary index: KEY") {
-    dropTable()
-
-    jdbcUpdate(
-      s"create table $dbtable(i int, s varchar(128), KEY (s))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello')"
-    )
-
-    {
-      val caught = intercept[TiBatchWriteException] {
-        tidbWrite(List(row2, row3), schema)
-      }
-      assert(
-        caught.getMessage
-          .equals(
-            "tispark currently does not support write data table with secondary index(KEY & UNIQUE KEY)!"
-          )
-      )
-    }
-
-    testTiDBSelect(Seq(row1))
-  }
-
   test("Test write to partition table") {
     dropTable()
 
@@ -86,33 +36,6 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       assert(
         caught.getMessage
           .equals("tispark currently does not support write data to partition table!")
-      )
-    }
-
-    testTiDBSelect(Seq(row1))
-  }
-
-  test(
-    "Test write to table with primary key & primary key is not handle (TINYINT、SMALLINT、MEDIUMINT、INTEGER)"
-  ) {
-    dropTable()
-
-    jdbcUpdate(
-      s"create table $dbtable(i int, s varchar(128), primary key(s))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello')"
-    )
-
-    {
-      val caught = intercept[TiBatchWriteException] {
-        tidbWrite(List(row2, row3), schema)
-      }
-      assert(
-        caught.getMessage
-          .equals(
-            "tispark currently does not support write data to table with primary key, but type is not TINYINT、SMALLINT、MEDIUMINT、INTEGER!"
-          )
       )
     }
 

@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DateTimeType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
@@ -81,10 +82,9 @@ public class TableCodecTest {
       try {
         byte[] bytes = TableCodec.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
         // testing the correctness via decodeRow
-        Object[] res = TableCodec.decodeRow(new CodecDataInput(bytes), tblInfo.getColumns());
+        Row row = TableCodec.decodeRow(bytes, tblInfo.getColumns());
         for (int j = 0; j < tblInfo.getColumns().size(); j++) {
-          assertEquals(res[2 * j], tblInfo.getColumn(j).getId());
-          assertEquals(res[2 * j + 1], values[j]);
+          assertEquals(row.get(j, null), values[j]);
         }
       } catch (IllegalAccessException ignored) {
       }

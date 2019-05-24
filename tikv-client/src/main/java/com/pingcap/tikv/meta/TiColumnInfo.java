@@ -190,6 +190,10 @@ public class TiColumnInfo implements Serializable {
     return version;
   }
 
+  public boolean isAutoIncrement() {
+    return this.type.isAutoIncrement();
+  }
+
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class InternalTypeHolder {
     private int tp;
