@@ -118,7 +118,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        mvn  test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
+                        mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
                     """
                 }
             }
@@ -130,7 +130,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        mvn verify -am -pl tikv-client
+                        mvn test -am -pl tikv-client
                     """
                     unstash "CODECOV_TOKEN"
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'
