@@ -7,6 +7,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
     def MVN_PROFILE = ""
+    def PARALLEL_NUMBER = 9
     
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
@@ -93,7 +94,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         sed -i 's/core\\/src\\/test\\/scala\\///g' test
                         sed -i 's/\\//\\./g' test
                         sed -i 's/\\.scala//g' test
-                        split test -n r/6 test_unit_ -a 1 --numeric-suffixes=1
+                        split test -n r/$PARALLEL_NUMBER test_unit_ -a 1 --numeric-suffixes=1
                         """
                     }
     
@@ -176,13 +177,11 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     }
                 }
             }
-    
-            tests["Integration test 1"] = {run_intergration_test(1, run_tispark_test)}
-            tests["Integration test 2"] = {run_intergration_test(2, run_tispark_test)}
-            tests["Integration test 3"] = {run_intergration_test(3, run_tispark_test)}
-            tests["Integration test 4"] = {run_intergration_test(4, run_tispark_test)}
-            tests["Integration test 5"] = {run_intergration_test(5, run_tispark_test)}
-            tests["Integration test 6"] = {run_intergration_test(6, run_tispark_test)}
+
+           for (int i = 1; i <= PARALLEL_NUMBER; i++) {
+                int x = i
+                tests["Integration test = $i"] = {run_intergration_test(x, run_tispark_test)}
+            }
             tests["Integration tikv-client test"] = {run_intergration_test(0, run_tikvclient_test)}
     
             parallel tests
