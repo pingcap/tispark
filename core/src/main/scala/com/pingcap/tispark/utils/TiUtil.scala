@@ -16,7 +16,6 @@
 package com.pingcap.tispark.utils
 
 import java.util.concurrent.TimeUnit
-import java.util.logging.Logger
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.expression.ExpressionBlacklist
@@ -27,13 +26,13 @@ import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
 import com.pingcap.tispark.TiBatchWrite.TiRow
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
-import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
-import org.apache.spark.{sql, SparkConf}
+import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import scala.collection.JavaConversions._
@@ -42,9 +41,6 @@ import scala.collection.mutable
 object TiUtil {
   type TiDataType = com.pingcap.tikv.types.DataType
   type TiExpression = com.pingcap.tikv.expression.Expression
-
-  private final val logger = Logger.getLogger(getClass.getName)
-  private final val MAX_PRECISION = sql.types.DecimalType.MAX_PRECISION
 
   def isSupportedAggregate(aggExpr: AggregateExpression,
                            tiDBRelation: TiDBRelation,
@@ -126,55 +122,6 @@ object TiUtil {
     Row.fromSeq(rowArray)
   }
 
-  // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp: TiDataType): DataType =
-    tp match {
-      case _: StringType => sql.types.StringType
-      case _: BytesType  => sql.types.BinaryType
-      case _: IntegerType =>
-        if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
-          DataTypes.createDecimalType(20, 0)
-        } else {
-          sql.types.LongType
-        }
-      case _: RealType => sql.types.DoubleType
-      // we need to make sure that tp.getLength does not result in negative number when casting.
-      // Decimal precision cannot exceed MAX_PRECISION.
-      case _: DecimalType =>
-        var len = tp.getLength
-        if (len > MAX_PRECISION) {
-          logger.warning(
-            "Decimal precision exceeding MAX_PRECISION=" + MAX_PRECISION + ", value will be truncated"
-          )
-          len = MAX_PRECISION
-        }
-        DataTypes.createDecimalType(
-          len.asInstanceOf[Int],
-          tp.getDecimal
-        )
-      case _: DateTimeType  => sql.types.TimestampType
-      case _: TimestampType => sql.types.TimestampType
-      case _: DateType      => sql.types.DateType
-      case _: EnumType      => sql.types.StringType
-      case _: SetType       => sql.types.StringType
-      case _: JsonType      => sql.types.StringType
-      case _: TimeType      => sql.types.LongType
-    }
-
-  def fromSparkType(tp: DataType): TiDataType =
-    // TODO: review type system
-    // pending: https://internal.pingcap.net/jira/browse/TISPARK-99
-    tp match {
-      case _: sql.types.BinaryType    => BytesType.BLOB
-      case _: sql.types.StringType    => StringType.VARCHAR
-      case _: sql.types.LongType      => IntegerType.BIGINT
-      case _: sql.types.IntegerType   => IntegerType.INT
-      case _: sql.types.DoubleType    => RealType.DOUBLE
-      case _: sql.types.DecimalType   => DecimalType.DECIMAL
-      case _: sql.types.TimestampType => TimestampType.TIMESTAMP
-      case _: sql.types.DateType      => DateType.DATE
-    }
-
   def getSchemaFromTable(table: TiTableInfo): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {
@@ -185,7 +132,7 @@ object TiUtil {
         .build()
       fields(i) = StructField(
         col.getName,
-        TiUtil.toSparkDataType(col.getType),
+        TiConverter.toSparkDataType(col.getType),
         nullable = !notNull,
         metadata
       )

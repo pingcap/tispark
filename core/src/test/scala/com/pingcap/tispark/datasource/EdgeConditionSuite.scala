@@ -32,8 +32,8 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     jdbcUpdate(
       s"insert into $dbtable values(1)"
     )
-    batchWrite(List(row2, row3, row4), schema)
-    testSelect(Seq(row1, row2, row3, row4))
+    tidbWrite(List(row2, row3, row4), schema)
+    testDataSourceSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Write to table with one column (primary key int type)") {
@@ -56,8 +56,8 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     jdbcUpdate(
       s"insert into $dbtable values(1)"
     )
-    batchWrite(List(row2, row3, row4), schema)
-    testSelect(Seq(row1, row2, row3, row4))
+    tidbWrite(List(row2, row3, row4), schema)
+    testDataSourceSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Write to table with one column (primary key + auto increase)") {
@@ -80,8 +80,8 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     jdbcUpdate(
       s"insert into $dbtable values(1)"
     )
-    batchWrite(List(row2, row3, row4), schema)
-    testSelect(Seq(row1, row2, row3, row4))
+    tidbWrite(List(row2, row3, row4), schema)
+    testDataSourceSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Write to table with one column (no primary key)") {
@@ -104,8 +104,8 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     jdbcUpdate(
       s"insert into $dbtable values('Hello')"
     )
-    batchWrite(List(row1, row3, row4), schema)
-    testSelect(Seq(row1, row2, row3, row4))
+    tidbWrite(List(row1, row3, row4), schema)
+    testDataSourceSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Write to table with many columns") {
@@ -144,8 +144,8 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
       s"create table $dbtable($createTableSchemaStr)"
     )
 
-    batchWrite(List(row1, row2), schema)
-    testSelect(Seq(row1, row2), "c0")
+    tidbWrite(List(row1, row2), schema)
+    testDataSourceSelect(Seq(row1, row2), "c0")
   }
 
   test("Write Empty data") {
@@ -165,8 +165,8 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     jdbcUpdate(
       s"insert into $dbtable values(1)"
     )
-    batchWrite(List(), schema)
-    testSelect(Seq(row1))
+    tidbWrite(List(), schema)
+    testDataSourceSelect(Seq(row1))
   }
 
   test("Write large amount of data") {
@@ -187,8 +187,8 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     jdbcUpdate(
       s"create table $dbtable(i int, primary key (i))"
     )
-    batchWrite(list, schema)
-    testSelect(list)
+    tidbWrite(list, schema)
+    testDataSourceSelect(list)
 
     var list2: List[Row] = Nil
     for (i <- TEST_LARGE_DATA_SIZE until TEST_LARGE_DATA_SIZE * 2) {
@@ -196,8 +196,8 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     }
     list2 = list2.reverse
 
-    batchWrite(list2, schema)
-    testSelect(list ::: list2)
+    tidbWrite(list2, schema)
+    testDataSourceSelect(list ::: list2)
   }
 
   override def afterAll(): Unit =

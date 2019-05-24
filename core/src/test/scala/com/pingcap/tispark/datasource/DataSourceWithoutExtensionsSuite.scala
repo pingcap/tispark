@@ -28,7 +28,7 @@ class DataSourceWithoutExtensionsSuite
     jdbcUpdate(
       s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
-    testSelect(Seq(row1, row2, row3, row4))
+    testDataSourceSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Test Write Append") {
@@ -49,7 +49,7 @@ class DataSourceWithoutExtensionsSuite
       .mode("append")
       .save()
 
-    testSelect(Seq(row1, row2, row3, row4))
+    testDataSourceSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Test Write Overwrite") {

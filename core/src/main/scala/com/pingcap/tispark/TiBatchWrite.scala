@@ -25,10 +25,10 @@ import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.txn.TxnKVClient
-import com.pingcap.tikv.types.{DataType, IntegerType}
+import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.TiConverter
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
@@ -156,8 +156,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     // deduplicate
-    val deduplicateRDD =
-      deduplicate(tiKVRowRDD)
+    val deduplicateRDD = deduplicate(tiKVRowRDD)
 
     // encode TiROW
     val encodedTiRowRDD = deduplicateRDD.map {
@@ -401,8 +400,6 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   @throws(classOf[TiBatchWriteException])
   private def deduplicate(rdd: RDD[TiRow]): RDD[(SerializableKey, TiRow)] = {
-    val tableId = tiTableInfo.getId
-
     val shuffledRDD: RDD[(SerializableKey, Iterable[TiRow])] = rdd
       .map(row => (tiKVRow2Key(row, isUpdate = false), row))
       .groupByKey()
@@ -492,7 +489,7 @@ class TiBatchWrite(@transient val df: DataFrame,
         for (i <- 0 until fieldCount) {
           val data = sparkRow.get(i)
           val sparkDataType = sparkRow.schema(i).dataType
-          val tiDataType = TiUtil.fromSparkType(sparkDataType)
+          val tiDataType = TiConverter.fromSparkType(sparkDataType)
           tiRow.set(i, tiDataType, data)
         }
       } else if (tiTableInfo.getAutoIncrementColInfo != null) {
@@ -511,7 +508,7 @@ class TiBatchWrite(@transient val df: DataFrame,
               data = handleId
             }
           }
-          val tiDataType = TiUtil.fromSparkType(sparkDataType)
+          val tiDataType = TiConverter.fromSparkType(sparkDataType)
           tiRow.set(i, tiDataType, data)
         }
       } else {
@@ -527,8 +524,8 @@ class TiBatchWrite(@transient val df: DataFrame,
       for (i <- 0 until fieldCount) {
         val data = sparkRow.get(i)
         val sparkDataType = sparkRow.schema(i).dataType
-        val tiDataType = TiUtil.fromSparkType(sparkDataType)
-        tiRow.set(i, tiDataType, data)
+        //val tiDataType = TiConverter.fromSparkType(sparkDataType)
+        tiRow.set(i, null, data)
       }
       // append _tidb_rowid at the end
       tiRow.set(fieldCount, IntegerType.BIGINT, handleId)
@@ -539,16 +536,13 @@ class TiBatchWrite(@transient val df: DataFrame,
   @throws(classOf[TiBatchWriteException])
   private def encodeTiRow(tiRow: TiRow): Array[Byte] = {
     var colSize = tiRow.fieldCount()
-    val columnInfos = tiTableInfo.getColumns
+    val colIds = new TLongArrayList
 
-    val colDataTypes = new Array[DataType](columnInfos.size)
-
-    for (i <- 0 until columnInfos.size) {
+    for (i <- 0 until tableColSize) {
       val tiColumnInfo = tiTableInfo.getColumn(i)
-      colDataTypes.update(i, tiColumnInfo.getType)
-    }
 
-    val tableColSize = colDataTypes.length
+      colIds.add(tiColumnInfo.getId)
+    }
 
     // an hidden row _tidb_rowid may exist
     if (colSize > (tableColSize + 1)) {
@@ -565,13 +559,16 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
     // TODO: ddl state change
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-82
-    val values = new Array[AnyRef](colSize)
+    val convertedValues = new Array[AnyRef](colSize)
     for (i <- 0 until colSize) {
       // pk is handle can be skipped
-      values.update(i, tiRow.get(i, colDataTypes(i)))
+      val columnInfo = tiTableInfo.getColumn(i)
+      val value = tiRow.get(i, columnInfo.getType)
+      val convertedValue = TiConverter.convertToTiDBType(columnInfo, value)
+      convertedValues.update(i, convertedValue)
     }
 
-    TableCodec.encodeRow(columnInfos, values, tiTableInfo.isPkHandle)
+    TableCodec.encodeRow(tiTableInfo.getColumns, convertedValues, tiTableInfo.isPkHandle)
   }
 }
 

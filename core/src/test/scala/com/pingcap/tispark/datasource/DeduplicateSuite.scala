@@ -26,12 +26,12 @@ class DeduplicateSuite extends BaseDataSourceTest("test_datasource_deduplicate")
     )
 
     // insert row2 row2 row3
-    batchWrite(List(row2, row2, row3), schema, Some(Map("deduplicate" -> "true")))
-    testSelect(Seq(row1, row2, row2, row3))
+    tidbWrite(List(row2, row2, row3), schema, Some(Map("deduplicate" -> "true")))
+    testDataSourceSelect(Seq(row1, row2, row2, row3))
 
     // insert row4 row4 row5
-    batchWrite(List(row4, row4, row5), schema, Some(Map("deduplicate" -> "false")))
-    testSelect(Seq(row1, row2, row2, row3, row4, row4, row5))
+    tidbWrite(List(row4, row4, row5), schema, Some(Map("deduplicate" -> "false")))
+    testDataSourceSelect(Seq(row1, row2, row2, row3, row4, row4, row5))
   }
 
   test("Test deduplicate (table with primary key & primary key is handle)") {
@@ -45,19 +45,19 @@ class DeduplicateSuite extends BaseDataSourceTest("test_datasource_deduplicate")
     // insert row4 row5 row3 row5
     {
       val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row4, row5, row3, row5), schema, Some(Map("deduplicate" -> "false")))
+        tidbWrite(List(row4, row5, row3, row5), schema, Some(Map("deduplicate" -> "false")))
       }
       assert(
         caught.getMessage
           .equals("data conflicts! set the parameter deduplicate.")
       )
     }
-    testSelect(Seq(row2))
+    testDataSourceSelect(Seq(row2))
 
     // deduplicate=true
     // insert row4 row5 row3 row5
-    batchWrite(List(row4, row5, row3, row5), schema, Some(Map("deduplicate" -> "true")))
-    testSelect(Seq(row2, row3, row4, row5))
+    tidbWrite(List(row4, row5, row3, row5), schema, Some(Map("deduplicate" -> "true")))
+    testDataSourceSelect(Seq(row2, row3, row4, row5))
   }
 
   override def afterAll(): Unit =
