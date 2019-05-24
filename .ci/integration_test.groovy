@@ -94,7 +94,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         sed -i 's/core\\/src\\/test\\/scala\\///g' test
                         sed -i 's/\\//\\./g' test
                         sed -i 's/\\.scala//g' test
+                        shuf test -o  test2
+                        mv test2 test
                         split test -n r/$PARALLEL_NUMBER test_unit_ -a 1 --numeric-suffixes=1
+                        cd tikv-client
+                        ./scripts/proto.sh
+                        cd ..
                         """
                     }
     
@@ -116,7 +121,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        mvn  test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
+                        export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
+                        mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr} -DskipCloneProtoFiles=true
                     """
                 }
             }
@@ -128,7 +134,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        mvn verify -am -pl tikv-client
+                        export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
+                        mvn test -am -pl tikv-client -DskipCloneProtoFiles=true
                     """
                     unstash "CODECOV_TOKEN"
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'
