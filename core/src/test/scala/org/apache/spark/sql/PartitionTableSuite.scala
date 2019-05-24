@@ -18,7 +18,7 @@ package org.apache.spark.sql
 import com.pingcap.tikv.meta.TiDAGRequest
 import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 
-class PartitionTableSuite extends BaseTiSparkSuite {
+class PartitionTableSuite extends BaseTiSparkTest {
   def enablePartitionForTiDB() = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
   test("constant folding does not apply case") {
     enablePartitionForTiDB()

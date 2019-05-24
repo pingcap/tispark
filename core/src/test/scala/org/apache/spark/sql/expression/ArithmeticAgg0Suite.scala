@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class ArithmeticAgg0Suite extends BaseInitialOnceSuite {
+class ArithmeticAgg0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select min(tp_smallint) from full_data_type_table",
     "select sum(tp_char) from full_data_type_table",

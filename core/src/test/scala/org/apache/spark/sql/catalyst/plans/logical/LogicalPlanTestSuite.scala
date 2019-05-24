@@ -1,10 +1,10 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import com.pingcap.tikv.meta.TiTimestamp
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.execution.{CoprocessorRDD, HandleRDDExec, RegionTaskExec, SparkPlan}
 
-class LogicalPlanTestSuite extends BaseTiSparkSuite {
+class LogicalPlanTestSuite extends BaseTiSparkTest {
 
   test("test timestamp in logical plan") {
     tidbStmt.execute("DROP TABLE IF EXISTS `test1`")

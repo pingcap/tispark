@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class PlaceHolder0Suite extends BaseInitialOnceSuite {
+class PlaceHolder0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select tp_tinyint from full_data_type_table_idx  where tp_tinyint = null",
     "select tp_tinyint from full_data_type_table_idx  where tp_tinyint = 'PingCAP'",

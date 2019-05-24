@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class SimpleSelect0Suite extends BaseInitialOnceSuite {
+class SimpleSelect0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select tp_text from full_data_type_table  order by tp_text  limit 20",
     "select tp_binary from full_data_type_table  order by tp_binary  limit 20",

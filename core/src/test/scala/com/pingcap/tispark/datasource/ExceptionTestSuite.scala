@@ -4,7 +4,7 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 
-class ExceptionTestSuite extends BaseDataSourceSuite("test_datasource_exception_test") {
+class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_test") {
 
   override def beforeAll(): Unit =
     super.beforeAll()

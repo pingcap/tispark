@@ -19,12 +19,12 @@ package org.apache.spark.sql.benchmark
 
 import java.io.File
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
 
 import scala.collection.mutable
 
-class TPCDSQuerySuite extends BaseTiSparkSuite {
+class TPCDSQuerySuite extends BaseTiSparkTest {
   private val tpcdsDirectory = getClass.getResource("/tpcds-sql").getPath
   private val tpcdsQueries = getListOfFiles(tpcdsDirectory)
 

@@ -2,7 +2,7 @@ package org.apache.spark.sql
 
 import com.pingcap.tikv.types.Converter
 
-class TiDBTypeTestSuite extends BaseTiSparkSuite {
+class TiDBTypeTestSuite extends BaseTiSparkTest {
   test("adding time type index test") {
     tidbStmt.execute("drop table if exists t_t")
     tidbStmt.execute("CREATE TABLE `t_t` (`t` time(3), index `idx_t`(t))")

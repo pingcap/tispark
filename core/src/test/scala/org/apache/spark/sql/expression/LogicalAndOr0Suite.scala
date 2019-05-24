@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class LogicalAndOr0Suite extends BaseInitialOnceSuite {
+class LogicalAndOr0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select tp_char, tp_smallint, tp_char, tp_smallint, tp_char from full_data_type_table  where tp_char = tp_smallint and tp_char > 0",
     "select tp_char,tp_smallint from full_data_type_table  where tp_char = tp_smallint and tp_char > 0",

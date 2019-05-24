@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class Join0Suite extends BaseInitialOnceSuite {
+class Join0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_decimal = b.tp_decimal",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.id_dt = b.id_dt",

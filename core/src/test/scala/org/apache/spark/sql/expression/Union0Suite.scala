@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class Union0Suite extends BaseInitialOnceSuite {
+class Union0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "(select tp_decimal from full_data_type_table where tp_decimal < 0) union (select tp_decimal from full_data_type_table where tp_decimal > 0) order by tp_decimal",
     "(select tp_smallint from full_data_type_table where tp_smallint < 0) union (select tp_smallint from full_data_type_table where tp_smallint > 0) order by tp_smallint",

@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class CartesianTypeTestCases1Suite extends BaseInitialOnceSuite {
+class CartesianTypeTestCases1Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select tp_tinyint,tp_smallint from full_data_type_table  where tp_tinyint <= tp_smallint order by id_dt  limit 20",
     "select tp_nvarchar,tp_nvarchar from full_data_type_table  where tp_nvarchar <= tp_nvarchar order by id_dt  limit 20",
