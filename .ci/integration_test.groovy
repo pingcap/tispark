@@ -178,8 +178,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                 }
             }
 
-            for (int i = 1; i <= PARALLEL_NUMBER; i++) {
-                tests["Integration test = $i"] = {run_intergration_test(i, run_tispark_test)}
+           for (int i = 1; i <= PARALLEL_NUMBER; i++) {
+                int x = i
+                tests["Integration test = $i"] = {run_intergration_test(x, run_tispark_test)}
             }
             tests["Integration tikv-client test"] = {run_intergration_test(0, run_tikvclient_test)}
     
