@@ -7,7 +7,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
     def MVN_PROFILE = ""
-    def PARALLEL_NUMBER = 12
+    def PARALLEL_NUMBER = 9
     
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
