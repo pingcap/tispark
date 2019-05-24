@@ -271,6 +271,17 @@ object TiConverter {
 
     targetColumnInfo.getType.getType match {
       case MySQLType.TypeFloat =>
+        if (java.lang.Double.compare(result, java.lang.Float.MAX_VALUE) > 0) {
+          throw new TiBatchWriteException(
+            s"data $value > upperBound ${java.lang.Float.MAX_VALUE}"
+          )
+        }
+
+        if (java.lang.Double.compare(result, java.lang.Float.MIN_VALUE) < 0) {
+          throw new TiBatchWriteException(
+            s"data $value < lowerBound ${java.lang.Float.MIN_VALUE}"
+          )
+        }
         val r: java.lang.Float = result.toFloat
         r
       case _ => result
