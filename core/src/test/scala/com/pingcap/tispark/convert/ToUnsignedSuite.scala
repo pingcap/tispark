@@ -1,6 +1,6 @@
 package com.pingcap.tispark.convert
 
-import com.pingcap.tispark.datasource.BaseDataSourceSuite
+import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -12,7 +12,7 @@ import org.apache.spark.sql.types._
  * 4. INT UNSINGED
  * 5. BIGINT UNSINGED
  */
-class ToUnsignedSuite extends BaseDataSourceSuite("test_data_type_convert_to_unsigned") {
+class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsigned") {
 
   test("Test Convert from java.lang.Boolean to UNSINGED") {
     // success

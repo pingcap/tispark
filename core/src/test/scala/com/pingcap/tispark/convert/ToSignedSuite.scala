@@ -1,6 +1,6 @@
 package com.pingcap.tispark.convert
 
-import com.pingcap.tispark.datasource.BaseDataSourceSuite
+import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
@@ -12,7 +12,7 @@ import org.apache.spark.sql.types._
  * 4. INT SINGED
  * 5. BIGINT SINGED
  */
-class ToSignedSuite extends BaseDataSourceSuite("test_data_type_convert_to_signed") {
+class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed") {
 
   test("Test Convert from java.lang.Boolean to SINGED") {
     // success

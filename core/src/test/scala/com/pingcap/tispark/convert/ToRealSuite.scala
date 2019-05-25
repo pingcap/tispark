@@ -3,7 +3,7 @@ package com.pingcap.tispark.convert
 import java.sql.BatchUpdateException
 
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tispark.datasource.BaseDataSourceSuite
+import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.SparkException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -13,7 +13,7 @@ import org.apache.spark.sql.types._
  * 1. FLOAT
  * 2. DOUBLE
  */
-class ToRealSuite extends BaseDataSourceSuite("test_data_type_convert_to_real") {
+class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
   //  + 1.0E-40f because of this issue: https://github.com/pingcap/tidb/issues/10587
   private val minFloat: java.lang.Float = java.lang.Float.MIN_VALUE + 1.0E-40f

@@ -1,8 +1,8 @@
 package com.pingcap.tispark.datatype
 
-import com.pingcap.tispark.datasource.BaseDataSourceSuite
+import com.pingcap.tispark.datasource.BaseDataSourceTest
 
-class DataTypeSuite extends BaseDataSourceSuite("test_datasource_data_type") {
+class DataTypeSuite extends BaseDataSourceTest("test_datasource_data_type") {
 
   test("Test Read different types") {
     dropTable()
