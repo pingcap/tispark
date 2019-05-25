@@ -542,11 +542,9 @@ class TiBatchWrite(@transient val df: DataFrame,
     val columnInfos = tiTableInfo.getColumns
 
     val colDataTypes = new Array[DataType](columnInfos.size)
-    val colIds = new TLongArrayList
 
     for (i <- 0 until columnInfos.size) {
       val tiColumnInfo = tiTableInfo.getColumn(i)
-      colIds.add(tiColumnInfo.getId)
       colDataTypes.update(i, tiColumnInfo.getType)
     }
 
@@ -573,7 +571,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       values.update(i, tiRow.get(i, colDataTypes(i)))
     }
 
-    TableCodec.encodeRow(columnInfos, colIds, values, tiTableInfo.isPkHandle)
+    TableCodec.encodeRow(columnInfos, values, tiTableInfo.isPkHandle)
   }
 }
 
