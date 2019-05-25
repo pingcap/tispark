@@ -3,7 +3,7 @@ package com.pingcap.tispark.datasource
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
 
-class EdgeConditionSuite extends BaseDataSourceSuite("test_datasource_edge_condition") {
+class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condition") {
 
   private val TEST_LARGE_DATA_SIZE = 102400
 

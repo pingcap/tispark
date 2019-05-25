@@ -2,7 +2,7 @@ package org.apache.spark.sql.txn
 
 import java.sql.{DriverManager, SQLException}
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.Utils.getOrElse
 import org.apache.spark.sql.test.TestConstants.{TiDB_PASSWORD, TiDB_USER}
@@ -16,7 +16,7 @@ import org.apache.spark.sql.test.TestConstants.{TiDB_PASSWORD, TiDB_USER}
 // What makes the resolveLock almost doesn't happen. What I think
 // the most useful way is to implement a mock kv, which delay the time
 // between prewrite and commit which cause the txn to rollback
-class TxnTestSuite extends BaseTiSparkSuite {
+class TxnTestSuite extends BaseTiSparkTest {
   protected final val sumString = resourceToString(
     s"resolveLock-test/sum_account.sql",
     classLoader = Thread.currentThread().getContextClassLoader

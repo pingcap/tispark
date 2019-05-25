@@ -17,9 +17,10 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class PlaceHolderTest1Suite extends BaseInitialOnceSuite {
+class PlaceHolderTest1Suite extends BaseInitialOnceTest {
+
   private val allCases = Seq[String](
     "select  count(1)  from full_data_type_table  where tp_float > null",
     "select  count(1)  from full_data_type_table  where tp_float > '2017-11-02'",

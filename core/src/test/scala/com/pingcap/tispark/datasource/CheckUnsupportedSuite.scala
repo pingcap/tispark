@@ -4,7 +4,7 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class CheckUnsupportedSuite extends BaseDataSourceSuite("test_datasource_check_unsupported") {
+class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_unsupported") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")

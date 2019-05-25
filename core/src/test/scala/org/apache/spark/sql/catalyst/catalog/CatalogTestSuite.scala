@@ -1,8 +1,8 @@
 package org.apache.spark.sql.catalyst.catalog
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 
-class CatalogTestSuite extends BaseTiSparkSuite {
+class CatalogTestSuite extends BaseTiSparkTest {
   test("test show databases/tables") {
     spark.sql("show databases").show(false)
     spark.sql(s"show databases like '$dbPrefix*'").show(false)

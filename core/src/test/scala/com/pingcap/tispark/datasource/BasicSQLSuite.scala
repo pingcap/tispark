@@ -5,7 +5,7 @@ import org.apache.spark.sql.Row
 
 import scala.util.Random
 
-class BasicSQLSuite extends BaseDataSourceSuite("test_datasource_sql") {
+class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")

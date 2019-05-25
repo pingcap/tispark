@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class InTest0Suite extends BaseInitialOnceSuite {
+class InTest0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select tp_int from full_data_type_table_idx  where tp_int in (2333, 601508558, 4294967296, 4294967295) order by id_dt ",
     "select tp_bigint from full_data_type_table_idx  where tp_bigint in (122222, -2902580959275580308, 9223372036854775807, 9223372036854775808) order by id_dt ",

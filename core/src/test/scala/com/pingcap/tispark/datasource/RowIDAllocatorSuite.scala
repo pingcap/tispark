@@ -1,9 +1,9 @@
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.allocator.RowIDAllocator
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 
-class RowIDAllocatorSuite extends BaseTiSparkSuite {
+class RowIDAllocatorSuite extends BaseTiSparkTest {
   test("test unsigned allocator") {
     tidbStmt.execute("drop table if exists rowid_allocator")
     tidbStmt.execute("""CREATE TABLE `rowid_allocator` (

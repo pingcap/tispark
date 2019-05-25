@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql
 
-class TiDBMapDatabaseSuite extends BaseTiSparkSuite {
+class TiDBMapDatabaseSuite extends BaseTiSparkTest {
 
   test("TiDBMapDatabase fails when Decimal length exceeding 38") {
     tidbStmt.execute("drop database if exists decimals")

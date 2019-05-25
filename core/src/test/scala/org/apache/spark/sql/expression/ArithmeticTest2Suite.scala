@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class ArithmeticTest2Suite extends BaseInitialOnceSuite {
+class ArithmeticTest2Suite extends BaseInitialOnceTest {
   private val divideCases = Seq[String](
     "select id_dt from full_data_type_table where tp_int / tp_tinyint > 0 order by id_dt",
     "select id_dt from full_data_type_table where tp_bigint / tp_int >= 0 order by id_dt",

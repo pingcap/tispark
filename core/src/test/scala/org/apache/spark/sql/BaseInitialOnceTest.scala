@@ -1,6 +1,6 @@
 package org.apache.spark.sql
 
-class BaseInitialOnceSuite extends BaseTiSparkSuite {
+class BaseInitialOnceTest extends BaseTiSparkTest {
   private var init = false
 
   override def beforeAll(): Unit =

@@ -15,9 +15,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class LikeTestSuite extends BaseInitialOnceSuite {
+class LikeTestSuite extends BaseInitialOnceTest {
   private val tableScanCases = Seq[String](
     "select tp_varchar from full_data_type_table where tp_varchar LIKE 'a%'",
     "select tp_varchar from full_data_type_table where tp_varchar LIKE '%a%'",

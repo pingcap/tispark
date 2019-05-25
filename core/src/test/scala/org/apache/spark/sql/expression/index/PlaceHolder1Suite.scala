@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class PlaceHolder1Suite extends BaseInitialOnceSuite {
+class PlaceHolder1Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select tp_decimal from full_data_type_table_idx  where tp_decimal > -128",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal > 0",

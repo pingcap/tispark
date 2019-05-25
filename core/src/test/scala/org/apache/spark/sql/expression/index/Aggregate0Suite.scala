@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class Aggregate0Suite extends BaseInitialOnceSuite {
+class Aggregate0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select tp_mediumint from full_data_type_table_idx  group by (tp_mediumint)  order by tp_mediumint ",
     "select tp_float from full_data_type_table_idx  group by (tp_float)  order by tp_float ",
