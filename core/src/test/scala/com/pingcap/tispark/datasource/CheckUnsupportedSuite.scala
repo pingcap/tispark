@@ -41,7 +41,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     }
 
-    testDataSourceSelect(Seq(row1))
+    testTiDBSelect(Seq(row1))
   }
 
   test("Test write to table with secondary index: KEY") {
@@ -66,7 +66,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     }
 
-    testDataSourceSelect(Seq(row1))
+    testTiDBSelect(Seq(row1))
   }
 
   test("Test write to partition table") {
@@ -89,7 +89,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     }
 
-    testDataSourceSelect(Seq(row1))
+    testTiDBSelect(Seq(row1))
   }
 
   test(
@@ -116,7 +116,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     }
 
-    testDataSourceSelect(Seq(row1))
+    testTiDBSelect(Seq(row1))
   }
 
   override def afterAll(): Unit =

@@ -27,11 +27,11 @@ class DeduplicateSuite extends BaseDataSourceTest("test_datasource_deduplicate")
 
     // insert row2 row2 row3
     tidbWrite(List(row2, row2, row3), schema, Some(Map("deduplicate" -> "true")))
-    testDataSourceSelect(Seq(row1, row2, row2, row3))
+    testTiDBSelect(Seq(row1, row2, row2, row3))
 
     // insert row4 row4 row5
     tidbWrite(List(row4, row4, row5), schema, Some(Map("deduplicate" -> "false")))
-    testDataSourceSelect(Seq(row1, row2, row2, row3, row4, row4, row5))
+    testTiDBSelect(Seq(row1, row2, row2, row3, row4, row4, row5))
   }
 
   test("Test deduplicate (table with primary key & primary key is handle)") {
@@ -52,12 +52,12 @@ class DeduplicateSuite extends BaseDataSourceTest("test_datasource_deduplicate")
           .equals("data conflicts! set the parameter deduplicate.")
       )
     }
-    testDataSourceSelect(Seq(row2))
+    testTiDBSelect(Seq(row2))
 
     // deduplicate=true
     // insert row4 row5 row3 row5
     tidbWrite(List(row4, row5, row3, row5), schema, Some(Map("deduplicate" -> "true")))
-    testDataSourceSelect(Seq(row2, row3, row4, row5))
+    testTiDBSelect(Seq(row2, row3, row4, row5))
   }
 
   override def afterAll(): Unit =

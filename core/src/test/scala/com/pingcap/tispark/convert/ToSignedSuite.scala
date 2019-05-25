@@ -17,7 +17,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   test("Test Convert from java.lang.Boolean to SINGED") {
     // success
     // java.lang.Boolean -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null, null, null, null)
         val row2 = Row(2, null, true, true, true, true)
@@ -44,14 +44,14 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
   test("Test Convert from java.lang.Byte to SIGNED") {
     // success
     // java.lang.Byte -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Byte = java.lang.Byte.valueOf("11")
         val b: java.lang.Byte = java.lang.Byte.MAX_VALUE
@@ -83,14 +83,14 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
   test("Test Convert from java.lang.Short to SIGNED") {
     // success
     // java.lang.Short -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Short = java.lang.Short.valueOf("11")
         val b: java.lang.Short = java.lang.Short.valueOf("-11")
@@ -125,14 +125,14 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
   test("Test Convert from java.lang.Integer to SIGNED") {
     // success
     // java.lang.Integer -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Integer = java.lang.Integer.valueOf("11")
         val b: java.lang.Integer = java.lang.Integer.valueOf("-11")
@@ -169,7 +169,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -179,7 +179,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   ignore("Test Convert from java.lang.Long to SIGNED") {
     // success
     // java.lang.Long -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Long = java.lang.Long.valueOf("11")
         val b: java.lang.Long = java.lang.Long.valueOf("-11")
@@ -218,14 +218,14 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
   test("Test Convert from java.lang.Float to SIGNED") {
     // success
     // java.lang.Float -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Float = java.lang.Float.valueOf("11.1")
         val b: java.lang.Float = java.lang.Float.valueOf("-11.1")
@@ -265,14 +265,14 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
   test("Test Convert from java.lang.Double to SIGNED") {
     // success
     // java.lang.Double -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Double = java.lang.Double.valueOf("11.1")
         val b: java.lang.Double = java.lang.Double.valueOf("-11.1")
@@ -309,14 +309,14 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
   test("Test Convert from String to SIGNED") {
     // success
     // String -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: String = "11.1"
         val b: String = "-11.1"
@@ -353,7 +353,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 

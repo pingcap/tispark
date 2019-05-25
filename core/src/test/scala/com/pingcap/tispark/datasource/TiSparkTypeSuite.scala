@@ -23,6 +23,6 @@ class TiSparkTypeSuite extends BaseDataSourceTest("type_test") {
     )
 
     tidbWrite(List(row3, row5), schema)
-    testDataSourceSelect(List(row1, row2, row3, row5))
+    testTiDBSelect(List(row1, row2, row3, row5))
   }
 }

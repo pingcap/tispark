@@ -25,7 +25,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     // success
     // java.lang.Boolean -> FLOAT
     // java.lang.Boolean -> DOUBLE
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null)
         val row2 = Row(2, true, false)
@@ -45,7 +45,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
         // insert row1 row2 row3 row4
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
     }
   }
 
@@ -53,7 +53,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     // success
     // java.lang.Byte -> FLOAT
     // java.lang.Byte -> DOUBLE
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Byte = java.lang.Byte.valueOf("11")
         val b: java.lang.Byte = java.lang.Byte.valueOf("22")
@@ -76,7 +76,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
         // insert row1 row2 row3 row4
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
     }
   }
 
@@ -84,7 +84,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     // success
     // java.lang.Short -> FLOAT
     // java.lang.Short -> DOUBLE
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Short = java.lang.Short.valueOf("11")
         val b: java.lang.Short = java.lang.Short.valueOf("22")
@@ -107,7 +107,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
         // insert row1 row2 row3 row4
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
     }
   }
 
@@ -115,7 +115,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     // success
     // java.lang.Integer -> FLOAT
     // java.lang.Integer -> DOUBLE
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null)
         val row2 = Row(2, 22, 33)
@@ -135,7 +135,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
         // insert row1 row2 row3 row4
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
     }
   }
 
@@ -143,7 +143,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     // success
     // java.lang.Long -> FLOAT
     // java.lang.Long -> DOUBLE
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null)
         val row2 = Row(2, 22L, 33L)
@@ -163,7 +163,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
         // insert row1 row2 row3 row4
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
     }
   }
 
@@ -171,7 +171,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     // success
     // java.lang.Float -> FLOAT
     // java.lang.Float -> DOUBLE
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null)
         val row2 = Row(2, 22.2f, 33.3f)
@@ -193,7 +193,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -201,7 +201,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     // success
     // java.lang.Double -> FLOAT
     // java.lang.Double -> DOUBLE
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         //  + 1.0E-40f because of this issue: https://github.com/pingcap/tidb/issues/10587
         val row1 = Row(1, null, null)
@@ -224,7 +224,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -232,7 +232,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     // success
     // String -> FLOAT
     // String -> DOUBLE
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null)
         val row2 = Row(2, "2.2", "-3.3")
@@ -254,7 +254,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareDataSourceSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
     }
   }
 
@@ -262,7 +262,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     // failure
     // java.sql.Date -> FLOAT
     // java.sql.Date -> DOUBLE
-    compareTiDBAndJDBCWrite {
+    compareTiDBWriteWithJDBC {
       case (writeFunc, funcName) =>
         val a: java.sql.Date = new java.sql.Date(0)
         val row1 = Row(1, null, null)

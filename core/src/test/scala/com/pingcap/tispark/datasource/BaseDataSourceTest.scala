@@ -66,40 +66,40 @@ class BaseDataSourceTest(val table: String,
       .save()
   }
 
-  protected def testDataSourceSelect(expectedAnswer: Seq[Row], sortCol: String = "i"): Unit = {
+  protected def testTiDBSelect(expectedAnswer: Seq[Row], sortCol: String = "i"): Unit = {
     // check data source result & expected answer
-    val df = queryDataSourceAPI(sortCol)
+    val df = queryTiDB(sortCol)
     checkAnswer(df, expectedAnswer)
   }
 
-  protected def compareTiDBAndJDBCWrite(
+  protected def compareTiDBWriteWithJDBC(
     testCode: ((List[Row], StructType, Option[Map[String, String]]) => Unit, String) => Unit
   ): Unit = {
     testCode(jdbcWrite, "jdbcWrite")
     testCode(tidbWrite, "tidbWrite")
   }
 
-  protected def compareDataSourceSelectWithJDBC(expectedAnswer: Seq[Row],
-                                                schema: StructType,
-                                                sortCol: String = "i"): Unit = {
+  protected def compareTiDBSelectWithJDBC(expectedAnswer: Seq[Row],
+                                          schema: StructType,
+                                          sortCol: String = "i"): Unit = {
     val sql = s"select * from $dbtable order by $sortCol"
     val answer = seqRowToList(expectedAnswer, schema)
 
     // check jdbc result & expected answer
-    val jdbcResult = queryTiDB(sql)
+    val jdbcResult = queryJDBC(sql)
     compSqlResult(sql, jdbcResult, answer, checkLimit = false)
 
     // check data source result & expected answer
-    val df = queryDataSourceAPI(sortCol)
+    val df = queryTiDB(sortCol)
     compSqlResult(sql, seqRowToList(df.collect(), df.schema), answer, checkLimit = false)
   }
 
-  protected def compareDataSourceSelectWithJDBC2(sortCol: String = "i"): Unit = {
+  protected def compareTiDBSelectWithJDBC_V2(sortCol: String = "i"): Unit = {
     val sql = s"select * from $dbtable order by $sortCol"
 
     // check jdbc result & data source result
-    val jdbcResult = queryTiDB(sql)
-    val df = queryDataSourceAPI(sortCol)
+    val jdbcResult = queryJDBC(sql)
+    val df = queryTiDB(sortCol)
 
     compSqlResult(sql, jdbcResult, seqRowToList(df.collect(), df.schema), checkLimit = false)
   }
@@ -119,7 +119,7 @@ class BaseDataSourceTest(val table: String,
       })
       .toList
 
-  private def queryDataSourceAPI(sortCol: String): DataFrame =
+  private def queryTiDB(sortCol: String): DataFrame =
     sqlContext.read
       .format("tidb")
       .options(tidbOptions)
@@ -128,7 +128,7 @@ class BaseDataSourceTest(val table: String,
       .load()
       .sort(sortCol)
 
-  private def queryTiDB(query: String): List[List[Any]] = {
+  private def queryJDBC(query: String): List[List[Any]] = {
     val resultSet = tidbStmt.executeQuery(query)
     val rsMetaData = resultSet.getMetaData
     val retSet = ArrayBuffer.empty[List[Any]]
@@ -147,7 +147,7 @@ class BaseDataSourceTest(val table: String,
     retSet.toList
   }
 
-  protected def testFilter(filter: String, expectedAnswer: Seq[Row]): Unit = {
+  protected def testTiDBSelectFilter(filter: String, expectedAnswer: Seq[Row]): Unit = {
     val loadedDf = sqlContext.read
       .format("tidb")
       .option("database", database)

@@ -78,7 +78,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_data_type") {
                   |)
        """.stripMargin)
 
-    compareDataSourceSelectWithJDBC2()
+    compareTiDBSelectWithJDBC_V2()
   }
 
   override def afterAll(): Unit =
