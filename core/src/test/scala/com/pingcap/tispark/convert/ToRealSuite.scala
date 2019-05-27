@@ -228,8 +228,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     }
   }
 
-  // TODO: com.pingcap.tikv.exception.TiBatchWriteException: data -3.4028235E38 < lowerBound -3.4028235E38
-  ignore("Test Convert from String to REAL") {
+  test("Test Convert from String to REAL") {
     // success
     // String -> FLOAT
     // String -> DOUBLE
