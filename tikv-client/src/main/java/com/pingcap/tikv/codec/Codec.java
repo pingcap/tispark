@@ -140,7 +140,8 @@ public class Codec {
      * @param value The data to encode
      */
     static void writeUVarLong(CodecDataOutput cdo, long value) {
-      while ((value - 0x80) >= 0) {
+      // value is assumed to be an unsigned value.
+      while (Long.compareUnsigned(value, 0x80) >= 0) {
         cdo.writeByte((byte) value | 0x80);
         value >>>= 7;
       }
@@ -197,7 +198,7 @@ public class Codec {
       int s = 0;
       for (int i = 0; !cdi.eof(); i++) {
         long b = cdi.readUnsignedByte();
-        if ((b - 0x80) < 0) {
+        if (Long.compareUnsigned(b, 0x80) < 0) {
           if (i > 9 || i == 9 && b > 1) {
             throw new InvalidCodecFormatException("readUVarLong overflow");
           }

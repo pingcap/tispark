@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class CoveringIndex0Suite extends BaseInitialOnceSuite {
+class CoveringIndex0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     // cover index tests with count(*)
     "select count(*) from full_data_type_table_idx where tp_varchar < 'a1c9e581-470a-4594-a72d-55ce40dd6ec3'",

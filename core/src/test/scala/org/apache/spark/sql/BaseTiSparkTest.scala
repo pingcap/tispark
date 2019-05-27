@@ -26,7 +26,7 @@ import org.apache.spark.sql.test.SharedSQLContext
 
 import scala.collection.mutable.ArrayBuffer
 
-class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
+class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected var tidbStmt: Statement = _
 

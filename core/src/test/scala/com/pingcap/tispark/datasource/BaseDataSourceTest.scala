@@ -14,8 +14,8 @@ import org.apache.spark.sql.{QueryTest, Row}
 // 2. with TiExtensions
 // set isTidbConfigPropertiesInjectedToSparkEnabled = true
 // will load tidb_config.properties to SparkConf
-class BaseDataSourceSuite(val table: String,
-                          val _enableTidbConfigPropertiesInjectedToSpark: Boolean = true)
+class BaseDataSourceTest(val table: String,
+                         val _enableTidbConfigPropertiesInjectedToSpark: Boolean = true)
     extends QueryTest
     with SharedSQLContext {
   protected val database: String = "tispark_test"

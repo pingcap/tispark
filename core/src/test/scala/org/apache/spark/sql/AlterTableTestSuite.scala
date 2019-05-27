@@ -15,7 +15,7 @@
 
 package org.apache.spark.sql
 
-class AlterTableTestSuite extends BaseTiSparkSuite {
+class AlterTableTestSuite extends BaseTiSparkTest {
 
   def alterTable(dataType: String,
                  value: String,

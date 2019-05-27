@@ -15,10 +15,10 @@
 
 package com.pingcap.tispark
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
-class TiBatchWriteSuite extends BaseTiSparkSuite {
+class TiBatchWriteSuite extends BaseTiSparkTest {
 
   private val database = "tpch_test"
 

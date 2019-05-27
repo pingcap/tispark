@@ -4,7 +4,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class MissingParameterSuite extends BaseDataSourceSuite("test_datasource_missing_parameter") {
+class MissingParameterSuite extends BaseDataSourceTest("test_datasource_missing_parameter") {
   private val row1 = Row(null, "Hello")
 
   private val schema = StructType(

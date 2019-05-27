@@ -17,9 +17,9 @@
 
 package org.apache.spark.sql.expression
 
-import org.apache.spark.sql.BaseInitialOnceSuite
+import org.apache.spark.sql.BaseInitialOnceTest
 
-class OtherTestSuite extends BaseInitialOnceSuite {
+class OtherTestSuite extends BaseInitialOnceTest {
   private val cases = Seq[String](
     "select id_dt from full_data_type_table where tp_date is null",
     "select id_dt from full_data_type_table where tp_date is not null",

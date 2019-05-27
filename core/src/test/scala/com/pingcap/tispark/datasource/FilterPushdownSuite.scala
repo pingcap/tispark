@@ -2,7 +2,7 @@ package com.pingcap.tispark.datasource
 
 import org.apache.spark.sql.Row
 
-class FilterPushdownSuite extends BaseDataSourceSuite("test_datasource_filter_pushdown") {
+class FilterPushdownSuite extends BaseDataSourceTest("test_datasource_filter_pushdown") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")

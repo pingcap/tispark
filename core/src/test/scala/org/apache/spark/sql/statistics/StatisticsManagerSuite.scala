@@ -24,13 +24,13 @@ import com.pingcap.tikv.meta.{TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
 import com.pingcap.tikv.predicates.TiKVScanAnalyzer
 import com.pingcap.tispark.statistics.StatisticsManager
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.execution.{CoprocessorRDD, HandleRDDExec, SparkPlan}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
-class StatisticsManagerSuite extends BaseTiSparkSuite {
+class StatisticsManagerSuite extends BaseTiSparkTest {
   protected var fDataTbl: TiTableInfo = _
   protected var fDataIdxTbl: TiTableInfo = _
 

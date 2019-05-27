@@ -15,9 +15,9 @@
 
 package org.apache.spark.sql.expression.index
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 
-class UnsignedTestSuite extends BaseTiSparkSuite {
+class UnsignedTestSuite extends BaseTiSparkTest {
 
   test("Unsigned Index Tests for TISPARK-28 and TISPARK-29") {
     tidbStmt.execute("DROP TABLE IF EXISTS `unsigned_test`")
