@@ -121,7 +121,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        export MAVEN_OPTS="-Xmx2G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
                         mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr} -DskipCloneProtoFiles=true
                     """
                 }
@@ -134,7 +134,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        export MAVEN_OPTS="-Xmx2G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
+                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
                         mvn test -am -pl tikv-client -DskipCloneProtoFiles=true
                     """
                     unstash "CODECOV_TOKEN"
