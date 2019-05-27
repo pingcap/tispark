@@ -2,10 +2,15 @@ package com.pingcap.tispark.datatype
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 
-class DataTypeSuite extends BaseDataSourceTest("test_datasource_data_type") {
+class DataTypeSuite extends BaseDataSourceTest("t") {
+
+  override protected val database: String = "test"
+  override protected val dbtable = s"$database.t"
 
   test("Test Read different types") {
-    dropTable()
+    val df = queryTiDB("c1")
+
+    //dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i INT,
@@ -77,13 +82,18 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_data_type") {
                   |'a,b'
                   |)
        """.stripMargin)
+    val tiTableInfo = ti.tiSession.getCatalog.getTable(s"$dbPrefix$database", table)
+    for (i <- 0 until tiTableInfo.getColumns.size()) {
+      println(s"$i -> ${tiTableInfo.getColumn(i).getType}")
+    }
+    assert(tiTableInfo != null)
 
     compareTiDBSelectWithJDBC_V2()
   }
 
   override def afterAll(): Unit =
     try {
-      dropTable()
+      //dropTable()
     } finally {
       super.afterAll()
     }

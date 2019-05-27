@@ -14,6 +14,22 @@ import org.apache.spark.sql.types._
  */
 class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed") {
 
+  private val readSchema = StructType(
+    List(
+      StructField("i", IntegerType),
+      StructField("c1", LongType),
+      StructField("c2", LongType),
+      StructField("c3", LongType),
+      StructField("c4", LongType),
+      StructField("c5", LongType)
+    )
+  )
+
+  private def createTable(): Unit =
+    jdbcUpdate(
+      s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT)"
+    )
+
   test("Test Convert from java.lang.Boolean to SINGED") {
     // success
     // java.lang.Boolean -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
@@ -37,14 +53,22 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
           )
         )
 
+        val readRow1 = Row(1, null, null, null, null, null)
+        val readRow2 = Row(2, null, 1L, 1L, 1L, 1L)
+        val readRow3 = Row(3, 0L, null, 0L, 0L, 0L)
+        val readRow4 = Row(4, 1L, 0L, null, 0L, 1L)
+        val readRow5 = Row(5, 1L, 0L, 0L, null, 1L)
+        val readRow6 = Row(6, 1L, 0L, 1L, 0L, null)
+
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -77,9 +101,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -119,9 +141,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -163,9 +183,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -173,10 +191,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
     }
   }
 
-  // TODO: ignore because of this issue
-  // https://github.com/pingcap/tispark/issues/759
-  // cannot read when insert Long.MAX to BIGINT
-  ignore("Test Convert from java.lang.Long to SIGNED") {
+  test("Test Convert from java.lang.Long to SIGNED") {
     // success
     // java.lang.Long -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
     compareTiDBWriteWithJDBC {
@@ -212,9 +227,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -259,9 +272,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -303,9 +314,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -318,15 +327,15 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
     // String -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
-        val a: String = "11"
-        val b: String = "-11"
+        val a: java.lang.String = "11"
+        val b: java.lang.String = "-11"
 
-        val maxByte: String = java.lang.Byte.MAX_VALUE.toString
-        val minByte: String = java.lang.Byte.MIN_VALUE.toString
-        val maxShort: String = java.lang.Short.MAX_VALUE.toString
-        val minShort: String = java.lang.Short.MIN_VALUE.toString
-        val maxInteger: String = java.lang.Integer.MAX_VALUE.toString
-        val minInteger: String = java.lang.Integer.MIN_VALUE.toString
+        val maxByte: java.lang.String = java.lang.Byte.MAX_VALUE.toString
+        val minByte: java.lang.String = java.lang.Byte.MIN_VALUE.toString
+        val maxShort: java.lang.String = java.lang.Short.MAX_VALUE.toString
+        val minShort: java.lang.String = java.lang.Short.MIN_VALUE.toString
+        val maxInteger: java.lang.String = java.lang.Integer.MAX_VALUE.toString
+        val minInteger: java.lang.String = java.lang.Integer.MIN_VALUE.toString
 
         val row1 = Row(1, null, null, null, null, null)
         val row2 = Row(2, maxByte, maxShort, maxShort, maxInteger, maxInteger)
@@ -346,14 +355,34 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
           )
         )
 
+        val aRead: java.lang.Long = 11L
+        val bRead: java.lang.Long = -11L
+
+        val maxByteRead: java.lang.Long = java.lang.Byte.MAX_VALUE.toLong
+        val minByteRead: java.lang.Long = java.lang.Byte.MIN_VALUE.toLong
+        val maxShortRead: java.lang.Long = java.lang.Short.MAX_VALUE.toLong
+        val minShortRead: java.lang.Long = java.lang.Short.MIN_VALUE.toLong
+        val maxIntegerRead: java.lang.Long = java.lang.Integer.MAX_VALUE.toLong
+        val minIntegerRead: java.lang.Long = java.lang.Integer.MIN_VALUE.toLong
+
+        val readRow1 = Row(1, null, null, null, null, null)
+        val readRow2 =
+          Row(2, maxByteRead, maxShortRead, maxShortRead, maxIntegerRead, maxIntegerRead)
+        val readRow3 =
+          Row(3, minByteRead, minShortRead, minShortRead, minIntegerRead, minIntegerRead)
+        val readRow4 = Row(4, null, bRead, null, aRead, aRead)
+        val readRow5 = Row(5, bRead, bRead, bRead, aRead, aRead)
+        val readRow6 = Row(6, bRead, bRead, null, aRead, null)
+
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 

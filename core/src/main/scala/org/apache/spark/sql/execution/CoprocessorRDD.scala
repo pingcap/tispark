@@ -408,7 +408,6 @@ case class RegionTaskExec(child: SparkPlan,
       }
 
       val rowTransformer: RowTransformer = schemaInferer.getRowTransformer
-      val finalTypes = rowTransformer.getTypes.toList
       val outputTypes = output.map(_.dataType)
       val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
 

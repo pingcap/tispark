@@ -165,7 +165,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             ps aux | grep '-server' || true
                             curl -s 127.0.0.1:2379/pd/api/v1/status || true
                             bin/tidb-server --store=tikv --path="127.0.0.1:2379" &>tidb.log &
-                            sleep 20
+                            sleep 40
                             """
     
                             timeout(60) {

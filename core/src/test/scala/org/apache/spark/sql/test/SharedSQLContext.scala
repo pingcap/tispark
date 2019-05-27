@@ -18,7 +18,7 @@
 package org.apache.spark.sql.test
 
 import java.io.File
-import java.sql.{Connection, DriverManager, Statement}
+import java.sql.{Connection, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
@@ -248,7 +248,7 @@ object SharedSQLContext extends Logging {
       val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toLowerCase.toBoolean
 
       jdbcUrl =
-        s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
+        s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true&serverTimezone=GMT-7"
 
       _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
       _statement = _tidbConnection.createStatement()

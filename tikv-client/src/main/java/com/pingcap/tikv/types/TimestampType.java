@@ -42,7 +42,6 @@ import org.joda.time.LocalDateTime;
  */
 public class TimestampType extends AbstractDateTimeType {
   public static final TimestampType TIMESTAMP = new TimestampType(MySQLType.TypeTimestamp);
-  public static final TimestampType TIME = new TimestampType(MySQLType.TypeDuration);
 
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeTimestamp};
 
@@ -55,7 +54,7 @@ public class TimestampType extends AbstractDateTimeType {
   }
 
   protected DateTimeZone getTimezone() {
-    return DateTimeZone.UTC;
+    return Converter.getLocalTimezone();
   }
 
   /**

@@ -23,7 +23,6 @@ import java.nio.charset.StandardCharsets;
 
 public class StringType extends BytesType {
   public static final StringType VARCHAR = new StringType(MySQLType.TypeVarchar);
-  public static final StringType BINARY = new StringType(MySQLType.TypeString);
   public static final StringType CHAR = new StringType(MySQLType.TypeString);
 
   public static final MySQLType[] subTypes =

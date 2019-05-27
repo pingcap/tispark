@@ -51,13 +51,15 @@ public class EnumType extends DataType {
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
+    long longVal = Converter.convertToLong(value);
+    IntegerCodec.writeULongFully(cdo, longVal, true);
   }
 
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
+    long longVal = Converter.convertToLong(value);
+    IntegerCodec.writeULongFully(cdo, longVal, false);
   }
 
   /** {@inheritDoc} */

@@ -145,27 +145,32 @@ object TiConverter {
     }
 
     targetColumnInfo.getType match {
-      //case _: BitType       =>
-      //case _: BytesType     =>
-      //case _: DateTimeType  =>
-      // TODO: add test for DateType
-      case _: DateType => value
-      // TODO: add test for DecimalType
-      case _: DecimalType => value
-      //case _: EnumType      =>
+      case _: StringType => convertToString(targetColumnInfo, value)
+      case _: BitType    => convertToMysqlBit(targetColumnInfo, value)
+      case _: BytesType  =>
+        // TODO: do not support write to BINARY TYPE, because of this issue
+        //  https://github.com/pingcap/tispark/issues/774
+        if (targetColumnInfo.getType.isZeroFill) {
+          throw new TiBatchWriteException(
+            s"do not support writing to column type: ${targetColumnInfo.getType}"
+          )
+        }
+        convertToBytes(targetColumnInfo, value)
+      case _: DateTimeType => convertToMysqlDateTime(targetColumnInfo, value)
+      case _: DateType     => convertToMysqlDate(targetColumnInfo, value)
+      case _: DecimalType  => convertToMysqlDecimal(targetColumnInfo, value)
+      case _: EnumType     => convertToMysqlEnum(targetColumnInfo, value)
       case _: IntegerType =>
         if (targetColumnInfo.getType.isUnsigned) {
           convertToUnsigned(targetColumnInfo, value)
         } else {
           convertToSigned(targetColumnInfo, value)
         }
-      //case JsonType      =>
-      case _: RealType => convertToReal(targetColumnInfo, value)
-      //case SetType       =>
-      // TODO: add test for StringType
-      case _: StringType => value
-      //case _: TimeType      =>
-      //case _: TimestampType =>
+      case _: RealType      => convertToReal(targetColumnInfo, value)
+      case _: TimestampType => convertToMysqlTimestamp(targetColumnInfo, value)
+      // TODO: case JsonType      =>
+      // TODO: case SetType       =>
+      // TODO: case _: TimeType      =>
       case _ =>
         throw new TiBatchWriteException(
           s"do not support writing to column type: ${targetColumnInfo.getType}"
@@ -173,7 +178,90 @@ object TiConverter {
     }
   }
 
-  private def convertToSigned(targetColumnInfo: TiColumnInfo, value: AnyRef): Object = {
+  private def convertToMysqlBit(targetColumnInfo: TiColumnInfo, value: AnyRef): java.lang.Long = {
+    val result: java.lang.Long = value match {
+      // TODO: case v: java.lang.String =>
+      case _ =>
+        val r: java.lang.Long = convertToUnsigned(targetColumnInfo, value)
+        r
+    }
+
+    // BIT(1)  -> targetLength = 1
+    val targetLength = targetColumnInfo.getLength
+    if (targetLength < 64 && java.lang.Long.compareUnsigned(result, 1 << targetLength) >= 0) {
+      throw new TiBatchWriteException(
+        s"ErrDataOutOfRange: writing data $result to column type: ${targetColumnInfo.getType}"
+      )
+    }
+
+    result
+  }
+
+  private def convertToString(targetColumnInfo: TiColumnInfo, value: AnyRef): java.lang.String = {
+    val result: java.lang.String = value match {
+      case v: java.lang.Boolean => if (v) "1" else "0"
+      case v: java.lang.Byte    => v.toString
+      case v: java.lang.Short   => v.toString
+      case v: java.lang.Integer => v.toString
+      case v: java.lang.Long    => v.toString
+      //TODO: case v: java.lang.Float      =>
+      //TODO: case v: java.lang.Double     =>
+      // a little complicated, e.g.
+      // 3.4028235E38 -> 340282350000000000000000000000000000000
+      case v: java.lang.String     => v
+      case v: java.math.BigDecimal => v.toString
+      case v: java.sql.Date        => v.toString
+      case v: java.sql.Timestamp =>
+        var result = v.toString
+        if (v.getNanos == 0) {
+          // remove `.0` according to mysql's format
+          val len = result.length
+          result = result.substring(0, len - 2)
+        }
+        result
+      // TODO: support following types
+      // case v: Array[String]              =>
+      // case v: scala.collection.Seq[_]    =>
+      // case v: scala.collection.Map[_, _] =>
+      // case v: org.apache.spark.sql.Row   =>
+      case _ =>
+        throw new TiBatchWriteException(
+          s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
+        )
+    }
+    result
+  }
+
+  private def convertToBytes(targetColumnInfo: TiColumnInfo, value: AnyRef): Array[Byte] = {
+    val result: Array[Byte] = value match {
+      case v: java.lang.Boolean => if (v) Array(49.toByte) else Array(48.toByte)
+      case v: java.lang.Byte    => v.toString.toArray.map(_.toByte)
+      case v: java.lang.Short   => v.toString.toArray.map(_.toByte)
+      case v: java.lang.Integer => v.toString.toArray.map(_.toByte)
+      case v: java.lang.Long    => v.toString.toArray.map(_.toByte)
+      //TODO: case v: java.lang.Float      =>
+      //TODO: case v: java.lang.Double     =>
+      // a little complicated, e.g.
+      // 3.4028235E38 -> 340282350000000000000000000000000000000
+      case v: java.lang.String => v.toArray.map(_.toByte)
+      // TODO: support following types
+      // case v: java.math.BigDecimal => v.longValue()
+      // case v: java.sql.Date              =>
+      // case v: java.sql.Timestamp         =>
+      // case v: Array[String]              =>
+      // case v: scala.collection.Seq[_]    =>
+      // case v: scala.collection.Map[_, _] =>
+      // case v: org.apache.spark.sql.Row   =>
+      case _ =>
+        throw new TiBatchWriteException(
+          s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
+        )
+    }
+
+    result
+  }
+
+  private def convertToSigned(targetColumnInfo: TiColumnInfo, value: AnyRef): java.lang.Long = {
     val lowerBound = integerSignedLowerBound(targetColumnInfo.getType)
     val upperBound = integerSignedUpperBound(targetColumnInfo.getType)
 
@@ -185,15 +273,15 @@ object TiConverter {
       case v: java.lang.Long    => v.longValue()
       case v: java.lang.Float   => floatToLong(v)
       case v: java.lang.Double  => doubleToLong(v)
-      case v: String            => stringToLong(v)
-      // TODO: case v: java.math.BigDecimal => v.longValue()
+      case v: java.lang.String  => stringToLong(v)
       // TODO: support following types
-      //case v: java.sql.Date              =>
-      //case v: java.sql.Timestamp         =>
-      //case v: Array[String]              =>
-      //case v: scala.collection.Seq[_]    =>
-      //case v: scala.collection.Map[_, _] =>
-      //case v: org.apache.spark.sql.Row   =>
+      // case v: java.math.BigDecimal => v.longValue()
+      // case v: java.sql.Date              =>
+      // case v: java.sql.Timestamp         =>
+      // case v: Array[String]              =>
+      // case v: scala.collection.Seq[_]    =>
+      // case v: scala.collection.Map[_, _] =>
+      // case v: org.apache.spark.sql.Row   =>
       case _ =>
         throw new TiBatchWriteException(
           s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
@@ -215,7 +303,7 @@ object TiConverter {
     result
   }
 
-  private def convertToUnsigned(targetColumnInfo: TiColumnInfo, value: AnyRef): Object = {
+  private def convertToUnsigned(targetColumnInfo: TiColumnInfo, value: AnyRef): java.lang.Long = {
     val lowerBound = 0L
     val upperBound = integerUnsignedUpperBound(targetColumnInfo.getType)
 
@@ -227,15 +315,15 @@ object TiConverter {
       case v: java.lang.Long    => v.longValue()
       case v: java.lang.Float   => floatToLong(v)
       case v: java.lang.Double  => doubleToLong(v)
-      case v: String            => stringToLong(v)
-      // TODO: case v: java.math.BigDecimal => v.longValue()
+      case v: java.lang.String  => stringToLong(v)
       // TODO: support following types
-      //case v: java.sql.Date              =>
-      //case v: java.sql.Timestamp         =>
-      //case v: Array[String]              =>
-      //case v: scala.collection.Seq[_]    =>
-      //case v: scala.collection.Map[_, _] =>
-      //case v: org.apache.spark.sql.Row   =>
+      // case v: java.math.BigDecimal => v.longValue()
+      // case v: java.sql.Date              =>
+      // case v: java.sql.Timestamp         =>
+      // case v: Array[String]              =>
+      // case v: scala.collection.Seq[_]    =>
+      // case v: scala.collection.Map[_, _] =>
+      // case v: org.apache.spark.sql.Row   =>
       case _ =>
         throw new TiBatchWriteException(
           s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
@@ -266,15 +354,15 @@ object TiConverter {
       case v: java.lang.Long    => v.doubleValue()
       case v: java.lang.Float   => v.doubleValue()
       case v: java.lang.Double  => v
-      case v: String            => stringToDouble(v)
-      // TODO: case v: java.math.BigDecimal => v.doubleValue()
+      case v: java.lang.String  => stringToDouble(v)
       // TODO: support following types
-      //case v: java.sql.Date              =>
-      //case v: java.sql.Timestamp         =>
-      //case v: Array[String]              =>
-      //case v: scala.collection.Seq[_]    =>
-      //case v: scala.collection.Map[_, _] =>
-      //case v: org.apache.spark.sql.Row   =>
+      // case v: java.math.BigDecimal => v.doubleValue()
+      // case v: java.sql.Date              =>
+      // case v: java.sql.Timestamp         =>
+      // case v: Array[String]              =>
+      // case v: scala.collection.Seq[_]    =>
+      // case v: scala.collection.Map[_, _] =>
+      // case v: org.apache.spark.sql.Row   =>
       case _ =>
         throw new TiBatchWriteException(
           s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
@@ -287,6 +375,155 @@ object TiConverter {
         r
       case _ => result
     }
+  }
+
+  private def convertToMysqlDecimal(targetColumnInfo: TiColumnInfo,
+                                    value: AnyRef): java.math.BigDecimal = {
+    val result: java.math.BigDecimal = value match {
+      case v: java.lang.Boolean    => if (v) java.math.BigDecimal.ONE else java.math.BigDecimal.ZERO
+      case v: java.lang.Byte       => java.math.BigDecimal.valueOf(v.longValue())
+      case v: java.lang.Short      => java.math.BigDecimal.valueOf(v.longValue())
+      case v: java.lang.Integer    => java.math.BigDecimal.valueOf(v.longValue())
+      case v: java.lang.Long       => java.math.BigDecimal.valueOf(v)
+      case v: java.lang.Float      => java.math.BigDecimal.valueOf(v.doubleValue())
+      case v: java.lang.Double     => java.math.BigDecimal.valueOf(v)
+      case v: java.lang.String     => new java.math.BigDecimal(v)
+      case v: java.math.BigDecimal => v
+      // TODO: support following types
+      // case v: java.sql.Date              =>
+      // case v: java.sql.Timestamp         =>
+      // case v: Array[String]              =>
+      // case v: scala.collection.Seq[_]    =>
+      // case v: scala.collection.Map[_, _] =>
+      // case v: org.apache.spark.sql.Row   =>
+      case _ =>
+        throw new TiBatchWriteException(
+          s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
+        )
+    }
+
+    result
+  }
+
+  private def convertToMysqlTimestamp(targetColumnInfo: TiColumnInfo,
+                                      value: AnyRef): java.sql.Timestamp = {
+    val result: java.sql.Timestamp = value match {
+      //case v: java.lang.Boolean => not support
+      //case v: java.lang.Byte    => not support
+      //case v: java.lang.Short   => not support
+      //case v: java.lang.Integer => not support
+      case v: java.lang.Long => new java.sql.Timestamp(v)
+      //case v: java.lang.Float   => not support
+      //case v: java.lang.Double  => not support
+      case v: java.lang.String => java.sql.Timestamp.valueOf(v)
+      // TODO: case v: java.math.BigDecimal =>
+      case v: java.sql.Date      => new java.sql.Timestamp(v.getTime)
+      case v: java.sql.Timestamp => v
+      //case v: Array[String]              => not support
+      //case v: scala.collection.Seq[_]    => not support
+      //case v: scala.collection.Map[_, _] => not support
+      //case v: org.apache.spark.sql.Row   => not support
+      case _ =>
+        throw new TiBatchWriteException(
+          s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
+        )
+    }
+
+    result
+  }
+
+  private def convertToMysqlDateTime(targetColumnInfo: TiColumnInfo,
+                                     value: AnyRef): java.sql.Timestamp = {
+    val result: java.sql.Timestamp = value match {
+      //case v: java.lang.Boolean => not support
+      //case v: java.lang.Byte    => not support
+      //case v: java.lang.Short   => not support
+      //case v: java.lang.Integer => not support
+      case v: java.lang.Long => new java.sql.Timestamp(v)
+      //case v: java.lang.Float   => not support
+      //case v: java.lang.Double  => not support
+      case v: java.lang.String => java.sql.Timestamp.valueOf(v)
+      // TODO: case v: java.math.BigDecimal =>
+      case v: java.sql.Date      => new java.sql.Timestamp(v.getTime)
+      case v: java.sql.Timestamp => v
+      //case v: Array[String]              => not support
+      //case v: scala.collection.Seq[_]    => not support
+      //case v: scala.collection.Map[_, _] => not support
+      //case v: org.apache.spark.sql.Row   => not support
+      case _ =>
+        throw new TiBatchWriteException(
+          s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
+        )
+    }
+
+    result
+  }
+
+  private def convertToMysqlDate(targetColumnInfo: TiColumnInfo, value: AnyRef): java.sql.Date = {
+    val result: java.sql.Date = value match {
+      //case v: java.lang.Boolean => not support
+      //case v: java.lang.Byte    => not support
+      //case v: java.lang.Short   => not support
+      //case v: java.lang.Integer => not support
+      case v: java.lang.Long => new java.sql.Date(v)
+      //case v: java.lang.Float   => not support
+      //case v: java.lang.Double  => not support
+      case v: java.lang.String => java.sql.Date.valueOf(v)
+      // TODO: case v: java.math.BigDecimal =>
+      case v: java.sql.Date      => v
+      case v: java.sql.Timestamp => new java.sql.Date(v.getTime)
+      //case v: Array[String]              => not support
+      //case v: scala.collection.Seq[_]    => not support
+      //case v: scala.collection.Map[_, _] => not support
+      //case v: org.apache.spark.sql.Row   => not support
+      case _ =>
+        throw new TiBatchWriteException(
+          s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
+        )
+    }
+
+    result
+  }
+
+  private def convertToMysqlEnum(targetColumnInfo: TiColumnInfo, value: AnyRef): Object = {
+    val result: Object = value match {
+
+      case v: java.lang.String => parseEnumName(targetColumnInfo.getType.getElems, v)
+      case _ =>
+        val r: java.lang.Long = convertToUnsigned(targetColumnInfo, value)
+        parseEnumValue(targetColumnInfo.getType.getElems, r.toInt)
+    }
+
+    result
+  }
+
+  private def parseEnumName(elems: java.util.List[java.lang.String],
+                            name: java.lang.String): java.lang.Integer = {
+    var i = 0
+    while (i < elems.size()) {
+      if (elems.get(i).equals(name)) {
+        return i + 1
+      }
+      i = i + 1
+    }
+
+    // name doesn't exist, maybe an integer?
+    val num = try {
+      java.lang.Integer.parseInt(name)
+    } catch {
+      case _: Throwable =>
+        throw new TiBatchWriteException(s"item $name is not in enum $elems")
+    }
+
+    parseEnumValue(elems, num)
+  }
+
+  private def parseEnumValue(elems: java.util.List[java.lang.String],
+                             number: java.lang.Integer): java.lang.Integer = {
+    if (number == 0 || number > elems.size()) {
+      throw new TiBatchWriteException(s"number $number overflow enum boundary [1, ${elems.size()}]")
+    }
+    number
   }
 
   private def floatToLong(v: java.lang.Float): java.lang.Long =
