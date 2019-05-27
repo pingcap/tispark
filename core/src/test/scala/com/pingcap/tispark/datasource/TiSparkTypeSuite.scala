@@ -3,7 +3,7 @@ package com.pingcap.tispark.datasource
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 
-class TiSparkTypeSuite extends BaseDataSourceSuite("type_test") {
+class TiSparkTypeSuite extends BaseDataSourceTest("type_test") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2L, "TiDB")
   private val row3 = Row(3L, "Spark")
@@ -22,7 +22,7 @@ class TiSparkTypeSuite extends BaseDataSourceSuite("type_test") {
       s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
     )
 
-    batchWrite(List(row3, row5), schema)
-    testSelect(List(row1, row2, row3, row5))
+    tidbWrite(List(row3, row5), schema)
+    testTiDBSelect(List(row1, row2, row3, row5))
   }
 }

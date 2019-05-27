@@ -31,7 +31,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
 
     {
       val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row2, row3), schema)
+        tidbWrite(List(row2, row3), schema)
       }
       assert(
         caught.getMessage
@@ -41,7 +41,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     }
 
-    testSelect(Seq(row1))
+    testTiDBSelect(Seq(row1))
   }
 
   test("Test write to table with secondary index: KEY") {
@@ -56,7 +56,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
 
     {
       val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row2, row3), schema)
+        tidbWrite(List(row2, row3), schema)
       }
       assert(
         caught.getMessage
@@ -66,7 +66,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     }
 
-    testSelect(Seq(row1))
+    testTiDBSelect(Seq(row1))
   }
 
   test("Test write to partition table") {
@@ -81,7 +81,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
 
     {
       val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row2, row3), schema)
+        tidbWrite(List(row2, row3), schema)
       }
       assert(
         caught.getMessage
@@ -89,7 +89,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     }
 
-    testSelect(Seq(row1))
+    testTiDBSelect(Seq(row1))
   }
 
   test(
@@ -106,7 +106,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
 
     {
       val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row2, row3), schema)
+        tidbWrite(List(row2, row3), schema)
       }
       assert(
         caught.getMessage
@@ -116,7 +116,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     }
 
-    testSelect(Seq(row1))
+    testTiDBSelect(Seq(row1))
   }
 
   override def afterAll(): Unit =

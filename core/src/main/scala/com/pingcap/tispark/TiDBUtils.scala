@@ -32,9 +32,9 @@ object TiDBUtils {
   /**
    * Returns a factory for creating connections to the given TiDB URL.
    *
-   * @param options - TiDB options that contains url, table and other information.
+   * @param jdbcURL
    */
-  def createConnectionFactory(options: TiDBOptions): () => Connection = {
+  def createConnectionFactory(jdbcURL: String): () => Connection = {
     import scala.collection.JavaConverters._
     val driverClass: String = TIDB_DRIVER_CLASS
     () =>
@@ -50,7 +50,7 @@ object TiDBUtils {
               s"Did not find registered driver with class $driverClass"
             )
           }
-        driver.connect(options.url, new Properties())
+        driver.connect(jdbcURL, new Properties())
       }
   }
 }

@@ -29,7 +29,7 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
   }
 
   test("Test Select") {
-    testSelect(Seq(row1, row2))
+    testTiDBSelect(Seq(row1, row2))
   }
 
   test("Test Write Append") {
@@ -44,7 +44,7 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
       .mode("append")
       .save()
 
-    testSelect(Seq(row1, row2, row3, row4))
+    testTiDBSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Test Write Overwrite") {

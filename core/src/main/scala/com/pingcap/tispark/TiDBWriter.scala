@@ -10,7 +10,7 @@ object TiDBWriter {
             saveMode: SaveMode,
             options: TiDBOptions): Unit = {
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
-    val conn = TiDBUtils.createConnectionFactory(options)()
+    val conn = TiDBUtils.createConnectionFactory(options.url)()
 
     try {
       val tableExists = TiDBUtils.tableExists(conn, options)

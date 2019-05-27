@@ -30,20 +30,20 @@ class UpsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     )
 
     // insert row2 row3
-    batchWrite(List(row2, row3), schema)
-    testSelect(Seq(row1, row2, row3))
+    tidbWrite(List(row2, row3), schema)
+    testTiDBSelect(Seq(row1, row2, row3))
 
     // insert row2 row4
-    batchWrite(List(row2, row4), schema)
-    testSelect(Seq(row1, row2, row2, row3, row4))
+    tidbWrite(List(row2, row4), schema)
+    testTiDBSelect(Seq(row1, row2, row2, row3, row4))
 
     // insert row5 row5
-    batchWrite(List(row5, row5), schema)
-    testSelect(Seq(row1, row2, row2, row3, row4, row5, row5))
+    tidbWrite(List(row5, row5), schema)
+    testTiDBSelect(Seq(row1, row2, row2, row3, row4, row5, row5))
 
     // insert row3_v2
-    batchWrite(List(row3_v2), schema)
-    testSelect(Seq(row1, row2, row2, row3, row3_v2, row4, row5, row5))
+    tidbWrite(List(row3_v2), schema)
+    testTiDBSelect(Seq(row1, row2, row2, row3, row3_v2, row4, row5, row5))
   }
 
   test("Test upsert to table with primary key (primary key is handle)") {
@@ -54,16 +54,16 @@ class UpsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     )
 
     // insert row3 row4
-    batchWrite(List(row3, row4), schema)
-    testSelect(Seq(row2, row3, row4))
+    tidbWrite(List(row3, row4), schema)
+    testTiDBSelect(Seq(row2, row3, row4))
 
     // insert row2_v2 row5
-    batchWrite(List(row2_v2, row5), schema)
-    testSelect(Seq(row2_v2, row3, row4, row5))
+    tidbWrite(List(row2_v2, row5), schema)
+    testTiDBSelect(Seq(row2_v2, row3, row4, row5))
 
     // insert row3_v2 row4_v2 row5_v2
-    batchWrite(List(row3_v2, row4_v2, row5_v2), schema)
-    testSelect(Seq(row2_v2, row3_v2, row4_v2, row5_v2))
+    tidbWrite(List(row3_v2, row4_v2, row5_v2), schema)
+    testTiDBSelect(Seq(row2_v2, row3_v2, row4_v2, row5_v2))
   }
 
   test("Test upsert to table with primary key (auto increase case 1)") {
@@ -74,16 +74,16 @@ class UpsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     )
 
     // insert row3 row4
-    batchWrite(List(row3, row4), schema)
-    testSelect(Seq(row2, row3, row4))
+    tidbWrite(List(row3, row4), schema)
+    testTiDBSelect(Seq(row2, row3, row4))
 
     // insert row2_v2 row5
-    batchWrite(List(row2_v2, row5), schema)
-    testSelect(Seq(row2_v2, row3, row4, row5))
+    tidbWrite(List(row2_v2, row5), schema)
+    testTiDBSelect(Seq(row2_v2, row3, row4, row5))
 
     // insert row3_v2 row4_v2 row5_v2
-    batchWrite(List(row3_v2, row4_v2, row5_v2), schema)
-    testSelect(Seq(row2_v2, row3_v2, row4_v2, row5_v2))
+    tidbWrite(List(row3_v2, row4_v2, row5_v2), schema)
+    testTiDBSelect(Seq(row2_v2, row3_v2, row4_v2, row5_v2))
   }
 
   // TODO: support auto increment
@@ -106,12 +106,12 @@ class UpsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     )
 
     // insert row2 row3
-    batchWrite(List(rowWithoutPK2, rowWithoutPK3), schema)
-    testSelect(Seq(row1, row2, row3))
+    tidbWrite(List(rowWithoutPK2, rowWithoutPK3), schema)
+    testTiDBSelect(Seq(row1, row2, row3))
 
     // insert row4 row5
-    batchWrite(List(rowWithoutPK4, rowWithoutPK5), schema)
-    testSelect(Seq(row1, row2, row3, row4, row5))
+    tidbWrite(List(rowWithoutPK4, rowWithoutPK5), schema)
+    testTiDBSelect(Seq(row1, row2, row3, row4, row5))
   }
 
   override def afterAll(): Unit =

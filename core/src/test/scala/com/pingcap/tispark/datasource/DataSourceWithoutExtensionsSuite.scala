@@ -22,16 +22,16 @@ class DataSourceWithoutExtensionsSuite
   override def beforeAll(): Unit =
     super.beforeAll()
 
-  test("Test Select") {
+  test("Test Select without extensions") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
-    testSelect(Seq(row1, row2, row3, row4))
+    testTiDBSelect(Seq(row1, row2, row3, row4))
   }
 
-  test("Test Write Append") {
+  test("Test Write Append without extensions") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
@@ -49,10 +49,10 @@ class DataSourceWithoutExtensionsSuite
       .mode("append")
       .save()
 
-    testSelect(Seq(row1, row2, row3, row4))
+    testTiDBSelect(Seq(row1, row2, row3, row4))
   }
 
-  test("Test Write Overwrite") {
+  test("Test Write Overwrite without extensions") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
 
@@ -75,15 +75,15 @@ class DataSourceWithoutExtensionsSuite
     )
   }
 
-  test("Test Simple Comparisons") {
+  test("Test Simple Comparisons without extensions") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
-    testFilter("s = 'Hello'", Seq(row1))
-    testFilter("i > 2", Seq(row3, row4))
-    testFilter("i < 3", Seq(row2))
+    testTiDBSelectFilter("s = 'Hello'", Seq(row1))
+    testTiDBSelectFilter("i > 2", Seq(row3, row4))
+    testTiDBSelectFilter("i < 3", Seq(row2))
   }
 
   override def afterAll(): Unit =

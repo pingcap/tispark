@@ -23,7 +23,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
     dropTable()
 
     val caught = intercept[TiBatchWriteException] {
-      batchWrite(List(row1, row2), schema)
+      tidbWrite(List(row1, row2), schema)
     }
     assert(caught.getMessage.equals(s"table $dbtable does not exists!"))
   }
@@ -44,7 +44,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
 
     {
       val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row1), schema)
+        tidbWrite(List(row1), schema)
       }
       assert(
         caught.getMessage
@@ -71,7 +71,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
 
     {
       val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row1), schema)
+        tidbWrite(List(row1), schema)
       }
       assert(
         caught.getMessage
@@ -99,7 +99,7 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
 
     {
       val caught = intercept[TiBatchWriteException] {
-        batchWrite(List(row1, row2), schema)
+        tidbWrite(List(row1, row2), schema)
       }
       assert(
         caught.getMessage
