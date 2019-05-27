@@ -22,6 +22,7 @@ import java.sql.{Connection, DriverManager, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
+import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
@@ -156,6 +157,7 @@ object SharedSQLContext extends Logging {
 
   private class TiContextCache {
     private var _ti: TiContext = _
+
     private[test] def get: TiContext = {
       if (_ti == null) {
         _ti = _spark.sessionState.planner.extraPlanningStrategies.head
@@ -164,6 +166,7 @@ object SharedSQLContext extends Logging {
       }
       _ti
     }
+
     private[test] def clear(): Unit =
       if (_ti != null) {
         _ti.sparkSession.sessionState.catalog.reset()
@@ -247,7 +250,7 @@ object SharedSQLContext extends Logging {
       jdbcUrl =
         s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
 
-      _tidbConnection = DriverManager.getConnection(jdbcUrl, tidbUser, tidbPassword)
+      _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
       _statement = _tidbConnection.createStatement()
 
       if (loadData) {
@@ -333,8 +336,9 @@ object SharedSQLContext extends Logging {
 
       if (isHiveEnabled) {
         // delete meta store directory to avoid multiple derby instances SPARK-10872
-        import org.apache.commons.io.FileUtils
         import java.io.IOException
+
+        import org.apache.commons.io.FileUtils
         val hiveLocalMetaStorePath = new File("metastore_db")
         try FileUtils.deleteDirectory(hiveLocalMetaStorePath)
         catch {
@@ -368,6 +372,17 @@ object SharedSQLContext extends Logging {
     }
 
     tiContextCache.clear()
+
+    if (_statement != null) {
+      try {
+        _statement.close()
+      } catch {
+        case _: Throwable =>
+      } finally {
+        _statement = null
+      }
+
+    }
 
     if (_tidbConnection != null) {
       _tidbConnection.close()
