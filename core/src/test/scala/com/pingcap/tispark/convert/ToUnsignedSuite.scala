@@ -305,8 +305,8 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
     // String -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
-        val a: String = "11.1"
-        val b: String = "22.2"
+        val a: String = "11"
+        val b: String = "22"
         val zero: String = "0"
 
         val maxByte: String = java.lang.Byte.MAX_VALUE.toString
