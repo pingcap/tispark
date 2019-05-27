@@ -287,7 +287,7 @@ object TiConverter {
     java.lang.Double.parseDouble(v)
 
   private def stringToLong(v: String): java.lang.Long =
-    doubleToLong(stringToDouble(v))
+    java.lang.Long.parseLong(v)
 
   private def integerSignedLowerBound(dataType: TiDataType): Long =
     dataType.getType match {
