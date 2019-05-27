@@ -227,8 +227,8 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
     // java.lang.Float -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
-        val a: java.lang.Float = java.lang.Float.valueOf("11.1")
-        val b: java.lang.Float = java.lang.Float.valueOf("-11.1")
+        val a: java.lang.Float = java.lang.Float.valueOf("11")
+        val b: java.lang.Float = java.lang.Float.valueOf("-11")
 
         val maxByte: java.lang.Float = java.lang.Byte.MAX_VALUE.toFloat
         val minByte: java.lang.Float = java.lang.Byte.MIN_VALUE.toFloat
@@ -274,8 +274,8 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
     // java.lang.Double -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
-        val a: java.lang.Double = java.lang.Double.valueOf("11.1")
-        val b: java.lang.Double = java.lang.Double.valueOf("-11.1")
+        val a: java.lang.Double = java.lang.Double.valueOf("11")
+        val b: java.lang.Double = java.lang.Double.valueOf("-11")
 
         val maxByte: java.lang.Double = java.lang.Byte.MAX_VALUE.toDouble
         val minByte: java.lang.Double = java.lang.Byte.MIN_VALUE.toDouble
@@ -318,8 +318,8 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
     // String -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
-        val a: String = "11.1"
-        val b: String = "-11.1"
+        val a: String = "11"
+        val b: String = "-11"
 
         val maxByte: String = java.lang.Byte.MAX_VALUE.toString
         val minByte: String = java.lang.Byte.MIN_VALUE.toString
