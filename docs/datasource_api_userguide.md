@@ -221,6 +221,8 @@ The following SparkSQL Data Type is currently not supported for writing to TiDB:
 - MapType
 - StructType
 
+The full conversion metrics is as follows.
+
 | Write support        | BooleanType | ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType | StringType | DecimalType | DateType | TimestampType |
 | -------------------- | ----------- | -------- | --------- | ----------- | -------- | --------- | ---------- | ---------- | ----------- | -------- | ------------- |
 | BIT                  | true        | true     | true      | true        | true     | true      | true       | false      | false       | false    | false         |
@@ -236,8 +238,8 @@ The following SparkSQL Data Type is currently not supported for writing to TiDB:
 | DATE                 | false       | false    | false     | false       | true     | true      | false      | false      | false       | true     | true          |
 | DATETIME             | false       | false    | false     | false       | true     | false     | false      | true       | false       | true     | true          |
 | TIMESTAMP            | false       | false    | false     | false       | true     | false     | false      | true       | false       | true     | true          |
-| TIME???              |             |          |           |             |          |           |            |            |             |          |               |
-| YEAR???              |             |          |           |             |          |           |            |            |             |          |               |
+| TIME                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
+| YEAR                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
 | CHAR                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
 | VARCHAR              | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
 | TINYTEXT             | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |

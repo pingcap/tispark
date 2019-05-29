@@ -122,9 +122,10 @@ class BaseDataSourceTest(val table: String,
     // check jdbc result & data source result
     val jdbcResult = queryJDBC(sql)
     val df = queryTiDB(sortCol)
+    val tidbResult = seqRowToList(df.collect(), df.schema)
 
     assert(
-      compSqlResult(sql, jdbcResult, seqRowToList(df.collect(), df.schema), checkLimit = false)
+      compSqlResult(sql, jdbcResult, tidbResult, checkLimit = false)
     )
   }
 

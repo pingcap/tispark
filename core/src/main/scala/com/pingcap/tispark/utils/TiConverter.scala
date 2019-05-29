@@ -162,7 +162,13 @@ object TiConverter {
       case _: DateType     => convertToMysqlDate(targetColumnInfo, value)
       case _: DecimalType  => convertToMysqlDecimal(targetColumnInfo, value)
       case _: EnumType     => convertToMysqlEnum(targetColumnInfo, value)
-      case _: IntegerType =>
+      case _: IntegerType  =>
+        // TODO: support write to YEAR
+        if (targetColumnInfo.getType.getType == MySQLType.TypeYear) {
+          throw new TiBatchWriteException(
+            s"do not support writing to column type: ${targetColumnInfo.getType}"
+          )
+        }
         if (targetColumnInfo.getType.isUnsigned) {
           convertToUnsigned(targetColumnInfo, value)
         } else {
