@@ -83,7 +83,7 @@ class BaseDataSourceTest(val table: String,
   protected def compareTiDBWriteWithJDBC(
     testCode: ((List[Row], StructType, Option[Map[String, String]]) => Unit, String) => Unit
   ): Unit = {
-    //testCode(tidbWrite, "tidbWrite")
+    testCode(tidbWrite, "tidbWrite")
     testCode(jdbcWrite, "jdbcWrite")
   }
 
