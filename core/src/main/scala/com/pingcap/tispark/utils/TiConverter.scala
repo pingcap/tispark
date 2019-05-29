@@ -423,10 +423,10 @@ object TiConverter {
       case v: java.lang.Long => new java.sql.Timestamp(v)
       //case v: java.lang.Float   => not support
       //case v: java.lang.Double  => not support
-      case v: java.lang.String => toUTDTimestamp(java.sql.Timestamp.valueOf(v))
+      //case v: java.lang.String => toUTCTimestamp(java.sql.Timestamp.valueOf(v))
       // TODO: case v: java.math.BigDecimal =>
-      case v: java.sql.Date      => toUTDTimestamp(new java.sql.Timestamp(v.getTime))
-      case v: java.sql.Timestamp => toUTDTimestamp(v)
+      //case v: java.sql.Date      => toUTCTimestamp(new java.sql.Timestamp(v.getTime))
+      //case v: java.sql.Timestamp => toUTCTimestamp(v)
       //case v: Array[String]              => not support
       //case v: scala.collection.Seq[_]    => not support
       //case v: scala.collection.Map[_, _] => not support
@@ -439,11 +439,11 @@ object TiConverter {
     result
   }
 
-  private def toUTDTimestamp(timestamp: java.sql.Timestamp): java.sql.Timestamp = {
+  private def toUTCTimestamp(timestamp: java.sql.Timestamp): java.sql.Timestamp = {
     val dateTime: DateTime = new DateTime(timestamp.getTime)
     val packedLong = DateTimeCodec.toPackedLong(dateTime, DateTimeZone.getDefault)
-    val utdDateTime = DateTimeCodec.fromPackedLong(packedLong, DateTimeZone.UTC)
-    val result = new Timestamp(utdDateTime.getMillis + timestamp.getNanos % 1000000)
+    val utcDateTime = DateTimeCodec.fromPackedLong(packedLong, DateTimeZone.UTC)
+    val result = new Timestamp(utcDateTime.getMillis + timestamp.getNanos % 1000000)
     result
   }
 

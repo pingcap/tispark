@@ -58,7 +58,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
     }
   }
 
-  test("Test Convert from String to TIMESTAMP") {
+  // TODO: to support
+  ignore("Test Convert from String to TIMESTAMP") {
     // success
     // String -> TIMESTAMP
     compareTiDBWriteWithJDBC {
@@ -89,7 +90,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
     }
   }
 
-  test("Test Convert from java.sql.Date to TIMESTAMP") {
+  // TODO: to support
+  ignore("Test Convert from java.sql.Date to TIMESTAMP") {
     // success
     // java.sql.Date -> TIMESTAMP
     compareTiDBWriteWithJDBC {
@@ -123,7 +125,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
     }
   }
 
-  test("Test Convert from java.sql.Timestamp to TIMESTAMP") {
+  // TODO: to support
+  ignore("Test Convert from java.sql.Timestamp to TIMESTAMP") {
     // success
     // java.sql.Timestamp -> TIMESTAMP
     compareTiDBWriteWithJDBC {
