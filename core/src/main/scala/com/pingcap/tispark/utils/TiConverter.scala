@@ -1,5 +1,6 @@
 package com.pingcap.tispark.utils
 
+import java.sql.Timestamp
 import java.util.logging.Logger
 
 import com.google.common.primitives.UnsignedLong
@@ -11,6 +12,7 @@ import com.pingcap.tispark.TiBatchWrite.TiRow
 import org.apache.spark.sql
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{DataTypes, Decimal}
+import org.joda.time.{DateTime, DateTimeZone}
 
 object TiConverter {
   type TiDataType = com.pingcap.tikv.types.DataType
@@ -415,10 +417,10 @@ object TiConverter {
       case v: java.lang.Long => new java.sql.Timestamp(v)
       //case v: java.lang.Float   => not support
       //case v: java.lang.Double  => not support
-      case v: java.lang.String => java.sql.Timestamp.valueOf(v)
+      case v: java.lang.String => toUTDTimestamp(java.sql.Timestamp.valueOf(v))
       // TODO: case v: java.math.BigDecimal =>
-      case v: java.sql.Date      => new java.sql.Timestamp(v.getTime)
-      case v: java.sql.Timestamp => v
+      case v: java.sql.Date      => toUTDTimestamp(new java.sql.Timestamp(v.getTime))
+      case v: java.sql.Timestamp => toUTDTimestamp(v)
       //case v: Array[String]              => not support
       //case v: scala.collection.Seq[_]    => not support
       //case v: scala.collection.Map[_, _] => not support
@@ -428,7 +430,14 @@ object TiConverter {
           s"do not support converting from ${value.getClass} to column type: ${targetColumnInfo.getType}"
         )
     }
+    result
+  }
 
+  private def toUTDTimestamp(timestamp: java.sql.Timestamp): java.sql.Timestamp = {
+    val dateTime: DateTime = new DateTime(timestamp.getTime)
+    val packedLong = DateTimeCodec.toPackedLong(dateTime, DateTimeZone.getDefault)
+    val utdDateTime = DateTimeCodec.fromPackedLong(packedLong, DateTimeZone.UTC)
+    val result = new Timestamp(utdDateTime.getMillis + timestamp.getNanos % 1000000)
     result
   }
 

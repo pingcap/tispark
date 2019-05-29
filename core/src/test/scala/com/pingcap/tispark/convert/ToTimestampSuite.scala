@@ -60,15 +60,13 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
     }
   }
 
-  // TODO: ignored because of this issue
-  // https://github.com/pingcap/tispark/issues/770
-  ignore("Test Convert from String to TIMESTAMP") {
+  test("Test Convert from String to TIMESTAMP") {
     // success
     // String -> TIMESTAMP
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null)
-        val row2 = Row(2, "2019-11-11 11:11:11", "1990-01-01 01:01:01.999999")
+        val row2 = Row(2, "2019-11-11 11:11:11", "1990-01-01 01:01:01.999")
 
         val schema = StructType(
           List(
@@ -78,8 +76,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
           )
         )
 
-        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 11:11:11")
-        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1990-01-01 01:01:01.99999")
+        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 04:11:11")
+        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1989-12-31 18:01:01.999")
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, readA, readB)
