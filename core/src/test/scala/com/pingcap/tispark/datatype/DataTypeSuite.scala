@@ -8,9 +8,8 @@ class DataTypeSuite extends BaseDataSourceTest("t") {
   override protected val dbtable = s"$database.t"
 
   test("Test Read different types") {
-    val df = queryTiDB("c1")
 
-    //dropTable()
+    dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
                   |i INT,
@@ -93,7 +92,7 @@ class DataTypeSuite extends BaseDataSourceTest("t") {
 
   override def afterAll(): Unit =
     try {
-      //dropTable()
+      dropTable()
     } finally {
       super.afterAll()
     }

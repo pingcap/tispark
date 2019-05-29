@@ -76,11 +76,15 @@ abstract class QueryTest extends PlanTest {
       case d: Number  => d.longValue()
       case d: Boolean => if (d) 1L else 0L
       case d: Array[Byte] =>
-        var r = 0L
-        for (x <- d) {
-          r = r * 256 + (if (x >= 0) { x } else { 256 + x })
+        if (d.length > 8) {
+          null
+        } else {
+          var r = 0L
+          for (x <- d) {
+            r = r * 256 + (if (x >= 0) { x } else { 256 + x })
+          }
+          r
         }
-        r
     }
 
     def toString(value: Any): String =
