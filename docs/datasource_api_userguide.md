@@ -214,39 +214,41 @@ The following is TiDB-specific options, which can be passed in through `TiDBOpti
 
 TiSpark's common options can also be passed in, e.g. `spark.tispark.plan.allow_agg_pushdown`, `spark.tispark.plan.allow_index_read`, etc.
 
-## Type Conversion
-ArrayType
-MapType
-StructType
+## Type Conversion for Write
+The following SparkSQL Data Type is currently not supported for writing to TiDB:
+- BinaryType
+- ArrayType
+- MapType
+- StructType
 
-| Conversion           | BooleanType | ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType | StringType | DecimalType | DateType | TimestampType | BinaryType |
-| -------------------- | ----------- | -------- | --------- | ----------- | -------- | --------- | ---------- | ---------- | ----------- | -------- | ------------- | ---------- |
-| BIT                  | true        | true     | true      | true        | true     | true      | true       | false      | false       | false    | false         | false      |
-| BOOLEAN              |             |          |           |             |          |           |            |            |             |          |               |            |
-| TINYINT [UNSIGNED]   | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         | false      |
-| SMALLINT [UNSIGNED]  | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         | false      |
-| MEDIUMINT [UNSIGNED] | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         | false      |
-| INTEGER [UNSIGNED]   | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         | false      |
-| BIGINT [UNSIGNED]    | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         | false      |
-| FLOAT                | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         | false      |
-| DOUBLE               | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         | false      |
-| DECIMAL              | true        | true     | true      | true        | true     | true      | true       | true       | true        | false    | false         | false      | 
-| DATE                 |             |          |           |             |          |           |            |            |             |          |               |            |
-| DATETIME             |             |          |           |             |          |           |            |            |             |          |               |            |
-| TIMESTAMP            |             |          |           |             |          |           |            |            |             |          |               |            |
-| TIME                 |             |          |           |             |          |           |            |            |             |          |               |            |
-| YEAR                 |             |          |           |             |          |           |            |            |             |          |               |            |
-| CHAR                 |             |          |           |             |          |           |            |            |             |          |               |            |
-| VARCHAR              |             |          |           |             |          |           |            |            |             |          |               |            |
-| BINARY               |             |          |           |             |          |           |            |            |             |          |               |            |
-| VARBINARY            |             |          |           |             |          |           |            |            |             |          |               |            |
-| TINYBLOB             |             |          |           |             |          |           |            |            |             |          |               |            |
-| TINYTEXT             |             |          |           |             |          |           |            |            |             |          |               |            |
-| BLOB                 |             |          |           |             |          |           |            |            |             |          |               |            |
-| TEXT                 |             |          |           |             |          |           |            |            |             |          |               |            |
-| MEDIUMBLOB           |             |          |           |             |          |           |            |            |             |          |               |            |
-| MEDIUMTEXT           |             |          |           |             |          |           |            |            |             |          |               |            |
-| LONGBLOB             |             |          |           |             |          |           |            |            |             |          |               |            |
-| LONGTEXT             |             |          |           |             |          |           |            |            |             |          |               |            |
-| ENUM                 |             |          |           |             |          |           |            |            |             |          |               |            |
-| SET                  |             |          |           |             |          |           |            |            |             |          |               |            |
+| Write support        | BooleanType | ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType | StringType | DecimalType | DateType | TimestampType |
+| -------------------- | ----------- | -------- | --------- | ----------- | -------- | --------- | ---------- | ---------- | ----------- | -------- | ------------- |
+| BIT                  | true        | true     | true      | true        | true     | true      | true       | false      | false       | false    | false         |
+| BOOLEAN              | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| TINYINT [UNSIGNED]   | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| SMALLINT [UNSIGNED]  | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| MEDIUMINT [UNSIGNED] | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| INTEGER [UNSIGNED]   | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| BIGINT [UNSIGNED]    | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| FLOAT                | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         |
+| DOUBLE               | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         |
+| DECIMAL              | true        | true     | true      | true        | true     | true      | true       | true       | true        | false    | false         |
+| DATE                 | false       | false    | false     | false       | true     | true      | false      | false      | false       | true     | true          |
+| DATETIME             | false       | false    | false     | false       | true     | false     | false      | true       | false       | true     | true          |
+| TIMESTAMP            | false       | false    | false     | false       | true     | false     | false      | true       | false       | true     | true          |
+| TIME???              |             |          |           |             |          |           |            |            |             |          |               |
+| YEAR???              |             |          |           |             |          |           |            |            |             |          |               |
+| CHAR                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| VARCHAR              | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| TINYTEXT             | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| TEXT                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| MEDIUMTEXT           | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| LONGTEXT             | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| BINARY               | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
+| VARBINARY            | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| TINYBLOB             | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| BLOB                 | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| MEDIUMBLOB           | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| LONGBLOB             | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| ENUM                 | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| SET                  | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |

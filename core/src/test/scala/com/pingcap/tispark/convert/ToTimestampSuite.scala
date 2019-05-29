@@ -50,10 +50,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
         createTable()
 
         // insert rows
-        // TODO: do not know how to set jdbc time zone
-        // set skipJDBCReadCheck=true to skip jdbc read
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, skipJDBCReadCheck = true)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
       case (writeFunc, "jdbcWrite") =>
       // TODO: ignored, because of this error
       //java.sql.BatchUpdateException: Data truncation: invalid time format: '34'
@@ -120,10 +118,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
         createTable()
 
         // insert rows
-        // TODO: do not know how to set jdbc time zone
-        // set skipJDBCReadCheck=true to skip jdbc read
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, skipJDBCReadCheck = true)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
     }
   }
 
@@ -156,10 +152,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
         createTable()
 
         // insert rows
-        // TODO: do not know how to set jdbc time zone
-        // set skipJDBCReadCheck=true to skip jdbc read
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, skipJDBCReadCheck = true)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
     }
   }
 

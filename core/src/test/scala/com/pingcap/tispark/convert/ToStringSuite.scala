@@ -399,54 +399,6 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
     }
   }
 
-  test("Test Convert from java.sql.Date to STRING") {
-    // failure
-    // java.sql.Date -> STRING
-    compareTiDBWriteWithJDBC {
-      case (writeFunc, _) =>
-        val a: java.sql.Date = java.sql.Date.valueOf("2019-01-01")
-        val b: java.sql.Date = java.sql.Date.valueOf("1990-12-12")
-        val c: java.sql.Date = java.sql.Date.valueOf("2000-09-09")
-        val d: java.sql.Date = java.sql.Date.valueOf("1999-10-28")
-
-        val row1 = Row(1, null, null, null, null, null, null)
-        val row2 = Row(2, a, b, a, b, a, b)
-        val row3 = Row(3, b, a, b, a, b, a)
-        val row4 = Row(4, c, d, c, d, c, d)
-        val row5 = Row(5, d, c, d, c, d, c)
-
-        val schema = StructType(
-          List(
-            StructField("i", IntegerType),
-            StructField("c1", DateType),
-            StructField("c2", DateType),
-            StructField("c3", DateType),
-            StructField("c4", DateType),
-            StructField("c5", DateType),
-            StructField("c6", DateType)
-          )
-        )
-
-        val readA: java.lang.String = "2019-01-01"
-        val readB: java.lang.String = "1990-12-12"
-        val readC: java.lang.String = "2000-09-09"
-        val readD: java.lang.String = "1999-10-28"
-
-        val readRow1 = Row(1, null, null, null, null, null, null)
-        val readRow2 = Row(2, readA, readB, readA, readB, readA, readB)
-        val readRow3 = Row(3, readB, readA, readB, readA, readB, readA)
-        val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
-        val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
-
-        dropTable()
-        createTable()
-
-        // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
-    }
-  }
-
   test("Test Convert from java.math.BigDecimal to STRING") {
     // failure
     // java.math.BigDecimal -> STRING
@@ -479,6 +431,54 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readB: java.lang.String = b.toString
         val readC: java.lang.String = c.toString
         val readD: java.lang.String = d.toString
+
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, readA, readB, readA, readB, readA, readB)
+        val readRow3 = Row(3, readB, readA, readB, readA, readB, readA)
+        val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
+        val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
+
+        dropTable()
+        createTable()
+
+        // insert rows
+        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+    }
+  }
+
+  test("Test Convert from java.sql.Date to STRING") {
+    // failure
+    // java.sql.Date -> STRING
+    compareTiDBWriteWithJDBC {
+      case (writeFunc, _) =>
+        val a: java.sql.Date = java.sql.Date.valueOf("2019-01-01")
+        val b: java.sql.Date = java.sql.Date.valueOf("1990-12-12")
+        val c: java.sql.Date = java.sql.Date.valueOf("2000-09-09")
+        val d: java.sql.Date = java.sql.Date.valueOf("1999-10-28")
+
+        val row1 = Row(1, null, null, null, null, null, null)
+        val row2 = Row(2, a, b, a, b, a, b)
+        val row3 = Row(3, b, a, b, a, b, a)
+        val row4 = Row(4, c, d, c, d, c, d)
+        val row5 = Row(5, d, c, d, c, d, c)
+
+        val schema = StructType(
+          List(
+            StructField("i", IntegerType),
+            StructField("c1", DateType),
+            StructField("c2", DateType),
+            StructField("c3", DateType),
+            StructField("c4", DateType),
+            StructField("c5", DateType),
+            StructField("c6", DateType)
+          )
+        )
+
+        val readA: java.lang.String = "2019-01-01"
+        val readB: java.lang.String = "1990-12-12"
+        val readC: java.lang.String = "2000-09-09"
+        val readD: java.lang.String = "1999-10-28"
 
         val readRow1 = Row(1, null, null, null, null, null, null)
         val readRow2 = Row(2, readA, readB, readA, readB, readA, readB)

@@ -68,6 +68,7 @@ abstract class QueryTest extends PlanTest {
       case d: BigDecimal           => d.bigDecimal.doubleValue()
       case d: Number               => d.doubleValue()
       case d: String               => BigDecimal(d).doubleValue()
+      case d: Boolean              => if (d) 1d else 0d
       case _                       => 0.0
     }
 
