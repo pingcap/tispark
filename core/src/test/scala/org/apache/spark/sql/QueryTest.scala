@@ -77,7 +77,7 @@ abstract class QueryTest extends PlanTest {
       case d: Boolean => if (d) 1L else 0L
       case d: Array[Byte] =>
         if (d.length > 8) {
-          null
+          0L
         } else {
           var r = 0L
           for (x <- d) {

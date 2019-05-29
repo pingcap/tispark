@@ -354,6 +354,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   }
 
   // TODO: test following types
+  // java.math.BigDecimal
   // java.sql.Timestamp
   // Array[String]
   // scala.collection.Seq

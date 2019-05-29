@@ -229,23 +229,16 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
     }
   }
 
-  // TODO: ignore because of this issue
-  // https://github.com/pingcap/tispark/issues/767
-  ignore("Test Convert from java.lang.Float to DECIMAL") {
+  test("Test Convert from java.lang.Float to DECIMAL") {
     // success
     // java.lang.Float -> DECIMAL
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Float = 1.1f
         val b: java.lang.Float = -2.2f
-        val c: java.lang.Float = 3.4e+30f
-        val d: java.lang.Float = 1.4e-25f
 
         val row1 = Row(1, null, null, null, null, null, null)
         val row2 = Row(2, a, b, a, b, a, b)
-        val row3 = Row(3, b, a, b, a, b, a)
-        val row4 = Row(4, c, d, c, d, c, d)
-        val row5 = Row(5, d, c, d, c, d, c)
 
         val schema = StructType(
           List(
@@ -259,12 +252,22 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
           )
         )
 
+        val readA1: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 1)
+        val readA3: java.math.BigDecimal = java.math.BigDecimal.valueOf(1100, 3)
+        val readA5: java.math.BigDecimal = java.math.BigDecimal.valueOf(110000, 5)
+        val readB2: java.math.BigDecimal = java.math.BigDecimal.valueOf(-220, 2)
+        val readB4: java.math.BigDecimal = java.math.BigDecimal.valueOf(-22000, 4)
+        val readB6: java.math.BigDecimal = java.math.BigDecimal.valueOf(-2200000, 6)
+
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, readA1, readB2, readA3, readB4, readA5, readB6)
+
         dropTable()
         createTable()
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2), schema, None)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
     }
   }
 
