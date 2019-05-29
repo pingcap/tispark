@@ -54,7 +54,7 @@ public class TimestampType extends AbstractDateTimeType {
   }
 
   protected DateTimeZone getTimezone() {
-    return Converter.getLocalTimezone();
+    return DateTimeZone.UTC;
   }
 
   /**

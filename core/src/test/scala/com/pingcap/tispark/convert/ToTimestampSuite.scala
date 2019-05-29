@@ -112,8 +112,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
           )
         )
 
-        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 00:00:00.0")
-        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1990-01-01 00:00:00.0")
+        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-10 17:00:00.0")
+        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1989-12-31 17:00:00.0")
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, readA, readB)
@@ -148,8 +148,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
           )
         )
 
-        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 11:11:11")
-        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1990-01-01 01:01:01.999")
+        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 04:11:11")
+        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1989-12-31 18:01:01.999")
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, readA, readB)

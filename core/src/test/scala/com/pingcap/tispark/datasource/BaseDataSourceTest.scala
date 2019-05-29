@@ -31,6 +31,7 @@ class BaseDataSourceTest(val table: String,
     super.beforeAll()
 
     tidbStmt = tidbConn.createStatement()
+
     initializeTimeZone()
   }
 
@@ -69,9 +70,6 @@ class BaseDataSourceTest(val table: String,
       .option("url", jdbcUrl)
       .option("dbtable", dbtable)
       .option("isolationLevel", "REPEATABLE_READ")
-      .option("useTimezone", "true")
-      .option("serverTimezone", "GMT-7")
-      .option("timeZone", "GMT-7")
       .mode("append")
       .save()
   }
@@ -85,7 +83,7 @@ class BaseDataSourceTest(val table: String,
   protected def compareTiDBWriteWithJDBC(
     testCode: ((List[Row], StructType, Option[Map[String, String]]) => Unit, String) => Unit
   ): Unit = {
-    testCode(tidbWrite, "tidbWrite")
+    //testCode(tidbWrite, "tidbWrite")
     testCode(jdbcWrite, "jdbcWrite")
   }
 
