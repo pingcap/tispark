@@ -226,15 +226,15 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("insert into t values(1)")
     tidbStmt.execute("insert into t values(2)")
     tidbStmt.execute("insert into t values(4)")
-    judge("select count(c1) from t")
-    judge("select count(c1 + 1) from t")
-    judge("select count(1 + c1) from t")
+    runTest("select count(c1) from t")
+    runTest("select count(c1 + 1) from t")
+    runTest("select count(1 + c1) from t")
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(c1 int not null, c2 int not null)")
     tidbStmt.execute("insert into t values(1, 4)")
     tidbStmt.execute("insert into t values(2, 2)")
     ti.meta.reloadAllMeta()
-    judge("select count(c1 + c2) from t")
+    runTest("select count(c1 + c2) from t")
   }
 
   // https://github.com/pingcap/tispark/issues/496
