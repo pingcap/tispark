@@ -89,7 +89,7 @@ public class SetType extends DataType {
   }
 
   @Override
-  protected Object convertToTiDBType(Object value)
+  public Object convertToTiDBType(Object value)
       throws TypeConvertNotSupportException, ConvertDataOverflowException {
     return new TypeConvertNotSupportException(
         value.getClass().getName(), this.getClass().getName());

@@ -50,7 +50,7 @@ public class DateType extends AbstractDateTimeType {
   }
 
   @Override
-  protected Object convertToTiDBType(Object value)
+  public Object convertToTiDBType(Object value)
       throws TypeConvertNotSupportException, ConvertDataOverflowException {
     return convertToMysqlDate(value);
   }

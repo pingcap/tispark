@@ -65,7 +65,7 @@ public class TimeType extends DataType {
   }
 
   @Override
-  protected Object convertToTiDBType(Object value)
+  public Object convertToTiDBType(Object value)
       throws TypeConvertNotSupportException, ConvertDataOverflowException {
     throw new TypeConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
   }

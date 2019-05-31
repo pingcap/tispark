@@ -499,8 +499,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       // pk is handle can be skipped
       val columnInfo = tiTableInfo.getColumn(i)
       val value = tiRow.get(i, columnInfo.getType)
-      val javaObject = TiConverter.sparkSQLObjectToJavaObject(value)
-      convertedValues.update(i, javaObject)
+      convertedValues.update(i, value)
     }
 
     try {

@@ -210,11 +210,8 @@ public abstract class DataType implements Serializable {
    * @param cdo destination of data.
    * @param encodeType Key or Value.
    * @param value value to be encoded.
-   * @throws TypeConvertNotSupportException
-   * @throws ConvertDataOverflowException
    */
-  public void encode(CodecDataOutput cdo, EncodeType encodeType, Object value)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+  public void encode(CodecDataOutput cdo, EncodeType encodeType, Object value) {
     requireNonNull(cdo, "cdo is null");
     if (value == null) {
       if (encodeType != EncodeType.PROTO) {
@@ -227,8 +224,7 @@ public abstract class DataType implements Serializable {
           encodeKey(cdo, value);
           return;
         case VALUE:
-          Object tidbValue = convertToTiDBType(value);
-          encodeValue(cdo, tidbValue);
+          encodeValue(cdo, value);
           return;
         case PROTO:
           encodeProto(cdo, value);
@@ -261,7 +257,7 @@ public abstract class DataType implements Serializable {
    * @throws TypeConvertNotSupportException
    * @throws ConvertDataOverflowException
    */
-  protected abstract Object convertToTiDBType(Object value)
+  public abstract Object convertToTiDBType(Object value)
       throws TypeConvertNotSupportException, ConvertDataOverflowException;
 
   protected abstract void encodeKey(CodecDataOutput cdo, Object value);

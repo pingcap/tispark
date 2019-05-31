@@ -25,7 +25,7 @@ public class TableCodecTest {
         .addColumn("c1", IntegerType.INT, true)
         .addColumn("c2", IntegerType.BIGINT)
         .addColumn("c3", DateTimeType.DATETIME)
-        .addColumn("c4", TimestampType.TIMESTAMP)
+        //.addColumn("c4", TimestampType.TIMESTAMP)
         .addColumn("c5", StringType.VARCHAR)
         .addColumn("c6", StringType.VARCHAR)
         //        .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
@@ -41,7 +41,7 @@ public class TableCodecTest {
     values.add(1L);
     DateTime dateTime = DateTime.parse("1995-10-10");
     values.add(new Timestamp(dateTime.getMillis()));
-    values.add(new Timestamp(dateTime.getMillis()));
+    //values.add(new Timestamp(dateTime.getMillis()));
     values.add("abc");
     values.add("中");
     this.values = values.toArray();

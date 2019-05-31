@@ -116,7 +116,7 @@ object TiConverter {
    * @param value
    * @return
    */
-  def sparkSQLObjectToJavaObject(value: AnyRef): java.lang.Object = {
+  def sparkSQLObjectToJavaObject(value: Any): java.lang.Object = {
     if (value == null) {
       return null
     }

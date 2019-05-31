@@ -41,7 +41,8 @@ public class TableCodec {
       TiColumnInfo col = columnInfos.get(i);
       if (!col.canSkip(isPkHandle)) {
         IntegerCodec.writeLongFully(cdo, col.getId(), false);
-        col.getType().encode(cdo, EncodeType.VALUE, values[i]);
+        Object convertedValue = col.getType().convertToTiDBType(values[i]);
+        col.getType().encode(cdo, EncodeType.VALUE, convertedValue);
       }
     }
 

@@ -39,7 +39,7 @@ public class BitType extends IntegerType {
   }
 
   @Override
-  protected Object convertToTiDBType(Object value)
+  public Object convertToTiDBType(Object value)
       throws TypeConvertNotSupportException, ConvertDataOverflowException {
     Long result = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());
     long targetLength = this.getLength();
