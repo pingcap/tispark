@@ -226,6 +226,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("insert into t values(1)")
     tidbStmt.execute("insert into t values(2)")
     tidbStmt.execute("insert into t values(4)")
+    ti.meta.reloadAllMeta()
     runTest("select count(c1) from t")
     runTest("select count(c1 + 1) from t")
     runTest("select count(1 + c1) from t")
