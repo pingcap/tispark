@@ -64,7 +64,7 @@ public class IntegerType extends DataType {
   }
 
   @Override
-  public Object convertToTiDBType(Object value)
+  protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
     // TODO: support write to YEAR
     if (this.getType() == MySQLType.TypeYear) {

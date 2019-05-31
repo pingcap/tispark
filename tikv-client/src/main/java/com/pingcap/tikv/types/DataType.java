@@ -256,7 +256,16 @@ public abstract class DataType implements Serializable {
    * @throws ConvertNotSupportException
    * @throws ConvertOverflowException
    */
-  public abstract Object convertToTiDBType(Object value)
+  public Object convertToTiDBType(Object value)
+      throws ConvertNotSupportException, ConvertOverflowException {
+    if(value == null) {
+      return null;
+    } else {
+      return doConvertToTiDBType(value);
+    }
+  }
+
+  protected abstract Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException;
 
   protected abstract void encodeKey(CodecDataOutput cdo, Object value);

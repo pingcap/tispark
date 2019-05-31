@@ -40,7 +40,7 @@ public class EnumType extends DataType {
   }
 
   @Override
-  public Object convertToTiDBType(Object value)
+  protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
     return convertToMysqlEnum(value);
   }

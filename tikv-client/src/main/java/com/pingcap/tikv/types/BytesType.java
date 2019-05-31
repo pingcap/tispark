@@ -66,7 +66,7 @@ public class BytesType extends DataType {
   }
 
   @Override
-  public Object convertToTiDBType(Object value)
+  protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
     // TODO: do not support write to BINARY TYPE, because of this issue
     //  https://github.com/pingcap/tispark/issues/774

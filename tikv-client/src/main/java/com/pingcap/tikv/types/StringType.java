@@ -38,7 +38,7 @@ public class StringType extends BytesType {
   }
 
   @Override
-  public Object convertToTiDBType(Object value) throws ConvertNotSupportException {
+  protected Object doConvertToTiDBType(Object value) throws ConvertNotSupportException {
     return convertToString(value);
   }
 

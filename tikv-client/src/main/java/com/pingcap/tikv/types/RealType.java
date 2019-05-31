@@ -57,7 +57,7 @@ public class RealType extends DataType {
   }
 
   @Override
-  public Object convertToTiDBType(Object value)
+  protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
     return convertToReal(value);
   }

@@ -60,7 +60,7 @@ public class JsonType extends DataType {
   }
 
   @Override
-  public Object convertToTiDBType(Object value)
+  protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
     throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
   }
