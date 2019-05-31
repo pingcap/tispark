@@ -16,9 +16,9 @@
 package com.pingcap.tispark
 
 import java.util
+import java.util.Objects
 
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
@@ -26,17 +26,15 @@ import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.txn.TxnKVClient
-import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
-import com.pingcap.tispark.utils.{TiConverter, TiUtil}
-import gnu.trove.list.array.TLongArrayList
+import com.pingcap.tispark.utils.TiConverter
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
-import org.apache.spark.sql.{DataFrame, TiContext}
+import org.apache.spark.sql.{DataFrame, Row, TiContext}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -81,19 +79,64 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var uniqueIndices: List[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
 
-  def allocateRowID(dbID: Long, tblInfo: TiTableInfo, catalog: Catalog): Long =
-    if (!tblInfo.isPkHandle) {
-      val rowIDAllocator = RowIDAllocator.create(
-        tiDBInfo.getId,
-        tiTableInfo.getId,
-        tiSession.getCatalog,
-        tiTableInfo.isAutoIncColUnsigned,
-        df.count
-      )
-      rowIDAllocator.getStart
-    } else {
-      0
+  private def calculateSplitKeys(sampleRDD: RDD[Row],
+                                 estimatedTotalSize: Long,
+                                 sampleRDDCount: Long,
+                                 tblInfo: TiTableInfo,
+                                 isUpdate: Boolean,
+                                 regionSplitNumber: Option[Int]): List[SerializableKey] = {
+
+    var regionNeed = (estimatedTotalSize / 96.0).toLong
+    // update region split number if user want more region
+    if (regionSplitNumber.isDefined) {
+      if (regionSplitNumber.get > regionNeed) {
+        regionNeed = regionSplitNumber.get
+      }
     }
+    // if region split is not needed, just return an empty list
+    if (regionNeed == 0) return List.empty
+
+    // TODO check this write is update or not
+    val handleRdd: RDD[Long] = sampleRDD
+      .map(obj => extractHandleId(obj))
+      .sortBy(k => k)
+    val step = sampleRDDCount / regionNeed
+    val splitKeys = handleRdd.zipWithIndex
+      .filter {
+        case (_, idx) => idx % step == 0
+      }
+      .map {
+        _._1
+      }
+      .map(h => new SerializableKey(RowKey.toRowKey(tblInfo.getId, h).getBytes))
+      .collect()
+      .toList
+
+    logger.info("region need split %d times".format(splitKeys.length))
+    splitKeys
+  }
+
+  private def calcRDDSize(rdd: RDD[Row]): Long =
+    rdd
+      .map(_.mkString(",").getBytes("UTF-8").length.toLong)
+      .reduce(_ + _) //add the sizes together
+
+  private def estimateDataSize(sampledRDD: RDD[Row], options: TiDBOptions) = {
+    // get all data size
+    val sampleRDDSize = calcRDDSize(sampledRDD)
+    logger.info(s"sample data size is ${sampleRDDSize / (1024 * 1024)} MB")
+
+    val sampleRowCount = sampledRDD.count()
+    val sampleAvgRowSize = sampleRDDSize / sampleRowCount
+    logger.info(s"sample avg row size is $sampleAvgRowSize")
+
+    val estimatedTotalSize = (sampleRowCount * sampleAvgRowSize) / options.sampleFraction
+    val formatter = java.text.NumberFormat.getIntegerInstance
+
+    val estimateInMB = estimatedTotalSize / (1024 * 1024)
+    logger.info("estimatedTotalSize is %s MB".format(formatter.format(estimateInMB)))
+    (estimateInMB.toLong, sampleRowCount)
+  }
 
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
@@ -152,6 +195,25 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
+
+    // region pre-split
+    if (enableRegionPreSplit && handleCol != null) {
+      logger.info("region pre split is enabled.")
+      val sampleRDD =
+        df.rdd.sample(withReplacement = false, fraction = options.sampleFraction)
+      val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
+
+      tiContext.tiSession.splitRegionAndScatter(
+        calculateSplitKeys(
+          sampleRDD,
+          dataSize,
+          sampleRDDCount,
+          tiTableInfo,
+          isUpdate = false,
+          regionSplitNumber
+        ).map(k => k.bytes).asJava
+      )
+    }
 
     val tiRowRdd = df.rdd.map(row => sparkRow2TiKVRow(row))
 
@@ -359,6 +421,20 @@ class TiBatchWrite(@transient val df: DataFrame,
     TiBatchWriteUtils.getRegionsByTable(tiSession, tiTableInfo).toList
   }
 
+  private def extractHandleId(row: Row): Long =
+    // If handle ID is changed when update, update will remove the old record first,
+    // and then call `AddRecord` to add a new record.
+    // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
+    if (tiTableInfo.isPkHandle) {
+      // it is a workaround. pk is handle must be a number
+      row
+        .get(handleCol.getOffset)
+        .asInstanceOf[Number]
+        .longValue()
+    } else {
+      throw new TiBatchWriteException("cannot extract handle non pk is handle table")
+    }
+
   private def extractHandleId(row: TiRow): Long =
     // If handle ID is changed when update, update will remove the old record first,
     // and then call `AddRecord` to add a new record.
@@ -425,9 +501,9 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   private def generateRDDToBeInserted(
-    rdd: RDD[toBeCheckedRow]
+    rdd: RDD[ToBeCheckedRow]
   ) = {
-    var allocatedRdd: RDD[(toBeCheckedRow, Long)] = null
+    var allocatedRdd: RDD[(ToBeCheckedRow, Long)] = null
     if (!tiTableInfo.isPkHandle) {
       val step = rdd.count
       val catalog = TiSessionCache.getSession(tiConf).getCatalog
@@ -474,7 +550,7 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   private def checkConflictWithInsertKeys(
-    rdd: RDD[toBeCheckedRow]
+    rdd: RDD[ToBeCheckedRow]
   ) = {
     if (handleCol != null) {
       // data is conflict with TiKV
@@ -547,13 +623,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private def getKeysNeedCheck(
     rdd: RDD[TiRow]
-  ) = {
-    val handleCol = if (tiTableInfo.isPkHandle) {
-      tiTableInfo.getPrimaryKeyColumn
-    } else {
-      null
-    }
-
+  ): RDD[ToBeCheckedRow] = {
     //1. check is there any conflicts in data to be inserted
     val cols = tiTableInfo.getColumns.asScala.flatMap { col =>
       if (!col.canSkip(tiTableInfo.isPkHandle)) {
@@ -604,7 +674,7 @@ class TiBatchWrite(@transient val df: DataFrame,
             }
         }
       }
-      new toBeCheckedRow(row, handleInfo, indexKeys)
+      new ToBeCheckedRow(row, handleInfo, indexKeys)
     }
   }
 }
@@ -627,7 +697,7 @@ class TiRegionPartitioner(regions: List[TiRegion]) extends Partitioner {
   }
 }
 
-class keyWithDupInfo(var key: SerializableKey, var oldRow: TiRow) extends Serializable {
+private class keyWithDupInfo(var key: SerializableKey, var oldRow: TiRow) extends Serializable {
   var oldHandle: Long = -1L
   def setOldHandle(handle: Long): Unit = this.oldHandle = handle
 
@@ -638,10 +708,10 @@ class keyWithDupInfo(var key: SerializableKey, var oldRow: TiRow) extends Serial
       case _ => false
     }
 
-  override def hashCode(): Int = util.Arrays.hashCode(key.bytes)
+  override def hashCode(): Int = Objects.hash(key.bytes)
 }
 
-class toBeCheckedRow(val row: TiRow,
+class ToBeCheckedRow(val row: TiRow,
                      val handleKey: keyWithDupInfo,
                      val indexKeys: List[keyWithDupInfo])
     extends Serializable {
@@ -651,7 +721,7 @@ class toBeCheckedRow(val row: TiRow,
   // then two row equals
   override def equals(that: Any): Boolean =
     that match {
-      case row: toBeCheckedRow =>
+      case row: ToBeCheckedRow =>
         if (row == this) return true
         if (indexKeys.isEmpty && row.indexKeys.isEmpty) return false
         val mayConflict = row.indexKeys.toSet

@@ -4,7 +4,7 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class UpsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
+class InsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
