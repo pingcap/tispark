@@ -18,6 +18,7 @@ package com.pingcap.tispark.utils
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
+import com.google.common.primitives.UnsignedLong
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.expression.ExpressionBlacklist
 import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
@@ -31,8 +32,8 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
-import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
-import org.apache.spark.{sql, SparkConf}
+import org.apache.spark.sql.types.{DataType, DataTypes, Decimal, MetadataBuilder, StructField, StructType}
+import org.apache.spark.{SparkConf, sql}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import scala.collection.JavaConversions._
@@ -114,13 +115,27 @@ object TiUtil {
                               blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
+
   def toSparkRow(row: TiRow, rowTransformer: RowTransformer): Row = {
+    import scala.collection.JavaConversions._
+
     val finalTypes = rowTransformer.getTypes.toList
     val transRow = rowTransformer.transform(row)
     val rowArray = new Array[Any](finalTypes.size)
 
     for (i <- 0 until transRow.fieldCount) {
-      rowArray(i) = transRow.get(i, finalTypes(i))
+      val colTp = finalTypes(i)
+      val isBigInt = colTp.getType.equals(MySQLType.TypeLonglong)
+      val isUnsigned = colTp.isUnsigned
+      val tmp = transRow.get(i, finalTypes(i))
+      rowArray(i) = if (isBigInt && isUnsigned) {
+        tmp match {
+          case l: java.lang.Long => Decimal.apply(UnsignedLong.fromLongBits(l).bigIntegerValue())
+          case _                 => tmp
+        }
+      } else {
+        tmp
+      }
     }
 
     Row.fromSeq(rowArray)
@@ -183,7 +198,7 @@ object TiUtil {
         .build()
       fields(i) = StructField(
         col.getName,
-        TiUtil.toSparkDataType(col.getType),
+        toSparkDataType(col.getType),
         nullable = !notNull,
         metadata
       )

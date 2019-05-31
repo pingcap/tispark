@@ -64,7 +64,6 @@ class IssueTestSuite extends BaseTiSparkSuite {
       "insert into t values(1),(2),(3),(4),(null)"
     )
     refreshConnections()
-
     assert(spark.sql("select * from t limit 10").count() == 5)
     assert(spark.sql("select a from t limit 10").count() == 5)
 
@@ -85,7 +84,6 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute(
       "insert into t values(1,771.64),(2,378.49),(3,920.92),(4,113.97)"
     )
-    refreshConnections()
 
     assert(try {
       judge("select a, max(b) from t group by a limit 2")
@@ -133,6 +131,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute(
       "insert into single_read values(1, 1, 1, 2, null), (1, 2, 1, 1, null), (2, 1, 3, 2, null), (2, 2, 2, 1, 0)"
     )
+
     refreshConnections()
 
     judge("select count(1) from single_read")
@@ -231,16 +230,16 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("insert into t values(1)")
     tidbStmt.execute("insert into t values(2)")
     tidbStmt.execute("insert into t values(4)")
-    refreshConnections() // refresh since we need to load data again
-    judge("select count(c1) from t")
-    judge("select count(c1 + 1) from t")
-    judge("select count(1 + c1) from t")
+    refreshConnections()
+    runTest("select count(c1) from t")
+    runTest("select count(c1 + 1) from t")
+    runTest("select count(1 + c1) from t")
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(c1 int not null, c2 int not null)")
     tidbStmt.execute("insert into t values(1, 4)")
     tidbStmt.execute("insert into t values(2, 2)")
     refreshConnections()
-    judge("select count(c1 + c2) from t")
+    runTest("select count(c1 + c2) from t")
   }
 
   // https://github.com/pingcap/tispark/issues/496
@@ -249,7 +248,6 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute(
       "CREATE TABLE `tmp_empty_tbl` (`c1` varchar(20))"
     )
-    refreshConnections()
     judge("select count(1) from `tmp_empty_tbl`")
     judge("select cast(count(1) as char(20)) from `tmp_empty_tbl`")
   }
@@ -274,6 +272,47 @@ class IssueTestSuite extends BaseTiSparkSuite {
     )
   }
 
+  test("unsigned bigint as group by column") {
+    def explainTestAndCollect(sql: String): Unit = {
+      val df = spark.sql(sql)
+      df.explain
+      df.show
+      df.collect.foreach(println)
+    }
+    tidbStmt.execute("drop table if exists table_group_by_bigint")
+    tidbStmt.execute("""
+                       |CREATE TABLE `table_group_by_bigint` (
+                       |  `a` int(11) NOT NULL,
+                       |  `b` bigint(20) UNSIGNED DEFAULT NULL,
+                       |  `c` bigint(20) UNSIGNED DEFAULT NULL,
+                       |  KEY idx(b)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+      """.stripMargin)
+    tidbStmt.execute(
+      "insert into table_group_by_bigint values(1, 2, 18446744073709551615), (2, 18446744073709551615, 18446744073709551614), (3, 18446744073709551615, 5), (4, 18446744073709551614, 18446744073709551614)"
+    )
+
+    refreshConnections()
+    explainTestAndCollect(
+      "select sum(a) from table_group_by_bigint group by b"
+    )
+    explainTestAndCollect(
+      "select sum(a) from table_group_by_bigint where c > 0 group by b"
+    )
+    explainTestAndCollect(
+      "select sum(b) from table_group_by_bigint group by c"
+    )
+    explainTestAndCollect(
+      "select sum(a) from table_group_by_bigint group by b"
+    )
+    explainTestAndCollect(
+      "select b from table_group_by_bigint group by b"
+    )
+    explainTestAndCollect(
+      "select b from table_group_by_bigint where c=18446744073709551614 group by b"
+    )
+  }
+
   override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists t")
@@ -283,6 +322,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists single_read")
       tidbStmt.execute("drop table if exists set_t")
       tidbStmt.execute("drop table if exists enum_t")
+      tidbStmt.execute("drop table if exists table_group_by_bigint")
     } finally {
       super.afterAll()
     }
