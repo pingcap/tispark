@@ -2,6 +2,7 @@ package com.pingcap.tispark.utils
 
 import java.util.logging.Logger
 
+import com.google.common.primitives.UnsignedLong
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.meta.TiColumnInfo
 import com.pingcap.tikv.operation.transformer.RowTransformer
@@ -9,7 +10,7 @@ import com.pingcap.tikv.types._
 import com.pingcap.tispark.TiBatchWrite.TiRow
 import org.apache.spark.sql
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.DataTypes
+import org.apache.spark.sql.types.{DataTypes, Decimal}
 
 object TiConverter {
   type TiDataType = com.pingcap.tikv.types.DataType
@@ -42,7 +43,18 @@ object TiConverter {
     val rowArray = new Array[Any](finalTypes.size)
 
     for (i <- 0 until transRow.fieldCount) {
-      rowArray(i) = transRow.get(i, finalTypes(i))
+      val colTp = finalTypes(i)
+      val isBigInt = colTp.getType.equals(MySQLType.TypeLonglong)
+      val isUnsigned = colTp.isUnsigned
+      val tmp = transRow.get(i, finalTypes(i))
+      rowArray(i) = if (isBigInt && isUnsigned) {
+        tmp match {
+          case l: java.lang.Long => Decimal.apply(UnsignedLong.fromLongBits(l).bigIntegerValue())
+          case _                 => tmp
+        }
+      } else {
+        tmp
+      }
     }
 
     Row.fromSeq(rowArray)

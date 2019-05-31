@@ -23,7 +23,7 @@ import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.{TiConverter, TiUtil}
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
@@ -78,7 +78,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
       iterator.hasNext
     }
 
-    override def next(): Row = TiUtil.toSparkRow(iterator.next, rowTransformer)
+    override def next(): Row = TiConverter.toSparkRow(iterator.next, rowTransformer)
   }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =

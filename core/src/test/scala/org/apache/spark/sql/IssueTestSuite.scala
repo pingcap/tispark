@@ -279,14 +279,31 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("""
                        |CREATE TABLE `table_group_by_bigint` (
                        |  `a` int(11) NOT NULL,
-                       |  `b` bigint(20) UNSIGNED DEFAULT NULL
+                       |  `b` bigint(20) UNSIGNED DEFAULT NULL,
+                       |  `c` bigint(20) UNSIGNED DEFAULT NULL,
+                       |  KEY idx(b)
                        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
       """.stripMargin)
     tidbStmt.execute(
-      "insert into table_group_by_bigint values(1, 2), (2, 18446744073709551615), (3, 18446744073709551615), (4, 18446744073709551614)"
+      "insert into table_group_by_bigint values(1, 2, 18446744073709551615), (2, 18446744073709551615, 18446744073709551614), (3, 18446744073709551615, 5), (4, 18446744073709551614, 18446744073709551614)"
     )
     explainTestAndCollect(
       "select sum(a) from table_group_by_bigint group by b"
+    )
+    explainTestAndCollect(
+      "select sum(a) from table_group_by_bigint where c > 0 group by b"
+    )
+    explainTestAndCollect(
+      "select sum(b) from table_group_by_bigint group by c"
+    )
+    explainTestAndCollect(
+      "select sum(a) from table_group_by_bigint group by b"
+    )
+    explainTestAndCollect(
+      "select b from table_group_by_bigint group by b"
+    )
+    explainTestAndCollect(
+      "select b from table_group_by_bigint where c=18446744073709551614 group by b"
     )
   }
 

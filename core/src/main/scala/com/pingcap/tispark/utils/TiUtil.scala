@@ -111,29 +111,6 @@ object TiUtil {
                               blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
-  def toSparkRow(row: TiRow, rowTransformer: RowTransformer): Row = {
-    val finalTypes = rowTransformer.getTypes.toList
-    val transRow = rowTransformer.transform(row)
-    val rowArray = new Array[Any](finalTypes.size)
-
-    for (i <- 0 until transRow.fieldCount) {
-      val colTp = finalTypes(i)
-      val isBigInt = colTp.getType.equals(MySQLType.TypeLonglong)
-      val isUnsigned = colTp.isUnsigned
-      val tmp = transRow.get(i, finalTypes(i))
-      rowArray(i) = if (isBigInt && isUnsigned) {
-        tmp match {
-          case l: java.lang.Long => Decimal.apply(UnsignedLong.fromLongBits(l).bigIntegerValue())
-          case _                 => tmp
-        }
-      } else {
-        tmp
-      }
-    }
-
-    Row.fromSeq(rowArray)
-  }
-
   def getSchemaFromTable(table: TiTableInfo): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {
