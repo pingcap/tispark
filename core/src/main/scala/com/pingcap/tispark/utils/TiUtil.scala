@@ -17,6 +17,7 @@ package com.pingcap.tispark.utils
 
 import java.util.concurrent.TimeUnit
 
+import com.google.common.primitives.UnsignedLong
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.expression.ExpressionBlacklist
 import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
@@ -32,7 +33,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
-import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.types.{Decimal, MetadataBuilder, StructField, StructType}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import scala.collection.JavaConversions._
@@ -116,7 +117,18 @@ object TiUtil {
     val rowArray = new Array[Any](finalTypes.size)
 
     for (i <- 0 until transRow.fieldCount) {
-      rowArray(i) = transRow.get(i, finalTypes(i))
+      val colTp = finalTypes(i)
+      val isBigInt = colTp.getType.equals(MySQLType.TypeLonglong)
+      val isUnsigned = colTp.isUnsigned
+      val tmp = transRow.get(i, finalTypes(i))
+      rowArray(i) = if (isBigInt && isUnsigned) {
+        tmp match {
+          case l: java.lang.Long => Decimal.apply(UnsignedLong.fromLongBits(l).bigIntegerValue())
+          case _                 => tmp
+        }
+      } else {
+        tmp
+      }
     }
 
     Row.fromSeq(rowArray)
