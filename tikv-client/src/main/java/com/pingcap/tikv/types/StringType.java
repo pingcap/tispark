@@ -18,7 +18,7 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.nio.charset.StandardCharsets;
 
@@ -38,11 +38,11 @@ public class StringType extends BytesType {
   }
 
   @Override
-  public Object convertToTiDBType(Object value) throws TypeConvertNotSupportException {
+  public Object convertToTiDBType(Object value) throws ConvertNotSupportException {
     return convertToString(value);
   }
 
-  private String convertToString(Object value) throws TypeConvertNotSupportException {
+  private String convertToString(Object value) throws ConvertNotSupportException {
     String result;
     if (value instanceof Boolean) {
       if ((Boolean) value) {
@@ -61,8 +61,7 @@ public class StringType extends BytesType {
     } else if (value instanceof Float || value instanceof Double) {
       // TODO: a little complicated, e.g.
       // 3.4028235E38 -> 340282350000000000000000000000000000000
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     } else if (value instanceof String) {
       result = value.toString();
     } else if (value instanceof java.math.BigDecimal) {
@@ -77,8 +76,7 @@ public class StringType extends BytesType {
         result = result.substring(0, len - 2);
       }
     } else {
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
     return result;
   }

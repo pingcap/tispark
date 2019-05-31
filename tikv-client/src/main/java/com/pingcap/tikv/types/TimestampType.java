@@ -22,8 +22,8 @@ import static com.pingcap.tikv.types.Converter.UTC_TIME_FORMATTER;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.ConvertDataOverflowException;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.sql.Timestamp;
 import org.joda.time.DateTime;
@@ -61,33 +61,29 @@ public class TimestampType extends AbstractDateTimeType {
 
   @Override
   public Object convertToTiDBType(Object value)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+      throws ConvertNotSupportException, ConvertOverflowException {
     return convertToMysqlTimestamp(value);
   }
 
   private java.sql.Timestamp convertToMysqlTimestamp(Object value)
-      throws TypeConvertNotSupportException {
+      throws ConvertNotSupportException {
     java.sql.Timestamp result;
     if (value instanceof Long) {
       result = new java.sql.Timestamp((Long) value);
     } else if (value instanceof String) {
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
       // TODO: to support
       // result = toUTCTimestamp(java.sql.Timestamp.valueOf((String)value));
     } else if (value instanceof java.sql.Date) {
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
       // TODO: to support
       // result = toUTCTimestamp(new java.sql.Timestamp(((java.sql.Date)value).getTime()));
     } else if (value instanceof java.sql.Timestamp) {
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
       // TODO: to support
       // result = toUTCTimestamp((java.sql.Timestamp)value);
     } else {
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
     return result;
   }

@@ -20,8 +20,8 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.ConvertDataOverflowException;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -41,11 +41,11 @@ public class EnumType extends DataType {
 
   @Override
   public Object convertToTiDBType(Object value)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+      throws ConvertNotSupportException, ConvertOverflowException {
     return convertToMysqlEnum(value);
   }
 
-  private Integer convertToMysqlEnum(Object value) throws TypeConvertNotSupportException {
+  private Integer convertToMysqlEnum(Object value) throws ConvertNotSupportException {
     Integer result;
 
     if (value instanceof String) {
@@ -71,13 +71,13 @@ public class EnumType extends DataType {
     return parseEnumValue(result);
   }
 
-  private Integer parseEnumValue(Integer number) throws ConvertDataOverflowException {
+  private Integer parseEnumValue(Integer number) throws ConvertOverflowException {
     if (number == 0) {
-      throw ConvertDataOverflowException.newLowerBound(number, 0);
+      throw ConvertOverflowException.newLowerBoundException(number, 0);
     }
 
     if (number > this.getElems().size()) {
-      throw ConvertDataOverflowException.newUpperBound(number, this.getElems().size());
+      throw ConvertOverflowException.newUpperBoundException(number, this.getElems().size());
     }
 
     return number;

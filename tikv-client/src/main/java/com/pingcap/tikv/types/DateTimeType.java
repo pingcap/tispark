@@ -18,8 +18,8 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.exception.ConvertDataOverflowException;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.sql.Timestamp;
 import org.joda.time.DateTime;
@@ -48,12 +48,12 @@ public class DateTimeType extends AbstractDateTimeType {
 
   @Override
   public Object convertToTiDBType(Object value)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+      throws ConvertNotSupportException, ConvertOverflowException {
     return convertToMysqlDateTime(value);
   }
 
   private java.sql.Timestamp convertToMysqlDateTime(Object value)
-      throws TypeConvertNotSupportException {
+      throws ConvertNotSupportException {
     java.sql.Timestamp result;
     if (value instanceof Long) {
       result = new java.sql.Timestamp((Long) value);
@@ -64,8 +64,7 @@ public class DateTimeType extends AbstractDateTimeType {
     } else if (value instanceof java.sql.Timestamp) {
       result = (java.sql.Timestamp) value;
     } else {
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
     return result;
   }

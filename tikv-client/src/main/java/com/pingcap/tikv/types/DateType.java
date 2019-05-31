@@ -20,8 +20,8 @@ package com.pingcap.tikv.types;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.ConvertDataOverflowException;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.sql.Date;
 import org.joda.time.DateTimeZone;
@@ -51,11 +51,11 @@ public class DateType extends AbstractDateTimeType {
 
   @Override
   public Object convertToTiDBType(Object value)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+      throws ConvertNotSupportException, ConvertOverflowException {
     return convertToMysqlDate(value);
   }
 
-  private java.sql.Date convertToMysqlDate(Object value) throws TypeConvertNotSupportException {
+  private java.sql.Date convertToMysqlDate(Object value) throws ConvertNotSupportException {
     java.sql.Date result;
     if (value instanceof Long) {
       result = new java.sql.Date((Long) value);
@@ -66,8 +66,7 @@ public class DateType extends AbstractDateTimeType {
     } else if (value instanceof java.sql.Timestamp) {
       result = new java.sql.Date(((java.sql.Timestamp) value).getTime());
     } else {
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
     return result;
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,16 @@
 
 package com.pingcap.tikv.exception;
 
-public class ConvertDataOverflowException extends RuntimeException {
-  private ConvertDataOverflowException(String msg) {
+public class ConvertOverflowException extends RuntimeException {
+  private ConvertOverflowException(String msg) {
     super(msg);
   }
 
-  public static ConvertDataOverflowException newLowerBound(Object value, Object lowerBound) {
-    return new ConvertDataOverflowException("value " + value + " < lowerBound " + lowerBound);
+  public static ConvertOverflowException newLowerBoundException(Object value, Object lowerBound) {
+    return new ConvertOverflowException("value " + value + " < lowerBound " + lowerBound);
   }
 
-  public static ConvertDataOverflowException newUpperBound(Object value, Object upperBound) {
-    return new ConvertDataOverflowException("value " + value + " > upperBound " + upperBound);
+  public static ConvertOverflowException newUpperBoundException(Object value, Object upperBound) {
+    return new ConvertOverflowException("value " + value + " > upperBound " + upperBound);
   }
 }

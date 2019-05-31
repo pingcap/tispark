@@ -23,9 +23,9 @@ import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.Codec.RealCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.ConvertDataOverflowException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
@@ -58,11 +58,11 @@ public class RealType extends DataType {
 
   @Override
   public Object convertToTiDBType(Object value)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+      throws ConvertNotSupportException, ConvertOverflowException {
     return convertToReal(value);
   }
 
-  private Object convertToReal(Object value) throws TypeConvertNotSupportException {
+  private Object convertToReal(Object value) throws ConvertNotSupportException {
     Double result;
     if (value instanceof Boolean) {
       if ((Boolean) value) {
@@ -85,8 +85,7 @@ public class RealType extends DataType {
     } else if (value instanceof String) {
       result = Converter.stringToDouble((String) value);
     } else {
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
 
     if (this.getType() == MySQLType.TypeFloat) {

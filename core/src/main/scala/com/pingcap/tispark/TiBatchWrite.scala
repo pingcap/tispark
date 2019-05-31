@@ -22,7 +22,7 @@ import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
-import com.pingcap.tikv.meta._
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.txn.TxnKVClient
@@ -31,7 +31,6 @@ import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
-import com.pingcap.tispark.utils.TiConverter
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException

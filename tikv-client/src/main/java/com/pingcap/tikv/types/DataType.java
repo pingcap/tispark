@@ -23,8 +23,8 @@ import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.ConvertDataOverflowException;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -218,7 +218,6 @@ public abstract class DataType implements Serializable {
         encodeNull(cdo);
       }
     } else {
-
       switch (encodeType) {
         case KEY:
           encodeKey(cdo, value);
@@ -238,9 +237,9 @@ public abstract class DataType implements Serializable {
   /**
    * Convert from Spark SQL Supported Java Type to TiDB Type
    *
-   * <p>1. data convert, e.g. Integer -> SHORT 2. check overflow, e.g. write 1000 to short
+   * <p>1. data convert, e.g. Integer -> SHORT
    *
-   * <p>
+   * <p>2. check overflow, e.g. write 1000 to short
    *
    * <p>Spark SQL only support following types:
    *
@@ -254,11 +253,11 @@ public abstract class DataType implements Serializable {
    *
    * @param value
    * @return
-   * @throws TypeConvertNotSupportException
-   * @throws ConvertDataOverflowException
+   * @throws ConvertNotSupportException
+   * @throws ConvertOverflowException
    */
   public abstract Object convertToTiDBType(Object value)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException;
+      throws ConvertNotSupportException, ConvertOverflowException;
 
   protected abstract void encodeKey(CodecDataOutput cdo, Object value);
 

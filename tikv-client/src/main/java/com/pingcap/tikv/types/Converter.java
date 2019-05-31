@@ -24,8 +24,8 @@ import static com.pingcap.tikv.types.TimeType.SECOND;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.primitives.UnsignedLong;
-import com.pingcap.tikv.exception.ConvertDataOverflowException;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -41,7 +41,7 @@ import org.joda.time.format.DateTimeFormatter;
 public class Converter {
 
   public static Long safeConvertToSigned(Object value, Long lowerBound, Long upperBound)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+      throws ConvertNotSupportException, ConvertOverflowException {
     Long result;
     if (value instanceof Boolean) {
       if ((Boolean) value) {
@@ -64,21 +64,21 @@ public class Converter {
     } else if (value instanceof String) {
       result = stringToLong((String) value);
     } else {
-      throw new TypeConvertNotSupportException(value.getClass().getName(), "SIGNED");
+      throw new ConvertNotSupportException(value.getClass().getName(), "SIGNED");
     }
 
     if (result < lowerBound) {
-      throw ConvertDataOverflowException.newLowerBound(result, lowerBound);
+      throw ConvertOverflowException.newLowerBoundException(result, lowerBound);
     }
 
     if (result > upperBound) {
-      throw ConvertDataOverflowException.newUpperBound(result, upperBound);
+      throw ConvertOverflowException.newUpperBoundException(result, upperBound);
     }
     return result;
   }
 
   public static Long safeConvertToUnsigned(Object value, Long upperBound)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+      throws ConvertNotSupportException, ConvertOverflowException {
     Long result;
     if (value instanceof Boolean) {
       if ((Boolean) value) {
@@ -102,16 +102,16 @@ public class Converter {
       UnsignedLong unsignedLong = stringToUnsignedLong((String) value);
       result = unsignedLong.longValue();
     } else {
-      throw new TypeConvertNotSupportException(value.getClass().getName(), "UNSIGNED");
+      throw new ConvertNotSupportException(value.getClass().getName(), "UNSIGNED");
     }
 
     long lowerBound = 0L;
     if (java.lang.Long.compareUnsigned(result, lowerBound) < 0) {
-      throw ConvertDataOverflowException.newLowerBound(result, lowerBound);
+      throw ConvertOverflowException.newLowerBoundException(result, lowerBound);
     }
 
     if (java.lang.Long.compareUnsigned(result, upperBound) > 0) {
-      throw ConvertDataOverflowException.newUpperBound(result, upperBound);
+      throw ConvertOverflowException.newUpperBoundException(result, upperBound);
     }
     return result;
   }

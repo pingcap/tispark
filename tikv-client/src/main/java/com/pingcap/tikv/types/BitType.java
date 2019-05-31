@@ -20,8 +20,8 @@ package com.pingcap.tikv.types;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.exception.ConvertDataOverflowException;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
@@ -40,12 +40,12 @@ public class BitType extends IntegerType {
 
   @Override
   public Object convertToTiDBType(Object value)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+      throws ConvertNotSupportException, ConvertOverflowException {
     Long result = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());
     long targetLength = this.getLength();
     long upperBound = 1 << targetLength;
     if (targetLength < 64 && java.lang.Long.compareUnsigned(result, upperBound) >= 0) {
-      throw ConvertDataOverflowException.newUpperBound(result, upperBound);
+      throw ConvertOverflowException.newUpperBoundException(result, upperBound);
     }
     return result;
   }

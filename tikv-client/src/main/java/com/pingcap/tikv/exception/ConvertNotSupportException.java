@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 
 package com.pingcap.tikv.exception;
 
-public class TypeConvertNotSupportException extends RuntimeException {
-  public TypeConvertNotSupportException(String fromType, String toType) {
+public class ConvertNotSupportException extends RuntimeException {
+  public ConvertNotSupportException(String fromType, String toType) {
     super("do not support converting from " + fromType + " to  " + toType);
   }
 }

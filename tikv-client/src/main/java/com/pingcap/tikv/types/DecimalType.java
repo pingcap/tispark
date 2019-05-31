@@ -22,9 +22,9 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.exception.ConvertDataOverflowException;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
-import com.pingcap.tikv.exception.TypeConvertNotSupportException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.math.BigDecimal;
 
@@ -51,12 +51,12 @@ public class DecimalType extends DataType {
 
   @Override
   public Object convertToTiDBType(Object value)
-      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+      throws ConvertNotSupportException, ConvertOverflowException {
     return convertToMysqlDecimal(value);
   }
 
   private java.math.BigDecimal convertToMysqlDecimal(Object value)
-      throws TypeConvertNotSupportException {
+      throws ConvertNotSupportException {
     java.math.BigDecimal result;
     if (value instanceof Boolean) {
       if ((Boolean) value) {
@@ -81,8 +81,7 @@ public class DecimalType extends DataType {
     } else if (value instanceof java.math.BigDecimal) {
       result = (java.math.BigDecimal) value;
     } else {
-      throw new TypeConvertNotSupportException(
-          value.getClass().getName(), this.getClass().getName());
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
     return result;
   }
