@@ -697,7 +697,7 @@ class TiRegionPartitioner(regions: List[TiRegion]) extends Partitioner {
   }
 }
 
-private class keyWithDupInfo(var key: SerializableKey, var oldRow: TiRow) extends Serializable {
+class keyWithDupInfo(var key: SerializableKey, var oldRow: TiRow) extends Serializable {
   var oldHandle: Long = -1L
   def setOldHandle(handle: Long): Unit = this.oldHandle = handle
 
@@ -708,7 +708,9 @@ private class keyWithDupInfo(var key: SerializableKey, var oldRow: TiRow) extend
       case _ => false
     }
 
-  override def hashCode(): Int = Objects.hash(key.bytes)
+  override def hashCode(): Int = {
+    util.Arrays.hashCode(key.bytes)
+  }
 }
 
 class ToBeCheckedRow(val row: TiRow,
