@@ -285,6 +285,10 @@ public abstract class DataType implements Serializable {
     return (flag & UniqueKeyFlag) > 0;
   }
 
+  public boolean isUnsigned() {
+    return (flag & UnsignedFlag) > 0;
+  }
+
   public boolean isMultiKey() {
     return (flag & MultipleKeyFlag) > 0;
   }

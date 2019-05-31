@@ -24,7 +24,7 @@ import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.TiUtil
-import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
+import com.pingcap.tispark.{TiPartition, TiSessionCache, TiTableReference}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
