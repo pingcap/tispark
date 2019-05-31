@@ -28,7 +28,7 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.TiSessionCache
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.{TiConverter, TiUtil}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
@@ -412,17 +412,6 @@ case class RegionTaskExec(child: SparkPlan,
       val outputTypes = output.map(_.dataType)
       val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
 
-      def toSparkRow(row: TiRow): Row = {
-        val transRow = rowTransformer.transform(row)
-        val rowArray = new Array[Any](finalTypes.size)
-
-        for (i <- 0 until transRow.fieldCount) {
-          rowArray(i) = transRow.get(i, finalTypes(i))
-        }
-
-        Row.fromSeq(rowArray)
-      }
-
       // The result iterator serves as an wrapper to the final result we fetched from region tasks
       val resultIter = new util.Iterator[UnsafeRow] {
         override def hasNext: Boolean = {
@@ -457,7 +446,7 @@ case class RegionTaskExec(child: SparkPlan,
           numOutputRows += 1
           // Unsafe row projection
           project.initialize(index)
-          val sparkRow = toSparkRow(rowIterator.next())
+          val sparkRow = TiConverter.toSparkRow(rowIterator.next(), rowTransformer)
           // Need to convert spark row to internal row for Catalyst
           project(rowToInternalRow(sparkRow, outputTypes, converters))
         }
