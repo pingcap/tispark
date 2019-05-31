@@ -20,6 +20,8 @@ package com.pingcap.tikv.types;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertDataOverflowException;
+import com.pingcap.tikv.exception.TypeConvertNotSupportException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.sql.Date;
 import org.joda.time.DateTimeZone;
@@ -45,6 +47,29 @@ public class DateType extends AbstractDateTimeType {
   @Override
   public Date getOriginDefaultValueNonNull(String value, long version) {
     return Converter.convertToDate(value);
+  }
+
+  @Override
+  protected Object convertToTiDBType(Object value)
+      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+    return convertToMysqlDate(value);
+  }
+
+  private java.sql.Date convertToMysqlDate(Object value) throws TypeConvertNotSupportException {
+    java.sql.Date result;
+    if (value instanceof Long) {
+      result = new java.sql.Date((Long) value);
+    } else if (value instanceof String) {
+      result = java.sql.Date.valueOf((String) value);
+    } else if (value instanceof java.sql.Date) {
+      result = (java.sql.Date) value;
+    } else if (value instanceof java.sql.Timestamp) {
+      result = new java.sql.Date(((java.sql.Timestamp) value).getTime());
+    } else {
+      throw new TypeConvertNotSupportException(
+          value.getClass().getName(), this.getClass().getName());
+    }
+    return result;
   }
 
   /** {@inheritDoc} */

@@ -22,7 +22,9 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertDataOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
+import com.pingcap.tikv.exception.TypeConvertNotSupportException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.math.BigDecimal;
 
@@ -45,6 +47,44 @@ public class DecimalType extends DataType {
       throw new InvalidCodecFormatException("Invalid Flag type for decimal type: " + flag);
     }
     return DecimalCodec.readDecimal(cdi);
+  }
+
+  @Override
+  protected Object convertToTiDBType(Object value)
+      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+    return convertToMysqlDecimal(value);
+  }
+
+  private java.math.BigDecimal convertToMysqlDecimal(Object value)
+      throws TypeConvertNotSupportException {
+    java.math.BigDecimal result;
+    if (value instanceof Boolean) {
+      if ((Boolean) value) {
+        result = BigDecimal.ONE;
+      } else {
+        result = BigDecimal.ZERO;
+      }
+    } else if (value instanceof Byte) {
+      result = java.math.BigDecimal.valueOf(((Byte) value).longValue());
+    } else if (value instanceof Short) {
+      result = java.math.BigDecimal.valueOf(((Short) value).longValue());
+    } else if (value instanceof Integer) {
+      result = java.math.BigDecimal.valueOf(((Integer) value).longValue());
+    } else if (value instanceof Long) {
+      result = java.math.BigDecimal.valueOf((Long) value);
+    } else if (value instanceof Float) {
+      result = java.math.BigDecimal.valueOf(((Float) value).doubleValue());
+    } else if (value instanceof Double) {
+      result = java.math.BigDecimal.valueOf((Double) value);
+    } else if (value instanceof String) {
+      result = new java.math.BigDecimal((String) value);
+    } else if (value instanceof java.math.BigDecimal) {
+      result = (java.math.BigDecimal) value;
+    } else {
+      throw new TypeConvertNotSupportException(
+          value.getClass().getName(), this.getClass().getName());
+    }
+    return result;
   }
 
   @Override

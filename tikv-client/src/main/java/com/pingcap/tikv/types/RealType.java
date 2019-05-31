@@ -23,7 +23,9 @@ import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.Codec.RealCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertDataOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
+import com.pingcap.tikv.exception.TypeConvertNotSupportException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
@@ -52,6 +54,46 @@ public class RealType extends DataType {
       return RealCodec.readDouble(cdi);
     }
     throw new InvalidCodecFormatException("Invalid Flag type for float type: " + flag);
+  }
+
+  @Override
+  protected Object convertToTiDBType(Object value)
+      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+    return convertToReal(value);
+  }
+
+  private Object convertToReal(Object value) throws TypeConvertNotSupportException {
+    Double result;
+    if (value instanceof Boolean) {
+      if ((Boolean) value) {
+        result = 1d;
+      } else {
+        result = 0d;
+      }
+    } else if (value instanceof Byte) {
+      result = ((Byte) value).doubleValue();
+    } else if (value instanceof Short) {
+      result = ((Short) value).doubleValue();
+    } else if (value instanceof Integer) {
+      result = ((Integer) value).doubleValue();
+    } else if (value instanceof Long) {
+      result = ((Long) value).doubleValue();
+    } else if (value instanceof Float) {
+      result = ((Float) value).doubleValue();
+    } else if (value instanceof Double) {
+      result = (Double) value;
+    } else if (value instanceof String) {
+      result = Converter.stringToDouble((String) value);
+    } else {
+      throw new TypeConvertNotSupportException(
+          value.getClass().getName(), this.getClass().getName());
+    }
+
+    if (this.getType() == MySQLType.TypeFloat) {
+      return result.floatValue();
+    } else {
+      return result;
+    }
   }
 
   @Override

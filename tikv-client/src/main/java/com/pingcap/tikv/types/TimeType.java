@@ -22,6 +22,8 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertDataOverflowException;
+import com.pingcap.tikv.exception.TypeConvertNotSupportException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
@@ -60,6 +62,12 @@ public class TimeType extends DataType {
       return IntegerCodec.readLong(cdi);
     }
     throw new TypeException("Invalid TimeType flag: " + flag);
+  }
+
+  @Override
+  protected Object convertToTiDBType(Object value)
+      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+    throw new TypeConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
   }
 
   @Override

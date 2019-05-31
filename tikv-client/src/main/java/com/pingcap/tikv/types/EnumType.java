@@ -20,6 +20,8 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertDataOverflowException;
+import com.pingcap.tikv.exception.TypeConvertNotSupportException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -35,6 +37,50 @@ public class EnumType extends DataType {
 
   protected EnumType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
+  }
+
+  @Override
+  protected Object convertToTiDBType(Object value)
+      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+    return convertToMysqlEnum(value);
+  }
+
+  private Integer convertToMysqlEnum(Object value) throws TypeConvertNotSupportException {
+    Integer result;
+
+    if (value instanceof String) {
+      result = parseEnumName((String) value);
+    } else {
+      Long l = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());
+      result = parseEnumValue(l.intValue());
+    }
+    return result;
+  }
+
+  private Integer parseEnumName(String name) {
+    int i = 0;
+    while (i < this.getElems().size()) {
+      if (this.getElems().get(i).equals(name)) {
+        return i + 1;
+      }
+      i = i + 1;
+    }
+
+    // name doesn't exist, maybe an integer?
+    int result = Integer.parseInt(name);
+    return parseEnumValue(result);
+  }
+
+  private Integer parseEnumValue(Integer number) throws ConvertDataOverflowException {
+    if (number == 0) {
+      throw ConvertDataOverflowException.newLowerBound(number, 0);
+    }
+
+    if (number > this.getElems().size()) {
+      throw ConvertDataOverflowException.newUpperBound(number, this.getElems().size());
+    }
+
+    return number;
   }
 
   /** {@inheritDoc} */

@@ -4,6 +4,8 @@ import com.google.gson.*;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertDataOverflowException;
+import com.pingcap.tikv.exception.TypeConvertNotSupportException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.nio.charset.StandardCharsets;
 import javax.annotation.Nullable;
@@ -55,6 +57,12 @@ public class JsonType extends DataType {
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     byte type = cdi.readByte();
     return parseValue(type, cdi).toString();
+  }
+
+  @Override
+  protected Object convertToTiDBType(Object value)
+      throws TypeConvertNotSupportException, ConvertDataOverflowException {
+    throw new TypeConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
   }
 
   /**

@@ -24,7 +24,13 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
 
   private def createTable(): Unit =
     jdbcUpdate(
-      s"create table $dbtable(i INT, c1 DECIMAL(38, 1), c2 DECIMAL(38, 2),  c3 DECIMAL(38, 3),  c4 DECIMAL(38, 4), c5 DECIMAL(38, 5), c6 DECIMAL(38, 6))"
+      s"""create table $dbtable(i INT,
+         |c1 DECIMAL(38, 1),
+         |c2 DECIMAL(38, 2),
+         |c3 DECIMAL(38, 3),
+         |c4 DECIMAL(38, 4),
+         |c5 DECIMAL(38, 5),
+         |c6 DECIMAL(38, 6))""".stripMargin
     )
 
   test("Test Convert from java.lang.Boolean to DECIMAL") {

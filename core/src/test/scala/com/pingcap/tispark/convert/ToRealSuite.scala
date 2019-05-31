@@ -314,46 +314,8 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
     }
   }
 
-  test("Test Convert from java.sql.Date to REAL") {
-    // failure
-    // java.sql.Date -> FLOAT
-    // java.sql.Date -> DOUBLE
-    compareTiDBWriteWithJDBC {
-      case (writeFunc, funcName) =>
-        val a: java.sql.Date = new java.sql.Date(0)
-        val row1 = Row(1, null, null)
-        val row2 = Row.apply(2, a, a)
-
-        val schema = StructType(
-          List(
-            StructField("i", IntegerType),
-            StructField("c1", DateType),
-            StructField("c2", DateType)
-          )
-        )
-
-        dropTable()
-        createTable()
-
-        val caught = intercept[SparkException] {
-          // insert rows
-          writeFunc(List(row1, row2), schema, None)
-        }
-        if ("jdbcWrite".equals(funcName)) {
-          assert(caught.getCause.getClass == classOf[BatchUpdateException])
-          assert(caught.getCause.getMessage.startsWith("Incorrect float value"))
-        } else if ("tidbWrite".equals(funcName)) {
-          assert(caught.getCause.getClass == classOf[TiBatchWriteException])
-          assert(
-            caught.getCause.getMessage.equals(
-              "do not support converting from class java.sql.Date to column type: RealType:TypeFloat"
-            )
-          )
-        }
-    }
-  }
-
   // TODO: test following types
+  // java.sql.Date
   // java.math.BigDecimal
   // java.sql.Timestamp
   // Array[String]

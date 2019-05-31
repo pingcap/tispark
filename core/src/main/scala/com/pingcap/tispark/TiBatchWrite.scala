@@ -22,7 +22,7 @@ import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
-import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiIndexInfo, TiTableInfo, TiTimestamp}
+import com.pingcap.tikv.meta._
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.txn.TxnKVClient
@@ -499,11 +499,16 @@ class TiBatchWrite(@transient val df: DataFrame,
       // pk is handle can be skipped
       val columnInfo = tiTableInfo.getColumn(i)
       val value = tiRow.get(i, columnInfo.getType)
-      val convertedValue = TiConverter.convertToTiDBType(columnInfo, value)
-      convertedValues.update(i, convertedValue)
+      val javaObject = TiConverter.sparkSQLObjectToJavaObject(value)
+      convertedValues.update(i, javaObject)
     }
 
-    TableCodec.encodeRow(tiTableInfo.getColumns, convertedValues, tiTableInfo.isPkHandle)
+    try {
+      TableCodec.encodeRow(tiTableInfo.getColumns, convertedValues, tiTableInfo.isPkHandle)
+    } catch {
+      case e: Throwable =>
+        throw new TiBatchWriteException("error during encoding row", e)
+    }
   }
 
   private def generateRDDToBeInserted(
