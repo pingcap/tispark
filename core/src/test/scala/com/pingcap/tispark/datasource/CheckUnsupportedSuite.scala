@@ -22,6 +22,8 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
   test("Test write to partition table") {
     dropTable()
 
+    tidbStmt.execute("set @@tidb_enable_table_partition = 1")
+
     jdbcUpdate(
       s"create table $dbtable(i int, s varchar(128)) partition by range(i) (partition p0 values less than maxvalue)"
     )
