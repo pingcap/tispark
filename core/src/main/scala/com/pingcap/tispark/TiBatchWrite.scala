@@ -750,7 +750,7 @@ class ToBeCheckedRow(val row: TiRow,
         if (row == this) return true
         if (indexKeys.isEmpty && row.indexKeys.isEmpty) return false
         val mayConflict = row.indexKeys.toSet
-        this.indexKeys.forall(mayConflict)
+        this.indexKeys.exists(mayConflict)
       case _ =>
         false
     }

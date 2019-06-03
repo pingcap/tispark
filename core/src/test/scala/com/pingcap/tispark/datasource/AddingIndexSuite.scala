@@ -7,7 +7,6 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
   private val row1 = Row(1, 1, "Hello")
   private val row2 = Row(2, 2, "TiDB")
-  private val row2_v2 = Row(2, 2, "TiDB2")
   private val row3 = Row(3, 3, "Spark")
   private val row4 = Row(4, 4, "abde")
   private val row5 = Row(5, 5, "Duplicate")
