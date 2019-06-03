@@ -462,8 +462,6 @@ class TiBatchWrite(@transient val df: DataFrame,
     for (i <- 0 until fieldCount) {
       val data = sparkRow.get(i)
       // TODO: add tiDataType back
-//      val sparkDataType = sparkRow.schema(i).dataType
-//      val tiDataType = TiConverter.fromSparkType(sparkDataType)
       tiRow.set(i, null, data)
     }
     tiRow
