@@ -20,8 +20,9 @@ import static com.pingcap.tikv.codec.Codec.IntegerCodec.writeLong;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiExpressionException;
+import java.io.Serializable;
 
-public class RowKey extends Key {
+public class RowKey extends Key implements Serializable {
   private static final byte[] REC_PREFIX_SEP = new byte[] {'_', 'r'};
 
   private final long tableId;
