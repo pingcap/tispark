@@ -16,7 +16,6 @@
 package com.pingcap.tispark
 
 import java.util
-import java.util.Objects
 
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
