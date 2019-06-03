@@ -537,9 +537,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       .map {
         case (data, handle) =>
           // extract index key from keyWithDupInfo
-          val indexKeys = data.indexKeys.map { key =>
-            key.key
-          }
+          val indexKeys = data.indexKeys.map(_.key)
           indexKeys.map { key =>
             val cdo = new CodecDataOutput()
             cdo.writeLong(handle)
