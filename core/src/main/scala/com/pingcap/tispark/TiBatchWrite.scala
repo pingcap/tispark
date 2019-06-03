@@ -508,6 +508,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     if (!tiTableInfo.isPkHandle) {
       val step = rdd.count
       val catalog = TiSessionCache.getSession(tiConf).getCatalog
+      // start means current largest allocated id in TiKV with specific table.
       val start = RowIDAllocator
         .create(tiDBInfo.getId, tiTableInfo.getId, catalog, tiTableInfo.isAutoIncColUnsigned, step)
         .getStart
@@ -587,21 +588,17 @@ class TiBatchWrite(@transient val df: DataFrame,
         throw new TiBatchWriteException("data to be inserted is conflict on primary key")
       }
 
-      val handleDuplicated = rdd
+      var handleDuplicated = false
+      rdd
         .map { row =>
           (row.handleKey, 0)
         }
-        .groupByKey()
-        .flatMap {
-          case (_, iterable) =>
-            if (iterable.size > 1) {
-              Some(iterable.size)
-            } else {
-              None
-            }
+        .reduceByKey { (x, _) =>
+          handleDuplicated = true
+          x
         }
 
-      if (!handleDuplicated.isEmpty) {
+      if (handleDuplicated) {
         throw new TiBatchWriteException("data to be inserted is conflict on primary key")
       }
     }
