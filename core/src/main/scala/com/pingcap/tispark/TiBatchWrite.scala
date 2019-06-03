@@ -161,12 +161,13 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiTableRef = options.tiTableRef
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
     tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
-    uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
-    handleCol = tiTableInfo.getPrimaryKeyColumn
 
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
     }
+
+    uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
+    handleCol = tiTableInfo.getPrimaryKeyColumn
     dfColSize = df.columns.length
     tableColSize = tiTableInfo.getColumns.size()
 
@@ -620,6 +621,11 @@ class TiBatchWrite(@transient val df: DataFrame,
     rdd
   }
 
+  private def generateIndexKey(row: TiRow, index: TiIndexInfo): Unit = {
+    val keys = IndexKey.encodeIndexDataValues(row, index.getIndexColumns, tiTableInfo)
+    val indexKey = IndexKey.toIndexKey(tiTableInfo.getId, index.getId, keys: _*)
+  }
+
   private def getKeysNeedCheck(
     rdd: RDD[TiRow]
   ): RDD[ToBeCheckedRow] = {
@@ -634,6 +640,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // TODO: replace get with batch get. It cannot be done by now since batch get api is not being
     //  implemented correctly.
+
     rdd.map { row =>
       val handleInfo = if (handleCol != null) {
         val handle =

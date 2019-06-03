@@ -11,11 +11,6 @@ class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
   private val row4 = Row(4, 4, "abde")
   private val row5 = Row(5, 5, "Duplicate")
 
-  private val row2_v2 = Row(2, 2, "TiSpark")
-  private val row3_v2 = Row(3, 3, "TiSpark")
-  private val row4_v2 = Row(4, 4, "TiSpark")
-  private val row5_v2 = Row(5, 5, "TiSpark")
-
   private val schema = StructType(
     List(
       StructField("pk", IntegerType),
