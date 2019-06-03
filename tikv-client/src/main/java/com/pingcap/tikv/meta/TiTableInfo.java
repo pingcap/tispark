@@ -47,7 +47,6 @@ public class TiTableInfo implements Serializable {
   private final long columnLength;
   private final TiPartitionInfo partitionInfo;
   private final TiColumnInfo primaryKeyColumn;
-  private final TiIndexInfo uniqueIndex;
 
   @JsonCreator
   public TiTableInfo(
@@ -89,16 +88,6 @@ public class TiTableInfo implements Serializable {
       }
     }
     primaryKeyColumn = primaryKey;
-
-    TiIndexInfo uniqueIndex = null;
-    // find unique index
-    for (TiIndexInfo indexInfo : getIndices()) {
-      if (indexInfo.isUnique()) {
-        uniqueIndex = indexInfo;
-        break;
-      }
-    }
-    this.uniqueIndex = uniqueIndex;
   }
 
   // auto increment column must be a primary key column
@@ -268,13 +257,5 @@ public class TiTableInfo implements Serializable {
   public boolean isPartitionEnabled() {
     if (partitionInfo == null) return false;
     return partitionInfo.isEnable();
-  }
-
-  public TiIndexInfo getUniqueIndex() {
-    return uniqueIndex;
-  }
-
-  public boolean hasUniqueIndex() {
-    return uniqueIndex != null;
   }
 }
