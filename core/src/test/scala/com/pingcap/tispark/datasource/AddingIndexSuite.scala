@@ -7,6 +7,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
   private val row1 = Row(1, 1, "Hello")
   private val row2 = Row(2, 2, "TiDB")
+  private val row2_v2 = Row(2, 2, "TiDB2")
   private val row3 = Row(3, 3, "Spark")
   private val row4 = Row(4, 4, "abde")
   private val row5 = Row(5, 5, "Duplicate")
@@ -18,6 +19,22 @@ class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
       StructField("s", StringType)
     )
   )
+
+  test("no pk, no unique index case") {
+    dropTable()
+    jdbcUpdate(
+      s"create table $dbtable(pk int, i int, s varchar(128), index(i))"
+    )
+    jdbcUpdate(
+      s"insert into $dbtable values(1, 1, 'Hello')"
+    )
+    // insert row2 row3
+    tidbWrite(List(row2, row3), schema)
+    testTiDBSelect(Seq(row1, row2, row3))
+
+    tidbWrite(List(row2, row4), schema)
+    testTiDBSelect(Seq(row1, row2, row2, row3, row4))
+  }
 
   test("pk is not handle adding unique index") {
     dropTable()

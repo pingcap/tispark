@@ -25,6 +25,8 @@ import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.txn.TxnKVClient
+import com.pingcap.tikv.types.DataType.EncodeType
+import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
@@ -530,7 +532,7 @@ class TiBatchWrite(@transient val df: DataFrame,
         )
     }
 
-    val indexKeyAllocatedRdd = allocatedRdd
+    val uniqueIndexKeyAllocatedRdd = allocatedRdd
       .map {
         case (data, handle) =>
           // extract index key from keyWithDupInfo
@@ -545,7 +547,27 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
       .flatMap(identity)
 
-    rowKeyAllocatedRdd.union(indexKeyAllocatedRdd)
+    val indexKeyAllocatedRdd = allocatedRdd
+      .map {
+        case (data, handle) =>
+          val nonUniqueIndices = tiTableInfo.getIndices.asScala.flatMap { index =>
+            if (!index.isUnique) {
+              Some(index)
+            } else {
+              None
+            }
+          }
+          nonUniqueIndices.map { index =>
+            val keys = IndexKey.encodeIndexDataValues(data.row, index.getIndexColumns, tiTableInfo)
+            val cdo = new CodecDataOutput()
+            cdo.write(IndexKey.toIndexKey(tiTableInfo.getId, index.getId, keys: _*).getBytes)
+            IntegerType.BIGINT.encode(cdo, EncodeType.KEY, handle)
+            (new SerializableKey(cdo.toBytes), new Array[Byte](0))
+          }
+      }
+      .flatMap(identity)
+
+    rowKeyAllocatedRdd.union(uniqueIndexKeyAllocatedRdd).union(indexKeyAllocatedRdd)
   }
 
   private def checkConflictWithInsertKeys(
@@ -611,18 +633,14 @@ class TiBatchWrite(@transient val df: DataFrame,
               None
             }
         }
+        .isEmpty()
 
-      if (!indexConflict.isEmpty) {
+      if (!indexConflict) {
         throw new TiBatchWriteException("data to be inserted is conflict on unique index")
       }
     }
 
     rdd
-  }
-
-  private def generateIndexKey(row: TiRow, index: TiIndexInfo): Unit = {
-    val keys = IndexKey.encodeIndexDataValues(row, index.getIndexColumns, tiTableInfo)
-    val indexKey = IndexKey.toIndexKey(tiTableInfo.getId, index.getId, keys: _*)
   }
 
   private def getKeysNeedCheck(
