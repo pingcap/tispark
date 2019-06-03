@@ -3,6 +3,7 @@ package com.pingcap.tikv.codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.row.DefaultRowReader;
+import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.types.DataType;
@@ -48,7 +49,8 @@ public class TableCodec {
     return cdo.toBytes();
   }
 
-  public static Object[] decodeRow(CodecDataInput cdi, List<TiColumnInfo> cols) {
+  public static Row decodeRow(byte[] value, List<TiColumnInfo> cols) {
+    CodecDataInput cdi = new CodecDataInput(value);
     List<DataType> newColTypes = new ArrayList<>();
     for (TiColumnInfo col : cols) {
       newColTypes.add(IntegerType.BIGINT);
@@ -56,11 +58,14 @@ public class TableCodec {
     }
     RowReader rowReader = DefaultRowReader.create(cdi);
     Row row = rowReader.readRow(newColTypes.toArray(new DataType[0]));
-    Object[] res = new Object[2 * cols.size()];
+    Object[] res = new Object[cols.size()];
     for (int i = 0; i < cols.size(); i++) {
-      res[2 * i] = row.get(2 * i, IntegerType.BIGINT);
-      res[2 * i + 1] = row.get(2 * i + 1, cols.get(i).getType());
+      res[i] = row.get(2 * i + 1, cols.get(i).getType());
     }
-    return res;
+    return ObjectRowImpl.create(res);
+  }
+
+  public static long decodeHandle(byte[] value) {
+    return new CodecDataInput(value).readLong();
   }
 }
