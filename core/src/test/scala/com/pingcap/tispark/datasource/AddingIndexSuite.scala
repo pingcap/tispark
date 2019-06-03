@@ -4,6 +4,7 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
+// TODO: once exception message is stable, we need also check the exception's message.
 class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
   private val row1 = Row(1, 1, "Hello")
   private val row2 = Row(2, 2, "TiDB")
@@ -33,6 +34,9 @@ class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
 
     tidbWrite(List(row2, row4), schema)
     testTiDBSelect(Seq(row1, row2, row2, row3, row4))
+
+    tidbWrite(List(row4, row4), schema)
+    testTiDBSelect(Seq(row1, row2, row2, row3, row4, row4, row4))
   }
 
   test("pk is not handle adding unique index") {

@@ -74,7 +74,7 @@ public class TiIndexInfo implements Serializable {
   }
 
   public static TiIndexInfo generateFakePrimaryKeyIndex(TiTableInfo table) {
-    TiColumnInfo pkColumn = table.getPrimaryKeyColumn();
+    TiColumnInfo pkColumn = table.getPKIsHandleColumn();
     if (pkColumn != null) {
       return new TiIndexInfo(
           -1,

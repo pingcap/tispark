@@ -100,8 +100,7 @@ public class TiTableInfo implements Serializable {
 
   // auto increment column must be a primary key column
   public TiColumnInfo getAutoIncrementColInfo() {
-    if (primaryKeyColumn == null) return null;
-    if (primaryKeyColumn.isAutoIncrement()) {
+    if (hasAutoIncrementColumn()) {
       return primaryKeyColumn;
     }
     return null;
@@ -194,7 +193,7 @@ public class TiTableInfo implements Serializable {
 
   // Only Integer Column will be a PK column
   // and there exists only one PK column
-  public TiColumnInfo getPrimaryKeyColumn() {
+  public TiColumnInfo getPKIsHandleColumn() {
     if (isPkHandle()) {
       for (TiColumnInfo col : getColumns()) {
         if (col.isPrimaryKey()) {
