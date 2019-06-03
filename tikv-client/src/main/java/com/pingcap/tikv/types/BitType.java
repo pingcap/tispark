@@ -43,8 +43,8 @@ public class BitType extends IntegerType {
       throws ConvertNotSupportException, ConvertOverflowException {
     Long result = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());
     long targetLength = this.getLength();
-    long upperBound = 1 << targetLength;
-    if (targetLength < 64 && java.lang.Long.compareUnsigned(result, upperBound) >= 0) {
+    long upperBound = 1L << targetLength;
+    if (targetLength < 64L && java.lang.Long.compareUnsigned(result, upperBound) >= 0) {
       throw ConvertOverflowException.newUpperBoundException(result, upperBound);
     }
     return result;
