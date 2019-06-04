@@ -248,6 +248,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute(
       "CREATE TABLE `tmp_empty_tbl` (`c1` varchar(20))"
     )
+    refreshConnections()
     judge("select count(1) from `tmp_empty_tbl`")
     judge("select cast(count(1) as char(20)) from `tmp_empty_tbl`")
   }
