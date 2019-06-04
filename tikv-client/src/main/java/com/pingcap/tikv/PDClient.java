@@ -329,7 +329,12 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
       PDGrpc.PDBlockingStub stub = PDGrpc.newBlockingStub(probChan);
       GetMembersRequest request =
           GetMembersRequest.newBuilder().setHeader(RequestHeader.getDefaultInstance()).build();
-      return stub.getMembers(request);
+      GetMembersResponse resp = stub.getMembers(request);
+      // check if the response contains a valid leader
+      if (resp != null && resp.getLeader().getMemberId() == 0) {
+        return null;
+      }
+      return resp;
     } catch (Exception e) {
       logger.warn("failed to get member from pd server.", e);
     }
