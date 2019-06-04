@@ -258,7 +258,7 @@ public abstract class DataType implements Serializable {
    */
   public Object convertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
-    if(value == null) {
+    if (value == null) {
       return null;
     } else {
       return doConvertToTiDBType(value);
