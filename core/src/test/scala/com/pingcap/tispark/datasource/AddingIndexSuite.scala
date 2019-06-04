@@ -20,6 +20,24 @@ class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
     )
   )
 
+  test("no pk, unique index on string column") {
+    dropTable()
+    jdbcUpdate(
+      s"create table $dbtable(pk int, i int, s varchar(128), unique index(s(2)))"
+    )
+    jdbcUpdate(
+      s"insert into $dbtable values(1, 1, 'Hello')"
+    )
+    // insert row2 row3
+    tidbWrite(List(row2, row3), schema)
+    testTiDBSelect(Seq(row1, row2, row3))
+
+    intercept[TiBatchWriteException] {
+      // insert row2 row4
+      tidbWrite(List(row2, row4), schema)
+    }
+  }
+
   test("no pk, no unique index case") {
     dropTable()
     jdbcUpdate(
