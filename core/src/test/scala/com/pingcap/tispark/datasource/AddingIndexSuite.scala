@@ -20,7 +20,7 @@ class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
     )
   )
 
-  test("no pk, unique index on string column") {
+  test("test column type can be truncated") {
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, i int, s varchar(128), unique index(s(2)))"
