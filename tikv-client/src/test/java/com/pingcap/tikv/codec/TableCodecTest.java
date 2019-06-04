@@ -21,6 +21,7 @@ public class TableCodecTest {
         .name("testTable")
         .addColumn("c1", IntegerType.INT, true)
         .addColumn("c2", IntegerType.BIGINT)
+        // TODO: enable when support Timestamp
         // .addColumn("c3", DateTimeType.DATETIME)
         // .addColumn("c4", TimestampType.TIMESTAMP)
         .addColumn("c5", StringType.VARCHAR)
