@@ -48,8 +48,8 @@ object TiConverter {
     tp match {
       case _: StringType => sql.types.StringType
       case _: BytesType  => sql.types.BinaryType
-      case _: IntegerType =>
-        if (tp.asInstanceOf[IntegerType].isUnsignedLong) {
+      case t: IntegerType =>
+        if (t.isUnsignedLong) {
           DataTypes.createDecimalType(20, 0)
         } else {
           sql.types.LongType
@@ -66,7 +66,7 @@ object TiConverter {
           len = MAX_PRECISION
         }
         DataTypes.createDecimalType(
-          len.asInstanceOf[Int],
+          len.toInt,
           tp.getDecimal
         )
       case _: DateTimeType  => sql.types.TimestampType
