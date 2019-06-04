@@ -419,7 +419,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
   override def afterAll(): Unit =
     try {
-      //dropTable()
+      dropTable()
     } finally {
       super.afterAll()
     }

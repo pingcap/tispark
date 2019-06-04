@@ -501,12 +501,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       convertedValues.update(i, value)
     }
 
-    try {
-      TableCodec.encodeRow(tiTableInfo.getColumns, convertedValues, tiTableInfo.isPkHandle)
-    } catch {
-      case e: Throwable =>
-        throw new TiBatchWriteException("error during encoding row", e)
-    }
+    TableCodec.encodeRow(tiTableInfo.getColumns, convertedValues, tiTableInfo.isPkHandle)
   }
 
   private def generateRDDToBeInserted(

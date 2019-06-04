@@ -20,11 +20,23 @@ public class ConvertOverflowException extends RuntimeException {
     super(msg);
   }
 
+  public static ConvertOverflowException newMaxLengthException(String value, long maxLength) {
+    return new ConvertOverflowException("value " + value + " length > max length " + maxLength);
+  }
+
+  public static ConvertOverflowException newMaxLengthException(long length, long maxLength) {
+    return new ConvertOverflowException("length " + length + " > max length " + maxLength);
+  }
+
   public static ConvertOverflowException newLowerBoundException(Object value, Object lowerBound) {
     return new ConvertOverflowException("value " + value + " < lowerBound " + lowerBound);
   }
 
   public static ConvertOverflowException newUpperBoundException(Object value, Object upperBound) {
     return new ConvertOverflowException("value " + value + " > upperBound " + upperBound);
+  }
+
+  public static ConvertOverflowException newEnumException(Object value) {
+    return new ConvertOverflowException("Incorrect enum value: '" + value + "'");
   }
 }

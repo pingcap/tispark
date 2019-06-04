@@ -105,6 +105,10 @@ public class Converter {
       throw new ConvertNotSupportException(value.getClass().getName(), "UNSIGNED");
     }
 
+    if (!(value instanceof String) && result < 0) {
+      throw ConvertOverflowException.newLowerBoundException(result, 0);
+    }
+
     long lowerBound = 0L;
     if (java.lang.Long.compareUnsigned(result, lowerBound) < 0) {
       throw ConvertOverflowException.newLowerBoundException(result, lowerBound);

@@ -102,6 +102,10 @@ public class BytesType extends DataType {
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
+
+    if (result.length > this.getLength()) {
+      throw ConvertOverflowException.newMaxLengthException(result.length, this.getLength());
+    }
     return result;
   }
 
