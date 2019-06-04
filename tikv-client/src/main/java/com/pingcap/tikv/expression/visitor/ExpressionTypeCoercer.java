@@ -120,7 +120,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   @Override
   protected Pair<DataType, Double> visit(StringRegExpression node, DataType targetType) {
     if (targetType != null && !targetType.equals(IntegerType.BOOLEAN)) {
-      throw new TiExpressionException(String.format("Comparison result cannot be %s", targetType));
+      throw new TiExpressionException(String.format("StringReg result cannot be %s", targetType));
     }
     if (!typeMap.containsKey(node)) {
       coerceType(null, node.getLeft(), node.getRight());
@@ -139,7 +139,8 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   @Override
   protected Pair<DataType, Double> visit(LogicalBinaryExpression node, DataType targetType) {
     if (targetType != null && !targetType.equals(IntegerType.BOOLEAN)) {
-      throw new TiExpressionException(String.format("Comparison result cannot be %s", targetType));
+      throw new TiExpressionException(
+          String.format("LogicalBinary result cannot be %s", targetType));
     }
     if (!typeMap.containsKey(node)) {
       coerceType(null, node.getLeft(), node.getRight());
