@@ -121,7 +121,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        cp core/src/main/resources/log4j.properties.template core/src/test/resources/log4j.properties
+                        cp .ci/log4j-ci.properties core/src/test/resources/log4j.properties
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
                         mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr} -DskipCloneProtoFiles=true
                     """

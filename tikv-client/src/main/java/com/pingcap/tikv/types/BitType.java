@@ -26,6 +26,8 @@ import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
 public class BitType extends IntegerType {
+  private static final long MAX_BIT_LENGTH = 64L;
+
   public static final BitType BIT = new BitType(MySQLType.TypeBit);
 
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeBit};
@@ -44,7 +46,7 @@ public class BitType extends IntegerType {
     Long result = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());
     long targetLength = this.getLength();
     long upperBound = 1L << targetLength;
-    if (targetLength < 64L && java.lang.Long.compareUnsigned(result, upperBound) >= 0) {
+    if (targetLength < MAX_BIT_LENGTH && java.lang.Long.compareUnsigned(result, upperBound) >= 0) {
       throw ConvertOverflowException.newUpperBoundException(result, upperBound);
     }
     return result;
