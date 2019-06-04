@@ -121,6 +121,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
+                        cp .ci/log4j-ci.properties core/src/test/resources/log4j.properties
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
                         mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr} -DskipCloneProtoFiles=true
                     """
@@ -165,7 +166,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             ps aux | grep '-server' || true
                             curl -s 127.0.0.1:2379/pd/api/v1/status || true
                             bin/tidb-server --store=tikv --path="127.0.0.1:2379" &>tidb.log &
-                            sleep 20
+                            sleep 60
                             """
     
                             timeout(60) {

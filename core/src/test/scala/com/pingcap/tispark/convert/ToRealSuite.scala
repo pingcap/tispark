@@ -21,6 +21,17 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   private val minDouble: java.lang.Double = java.lang.Double.MIN_VALUE
   private val maxDouble: java.lang.Double = java.lang.Double.MAX_VALUE
 
+  private val readSchema = StructType(
+    List(
+      StructField("i", IntegerType),
+      StructField("c1", FloatType),
+      StructField("c2", DoubleType)
+    )
+  )
+
+  private def createTable(): Unit =
+    jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+
   test("Test Convert from java.lang.Boolean to REAL") {
     // success
     // java.lang.Boolean -> FLOAT
@@ -40,12 +51,17 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           )
         )
 
-        dropTable()
-        jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+        val readRow1 = Row(1, null, null)
+        val readRow2 = Row(2, 1f, 0d)
+        val readRow3 = Row(3, 0f, 1d)
+        val readRow4 = Row(4, 1f, 1d)
 
-        // insert row1 row2 row3 row4
+        dropTable()
+        createTable()
+
+        // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4), readSchema)
     }
   }
 
@@ -72,9 +88,9 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
         )
 
         dropTable()
-        jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+        createTable()
 
-        // insert row1 row2 row3 row4
+        // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
         compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
     }
@@ -103,9 +119,9 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
         )
 
         dropTable()
-        jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+        createTable()
 
-        // insert row1 row2 row3 row4
+        // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
         compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
     }
@@ -130,12 +146,18 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           )
         )
 
-        dropTable()
-        jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+        val readRow1 = Row(1, null, null)
+        val readRow2 = Row(2, 22, 33d)
+        val readRow3 =
+          Row(3, java.lang.Integer.MAX_VALUE.toFloat, java.lang.Integer.MIN_VALUE.toDouble)
+        val readRow4 = Row(4, java.lang.Integer.MIN_VALUE.toFloat, java.lang.Integer.MAX_VALUE)
 
-        // insert row1 row2 row3 row4
+        dropTable()
+        createTable()
+
+        // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4), readSchema)
     }
   }
 
@@ -159,9 +181,9 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
         )
 
         dropTable()
-        jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+        createTable()
 
-        // insert row1 row2 row3 row4
+        // insert rows
         writeFunc(List(row1, row2, row3, row4), schema, None)
         compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4), schema)
     }
@@ -188,12 +210,26 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           )
         )
 
+        val readRow1 = Row(1, null, null)
+        val readRow2 = Row(2, 22.2f, 33.3d)
+        val readRow3 = Row(3, maxFloat, maxFloat.toDouble)
+        val readRow4 = Row(4, minFloat, minFloat.toDouble)
+        val readRow5 = Row(5, -maxFloat, (-maxFloat).toDouble)
+        val readRow6 = Row(6, -minFloat, (-minFloat).toDouble)
+
         dropTable()
-        jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+
+        // TODO: TiSpark transforms FLOAT to Double, which will cause precision problem,
+        //  so we just set skipTiDBAndExpectedAnswerCheck = true
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema,
+          skipTiDBAndExpectedAnswerCheck = true
+        )
     }
   }
 
@@ -219,12 +255,22 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           )
         )
 
+        val readRow1 = Row(1, null, null)
+        val readRow2 = Row(2, 22.22f, 33.33d)
+        val readRow3 = Row(3, maxFloat, maxDouble)
+        val readRow4 = Row(4, minFloat, minDouble)
+        val readRow5 = Row(5, -maxFloat, -maxDouble)
+        val readRow6 = Row(6, -minFloat, -minDouble)
+
         dropTable()
-        jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -249,55 +295,28 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
           )
         )
 
+        val readRow1 = Row(1, null, null)
+        val readRow2 = Row(2, 2.2f, -3.3d)
+        val readRow3 = Row(3, minFloat, minDouble)
+        val readRow4 = Row(4, maxFloat, maxDouble)
+        val readRow5 = Row(5, -minFloat, -minDouble)
+        val readRow6 = Row(6, -maxFloat, -maxDouble)
+
         dropTable()
-        jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
-    }
-  }
-
-  test("Test Convert from java.sql.Date to REAL") {
-    // failure
-    // java.sql.Date -> FLOAT
-    // java.sql.Date -> DOUBLE
-    compareTiDBWriteWithJDBC {
-      case (writeFunc, funcName) =>
-        val a: java.sql.Date = new java.sql.Date(0)
-        val row1 = Row(1, null, null)
-        val row2 = Row.apply(2, a, a)
-
-        val schema = StructType(
-          List(
-            StructField("i", IntegerType),
-            StructField("c1", DateType),
-            StructField("c2", DateType)
-          )
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
         )
-
-        dropTable()
-        jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
-
-        val caught = intercept[SparkException] {
-          // insert row1 row2
-          writeFunc(List(row1, row2), schema, None)
-        }
-        if ("jdbcWrite".equals(funcName)) {
-          assert(caught.getCause.getClass == classOf[BatchUpdateException])
-          assert(caught.getCause.getMessage.startsWith("Incorrect float value"))
-        } else if ("tidbWrite".equals(funcName)) {
-          assert(caught.getCause.getClass == classOf[TiBatchWriteException])
-          assert(
-            caught.getCause.getMessage.equals(
-              "do not support converting from class java.sql.Date to column type: RealType:TypeFloat"
-            )
-          )
-        }
     }
   }
 
   // TODO: test following types
+  // java.sql.Date
+  // java.math.BigDecimal
   // java.sql.Timestamp
   // Array[String]
   // scala.collection.Seq

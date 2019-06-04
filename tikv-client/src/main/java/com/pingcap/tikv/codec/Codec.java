@@ -450,7 +450,7 @@ public class Codec {
      * @param tz timezone used for converting to localDateTime
      * @return a packed long.
      */
-    static long toPackedLong(DateTime dateTime, DateTimeZone tz) {
+    public static long toPackedLong(DateTime dateTime, DateTimeZone tz) {
       LocalDateTime localDateTime = dateTime.withZone(tz).toLocalDateTime();
       return toPackedLong(
           localDateTime.getYear(),
@@ -484,7 +484,7 @@ public class Codec {
      * @param tz timezone to interpret datetime parts
      * @return decoded DateTime using provided timezone
      */
-    static DateTime fromPackedLong(long packed, DateTimeZone tz) {
+    public static DateTime fromPackedLong(long packed, DateTimeZone tz) {
       // TODO: As for JDBC behavior, it can be configured to "round" or "toNull"
       // for now we didn't pass in session so we do a toNull behavior
       if (packed == 0) {

@@ -4,7 +4,7 @@ import java.sql.Statement
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.test.SharedSQLContext
-import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, QueryTest, Row}
 
 import scala.collection.mutable.ArrayBuffer
@@ -31,6 +31,14 @@ class BaseDataSourceTest(val table: String,
     super.beforeAll()
 
     tidbStmt = tidbConn.createStatement()
+
+    initializeTimeZone()
+  }
+
+  protected def initializeTimeZone(): Unit = {
+    tidbStmt = tidbConn.createStatement()
+    // Set default time zone to GMT-7
+    tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
   protected def jdbcUpdate(query: String): Unit =
@@ -75,23 +83,37 @@ class BaseDataSourceTest(val table: String,
   protected def compareTiDBWriteWithJDBC(
     testCode: ((List[Row], StructType, Option[Map[String, String]]) => Unit, String) => Unit
   ): Unit = {
-    testCode(jdbcWrite, "jdbcWrite")
     testCode(tidbWrite, "tidbWrite")
+    testCode(jdbcWrite, "jdbcWrite")
   }
 
   protected def compareTiDBSelectWithJDBC(expectedAnswer: Seq[Row],
                                           schema: StructType,
-                                          sortCol: String = "i"): Unit = {
+                                          sortCol: String = "i",
+                                          skipTiDBAndExpectedAnswerCheck: Boolean = false,
+                                          skipJDBCReadCheck: Boolean = false): Unit = {
     val sql = s"select * from $dbtable order by $sortCol"
     val answer = seqRowToList(expectedAnswer, schema)
 
-    // check jdbc result & expected answer
     val jdbcResult = queryJDBC(sql)
-    compSqlResult(sql, jdbcResult, answer, checkLimit = false)
-
-    // check data source result & expected answer
     val df = queryTiDB(sortCol)
-    compSqlResult(sql, seqRowToList(df.collect(), df.schema), answer, checkLimit = false)
+    val tidbResult = seqRowToList(df.collect(), df.schema)
+
+    // check tidb result & expected answer
+    if (!skipTiDBAndExpectedAnswerCheck) {
+      checkAnswer(df, expectedAnswer)
+    }
+
+    if (!skipJDBCReadCheck) {
+      // check jdbc result & expected answer
+      assert(compSqlResult(sql, jdbcResult, answer, checkLimit = false))
+
+      // check jdbc result & tidb result
+      assert(
+        compSqlResult(sql, jdbcResult, tidbResult, checkLimit = false)
+      )
+    }
+
   }
 
   protected def compareTiDBSelectWithJDBC_V2(sortCol: String = "i"): Unit = {
@@ -100,8 +122,11 @@ class BaseDataSourceTest(val table: String,
     // check jdbc result & data source result
     val jdbcResult = queryJDBC(sql)
     val df = queryTiDB(sortCol)
+    val tidbResult = seqRowToList(df.collect(), df.schema)
 
-    compSqlResult(sql, jdbcResult, seqRowToList(df.collect(), df.schema), checkLimit = false)
+    assert(
+      compSqlResult(sql, jdbcResult, tidbResult, checkLimit = false)
+    )
   }
 
   private def seqRowToList(rows: Seq[Row], schema: StructType): List[List[Any]] =
@@ -119,7 +144,7 @@ class BaseDataSourceTest(val table: String,
       })
       .toList
 
-  private def queryTiDB(sortCol: String): DataFrame =
+  protected def queryTiDB(sortCol: String): DataFrame =
     sqlContext.read
       .format("tidb")
       .options(tidbOptions)

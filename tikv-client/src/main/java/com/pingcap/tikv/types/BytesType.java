@@ -22,6 +22,8 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
@@ -61,6 +63,46 @@ public class BytesType extends DataType {
     } else {
       throw new InvalidCodecFormatException("Invalid Flag type for : " + flag);
     }
+  }
+
+  @Override
+  protected Object doConvertToTiDBType(Object value)
+      throws ConvertNotSupportException, ConvertOverflowException {
+    // TODO: do not support write to BINARY TYPE, because of this issue
+    //  https://github.com/pingcap/tispark/issues/774
+    if (this.isZeroFill()) {
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    }
+
+    return convertToBytes(value);
+  }
+
+  private byte[] convertToBytes(Object value) throws ConvertNotSupportException {
+    byte[] result;
+    if (value instanceof Boolean) {
+      if ((Boolean) value) {
+        result = new byte[] {49};
+      } else {
+        result = new byte[] {48};
+      }
+    } else if (value instanceof Byte) {
+      result = value.toString().getBytes();
+    } else if (value instanceof Short) {
+      result = value.toString().getBytes();
+    } else if (value instanceof Integer) {
+      result = value.toString().getBytes();
+    } else if (value instanceof Long) {
+      result = value.toString().getBytes();
+    } else if (value instanceof Float || value instanceof Double) {
+      // TODO: a little complicated, e.g.
+      // 3.4028235E38 -> 340282350000000000000000000000000000000
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    } else if (value instanceof String) {
+      result = value.toString().getBytes();
+    } else {
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    }
+    return result;
   }
 
   @Override

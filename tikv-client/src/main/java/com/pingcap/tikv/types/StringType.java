@@ -18,12 +18,12 @@
 package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.nio.charset.StandardCharsets;
 
 public class StringType extends BytesType {
   public static final StringType VARCHAR = new StringType(MySQLType.TypeVarchar);
-  public static final StringType BINARY = new StringType(MySQLType.TypeString);
   public static final StringType CHAR = new StringType(MySQLType.TypeString);
 
   public static final MySQLType[] subTypes =
@@ -35,6 +35,50 @@ public class StringType extends BytesType {
 
   protected StringType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
+  }
+
+  @Override
+  protected Object doConvertToTiDBType(Object value) throws ConvertNotSupportException {
+    return convertToString(value);
+  }
+
+  private String convertToString(Object value) throws ConvertNotSupportException {
+    String result;
+    if (value instanceof Boolean) {
+      if ((Boolean) value) {
+        result = "1";
+      } else {
+        result = "0";
+      }
+    } else if (value instanceof Byte) {
+      result = value.toString();
+    } else if (value instanceof Short) {
+      result = value.toString();
+    } else if (value instanceof Integer) {
+      result = value.toString();
+    } else if (value instanceof Long) {
+      result = value.toString();
+    } else if (value instanceof Float || value instanceof Double) {
+      // TODO: a little complicated, e.g.
+      // 3.4028235E38 -> 340282350000000000000000000000000000000
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    } else if (value instanceof String) {
+      result = value.toString();
+    } else if (value instanceof java.math.BigDecimal) {
+      result = value.toString();
+    } else if (value instanceof java.sql.Date) {
+      result = value.toString();
+    } else if (value instanceof java.sql.Timestamp) {
+      result = value.toString();
+      if (((java.sql.Timestamp) value).getNanos() == 0) {
+        // remove `.0` according to mysql's format
+        int len = result.length();
+        result = result.substring(0, len - 2);
+      }
+    } else {
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    }
+    return result;
   }
 
   /** {@inheritDoc} */
