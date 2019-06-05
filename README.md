@@ -33,10 +33,6 @@ If you are using maven(recommended), add the following to your pom.xml:
     </dependency>
 </dependencies>
 ```
-If you're using SBT, add the following line to your build file:
-```sbtshell
-libraryDependencies += "com.pingcap.tispark" % "tispark-core" % s"2.1-spark_${spark.version}"
-```
 
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
 
