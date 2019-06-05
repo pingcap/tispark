@@ -25,11 +25,14 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import java.nio.charset.StandardCharsets;
 
 public class StringType extends BytesType {
-  private static final TiColumnInfo.InternalTypeHolder varcharHolder =
+
+  public static final StringType VARCHAR = new StringType(MySQLType.TypeVarchar);
+  public static final StringType CHAR = new StringType(MySQLType.TypeString);
+
+  private static final TiColumnInfo.InternalTypeHolder varchar255Holder =
       new TiColumnInfo.InternalTypeHolder(
           MySQLType.TypeVarchar.getTypeCode(), 0, 255, 0, "", "", ImmutableList.of());
-  public static final StringType VARCHAR = new StringType(varcharHolder);
-  public static final StringType CHAR = new StringType(MySQLType.TypeString);
+  public static final StringType VARCHAR255 = new StringType(varchar255Holder);
 
   public static final MySQLType[] subTypes =
       new MySQLType[] {MySQLType.TypeVarchar, MySQLType.TypeString};
