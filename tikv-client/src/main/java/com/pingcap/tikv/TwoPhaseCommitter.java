@@ -251,8 +251,6 @@ public class TwoPhaseCommitter {
   private void doPrewriteSecondaryKeys(
       ByteString primaryKey, Iterator<Pair<ByteString, ByteString>> pairs)
       throws TiBatchWriteException {
-    LOG.debug("start prewrite secondary key, primary key={}", KeyUtils.formatBytes(primaryKey));
-
     int totalSize = 0;
     while (pairs.hasNext()) {
       ByteString[] keyBytes = new ByteString[WRITE_BUFFER_SIZE];
@@ -269,17 +267,12 @@ public class TwoPhaseCommitter {
       doPrewriteSecondaryKeysInBatchesWithRetry(backOffer, primaryKey, keyBytes, valueBytes, size);
       totalSize = totalSize + size;
     }
-
-    LOG.debug(
-        "prewrite secondary key successfully, primary key={}, total size={}",
-        KeyUtils.formatBytes(primaryKey),
-        totalSize);
   }
 
   private void doPrewriteSecondaryKeysInBatchesWithRetry(
       BackOffer backOffer, ByteString primaryKey, ByteString[] keys, ByteString[] values, int size)
       throws TiBatchWriteException {
-    LOG.info(
+    LOG.debug(
         "start prewrite secondary key in batches, primary key={}, size={}",
         KeyUtils.formatBytes(primaryKey),
         size);
@@ -320,7 +313,7 @@ public class TwoPhaseCommitter {
       doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
     }
 
-    LOG.info(
+    LOG.debug(
         "prewrite secondary key in batches successfully, primary key={}, size={}",
         KeyUtils.formatBytes(primaryKey),
         size);
