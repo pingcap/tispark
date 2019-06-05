@@ -11,50 +11,47 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to an
 Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
-The current stable version is 2.0 which is compatible with **Spark 2.3.0+**, the stable version does not support **Spark 2.4.0+** yet but you can follow the document to build from source that supports **Spark 2.4.0+** if necessary.
+The current stable version is **TiSpark 2.1** which is compatible with **Spark 2.3.0+** and **Spark 2.4.0+**.
 
-**When using Spark 2.1.0+, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
+The latest stable version compatible with **Spark 2.1.0+** is **TiSpark 1.2**
 
-**When using Spark 2.3.0+, please follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 1.2, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
-**When using Spark 2.4.0+, please [build from sources](#how-to-build-from-sources) and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1 with Spark 2.3.0+, please use version `2.1-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
-If you are using maven, add the following to your pom.xml:
+**When using TiSpark 2.1 with Spark 2.4.0+, please use version `2.1-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+
+You may also [build from sources](#how-to-build-from-sources) to try the new features on TiSpark master branch.
+
+If you are using maven(recommended), add the following to your pom.xml:
 ```xml
 <dependencies>
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-core</artifactId>
-      <version>2.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.pingcap.tikv</groupId>
-      <artifactId>tikv-client</artifactId>
-      <version>2.0</version>
+      <version>2.1-spark_${spark.version}</version>
     </dependency>
 </dependencies>
 ```
 If you're using SBT, add the following line to your build file:
-```scala
-libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "2.0"
-libraryDependencies += "com.pingcap.tikv" % "tikv-client" % "2.0"
+```sbtshell
+libraryDependencies += "com.pingcap.tispark" % "tispark-core" % s"2.1-spark_${spark.version}"
 ```
 
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
 
-To build from sources that is compatible with Spark 2.3.0+/2.4.0+, please follow the next section.
-
 ## How to build from sources
-TiSpark now supports Spark 2.3.0+/2.4.0+. The previous version for Spark 2.1.0+ will only contain bug fixes in future, you may still get Spark 2.1 support until release 1.1.
+TiSpark now supports Spark 2.3.0+/2.4.0+. The previous version for Spark 2.1.0+ will only contain bug fixes in future, you may still get Spark 2.1 support until TiSpark 1.2.
 ```
 git clone https://github.com/pingcap/tispark.git
 ```
 To build all TiSpark modules from sources, please run command under TiSpark root directory:
 ```
 mvn clean install -Dmaven.test.skip=true -P spark-2.3
+or
 mvn clean install -Dmaven.test.skip=true -P spark-2.4
 ```
-**Please note that after you need to specify major version of Spark as above switching dependency.**
+**Please note that after you need to specify major version of Spark according to the Spark version you are using.**
 
 Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.
 

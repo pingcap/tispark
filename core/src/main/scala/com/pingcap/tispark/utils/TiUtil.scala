@@ -33,7 +33,7 @@ import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
 import org.apache.spark.sql.types.{DataType, DataTypes, Decimal, MetadataBuilder, StructField, StructType}
-import org.apache.spark.{SparkConf, sql}
+import org.apache.spark.{sql, SparkConf}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import scala.collection.JavaConversions._
@@ -114,7 +114,6 @@ object TiUtil {
                               source: TiDBRelation,
                               blacklist: ExpressionBlacklist): Boolean =
     isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
-
 
   def toSparkRow(row: TiRow, rowTransformer: RowTransformer): Row = {
     import scala.collection.JavaConversions._
