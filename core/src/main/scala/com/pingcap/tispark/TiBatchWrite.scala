@@ -194,9 +194,6 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
     }
 
-    // continue check check check
-    checkValueNotNull()
-
     if(tiTableInfo.hasAutoIncrementColumn) {
       val autoColNullSize = df.filter {
         row =>  {
@@ -212,6 +209,35 @@ class TiBatchWrite(@transient val df: DataFrame,
         throw new TiBatchWriteException("found all auto id column have value but you specify not to provide them")
       }
     }
+
+
+
+    val rdd = if(tiTableInfo.hasAutoIncrementColumn && !options.autoIDProvided) {
+      val cols = tiTableInfo.getColumns
+      val start = RowIDAllocator
+        .create(tiDBInfo.getId, tiTableInfo.getId, catalog, tiTableInfo.isAutoIncColUnsigned, df.count())
+        .getStart
+      df.rdd.zipWithIndex.map {
+        row =>
+          val rowSep = row._1.toSeq.zipWithIndex.map {
+            data =>
+              val colOffset = data._2
+              if(cols.get(colOffset).isAutoIncrement) {
+                row._2 + start
+              } else {
+                data._1
+              }
+          }
+          Row.fromSeq(rowSep)
+      }
+    } else {
+      df.rdd
+    }
+
+      // continue check check check
+    checkValueNotNull(rdd)
+
+    val tiRowRdd = rdd.map(row => sparkRow2TiKVRow(row))
 
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
@@ -234,30 +260,6 @@ class TiBatchWrite(@transient val df: DataFrame,
         ).map(k => k.bytes).asJava
       )
     }
-
-    val tiRowRdd = if(tiTableInfo.hasAutoIncrementColumn && !options.autoIDProvided) {
-      val cols = tiTableInfo.getColumns
-      val start = RowIDAllocator
-        .create(tiDBInfo.getId, tiTableInfo.getId, catalog, tiTableInfo.isAutoIncColUnsigned, df.count())
-        .getStart
-      df.rdd.zipWithIndex.map {
-        row =>
-          val rowSep = row._1.toSeq.zipWithIndex.map {
-            data =>
-              val colOffset = data._2
-              if(cols.get(colOffset).isAutoIncrement) {
-                row._2 + start
-              } else {
-                data._1
-              }
-          }
-          sparkRow2TiKVRow(Row.fromSeq(rowSep))
-      }
-    } else {
-      df.rdd.map(row => sparkRow2TiKVRow(row))
-    }
-
-    // fill row value if necessary
 
     val deduplicatedTiRowRdd = deduplicateIfNecessary(tiRowRdd, tiTableInfo.isPkHandle)
 
@@ -383,7 +385,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
   }
 
-  private def checkValueNotNull(): Unit = {
+  private def checkValueNotNull(rdd: RDD[Row]): Unit = {
     var notNullColumnIndex: List[Int] = Nil
 
     for (i <- 0 until dfColSize) {
@@ -394,8 +396,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     if (notNullColumnIndex.nonEmpty) {
-      val encoder = RowEncoder(df.schema)
-      val nullRowCount = df
+      val nullRowCount = rdd
         .flatMap { row =>
           var result: Option[SparkRow] = None
           notNullColumnIndex.foreach { col =>
@@ -404,7 +405,7 @@ class TiBatchWrite(@transient val df: DataFrame,
             }
           }
           result
-        }(encoder)
+        }
         .count()
       if (nullRowCount > 0) {
         throw new TiBatchWriteException(
@@ -412,10 +413,6 @@ class TiBatchWrite(@transient val df: DataFrame,
         )
       }
     }
-  }
-
-  private def fillRow(row: TiRow): TiRow  = {
-    null
   }
 
   // currently deduplicate can only perform on pk is handle table.

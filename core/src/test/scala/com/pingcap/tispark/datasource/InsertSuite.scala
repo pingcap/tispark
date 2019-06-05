@@ -97,16 +97,15 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     }
   }
 
-  // TODO: support auto increment
-  ignore("Test upsert to table with primary key (auto increase case 2)") {
-    val rowWithoutPK2 = Row("TiDB")
-    val rowWithoutPK3 = Row("Spark")
-    val rowWithoutPK4 = Row(null)
-    val rowWithoutPK5 = Row("Duplicate")
+  test("Test upsert to table with primary key (auto increase case 2)") {
+    val rowWithoutPK2 = Row(null, "TiDB")
+    val rowWithoutPK3 = Row(null, "Spark")
+    val rowWithoutPK4 = Row(null, null)
+    val rowWithoutPK5 = Row(null, "Duplicate")
 
     val row1 = Row(1, "Hello")
-    val row2 = Row(2, "TiDB")
-    val row3 = Row(3, "Spark")
+    val row2 = Row(30000, "TiDB")
+    val row3 = Row(30001, "Spark")
     val row4 = Row(4, null)
     val row5 = Row(5, "Duplicate")
 
@@ -117,12 +116,8 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     )
 
     // insert row2 row3
-    tidbWrite(List(rowWithoutPK2, rowWithoutPK3), schema)
+    tidbWrite(List(rowWithoutPK2, rowWithoutPK3), schema, Some(Map(TiDBOptions.TIDB_AUTO_ID_PROVIDED -> "false")))
     testTiDBSelect(Seq(row1, row2, row3))
-
-    // insert row4 row5
-    tidbWrite(List(rowWithoutPK4, rowWithoutPK5), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4, row5))
   }
 
   override def afterAll(): Unit =

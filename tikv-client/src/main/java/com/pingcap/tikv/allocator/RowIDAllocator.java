@@ -34,7 +34,7 @@ public final class RowIDAllocator {
   }
 
   public static RowIDAllocator create(
-      long dbId, long tableId, Catalog catalog, boolean unsigned, long step) {
+      long dbId, long tableId,  Catalog catalog, boolean unsigned, long step) {
     RowIDAllocator allocator = new RowIDAllocator(dbId, step);
     if (unsigned) {
       allocator.initUnsigned(catalog, tableId);
