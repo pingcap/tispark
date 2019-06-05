@@ -263,19 +263,28 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // executors secondary pre-write
     finalWriteRDD.foreachPartition { iterator =>
-      val tiSessionOnExecutor = new TiSession(tiConf)
+      val tiSessionOnExecutor = TiSessionCache.getSession(tiConf)
       val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
       val ti2PCClientOnExecutor = new TwoPhaseCommitter(kvClientOnExecutor, startTs)
-      val prewriteSecondaryBackoff =
-        ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
 
       val pairs = iterator.map {
         case (key, row) =>
           new TwoPhaseCommitter.BytePairWrapper(key.bytes, row)
       }.asJava
 
-      ti2PCClientOnExecutor
-        .prewriteSecondaryKeys(prewriteSecondaryBackoff, primaryKey.bytes, pairs)
+      ti2PCClientOnExecutor.prewriteSecondaryKeys(primaryKey.bytes, pairs)
+
+      try {
+        kvClientOnExecutor.close()
+      } catch {
+        case _: Throwable =>
+      }
+
+      try {
+        ti2PCClientOnExecutor.close()
+      } catch {
+        case _: Throwable =>
+      }
     }
 
     // driver primary commit
@@ -295,15 +304,13 @@ class TiBatchWrite(@transient val df: DataFrame,
         val tiSessionOnExecutor = new TiSession(tiConf)
         val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
         val ti2PCClientOnExecutor = new TwoPhaseCommitter(kvClientOnExecutor, startTs)
-        val commitSecondaryBackoff =
-          ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
 
         val keys = iterator.map {
           case (key, _) => new TwoPhaseCommitter.ByteWrapper(key.bytes)
         }.asJava
 
         try {
-          ti2PCClientOnExecutor.commitSecondaryKeys(commitSecondaryBackoff, keys, commitTs)
+          ti2PCClientOnExecutor.commitSecondaryKeys(keys, commitTs)
         } catch {
           case e: TiBatchWriteException =>
             // ignored

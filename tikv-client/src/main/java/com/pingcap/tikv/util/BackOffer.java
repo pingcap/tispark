@@ -45,8 +45,8 @@ public interface BackOffer {
   int GC_DELETE_RANGE_MAX_BACKOFF = 100 * seconds;
   int RAWKV_MAX_BACKOFF = 40 * seconds;
   int SPLIT_REGION_BACKOFF = 20 * seconds;
-  int BATCH_PREWRITE_BACKOFF = 20 * seconds;
-  int BATCH_COMMIT_BACKOFF = 3 * seconds;
+  int BATCH_PREWRITE_BACKOFF = 30 * seconds;
+  int BATCH_COMMIT_BACKOFF = 10 * seconds;
   int WAIT_SCATTER_REGION_FINISH = 120 * seconds;
 
   /**
