@@ -62,7 +62,6 @@ public class TiSession implements AutoCloseable {
   }
 
   public TxnKVClient createTxnClient() {
-    // Create new Region Manager avoiding thread contentions
     return new TxnKVClient(conf, this.getRegionStoreClientBuilder(), this.getPDClient());
   }
 
