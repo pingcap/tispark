@@ -106,7 +106,7 @@ class BaseDataSourceTest(val table: String,
       )
     } else {
       assert(
-        caughtJDBC.getCause.getMessage.startsWith(jdbcErrorMsg),
+        startWith(caughtJDBC.getCause.getMessage, jdbcErrorMsg),
         s"${caughtJDBC.getCause.getMessage} not start with $jdbcErrorMsg"
       )
     }
@@ -126,10 +126,14 @@ class BaseDataSourceTest(val table: String,
       )
     } else {
       assert(
-        caughtTiDB.getCause.getMessage.startsWith(tidbErrorMsg),
+        startWith(caughtTiDB.getCause.getMessage, tidbErrorMsg),
         s"${caughtTiDB.getCause.getMessage} not start with $tidbErrorMsg"
       )
     }
+  }
+
+  private def startWith(a: String, b: String): Boolean = {
+    (a == null && b == null) || a.startsWith(b)
   }
 
   protected def compareTiDBWriteWithJDBC(

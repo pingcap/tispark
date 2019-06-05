@@ -17,6 +17,7 @@
 
 package com.pingcap.tikv.types;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
@@ -24,7 +25,10 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import java.nio.charset.StandardCharsets;
 
 public class StringType extends BytesType {
-  public static final StringType VARCHAR = new StringType(MySQLType.TypeVarchar);
+  private static final TiColumnInfo.InternalTypeHolder varcharHolder =
+      new TiColumnInfo.InternalTypeHolder(
+          MySQLType.TypeVarchar.getTypeCode(), 0, 255, 0, "", "", ImmutableList.of());
+  public static final StringType VARCHAR = new StringType(varcharHolder);
   public static final StringType CHAR = new StringType(MySQLType.TypeString);
 
   public static final MySQLType[] subTypes =
