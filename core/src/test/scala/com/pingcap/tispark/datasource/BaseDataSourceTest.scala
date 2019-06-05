@@ -1,6 +1,6 @@
 package com.pingcap.tispark.datasource
 
-import java.sql.{BatchUpdateException, Statement}
+import java.sql.Statement
 import java.util.Objects
 
 import org.apache.spark.SparkException

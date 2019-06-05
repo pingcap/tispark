@@ -16,21 +16,20 @@
 package com.pingcap.tikv.txn.type;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.region.TiRegion;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import org.tikv.kvproto.Metapb;
 
 public class BatchKeys {
   private List<ByteString> keys;
 
-  private Long regioId;
+  private TiRegion region;
+  private Metapb.Store store;
 
-  public BatchKeys() {}
-
-  public BatchKeys(Long regioId, List<ByteString> keysInput) {
-    Objects.nonNull(regioId);
-    Objects.nonNull(keysInput);
-    this.regioId = regioId;
+  public BatchKeys(TiRegion region, Metapb.Store store, List<ByteString> keysInput) {
+    this.region = region;
+    this.store = store;
     this.keys = new ArrayList<>();
     this.keys.addAll(keysInput);
   }
@@ -43,11 +42,11 @@ public class BatchKeys {
     this.keys = keys;
   }
 
-  public Long getRegioId() {
-    return regioId;
+  public TiRegion getRegion() {
+    return region;
   }
 
-  public void setRegioId(Long regioId) {
-    this.regioId = regioId;
+  public Metapb.Store getStore() {
+    return store;
   }
 }

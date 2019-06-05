@@ -28,6 +28,7 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.Pair;
 import gnu.trove.list.array.TLongArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -37,6 +38,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.tikv.kvproto.Metapb;
 
 public class TiSession implements AutoCloseable {
   private final Logger logger = LoggerFactory.getLogger(TiSession.class);
@@ -44,33 +46,38 @@ public class TiSession implements AutoCloseable {
   private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
   // below object creation is either heavy or making connection (pd), pending for lazy loading
-  private volatile RegionManager regionManager;
   private volatile PDClient client;
   private volatile Catalog catalog;
   private volatile ExecutorService indexScanThreadPool;
   private volatile ExecutorService tableScanThreadPool;
 
-  private final RegionStoreClient.RegionStoreClientBuilder clientBuilder;
+  private volatile RegionManager regionManager;
+  private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
 
   public TiSession(TiConfiguration conf) {
     this.conf = conf;
     this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
-    this.regionManager = new RegionManager(this.getPDClient(), this.cacheInvalidateCallback);
-    this.clientBuilder =
-        new RegionStoreClient.RegionStoreClientBuilder(
-            conf, this.channelFactory, this.regionManager, this);
+    this.regionManager = null;
+    this.clientBuilder = null;
   }
 
   public TxnKVClient createTxnClient() {
-    // Create new Region Manager avoiding thread contentions
-    RegionManager regionMgr = new RegionManager(this.getPDClient(), this.cacheInvalidateCallback);
-    RegionStoreClient.RegionStoreClientBuilder builder =
-        new RegionStoreClient.RegionStoreClientBuilder(conf, this.channelFactory, regionMgr, this);
-    return new TxnKVClient(conf, builder, this.getPDClient());
+    return new TxnKVClient(conf, this.getRegionStoreClientBuilder(), this.getPDClient());
   }
 
   public RegionStoreClient.RegionStoreClientBuilder getRegionStoreClientBuilder() {
-    return this.clientBuilder;
+    RegionStoreClient.RegionStoreClientBuilder res = clientBuilder;
+    if (res == null) {
+      synchronized (this) {
+        if (clientBuilder == null) {
+          clientBuilder =
+              new RegionStoreClient.RegionStoreClientBuilder(
+                  conf, this.channelFactory, this.getRegionManager());
+        }
+        res = clientBuilder;
+      }
+    }
+    return res;
   }
 
   public TiConfiguration getConf() {
@@ -194,7 +201,11 @@ public class TiSession implements AutoCloseable {
   private void splitRegionAndScatter(Key splitKey, TLongArrayList regionIds) {
     // make sure split key must be row key
     Key nextKey = splitKey.next();
-    TiRegion region = regionManager.getRegionByKey(splitKey.toByteString());
+    Pair<TiRegion, Metapb.Store> pair =
+        getRegionManager().getRegionStorePairByKey(splitKey.toByteString());
+    TiRegion region = pair.first;
+    Metapb.Store store = pair.second;
+
     if (nextKey.toByteString().equals(region.getStartKey())
         || nextKey.toByteString().equals(region.getEndKey())) {
       logger.warn(
@@ -203,14 +214,14 @@ public class TiSession implements AutoCloseable {
     }
     TiRegion left =
         getRegionStoreClientBuilder()
-            .build(region)
+            .build(region, store)
             .splitRegion(ByteString.copyFrom(nextKey.getBytes()));
     Objects.requireNonNull(left, "Region after split cannot be null");
     // need invalidate region that is already split.
     getPDClient().scatterRegion(left);
     regionIds.add(left.getId());
     // after split succeed, we need invalidate outdated region info from cache.
-    regionManager.invalidateRegion(region.getId());
+    getRegionManager().invalidateRegion(region.getId());
   }
 
   @Override

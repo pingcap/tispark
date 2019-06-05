@@ -21,13 +21,15 @@ import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import io.grpc.Status;
+
+import javax.annotation.Nonnull;
 import java.util.concurrent.Callable;
 
 public abstract class RetryPolicy<RespT> {
   BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
 
   // handles PD and TiKV's error.
-  private ErrorHandler<RespT> handler;
+  final private ErrorHandler<RespT> handler;
 
   private ImmutableSet<Status.Code> unrecoverableStatus =
       ImmutableSet.of(
@@ -36,7 +38,7 @@ public abstract class RetryPolicy<RespT> {
           Status.Code.UNIMPLEMENTED, Status.Code.OUT_OF_RANGE,
           Status.Code.UNAUTHENTICATED, Status.Code.CANCELLED);
 
-  RetryPolicy(ErrorHandler<RespT> handler) {
+  RetryPolicy(@Nonnull ErrorHandler<RespT> handler) {
     this.handler = handler;
   }
 
@@ -62,11 +64,9 @@ public abstract class RetryPolicy<RespT> {
       }
 
       // Handle response error
-      if (handler != null) {
-        boolean retry = handler.handleResponseError(backOffer, result);
-        if (retry) {
-          continue;
-        }
+      boolean retry = handler.handleResponseError(backOffer, result);
+      if (retry) {
+        continue;
       }
       return result;
     }

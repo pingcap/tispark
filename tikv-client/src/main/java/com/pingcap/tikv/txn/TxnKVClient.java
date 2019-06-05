@@ -38,6 +38,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Metapb;
 
 /** KV client of transaction APIs for GET/PUT/DELETE/SCAN */
 public class TxnKVClient implements AutoCloseable {
@@ -92,11 +93,11 @@ public class TxnKVClient implements AutoCloseable {
       ByteString primary,
       long lockTTL,
       long startTs,
-      long regionId) {
+      TiRegion tiRegion,
+      Metapb.Store store) {
     ClientRPCResult result = new ClientRPCResult(true, false, null);
     // send request
-    TiRegion region = regionManager.getRegionById(regionId);
-    RegionStoreClient client = clientBuilder.build(region);
+    RegionStoreClient client = clientBuilder.build(tiRegion, store);
     try {
       client.prewrite(backOffer, primary, mutations, startTs, lockTTL);
     } catch (Exception e) {
@@ -116,15 +117,19 @@ public class TxnKVClient implements AutoCloseable {
    * @param keys
    * @param startTs
    * @param commitTs
-   * @param regionId
+   * @param tiRegion
    * @return
    */
   public ClientRPCResult commit(
-      BackOffer backOffer, ByteString[] keys, long startTs, long commitTs, long regionId) {
+      BackOffer backOffer,
+      ByteString[] keys,
+      long startTs,
+      long commitTs,
+      TiRegion tiRegion,
+      Metapb.Store store) {
     ClientRPCResult result = new ClientRPCResult(true, false, null);
     // send request
-    TiRegion region = regionManager.getRegionById(regionId);
-    RegionStoreClient client = clientBuilder.build(region);
+    RegionStoreClient client = clientBuilder.build(tiRegion, store);
     List<ByteString> byteList = Lists.newArrayList();
     byteList.addAll(Arrays.asList(keys));
     try {

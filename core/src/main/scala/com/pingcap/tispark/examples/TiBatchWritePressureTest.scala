@@ -20,7 +20,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.{SparkSession, TiContext}
 
 object TiBatchWritePressureTest {
-  def main(args: Array[String]) = {
+  def main(args: Array[String]): Unit = {
 
     if (args.length < 4) {
       throw new Exception("wrong arguments!")
