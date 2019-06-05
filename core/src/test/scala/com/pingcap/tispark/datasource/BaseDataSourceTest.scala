@@ -4,7 +4,7 @@ import java.sql.Statement
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.test.SharedSQLContext
-import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, QueryTest, Row}
 
 import scala.collection.mutable.ArrayBuffer

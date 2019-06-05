@@ -165,9 +165,10 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       }
       List<Coprocessor.KeyRange> ranges = task.getRanges();
       TiRegion region = task.getRegion();
+      Metapb.Store store = regionTask.getStore();
 
       try {
-        RegionStoreClient client = session.getRegionStoreClientBuilder().build(region);
+        RegionStoreClient client = session.getRegionStoreClientBuilder().build(region, store);
         Collection<RangeSplitter.RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, ranges, responseQueue);
         if (tasks != null) {
@@ -205,7 +206,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
 
     RegionStoreClient client;
     try {
-      client = session.getRegionStoreClientBuilder().build(region);
+      client = session.getRegionStoreClientBuilder().build(region, store);
       Iterator<SelectResponse> responseIterator = client.coprocessStreaming(dagRequest, ranges);
       if (responseIterator == null) {
         eof = true;

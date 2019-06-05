@@ -33,8 +33,8 @@ import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.{DataFrame, TiContext}
+import org.apache.spark.storage.StorageLevel
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -50,19 +50,34 @@ object TiBatchWrite {
                   tiContext: TiContext,
                   options: TiDBOptions,
                   regionSplitNumber: Option[Int] = None,
-                  enableRegionPreSplit: Boolean = false): Unit =
-    new TiBatchWrite(df, tiContext, options, regionSplitNumber, enableRegionPreSplit).write()
+                  enableRegionPreSplit: Boolean = false,
+                  tikvInstanceNumber: Option[Int] = None): Unit =
+    new TiBatchWrite(
+      df,
+      tiContext,
+      options,
+      regionSplitNumber,
+      enableRegionPreSplit,
+      tikvInstanceNumber
+    ).write()
 }
 
 class TiBatchWrite(@transient val df: DataFrame,
                    @transient val tiContext: TiContext,
                    options: TiDBOptions,
                    regionSplitNumber: Option[Int],
-                   enableRegionPreSplit: Boolean)
+                   enableRegionPreSplit: Boolean,
+                   tikvInstanceNumber: Option[Int])
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   import TiBatchWrite._
+
+  private val MIN_SAMPLE_COUNT = 1000L
+  private val MAX_SAMPLE_COUNT = 100000L
+  private val MAX_TASK_NUMBER_PER_TIKV_INSTANCE = 2
+
+  @transient private var srcRDD: RDD[SparkRow] = _
 
   private var tiConf: TiConfiguration = _
   @transient private var tiSession: TiSession = _
@@ -79,6 +94,10 @@ class TiBatchWrite(@transient val df: DataFrame,
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def write(): Unit = {
+    val storageLevel = StorageLevel.DISK_ONLY
+
+    val startTime = System.currentTimeMillis()
+
     // check if write enable
     if (!tiContext.tiConf.isWriteEnable) {
       throw new TiBatchWriteException(
@@ -87,7 +106,11 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     // check empty
-    if (df.count() == 0) {
+    srcRDD = df.rdd
+    srcRDD.persist(storageLevel)
+    val rddCount = srcRDD.count()
+    logger.info(s"rddCount=$rddCount")
+    if (rddCount == 0) {
       logger.warn("data is empty!")
       return
     }
@@ -108,6 +131,9 @@ class TiBatchWrite(@transient val df: DataFrame,
     // check check check
     checkUnsupported()
     checkColumnNumbers()
+
+    val checkTime = System.currentTimeMillis()
+    logger.info(s"CheckTime=${(checkTime - startTime) / 1000}s")
 
     // initialize dfTiColumnInfo
     dfTiColumnInfo = new Array[TiColumnInfo](dfColSize)
@@ -142,7 +168,7 @@ class TiBatchWrite(@transient val df: DataFrame,
         tiTableInfo.getId,
         tiSession.getCatalog,
         tiTableInfo.isAutoIncColUnsigned,
-        df.count
+        rddCount
       )
       rowIDAllocator.getStart
     } else {
@@ -150,7 +176,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     // i + start will be handle id if primary key is not handle
-    val tiKVRowRDD = df.rdd.zipWithIndex.map {
+    val tiKVRowRDD = srcRDD.zipWithIndex.map {
       case (row, i) =>
         sparkRow2TiKVRow(i + offset, row)
     }
@@ -162,17 +188,32 @@ class TiBatchWrite(@transient val df: DataFrame,
     val encodedTiRowRDD = deduplicateRDD.map {
       case (key, tiRow) => (key, tiRow, encodeTiRow(tiRow))
     }
+    encodedTiRowRDD.persist(storageLevel)
 
     // region pre-split
     if (enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
+      val preSplitStartTime = System.currentTimeMillis()
+      val count = encodedTiRowRDD.count()
+      val fraction =
+        if (count * options.sampleFraction < MIN_SAMPLE_COUNT) {
+          1.0d
+        } else if (count * options.sampleFraction > MAX_SAMPLE_COUNT) {
+          MAX_SAMPLE_COUNT.toDouble / count.toDouble
+        } else {
+          options.sampleFraction
+        }
+      logger.info(s"sample fraction=$fraction")
+      logger.info(s"sample count=${(fraction * count).toLong}")
+
       val sampleRDD =
-        encodedTiRowRDD.sample(withReplacement = false, fraction = options.sampleFraction)
+        encodedTiRowRDD.sample(withReplacement = false, fraction = fraction)
+      sampleRDD.persist(storageLevel)
       val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
 
       tiContext.tiSession.splitRegionAndScatter(
         calculateSplitKeys(
-          encodedTiRowRDD,
+          sampleRDD,
           dataSize,
           sampleRDDCount,
           tiTableInfo,
@@ -180,10 +221,13 @@ class TiBatchWrite(@transient val df: DataFrame,
           regionSplitNumber
         ).map(k => k.bytes).asJava
       )
+      val preSplitEndTime = System.currentTimeMillis()
+      logger.info(s"PreSplitTime=${(preSplitEndTime - preSplitStartTime) / 1000}s")
     }
 
     // shuffle data in same task which belong to same region
-    val shuffledRDD = shuffleKeyToSameRegion(encodedTiRowRDD).cache()
+    val shuffledRDD = shuffleKeyToSameRegion(encodedTiRowRDD)
+    shuffledRDD.persist(storageLevel)
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
@@ -208,14 +252,21 @@ class TiBatchWrite(@transient val df: DataFrame,
     logger.info(s"startTS: $startTs")
 
     // driver primary pre-write
+    val prewritePrimaryStartTime = System.currentTimeMillis()
     val ti2PCClient = new TwoPhaseCommitter(kvClient, startTs)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
+    val prewritePrimaryEndTime = System.currentTimeMillis()
+    logger.info(
+      s"PrewritePrimaryTime=${(prewritePrimaryEndTime - prewritePrimaryStartTime) / 1000}s"
+    )
 
     // executors secondary pre-write
+    val prewriteSecondaryStartTime = System.currentTimeMillis()
     finalWriteRDD.foreachPartition { iterator =>
-      val tiSessionOnExecutor = new TiSession(tiConf)
+      val tiSessionOnExecutor = TiSessionCache.getSession(tiConf)
+
       val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
       val ti2PCClientOnExecutor = new TwoPhaseCommitter(kvClientOnExecutor, startTs)
       val prewriteSecondaryBackoff =
@@ -228,9 +279,26 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       ti2PCClientOnExecutor
         .prewriteSecondaryKeys(prewriteSecondaryBackoff, primaryKey.bytes, pairs)
+
+      try {
+        kvClientOnExecutor.close()
+      } catch {
+        case _: Throwable =>
+      }
+
+      try {
+        ti2PCClientOnExecutor.close()
+      } catch {
+        case _: Throwable =>
+      }
     }
+    val prewriteSecondaryEndTime = System.currentTimeMillis()
+    logger.info(
+      s"PrewriteSecondaryTime=${(prewriteSecondaryEndTime - prewriteSecondaryStartTime) / 1000}s"
+    )
 
     // driver primary commit
+    val commitPrimaryStartTime = System.currentTimeMillis()
     val commitTs = kvClient.getTimestamp.getVersion
     // check commitTS
     if (commitTs <= startTs) {
@@ -240,9 +308,14 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
     val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
+    val commitPrimaryEndTime = System.currentTimeMillis()
+    logger.info(
+      s"CommitPrimaryTime=${(commitPrimaryEndTime - commitPrimaryStartTime) / 1000}s"
+    )
 
     // executors secondary commit
     if (!options.skipCommitSecondaryKey) {
+      val commitSecondaryStartTime = System.currentTimeMillis()
       finalWriteRDD.foreachPartition { iterator =>
         val tiSessionOnExecutor = new TiSession(tiConf)
         val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
@@ -262,9 +335,16 @@ class TiBatchWrite(@transient val df: DataFrame,
             logger.warn(s"commit secondary key error", e)
         }
       }
+      val commitSecondaryEndTime = System.currentTimeMillis()
+      logger.info(
+        s"CommitSecondaryTime=${(commitSecondaryEndTime - commitSecondaryStartTime) / 1000}s"
+      )
     } else {
       logger.info("skipping commit secondary key")
     }
+
+    val endTime = System.currentTimeMillis()
+    logger.info(s"TotalWriteTime=${(endTime - startTime) / 1000}s")
   }
 
   @throws(classOf[TiBatchWriteException])
@@ -319,8 +399,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     if (notNullColumnIndex.nonEmpty) {
-      val encoder = RowEncoder(df.schema)
-      val nullRowCount = df
+      val nullRowCount = srcRDD
         .flatMap { row =>
           var result: Option[SparkRow] = None
           notNullColumnIndex.foreach { col =>
@@ -329,7 +408,7 @@ class TiBatchWrite(@transient val df: DataFrame,
             }
           }
           result
-        }(encoder)
+        }
         .count()
       if (nullRowCount > 0) {
         throw new TiBatchWriteException(
@@ -374,6 +453,11 @@ class TiBatchWrite(@transient val df: DataFrame,
         regionNeed = regionSplitNumber.get
       }
     }
+
+    if (tikvInstanceNumber.isDefined && regionNeed > tikvInstanceNumber.get * MAX_TASK_NUMBER_PER_TIKV_INSTANCE) {
+      regionNeed = tikvInstanceNumber.get * MAX_TASK_NUMBER_PER_TIKV_INSTANCE
+    }
+
     // if region split is not needed, just return an empty list
     if (regionNeed == 0) return List.empty
 
@@ -394,6 +478,10 @@ class TiBatchWrite(@transient val df: DataFrame,
       .collect()
       .toList
 
+    logger.info(s"estimatedTotalSize=$estimatedTotalSize")
+    logger.info(s"sampleRDDCount=$sampleRDDCount")
+    logger.info(s"regionNeed=$regionNeed")
+    logger.info(s"step=$step")
     logger.info("region need split %d times".format(splitKeys.length))
     splitKeys
   }

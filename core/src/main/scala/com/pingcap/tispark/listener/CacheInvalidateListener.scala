@@ -68,7 +68,9 @@ object CacheInvalidateListener {
       }
     }
 
-  def init(sc: SparkContext, regionManager: RegionManager, manager: CacheInvalidateListener): Unit =
+  private def init(sc: SparkContext,
+                   regionManager: RegionManager,
+                   manager: CacheInvalidateListener): Unit =
     if (sc != null && regionManager != null) {
       sc.register(manager.CACHE_INVALIDATE_ACCUMULATOR, manager.CACHE_ACCUMULATOR_NAME)
       sc.addSparkListener(

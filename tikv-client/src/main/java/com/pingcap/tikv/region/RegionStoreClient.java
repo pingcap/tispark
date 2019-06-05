@@ -31,7 +31,6 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.LockException;
@@ -108,7 +107,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private static final Logger logger = Logger.getLogger(RegionStoreClient.class);
   private TiRegion region;
   private final RegionManager regionManager;
-  private final TiSession session;
 
   @VisibleForTesting public final LockResolverClient lockResolverClient;
   private TikvBlockingStub blockingStub;
@@ -416,7 +414,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       throws TiClientInternalException, KeyException, RegionException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("PrewriteResponse failed without a cause");
+      throw new TiClientInternalException("Prewrite Response failed without a cause");
     }
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
@@ -566,7 +564,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
           BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(regionError.toString()));
       logger.warn("Re-splitting region task due to region error:" + regionError.getMessage());
       // Split ranges
-      return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);
+      return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges);
     }
 
     if (response.hasLocked()) {
@@ -579,7 +577,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
         backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
       }
       // Split ranges
-      return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);
+      return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges);
     }
 
     String otherError = response.getOtherError();
@@ -661,20 +659,15 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     private final TiConfiguration conf;
     private final ChannelFactory channelFactory;
     private final RegionManager regionManager;
-    private final TiSession session;
 
     public RegionStoreClientBuilder(
-        TiConfiguration conf,
-        ChannelFactory channelFactory,
-        RegionManager regionManager,
-        TiSession session) {
+        TiConfiguration conf, ChannelFactory channelFactory, RegionManager regionManager) {
       Objects.requireNonNull(conf, "conf is null");
       Objects.requireNonNull(channelFactory, "channelFactory is null");
       Objects.requireNonNull(regionManager, "regionManager is null");
       this.conf = conf;
       this.channelFactory = channelFactory;
       this.regionManager = regionManager;
-      this.session = session;
     }
 
     public RegionStoreClient build(TiRegion region, Store store) {
@@ -691,7 +684,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       TikvStub asyncStub = TikvGrpc.newStub(channel);
 
       return new RegionStoreClient(
-          conf, region, session, channelFactory, blockingStub, asyncStub, regionManager);
+          conf, region, channelFactory, blockingStub, asyncStub, regionManager);
     }
 
     public RegionStoreClient build(ByteString key) {
@@ -712,7 +705,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private RegionStoreClient(
       TiConfiguration conf,
       TiRegion region,
-      TiSession session,
       ChannelFactory channelFactory,
       TikvBlockingStub blockingStub,
       TikvStub asyncStub,
@@ -722,7 +714,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     checkNotNull(region.getLeader(), "Leader Peer is null");
     checkArgument(region.getLeader() != null, "Leader Peer is null");
     this.regionManager = regionManager;
-    this.session = session;
     this.region = region;
     this.blockingStub = blockingStub;
     this.asyncStub = asyncStub;

@@ -46,7 +46,7 @@ public interface BackOffer {
   int RAWKV_MAX_BACKOFF = 40 * seconds;
   int SPLIT_REGION_BACKOFF = 20 * seconds;
   int BATCH_PREWRITE_BACKOFF = 20 * seconds;
-  int BATCH_COMMIT_BACKOFF = 3 * seconds;
+  int BATCH_COMMIT_BACKOFF = 20 * seconds;
   int WAIT_SCATTER_REGION_FINISH = 120 * seconds;
 
   /**

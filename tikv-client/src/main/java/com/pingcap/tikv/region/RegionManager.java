@@ -45,6 +45,7 @@ public class RegionManager {
   private static final Logger logger = Logger.getLogger(RegionManager.class);
   private final RegionCache cache;
 
+  private CacheInvalidateHandler cacheInvalidateHandler;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
 
   // To avoid double retrieval, we used the async version of grpc
@@ -53,52 +54,53 @@ public class RegionManager {
       ReadOnlyPDClient pdClient, Function<CacheInvalidateEvent, Void> cacheInvalidateCallback) {
     this.cache = new RegionCache(pdClient);
     this.cacheInvalidateCallback = cacheInvalidateCallback;
+    this.cacheInvalidateHandler = new CacheInvalidateHandler();
   }
 
   public static class RegionCache {
     private final Map<Long, TiRegion> regionCache;
     private final Map<Long, Store> storeCache;
-    private final RangeMap<Key, Long> keyToRegionIdCache;
+    //private final RangeMap<Key, Long> keyToRegionIdCache;
     private final ReadOnlyPDClient pdClient;
 
     public RegionCache(ReadOnlyPDClient pdClient) {
       regionCache = new HashMap<>();
       storeCache = new HashMap<>();
 
-      keyToRegionIdCache = TreeRangeMap.create();
+      //keyToRegionIdCache = TreeRangeMap.create();
       this.pdClient = pdClient;
     }
 
     public synchronized TiRegion getRegionByKey(ByteString key) {
-      Long regionId;
-      regionId = keyToRegionIdCache.get(Key.toRawKey(key));
-      if (logger.isDebugEnabled()) {
+      //Long regionId = null;
+      //regionId = keyToRegionIdCache.get(Key.toRawKey(key));
+      /*if (logger.isDebugEnabled()) {
         logger.debug(
             String.format("getRegionByKey key[%s] -> ID[%s]", formatBytesUTF8(key), regionId));
-      }
+      }*/
 
-      if (regionId == null) {
+      //if (regionId == null) {
         logger.debug("Key not find in keyToRegionIdCache:" + formatBytesUTF8(key));
         TiRegion region = pdClient.getRegionByKey(ConcreteBackOffer.newGetBackOff(), key);
-        if (!putRegion(region)) {
+        /*if (!putRegion(region)) {
           throw new TiClientInternalException("Invalid Region: " + region.toString());
-        }
+        }*/
         return region;
-      }
-      TiRegion region = regionCache.get(regionId);
+      //}
+      /*TiRegion region = regionCache.get(regionId);
       if (logger.isDebugEnabled()) {
         logger.debug(String.format("getRegionByKey ID[%s] -> Region[%s]", regionId, region));
       }
 
-      return region;
+      return region;*/
     }
 
     private synchronized boolean putRegion(TiRegion region) {
       if (logger.isDebugEnabled()) {
         logger.debug("putRegion: " + region);
       }
-      regionCache.put(region.getId(), region);
-      keyToRegionIdCache.put(makeRange(region.getStartKey(), region.getEndKey()), region.getId());
+      //regionCache.put(region.getId(), region);
+      //keyToRegionIdCache.put(makeRange(region.getStartKey(), region.getEndKey()), region.getId());
       return true;
     }
 
@@ -118,7 +120,7 @@ public class RegionManager {
 
     /** Removes region associated with regionId from regionCache. */
     public synchronized void invalidateRegion(long regionId) {
-      try {
+      /*try {
         if (logger.isDebugEnabled()) {
           logger.debug(String.format("invalidateRegion ID[%s]", regionId));
         }
@@ -127,11 +129,11 @@ public class RegionManager {
       } catch (Exception ignore) {
       } finally {
         regionCache.remove(regionId);
-      }
+      }*/
     }
 
     public synchronized void invalidateAllRegionForStore(long storeId) {
-      List<TiRegion> regionToRemove = new ArrayList<>();
+      /*List<TiRegion> regionToRemove = new ArrayList<>();
       for (TiRegion r : regionCache.values()) {
         if (r.getLeader().getStoreId() == storeId) {
           if (logger.isDebugEnabled()) {
@@ -145,7 +147,7 @@ public class RegionManager {
       for (TiRegion r : regionToRemove) {
         regionCache.remove(r.getId());
         keyToRegionIdCache.remove(makeRange(r.getStartKey(), r.getEndKey()));
-      }
+      }*/
     }
 
     public synchronized void invalidateStore(long storeId) {
@@ -169,8 +171,49 @@ public class RegionManager {
     }
   }
 
+  public class CacheInvalidateHandler {
+    public void handle(CacheInvalidateEvent event) {
+      try {
+        if (event.getCacheType() == CacheInvalidateEvent.CacheType.REGION_STORE) {
+          // Used for updating region/store cache in the given regionManager
+          if (event.shouldUpdateRegion()) {
+            logger.info("Invalidating region " + event.getRegionId() + " cache at driver.");
+            invalidateRegion(event.getRegionId());
+          }
+
+          if (event.shouldUpdateStore()) {
+            logger.info("Invalidating store " + event.getStoreId() + " cache at driver.");
+            invalidateStore(event.getStoreId());
+          }
+        } else if (event.getCacheType() == CacheInvalidateEvent.CacheType.LEADER) {
+          // Used for updating leader information cached in the given regionManager
+          logger.info(
+              "Invalidating leader of region:"
+                  + event.getRegionId()
+                  + " store:"
+                  + event.getStoreId()
+                  + " cache at driver.");
+          updateLeader(event.getRegionId(), event.getStoreId());
+        } else if (event.getCacheType() == CacheInvalidateEvent.CacheType.REQ_FAILED) {
+          logger.info("Request failed cache invalidation for region " + event.getRegionId());
+          onRequestFail(event.getRegionId(), event.getStoreId());
+        } else {
+          throw new IllegalArgumentException("Unsupported cache invalidate type.");
+        }
+      } catch (Exception e) {
+        logger.error("Updating cache failed", e);
+      }
+    }
+  }
+
   public Function<CacheInvalidateEvent, Void> getCacheInvalidateCallback() {
-    return cacheInvalidateCallback;
+    return event -> {
+      this.cacheInvalidateHandler.handle(event);
+      if (cacheInvalidateCallback != null) {
+        this.cacheInvalidateCallback.apply(event);
+      }
+      return null;
+    };
   }
 
   public TiRegion getRegionByKey(ByteString key) {
