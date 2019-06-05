@@ -46,11 +46,11 @@ public class IndexKey extends Key {
   public static Key[] encodeIndexDataValues(
       Row row, List<TiIndexColumn> indexColumns, TiTableInfo tableInfo) {
     Key[] keys = new Key[indexColumns.size()];
-    // TODO: truncate column value if necessary.
     for (int i = 0; i < indexColumns.size(); i++) {
       TiIndexColumn col = indexColumns.get(i);
       DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
-      Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp);
+      // truncate index's if necessary
+      Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
       keys[i] = key;
     }
     return keys;
