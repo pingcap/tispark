@@ -22,7 +22,7 @@ import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
-import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiIndexInfo, TiTableInfo, TiTimestamp}
+import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.txn.TxnKVClient
@@ -31,7 +31,6 @@ import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
-import com.pingcap.tispark.utils.TiConverter
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -499,11 +498,15 @@ class TiBatchWrite(@transient val df: DataFrame,
       // pk is handle can be skipped
       val columnInfo = tiTableInfo.getColumn(i)
       val value = tiRow.get(i, columnInfo.getType)
-      val convertedValue = TiConverter.convertToTiDBType(columnInfo, value)
-      convertedValues.update(i, convertedValue)
+      convertedValues.update(i, value)
     }
 
-    TableCodec.encodeRow(tiTableInfo.getColumns, convertedValues, tiTableInfo.isPkHandle)
+    try {
+      TableCodec.encodeRow(tiTableInfo.getColumns, convertedValues, tiTableInfo.isPkHandle)
+    } catch {
+      case e: Throwable =>
+        throw new TiBatchWriteException("error during encoding row", e)
+    }
   }
 
   private def generateRDDToBeInserted(

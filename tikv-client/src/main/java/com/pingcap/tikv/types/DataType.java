@@ -23,6 +23,8 @@ import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -32,6 +34,22 @@ import java.util.List;
 
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {
+
+  private static final Long MaxInt8 = (1L << 7) - 1;
+  private static final Long MinInt8 = -1L << 7;
+  private static final Long MaxInt16 = (1L << 15) - 1;
+  private static final Long MinInt16 = -1L << 15;
+  private static final Long MaxInt24 = (1L << 23) - 1;
+  private static final Long MinInt24 = -1L << 23;
+  private static final Long MaxInt32 = (1L << 31) - 1;
+  private static final Long MinInt32 = -1L << 31;
+  private static final Long MaxInt64 = (1L << 63) - 1;
+  private static final Long MinInt64 = -1L << 63;
+  private static final Long MaxUint8 = (1L << 8) - 1;
+  private static final Long MaxUint16 = (1L << 16) - 1;
+  private static final Long MaxUint24 = (1L << 24) - 1;
+  private static final Long MaxUint32 = (1L << 32) - 1;
+  private static final Long MaxUint64 = -1L;
 
   // Flag Information for strict mysql type
   public static final int NotNullFlag = 1; /* Field can't be NULL */
@@ -101,6 +119,60 @@ public abstract class DataType implements Serializable {
     this.collation = collation;
   }
 
+  public Long signedLowerBound() throws TypeException {
+    if (this.getType() == MySQLType.TypeTiny) {
+      return MinInt8;
+    } else if (this.getType() == MySQLType.TypeShort) {
+      return MinInt16;
+    } else if (this.getType() == MySQLType.TypeInt24) {
+      return MinInt24;
+    } else if (this.getType() == MySQLType.TypeLong) {
+      return MinInt32;
+    } else if (this.getType() == MySQLType.TypeLonglong) {
+      return MinInt64;
+    } else {
+      throw new TypeException("Input Type is not a mysql SIGNED type");
+    }
+  }
+
+  public Long signedUpperBound() throws TypeException {
+    if (this.getType() == MySQLType.TypeTiny) {
+      return MaxInt8;
+    } else if (this.getType() == MySQLType.TypeShort) {
+      return MaxInt16;
+    } else if (this.getType() == MySQLType.TypeInt24) {
+      return MaxInt24;
+    } else if (this.getType() == MySQLType.TypeLong) {
+      return MaxInt32;
+    } else if (this.getType() == MySQLType.TypeLonglong) {
+      return MaxInt64;
+    } else {
+      throw new TypeException("Input Type is not a mysql SIGNED type");
+    }
+  }
+
+  public Long unsignedUpperBound() throws TypeException {
+    if (this.getType() == MySQLType.TypeTiny) {
+      return MaxUint8;
+    } else if (this.getType() == MySQLType.TypeShort) {
+      return MaxUint16;
+    } else if (this.getType() == MySQLType.TypeInt24) {
+      return MaxUint24;
+    } else if (this.getType() == MySQLType.TypeLong) {
+      return MaxUint32;
+    } else if (this.getType() == MySQLType.TypeLonglong) {
+      return MaxUint64;
+    } else if (this.getType() == MySQLType.TypeBit) {
+      return MaxUint64;
+    } else if (this.getType() == MySQLType.TypeEnum) {
+      return MaxUint64;
+    } else if (this.getType() == MySQLType.TypeSet) {
+      return MaxUint64;
+    } else {
+      throw new TypeException("Input Type is not a mysql UNSIGNED type");
+    }
+  }
+
   protected abstract Object decodeNotNull(int flag, CodecDataInput cdi);
 
   /**
@@ -161,6 +233,40 @@ public abstract class DataType implements Serializable {
       }
     }
   }
+
+  /**
+   * Convert from Spark SQL Supported Java Type to TiDB Type
+   *
+   * <p>1. data convert, e.g. Integer -> SHORT
+   *
+   * <p>2. check overflow, e.g. write 1000 to short
+   *
+   * <p>Spark SQL only support following types:
+   *
+   * <p>1. BooleanType -> java.lang.Boolean 2. ByteType -> java.lang.Byte 3. ShortType ->
+   * java.lang.Short 4. IntegerType -> java.lang.Integer 5. LongType -> java.lang.Long 6. FloatType
+   * -> java.lang.Float 7. DoubleType -> java.lang.Double 8. StringType -> String 9. DecimalType ->
+   * java.math.BigDecimal 10. DateType -> java.sql.Date 11. TimestampType -> java.sql.Timestamp 12.
+   * BinaryType -> byte array 13. ArrayType -> scala.collection.Seq (use getList for java.util.List)
+   * 14. MapType -> scala.collection.Map (use getJavaMap for java.util.Map) 15. StructType ->
+   * org.apache.spark.sql.Row
+   *
+   * @param value
+   * @return
+   * @throws ConvertNotSupportException
+   * @throws ConvertOverflowException
+   */
+  public Object convertToTiDBType(Object value)
+      throws ConvertNotSupportException, ConvertOverflowException {
+    if (value == null) {
+      return null;
+    } else {
+      return doConvertToTiDBType(value);
+    }
+  }
+
+  protected abstract Object doConvertToTiDBType(Object value)
+      throws ConvertNotSupportException, ConvertOverflowException;
 
   protected abstract void encodeKey(CodecDataOutput cdo, Object value);
 

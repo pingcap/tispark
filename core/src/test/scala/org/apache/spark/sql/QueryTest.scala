@@ -68,12 +68,24 @@ abstract class QueryTest extends PlanTest {
       case d: BigDecimal           => d.bigDecimal.doubleValue()
       case d: Number               => d.doubleValue()
       case d: String               => BigDecimal(d).doubleValue()
+      case d: Boolean              => if (d) 1d else 0d
       case _                       => 0.0
     }
 
     def toInteger(x: Any): Long = x match {
-      case d: BigInt => d.bigInteger.longValue()
-      case d: Number => d.longValue()
+      case d: BigInt  => d.bigInteger.longValue()
+      case d: Number  => d.longValue()
+      case d: Boolean => if (d) 1L else 0L
+      case d: Array[Byte] =>
+        if (d.length > 8) {
+          0L
+        } else {
+          var r = 0L
+          for (x <- d) {
+            r = r * 256 + (if (x >= 0) { x } else { 256 + x })
+          }
+          r
+        }
     }
 
     def toString(value: Any): String =
@@ -462,7 +474,9 @@ object QueryTest {
   def sameRows(expectedAnswer: Seq[Row],
                sparkAnswer: Seq[Row],
                isSorted: Boolean = false): Option[String] = {
-    if (prepareAnswer(expectedAnswer, isSorted) != prepareAnswer(sparkAnswer, isSorted)) {
+    val left = prepareAnswer(expectedAnswer, isSorted)
+    val right = prepareAnswer(sparkAnswer, isSorted)
+    if (left != right) {
       val errorMessage =
         s"""
            |== Results ==

@@ -58,7 +58,7 @@ val sparkConf = new SparkConf()
   .setIfMissing("spark.tispark.tidb.password", "")
   .setIfMissing("spark.tispark.tidb.port", "4000")
   .setIfMissing("spark.tispark.tidb.user", "root")
- 
+
 
 val spark = SparkSession.builder.config(sparkConf).getOrCreate()
 val sqlContext = spark.sqlContext
@@ -145,7 +145,7 @@ val sqlContext = spark.sqlContext
 
 ### Read using scala
 ```scala
-// TiSpark's common options can also be passed in, 
+// TiSpark's common options can also be passed in,
 // e.g. spark.tispark.plan.allow_agg_pushdown, spark.tispark.plan.allow_index_read, etc.
 // spark.tispark.plan.allow_index_read is optional
 val tidbOptions: Map[String, String] = Map(
@@ -213,3 +213,44 @@ The following is TiDB-specific options, which can be passed in through `TiDBOpti
 | sampleFraction | - | false | sample fraction, from 0 to 1 | 0.01 |
 
 TiSpark's common options can also be passed in, e.g. `spark.tispark.plan.allow_agg_pushdown`, `spark.tispark.plan.allow_index_read`, etc.
+
+## Type Conversion for Write
+The following SparkSQL Data Type is currently not supported for writing to TiDB:
+- BinaryType
+- ArrayType
+- MapType
+- StructType
+
+The full conversion metrics is as follows.
+
+| Write support        | BooleanType | ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType | StringType | DecimalType | DateType | TimestampType |
+| -------------------- | ----------- | -------- | --------- | ----------- | -------- | --------- | ---------- | ---------- | ----------- | -------- | ------------- |
+| BIT                  | true        | true     | true      | true        | true     | true      | true       | false      | false       | false    | false         |
+| BOOLEAN              | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| TINYINT [UNSIGNED]   | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| SMALLINT [UNSIGNED]  | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| MEDIUMINT [UNSIGNED] | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| INTEGER [UNSIGNED]   | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| BIGINT [UNSIGNED]    | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| FLOAT                | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         |
+| DOUBLE               | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         |
+| DECIMAL              | true        | true     | true      | true        | true     | true      | true       | true       | true        | false    | false         |
+| DATE                 | false       | false    | false     | false       | true     | true      | false      | false      | false       | true     | false         |
+| DATETIME             | false       | false    | false     | false       | true     | false     | false      | true       | false       | true     | false         |
+| TIMESTAMP            | false       | false    | false     | false       | true     | false     | false      | false      | false       | false    | false         |
+| TIME                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
+| YEAR                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
+| CHAR                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| VARCHAR              | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| TINYTEXT             | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| TEXT                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| MEDIUMTEXT           | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| LONGTEXT             | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
+| BINARY               | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
+| VARBINARY            | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| TINYBLOB             | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| BLOB                 | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| MEDIUMBLOB           | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| LONGBLOB             | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
+| ENUM                 | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
+| SET                  | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |

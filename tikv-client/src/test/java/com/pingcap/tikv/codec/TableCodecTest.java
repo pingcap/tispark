@@ -5,11 +5,8 @@ import static org.junit.Assert.*;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.types.DateTimeType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
-import com.pingcap.tikv.types.TimestampType;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import org.joda.time.DateTime;
@@ -24,11 +21,12 @@ public class TableCodecTest {
         .name("testTable")
         .addColumn("c1", IntegerType.INT, true)
         .addColumn("c2", IntegerType.BIGINT)
-        .addColumn("c3", DateTimeType.DATETIME)
-        .addColumn("c4", TimestampType.TIMESTAMP)
+        // TODO: enable when support Timestamp
+        // .addColumn("c3", DateTimeType.DATETIME)
+        // .addColumn("c4", TimestampType.TIMESTAMP)
         .addColumn("c5", StringType.VARCHAR)
         .addColumn("c6", StringType.VARCHAR)
-        //        .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
+        // .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
         .build();
   }
 
@@ -40,8 +38,8 @@ public class TableCodecTest {
     values.add(1L);
     values.add(1L);
     DateTime dateTime = DateTime.parse("1995-10-10");
-    values.add(new Timestamp(dateTime.getMillis()));
-    values.add(new Timestamp(dateTime.getMillis()));
+    // values.add(new Timestamp(dateTime.getMillis()));
+    // values.add(new Timestamp(dateTime.getMillis()));
     values.add("abc");
     values.add("中");
     this.values = values.toArray();

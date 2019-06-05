@@ -23,6 +23,8 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -59,6 +61,25 @@ public class IntegerType extends DataType {
 
   private static BigDecimal unsignedValueOf(long x) {
     return new BigDecimal(UnsignedLong.fromLongBits(x).bigIntegerValue());
+  }
+
+  @Override
+  protected Object doConvertToTiDBType(Object value)
+      throws ConvertNotSupportException, ConvertOverflowException {
+    // TODO: support write to YEAR
+    if (this.getType() == MySQLType.TypeYear) {
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    }
+
+    Long result;
+    if (this.isUnsigned()) {
+      result = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());
+    } else {
+      result =
+          Converter.safeConvertToSigned(value, this.signedLowerBound(), this.signedUpperBound());
+    }
+
+    return result;
   }
 
   /** {@inheritDoc} */

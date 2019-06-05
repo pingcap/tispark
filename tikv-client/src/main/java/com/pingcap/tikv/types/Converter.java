@@ -23,6 +23,9 @@ import static com.pingcap.tikv.types.TimeType.MINUTE;
 import static com.pingcap.tikv.types.TimeType.SECOND;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.primitives.UnsignedLong;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -36,6 +39,103 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 public class Converter {
+
+  public static Long safeConvertToSigned(Object value, Long lowerBound, Long upperBound)
+      throws ConvertNotSupportException, ConvertOverflowException {
+    Long result;
+    if (value instanceof Boolean) {
+      if ((Boolean) value) {
+        result = 1L;
+      } else {
+        result = 0L;
+      }
+    } else if (value instanceof Byte) {
+      result = ((Byte) value).longValue();
+    } else if (value instanceof Short) {
+      result = ((Short) value).longValue();
+    } else if (value instanceof Integer) {
+      result = ((Integer) value).longValue();
+    } else if (value instanceof Long) {
+      result = (Long) value;
+    } else if (value instanceof Float) {
+      result = floatToLong((Float) value);
+    } else if (value instanceof Double) {
+      result = doubleToLong((Double) value);
+    } else if (value instanceof String) {
+      result = stringToLong((String) value);
+    } else {
+      throw new ConvertNotSupportException(value.getClass().getName(), "SIGNED");
+    }
+
+    if (result < lowerBound) {
+      throw ConvertOverflowException.newLowerBoundException(result, lowerBound);
+    }
+
+    if (result > upperBound) {
+      throw ConvertOverflowException.newUpperBoundException(result, upperBound);
+    }
+    return result;
+  }
+
+  public static Long safeConvertToUnsigned(Object value, Long upperBound)
+      throws ConvertNotSupportException, ConvertOverflowException {
+    Long result;
+    if (value instanceof Boolean) {
+      if ((Boolean) value) {
+        result = 1L;
+      } else {
+        result = 0L;
+      }
+    } else if (value instanceof Byte) {
+      result = ((Byte) value).longValue();
+    } else if (value instanceof Short) {
+      result = ((Short) value).longValue();
+    } else if (value instanceof Integer) {
+      result = ((Integer) value).longValue();
+    } else if (value instanceof Long) {
+      result = (Long) value;
+    } else if (value instanceof Float) {
+      result = floatToLong((Float) value);
+    } else if (value instanceof Double) {
+      result = doubleToLong((Double) value);
+    } else if (value instanceof String) {
+      UnsignedLong unsignedLong = stringToUnsignedLong((String) value);
+      result = unsignedLong.longValue();
+    } else {
+      throw new ConvertNotSupportException(value.getClass().getName(), "UNSIGNED");
+    }
+
+    long lowerBound = 0L;
+    if (java.lang.Long.compareUnsigned(result, lowerBound) < 0) {
+      throw ConvertOverflowException.newLowerBoundException(result, lowerBound);
+    }
+
+    if (java.lang.Long.compareUnsigned(result, upperBound) > 0) {
+      throw ConvertOverflowException.newUpperBoundException(result, upperBound);
+    }
+    return result;
+  }
+
+  public static Long floatToLong(Float v) {
+    return (long) Math.round(v);
+  }
+
+  public static Long doubleToLong(Double v) {
+    return Math.round(v);
+  }
+
+  public static Long stringToLong(String v) {
+    return Long.parseLong(v);
+  }
+
+  public static Double stringToDouble(String v) {
+    return Double.parseDouble(v);
+  }
+
+  public static UnsignedLong stringToUnsignedLong(String v) {
+    return UnsignedLong.valueOf(v);
+  }
+
   public static long convertToLong(Object val) {
     requireNonNull(val, "val is null");
     if (val instanceof Number) {

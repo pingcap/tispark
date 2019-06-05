@@ -20,6 +20,8 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -37,6 +39,50 @@ public class EnumType extends DataType {
     super(holder);
   }
 
+  @Override
+  protected Object doConvertToTiDBType(Object value)
+      throws ConvertNotSupportException, ConvertOverflowException {
+    return convertToMysqlEnum(value);
+  }
+
+  private Integer convertToMysqlEnum(Object value) throws ConvertNotSupportException {
+    Integer result;
+
+    if (value instanceof String) {
+      result = parseEnumName((String) value);
+    } else {
+      Long l = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());
+      result = parseEnumValue(l.intValue());
+    }
+    return result;
+  }
+
+  private Integer parseEnumName(String name) {
+    int i = 0;
+    while (i < this.getElems().size()) {
+      if (this.getElems().get(i).equals(name)) {
+        return i + 1;
+      }
+      i = i + 1;
+    }
+
+    // name doesn't exist, maybe an integer?
+    int result = Integer.parseInt(name);
+    return parseEnumValue(result);
+  }
+
+  private Integer parseEnumValue(Integer number) throws ConvertOverflowException {
+    if (number == 0) {
+      throw ConvertOverflowException.newLowerBoundException(number, 0);
+    }
+
+    if (number > this.getElems().size()) {
+      throw ConvertOverflowException.newUpperBoundException(number, this.getElems().size());
+    }
+
+    return number;
+  }
+
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
@@ -51,13 +97,15 @@ public class EnumType extends DataType {
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
+    long longVal = Converter.convertToLong(value);
+    IntegerCodec.writeULongFully(cdo, longVal, true);
   }
 
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    throw new UnsupportedTypeException("Enum type cannot be pushed down.");
+    long longVal = Converter.convertToLong(value);
+    IntegerCodec.writeULongFully(cdo, longVal, false);
   }
 
   /** {@inheritDoc} */

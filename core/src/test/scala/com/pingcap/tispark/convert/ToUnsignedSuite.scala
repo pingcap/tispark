@@ -14,6 +14,27 @@ import org.apache.spark.sql.types._
  */
 class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsigned") {
 
+  private val readSchema = StructType(
+    List(
+      StructField("i", IntegerType),
+      StructField("c1", LongType),
+      StructField("c2", LongType),
+      StructField("c3", LongType),
+      StructField("c4", LongType),
+      StructField("c5", LongType)
+    )
+  )
+
+  private def createTable(): Unit =
+    jdbcUpdate(
+      s"""create table $dbtable(i INT,
+         | c1 TINYINT UNSIGNED,
+         | c2 SMALLINT UNSIGNED,
+         | c3 MEDIUMINT UNSIGNED,
+         | c4 INT UNSIGNED,
+         | c5 BIGINT UNSIGNED)""".stripMargin
+    )
+
   test("Test Convert from java.lang.Boolean to UNSINGED") {
     // success
     // java.lang.Boolean -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
@@ -37,14 +58,22 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
           )
         )
 
+        val readRow1 = Row(1, null, null, null, null, null)
+        val readRow2 = Row(2, null, 1L, 1L, 1L, 1L)
+        val readRow3 = Row(3, 0L, null, 0L, 0L, 0L)
+        val readRow4 = Row(4, 1L, 0L, null, 0L, 1L)
+        val readRow5 = Row(5, 1L, 0L, 0L, null, 1L)
+        val readRow6 = Row(6, 1L, 0L, 1L, 0L, null)
+
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT UNSIGNED, c2 SMALLINT UNSIGNED, c3 MEDIUMINT UNSIGNED, c4 INT UNSIGNED, c5 BIGINT UNSIGNED)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -77,9 +106,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT UNSIGNED, c2 SMALLINT UNSIGNED, c3 MEDIUMINT UNSIGNED, c4 INT UNSIGNED, c5 BIGINT UNSIGNED)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -118,9 +145,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT UNSIGNED, c2 SMALLINT UNSIGNED, c3 MEDIUMINT UNSIGNED, c4 INT UNSIGNED, c5 BIGINT UNSIGNED)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -160,9 +185,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT UNSIGNED, c2 SMALLINT UNSIGNED, c3 MEDIUMINT UNSIGNED, c4 INT UNSIGNED, c5 BIGINT UNSIGNED)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -203,9 +226,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
         )
 
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT UNSIGNED, c2 SMALLINT UNSIGNED, c3 MEDIUMINT UNSIGNED, c4 INT UNSIGNED, c5 BIGINT UNSIGNED)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
@@ -225,12 +246,10 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
         val maxByte: java.lang.Float = java.lang.Byte.MAX_VALUE.toFloat
         val maxShort: java.lang.Float = java.lang.Short.MAX_VALUE.toFloat
 
-        // `-100` because of
-        // com.mysql.jdbc.MysqlDataTruncation: Data truncation: Out of range value for column 'c4' at row 1
-        val maxInteger: java.lang.Float = java.lang.Integer.MAX_VALUE.toFloat - 100
+        val medianInteger: java.lang.Float = 10737418f
 
         val row1 = Row(1, null, null, null, null, null)
-        val row2 = Row(2, maxByte, maxShort, maxShort, maxInteger, maxInteger)
+        val row2 = Row(2, maxByte, maxShort, maxShort, medianInteger, medianInteger)
         val row3 = Row(3, zero, zero, zero, zero, zero)
         val row4 = Row(4, null, b, null, a, a)
         val row5 = Row(5, b, b, b, a, a)
@@ -247,14 +266,30 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
           )
         )
 
+        val readA: java.lang.Long = 11L
+        val readB: java.lang.Long = 22L
+        val readZero: java.lang.Long = 0L
+        val readMaxByte: java.lang.Long = java.lang.Byte.MAX_VALUE.toLong
+        val readMaxShort: java.lang.Long = java.lang.Short.MAX_VALUE.toLong
+        val readMedianInteger: java.lang.Long = 10737418L
+
+        val readRow1 = Row(1, null, null, null, null, null)
+        val readRow2 =
+          Row(2, readMaxByte, readMaxShort, readMaxShort, readMedianInteger, readMedianInteger)
+        val readRow3 = Row(3, readZero, readZero, readZero, readZero, readZero)
+        val readRow4 = Row(4, null, readB, null, readA, readA)
+        val readRow5 = Row(5, readB, readB, readB, readA, readA)
+        val readRow6 = Row(6, readB, readB, null, readA, null)
+
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT UNSIGNED, c2 SMALLINT UNSIGNED, c3 MEDIUMINT UNSIGNED, c4 INT UNSIGNED, c5 BIGINT UNSIGNED)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -289,14 +324,30 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
           )
         )
 
+        val readA: java.lang.Long = 11L
+        val readB: java.lang.Long = 22L
+        val readZero: java.lang.Long = 0L
+        val readMaxByte: java.lang.Long = java.lang.Byte.MAX_VALUE.toLong
+        val readMaxShort: java.lang.Long = java.lang.Short.MAX_VALUE.toLong
+        val readMaxInteger: java.lang.Long = java.lang.Integer.MAX_VALUE.toLong
+
+        val readRow1 = Row(1, null, null, null, null, null)
+        val readRow2 =
+          Row(2, readMaxByte, readMaxShort, readMaxShort, readMaxInteger, readMaxInteger)
+        val readRow3 = Row(3, readZero, readZero, readZero, readZero, readZero)
+        val readRow4 = Row(4, null, readB, null, readA, readA)
+        val readRow5 = Row(5, readB, readB, readB, readA, readA)
+        val readRow6 = Row(6, readB, readB, null, readA, null)
+
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT UNSIGNED, c2 SMALLINT UNSIGNED, c3 MEDIUMINT UNSIGNED, c4 INT UNSIGNED, c5 BIGINT UNSIGNED)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -331,14 +382,30 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
           )
         )
 
+        val readA: java.lang.Long = 11L
+        val readB: java.lang.Long = 22L
+        val readZero: java.lang.Long = 0L
+        val readMaxByte: java.lang.Long = java.lang.Byte.MAX_VALUE.toLong
+        val readMaxShort: java.lang.Long = java.lang.Short.MAX_VALUE.toLong
+        val readMaxInteger: java.lang.Long = java.lang.Integer.MAX_VALUE.toLong
+
+        val readRow1 = Row(1, null, null, null, null, null)
+        val readRow2 =
+          Row(2, readMaxByte, readMaxShort, readMaxShort, readMaxInteger, readMaxInteger)
+        val readRow3 = Row(3, readZero, readZero, readZero, readZero, readZero)
+        val readRow4 = Row(4, null, readB, null, readA, readA)
+        val readRow5 = Row(5, readB, readB, readB, readA, readA)
+        val readRow6 = Row(6, readB, readB, null, readA, null)
+
         dropTable()
-        jdbcUpdate(
-          s"create table $dbtable(i INT, c1 TINYINT UNSIGNED, c2 SMALLINT UNSIGNED, c3 MEDIUMINT UNSIGNED, c4 INT UNSIGNED, c5 BIGINT UNSIGNED)"
-        )
+        createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
