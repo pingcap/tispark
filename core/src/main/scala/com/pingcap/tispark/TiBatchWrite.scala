@@ -20,6 +20,7 @@ import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
+import org.apache.spark.sql.functions.lit
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
@@ -33,8 +34,8 @@ import com.pingcap.tikv.{TiBatchWriteUtils, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.{DataFrame, Row, TiContext}
 import org.slf4j.LoggerFactory
 
@@ -55,7 +56,7 @@ object TiBatchWrite {
     new TiBatchWrite(df, tiContext, options, regionSplitNumber, enableRegionPreSplit).write()
 }
 
-class TiBatchWrite(@transient val df: DataFrame,
+class TiBatchWrite(@transient var df: DataFrame,
                    @transient val tiContext: TiContext,
                    options: TiDBOptions,
                    regionSplitNumber: Option[Int],
@@ -77,6 +78,11 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var dfColSize: Int = _
   private var tableColSize: Int = _
   private var dfTiColumnInfo: Array[TiColumnInfo] = _
+
+  private var colsMapInTiDB: Map[String, TiColumnInfo] = _
+
+  private var colsInDf: List[String] = _
+
 
   private var uniqueIndices: List[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
@@ -150,12 +156,6 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
     }
 
-    // check empty
-    if (df.count() == 0) {
-      logger.warn("data is empty!")
-      return
-    }
-
     // initialize
     tiConf = tiContext.tiConf
     tiSession = tiContext.tiSession
@@ -169,72 +169,81 @@ class TiBatchWrite(@transient val df: DataFrame,
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
     }
 
+    colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
+    colsInDf = df.columns.toList
     uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
     handleCol = tiTableInfo.getPKIsHandleColumn
-    dfColSize = df.columns.length
     tableColSize = tiTableInfo.getColumns.size()
 
     // check check check
     checkUnsupported()
-    checkColumnNumbers()
 
-    // initialize dfTiColumnInfo
-    dfTiColumnInfo = new Array[TiColumnInfo](dfColSize)
-    for (i <- 0 until dfColSize) {
-      if (dfColSize == tableColSize - 1) {
-        // auto increment case, use auto generated id
-        val offset = tiTableInfo.getAutoIncrementColInfo.getOffset
-        if (i < offset) {
-          dfTiColumnInfo(i) = tiTableInfo.getColumn(i)
-        } else {
-          dfTiColumnInfo(i) = tiTableInfo.getColumn(i + 1)
+    // check empty
+    if (df.count() == 0) {
+      logger.warn("data is empty!")
+      return
+    }
+
+    val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
+      val isProvidedID = tableColSize == dfColSize
+      val autoIncrementColName = tiTableInfo.getAutoIncrementColInfo.getName
+
+      // when auto increment column is provided but the corresponding column in df contains null,
+      // we need throw exception
+      if (isProvidedID) {
+        if (!df.columns.contains(autoIncrementColName)) {
+          throw new TiBatchWriteException(
+            "Column size is matched but cannot find auto increment column by name")
         }
+
+        val hasNullValue = df.filter(row => row.get(tiTableInfo.getAutoIncrementColInfo.getOffset) == null)
+          .count() > 0
+        if (hasNullValue) {
+          throw new TiBatchWriteException(
+            "cannot allocate id on the condition of having null value " +
+              "and valid value on auto increment column"
+          )
+        }
+        df.rdd
       } else {
-        dfTiColumnInfo(i) = tiTableInfo.getColumn(i)
-      }
-    }
+        // if auto increment column is not provided, we need allocate id for it.
+        // adding an auto increment column to df
+        df = df.withColumn(autoIncrementColName,
+          lit(null).cast("long"))
+        val start = RowIDAllocator
+          .create(
+            tiDBInfo.getId,
+            tiTableInfo.getId,
+            catalog,
+            tiTableInfo.isAutoIncColUnsigned,
+            df.count()
+          )
+          .getStart
 
-    if(tiTableInfo.hasAutoIncrementColumn) {
-      val autoColNullSize = df.filter {
-        row =>  {
-          val autoCol = tiTableInfo.getAutoIncrementColInfo
-          row.get(autoCol.getOffset) == null
+        // update colsInDF since we just add one column in df
+        colsInDf = df.columns.toList
+        // last one is auto increment column
+        df.rdd.zipWithIndex.map {
+          row =>
+            val rowSep = row._1.toSeq.zipWithIndex.map {
+              data =>
+                val colOffset = data._2
+                if (colsMapInTiDB.contains(colsInDf(colOffset))) {
+                  if (colsMapInTiDB(colsInDf(colOffset)).isAutoIncrement) {
+                    row._2 + start
+                  } else {
+                    data._1
+                  }
+                }
+            }
+            Row.fromSeq(rowSep)
         }
-      }.count()
-      if(autoColNullSize != 0 && options.autoIDProvided) {
-        throw new TiBatchWriteException("found some auto id column is null but you specify to provide them")
-      }
-
-      if(autoColNullSize == 0 && !options.autoIDProvided) {
-        throw new TiBatchWriteException("found all auto id column have value but you specify not to provide them")
-      }
-    }
-
-
-
-    val rdd = if(tiTableInfo.hasAutoIncrementColumn && !options.autoIDProvided) {
-      val cols = tiTableInfo.getColumns
-      val start = RowIDAllocator
-        .create(tiDBInfo.getId, tiTableInfo.getId, catalog, tiTableInfo.isAutoIncColUnsigned, df.count())
-        .getStart
-      df.rdd.zipWithIndex.map {
-        row =>
-          val rowSep = row._1.toSeq.zipWithIndex.map {
-            data =>
-              val colOffset = data._2
-              if(cols.get(colOffset).isAutoIncrement) {
-                row._2 + start
-              } else {
-                data._1
-              }
-          }
-          Row.fromSeq(rowSep)
       }
     } else {
       df.rdd
     }
 
-      // continue check check check
+    // continue check check check
     checkValueNotNull(rdd)
 
     val tiRowRdd = rdd.map(row => sparkRow2TiKVRow(row))
@@ -371,20 +380,6 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
     }
 
-  private def checkColumnNumbers(): Unit = {
-    if (!tiTableInfo.hasAutoIncrementColumn && dfColSize != tableColSize) {
-      throw new TiBatchWriteException(
-        s"table without auto increment column, but data col size $dfColSize != table column size $tableColSize"
-      )
-    }
-
-    if (tiTableInfo.hasAutoIncrementColumn && dfColSize != tableColSize && dfColSize != tableColSize - 1) {
-      throw new TiBatchWriteException(
-        s"table with auto increment column, but data col size $dfColSize != table column size $tableColSize and table column size - 1 ${tableColSize - 1} "
-      )
-    }
-  }
-
   private def checkValueNotNull(rdd: RDD[Row]): Unit = {
     var notNullColumnIndex: List[Int] = Nil
 
@@ -513,7 +508,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     val tiRow = ObjectRowImpl.create(fieldCount)
     for (i <- 0 until fieldCount) {
       // TODO: add tiDataType back
-      tiRow.set(i, null, sparkRow(i))
+      tiRow.set(colsMapInTiDB(colsInDf(i)).getOffset, null, sparkRow(i))
     }
     tiRow
   }
