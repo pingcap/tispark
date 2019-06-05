@@ -2,10 +2,13 @@ package com.pingcap.tikv.codec;
 
 import static org.junit.Assert.*;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.meta.MetaUtils;
+import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.MySQLType;
 import com.pingcap.tikv.types.StringType;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +20,11 @@ import org.junit.rules.ExpectedException;
 
 public class TableCodecTest {
   private static TiTableInfo createTable() {
+    StringType VARCHAR255 =
+        new StringType(
+            new TiColumnInfo.InternalTypeHolder(
+                MySQLType.TypeVarchar.getTypeCode(), 0, 255, 0, "", "", ImmutableList.of()));
+
     return new MetaUtils.TableBuilder()
         .name("testTable")
         .addColumn("c1", IntegerType.INT, true)
@@ -24,8 +32,8 @@ public class TableCodecTest {
         // TODO: enable when support Timestamp
         // .addColumn("c3", DateTimeType.DATETIME)
         // .addColumn("c4", TimestampType.TIMESTAMP)
-        .addColumn("c5", StringType.VARCHAR255)
-        .addColumn("c6", StringType.VARCHAR255)
+        .addColumn("c5", VARCHAR255)
+        .addColumn("c6", VARCHAR255)
         // .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
         .build();
   }
