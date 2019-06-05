@@ -197,6 +197,22 @@ class TiBatchWrite(@transient val df: DataFrame,
     // continue check check check
     checkValueNotNull()
 
+    if(tiTableInfo.hasAutoIncrementColumn) {
+      val autoColNullSize = df.filter {
+        row =>  {
+          val autoCol = tiTableInfo.getAutoIncrementColInfo
+          row.get(autoCol.getOffset) == null
+        }
+      }.count()
+      if(autoColNullSize != 0 && options.autoIDProvided) {
+        throw new TiBatchWriteException("found some auto id column is null but you specify to provide them")
+      }
+
+      if(autoColNullSize == 0 && !options.autoIDProvided) {
+        throw new TiBatchWriteException("found all auto id column have value but you specify not to provide them")
+      }
+    }
+
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
@@ -219,7 +235,29 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
     }
 
-    val tiRowRdd = df.rdd.map(row => sparkRow2TiKVRow(row))
+    val tiRowRdd = if(tiTableInfo.hasAutoIncrementColumn && !options.autoIDProvided) {
+      val cols = tiTableInfo.getColumns
+      val start = RowIDAllocator
+        .create(tiDBInfo.getId, tiTableInfo.getId, catalog, tiTableInfo.isAutoIncColUnsigned, df.count())
+        .getStart
+      df.rdd.zipWithIndex.map {
+        row =>
+          val rowSep = row._1.toSeq.zipWithIndex.map {
+            data =>
+              val colOffset = data._2
+              if(cols.get(colOffset).isAutoIncrement) {
+                row._2 + start
+              } else {
+                data._1
+              }
+          }
+          sparkRow2TiKVRow(Row.fromSeq(rowSep))
+      }
+    } else {
+      df.rdd.map(row => sparkRow2TiKVRow(row))
+    }
+
+    // fill row value if necessary
 
     val deduplicatedTiRowRdd = deduplicateIfNecessary(tiRowRdd, tiTableInfo.isPkHandle)
 
@@ -376,6 +414,10 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
   }
 
+  private def fillRow(row: TiRow): TiRow  = {
+    null
+  }
+
   // currently deduplicate can only perform on pk is handle table.
   @throws(classOf[TiBatchWriteException])
   private def deduplicateIfNecessary(rdd: RDD[TiRow], necessary: Boolean): RDD[TiRow] =
@@ -473,9 +515,8 @@ class TiBatchWrite(@transient val df: DataFrame,
     val fieldCount = sparkRow.size
     val tiRow = ObjectRowImpl.create(fieldCount)
     for (i <- 0 until fieldCount) {
-      val data = sparkRow.get(i)
       // TODO: add tiDataType back
-      tiRow.set(i, null, data)
+      tiRow.set(i, null, sparkRow(i))
     }
     tiRow
   }

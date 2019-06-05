@@ -1,6 +1,7 @@
 package com.pingcap.tispark.datasource
 
 import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tispark.TiDBOptions
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
@@ -72,7 +73,7 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     }
   }
 
-  ignore("Test upsert to table with primary key (auto increase case 1)") {
+  test("Test upsert to table with primary key (auto increase case 1)") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
     jdbcUpdate(
@@ -80,16 +81,20 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     )
 
     // insert row3 row4
-    tidbWrite(List(row3, row4), schema)
+    tidbWrite(List(row3, row4), schema, Some(Map(TiDBOptions.TIDB_AUTO_ID_PROVIDED -> "true")))
     testTiDBSelect(Seq(row2, row3, row4))
 
-    // insert row2_v2 row5
-    tidbWrite(List(row2_v2, row5), schema)
-    testTiDBSelect(Seq(row2_v2, row3, row4, row5))
+    // when provide auto id column value but say not provide them in options
+    // an exception will be thrown.
+    intercept[TiBatchWriteException] {
+      tidbWrite(List(row2_v2, row5), schema, Some(Map(TiDBOptions.TIDB_AUTO_ID_PROVIDED -> "false")))
+    }
 
-    // insert row3_v2 row4_v2 row5_v2
-    tidbWrite(List(row3_v2, row4_v2, row5_v2), schema)
-    testTiDBSelect(Seq(row2_v2, row3_v2, row4_v2, row5_v2))
+    // when not provide auto id but say provide them in options
+    // and exception will be thrown.
+    intercept[TiBatchWriteException] {
+      tidbWrite(List(Row(null, "abc")), schema, Some(Map(TiDBOptions.TIDB_AUTO_ID_PROVIDED -> "true")))
+    }
   }
 
   // TODO: support auto increment
