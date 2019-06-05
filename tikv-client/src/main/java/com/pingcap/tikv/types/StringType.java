@@ -19,10 +19,12 @@ package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
+import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.nio.charset.StandardCharsets;
 
 public class StringType extends BytesType {
+
   public static final StringType VARCHAR = new StringType(MySQLType.TypeVarchar);
   public static final StringType CHAR = new StringType(MySQLType.TypeString);
 
@@ -33,7 +35,7 @@ public class StringType extends BytesType {
     super(tp);
   }
 
-  protected StringType(TiColumnInfo.InternalTypeHolder holder) {
+  public StringType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
 
@@ -78,6 +80,11 @@ public class StringType extends BytesType {
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
+
+    if (result.length() > this.getLength()) {
+      throw ConvertOverflowException.newMaxLengthException(result, this.getLength());
+    }
+
     return result;
   }
 

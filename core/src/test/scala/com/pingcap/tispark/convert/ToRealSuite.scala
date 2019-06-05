@@ -1,10 +1,6 @@
 package com.pingcap.tispark.convert
 
-import java.sql.BatchUpdateException
-
-import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.datasource.BaseDataSourceTest
-import org.apache.spark.SparkException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 

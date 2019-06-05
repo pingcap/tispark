@@ -45,7 +45,8 @@ public class EnumType extends DataType {
     return convertToMysqlEnum(value);
   }
 
-  private Integer convertToMysqlEnum(Object value) throws ConvertNotSupportException {
+  private Integer convertToMysqlEnum(Object value)
+      throws ConvertNotSupportException, ConvertOverflowException {
     Integer result;
 
     if (value instanceof String) {
@@ -57,7 +58,7 @@ public class EnumType extends DataType {
     return result;
   }
 
-  private Integer parseEnumName(String name) {
+  private Integer parseEnumName(String name) throws ConvertOverflowException {
     int i = 0;
     while (i < this.getElems().size()) {
       if (this.getElems().get(i).equals(name)) {
@@ -67,7 +68,12 @@ public class EnumType extends DataType {
     }
 
     // name doesn't exist, maybe an integer?
-    int result = Integer.parseInt(name);
+    int result;
+    try {
+      result = Integer.parseInt(name);
+    } catch (Exception e) {
+      throw ConvertOverflowException.newEnumException(name);
+    }
     return parseEnumValue(result);
   }
 

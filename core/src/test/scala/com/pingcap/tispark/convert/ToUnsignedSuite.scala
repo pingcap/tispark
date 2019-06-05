@@ -5,12 +5,12 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
 /**
- * UNSINGED type include:
- * 1. TINYINT UNSINGED
- * 2. SMALLINT UNSINGED
- * 3. MEDIUMINT UNSINGED
- * 4. INT UNSINGED
- * 5. BIGINT UNSINGED
+ * UNSIGNED type include:
+ * 1. TINYINT UNSIGNED
+ * 2. SMALLINT UNSIGNED
+ * 3. MEDIUMINT UNSIGNED
+ * 4. INT UNSIGNED
+ * 5. BIGINT UNSIGNED
  */
 class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsigned") {
 
@@ -35,7 +35,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
          | c5 BIGINT UNSIGNED)""".stripMargin
     )
 
-  test("Test Convert from java.lang.Boolean to UNSINGED") {
+  test("Test Convert from java.lang.Boolean to UNSIGNED") {
     // success
     // java.lang.Boolean -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
     compareTiDBWriteWithJDBC {
@@ -420,7 +420,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
 
   override def afterAll(): Unit =
     try {
-      //dropTable()
+      dropTable()
     } finally {
       super.afterAll()
     }

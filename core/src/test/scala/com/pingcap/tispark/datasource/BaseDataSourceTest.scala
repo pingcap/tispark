@@ -1,7 +1,9 @@
 package com.pingcap.tispark.datasource
 
-import java.sql.Statement
+import java.sql.{BatchUpdateException, Statement}
+import java.util.Objects
 
+import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.StructType
@@ -78,6 +80,60 @@ class BaseDataSourceTest(val table: String,
     // check data source result & expected answer
     val df = queryTiDB(sortCol)
     checkAnswer(df, expectedAnswer)
+  }
+
+  protected def compareTiDBWriteFailureWithJDBC(
+    data: List[Row],
+    schema: StructType,
+    jdbcErrorClass: Class[_],
+    jdbcErrorMsg: String,
+    tidbErrorClass: Class[_],
+    tidbErrorMsg: String,
+    msgStartWith: Boolean = false
+  ): Unit = {
+    val caughtJDBC = intercept[SparkException] {
+      this.jdbcWrite(data, schema)
+    }
+    assert(
+      caughtJDBC.getCause.getClass.equals(jdbcErrorClass),
+      s"${caughtJDBC.getCause.getClass.getName} not equals to ${jdbcErrorClass.getName}"
+    )
+
+    if (!msgStartWith) {
+      assert(
+        Objects.equals(caughtJDBC.getCause.getMessage, jdbcErrorMsg),
+        s"${caughtJDBC.getCause.getMessage} not equals to $jdbcErrorMsg"
+      )
+    } else {
+      assert(
+        startWith(caughtJDBC.getCause.getMessage, jdbcErrorMsg),
+        s"${caughtJDBC.getCause.getMessage} not start with $jdbcErrorMsg"
+      )
+    }
+
+    val caughtTiDB = intercept[SparkException] {
+      this.tidbWrite(data, schema)
+    }
+    assert(
+      caughtTiDB.getCause.getClass.equals(tidbErrorClass),
+      s"${caughtTiDB.getCause.getClass.getName} not equals to ${tidbErrorClass.getName}"
+    )
+
+    if (!msgStartWith) {
+      assert(
+        Objects.equals(caughtTiDB.getCause.getMessage, tidbErrorMsg),
+        s"${caughtTiDB.getCause.getMessage} not equals to $tidbErrorMsg"
+      )
+    } else {
+      assert(
+        startWith(caughtTiDB.getCause.getMessage, tidbErrorMsg),
+        s"${caughtTiDB.getCause.getMessage} not start with $tidbErrorMsg"
+      )
+    }
+  }
+
+  private def startWith(a: String, b: String): Boolean = {
+    (a == null && b == null) || a.startsWith(b)
   }
 
   protected def compareTiDBWriteWithJDBC(
