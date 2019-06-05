@@ -50,7 +50,7 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsgStart = "Data truncation: invalid"
+    val jdbcErrorMsgStart = "Data truncation"
     val tidbErrorClass = classOf[java.lang.IllegalArgumentException]
     val tidbErrorMsgStart = null
 
