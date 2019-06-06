@@ -285,21 +285,19 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     List<Lock> locks = new ArrayList<>();
 
     // Check if kvPair contains error, it should be a Lock if hasError is true.
-    List<KvPair> kvPairs = new ArrayList<>(resp.getPairsList());
-    for (int i = 0; i < kvPairs.size(); i++) {
-      KvPair kvPair = kvPairs.get(i);
+    List<KvPair> kvPairs = resp.getPairsList();
+    List<KvPair> newKvPairs = new ArrayList<>();
+    for (KvPair kvPair : kvPairs) {
       if (kvPair.hasError()) {
         Lock lock = extractLockFromKeyErr(kvPair.getError());
-        kvPairs.set(
-            i,
-            KvPair.newBuilder()
-                .setError(kvPair.getError())
-                .setValue(kvPair.getValue())
-                .setKey(lock.getKey())
-                .build());
+        newKvPairs.add(KvPair.newBuilder()
+            .setError(kvPair.getError())
+            .setValue(kvPair.getValue())
+            .setKey(lock.getKey())
+            .build());
       }
     }
-    return kvPairs;
+    return Collections.unmodifiableList(newKvPairs);
   }
 
   private Lock extractLockFromKeyErr(KeyError keyError) {
