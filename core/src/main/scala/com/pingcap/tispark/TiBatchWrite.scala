@@ -55,7 +55,7 @@ object TiBatchWrite {
     new TiBatchWrite(df, tiContext, options, regionSplitNumber, enableRegionPreSplit).write()
 }
 
-class TiBatchWrite(@transient var df: DataFrame,
+class TiBatchWrite(@transient val df: DataFrame,
                    @transient val tiContext: TiContext,
                    options: TiDBOptions,
                    regionSplitNumber: Option[Int],
@@ -208,7 +208,7 @@ class TiBatchWrite(@transient var df: DataFrame,
       } else {
         // if auto increment column is not provided, we need allocate id for it.
         // adding an auto increment column to df
-        df = df.withColumn(autoIncrementColName, lit(null).cast("long"))
+        val newDf = df.withColumn(autoIncrementColName, lit(null).cast("long"))
         val start = RowIDAllocator
           .create(
             tiDBInfo.getId,
@@ -220,9 +220,9 @@ class TiBatchWrite(@transient var df: DataFrame,
           .getStart
 
         // update colsInDF since we just add one column in df
-        colsInDf = df.columns.toList
+        colsInDf = newDf.columns.toList
         // last one is auto increment column
-        df.rdd.zipWithIndex.map { row =>
+        newDf.rdd.zipWithIndex.map { row =>
           val rowSep = row._1.toSeq.zipWithIndex.map { data =>
             val colOffset = data._2
             if (colsMapInTiDB.contains(colsInDf(colOffset))) {
@@ -252,7 +252,7 @@ class TiBatchWrite(@transient var df: DataFrame,
     if (enableRegionPreSplit && handleCol != null) {
       logger.info("region pre split is enabled.")
       val sampleRDD =
-        df.rdd.sample(withReplacement = false, fraction = options.sampleFraction)
+        rdd.sample(withReplacement = false, fraction = options.sampleFraction)
       val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
 
       tiContext.tiSession.splitRegionAndScatter(
