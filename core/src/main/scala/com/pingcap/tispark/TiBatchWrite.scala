@@ -34,7 +34,6 @@ import com.pingcap.tikv.{TiBatchWriteUtils, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.{DataFrame, Row, TiContext}
 import org.slf4j.LoggerFactory
@@ -82,7 +81,6 @@ class TiBatchWrite(@transient var df: DataFrame,
   private var colsMapInTiDB: Map[String, TiColumnInfo] = _
 
   private var colsInDf: List[String] = _
-
 
   private var uniqueIndices: List[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
@@ -193,10 +191,12 @@ class TiBatchWrite(@transient var df: DataFrame,
       if (isProvidedID) {
         if (!df.columns.contains(autoIncrementColName)) {
           throw new TiBatchWriteException(
-            "Column size is matched but cannot find auto increment column by name")
+            "Column size is matched but cannot find auto increment column by name"
+          )
         }
 
-        val hasNullValue = df.filter(row => row.get(tiTableInfo.getAutoIncrementColInfo.getOffset) == null)
+        val hasNullValue = df
+          .filter(row => row.get(tiTableInfo.getAutoIncrementColInfo.getOffset) == null)
           .count() > 0
         if (hasNullValue) {
           throw new TiBatchWriteException(
@@ -208,8 +208,7 @@ class TiBatchWrite(@transient var df: DataFrame,
       } else {
         // if auto increment column is not provided, we need allocate id for it.
         // adding an auto increment column to df
-        df = df.withColumn(autoIncrementColName,
-          lit(null).cast("long"))
+        df = df.withColumn(autoIncrementColName, lit(null).cast("long"))
         val start = RowIDAllocator
           .create(
             tiDBInfo.getId,
@@ -223,20 +222,18 @@ class TiBatchWrite(@transient var df: DataFrame,
         // update colsInDF since we just add one column in df
         colsInDf = df.columns.toList
         // last one is auto increment column
-        df.rdd.zipWithIndex.map {
-          row =>
-            val rowSep = row._1.toSeq.zipWithIndex.map {
-              data =>
-                val colOffset = data._2
-                if (colsMapInTiDB.contains(colsInDf(colOffset))) {
-                  if (colsMapInTiDB(colsInDf(colOffset)).isAutoIncrement) {
-                    row._2 + start
-                  } else {
-                    data._1
-                  }
-                }
+        df.rdd.zipWithIndex.map { row =>
+          val rowSep = row._1.toSeq.zipWithIndex.map { data =>
+            val colOffset = data._2
+            if (colsMapInTiDB.contains(colsInDf(colOffset))) {
+              if (colsMapInTiDB(colsInDf(colOffset)).isAutoIncrement) {
+                row._2 + start
+              } else {
+                data._1
+              }
             }
-            Row.fromSeq(rowSep)
+          }
+          Row.fromSeq(rowSep)
         }
       }
     } else {
@@ -515,22 +512,14 @@ class TiBatchWrite(@transient var df: DataFrame,
 
   @throws(classOf[TiBatchWriteException])
   private def encodeTiRow(tiRow: TiRow): Array[Byte] = {
-    var colSize = tiRow.fieldCount()
+    val colSize = tiRow.fieldCount()
 
-    // an hidden row _tidb_rowid may exist
-    if (colSize > (tableColSize + 1)) {
+    if (colSize > tableColSize) {
       throw new TiBatchWriteException(
-        s"data col size $colSize > table column size $tableColSize + 1"
+        s"data col size $colSize > table column size $tableColSize"
       )
     }
-    // TODO: remove hashHiddenRow later, it is not used any more.
-    val hasHiddenRow = colSize == tableColSize + 1
 
-    // when we have an hidden row, we do not need
-    // write such column into TiKV
-    if (hasHiddenRow) {
-      colSize = colSize - 1
-    }
     // TODO: ddl state change
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-82
     val convertedValues = new Array[AnyRef](colSize)
