@@ -21,15 +21,14 @@ import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import io.grpc.Status;
-
-import javax.annotation.Nonnull;
 import java.util.concurrent.Callable;
+import javax.annotation.Nonnull;
 
 public abstract class RetryPolicy<RespT> {
   BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
 
   // handles PD and TiKV's error.
-  final private ErrorHandler<RespT> handler;
+  private final ErrorHandler<RespT> handler;
 
   private ImmutableSet<Status.Code> unrecoverableStatus =
       ImmutableSet.of(

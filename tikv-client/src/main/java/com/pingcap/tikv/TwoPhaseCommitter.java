@@ -106,6 +106,8 @@ public class TwoPhaseCommitter {
   /** unit is second */
   private static final long DEFAULT_BATCH_WRITE_LOCK_TTL = 3000;
 
+  private static final long MAX_RETRY_LEVEL = 3;
+
   private static final Logger LOG = LoggerFactory.getLogger(TwoPhaseCommitter.class);
 
   private TxnKVClient kvClient;
@@ -264,19 +266,20 @@ public class TwoPhaseCommitter {
       }
 
       BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF);
-      doPrewriteSecondaryKeysInBatchesWithRetry(backOffer, primaryKey, keyBytes, valueBytes, size);
+      doPrewriteSecondaryKeysInBatchesWithRetry(
+          backOffer, primaryKey, keyBytes, valueBytes, size, -1);
       totalSize = totalSize + size;
     }
   }
 
   private void doPrewriteSecondaryKeysInBatchesWithRetry(
-      BackOffer backOffer, ByteString primaryKey, ByteString[] keys, ByteString[] values, int size)
+      BackOffer backOffer,
+      ByteString primaryKey,
+      ByteString[] keys,
+      ByteString[] values,
+      int size,
+      int level)
       throws TiBatchWriteException {
-    LOG.debug(
-        "start prewrite secondary key in batches, primary key={}, size={}",
-        KeyUtils.formatBytes(primaryKey),
-        size);
-
     if (keys == null || keys.length == 0 || values == null || values.length == 0 || size <= 0) {
       // return success
       return;
@@ -310,13 +313,45 @@ public class TwoPhaseCommitter {
 
     // For prewrite, stop sending other requests after receiving first error.
     for (BatchKeys batchKeys : batchKeyList) {
-      doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
+      TiRegion oldRegion = batchKeys.getRegion();
+      TiRegion currentRegion = this.regionManager.getRegionById(oldRegion.getId());
+      if (oldRegion.equals(currentRegion)) {
+        doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
+      } else {
+        if (level > MAX_RETRY_LEVEL) {
+          throw new TiBatchWriteException(
+              String.format(
+                  "> max retry number %s, oldRegion=%s, currentRegion=%s",
+                  MAX_RETRY_LEVEL, oldRegion, currentRegion));
+        }
+        LOG.debug(
+            String.format(
+                "oldRegion=%s != currentRegion=%s, will refetch region info and retry",
+                oldRegion, currentRegion));
+        retryPrewriteBatch(
+            backOffer, primaryKey, batchKeys, mutations, level == -1 ? 1 : level + 1);
+      }
     }
+  }
 
-    LOG.debug(
-        "prewrite secondary key in batches successfully, primary key={}, size={}",
-        KeyUtils.formatBytes(primaryKey),
-        size);
+  private void retryPrewriteBatch(
+      BackOffer backOffer,
+      ByteString primaryKey,
+      BatchKeys batchKeys,
+      Map<ByteString, Kvrpcpb.Mutation> mutations,
+      int level) {
+
+    int size = batchKeys.getKeys().size();
+    ByteString[] keyBytes = new ByteString[size];
+    ByteString[] valueBytes = new ByteString[size];
+    int i = 0;
+    for (ByteString k : batchKeys.getKeys()) {
+      keyBytes[i] = k;
+      valueBytes[i] = mutations.get(k).getValue();
+      i++;
+    }
+    doPrewriteSecondaryKeysInBatchesWithRetry(
+        backOffer, primaryKey, keyBytes, valueBytes, size, level);
   }
 
   private void doPrewriteSecondaryKeySingleBatchWithRetry(
@@ -350,6 +385,7 @@ public class TwoPhaseCommitter {
           "prewrite secondary key error", prewriteResult.getException());
     }
     if (prewriteResult.isRetry()) {
+      LOG.debug("prewrite secondary key fail, will backoff and retry");
       try {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss,
@@ -359,17 +395,7 @@ public class TwoPhaseCommitter {
                     batchKeys.getRegion().getId()),
                 prewriteResult.getException()));
         // re-split keys and commit again.
-        int size = batchKeys.getKeys().size();
-        ByteString[] keyBytes = new ByteString[size];
-        ByteString[] valueBytes = new ByteString[size];
-        int i = 0;
-        for (ByteString k : batchKeys.getKeys()) {
-          keyBytes[i] = k;
-          valueBytes[i] = mutations.get(k).getValue();
-          i++;
-        }
-        doPrewriteSecondaryKeysInBatchesWithRetry(
-            backOffer, primaryKey, keyBytes, valueBytes, size);
+        retryPrewriteBatch(backOffer, primaryKey, batchKeys, mutations, -1);
       } catch (GrpcException e) {
         String errorMsg =
             String.format(
