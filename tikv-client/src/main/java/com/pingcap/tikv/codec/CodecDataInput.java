@@ -190,7 +190,7 @@ public class CodecDataInput implements DataInput {
 
   public int readPartialUnsignedShort() {
     try {
-      byte readBuffer[] = new byte[2];
+      byte[] readBuffer = new byte[2];
       inputStream.read(readBuffer, 0, 2);
       return ((readBuffer[0] & 0xff) << 8) + ((readBuffer[1] & 0xff) << 0);
     } catch (IOException e) {
@@ -225,18 +225,18 @@ public class CodecDataInput implements DataInput {
     }
   }
 
-  public final long readPartialLong() {
+  final long readPartialLong() {
     try {
-      byte readBuffer[] = new byte[8];
+      byte[] readBuffer = new byte[8];
       inputStream.read(readBuffer, 0, 8);
       return (((long) readBuffer[0] << 56)
-          + ((long) (readBuffer[1] & 255) << 48)
-          + ((long) (readBuffer[2] & 255) << 40)
-          + ((long) (readBuffer[3] & 255) << 32)
-          + ((long) (readBuffer[4] & 255) << 24)
-          + ((readBuffer[5] & 255) << 16)
-          + ((readBuffer[6] & 255) << 8)
-          + ((readBuffer[7] & 255) << 0));
+          + ((long) (readBuffer[1] & 0xff) << 48)
+          + ((long) (readBuffer[2] & 0xff) << 40)
+          + ((long) (readBuffer[3] & 0xff) << 32)
+          + ((long) (readBuffer[4] & 0xff) << 24)
+          + ((readBuffer[5] & 0xff) << 16)
+          + ((readBuffer[6] & 0xff) << 8)
+          + ((readBuffer[7] & 0xff) << 0));
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -270,6 +270,7 @@ public class CodecDataInput implements DataInput {
   }
 
   @Override
+  @Nonnull
   public String readUTF() {
     try {
       return inputStream.readUTF();
