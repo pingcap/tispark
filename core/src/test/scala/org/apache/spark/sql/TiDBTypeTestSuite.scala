@@ -88,7 +88,6 @@ class TiDBTypeTestSuite extends BaseTiSparkTest {
           ('-2147483648'),
           ('9223372036854775807'),
           ('-9223372036854775808'),
-          ('9223372036854775808'),
           ('0.5'),
           ('-0.5'),
           ('""'),
@@ -99,17 +98,16 @@ class TiDBTypeTestSuite extends BaseTiSparkTest {
           ('"\\u0001"'),
           ('[]'),
           ('"中文"'),
-          (JSON_ARRAY(null, false, true, 3, 0.5, "hello", JSON_ARRAY("nested_array"), JSON_OBJECT("nested", "object"))),
+          (JSON_ARRAY(null, false, true, 0, 0.5, "hello", JSON_ARRAY("nested_array"), JSON_OBJECT("nested", "object"))),
           (JSON_OBJECT("a", null, "b", true, "c", false, "d", 0, "e", 0.5, "f", "hello", "nested_array", JSON_ARRAY(1, 2, 3), "nested_object", JSON_OBJECT("hello", 1)))"""
     )
     refreshConnections()
 
-    spark.sql("select json_doc from t").show(30, truncate = false)
     runTest(
       "select json_doc from t",
       skipJDBC = true,
       rTiDB = List(
-        List(null),
+        List("null"),
         List(true),
         List(false),
         List(0),
@@ -119,7 +117,6 @@ class TiDBTypeTestSuite extends BaseTiSparkTest {
         List(-2147483648),
         List(9223372036854775807L),
         List(-9223372036854775808L),
-        List(9.223372036854776E18),
         List(0.5),
         List(-0.5),
         List("\"\""),
@@ -130,7 +127,7 @@ class TiDBTypeTestSuite extends BaseTiSparkTest {
         List("\"\\u0001\""),
         List("[]"),
         List("\"中文\""),
-        List("[null,false,true,3,0.5,\"hello\",[\"nested_array\"],{\"nested\":\"object\"}]"),
+        List("[null,false,true,0,0.5,\"hello\",[\"nested_array\"],{\"nested\":\"object\"}]"),
         List(
           "{\"a\":null,\"b\":true,\"c\":false,\"d\":0,\"e\":0.5,\"f\":\"hello\",\"nested_array\":[1,2,3],\"nested_object\":{\"hello\":1}}"
         )
