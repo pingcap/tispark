@@ -55,7 +55,7 @@ Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need
 
 Each latest TiSpark version guarantees *downward compatibility* for TiDB components, i.e., supports TiDB/TiKV/PD until a certain release. Its reason varies, amongst which the most common one is that the new features and bug-fixes provided by TiDB components requires update on API, dependencies, etc.
 
-| TiSpark Version | TiDB Version | TiKV Version | PD Version |
+| TiSpark Version | Maximum TiDB Version | Maximum TiKV Version | Maximum PD Version |
 | ----- | ------ | ------ | ------ |
 | 1.2 | v2.1.5 | v2.1.5 | v2.1.5 |
 | 2.1 | v3.0.0-beta | v3.0.0-beta | v3.0.0-beta |
