@@ -106,7 +106,7 @@ public class TwoPhaseCommitter {
   /** unit is second */
   private static final long DEFAULT_BATCH_WRITE_LOCK_TTL = 3000;
 
-  private static final long MAX_RETRY_LEVEL = 3;
+  private static final long MAX_RETRY_TIMES = 3;
 
   private static final Logger LOG = LoggerFactory.getLogger(TwoPhaseCommitter.class);
 
@@ -267,7 +267,7 @@ public class TwoPhaseCommitter {
 
       BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF);
       doPrewriteSecondaryKeysInBatchesWithRetry(
-          backOffer, primaryKey, keyBytes, valueBytes, size, -1);
+          backOffer, primaryKey, keyBytes, valueBytes, size, 0);
       totalSize = totalSize + size;
     }
   }
@@ -318,18 +318,18 @@ public class TwoPhaseCommitter {
       if (oldRegion.equals(currentRegion)) {
         doPrewriteSecondaryKeySingleBatchWithRetry(backOffer, primaryKey, batchKeys, mutations);
       } else {
-        if (level > MAX_RETRY_LEVEL) {
+        if (level > MAX_RETRY_TIMES) {
           throw new TiBatchWriteException(
               String.format(
                   "> max retry number %s, oldRegion=%s, currentRegion=%s",
-                  MAX_RETRY_LEVEL, oldRegion, currentRegion));
+                  MAX_RETRY_TIMES, oldRegion, currentRegion));
         }
         LOG.debug(
             String.format(
                 "oldRegion=%s != currentRegion=%s, will refetch region info and retry",
                 oldRegion, currentRegion));
         retryPrewriteBatch(
-            backOffer, primaryKey, batchKeys, mutations, level == -1 ? 1 : level + 1);
+            backOffer, primaryKey, batchKeys, mutations, level <= 0 ? 1 : level + 1);
       }
     }
   }
@@ -395,7 +395,7 @@ public class TwoPhaseCommitter {
                     batchKeys.getRegion().getId()),
                 prewriteResult.getException()));
         // re-split keys and commit again.
-        retryPrewriteBatch(backOffer, primaryKey, batchKeys, mutations, -1);
+        retryPrewriteBatch(backOffer, primaryKey, batchKeys, mutations, 0);
       } catch (GrpcException e) {
         String errorMsg =
             String.format(
