@@ -295,6 +295,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             .setValue(kvPair.getValue())
             .setKey(lock.getKey())
             .build());
+      } else {
+        newKvPairs.add(kvPair);
       }
     }
     return Collections.unmodifiableList(newKvPairs);
