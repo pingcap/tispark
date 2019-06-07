@@ -37,15 +37,15 @@ import org.tikv.kvproto.Kvrpcpb.KvPair;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
-  private final TiSession session;
+  private final TiConfiguration conf;
 
-  public Snapshot(@Nonnull TiTimestamp timestamp, TiSession session) {
+  public Snapshot(@Nonnull TiTimestamp timestamp, TiConfiguration conf) {
     this.timestamp = timestamp;
-    this.session = session;
+    this.conf = conf;
   }
 
   public TiSession getSession() {
-    return session;
+    return TiSessionCache.getSession(conf);
   }
 
   public long getVersion() {
@@ -63,7 +63,7 @@ public class Snapshot {
   }
 
   public ByteString get(ByteString key) {
-    RegionStoreClient client = session.getRegionStoreClientBuilder().build(key);
+    RegionStoreClient client = getSession().getRegionStoreClientBuilder().build(key);
     // TODO: Need to deal with lock error after grpc stable
     return client.get(ConcreteBackOffer.newGetBackOff(), key, timestamp.getVersion());
   }
@@ -71,7 +71,7 @@ public class Snapshot {
   public void set(ByteString key, ByteString value) {
     TxnKVClient txnKVClient =
         new TxnKVClient(
-            this.session.getConf(), session.getRegionStoreClientBuilder(), session.getPDClient());
+            conf, getSession().getRegionStoreClientBuilder(), getSession().getPDClient());
     TwoPhaseCommitter twoPhaseCommitter =
         new TwoPhaseCommitter(txnKVClient, txnKVClient.getTimestamp().getVersion());
     twoPhaseCommitter.prewritePrimaryKey(
@@ -94,7 +94,7 @@ public class Snapshot {
   public Iterator<Row> tableRead(TiDAGRequest dagRequest, long physicalId) {
     return tableRead(
         dagRequest,
-        RangeSplitter.newSplitter(session.getRegionManager())
+        RangeSplitter.newSplitter(getSession().getRegionManager())
             .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId)));
   }
 
@@ -108,10 +108,10 @@ public class Snapshot {
    */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest, List<RegionTask> task) {
     if (dagRequest.isDoubleRead()) {
-      Iterator<Long> iter = getHandleIterator(dagRequest, task, session);
+      Iterator<Long> iter = getHandleIterator(dagRequest, task, getSession());
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
-      return getRowIterator(dagRequest, task, session);
+      return getRowIterator(dagRequest, task, getSession());
     }
   }
 
@@ -124,10 +124,10 @@ public class Snapshot {
    * @return Row iterator to iterate over resulting rows
    */
   public Iterator<Long> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
-    return getHandleIterator(dagRequest, tasks, session);
+    return getHandleIterator(dagRequest, tasks, getSession());
   }
 
   public Iterator<KvPair> scan(ByteString startKey) {
-    return new ScanIterator(startKey, session, timestamp.getVersion());
+    return new ScanIterator(startKey, getSession(), timestamp.getVersion());
   }
 }
