@@ -103,15 +103,15 @@ public class Snapshot {
    * scan
    *
    * @param dagRequest DAGRequest for coprocessor
-   * @param task RegionTask of the coprocessor request to send
+   * @param tasks RegionTasks of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  public Iterator<Row> tableRead(TiDAGRequest dagRequest, List<RegionTask> task) {
+  public Iterator<Row> tableRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
-      Iterator<Long> iter = getHandleIterator(dagRequest, task, getSession());
+      Iterator<Long> iter = getHandleIterator(dagRequest, tasks, getSession());
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
-      return getRowIterator(dagRequest, task, getSession());
+      return getRowIterator(dagRequest, tasks, getSession());
     }
   }
 
