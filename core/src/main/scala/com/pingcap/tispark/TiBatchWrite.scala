@@ -74,9 +74,7 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var tiDBInfo: TiDBInfo = _
   private var tiTableInfo: TiTableInfo = _
 
-  private var dfColSize: Int = _
   private var tableColSize: Int = _
-  private var dfTiColumnInfo: Array[TiColumnInfo] = _
 
   private var colsMapInTiDB: Map[String, TiColumnInfo] = _
 
@@ -175,6 +173,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // check check check
     checkUnsupported()
+    checkColumnNumbers()
 
     // check empty
     if (df.count() == 0) {
@@ -183,7 +182,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
-      val isProvidedID = tableColSize == dfColSize
+      val isProvidedID = tableColSize == colsInDf.length
       val autoIncrementColName = tiTableInfo.getAutoIncrementColInfo.getName
 
       // when auto increment column is provided but the corresponding column in df contains null,
@@ -240,10 +239,10 @@ class TiBatchWrite(@transient val df: DataFrame,
       df.rdd
     }
 
-    // continue check check check
-    checkValueNotNull(rdd)
-
     val tiRowRdd = rdd.map(row => sparkRow2TiKVRow(row))
+
+    // continue check check check
+    checkValueNotNull(tiRowRdd)
 
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
@@ -377,33 +376,36 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
     }
 
-  private def checkValueNotNull(rdd: RDD[Row]): Unit = {
-    var notNullColumnIndex: List[Int] = Nil
-
-    for (i <- 0 until dfColSize) {
-      val tiColumnInfo = dfTiColumnInfo(i)
-      if (tiColumnInfo.getType.isNotNull) {
-        notNullColumnIndex = i :: notNullColumnIndex
-      }
+  private def checkColumnNumbers(): Unit = {
+    if (!tiTableInfo.hasAutoIncrementColumn && colsInDf.length != tableColSize) {
+      throw new TiBatchWriteException(
+        s"table without auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize"
+      )
     }
 
-    if (notNullColumnIndex.nonEmpty) {
-      val nullRowCount = rdd
-        .flatMap { row =>
-          var result: Option[SparkRow] = None
-          notNullColumnIndex.foreach { col =>
-            if (row.isNullAt(col)) {
-              result = Some(row)
+    if (tiTableInfo.hasAutoIncrementColumn && colsInDf.length != tableColSize && colsInDf.length != tableColSize - 1) {
+      throw new TiBatchWriteException(
+        s"table with auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize and table column size - 1 ${tableColSize - 1} "
+      )
+    }
+  }
+
+  private def checkValueNotNull(rdd: RDD[TiRow]): Unit = {
+    val nullRowCount = rdd.filter {
+      row =>
+        colsMapInTiDB.exists {
+          case (_, v) =>
+            if(v.getType.isNotNull && row.get(v.getOffset, v.getType) == null) {
+              true
+            } else {
+              false
             }
-          }
-          result
         }
-        .count()
-      if (nullRowCount > 0) {
-        throw new TiBatchWriteException(
-          s"Insert null value to not null column! $nullRowCount rows contain illegal null values!"
-        )
-      }
+    }.count()
+
+    if (nullRowCount > 0) {
+      throw new TiBatchWriteException(
+        s"Insert null value to not null column! $nullRowCount rows contain illegal null values!")
     }
   }
 
