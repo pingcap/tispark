@@ -9,6 +9,17 @@ public class TiSessionCache {
   // Since we create session as singleton now, configuration change will not
   // reflect change
   public static TiSession getSession(TiConfiguration conf) {
-    return sessionCachedMap.putIfAbsent(conf.getPdAddrsString(), TiSession.create(conf));
+    String key = conf.getPdAddrsString();
+    if (sessionCachedMap.containsKey(key)) {
+      return sessionCachedMap.get(key);
+    }
+
+    TiSession newSession = TiSession.create(conf);
+    sessionCachedMap.put(key, newSession);
+    return newSession;
+  }
+
+  public static void clear() {
+    sessionCachedMap.clear();
   }
 }
