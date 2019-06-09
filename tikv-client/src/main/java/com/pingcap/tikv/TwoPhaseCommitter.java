@@ -116,8 +116,8 @@ public class TwoPhaseCommitter {
   /** start timestamp of transaction which get from PD */
   private final long startTs;
 
-  public TwoPhaseCommitter(TxnKVClient kvClient, long startTime) {
-    this.kvClient = kvClient;
+  public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
+    this.kvClient = TiSessionCache.getSession(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
   }

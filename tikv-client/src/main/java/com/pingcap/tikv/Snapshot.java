@@ -25,8 +25,6 @@ import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.operation.iterator.ScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.txn.TxnKVClient;
-import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
@@ -37,15 +35,17 @@ import org.tikv.kvproto.Kvrpcpb.KvPair;
 
 public class Snapshot {
   private final TiTimestamp timestamp;
+  private final TiSession session;
   private final TiConfiguration conf;
 
   public Snapshot(@Nonnull TiTimestamp timestamp, TiConfiguration conf) {
     this.timestamp = timestamp;
     this.conf = conf;
+    this.session = TiSessionCache.getSession(conf);
   }
 
   public TiSession getSession() {
-    return TiSessionCache.getSession(conf);
+    return session;
   }
 
   public long getVersion() {
@@ -63,26 +63,9 @@ public class Snapshot {
   }
 
   public ByteString get(ByteString key) {
-    RegionStoreClient client = getSession().getRegionStoreClientBuilder().build(key);
+    RegionStoreClient client = session.getRegionStoreClientBuilder().build(key);
     // TODO: Need to deal with lock error after grpc stable
     return client.get(ConcreteBackOffer.newGetBackOff(), key, timestamp.getVersion());
-  }
-
-  public void set(ByteString key, ByteString value) {
-    TxnKVClient txnKVClient =
-        new TxnKVClient(
-            conf, getSession().getRegionStoreClientBuilder(), getSession().getPDClient());
-    TwoPhaseCommitter twoPhaseCommitter =
-        new TwoPhaseCommitter(txnKVClient, txnKVClient.getTimestamp().getVersion());
-    twoPhaseCommitter.prewritePrimaryKey(
-        ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
-        key.toByteArray(),
-        value.toByteArray());
-    long commitTs = txnKVClient.getTimestamp().getVersion();
-    twoPhaseCommitter.commitPrimaryKey(
-        ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF),
-        key.toByteArray(),
-        commitTs);
   }
 
   /**
@@ -94,7 +77,7 @@ public class Snapshot {
   public Iterator<Row> tableRead(TiDAGRequest dagRequest, long physicalId) {
     return tableRead(
         dagRequest,
-        RangeSplitter.newSplitter(getSession().getRegionManager())
+        RangeSplitter.newSplitter(session.getRegionManager())
             .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId)));
   }
 
@@ -124,10 +107,14 @@ public class Snapshot {
    * @return Row iterator to iterate over resulting rows
    */
   public Iterator<Long> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
-    return getHandleIterator(dagRequest, tasks, getSession());
+    return getHandleIterator(dagRequest, tasks, session);
   }
 
   public Iterator<KvPair> scan(ByteString startKey) {
-    return new ScanIterator(startKey, getSession(), timestamp.getVersion());
+    return new ScanIterator(startKey, session, timestamp.getVersion());
+  }
+
+  public TiConfiguration getConf() {
+    return conf;
   }
 }
