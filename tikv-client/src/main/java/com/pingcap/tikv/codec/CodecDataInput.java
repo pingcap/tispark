@@ -15,10 +15,8 @@
 
 package com.pingcap.tikv.codec;
 
-import com.google.common.io.LittleEndianDataInputStream;
 import com.google.protobuf.ByteString;
 import java.io.*;
-import java.util.Arrays;
 import javax.annotation.Nonnull;
 
 public class CodecDataInput implements DataInput {
@@ -118,10 +116,6 @@ public class CodecDataInput implements DataInput {
     inputStream = new DataInputStream(backingStream);
   }
 
-  public CodecDataInput(byte[] buf, int start) {
-    this(Arrays.copyOfRange(buf, start, buf.length));
-  }
-
   @Override
   public void readFully(@Nonnull byte[] b) {
     try {
@@ -190,6 +184,16 @@ public class CodecDataInput implements DataInput {
     try {
       return inputStream.readUnsignedShort();
     } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public int readPartialUnsignedShort() {
+    try {
+      byte[] readBuffer = new byte[2];
+      inputStream.read(readBuffer, 0, 2);
+      return ((readBuffer[0] & 0xff) << 8) + ((readBuffer[1] & 0xff) << 0);
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
@@ -270,43 +274,6 @@ public class CodecDataInput implements DataInput {
   public String readUTF() {
     try {
       return inputStream.readUTF();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  // Read from input stream with little endian data
-  public int readUnsignedShortLSB() {
-    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
-    try {
-      return ldInputStream.readUnsignedShort();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public int readIntLSB() {
-    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
-    try {
-      return ldInputStream.readInt();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public long readLongLSB() {
-    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
-    try {
-      return ldInputStream.readLong();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public double readDoubleLSB() {
-    LittleEndianDataInputStream ldInputStream = new LittleEndianDataInputStream(inputStream);
-    try {
-      return ldInputStream.readDouble();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
