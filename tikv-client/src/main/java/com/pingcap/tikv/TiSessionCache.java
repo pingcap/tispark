@@ -1,14 +1,14 @@
 package com.pingcap.tikv;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class TiSessionCache {
-  private static Map<String, TiSession> sessionCachedMap = new ConcurrentHashMap<>();
+  private static Map<String, TiSession> sessionCachedMap = new HashMap<>();
 
   // Since we create session as singleton now, configuration change will not
   // reflect change
-  public static TiSession getSession(TiConfiguration conf) {
+  public static synchronized TiSession getSession(TiConfiguration conf) {
     String key = conf.getPdAddrsString();
     if (sessionCachedMap.containsKey(key)) {
       return sessionCachedMap.get(key);
