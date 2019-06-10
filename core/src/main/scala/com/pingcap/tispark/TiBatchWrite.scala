@@ -253,17 +253,19 @@ class TiBatchWrite(@transient val df: DataFrame,
       val sampleRDD =
         rdd.sample(withReplacement = false, fraction = options.sampleFraction)
       val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
-
-      tiContext.tiSession.splitRegionAndScatter(
-        calculateSplitKeys(
-          sampleRDD,
-          dataSize,
-          sampleRDDCount,
-          tiTableInfo,
-          isUpdate = false,
-          regionSplitNumber
-        ).map(k => k.bytes).asJava
-      )
+      // only perform region presplit if sample rdd is not empty
+      if (!sampleRDD.isEmpty()) {
+        tiContext.tiSession.splitRegionAndScatter(
+          calculateSplitKeys(
+            sampleRDD,
+            dataSize,
+            sampleRDDCount,
+            tiTableInfo,
+            isUpdate = false,
+            regionSplitNumber
+          ).map(k => k.bytes).asJava
+        )
+      }
     }
 
     val deduplicatedTiRowRdd = deduplicateIfNecessary(tiRowRdd, tiTableInfo.isPkHandle)
