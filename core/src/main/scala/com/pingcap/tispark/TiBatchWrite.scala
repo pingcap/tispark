@@ -391,21 +391,23 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   private def checkValueNotNull(rdd: RDD[TiRow]): Unit = {
-    val nullRowCount = rdd.filter {
-      row =>
+    val nullRowCount = rdd
+      .filter { row =>
         colsMapInTiDB.exists {
           case (_, v) =>
-            if(v.getType.isNotNull && row.get(v.getOffset, v.getType) == null) {
+            if (v.getType.isNotNull && row.get(v.getOffset, v.getType) == null) {
               true
             } else {
               false
             }
         }
-    }.count()
+      }
+      .count()
 
     if (nullRowCount > 0) {
       throw new TiBatchWriteException(
-        s"Insert null value to not null column! $nullRowCount rows contain illegal null values!")
+        s"Insert null value to not null column! $nullRowCount rows contain illegal null values!"
+      )
     }
   }
 
