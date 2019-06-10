@@ -104,7 +104,6 @@ class TiDBTypeTestSuite extends BaseTiSparkTest {
     )
     refreshConnections()
 
-    spark.sql("select json_doc from t").show(30, truncate = false)
     runTest(
       "select json_doc from t",
       skipJDBC = true,

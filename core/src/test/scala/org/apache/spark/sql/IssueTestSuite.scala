@@ -249,11 +249,6 @@ class IssueTestSuite extends BaseTiSparkTest {
   }
 
   test("test push down filters when using index double read") {
-    def explainTestAndCollect(sql: String): Unit = {
-      val df = spark.sql(sql)
-      df.explain
-      df.collect.foreach(println)
-    }
     explainTestAndCollect(
       "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx limit 10"
     )
@@ -269,12 +264,6 @@ class IssueTestSuite extends BaseTiSparkTest {
   }
 
   test("unsigned bigint as group by column") {
-    def explainTestAndCollect(sql: String): Unit = {
-      val df = spark.sql(sql)
-      df.explain
-      df.show
-      df.collect.foreach(println)
-    }
     tidbStmt.execute("drop table if exists table_group_by_bigint")
     tidbStmt.execute("""
                        |CREATE TABLE `table_group_by_bigint` (

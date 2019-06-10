@@ -23,6 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
+import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.TiSessionCache;
+import com.pingcap.tikv.TwoPhaseCommitter;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
@@ -31,6 +35,8 @@ import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -46,6 +52,7 @@ public class CatalogTransaction {
   protected static final Logger logger = Logger.getLogger(CatalogTransaction.class);
   private final Snapshot snapshot;
   private final byte[] prefix;
+  private final TiConfiguration conf;
 
   private static final byte[] META_PREFIX = new byte[] {'m'};
 
@@ -62,6 +69,7 @@ public class CatalogTransaction {
 
   CatalogTransaction(Snapshot snapshot) {
     this.snapshot = snapshot;
+    this.conf = snapshot.getConf();
     this.prefix = META_PREFIX;
   }
 
@@ -128,6 +136,23 @@ public class CatalogTransaction {
     return !hashGet(dbKey, tableKey).isEmpty();
   }
 
+  // set key value pair to tikv via two phase committer protocol.
+  private void set(ByteString key, byte[] value) {
+    TiSession session = TiSessionCache.getSession(conf);
+    TwoPhaseCommitter twoPhaseCommitter =
+        new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
+
+    twoPhaseCommitter.prewritePrimaryKey(
+        ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
+        key.toByteArray(),
+        value);
+
+    twoPhaseCommitter.commitPrimaryKey(
+        ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF),
+        key.toByteArray(),
+        session.getTimestamp().getVersion());
+  }
+
   private void updateMeta(ByteString key, byte[] oldVal) {
     // 1. encode hash meta key
     // 2. load meta via hash meta key from TiKV
@@ -146,7 +171,8 @@ public class CatalogTransaction {
       fieldCount++;
       cdo.reset();
       cdo.writeLong(fieldCount);
-      snapshot.set(metaKey, cdo.toByteString());
+
+      set(metaKey, cdo.toBytes());
     }
   }
 
@@ -170,8 +196,8 @@ public class CatalogTransaction {
       // not need to update
       return 0L;
     }
-    snapshot.set(dataKey, ByteString.copyFrom(newVal));
 
+    set(dataKey, newVal);
     updateMeta(key, oldVal);
     return Long.parseLong(new String(newVal));
   }

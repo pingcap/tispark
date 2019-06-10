@@ -89,11 +89,11 @@ public class TiSession implements AutoCloseable {
   }
 
   public Snapshot createSnapshot() {
-    return new Snapshot(getTimestamp(), this);
+    return new Snapshot(getTimestamp(), this.conf);
   }
 
   public Snapshot createSnapshot(TiTimestamp ts) {
-    return new Snapshot(ts, this);
+    return new Snapshot(ts, conf);
   }
 
   public PDClient getPDClient() {
