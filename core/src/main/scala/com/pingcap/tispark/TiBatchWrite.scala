@@ -20,6 +20,7 @@ import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
+import org.apache.spark.sql.functions.lit
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
@@ -34,7 +35,6 @@ import com.pingcap.tispark.TiBatchWrite.TiRow
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.{DataFrame, Row, TiContext}
 import org.slf4j.LoggerFactory
 
@@ -73,9 +73,11 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var tiDBInfo: TiDBInfo = _
   private var tiTableInfo: TiTableInfo = _
 
-  private var dfColSize: Int = _
   private var tableColSize: Int = _
-  private var dfTiColumnInfo: Array[TiColumnInfo] = _
+
+  private var colsMapInTiDB: Map[String, TiColumnInfo] = _
+
+  private var colsInDf: List[String] = _
 
   private var uniqueIndices: List[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
@@ -149,12 +151,6 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
     }
 
-    // check empty
-    if (df.count() == 0) {
-      logger.warn("data is empty!")
-      return
-    }
-
     // initialize
     tiConf = tiContext.tiConf
     tiSession = tiContext.tiSession
@@ -167,33 +163,84 @@ class TiBatchWrite(@transient val df: DataFrame,
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
     }
 
+    colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
+    colsInDf = df.columns.toList
     uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
     handleCol = tiTableInfo.getPKIsHandleColumn
-    dfColSize = df.columns.length
     tableColSize = tiTableInfo.getColumns.size()
 
     // check check check
     checkUnsupported()
     checkColumnNumbers()
 
-    // initialize dfTiColumnInfo
-    dfTiColumnInfo = new Array[TiColumnInfo](dfColSize)
-    for (i <- 0 until dfColSize) {
-      if (dfColSize == tableColSize - 1) {
-        // auto increment case, use auto generated id
-        val offset = tiTableInfo.getAutoIncrementColInfo.getOffset
-        if (i < offset) {
-          dfTiColumnInfo(i) = tiTableInfo.getColumn(i)
-        } else {
-          dfTiColumnInfo(i) = tiTableInfo.getColumn(i + 1)
-        }
-      } else {
-        dfTiColumnInfo(i) = tiTableInfo.getColumn(i)
-      }
+    // check empty
+    if (df.count() == 0) {
+      logger.warn("data is empty!")
+      return
     }
 
+    val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
+      val isProvidedID = tableColSize == colsInDf.length
+      val autoIncrementColName = tiTableInfo.getAutoIncrementColInfo.getName
+
+      // when auto increment column is provided but the corresponding column in df contains null,
+      // we need throw exception
+      if (isProvidedID) {
+        if (!df.columns.contains(autoIncrementColName)) {
+          throw new TiBatchWriteException(
+            "Column size is matched but cannot find auto increment column by name"
+          )
+        }
+
+        val hasNullValue = df
+          .filter(row => row.get(tiTableInfo.getAutoIncrementColInfo.getOffset) == null)
+          .count() > 0
+        if (hasNullValue) {
+          throw new TiBatchWriteException(
+            "cannot allocate id on the condition of having null value " +
+              "and valid value on auto increment column"
+          )
+        }
+        df.rdd
+      } else {
+        // if auto increment column is not provided, we need allocate id for it.
+        // adding an auto increment column to df
+        val newDf = df.withColumn(autoIncrementColName, lit(null).cast("long"))
+        val start = RowIDAllocator
+          .create(
+            tiDBInfo.getId,
+            tiTableInfo.getId,
+            catalog,
+            tiTableInfo.isAutoIncColUnsigned,
+            df.count()
+          )
+          .getStart
+
+        // update colsInDF since we just add one column in df
+        colsInDf = newDf.columns.toList
+        // last one is auto increment column
+        newDf.rdd.zipWithIndex.map { row =>
+          val rowSep = row._1.toSeq.zipWithIndex.map { data =>
+            val colOffset = data._2
+            if (colsMapInTiDB.contains(colsInDf(colOffset))) {
+              if (colsMapInTiDB(colsInDf(colOffset)).isAutoIncrement) {
+                row._2 + start
+              } else {
+                data._1
+              }
+            }
+          }
+          Row.fromSeq(rowSep)
+        }
+      }
+    } else {
+      df.rdd
+    }
+
+    val tiRowRdd = rdd.map(row => sparkRow2TiKVRow(row))
+
     // continue check check check
-    checkValueNotNull()
+    checkValueNotNull(tiRowRdd)
 
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
@@ -202,22 +249,22 @@ class TiBatchWrite(@transient val df: DataFrame,
     if (enableRegionPreSplit && handleCol != null) {
       logger.info("region pre split is enabled.")
       val sampleRDD =
-        df.rdd.sample(withReplacement = false, fraction = options.sampleFraction)
+        rdd.sample(withReplacement = false, fraction = options.sampleFraction)
       val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
-
-      tiContext.tiSession.splitRegionAndScatter(
-        calculateSplitKeys(
-          sampleRDD,
-          dataSize,
-          sampleRDDCount,
-          tiTableInfo,
-          isUpdate = false,
-          regionSplitNumber
-        ).map(k => k.bytes).asJava
-      )
+      // only perform region presplit if sample rdd is not empty
+      if (!sampleRDD.isEmpty()) {
+        tiContext.tiSession.splitRegionAndScatter(
+          calculateSplitKeys(
+            sampleRDD,
+            dataSize,
+            sampleRDDCount,
+            tiTableInfo,
+            isUpdate = false,
+            regionSplitNumber
+          ).map(k => k.bytes).asJava
+        )
+      }
     }
-
-    val tiRowRdd = df.rdd.map(row => sparkRow2TiKVRow(row))
 
     val deduplicatedTiRowRdd = deduplicateIfNecessary(tiRowRdd, tiTableInfo.isPkHandle)
 
@@ -320,47 +367,37 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
   private def checkColumnNumbers(): Unit = {
-    if (!tiTableInfo.hasAutoIncrementColumn && dfColSize != tableColSize) {
+    if (!tiTableInfo.hasAutoIncrementColumn && colsInDf.length != tableColSize) {
       throw new TiBatchWriteException(
-        s"table without auto increment column, but data col size $dfColSize != table column size $tableColSize"
+        s"table without auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize"
       )
     }
 
-    if (tiTableInfo.hasAutoIncrementColumn && dfColSize != tableColSize && dfColSize != tableColSize - 1) {
+    if (tiTableInfo.hasAutoIncrementColumn && colsInDf.length != tableColSize && colsInDf.length != tableColSize - 1) {
       throw new TiBatchWriteException(
-        s"table with auto increment column, but data col size $dfColSize != table column size $tableColSize and table column size - 1 ${tableColSize - 1} "
+        s"table with auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize and table column size - 1 ${tableColSize - 1} "
       )
     }
   }
 
-  private def checkValueNotNull(): Unit = {
-    var notNullColumnIndex: List[Int] = Nil
-
-    for (i <- 0 until dfColSize) {
-      val tiColumnInfo = dfTiColumnInfo(i)
-      if (tiColumnInfo.getType.isNotNull) {
-        notNullColumnIndex = i :: notNullColumnIndex
-      }
-    }
-
-    if (notNullColumnIndex.nonEmpty) {
-      val encoder = RowEncoder(df.schema)
-      val nullRowCount = df
-        .flatMap { row =>
-          var result: Option[SparkRow] = None
-          notNullColumnIndex.foreach { col =>
-            if (row.isNullAt(col)) {
-              result = Some(row)
+  private def checkValueNotNull(rdd: RDD[TiRow]): Unit = {
+    val nullRowCount = rdd
+      .filter { row =>
+        colsMapInTiDB.exists {
+          case (_, v) =>
+            if (v.getType.isNotNull && row.get(v.getOffset, v.getType) == null) {
+              true
+            } else {
+              false
             }
-          }
-          result
-        }(encoder)
-        .count()
-      if (nullRowCount > 0) {
-        throw new TiBatchWriteException(
-          s"Insert null value to not null column! $nullRowCount rows contain illegal null values!"
-        )
+        }
       }
+      .count()
+
+    if (nullRowCount > 0) {
+      throw new TiBatchWriteException(
+        s"Insert null value to not null column! $nullRowCount rows contain illegal null values!"
+      )
     }
   }
 
@@ -461,31 +498,22 @@ class TiBatchWrite(@transient val df: DataFrame,
     val fieldCount = sparkRow.size
     val tiRow = ObjectRowImpl.create(fieldCount)
     for (i <- 0 until fieldCount) {
-      val data = sparkRow.get(i)
       // TODO: add tiDataType back
-      tiRow.set(i, null, data)
+      tiRow.set(colsMapInTiDB(colsInDf(i)).getOffset, null, sparkRow(i))
     }
     tiRow
   }
 
   @throws(classOf[TiBatchWriteException])
   private def encodeTiRow(tiRow: TiRow): Array[Byte] = {
-    var colSize = tiRow.fieldCount()
+    val colSize = tiRow.fieldCount()
 
-    // an hidden row _tidb_rowid may exist
-    if (colSize > (tableColSize + 1)) {
+    if (colSize > tableColSize) {
       throw new TiBatchWriteException(
-        s"data col size $colSize > table column size $tableColSize + 1"
+        s"data col size $colSize > table column size $tableColSize"
       )
     }
-    // TODO: remove hashHiddenRow later, it is not used any more.
-    val hasHiddenRow = colSize == tableColSize + 1
 
-    // when we have an hidden row, we do not need
-    // write such column into TiKV
-    if (hasHiddenRow) {
-      colSize = colSize - 1
-    }
     // TODO: ddl state change
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-82
     val convertedValues = new Array[AnyRef](colSize)

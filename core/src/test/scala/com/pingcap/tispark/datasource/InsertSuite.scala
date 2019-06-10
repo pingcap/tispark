@@ -4,7 +4,7 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class InsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
+class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -72,7 +72,7 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     }
   }
 
-  ignore("Test upsert to table with primary key (auto increase case 1)") {
+  test("Test upsert to table with primary key (auto increase case 1)") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
     jdbcUpdate(
@@ -83,27 +83,30 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
     tidbWrite(List(row3, row4), schema)
     testTiDBSelect(Seq(row2, row3, row4))
 
-    // insert row2_v2 row5
-    tidbWrite(List(row2_v2, row5), schema)
-    testTiDBSelect(Seq(row2_v2, row3, row4, row5))
+    // when provide auto id column value but say not provide them in options
+    // an exception will be thrown.
+    intercept[TiBatchWriteException] {
+      tidbWrite(List(row2_v2, row5), schema)
+    }
 
-    // insert row3_v2 row4_v2 row5_v2
-    tidbWrite(List(row3_v2, row4_v2, row5_v2), schema)
-    testTiDBSelect(Seq(row2_v2, row3_v2, row4_v2, row5_v2))
+    // when not provide auto id but say provide them in options
+    // and exception will be thrown.
+    intercept[TiBatchWriteException] {
+      tidbWrite(List(Row(null, "abc")), schema)
+    }
   }
 
-  // TODO: support auto increment
-  ignore("Test upsert to table with primary key (auto increase case 2)") {
+  test("Test upsert to table with primary key (auto increase case 2)") {
     val rowWithoutPK2 = Row("TiDB")
     val rowWithoutPK3 = Row("Spark")
     val rowWithoutPK4 = Row(null)
     val rowWithoutPK5 = Row("Duplicate")
 
     val row1 = Row(1, "Hello")
-    val row2 = Row(2, "TiDB")
-    val row3 = Row(3, "Spark")
-    val row4 = Row(4, null)
-    val row5 = Row(5, "Duplicate")
+    val row2 = Row(30000, "TiDB")
+    val row3 = Row(30001, "Spark")
+    val row4 = Row(30002, null)
+    val row5 = Row(30003, "Duplicate")
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
@@ -111,12 +114,16 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_upsert") {
       s"insert into $dbtable(s) values('Hello')"
     )
 
+    val withOutIDSchema = StructType(
+      List(
+        StructField("s", StringType)
+      )
+    )
     // insert row2 row3
-    tidbWrite(List(rowWithoutPK2, rowWithoutPK3), schema)
+    tidbWrite(List(rowWithoutPK2, rowWithoutPK3), withOutIDSchema)
     testTiDBSelect(Seq(row1, row2, row3))
 
-    // insert row4 row5
-    tidbWrite(List(rowWithoutPK4, rowWithoutPK5), schema)
+    tidbWrite(List(rowWithoutPK4, rowWithoutPK5), withOutIDSchema)
     testTiDBSelect(Seq(row1, row2, row3, row4, row5))
   }
 
