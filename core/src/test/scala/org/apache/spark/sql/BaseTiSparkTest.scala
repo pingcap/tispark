@@ -397,4 +397,19 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         case _ =>
           result.toString
       }
+
+  protected def explainTestAndCollect(sql: String): Unit = {
+    val df = spark.sql(sql)
+    df.explain
+    df.show
+    df.collect.foreach(println)
+  }
+
+  protected def time[A](f: => A): A = {
+    val s = System.currentTimeMillis
+    val ret = f
+    println(s"time: ${(System.currentTimeMillis() - s) / 1e3}s")
+    ret
+  }
+
 }
