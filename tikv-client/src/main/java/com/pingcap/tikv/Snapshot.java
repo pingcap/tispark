@@ -25,8 +25,6 @@ import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.operation.iterator.ScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.txn.TxnKVClient;
-import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
@@ -38,10 +36,12 @@ import org.tikv.kvproto.Kvrpcpb.KvPair;
 public class Snapshot {
   private final TiTimestamp timestamp;
   private final TiSession session;
+  private final TiConfiguration conf;
 
-  public Snapshot(@Nonnull TiTimestamp timestamp, TiSession session) {
+  public Snapshot(@Nonnull TiTimestamp timestamp, TiConfiguration conf) {
     this.timestamp = timestamp;
-    this.session = session;
+    this.conf = conf;
+    this.session = TiSessionCache.getSession(conf);
   }
 
   public TiSession getSession() {
@@ -68,23 +68,6 @@ public class Snapshot {
     return client.get(ConcreteBackOffer.newGetBackOff(), key, timestamp.getVersion());
   }
 
-  public void set(ByteString key, ByteString value) {
-    TxnKVClient txnKVClient =
-        new TxnKVClient(
-            this.session.getConf(), session.getRegionStoreClientBuilder(), session.getPDClient());
-    TwoPhaseCommitter twoPhaseCommitter =
-        new TwoPhaseCommitter(txnKVClient, txnKVClient.getTimestamp().getVersion());
-    twoPhaseCommitter.prewritePrimaryKey(
-        ConcreteBackOffer.newCustomBackOff(BackOffer.PREWRITE_MAX_BACKOFF),
-        key.toByteArray(),
-        value.toByteArray());
-    long commitTs = txnKVClient.getTimestamp().getVersion();
-    twoPhaseCommitter.commitPrimaryKey(
-        ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF),
-        key.toByteArray(),
-        commitTs);
-  }
-
   /**
    * Issue a table read request
    *
@@ -103,15 +86,15 @@ public class Snapshot {
    * scan
    *
    * @param dagRequest DAGRequest for coprocessor
-   * @param task RegionTask of the coprocessor request to send
+   * @param tasks RegionTasks of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  public Iterator<Row> tableRead(TiDAGRequest dagRequest, List<RegionTask> task) {
+  public Iterator<Row> tableRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
-      Iterator<Long> iter = getHandleIterator(dagRequest, task, session);
+      Iterator<Long> iter = getHandleIterator(dagRequest, tasks, getSession());
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
-      return getRowIterator(dagRequest, task, session);
+      return getRowIterator(dagRequest, tasks, getSession());
     }
   }
 
@@ -129,5 +112,9 @@ public class Snapshot {
 
   public Iterator<KvPair> scan(ByteString startKey) {
     return new ScanIterator(startKey, session, timestamp.getVersion());
+  }
+
+  public TiConfiguration getConf() {
+    return conf;
   }
 }
