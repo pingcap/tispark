@@ -53,12 +53,13 @@ Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need
 
 ## Maximum TiDB/TiKV/PD version supported by TiSpark
 
-Each latest TiSpark version guarantees *downward compatibility* for TiDB components, i.e., supports TiDB/TiKV/PD until a certain release. Its reason varies, amongst which the most common one is that the new features and bug-fixes provided by TiDB components requires update on API, dependencies, etc.
+Each latest TiSpark version guarantees *backward compatibility* for TiDB components, i.e., supports TiDB/TiKV/PD until a certain release. Its reason varies, amongst which the most common one is that the new features and bug-fixes provided by TiDB components requires update on API, dependencies, etc.
 
 | TiSpark Version | Maximum TiDB Version | Maximum TiKV Version | Maximum PD Version |
 | ----- | ------ | ------ | ------ |
-| 1.2 | v2.1.5 | v2.1.5 | v2.1.5 |
-| 2.1 | v3.0.0-beta | v3.0.0-beta | v3.0.0-beta |
+| < 1.2 | v2.1.4 | v2.1.4 | v2.1.4 |
+| 1.2 | v2.1.x | v2.1.x | v2.1.x |
+| 2.x | v3.0.0-beta | v3.0.0-beta | v3.0.0-beta |
 | Latest (master) | Latest | Latest | Latest |
 
 ## Available Spark version supported by TiSpark
@@ -67,7 +68,8 @@ While TiSpark provides downward compatibility for TiDB, it guarantees **restrict
 
 | TiSpark Version | Spark Version |
 | ----- | ------ |
-| 1.2 | Spark v2.1.0+ |
+| 1.x | Spark v2.1.0+ |
+| 2.0 | Spark v2.3.0+ |
 | 2.1 | Spark v2.3.0+, Spark v2.4.0+ |
 | Latest (master) | Spark v2.3.0+, Spark v2.4.0+ |
 
