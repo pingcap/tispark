@@ -67,7 +67,6 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private var tiConf: TiConfiguration = _
   @transient private var tiSession: TiSession = _
-  @transient private var kvClient: TxnKVClient = _
   @transient private var catalog: Catalog = _
 
   private var tiTableRef: TiTableReference = _
@@ -155,7 +154,6 @@ class TiBatchWrite(@transient val df: DataFrame,
     // initialize
     tiConf = tiContext.tiConf
     tiSession = tiContext.tiSession
-    kvClient = tiSession.createTxnClient()
     tiTableRef = options.tiTableRef
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
     tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
@@ -271,7 +269,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     val deduplicatedTiRowRdd = deduplicateIfNecessary(tiRowRdd, tiTableInfo.isPkHandle)
 
     // get timestamp as start_ts
-    val startTimeStamp = kvClient.getTimestamp
+    val startTimeStamp = tiSession.getTimestamp
 
     // TODO support insert ignore
     val toBeCheckedRdd = getKeysNeedCheck(deduplicatedTiRowRdd, startTimeStamp)
@@ -303,16 +301,14 @@ class TiBatchWrite(@transient val df: DataFrame,
     logger.info(s"startTS: $startTs")
 
     // driver primary pre-write
-    val ti2PCClient = new TwoPhaseCommitter(kvClient, startTs)
+    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
 
     // executors secondary pre-write
     finalWriteRDD.foreachPartition { iterator =>
-      val tiSessionOnExecutor = TiSessionCache.getSession(tiConf)
-      val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
-      val ti2PCClientOnExecutor = new TwoPhaseCommitter(kvClientOnExecutor, startTs)
+      val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
 
       val pairs = iterator.map {
         case (key, row) =>
@@ -322,12 +318,6 @@ class TiBatchWrite(@transient val df: DataFrame,
       ti2PCClientOnExecutor.prewriteSecondaryKeys(primaryKey.bytes, pairs)
 
       try {
-        kvClientOnExecutor.close()
-      } catch {
-        case _: Throwable =>
-      }
-
-      try {
         ti2PCClientOnExecutor.close()
       } catch {
         case _: Throwable =>
@@ -335,7 +325,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     // driver primary commit
-    val commitTs = kvClient.getTimestamp.getVersion
+    val commitTs = tiSession.getTimestamp.getVersion
     // check commitTS
     if (commitTs <= startTs) {
       throw new TiBatchWriteException(
@@ -348,9 +338,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     // executors secondary commit
     if (!options.skipCommitSecondaryKey) {
       finalWriteRDD.foreachPartition { iterator =>
-        val tiSessionOnExecutor = new TiSession(tiConf)
-        val kvClientOnExecutor = tiSessionOnExecutor.createTxnClient()
-        val ti2PCClientOnExecutor = new TwoPhaseCommitter(kvClientOnExecutor, startTs)
+        val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
 
         val keys = iterator.map {
           case (key, _) => new TwoPhaseCommitter.ByteWrapper(key.bytes)
@@ -608,7 +596,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private def checkConflictWithInsertKeys(
     rdd: RDD[ToBeCheckedRow]
-  ) = {
+  ): Unit = {
     if (handleCol != null) {
       // data is conflict with TiKV
       val handleConflict = !rdd

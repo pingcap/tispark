@@ -18,8 +18,8 @@ package org.apache.spark.sql.tispark
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
-import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{TiPartition, TiSessionCache, TiTableReference}
+import com.pingcap.tikv.{TiConfiguration, TiSession, TiSessionCache}
+import com.pingcap.tispark.{TiPartition, TiTableReference}
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
