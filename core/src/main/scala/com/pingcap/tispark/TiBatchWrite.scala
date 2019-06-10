@@ -254,17 +254,17 @@ class TiBatchWrite(@transient val df: DataFrame,
         rdd.sample(withReplacement = false, fraction = options.sampleFraction)
       val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
       // only perform region presplit if sample rdd is not empty
-      if(!sampleRDD.isEmpty()) {
+      if (!sampleRDD.isEmpty()) {
         tiContext.tiSession.splitRegionAndScatter(
-        calculateSplitKeys(
-          sampleRDD,
-          dataSize,
-          sampleRDDCount,
-          tiTableInfo,
-          isUpdate = false,
-          regionSplitNumber
-        ).map(k => k.bytes).asJava
-      )
+          calculateSplitKeys(
+            sampleRDD,
+            dataSize,
+            sampleRDDCount,
+            tiTableInfo,
+            isUpdate = false,
+            regionSplitNumber
+          ).map(k => k.bytes).asJava
+        )
       }
     }
 
@@ -393,21 +393,23 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   private def checkValueNotNull(rdd: RDD[TiRow]): Unit = {
-    val nullRowCount = rdd.filter {
-      row =>
+    val nullRowCount = rdd
+      .filter { row =>
         colsMapInTiDB.exists {
           case (_, v) =>
-            if(v.getType.isNotNull && row.get(v.getOffset, v.getType) == null) {
+            if (v.getType.isNotNull && row.get(v.getOffset, v.getType) == null) {
               true
             } else {
               false
             }
         }
-    }.count()
+      }
+      .count()
 
     if (nullRowCount > 0) {
       throw new TiBatchWriteException(
-        s"Insert null value to not null column! $nullRowCount rows contain illegal null values!")
+        s"Insert null value to not null column! $nullRowCount rows contain illegal null values!"
+      )
     }
   }
 

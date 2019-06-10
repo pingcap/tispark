@@ -328,8 +328,7 @@ public class TwoPhaseCommitter {
             String.format(
                 "oldRegion=%s != currentRegion=%s, will refetch region info and retry",
                 oldRegion, currentRegion));
-        retryPrewriteBatch(
-            backOffer, primaryKey, batchKeys, mutations, level <= 0 ? 1 : level + 1);
+        retryPrewriteBatch(backOffer, primaryKey, batchKeys, mutations, level <= 0 ? 1 : level + 1);
       }
     }
   }
