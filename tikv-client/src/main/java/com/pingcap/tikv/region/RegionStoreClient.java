@@ -290,11 +290,12 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     for (KvPair kvPair : kvPairs) {
       if (kvPair.hasError()) {
         Lock lock = extractLockFromKeyErr(kvPair.getError());
-        newKvPairs.add(KvPair.newBuilder()
-            .setError(kvPair.getError())
-            .setValue(kvPair.getValue())
-            .setKey(lock.getKey())
-            .build());
+        newKvPairs.add(
+            KvPair.newBuilder()
+                .setError(kvPair.getError())
+                .setValue(kvPair.getValue())
+                .setKey(lock.getKey())
+                .build());
       } else {
         newKvPairs.add(kvPair);
       }
