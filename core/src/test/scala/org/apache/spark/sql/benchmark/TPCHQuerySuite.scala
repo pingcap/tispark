@@ -79,7 +79,7 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
           }
         case _ =>
       }
-      val res = querySpark(queryString)
+      val res = queryViaTiSpark(queryString)
       println(s"TiSpark finished $name")
       res
     } catch {
@@ -100,7 +100,7 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
           throw new AssertionError("JDBC plan should not use CoprocessorRDD as data source node!")
         case _ =>
       }
-      val res = querySpark(queryString)
+      val res = queryViaTiSpark(queryString)
       println(s"Spark JDBC finished $name")
       res
     } catch {
