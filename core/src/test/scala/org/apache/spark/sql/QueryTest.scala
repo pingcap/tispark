@@ -402,13 +402,21 @@ abstract class QueryTest extends PlanTest {
     )
   }
 
-  protected def callWithRetry(execute: => ResultSet): ResultSet = {
+  protected def callWithRetry[A](execute: => A): A = {
     callWithRetry(execute, retryOnFailure = 3)
   }
 
-  protected def callWithRetry(execute: => ResultSet,
-                              retryOnFailure: Int,
-                              exception: Exception = null): ResultSet = {
+  /**
+   * Execute a command with retry number = `retryOnFailure`
+   *
+   * @param execute command that returns anything
+   * @param retryOnFailure number of remaining retries before it fails
+   * @param exception last exception thrown
+   * @return result of command
+   */
+  protected def callWithRetry[A](execute: => A,
+                                 retryOnFailure: Int,
+                                 exception: Exception = null): A = {
     if (retryOnFailure <= 0) {
       fail(exception)
     } else

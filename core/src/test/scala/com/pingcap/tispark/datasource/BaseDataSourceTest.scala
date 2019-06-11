@@ -138,7 +138,7 @@ class BaseDataSourceTest(val table: String,
     val sql = s"select * from $dbtable order by $sortCol"
     val answer = seqRowToList(expectedAnswer, schema)
 
-    val jdbcResult = queryTiDB(sql)
+    val jdbcResult = queryTiDBViaJDBC(sql)
     val df = queryDatasourceTiDB(sortCol)
     val tidbResult = seqRowToList(df.collect(), df.schema)
 
@@ -163,7 +163,7 @@ class BaseDataSourceTest(val table: String,
     val sql = s"select * from $dbtable order by $sortCol"
 
     // check jdbc result & data source result
-    val jdbcResult = queryTiDB(sql)
+    val jdbcResult = queryTiDBViaJDBC(sql)
     val df = queryDatasourceTiDB(sortCol)
     val tidbResult = seqRowToList(df.collect(), df.schema)
 
