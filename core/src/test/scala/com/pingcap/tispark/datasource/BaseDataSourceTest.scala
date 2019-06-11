@@ -1,13 +1,12 @@
 package com.pingcap.tispark.datasource
 
-import java.sql.Statement
 import java.util.Objects
 
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{BaseTiSparkTest, DataFrame, QueryTest, Row}
+import org.apache.spark.sql.{BaseTiSparkTest, DataFrame, Row}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -26,11 +25,8 @@ class BaseDataSourceTest(val table: String,
 
   override def beforeAll(): Unit = {
     enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark
-
-    super.beforeAll()
-
+    super.beforeAllWithoutLoadData()
     tidbStmt = tidbConn.createStatement()
-
     initializeTimeZone()
   }
 

@@ -134,9 +134,13 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
   }
 
-  override def beforeAll(): Unit = {
+  def beforeAllWithoutLoadData(): Unit = {
     super.beforeAll()
     setLogLevel("WARN")
+  }
+
+  override def beforeAll(): Unit = {
+    beforeAllWithoutLoadData()
     loadTestData()
   }
 
