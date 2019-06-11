@@ -44,7 +44,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def queryTiDB(query: String): List[List[Any]] = {
-    val resultSet = tidbStmt.executeQuery(query)
+    val resultSet = callWithRetry(tidbStmt.executeQuery(query))
     val rsMetaData = resultSet.getMetaData
     val retSet = ArrayBuffer.empty[List[Any]]
     val retSchema = ArrayBuffer.empty[String]

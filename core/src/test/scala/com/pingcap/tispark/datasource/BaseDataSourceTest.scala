@@ -7,11 +7,11 @@ import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, QueryTest, Row}
+import org.apache.spark.sql.{BaseTiSparkTest, DataFrame, QueryTest, Row}
 
 import scala.collection.mutable.ArrayBuffer
 
-// Tow modes:
+// Two modes:
 // 1. without TiExtensions:
 // set isTidbConfigPropertiesInjectedToSparkEnabled = false
 // will not load tidb_config.properties to SparkConf
@@ -20,12 +20,9 @@ import scala.collection.mutable.ArrayBuffer
 // will load tidb_config.properties to SparkConf
 class BaseDataSourceTest(val table: String,
                          val _enableTidbConfigPropertiesInjectedToSpark: Boolean = true)
-    extends QueryTest
-    with SharedSQLContext {
+    extends BaseTiSparkTest {
   protected val database: String = "tispark_test"
   protected val dbtable = s"$database.$table"
-
-  protected var tidbStmt: Statement = _
 
   override def beforeAll(): Unit = {
     enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark
@@ -35,12 +32,6 @@ class BaseDataSourceTest(val table: String,
     tidbStmt = tidbConn.createStatement()
 
     initializeTimeZone()
-  }
-
-  protected def initializeTimeZone(): Unit = {
-    tidbStmt = tidbConn.createStatement()
-    // Set default time zone to GMT-7
-    tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
   protected def jdbcUpdate(query: String): Unit =
@@ -78,7 +69,7 @@ class BaseDataSourceTest(val table: String,
 
   protected def testTiDBSelect(expectedAnswer: Seq[Row], sortCol: String = "i"): Unit = {
     // check data source result & expected answer
-    val df = queryTiDB(sortCol)
+    val df = queryDatasourceTiDB(sortCol)
     checkAnswer(df, expectedAnswer)
   }
 
@@ -151,8 +142,8 @@ class BaseDataSourceTest(val table: String,
     val sql = s"select * from $dbtable order by $sortCol"
     val answer = seqRowToList(expectedAnswer, schema)
 
-    val jdbcResult = queryJDBC(sql)
-    val df = queryTiDB(sortCol)
+    val jdbcResult = queryTiDB(sql)
+    val df = queryDatasourceTiDB(sortCol)
     val tidbResult = seqRowToList(df.collect(), df.schema)
 
     // check tidb result & expected answer
@@ -176,8 +167,8 @@ class BaseDataSourceTest(val table: String,
     val sql = s"select * from $dbtable order by $sortCol"
 
     // check jdbc result & data source result
-    val jdbcResult = queryJDBC(sql)
-    val df = queryTiDB(sortCol)
+    val jdbcResult = queryTiDB(sql)
+    val df = queryDatasourceTiDB(sortCol)
     val tidbResult = seqRowToList(df.collect(), df.schema)
 
     assert(
@@ -200,7 +191,7 @@ class BaseDataSourceTest(val table: String,
       })
       .toList
 
-  protected def queryTiDB(sortCol: String): DataFrame =
+  protected def queryDatasourceTiDB(sortCol: String): DataFrame =
     sqlContext.read
       .format("tidb")
       .options(tidbOptions)
@@ -208,25 +199,6 @@ class BaseDataSourceTest(val table: String,
       .option("table", table)
       .load()
       .sort(sortCol)
-
-  private def queryJDBC(query: String): List[List[Any]] = {
-    val resultSet = tidbStmt.executeQuery(query)
-    val rsMetaData = resultSet.getMetaData
-    val retSet = ArrayBuffer.empty[List[Any]]
-    val retSchema = ArrayBuffer.empty[String]
-    for (i <- 1 to rsMetaData.getColumnCount) {
-      retSchema += rsMetaData.getColumnTypeName(i)
-    }
-    while (resultSet.next()) {
-      val row = ArrayBuffer.empty[Any]
-
-      for (i <- 1 to rsMetaData.getColumnCount) {
-        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
-      }
-      retSet += row.toList
-    }
-    retSet.toList
-  }
 
   protected def testTiDBSelectFilter(filter: String, expectedAnswer: Seq[Row]): Unit = {
     val loadedDf = sqlContext.read
