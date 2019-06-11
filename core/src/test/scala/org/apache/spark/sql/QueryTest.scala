@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql
 
-import java.sql.{Date, Timestamp}
+import java.sql.{Date, ResultSet, Timestamp}
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
@@ -400,6 +400,33 @@ abstract class QueryTest extends PlanTest {
       query.queryExecution.executedPlan.missingInput.isEmpty,
       s"The physical plan has missing inputs:\n${query.queryExecution.executedPlan}"
     )
+  }
+
+  protected def callWithRetry[A](execute: => A): A = {
+    callWithRetry(execute, retryOnFailure = 3)
+  }
+
+  /**
+   * Execute a command with retry number = `retryOnFailure`
+   *
+   * @param execute command that returns anything
+   * @param retryOnFailure number of remaining retries before it fails
+   * @param exception last exception thrown
+   * @return result of command
+   */
+  protected def callWithRetry[A](execute: => A,
+                                 retryOnFailure: Int,
+                                 exception: Exception = null): A = {
+    if (retryOnFailure <= 0) {
+      fail(exception)
+    } else
+      try {
+        execute
+      } catch {
+        case e: Exception =>
+          logger.info(s"Error occurs when calling with retry, remain retries: $retryOnFailure", e)
+          callWithRetry(execute, retryOnFailure - 1, e)
+      }
   }
 }
 

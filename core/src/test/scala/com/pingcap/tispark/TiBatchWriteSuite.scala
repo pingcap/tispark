@@ -69,9 +69,9 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
       tidbStmt.execute(s"select * from ${batchWriteTablePrefix}_$table")
 
       // assert
-      val originCount = querySpark(s"select count(*) from $table").head.head.asInstanceOf[Long]
+      val originCount = queryViaTiSpark(s"select count(*) from $table").head.head.asInstanceOf[Long]
       // cannot use count since batch write is not support index writing yet.
-      val count = querySpark(s"select * from ${batchWriteTablePrefix}_$table").length
+      val count = queryViaTiSpark(s"select * from ${batchWriteTablePrefix}_$table").length
         .asInstanceOf[Long]
       assert(count == originCount)
     }

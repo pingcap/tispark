@@ -99,7 +99,7 @@ class TxnTestSuite extends BaseTiSparkTest {
   test("resolveLock concurrent test") {
     ti.tiConf.setIsolationLevel(IsolationLevel.SI)
 
-    val start = querySpark(sumString).head.head
+    val start = queryViaTiSpark(sumString).head.head
 
     val threads =
       scala.util.Random.shuffle(
@@ -108,7 +108,7 @@ class TxnTestSuite extends BaseTiSparkTest {
             i / 100 match {
               case 0 =>
                 doThread(i, () => {
-                  querySpark(q1String)
+                  queryViaTiSpark(q1String)
                 })
               case 1 =>
                 doThread(
@@ -128,7 +128,7 @@ class TxnTestSuite extends BaseTiSparkTest {
                 (i - 200) / 20 match {
                   case 0 =>
                     doThread(i, () => {
-                      querySpark(q2String)
+                      queryViaTiSpark(q2String)
                     })
                   case 1 =>
                     doThread(
@@ -167,7 +167,7 @@ class TxnTestSuite extends BaseTiSparkTest {
       t.join()
     }
 
-    val end = querySpark(sumString).head.head
+    val end = queryViaTiSpark(sumString).head.head
     if (start != end) {
       fail(s"""Failed With
               | error transaction
