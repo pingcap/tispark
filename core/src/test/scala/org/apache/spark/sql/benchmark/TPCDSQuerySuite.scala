@@ -80,7 +80,7 @@ class TPCDSQuerySuite extends BaseTiSparkTest {
           }
         }
 
-        val res = querySpark(queryString)
+        val res = queryViaTiSpark(queryString)
         println(s"TiSpark finished $q")
       }
     } catch {
