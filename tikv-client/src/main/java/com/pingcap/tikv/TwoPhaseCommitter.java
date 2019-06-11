@@ -116,8 +116,8 @@ public class TwoPhaseCommitter {
   /** start timestamp of transaction which get from PD */
   private final long startTs;
 
-  public TwoPhaseCommitter(TxnKVClient kvClient, long startTime) {
-    this.kvClient = kvClient;
+  public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
+    this.kvClient = TiSessionCache.getSession(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
   }
@@ -328,8 +328,7 @@ public class TwoPhaseCommitter {
             String.format(
                 "oldRegion=%s != currentRegion=%s, will refetch region info and retry",
                 oldRegion, currentRegion));
-        retryPrewriteBatch(
-            backOffer, primaryKey, batchKeys, mutations, level <= 0 ? 1 : level + 1);
+        retryPrewriteBatch(backOffer, primaryKey, batchKeys, mutations, level <= 0 ? 1 : level + 1);
       }
     }
   }

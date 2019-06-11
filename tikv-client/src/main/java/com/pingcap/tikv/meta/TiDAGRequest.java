@@ -640,17 +640,6 @@ public class TiDAGRequest implements Serializable {
     return this;
   }
 
-  /**
-   * set timezone offset
-   *
-   * @param timeZoneOffset timezone offset
-   * @return a TiDAGRequest
-   */
-  public TiDAGRequest setTimeZoneOffset(int timeZoneOffset) {
-    this.timeZoneOffset = timeZoneOffset;
-    return this;
-  }
-
   int getTimeZoneOffset() {
     return timeZoneOffset;
   }

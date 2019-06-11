@@ -14,22 +14,6 @@ The following command can install dependencies for you.
 mvn package
 ```
 
-Alternatively, you can use `bazel` for much faster build. When you try this approach, you should run `git submodule update --init --recursive` before you build project.
-
-Making a uber jar:
-```
-make uber_jar
-```
-run Main class:
-```
-make run
-```
-
-run test cases:
-```
-make test
-```
-
 this project is designed to hook with `pd` and `tikv` which you can find in `PingCap` github page.
 
 When you work with this project, you have to communicate with `pd` and `tikv`. There is a script taking care of this. By executing the following commands, `pd` and `tikv` can be executed on background.
@@ -40,7 +24,8 @@ make tikv
 ```
 
 ## How to use for now
-Since it's not quite complete, a usage sample for now can be given is:
+It is not recommended to use tikv java client directly; it is better to use together with `TiSpark`
+
 ```java
 // Init tidb cluster configuration
 TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:2379");
@@ -59,18 +44,18 @@ ranges.add(keyRange);
 
  
 // Create select request
-TiSelectRequest selectRequest = new TiSelectRequest();
-selectRequest.addRanges(ranges);
-selectRequest.addField(TiColumnRef.create("c_mktsegment", table));
-selectRequest.setTableInfo(table);
-selectRequest.setStartTs(session.getTimestamp().getVersion());
-selectRequest.addWhere(new GreaterEqual(TiConstant.create(5), TiConstant.create(5)));
-selectRequest.addGroupByItem(TiByItem.create(TiColumnRef.create("c_mktsegment"), false));
-selectRequest.setLimit(10);
-selectRequest.bind();
+TiDAGRequest dagRequest = new TiDAGRequest();
+dagRequest.addRanges(ranges);
+dagRequest.addField(TiColumnRef.create("c_mktsegment", table));
+dagRequest.setTableInfo(table);
+dagRequest.setStartTs(session.getTimestamp().getVersion());
+dagRequest.addWhere(new GreaterEqual(TiConstant.create(5), TiConstant.create(5)));
+dagRequest.addGroupByItem(TiByItem.create(TiColumnRef.create("c_mktsegment"), false));
+dagRequest.setLimit(10);
+dagRequest.resolve();
  
 // Fetch data
-Iterator<Row> iterator = snapshot.select(selectRequest);
+Iterator<Row> iterator = snapshot.tableRead(dagRequest, table.getId());
 System.out.println("Show result:");
 while (iterator.hasNext()) {
   Row rowData = iterator.next();
