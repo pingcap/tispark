@@ -88,7 +88,7 @@ public class TableCodecTest {
       try {
         byte[] bytes = TableCodec.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
         // testing the correctness via decodeRow
-        Row row = TableCodec.decodeRow(bytes, tblInfo.getColumns());
+        Row row = TableCodec.decodeRow(bytes, -1, tblInfo);
         for (int j = 0; j < tblInfo.getColumns().size(); j++) {
           assertEquals(row.get(j, null), values[j]);
         }
