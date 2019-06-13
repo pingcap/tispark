@@ -34,6 +34,9 @@ split-table = true
 # Enable chunk executors.
 enable-chunk = true
 
+# enable-table-lock is used to control table lock feature. Default is false, indicate the table lock feature is disabled.
+enable-table-lock = true
+
 [log]
 # Log level: info, debug, warn, error, fatal.
 level = "info"
