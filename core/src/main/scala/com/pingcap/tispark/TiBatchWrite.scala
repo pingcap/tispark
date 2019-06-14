@@ -398,7 +398,7 @@ class TiBatchWrite(@transient val df: DataFrame,
   private def lockTable(): Unit = {
     if (isEnableTableLock) {
       if (!tableLocked) {
-        tiDBJDBCClient.lockTableWriteLocal(tiTableRef.databaseName, tiTableRef.tableName)
+        tiDBJDBCClient.lockTableWriteLocal(options.database, options.table)
         tableLocked = true
       } else {
         logger.warn("table already locked!")

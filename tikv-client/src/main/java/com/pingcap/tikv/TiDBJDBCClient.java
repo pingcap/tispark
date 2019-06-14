@@ -90,7 +90,7 @@ public class TiDBJDBCClient implements AutoCloseable {
 
       while (resultSet.next()) {
         ArrayList<Object> row = new ArrayList<>();
-        for (int i = 0; i < rsMetaData.getColumnCount(); i++) {
+        for (int i = 1; i <= rsMetaData.getColumnCount(); i++) {
           row.add(resultSet.getObject(i));
         }
         result.add(row);
