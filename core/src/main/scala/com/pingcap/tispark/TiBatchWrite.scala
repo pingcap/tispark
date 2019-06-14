@@ -368,6 +368,10 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
     }
     val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
+
+    if (connectionLost()) {
+      throw new TiBatchWriteException("tidb's jdbc connection is lost!")
+    }
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
 
     // unlock table
@@ -418,6 +422,15 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
     } else {
       // TODO: what if version of tidb does not support lock table
+    }
+  }
+
+  private def connectionLost(): Boolean = {
+    if (isEnableTableLock) {
+      tiDBJDBCClient.isClosed
+    } else {
+      // TODO: what if version of tidb does not support lock table
+      false
     }
   }
 
