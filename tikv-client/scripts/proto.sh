@@ -19,7 +19,7 @@ kvproto_hash=a0f02f7c718c2e64946f442c9c06980e2fba6e83
 if [[ -d "kvproto" ]]; then
 	cd kvproto; git remote add birdstorm https://github.com/birdstorm/kvproto.git -t refresh-ttl; git fetch -p birdstorm; git checkout ${kvproto_hash}; cd ..
 else
-	git clone https://github.com/pingcap/kvproto; cd kvproto; git checkout ${kvproto_hash}; cd ..
+	git clone https://github.com/pingcap/kvproto; cd kvproto; git remote add birdstorm https://github.com/birdstorm/kvproto.git -t refresh-ttl; git fetch -p birdstorm; git checkout ${kvproto_hash}; cd ..
 fi
 
 if [[ -d "raft-rs" ]]; then
