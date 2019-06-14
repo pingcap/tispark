@@ -97,6 +97,13 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         shuf test -o  test2
                         mv test2 test
                         split test -n r/$PARALLEL_NUMBER test_unit_ -a 1 --numeric-suffixes=1
+                        """
+
+                        for (int i = 1; i <= PARALLEL_NUMBER; i++) {
+                            sh """cat test_unit_$i"""
+                        }
+
+                        sh """
                         cd tikv-client
                         ./scripts/proto.sh
                         cd ..
