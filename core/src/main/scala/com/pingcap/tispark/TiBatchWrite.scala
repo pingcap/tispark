@@ -345,8 +345,6 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     } catch {
       case e: Exception =>
-        println("wtf")
-        logger.warn("?????", e)
         throw e
     } finally {
       refreshLockService.shutdownNow()
