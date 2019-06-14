@@ -157,7 +157,9 @@ class TiBatchWrite(@transient val df: DataFrame,
         override def run(): Unit =
           try {
             val backOffer = ConcreteBackOffer.newGetBackOff
-            val myClient = new RegionStoreClientBuilder(tiSession).build(key)
+            val regionStorePair = tiSession.getRegionManager.getRegionStorePairByKey(key)
+            val (region, store) = (regionStorePair.first, regionStorePair.second)
+            val myClient = new RegionStoreClientBuilder(tiSession).build(region, store)
             myClient.refreshLock(backOffer, key, startTs, lock_ttl)
           } catch {
             case e: Exception =>
