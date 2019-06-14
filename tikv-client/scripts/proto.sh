@@ -14,21 +14,21 @@
 #   limitations under the License.
 #
 
-kvproto_hash=4ed0aa16f7eaeeb3386f5d081b03c35c5ab82ba5
+kvproto_hash=a0f02f7c718c2e64946f442c9c06980e2fba6e83
 
-if [ -d "kvproto" ]; then
-	cd kvproto; git fetch -p; git checkout ${kvproto_hash}; cd ..
+if [[ -d "kvproto" ]]; then
+	cd kvproto; git remote add birdstorm https://github.com/birdstorm/kvproto.git -t refresh-ttl; git fetch -p birdstorm; git checkout ${kvproto_hash}; cd ..
 else
 	git clone https://github.com/pingcap/kvproto; cd kvproto; git checkout ${kvproto_hash}; cd ..
 fi
 
-if [ -d "raft-rs" ]; then
+if [[ -d "raft-rs" ]]; then
 	cd raft-rs; git pull origin master; cd ..
 else
 	git clone https://github.com/pingcap/raft-rs
 fi
 
-if [ -d "tipb" ]; then
+if [[ -d "tipb" ]]; then
 	cd tipb; git pull origin master; cd ..
 else
 	git clone https://github.com/pingcap/tipb

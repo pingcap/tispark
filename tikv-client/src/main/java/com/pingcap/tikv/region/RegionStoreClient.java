@@ -31,12 +31,8 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.exception.KeyException;
-import com.pingcap.tikv.exception.LockException;
-import com.pingcap.tikv.exception.RegionException;
-import com.pingcap.tikv.exception.SelectException;
-import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.exception.*;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.txn.Lock;
@@ -73,6 +69,8 @@ import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Kvrpcpb.Mutation;
 import org.tikv.kvproto.Kvrpcpb.PrewriteRequest;
 import org.tikv.kvproto.Kvrpcpb.PrewriteResponse;
+import org.tikv.kvproto.Kvrpcpb.RefreshLockRequest;
+import org.tikv.kvproto.Kvrpcpb.RefreshLockResponse;
 import org.tikv.kvproto.Kvrpcpb.ScanRequest;
 import org.tikv.kvproto.Kvrpcpb.ScanResponse;
 import org.tikv.kvproto.Kvrpcpb.SplitRegionRequest;
@@ -514,6 +512,44 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   }
 
   /**
+   * Refresh specific lock with corresponding ttl
+   *
+   * @param backOffer backOffer
+   * @param key locked key
+   * @param startVersion startTs of lock
+   * @param ttl new ttl of lock
+   */
+  public void refreshLock(BackOffer backOffer, ByteString key, long startVersion, long ttl) {
+    Supplier<RefreshLockRequest> factory =
+        () ->
+            RefreshLockRequest.newBuilder()
+                .setStartVersion(startVersion)
+                .setKey(key)
+                .setContext(region.getContext())
+                .setTtl(ttl)
+                .build();
+    KVErrorHandler<RefreshLockResponse> handler =
+        new KVErrorHandler<>(
+            regionManager,
+            this,
+            region,
+            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+    RefreshLockResponse resp =
+        callWithRetry(backOffer, TikvGrpc.METHOD_KV_REFRESH_LOCK, factory, handler);
+    if (resp == null) {
+      this.regionManager.onRequestFail(region);
+      throw new TiClientInternalException("RefreshLockResponse failed without a cause");
+    }
+    if (resp.hasRegionError()) {
+      // Caller method should restart commit
+      throw new RegionException(resp.getRegionError());
+    }
+    if (resp.getTtl() == 0) {
+      throw new TiBatchWriteException("Lock outdated");
+    }
+  }
+
+  /**
    * Execute and retrieve the response from TiKV server.
    *
    * @param req Select request to process
@@ -661,14 +697,10 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     private final ChannelFactory channelFactory;
     private final RegionManager regionManager;
 
-    public RegionStoreClientBuilder(
-        TiConfiguration conf, ChannelFactory channelFactory, RegionManager regionManager) {
-      Objects.requireNonNull(conf, "conf is null");
-      Objects.requireNonNull(channelFactory, "channelFactory is null");
-      Objects.requireNonNull(regionManager, "regionManager is null");
-      this.conf = conf;
-      this.channelFactory = channelFactory;
-      this.regionManager = regionManager;
+    public RegionStoreClientBuilder(TiSession session) {
+      this.conf = session.getConf();
+      this.channelFactory = session.getChannelFactory();
+      this.regionManager = session.getRegionManager();
     }
 
     public RegionStoreClient build(TiRegion region, Store store) {

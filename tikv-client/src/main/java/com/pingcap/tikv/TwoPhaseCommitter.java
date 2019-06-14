@@ -44,56 +44,6 @@ import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Metapb;
 
 public class TwoPhaseCommitter {
-
-  public static class ByteWrapper {
-    private byte[] bytes;
-
-    public ByteWrapper(byte[] bytes) {
-      this.bytes = bytes;
-    }
-
-    public byte[] getBytes() {
-      return this.bytes;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-
-      ByteWrapper that = (ByteWrapper) o;
-
-      return Arrays.equals(bytes, that.bytes);
-    }
-
-    @Override
-    public int hashCode() {
-      return Arrays.hashCode(bytes);
-    }
-  }
-
-  public static class BytePairWrapper {
-    private byte[] key;
-    private byte[] value;
-
-    public BytePairWrapper(byte[] key, byte[] value) {
-      this.key = key;
-      this.value = value;
-    }
-
-    public byte[] getKey() {
-      return key;
-    }
-
-    public byte[] getValue() {
-      return value;
-    }
-  }
-
   /** buffer spark rdd iterator data into memory */
   private static final int WRITE_BUFFER_SIZE = 32 * 1024;
 
@@ -103,15 +53,12 @@ public class TwoPhaseCommitter {
    */
   private static final int TXN_COMMIT_BATCH_SIZE = 768 * 1024;
 
-  /** unit is second */
-  private static final long DEFAULT_BATCH_WRITE_LOCK_TTL = 3000;
+  private static final Logger logger = LoggerFactory.getLogger(TwoPhaseCommitter.class);
 
   private static final long MAX_RETRY_TIMES = 3;
 
-  private static final Logger LOG = LoggerFactory.getLogger(TwoPhaseCommitter.class);
-
-  private TxnKVClient kvClient;
-  private RegionManager regionManager;
+  private final TxnKVClient kvClient;
+  private final RegionManager regionManager;
 
   /** start timestamp of transaction which get from PD */
   private final long startTs;
@@ -120,6 +67,10 @@ public class TwoPhaseCommitter {
     this.kvClient = TiSessionCache.getSession(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
+  }
+
+  public long getLockTtl() {
+    return this.kvClient.getLockTTL();
   }
 
   public void close() throws Exception {}
@@ -154,7 +105,7 @@ public class TwoPhaseCommitter {
     List<Kvrpcpb.Mutation> mutationList = Collections.singletonList(mutation);
 
     // send rpc request to tikv server
-    long lockTTL = getTxnLockTTL(this.startTs);
+    long lockTTL = this.kvClient.getLockTTL();
     ClientRPCResult prewriteResult =
         this.kvClient.prewrite(
             backOffer, mutationList, key, lockTTL, this.startTs, tiRegion, store);
@@ -179,7 +130,7 @@ public class TwoPhaseCommitter {
       }
     }
 
-    LOG.debug("prewrite primary key {} successfully", KeyUtils.formatBytes(key));
+    logger.debug("PreWrite primary key {} successfully", KeyUtils.formatBytes(key));
   }
 
   /**
@@ -219,7 +170,7 @@ public class TwoPhaseCommitter {
       }
     }
 
-    LOG.debug("commit primary key {} successfully", KeyUtils.formatBytes(key));
+    logger.debug("commit primary key {} successfully", KeyUtils.formatBytes(key));
   }
 
   /**
@@ -270,6 +221,11 @@ public class TwoPhaseCommitter {
           backOffer, primaryKey, keyBytes, valueBytes, size, 0);
       totalSize = totalSize + size;
     }
+
+    logger.debug(
+        "prewrite secondary key successfully, primary key={}, total size={}",
+        KeyUtils.formatBytes(primaryKey),
+        totalSize);
   }
 
   private void doPrewriteSecondaryKeysInBatchesWithRetry(
@@ -324,7 +280,7 @@ public class TwoPhaseCommitter {
                   "> max retry number %s, oldRegion=%s, currentRegion=%s",
                   MAX_RETRY_TIMES, oldRegion, currentRegion));
         }
-        LOG.debug(
+        logger.debug(
             String.format(
                 "oldRegion=%s != currentRegion=%s, will refetch region info and retry",
                 oldRegion, currentRegion));
@@ -359,7 +315,7 @@ public class TwoPhaseCommitter {
       BatchKeys batchKeys,
       Map<ByteString, Kvrpcpb.Mutation> mutations)
       throws TiBatchWriteException {
-    LOG.debug("start prewrite secondary key, size={}", batchKeys.getKeys().size());
+    logger.debug("start prewrite secondary key, size={}", batchKeys.getKeys().size());
 
     List<ByteString> keyList = batchKeys.getKeys();
     int batchSize = keyList.size();
@@ -368,8 +324,7 @@ public class TwoPhaseCommitter {
       mutationList.add(mutations.get(key));
     }
     // send rpc request to tikv server
-    int txnSize = batchKeys.getKeys().size();
-    long lockTTL = getTxnLockTTL(this.startTs, txnSize);
+    long lockTTL = this.kvClient.getLockTTL();
     ClientRPCResult prewriteResult =
         this.kvClient.prewrite(
             backOffer,
@@ -384,7 +339,7 @@ public class TwoPhaseCommitter {
           "prewrite secondary key error", prewriteResult.getException());
     }
     if (prewriteResult.isRetry()) {
-      LOG.debug("prewrite secondary key fail, will backoff and retry");
+      logger.debug("prewrite secondary key fail, will backoff and retry");
       try {
         backOffer.doBackOff(
             BackOffFunction.BackOffFuncType.BoRegionMiss,
@@ -403,7 +358,7 @@ public class TwoPhaseCommitter {
         throw new TiBatchWriteException(errorMsg, e);
       }
     }
-    LOG.debug("prewrite secondary key successfully, size={}", batchKeys.getKeys().size());
+    logger.debug("prewrite secondary key successfully, size={}", batchKeys.getKeys().size());
   }
 
   private void appendBatchBySize(
@@ -473,7 +428,7 @@ public class TwoPhaseCommitter {
 
   private void doCommitSecondaryKeys(Iterator<ByteString> keys, long commitTs)
       throws TiBatchWriteException {
-    LOG.debug("start commit secondary key");
+    logger.debug("start commit secondary key");
 
     int totalSize = 0;
     while (keys.hasNext()) {
@@ -493,7 +448,7 @@ public class TwoPhaseCommitter {
       doCommitSecondaryKeys(backOffer, keyBytes, size, commitTs);
     }
 
-    LOG.debug("commit secondary key successfully, total size={}", totalSize);
+    logger.debug("commit secondary key successfully, total size={}", totalSize);
   }
 
   private void doCommitSecondaryKeys(
@@ -532,10 +487,10 @@ public class TwoPhaseCommitter {
     if (!commitResult.isSuccess()) {
       String error =
           String.format("Txn commit secondary key error, regionId=%s", batchKeys.getRegion());
-      LOG.warn(error);
+      logger.warn(error);
       throw new TiBatchWriteException("commit secondary key error", commitResult.getException());
     }
-    LOG.debug("commit {} rows successfully", batchKeys.getKeys().size());
+    logger.debug("commit {} rows successfully", batchKeys.getKeys().size());
   }
 
   private GroupKeyResult groupKeysByRegion(ByteString[] keys, int size)
@@ -558,13 +513,52 @@ public class TwoPhaseCommitter {
     return result;
   }
 
-  private long getTxnLockTTL(long startTime) {
-    // TODO: calculate txn lock ttl
-    return DEFAULT_BATCH_WRITE_LOCK_TTL;
+  public static class ByteWrapper {
+    private byte[] bytes;
+
+    public ByteWrapper(byte[] bytes) {
+      this.bytes = bytes;
+    }
+
+    public byte[] getBytes() {
+      return this.bytes;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      ByteWrapper that = (ByteWrapper) o;
+
+      return Arrays.equals(bytes, that.bytes);
+    }
+
+    @Override
+    public int hashCode() {
+      return Arrays.hashCode(bytes);
+    }
   }
 
-  private long getTxnLockTTL(long startTime, int txnSize) {
-    // TODO: calculate txn lock ttl
-    return DEFAULT_BATCH_WRITE_LOCK_TTL;
+  public static class BytePairWrapper {
+    private byte[] key;
+    private byte[] value;
+
+    public BytePairWrapper(byte[] key, byte[] value) {
+      this.key = key;
+      this.value = value;
+    }
+
+    public byte[] getKey() {
+      return key;
+    }
+
+    public byte[] getValue() {
+      return value;
+    }
   }
 }

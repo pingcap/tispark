@@ -54,6 +54,9 @@ public class TiSession implements AutoCloseable {
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
 
+  /** unit is second */
+  private static final long DEFAULT_BATCH_WRITE_LOCK_TTL = 3;
+
   public TiSession(TiConfiguration conf) {
     this.conf = conf;
     this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
@@ -62,7 +65,8 @@ public class TiSession implements AutoCloseable {
   }
 
   public TxnKVClient createTxnClient() {
-    return new TxnKVClient(conf, this.getRegionStoreClientBuilder(), this.getPDClient());
+    return new TxnKVClient(
+        conf, this.getRegionStoreClientBuilder(), this.getPDClient(), DEFAULT_BATCH_WRITE_LOCK_TTL);
   }
 
   public RegionStoreClient.RegionStoreClientBuilder getRegionStoreClientBuilder() {
@@ -70,9 +74,7 @@ public class TiSession implements AutoCloseable {
     if (res == null) {
       synchronized (this) {
         if (clientBuilder == null) {
-          clientBuilder =
-              new RegionStoreClient.RegionStoreClientBuilder(
-                  conf, this.channelFactory, this.getRegionManager());
+          clientBuilder = new RegionStoreClient.RegionStoreClientBuilder(this);
         }
         res = clientBuilder;
       }
@@ -171,6 +173,10 @@ public class TiSession implements AutoCloseable {
       }
     }
     return res;
+  }
+
+  public ChannelFactory getChannelFactory() {
+    return this.channelFactory;
   }
 
   public static TiSession create(TiConfiguration conf) {

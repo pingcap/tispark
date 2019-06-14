@@ -19,11 +19,7 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.exception.GrpcException;
-import com.pingcap.tikv.exception.KeyException;
-import com.pingcap.tikv.exception.RegionException;
-import com.pingcap.tikv.exception.TiClientInternalException;
-import com.pingcap.tikv.exception.TiKVException;
+import com.pingcap.tikv.exception.*;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -42,29 +38,33 @@ import org.tikv.kvproto.Metapb;
 
 /** KV client of transaction APIs for GET/PUT/DELETE/SCAN */
 public class TxnKVClient implements AutoCloseable {
-  private static final Logger LOG = LoggerFactory.getLogger(TxnKVClient.class);
+  private static final Logger logger = LoggerFactory.getLogger(TxnKVClient.class);
 
   private final RegionStoreClient.RegionStoreClientBuilder clientBuilder;
   private final TiConfiguration conf;
   private final RegionManager regionManager;
-  private ReadOnlyPDClient pdClient;
+  private final ReadOnlyPDClient pdClient;
+
+  private final long lockTTL;
 
   public TxnKVClient(
       TiConfiguration conf,
       RegionStoreClient.RegionStoreClientBuilder clientBuilder,
-      ReadOnlyPDClient pdClient) {
+      ReadOnlyPDClient pdClient,
+      long lockTTL) {
     this.conf = conf;
     this.clientBuilder = clientBuilder;
     this.regionManager = clientBuilder.getRegionManager();
     this.pdClient = pdClient;
-  }
-
-  public TiConfiguration getConf() {
-    return conf;
+    this.lockTTL = lockTTL;
   }
 
   public RegionManager getRegionManager() {
     return regionManager;
+  }
+
+  public long getLockTTL() {
+    return lockTTL;
   }
 
   public TiTimestamp getTimestamp() {
@@ -81,7 +81,7 @@ public class TxnKVClient implements AutoCloseable {
         }
       }
     } catch (GrpcException e1) {
-      LOG.error("Get tso from pd failed,", e1);
+      logger.error("Get tso from pd failed,", e1);
     }
     return timestamp;
   }

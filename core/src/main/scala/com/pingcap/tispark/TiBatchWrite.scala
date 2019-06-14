@@ -16,7 +16,10 @@
 package com.pingcap.tispark
 
 import java.util
+import java.util.concurrent.{Executors, TimeUnit}
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
+import com.google.protobuf.ByteString
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
@@ -24,9 +27,9 @@ import org.apache.spark.sql.functions.lit
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
+import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
-import com.pingcap.tikv.txn.TxnKVClient
 import com.pingcap.tikv.types.DataType.EncodeType
 import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
@@ -81,6 +84,11 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private var uniqueIndices: List[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
+
+  @transient private val refreshLockService =
+    Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build)
+
+  private val DEFAULT_REFRESH_LOCK_INTERVAL = 1000
 
   private def calculateSplitKeys(sampleRDD: RDD[Row],
                                  estimatedTotalSize: Long,
@@ -139,6 +147,28 @@ class TiBatchWrite(@transient val df: DataFrame,
     val estimateInMB = estimatedTotalSize / (1024 * 1024)
     logger.info("estimatedTotalSize is %s MB".format(formatter.format(estimateInMB)))
     (estimateInMB.toLong, sampleRowCount)
+  }
+
+  private def refreshLocks(key: ByteString, startTs: Long, lock_ttl: Long): Unit = {
+    // TODO: Make this configurable
+    val refreshLockInterval = DEFAULT_REFRESH_LOCK_INTERVAL
+    refreshLockService.scheduleAtFixedRate(
+      new Runnable {
+        override def run(): Unit =
+          try {
+            val backOffer = ConcreteBackOffer.newGetBackOff
+            val myClient = new RegionStoreClientBuilder(tiSession).build(key)
+            myClient.refreshLock(backOffer, key, startTs, lock_ttl)
+          } catch {
+            case e: Exception =>
+              logger.warn("Refresh lock failed.", e)
+            // ignore exception
+          }
+      },
+      refreshLockInterval,
+      refreshLockInterval,
+      TimeUnit.SECONDS
+    )
   }
 
   @throws(classOf[NoSuchTableException])
@@ -300,14 +330,46 @@ class TiBatchWrite(@transient val df: DataFrame,
     val startTs = startTimeStamp.getVersion
     logger.info(s"startTS: $startTs")
 
+    try {
+      val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs)
+
+      primaryPreWrite(ti2PCClient, primaryKey, primaryRow, startTs)
+
+      secondaryPreWrite(finalWriteRDD, primaryKey, startTs)
+
+      val commitTs = tiSession.getTimestamp.getVersion
+
+      primaryCommit(ti2PCClient, primaryKey, startTs, commitTs)
+
+      secondaryCommit(finalWriteRDD, primaryKey, startTs, commitTs)
+
+    } catch {
+      case e: Exception =>
+        println("wtf")
+        logger.warn("?????", e)
+        throw e
+    } finally {
+      refreshLockService.shutdownNow()
+    }
+  }
+
+  private def primaryPreWrite(committer: TwoPhaseCommitter,
+                              primaryKey: SerializableKey,
+                              primaryRow: Array[Byte],
+                              startTs: Long): Unit = {
     // driver primary pre-write
-    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
-    ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
+    committer.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
+    // Refresh Primary Lock
+    refreshLocks(ByteString.copyFrom(primaryKey.bytes), startTs, committer.getLockTtl)
+  }
 
+  private def secondaryPreWrite(rdd: RDD[(SerializableKey, Array[Byte])],
+                                primaryKey: SerializableKey,
+                                startTs: Long): Unit = {
     // executors secondary pre-write
-    finalWriteRDD.foreachPartition { iterator =>
+    rdd.foreachPartition { iterator =>
       val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
 
       val pairs = iterator.map {
@@ -323,9 +385,13 @@ class TiBatchWrite(@transient val df: DataFrame,
         case _: Throwable =>
       }
     }
+  }
 
+  private def primaryCommit(committer: TwoPhaseCommitter,
+                            primaryKey: SerializableKey,
+                            startTs: Long,
+                            commitTs: Long): Unit = {
     // driver primary commit
-    val commitTs = tiSession.getTimestamp.getVersion
     // check commitTS
     if (commitTs <= startTs) {
       throw new TiBatchWriteException(
@@ -333,11 +399,16 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
     }
     val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
-    ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
+    committer.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
+  }
 
+  private def secondaryCommit(rdd: RDD[(SerializableKey, Array[Byte])],
+                              primaryKey: SerializableKey,
+                              startTs: Long,
+                              commitTs: Long): Unit = {
     // executors secondary commit
     if (!options.skipCommitSecondaryKey) {
-      finalWriteRDD.foreachPartition { iterator =>
+      rdd.foreachPartition { iterator =>
         val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
 
         val keys = iterator.map {
@@ -355,6 +426,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     } else {
       logger.info("skipping commit secondary key")
     }
+
   }
 
   @throws(classOf[TiBatchWriteException])
