@@ -172,7 +172,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             sleep 10
                             ps aux | grep '-server' || true
                             curl -s 127.0.0.1:2379/pd/api/v1/status || true
-                            bin/tidb-server --store=tikv --path="127.0.0.1:2379" &>tidb.log &
+                            bin/tidb-server --store=tikv --path="127.0.0.1:2379" --config=go/src/github.com/pingcap/tispark/config/tidb.toml &>tidb.log &
                             sleep 60
                             """
     
