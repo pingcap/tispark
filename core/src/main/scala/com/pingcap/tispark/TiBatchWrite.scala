@@ -16,10 +16,7 @@
 package com.pingcap.tispark
 
 import java.util
-import java.util.concurrent.{Executors, TimeUnit}
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.google.protobuf.ByteString
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
@@ -27,7 +24,6 @@ import org.apache.spark.sql.functions.lit
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
-import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
@@ -84,11 +80,6 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private var uniqueIndices: List[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
-
-  @transient private val refreshLockService =
-    Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build)
-
-  private val DEFAULT_REFRESH_LOCK_INTERVAL = 1000
 
   private def calculateSplitKeys(sampleRDD: RDD[Row],
                                  estimatedTotalSize: Long,
@@ -147,30 +138,6 @@ class TiBatchWrite(@transient val df: DataFrame,
     val estimateInMB = estimatedTotalSize / (1024 * 1024)
     logger.info("estimatedTotalSize is %s MB".format(formatter.format(estimateInMB)))
     (estimateInMB.toLong, sampleRowCount)
-  }
-
-  private def refreshLocks(key: ByteString, startTs: Long, lock_ttl: Long): Unit = {
-    // TODO: Make this configurable
-    val refreshLockInterval = DEFAULT_REFRESH_LOCK_INTERVAL
-    refreshLockService.scheduleAtFixedRate(
-      new Runnable {
-        override def run(): Unit =
-          try {
-            val backOffer = ConcreteBackOffer.newGetBackOff
-            val regionStorePair = tiSession.getRegionManager.getRegionStorePairByKey(key)
-            val (region, store) = (regionStorePair.first, regionStorePair.second)
-            val myClient = new RegionStoreClientBuilder(tiSession).build(region, store)
-            myClient.refreshLock(backOffer, key, startTs, lock_ttl)
-          } catch {
-            case e: Exception =>
-              logger.warn("Refresh lock failed.", e)
-            // ignore exception
-          }
-      },
-      refreshLockInterval,
-      refreshLockInterval,
-      TimeUnit.SECONDS
-    )
   }
 
   @throws(classOf[NoSuchTableException])
@@ -332,9 +299,9 @@ class TiBatchWrite(@transient val df: DataFrame,
     val startTs = startTimeStamp.getVersion
     logger.info(s"startTS: $startTs")
 
-    try {
-      val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs)
+    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs)
 
+    try {
       primaryPreWrite(ti2PCClient, primaryKey, primaryRow, startTs)
 
       secondaryPreWrite(finalWriteRDD, primaryKey, startTs)
@@ -346,10 +313,9 @@ class TiBatchWrite(@transient val df: DataFrame,
       secondaryCommit(finalWriteRDD, primaryKey, startTs, commitTs)
 
     } catch {
-      case e: Exception =>
-        throw e
+      case e: Exception => throw e
     } finally {
-      refreshLockService.shutdownNow()
+      ti2PCClient.close()
     }
   }
 
@@ -362,7 +328,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     committer.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
     // Refresh Primary Lock
-    refreshLocks(ByteString.copyFrom(primaryKey.bytes), startTs, committer.getLockTtl)
+    committer.refreshLocks(primaryKey.bytes, startTs, committer.getLockTtl)
   }
 
   private def secondaryPreWrite(rdd: RDD[(SerializableKey, Array[Byte])],

@@ -15,11 +15,14 @@
 
 package com.pingcap.tikv;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiBatchWriteException;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.region.RegionStoreClient;
+import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.txn.type.BatchKeys;
@@ -38,6 +41,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
@@ -63,17 +69,29 @@ public class TwoPhaseCommitter {
   /** start timestamp of transaction which get from PD */
   private final long startTs;
 
+  private final RegionStoreClientBuilder regionStoreClientBuilder;
+
+  private static final long DEFAULT_REFRESH_LOCK_INTERVAL = 1000;
+  private final ScheduledExecutorService refreshLockService;
+
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
-    this.kvClient = TiSessionCache.getSession(conf).createTxnClient();
+    TiSession session = TiSessionCache.getSession(conf);
+    this.kvClient = session.createTxnClient();
     this.regionManager = kvClient.getRegionManager();
+    this.regionStoreClientBuilder = new RegionStoreClientBuilder(session);
     this.startTs = startTime;
+    refreshLockService =
+        Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder().setDaemon(true).build());
   }
 
   public long getLockTtl() {
     return this.kvClient.getLockTTL();
   }
 
-  public void close() throws Exception {}
+  public void close() throws Exception {
+    refreshLockService.shutdownNow();
+  }
 
   /**
    * 2pc - prewrite primary key
@@ -383,6 +401,30 @@ public class TwoPhaseCommitter {
       BatchKeys batchKeys = new BatchKeys(tiRegion, store, keys.subList(start, end));
       batchKeyList.add(batchKeys);
     }
+  }
+
+  public void refreshLocks(byte[] key, long startTs, long lock_ttl) {
+    // TODO: Make this configurable
+    long refreshLockInterval = DEFAULT_REFRESH_LOCK_INTERVAL;
+    refreshLockService.scheduleAtFixedRate(
+        () -> {
+          try {
+            BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+            ByteString primaryKey = ByteString.copyFrom(key);
+            Pair<TiRegion, Metapb.Store> regionStorePair =
+                regionManager.getRegionStorePairByKey(primaryKey);
+            TiRegion region = regionStorePair.first;
+            Metapb.Store store = regionStorePair.second;
+            RegionStoreClient regionStoreClient = regionStoreClientBuilder.build(region, store);
+            regionStoreClient.refreshLock(backOffer, primaryKey, startTs, lock_ttl);
+          } catch (Exception e) {
+            logger.warn("Refresh lock failed.", e);
+            // ignore exception
+          }
+        },
+        refreshLockInterval,
+        refreshLockInterval,
+        TimeUnit.SECONDS);
   }
 
   private long keyValueSize(ByteString key, Map<ByteString, Kvrpcpb.Mutation> mutations) {
