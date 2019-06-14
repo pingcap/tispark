@@ -122,12 +122,16 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
       if (!tiDBJDBCClient.isClosed) {
         tiDBJDBCClient.unlockTables()
       }
+    } catch {
+      case _: Throwable =>
     }
 
     try {
       if (!tiDBJDBCClient.isClosed) {
         dropTable()
       }
+    } catch {
+      case _: Throwable =>
     }
 
     try {
