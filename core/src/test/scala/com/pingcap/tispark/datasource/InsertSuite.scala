@@ -19,11 +19,11 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
     )
   )
 
-  def compareRow(r1 : Row, r2 : Row) : Boolean = {
+  private def compareRow(r1 : Row, r2 : Row) : Boolean = {
     r1.getAs[Int](0) < r2.getAs[Int](0)
   }
 
-  def generateData(start : Int, length : Int, skipFirstCol : Boolean = false): List[Row] = {
+  private def generateData(start : Int, length : Int, skipFirstCol : Boolean = false): List[Row] = {
     val strings = Array("Hello","TiDB","Spark",null,"TiSpark")
     val ret = ArrayBuffer[Row]()
     for ( x <- start until start+length) {
