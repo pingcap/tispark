@@ -4,17 +4,13 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
+import scala.collection.mutable.ArrayBuffer
+
 class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
   private val row1 = Row(null, "Hello")
-  private val row2 = Row(2, "TiDB")
-  private val row3 = Row(3, "Spark")
-  private val row4 = Row(4, null)
   private val row5 = Row(5, "Duplicate")
 
   private val row2_v2 = Row(2, "TiSpark")
-  private val row3_v2 = Row(3, "TiSpark")
-  private val row4_v2 = Row(4, "TiSpark")
-  private val row5_v2 = Row(5, "TiSpark")
 
   private val schema = StructType(
     List(
@@ -23,90 +19,179 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
     )
   )
 
-  test("Test upsert to table without primary key") {
+  def compareRow(r1 : Row, r2 : Row) : Boolean = {
+    r1.getAs[Int](0) < r2.getAs[Int](0)
+  }
+
+  def generateData(start : Int, length : Int, skipFirstCol : Boolean = false): List[Row] = {
+    val strings = Array("Hello","TiDB","Spark",null,"TiSpark")
+    val ret = ArrayBuffer[Row]()
+    for ( x <- start until start+length) {
+      if(skipFirstCol) {
+        ret += Row(strings(x % strings.length))
+      } else {
+        ret += Row(x, strings(x % strings.length))
+      }
+    }
+    ret.toList
+  }
+
+  test("Test insert to table without primary key") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtable values(null, 'Hello')"
     )
 
-    // insert row2 row3
-    tidbWrite(List(row2, row3), schema)
-    testTiDBSelect(Seq(row1, row2, row3))
+    var data = List(row1)
+    // insert 2 rows
+    var insert = generateData(2,2)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
 
-    // insert row2 row4
-    tidbWrite(List(row2, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row2, row3, row4))
+    // insert duplicate row
+    insert = generateData(2,2)
+    data = data:::insert
+    // sort the data
+    data = data.sortWith(compareRow)
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
 
-    // insert row5 row5
-    tidbWrite(List(row5, row5), schema)
-    testTiDBSelect(Seq(row1, row2, row2, row3, row4, row5, row5))
+    // insert ~100 rows
+    insert = generateData(5,95)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
 
-    // insert row3_v2
-    tidbWrite(List(row3_v2), schema)
-    testTiDBSelect(Seq(row1, row2, row2, row3, row3_v2, row4, row5, row5))
+    // insert ~1000 rows
+    insert = generateData(101,900)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
   }
 
-  test("Test upsert to table with primary key (primary key is handle)") {
+  test("Test insert to table with primary key (primary key is handle)") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtable values(2, 'TiDB')"
     )
 
-    // insert row3 row4
-    tidbWrite(List(row3, row4), schema)
-    testTiDBSelect(Seq(row2, row3, row4))
+    var data = List(Row(2,"TiDB"))
+    // insert 2 rows
+    var insert = generateData(3,2)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
 
-    // insert row2_v2 row5
+
+    // insert duplicate row
+    insert = generateData(4,2)
     intercept[TiBatchWriteException] {
-      tidbWrite(List(row2_v2, row5), schema)
-//      testSelect(Seq(row2_v2, row3, row4, row5))
+      tidbWrite(insert, schema)
     }
 
-    // insert row3_v2 row4_v2 row5_v2
+    // insert ~100 rows
+    insert = generateData(5,95)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
 
-    intercept[TiBatchWriteException] {
-      tidbWrite(List(row3_v2, row4_v2, row5_v2), schema)
-//      testSelect(Seq(row2_v2, row3_v2, row4_v2, row5_v2))
-    }
+    // insert ~1000 rows
+    insert = generateData(101,900)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
   }
 
-  test("Test upsert to table with primary key (auto increase case 1)") {
+  test("Test insert to table with primary key with tiny int") {
+    dropTable()
+    jdbcUpdate(s"create table $dbtable(i tinyint primary key, s varchar(128))")
+    jdbcUpdate(
+      s"insert into $dbtable values(2, 'TiDB')"
+    )
+
+    var data = List(Row(2,"TiDB"))
+    // insert 2 rows
+    val insert = generateData(3,100)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
+  }
+
+  test("Test insert to table with primary key with small int") {
+    dropTable()
+    jdbcUpdate(s"create table $dbtable(i smallint primary key, s varchar(128))")
+    jdbcUpdate(
+      s"insert into $dbtable values(2, 'TiDB')"
+    )
+
+    var data = List(Row(2,"TiDB"))
+    // insert 2 rows
+    val insert = generateData(3,100)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
+  }
+
+  test("Test insert to table with primary key with medium int") {
+    dropTable()
+    jdbcUpdate(s"create table $dbtable(i mediumint primary key, s varchar(128))")
+    jdbcUpdate(
+      s"insert into $dbtable values(2, 'TiDB')"
+    )
+
+    var data = List(Row(2,"TiDB"))
+    // insert 2 rows
+    val insert = generateData(3,100)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
+  }
+
+  test("Test insert to table with primary key (auto increase case 1)") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
     jdbcUpdate(
       s"insert into $dbtable values(2, 'TiDB')"
     )
 
-    // insert row3 row4
-    tidbWrite(List(row3, row4), schema)
-    testTiDBSelect(Seq(row2, row3, row4))
+    var data = List(Row(2,"TiDB"))
+    // insert 2 rows
+    var insert = generateData(3,2)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
 
     // when provide auto id column value but say not provide them in options
     // an exception will be thrown.
+    // duplicate pk
     intercept[TiBatchWriteException] {
       tidbWrite(List(row2_v2, row5), schema)
     }
 
     // when not provide auto id but say provide them in options
     // and exception will be thrown.
+    // null pk
     intercept[TiBatchWriteException] {
       tidbWrite(List(Row(null, "abc")), schema)
     }
+
+    //insert ~100 rows
+    insert = generateData(5,95)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
+
+    //insert ~1000 rows
+    insert = generateData(101, 900)
+    data = data:::insert
+    tidbWrite(insert, schema)
+    testTiDBSelect(data)
   }
 
-  test("Test upsert to table with primary key (auto increase case 2)") {
-    val rowWithoutPK2 = Row("TiDB")
-    val rowWithoutPK3 = Row("Spark")
-    val rowWithoutPK4 = Row(null)
-    val rowWithoutPK5 = Row("Duplicate")
-
-    val row1 = Row(1, "Hello")
-    val row2 = Row(30000, "TiDB")
-    val row3 = Row(30001, "Spark")
-    val row4 = Row(30002, null)
-    val row5 = Row(30003, "Duplicate")
+  test("Test insert to table with primary key (auto increase case 2)") {
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
@@ -119,12 +204,24 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
         StructField("s", StringType)
       )
     )
-    // insert row2 row3
-    tidbWrite(List(rowWithoutPK2, rowWithoutPK3), withOutIDSchema)
-    testTiDBSelect(Seq(row1, row2, row3))
+    // insert 2 rows
+    var data = List(Row(1, "Hello"))
+    var insert = generateData(30000,2, true)
+    data = data:::generateData(30000,2)
+    tidbWrite(insert, withOutIDSchema)
+    testTiDBSelect(data)
 
-    tidbWrite(List(rowWithoutPK4, rowWithoutPK5), withOutIDSchema)
-    testTiDBSelect(Seq(row1, row2, row3, row4, row5))
+    // insert ~100 rows
+    insert = generateData(30002, 98, true)
+    data = data:::generateData(30002, 98)
+    tidbWrite(insert, withOutIDSchema)
+    testTiDBSelect(data)
+
+    // insert ~1000 rows
+    insert = generateData(30100, 900, true)
+    data = data:::generateData(30100, 900)
+    tidbWrite(insert, withOutIDSchema)
+    testTiDBSelect(data)
   }
 
   override def afterAll(): Unit =
