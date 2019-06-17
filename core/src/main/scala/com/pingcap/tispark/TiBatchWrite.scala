@@ -192,8 +192,8 @@ class TiBatchWrite(@transient val df: DataFrame,
           )
         }
 
-        val colOffset = colsInDf.zipWithIndex.find(col => autoIncrementColName.equals(col._1)).get._2
-        colsMapInTiDB(autoIncrementColName).getOffset
+        val colOffset =
+          colsInDf.zipWithIndex.find(col => autoIncrementColName.equals(col._1)).get._2
         val hasNullValue = df
           .filter(row => row.get(colOffset) == null)
           .count() > 0
@@ -243,6 +243,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // continue check check check
     checkValueNotNull(tiRowRdd)
+    // check the validation of handle column value
+    checkHandleColumn(tiRowRdd)
 
     // TODO: lock table
     // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
@@ -400,6 +402,15 @@ class TiBatchWrite(@transient val df: DataFrame,
       throw new TiBatchWriteException(
         s"Insert null value to not null column! $nullRowCount rows contain illegal null values!"
       )
+    }
+  }
+
+  private def checkHandleColumn(rdd: RDD[TiRow]): Unit = {
+    if (tiTableInfo.isPkHandle) {
+      rdd.foreach(
+        row => handleCol.getType.convertToTiDBType(row.get(handleCol.getOffset, handleCol.getType))
+      )
+      handleCol.getType.convertToTiDBType()
     }
   }
 
