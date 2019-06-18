@@ -47,6 +47,7 @@ public class TiTableInfo implements Serializable {
   private final long columnLength;
   private final TiPartitionInfo partitionInfo;
   private final TiColumnInfo primaryKeyColumn;
+  private final long updateTimestamp;
 
   @JsonCreator
   public TiTableInfo(
@@ -62,7 +63,8 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("max_col_id") long maxColumnId,
       @JsonProperty("max_idx_id") long maxIndexId,
       @JsonProperty("old_schema_id") long oldSchemaId,
-      @JsonProperty("partition") TiPartitionInfo partitionInfo) {
+      @JsonProperty("partition") TiPartitionInfo partitionInfo,
+      @JsonProperty("update_timestamp") long updateTimestamp) {
     this.id = id;
     this.name = name.getL();
     this.charset = charset;
@@ -79,6 +81,7 @@ public class TiTableInfo implements Serializable {
     this.maxIndexId = maxIndexId;
     this.oldSchemaId = oldSchemaId;
     this.partitionInfo = partitionInfo;
+    this.updateTimestamp = updateTimestamp;
 
     TiColumnInfo primaryKey = null;
     for (TiColumnInfo col : this.columns) {
@@ -242,7 +245,8 @@ public class TiTableInfo implements Serializable {
           getMaxColumnId(),
           getMaxIndexId(),
           getOldSchemaId(),
-          partitionInfo);
+          partitionInfo,
+          updateTimestamp);
     } else {
       return this;
     }
@@ -256,5 +260,9 @@ public class TiTableInfo implements Serializable {
   public boolean isPartitionEnabled() {
     if (partitionInfo == null) return false;
     return partitionInfo.isEnable();
+  }
+
+  public long getUpdateTimestamp() {
+    return updateTimestamp;
   }
 }

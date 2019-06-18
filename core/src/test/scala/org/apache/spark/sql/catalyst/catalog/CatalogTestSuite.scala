@@ -3,6 +3,25 @@ package org.apache.spark.sql.catalyst.catalog
 import org.apache.spark.sql.BaseTiSparkTest
 
 class CatalogTestSuite extends BaseTiSparkTest {
+  test("test schema change") {
+    val tableName = "catalog_test"
+
+    tidbStmt.execute(s"DROP TABLE IF EXISTS `$tableName`")
+    tidbStmt.execute(s"CREATE TABLE $tableName(c1 int)")
+
+    val catalog = this.ti.tiSession.getCatalog
+    val tableInfo1 = catalog.getDatabaseTable(s"${dbPrefix}tispark_test", tableName, true).second
+    tidbStmt.execute(s"ALTER TABLE `$tableName` ADD COLUMN c2 INT;")
+
+    val tableInfo2 = catalog.getDatabaseTable(s"${dbPrefix}tispark_test", tableName, true).second
+    assert(tableInfo1.getUpdateTimestamp != tableInfo2.getUpdateTimestamp)
+
+    val tableInfo3 = catalog.getDatabaseTable(s"${dbPrefix}tispark_test", tableName, true).second
+    assert(tableInfo2.getUpdateTimestamp == tableInfo3.getUpdateTimestamp)
+
+    tidbStmt.execute(s"DROP TABLE IF EXISTS `$tableName`")
+  }
+
   test("test show databases/tables") {
     spark.sql("show databases").show(false)
     spark.sql(s"show databases like '$dbPrefix*'").show(false)

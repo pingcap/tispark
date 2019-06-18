@@ -183,10 +183,11 @@ class TiBatchWrite(@transient val df: DataFrame,
     // initialize
     tiConf = tiContext.tiConf
     tiSession = tiContext.tiSession
+    catalog = tiSession.getCatalog
     tiTableRef = options.tiTableRef
-    tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
-    tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
-    catalog = TiSessionCache.getSession(tiConf).getCatalog
+    val dbTable = catalog.getDatabaseTable(tiTableRef.databaseName, tiTableRef.tableName, true)
+    tiDBInfo = dbTable.first
+    tiTableInfo = dbTable.second
 
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
@@ -372,6 +373,15 @@ class TiBatchWrite(@transient val df: DataFrame,
     if (connectionLost()) {
       throw new TiBatchWriteException("tidb's jdbc connection is lost!")
     }
+
+    // Schema must not be changed during prewrite,
+    // but the current check is not enough, e.g.
+    // schema change happens after calling isSchemaChanged() and before calling commitPrimaryKey().
+    // This problem can be solved by lock table.
+    // Check schema change is only usefully on such TiDB that does not support lock table.
+    if (isSchemaChanged()) {
+      throw new TiBatchWriteException("schema has changed during prewrite!")
+    }
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
 
     // unlock table
@@ -423,6 +433,12 @@ class TiBatchWrite(@transient val df: DataFrame,
     } else {
       // TODO: what if version of tidb does not support lock table
     }
+  }
+
+  private def isSchemaChanged(): Boolean = {
+    val newTableInfo =
+      catalog.getDatabaseTable(tiTableRef.databaseName, tiTableRef.tableName, true).second
+    tiTableInfo.getUpdateTimestamp != newTableInfo.getUpdateTimestamp
   }
 
   private def connectionLost(): Boolean = {

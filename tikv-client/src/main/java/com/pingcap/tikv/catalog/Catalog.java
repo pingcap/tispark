@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
+import com.pingcap.tikv.util.Pair;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -199,6 +200,15 @@ public class Catalog implements AutoCloseable {
     } else {
       return metaCache.listTables(database);
     }
+  }
+
+  public Pair<TiDBInfo, TiTableInfo> getDatabaseTable(
+      String dbName, String tableName, Boolean reloadCache) {
+    if (reloadCache) {
+      this.reloadCache(true);
+    }
+
+    return new Pair<>(getDatabase(dbName), getTable(dbName, tableName));
   }
 
   public TiDBInfo getDatabase(String dbName) {

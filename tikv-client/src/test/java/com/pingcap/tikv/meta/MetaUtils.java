@@ -50,11 +50,17 @@ public class MetaUtils {
     private List<TiIndexInfo> indices = new ArrayList<>();
     private TiPartitionInfo partInfo;
     private Long tid = null;
+    private long updateTimestamp = 0L;
 
     public TableBuilder() {}
 
     public TableBuilder name(String name) {
       this.name = name;
+      return this;
+    }
+
+    public TableBuilder updateTimestamp(long updateTimestamp) {
+      this.updateTimestamp = updateTimestamp;
       return this;
     }
 
@@ -130,7 +136,20 @@ public class MetaUtils {
         name = "Table" + tid;
       }
       return new TiTableInfo(
-          tid, CIStr.newCIStr(name), "", "", pkHandle, columns, indices, "", 0, 0, 0, 0, partInfo);
+          tid,
+          CIStr.newCIStr(name),
+          "",
+          "",
+          pkHandle,
+          columns,
+          indices,
+          "",
+          0,
+          0,
+          0,
+          0,
+          partInfo,
+          updateTimestamp);
     }
   }
 
