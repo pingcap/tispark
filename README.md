@@ -139,7 +139,7 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.grpc.timeout_in_sec |  10 | GRPC timeout time in seconds |
 | spark.tispark.meta.reload_period_in_sec |  60 | Metastore reload period in seconds |
 | spark.tispark.plan.allow_agg_pushdown |  true | If allow aggregation pushdown (in case of busy TiKV nodes) |
-| spark.tispark.plan.allow_index_read |  false | If allow index read (which might cause heavy pressure on TiKV) |
+| spark.tispark.plan.allow_index_read |  true | If allow index read (which might cause heavy pressure on TiKV) |
 | spark.tispark.index.scan_batch_size |  20000 | How many row key in batch for concurrent index scan |
 | spark.tispark.index.scan_concurrency |  5 | Maximal threads for index scan retrieving row keys (shared among tasks inside each JVM) |
 | spark.tispark.table.scan_concurrency |  512 | Maximal threads for table scan (shared among tasks inside each JVM) |
