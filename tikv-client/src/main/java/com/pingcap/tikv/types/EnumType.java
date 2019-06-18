@@ -26,6 +26,8 @@ import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
+import static java.util.Objects.requireNonNull;
+
 public class EnumType extends DataType {
   public static final EnumType ENUM = new EnumType(MySQLType.TypeEnum);
 
@@ -92,9 +94,19 @@ public class EnumType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    if (flag != Codec.UVARINT_FLAG)
-      throw new TypeException("Invalid EnumType(IntegerType) flag: " + flag);
-    int idx = (int) IntegerCodec.readUVarLong(cdi) - 1;
+    int idx;
+    switch (flag) {
+        // encodeKey write UINT_FLAG
+      case Codec.UINT_FLAG:
+        idx = (int) IntegerCodec.readULong(cdi) -1;
+        break;
+        // encodeValue write UVARINT_FLAG
+      case Codec.UVARINT_FLAG:
+        idx = (int) IntegerCodec.readUVarLong(cdi) - 1;
+        break;
+      default:
+          throw new TypeException("Invalid EnumType(IntegerType) flag: " + flag);
+    }
     if (idx < 0 || idx >= this.getElems().size())
       throw new TypeException("Index is out of range, better " + "take a look at tidb side.");
     return this.getElems().get(idx);
@@ -103,7 +115,17 @@ public class EnumType extends DataType {
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    long longVal = Converter.convertToLong(value);
+    requireNonNull(value, "val is null");
+    long longVal = -1;
+    if (value instanceof Number) {
+      longVal = ((Number) value).longValue();
+    } else if (value instanceof String) {
+      longVal = parseEnumName((String)value);
+    }
+    if(longVal < 0 || longVal >= getElems().size()) {
+      throw new TypeException(
+              String.format("Cannot cast %s to long", value.getClass().getSimpleName()));
+    }
     IntegerCodec.writeULongFully(cdo, longVal, true);
   }
 
