@@ -192,7 +192,8 @@ class TiBatchWrite(@transient val df: DataFrame,
           )
         }
 
-        val colOffset = colsInDf.zipWithIndex.find(col => autoIncrementColName.equals(col._1)).get._2
+        val colOffset =
+          colsInDf.zipWithIndex.find(col => autoIncrementColName.equals(col._1)).get._2
         colsMapInTiDB(autoIncrementColName).getOffset
         val hasNullValue = df
           .filter(row => row.get(colOffset) == null)
