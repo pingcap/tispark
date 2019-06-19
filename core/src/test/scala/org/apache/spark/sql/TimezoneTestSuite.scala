@@ -54,7 +54,8 @@ class TimezoneTestSuite extends BaseTiSparkTest {
     assert(testData.equals(resultData.toString))
   }
 
-  test("Test Spark JDBC Write Timezone GLOBAL=-7:00 SESSION=-7:00") {
+  // ignored because spark jdbc write do not use local time zone
+  ignore("Test Spark JDBC Write Timezone GLOBAL=-7:00 SESSION=-7:00") {
     tidbStmt.execute(s"SET GLOBAL time_zone = '${this.timeZoneOffset}'")
 
     tidbStmt.execute(s"drop table if exists $table")
