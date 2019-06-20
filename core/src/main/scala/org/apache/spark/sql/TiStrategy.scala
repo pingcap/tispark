@@ -15,15 +15,12 @@
 
 package org.apache.spark.sql
 
-import java.time.ZonedDateTime
-
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.predicates.TiKVScanAnalyzer.TiKVScanPlan
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.utils.TiConverter._
@@ -39,7 +36,6 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
-import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
