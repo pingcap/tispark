@@ -2,6 +2,7 @@ package com.pingcap.tispark.datasource
 
 import java.util.Objects
 
+import com.pingcap.tispark.{TiConfigConst, TiDBOptions}
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.StructType
@@ -66,6 +67,10 @@ class BaseDataSourceTest(val table: String,
     // check data source result & expected answer
     val df = queryDatasourceTiDB(sortCol)
     checkAnswer(df, expectedAnswer)
+
+    // check table scan
+    val df2 = queryDatasourceTableScan(sortCol)
+    checkAnswer(df2, expectedAnswer)
   }
 
   protected def compareTiDBWriteFailureWithJDBC(
@@ -185,6 +190,18 @@ class BaseDataSourceTest(val table: String,
         rowRes.toList
       })
       .toList
+
+  protected def queryDatasourceTableScan(sortCol: String): DataFrame = {
+     sqlContext.read
+      .format("tidb")
+      .options(tidbOptions)
+      .option("database", database)
+      .option("table", table)
+      .option(TiConfigConst.ALLOW_INDEX_READ, "false")
+      .load()
+      .sort(sortCol)
+  }
+
 
   protected def queryDatasourceTiDB(sortCol: String): DataFrame =
     sqlContext.read
