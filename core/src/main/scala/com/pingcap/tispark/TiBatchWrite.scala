@@ -315,14 +315,12 @@ class TiBatchWrite(@transient val df: DataFrame,
     val toBeCheckedRdd = getKeysNeedCheck(tiRowRdd, startTimeStamp)
 
     val deduplicatedTiRowRdd = deduplicateIfNecessary(toBeCheckedRdd)
-    val rddToBeInserted = if (options.upsert) {
+     if (!options.upsert) {
       // step 1: remove duplicate item from data to be inserted. The duplicate basically means
       // two row items violate primary key or unique index constraint.
-      deduplicatedTiRowRdd
-    } else {
       checkConflictWithInsertKeys(toBeCheckedRdd)
-      deduplicatedTiRowRdd
     }
+    val rddToBeInserted = deduplicatedTiRowRdd
 
     val encodedTiRowRDD = generateRDDToBeInserted(rddToBeInserted)
 
@@ -496,16 +494,9 @@ class TiBatchWrite(@transient val df: DataFrame,
   // currently deduplicate can only perform on pk is handle table.
   @throws(classOf[TiBatchWriteException])
   private def deduplicateIfNecessary(rdd: RDD[ToBeCheckedRow]) = {
-    val shuffledRDD = rdd.map(row => (row, 0))
-    val rddGroupByKey = shuffledRDD.groupByKey
-    val duplicateCountRDD = rddGroupByKey.flatMap {
-      case (_, iterable) =>
-        if (iterable.size > 1) {
-          Some(iterable.size)
-        } else {
-          None
-        }
-    }
+    val mappedRDD = rdd.map(row => (row, 0))
+    val rddGroupByKey = mappedRDD.groupByKey
+
 
     if (options.deduplicate) {
       rddGroupByKey.map {
@@ -514,6 +505,14 @@ class TiBatchWrite(@transient val df: DataFrame,
           row
       }
     } else {
+      val duplicateCountRDD = rddGroupByKey.flatMap {
+      case (_, iterable) =>
+        if (iterable.size > 1) {
+          Some(iterable.size)
+        } else {
+          None
+        }
+    }
       if (!duplicateCountRDD.isEmpty()) {
         throw new TiBatchWriteException("data conflicts! set the parameter deduplicate.")
       }
@@ -990,12 +989,12 @@ class ToBeCheckedRow(val row: TiRow,
         if (handleKey != null && row.handleKey != null) {
           handleConflict = handleKey.equals(row.handleKey)
         }
-        // 2. index keys are empty, just return false
+        // 2. index keys are empty, just return true if handle key is conflict
         if (indexKeys.isEmpty && row.indexKeys.isEmpty) {
           return handleConflict
         }
         // 3. check is there any index key same
-        this.indexKeys.exists(row.indexKeys.toSet) || handleConflict
+         handleConflict || this.indexKeys.exists(row.indexKeys.toSet)
       case _ =>
         false
     }

@@ -1,5 +1,6 @@
 package com.pingcap.tispark.datasource
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
@@ -21,19 +22,6 @@ class AddingIndexUpsertSuite extends BaseDataSourceTest("adding_index_upsert") {
       StructField("s", StringType)
     )
   )
-
-  test("test pk is handle") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
-    )
-    // insert row2 row3
-    tidbWrite(List(row2, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
-  }
 
   test("test unique index upsert with primary key is handle and index") {
     dropTable()
@@ -89,12 +77,25 @@ class AddingIndexUpsertSuite extends BaseDataSourceTest("adding_index_upsert") {
     tidbWrite(List(row2, row4, row5), schema)
     testTiDBSelect(Seq(row1, row2, row4, row5), "c1")
 
-    val options = Some(Map("upsert" -> "true", "deduplicate" -> "true"))
-    tidbWrite(
-      List(row3, row3, conflcitWithOneIndex, conflcitWithTwoIndices),
-      schema,
-      options
-    )
+    val options = Some(Map("upsert" -> "true", "deduplicate" -> "false"))
+    intercept[TiBatchWriteException] {
+      // insert row2 row4
+      tidbWrite(
+        List(row3, row3, conflcitWithOneIndex, conflcitWithTwoIndices),
+        schema,
+        options
+      )
+    }
+
+    options("deduplicate") = "false"
+
     testTiDBSelect(Seq(row2, row3, conflcitWithOneIndex, conflcitWithTwoIndices), "c1")
   }
+
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 }
