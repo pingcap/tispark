@@ -22,9 +22,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testTinyIntUnsignedUpperBound(true)
   }
 
-  private def testTinyIntUnsignedUpperBound(testKey : Boolean): Unit = {
+  private def testTinyIntUnsignedUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 TINYINT UNSIGNED primary key)"
       )
@@ -63,9 +63,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testTinyIntUnsignedLowerBound(false)
   }
 
-  private def testTinyIntUnsignedLowerBound(testKey : Boolean): Unit = {
+  private def testTinyIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 TINYINT UNSIGNED primary key)"
       )
@@ -104,9 +104,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testSmallIntUnsignedUpperBound(true)
   }
 
-  private def testSmallIntUnsignedUpperBound(testKey : Boolean): Unit = {
+  private def testSmallIntUnsignedUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)"
       )
@@ -145,9 +145,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testSmallIntUnsignedLowerBound(true)
   }
 
-  private def testSmallIntUnsignedLowerBound(testKey : Boolean): Unit = {
+  private def testSmallIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)"
       )
@@ -186,9 +186,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testMediumIntUnsignedUpperBound(true)
   }
 
-  private def testMediumIntUnsignedUpperBound(testKey : Boolean): Unit = {
+  private def testMediumIntUnsignedUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)"
       )
@@ -227,9 +227,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testMediumIntUnsignedLowerBound(true)
   }
 
-  private def testMediumIntUnsignedLowerBound(testKey : Boolean): Unit = {
+  private def testMediumIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)"
       )
@@ -268,9 +268,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testIntUnsignedUpperBound(true)
   }
 
-  private def testIntUnsignedUpperBound(testKey : Boolean): Unit = {
+  private def testIntUnsignedUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 INT UNSIGNED primary key)"
       )
@@ -309,9 +309,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testIntUnsignedLowerBound(true)
   }
 
-  private def testIntUnsignedLowerBound(testKey : Boolean): Unit = {
+  private def testIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 INT UNSIGNED primary key)"
       )
@@ -353,9 +353,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testBigIntUnsignedUpperBound(true)
   }
 
-  private def testBigIntUnsignedUpperBound(testKey : Boolean): Unit = {
+  private def testBigIntUnsignedUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIGINT UNSIGNED primary key)"
       )
@@ -394,9 +394,9 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     testBigIntUnsignedLowerBound(true)
   }
 
-  private def testBigIntUnsignedLowerBound(testKey : Boolean): Unit = {
+  private def testBigIntUnsignedLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIGINT UNSIGNED primary key)"
       )

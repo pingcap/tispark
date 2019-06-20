@@ -23,9 +23,9 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     testCharOverflow(true)
   }
 
-  private def testCharOverflow(testKey : Boolean): Unit = {
+  private def testCharOverflow(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 CHAR(8) primary key)"
       )
@@ -64,9 +64,9 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     testVarcharOverflow(true)
   }
 
-  private def testVarcharOverflow(testKey : Boolean): Unit = {
+  private def testVarcharOverflow(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 VARCHAR(8) primary key)"
       )
@@ -105,9 +105,9 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     testTinyTextOverflow(true)
   }
 
-  private def testTinyTextOverflow(testKey : Boolean): Unit = {
+  private def testTinyTextOverflow(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 TINYTEXT, primary key (c1(4)))"
       )
@@ -151,9 +151,9 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     testTextOverflow(true)
   }
 
-  private def testTextOverflow(testKey : Boolean): Unit = {
+  private def testTextOverflow(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 TEXT(8), primary key (c1(4)))"
       )

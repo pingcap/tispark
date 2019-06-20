@@ -2,10 +2,10 @@ package com.pingcap.tispark.datatype
 
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 
-class DataTypeSuite extends BaseDataSourceTest("t") {
+class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
 
   override protected val database: String = "test"
-  override protected val dbtable = s"$database.t"
+  override protected val dbtable = s"$database.test_data_type"
 
   test("Test Read different types") {
 

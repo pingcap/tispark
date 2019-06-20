@@ -23,9 +23,9 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
     testVarbinaryOverflow(true)
   }
 
-  private def testVarbinaryOverflow(testKey : Boolean): Unit = {
+  private def testVarbinaryOverflow(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 VARBINARY(8), primary key (c1(4)))"
       )
@@ -64,9 +64,9 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
     testTinyBlobOverflow(true)
   }
 
-  private def testTinyBlobOverflow(testKey : Boolean): Unit = {
+  private def testTinyBlobOverflow(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 TINYBLOB, primary key (c1(4)))"
       )

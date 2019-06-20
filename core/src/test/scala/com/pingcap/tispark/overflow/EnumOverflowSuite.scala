@@ -18,10 +18,10 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
     testEnumValueOverflow(true)
   }
 
-  private def testEnumValueOverflow(testKey : Boolean): Unit = {
+  private def testEnumValueOverflow(testKey: Boolean): Unit = {
 
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
     } else {
       jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
@@ -56,10 +56,10 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
     testEnumNumberOverflow(true)
   }
 
-  private def testEnumNumberOverflow(testKey : Boolean): Unit = {
+  private def testEnumNumberOverflow(testKey: Boolean): Unit = {
 
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
     } else {
       jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")

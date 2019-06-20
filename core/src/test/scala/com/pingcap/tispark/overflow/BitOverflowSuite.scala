@@ -17,10 +17,10 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     testBit1UpperBound(true)
   }
 
-  private def testBit1UpperBound(testKey : Boolean): Unit  = {
+  private def testBit1UpperBound(testKey: Boolean): Unit = {
 
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIT(1) primary key)"
       )
@@ -32,9 +32,9 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
 
     val row = Row(2.toByte)
     val schema = StructType(
-    List(
-    StructField("c1", ByteType)
-    )
+      List(
+        StructField("c1", ByteType)
+      )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
     val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
@@ -42,13 +42,13 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     val tidbErrorMsg = "value 2 > upperBound 2"
 
     compareTiDBWriteFailureWithJDBC(
-    List(row),
-    schema,
-    jdbcErrorClass,
-    jdbcErrorMsg,
-    tidbErrorClass,
-    tidbErrorMsg,
-    msgStartWith = true
+      List(row),
+      schema,
+      jdbcErrorClass,
+      jdbcErrorMsg,
+      tidbErrorClass,
+      tidbErrorMsg,
+      msgStartWith = true
     )
   }
 
@@ -60,10 +60,10 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     testBit1LowerBound(true)
   }
 
-  private def testBit1LowerBound(testKey : Boolean): Unit = {
+  private def testBit1LowerBound(testKey: Boolean): Unit = {
 
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIT(1) primary key)"
       )
@@ -103,9 +103,9 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     testBit4UpperBound(true)
   }
 
-  private def testBit4UpperBound(testKey : Boolean): Unit = {
+  private def testBit4UpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIT(4) primary key)"
       )
@@ -145,9 +145,9 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     testBit4LowerBound(true)
   }
 
-  private def testBit4LowerBound(testKey : Boolean): Unit = {
+  private def testBit4LowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIT(4) primary key)"
       )
@@ -187,10 +187,10 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     testBit8UpperBound(true)
   }
 
-  private def testBit8UpperBound(testKey : Boolean): Unit = {
+  private def testBit8UpperBound(testKey: Boolean): Unit = {
 
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIT(8) primary key)"
       )
@@ -230,9 +230,9 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     testBit8LowerBound(true)
   }
 
-  private def testBit8LowerBound(testKey : Boolean): Unit = {
+  private def testBit8LowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIT(8) primary key)"
       )

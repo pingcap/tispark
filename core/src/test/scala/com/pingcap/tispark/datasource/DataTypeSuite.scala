@@ -7,7 +7,6 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{ByteType, CharType, DecimalType, DoubleType, FloatType, IntegerType, LongType, StringType, StructField, StructType, TimestampType, VarcharType}
 
-
 class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
 
   //todo support TIME/YEAR/BINARY/SET
@@ -80,21 +79,125 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
       )
     )
     val timestampInLong = Calendar.getInstance().getTimeInMillis
-    val row1 = Row(1,0.toByte,18.toByte,29,1,28,128,256,11111111111L,12.23f,23.456,BigDecimal(1.23), "2019-06-10", timestampInLong,
-      timestampInLong, "PingCap", "TiSpark", "Tidb varbinary", "Tidb tinyblob", "Tidb tinytext", "Tidb blob",
-      "Tidb text", "Tidb mediumblob", "Tidb mediumtext", "Tidb longblob", "Tidb longtext", "male")
-    val row2 = Row(2,1.toByte,18.toByte,29,1,28,128,256,21111111111L,12.33f,23.457,BigDecimal(1.24), "2019-06-10", timestampInLong,
-      timestampInLong, "PingCap", "TiSpark", "Tidb varbinary", "Tidb tinyblob", "Tidb tinytext", "Tidb blob",
-      "Tidb text", "Tidb mediumblob", "Tidb mediumtext", "Tidb longblob", "Tidb longtext", "female")
+    val row1 = Row(
+      1,
+      0.toByte,
+      18.toByte,
+      29,
+      1,
+      28,
+      128,
+      256,
+      11111111111L,
+      12.23f,
+      23.456,
+      BigDecimal(1.23),
+      "2019-06-10",
+      timestampInLong,
+      timestampInLong,
+      "PingCap",
+      "TiSpark",
+      "Tidb varbinary",
+      "Tidb tinyblob",
+      "Tidb tinytext",
+      "Tidb blob",
+      "Tidb text",
+      "Tidb mediumblob",
+      "Tidb mediumtext",
+      "Tidb longblob",
+      "Tidb longtext",
+      "male"
+    )
+    val row2 = Row(
+      2,
+      1.toByte,
+      18.toByte,
+      29,
+      1,
+      28,
+      128,
+      256,
+      21111111111L,
+      12.33f,
+      23.457,
+      BigDecimal(1.24),
+      "2019-06-10",
+      timestampInLong,
+      timestampInLong,
+      "PingCap",
+      "TiSpark",
+      "Tidb varbinary",
+      "Tidb tinyblob",
+      "Tidb tinytext",
+      "Tidb blob",
+      "Tidb text",
+      "Tidb mediumblob",
+      "Tidb mediumtext",
+      "Tidb longblob",
+      "Tidb longtext",
+      "female"
+    )
     val data = List(row1, row2)
     tidbWrite(data, schema)
     val timestamp = new Timestamp(timestampInLong)
-    val row3 = Row(1,0.toByte,18.toByte,29,1,28,128,256,11111111111L,12.23f,23.456,BigDecimal(1.23), Date.valueOf("2019-06-10"),timestamp,
-      timestamp, "PingCap", "TiSpark", "Tidb varbinary".toArray, "Tidb tinyblob".toArray, "Tidb tinytext", "Tidb blob".toArray,
-      "Tidb text", "Tidb mediumblob".toArray, "Tidb mediumtext", "Tidb longblob".toArray, "Tidb longtext", "male")
-    val row4 = Row(2,1.toByte,18.toByte,29,1,28,128,256,21111111111L,12.33f,23.457,BigDecimal(1.24), Date.valueOf("2019-06-10"), timestamp,
-      timestamp, "PingCap", "TiSpark", "Tidb varbinary".toArray, "Tidb tinyblob".toArray, "Tidb tinytext", "Tidb blob".toArray,
-      "Tidb text", "Tidb mediumblob".toArray, "Tidb mediumtext", "Tidb longblob".toArray, "Tidb longtext", "female")
+    val row3 = Row(
+      1,
+      0.toByte,
+      18.toByte,
+      29,
+      1,
+      28,
+      128,
+      256,
+      11111111111L,
+      12.23f,
+      23.456,
+      BigDecimal(1.23),
+      Date.valueOf("2019-06-10"),
+      timestamp,
+      timestamp,
+      "PingCap",
+      "TiSpark",
+      "Tidb varbinary".toArray,
+      "Tidb tinyblob".toArray,
+      "Tidb tinytext",
+      "Tidb blob".toArray,
+      "Tidb text",
+      "Tidb mediumblob".toArray,
+      "Tidb mediumtext",
+      "Tidb longblob".toArray,
+      "Tidb longtext",
+      "male"
+    )
+    val row4 = Row(
+      2,
+      1.toByte,
+      18.toByte,
+      29,
+      1,
+      28,
+      128,
+      256,
+      21111111111L,
+      12.33f,
+      23.457,
+      BigDecimal(1.24),
+      Date.valueOf("2019-06-10"),
+      timestamp,
+      timestamp,
+      "PingCap",
+      "TiSpark",
+      "Tidb varbinary".toArray,
+      "Tidb tinyblob".toArray,
+      "Tidb tinytext",
+      "Tidb blob".toArray,
+      "Tidb text",
+      "Tidb mediumblob".toArray,
+      "Tidb mediumtext",
+      "Tidb longblob".toArray,
+      "Tidb longtext",
+      "female"
+    )
     val ref = List(row3, row4)
     testTiDBSelect(ref)
   }
@@ -114,13 +217,13 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
         StructField("c1", StringType)
       )
     )
-    val row1 = Row(1,"test")
-    val row2 = Row(2,"spark")
+    val row1 = Row(1, "test")
+    val row2 = Row(2, "spark")
     var data = List(row1, row2)
     tidbWrite(data, schema)
     testTiDBSelect(data)
 
-    val row3 = Row(1,"spark")
+    val row3 = Row(1, "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -138,17 +241,17 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
       """.stripMargin)
     val schema = StructType(
       List(
-        StructField("i", DecimalType(3,2)),
+        StructField("i", DecimalType(3, 2)),
         StructField("c1", StringType)
       )
     )
-    val row1 = Row(BigDecimal(1.23),"test")
-    val row2 = Row(BigDecimal(1.24),"spark")
+    val row1 = Row(BigDecimal(1.23), "test")
+    val row2 = Row(BigDecimal(1.24), "spark")
     var data = List(row1, row2)
     tidbWrite(data, schema)
     testTiDBSelect(data)
 
-    val row3 = Row(BigDecimal(1.23),"spark")
+    val row3 = Row(BigDecimal(1.23), "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -170,13 +273,13 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
         StructField("c1", StringType)
       )
     )
-    val row1 = Row("row1","test")
-    val row2 = Row("row2","spark")
+    val row1 = Row("row1", "test")
+    val row2 = Row("row2", "spark")
     var data = List(row1, row2)
     tidbWrite(data, schema)
     testTiDBSelect(data)
 
-    val row3 = Row("row1","spark")
+    val row3 = Row("row1", "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -198,13 +301,13 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
         StructField("c1", StringType)
       )
     )
-    val row1 = Row("r1","test")
-    val row2 = Row("r2","spark")
+    val row1 = Row("r1", "test")
+    val row2 = Row("r2", "spark")
     var data = List(row1, row2)
     tidbWrite(data, schema)
     testTiDBSelect(data)
 
-    val row3 = Row("r1","spark")
+    val row3 = Row("r1", "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -226,14 +329,15 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
         StructField("c1", StringType)
       )
     )
-    val row1 = Row("2019-06-10","test")
-    val row2 = Row("2019-06-11","spark")
+    val row1 = Row("2019-06-10", "test")
+    val row2 = Row("2019-06-11", "spark")
     var data = List(row1, row2)
-    val ref = List(Row(Date.valueOf("2019-06-10"), "test"), Row(Date.valueOf("2019-06-11"), "spark"))
+    val ref =
+      List(Row(Date.valueOf("2019-06-10"), "test"), Row(Date.valueOf("2019-06-11"), "spark"))
     tidbWrite(data, schema)
     testTiDBSelect(ref)
 
-    val row3 = Row("2019-06-10","spark")
+    val row3 = Row("2019-06-10", "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -257,15 +361,14 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
     )
     val timeInLong = Calendar.getInstance().getTimeInMillis
     val timeInLong1 = timeInLong + 12345
-    val row1 = Row(timeInLong,"test")
-    val row2 = Row(timeInLong1,"spark")
+    val row1 = Row(timeInLong, "test")
+    val row2 = Row(timeInLong1, "spark")
     var data = List(row1, row2)
-    val ref = List(Row(new Timestamp(timeInLong), "test"),
-      Row(new Timestamp(timeInLong1), "spark"))
+    val ref = List(Row(new Timestamp(timeInLong), "test"), Row(new Timestamp(timeInLong1), "spark"))
     tidbWrite(data, schema)
     testTiDBSelect(ref)
 
-    val row3 = Row(timeInLong,"spark")
+    val row3 = Row(timeInLong, "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -289,15 +392,14 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
     )
     val timeInLong = Calendar.getInstance().getTimeInMillis
     val timeInLong1 = timeInLong + 12345
-    val row1 = Row(timeInLong,"test")
-    val row2 = Row(timeInLong1,"spark")
+    val row1 = Row(timeInLong, "test")
+    val row2 = Row(timeInLong1, "spark")
     var data = List(row1, row2)
-    val ref = List(Row(new Timestamp(timeInLong), "test"),
-      Row(new Timestamp(timeInLong1), "spark"))
+    val ref = List(Row(new Timestamp(timeInLong), "test"), Row(new Timestamp(timeInLong1), "spark"))
     tidbWrite(data, schema)
     testTiDBSelect(ref)
 
-    val row3 = Row(timeInLong,"spark")
+    val row3 = Row(timeInLong, "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -320,13 +422,13 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
         StructField("c1", StringType)
       )
     )
-    val row1 = Row("row1","test")
-    val row2 = Row("row2","spark")
+    val row1 = Row("row1", "test")
+    val row2 = Row("row2", "spark")
     var data = List(row1, row2)
     tidbWrite(data, schema)
     testTiDBSelect(data)
 
-    val row3 = Row("row1","spark")
+    val row3 = Row("row1", "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -349,15 +451,14 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
         StructField("c1", StringType)
       )
     )
-    val row1 = Row("row1","test")
-    val row2 = Row("row2","spark")
+    val row1 = Row("row1", "test")
+    val row2 = Row("row2", "spark")
     var data = List(row1, row2)
-    val ref = List(Row("row1".toArray,"test"),
-      Row("row2".toArray, "spark"))
+    val ref = List(Row("row1".toArray, "test"), Row("row2".toArray, "spark"))
     tidbWrite(data, schema)
     testTiDBSelect(ref)
 
-    val row3 = Row("row1","spark")
+    val row3 = Row("row1", "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -379,13 +480,13 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
         StructField("c1", StringType)
       )
     )
-    val row1 = Row("male","test")
-    val row2 = Row("female","spark")
+    val row1 = Row("male", "test")
+    val row2 = Row("female", "spark")
     var data = List(row2, row1)
     tidbWrite(data, schema)
     testTiDBSelect(data)
 
-    val row3 = Row("male","spark")
+    val row3 = Row("male", "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -410,13 +511,13 @@ class DataTypeSuite extends BaseDataSourceTest("test_datasource_datatype") {
         StructField("c1", StringType)
       )
     )
-    val row1 = Row(1,2,"test")
-    val row2 = Row(2,2,"tispark")
+    val row1 = Row(1, 2, "test")
+    val row2 = Row(2, 2, "tispark")
     var data = List(row1, row2)
     tidbWrite(data, schema)
     testTiDBSelect(data)
 
-    val row3 = Row(1,2,"spark")
+    val row3 = Row(1, 2, "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)

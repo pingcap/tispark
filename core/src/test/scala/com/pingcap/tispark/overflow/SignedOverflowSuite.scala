@@ -23,9 +23,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testTinyIntUpperBound(true)
   }
 
-  private def testTinyIntUpperBound(testKey : Boolean): Unit = {
+  private def testTinyIntUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 TINYINT primary key)"
       )
@@ -64,9 +64,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testTinyIntLowerBound(true)
   }
 
-  private def testTinyIntLowerBound(testKey : Boolean): Unit = {
+  private def testTinyIntLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 TINYINT primary key)"
       )
@@ -105,9 +105,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testSmallIntUpperBound(true)
   }
 
-  private def testSmallIntUpperBound(testKey : Boolean): Unit = {
+  private def testSmallIntUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 SMALLINT primary key)"
       )
@@ -146,9 +146,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testSmallIntLowerBound(true)
   }
 
-  private def testSmallIntLowerBound(testKey : Boolean): Unit = {
+  private def testSmallIntLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 SMALLINT primary key)"
       )
@@ -187,9 +187,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testMediumIntUpperBound(true)
   }
 
-  private def testMediumIntUpperBound(testKey : Boolean): Unit = {
+  private def testMediumIntUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 MEDIUMINT primary key)"
       )
@@ -228,9 +228,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testMediumIntLowerBound(true)
   }
 
-  private def testMediumIntLowerBound(testKey : Boolean): Unit = {
+  private def testMediumIntLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 MEDIUMINT primary key)"
       )
@@ -269,9 +269,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testIntUpperBound(true)
   }
 
-  private def testIntUpperBound(testKey : Boolean): Unit = {
+  private def testIntUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 INT primary key)"
       )
@@ -310,9 +310,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testIntLowerBound(true)
   }
 
-  private def testIntLowerBound(testKey : Boolean): Unit = {
+  private def testIntLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 INT primary key)"
       )
@@ -351,9 +351,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testBigIntUpperBound(true)
   }
 
-  private def testBigIntUpperBound(testKey : Boolean): Unit = {
+  private def testBigIntUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIGINT primary key)"
       )
@@ -392,9 +392,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testBigIntLowerBound(true)
   }
 
-  private def testBigIntLowerBound(testKey : Boolean): Unit = {
+  private def testBigIntLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BIGINT primary key)"
       )
@@ -433,9 +433,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testBooleanUpperBound(true)
   }
 
-  private def testBooleanUpperBound(testKey : Boolean): Unit = {
+  private def testBooleanUpperBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BOOLEAN primary key)"
       )
@@ -474,9 +474,9 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     testBooleanLowerBound(true)
   }
 
-  private def testBooleanLowerBound(testKey : Boolean): Unit = {
+  private def testBooleanLowerBound(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 BOOLEAN primary key)"
       )

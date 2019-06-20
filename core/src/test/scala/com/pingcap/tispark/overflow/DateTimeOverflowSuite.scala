@@ -18,10 +18,10 @@ class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_
     testDateTimeOverflow(true)
   }
 
-  private def testDateTimeOverflow(testKey : Boolean): Unit = {
+  private def testDateTimeOverflow(testKey: Boolean): Unit = {
 
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 DATETIME(6) primary key)"
       )

@@ -18,9 +18,9 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
     testYearOverflow(true)
   }
 
-  private def testYearOverflow(testKey : Boolean): Unit = {
+  private def testYearOverflow(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 DATE primary key)"
       )
@@ -59,9 +59,9 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
     testMonthOverflow(true)
   }
 
-  private def testMonthOverflow(testKey : Boolean): Unit = {
+  private def testMonthOverflow(testKey: Boolean): Unit = {
     dropTable()
-    if(testKey) {
+    if (testKey) {
       jdbcUpdate(
         s"create table $dbtable(c1 DATE primary key)"
       )
