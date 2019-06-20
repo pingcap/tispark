@@ -35,6 +35,5 @@ fi
 if [ -d "tipb" ]; then
 	cd tipb; git fetch -p; git checkout ${tipb_hash}; cd ..
 else
-	git clone https://github.com/pingcap/tipb
 	git clone https://github.com/pingcap/tipb; cd tipb; git checkout ${tipb_hash}; cd ..
 fi
