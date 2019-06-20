@@ -15,6 +15,8 @@
 
 package org.apache.spark.sql
 
+import java.util.concurrent.TimeUnit
+
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
@@ -36,6 +38,7 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
+import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -80,9 +83,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
   private lazy val timeZoneOffset: Int = {
-    import org.joda.time.DateTime
-    import org.joda.time.DateTimeZone
-    import java.util.concurrent.TimeUnit
     val tz = DateTimeZone.getDefault
     val instant = DateTime.now.getMillis
     val offsetInMilliseconds = tz.getOffset(instant)
