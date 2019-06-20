@@ -223,8 +223,8 @@ public class Converter {
   }
 
   /**
-   * Convert an object to Datetime If constant is a string, it parses as local timezone If it is an
-   * long, it parsed as UTC epoch
+   * Convert an object to Datetime. If constant is a string, it parses as local timezone. If it is
+   * an long, it parsed as UTC epoch. If it is a TimeStamp, it parses as local timezone.
    *
    * @param val value to be converted to DateTime
    * @return joda.time.DateTime indicating local Datetime
