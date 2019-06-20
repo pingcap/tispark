@@ -108,7 +108,9 @@ object DefaultTableSizeEstimator extends TableSizeEstimator {
    */
   override def estimatedCount(table: TiTableInfo): Long = {
     val tblStats = StatisticsManager.getTableStatistics(table.getId)
-    if (tblStats != null) {
+    // When getCount is 0, it is possible that statistics information is not read correctly.
+    // Just set its estimate count to `Long.Max` since we do not want to broadcast this table.
+    if (tblStats != null && tblStats.getCount != 0) {
       tblStats.getCount
     } else {
       Long.MaxValue
@@ -117,6 +119,8 @@ object DefaultTableSizeEstimator extends TableSizeEstimator {
 
   /**
    * Returns the estimated size of the table in bytes.
+   * Result overrides [[org.apache.spark.sql.sources.BaseRelation.sizeInBytes]],
+   * which decides whether to broadcast the table (by default not to broadcast).
    *
    * @param table table to evaluate
    * @return estimated table size of this table
