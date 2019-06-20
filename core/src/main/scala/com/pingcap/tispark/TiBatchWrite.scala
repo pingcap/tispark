@@ -281,8 +281,6 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // check value not null
     checkValueNotNull(tiRowRdd)
-    // check the validation of handle column value
-    checkHandleColumn(tiRowRdd)
 
     // region pre-split
     if (enableRegionPreSplit && handleCol != null) {
@@ -482,15 +480,6 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
   }
 
-  private def checkHandleColumn(rdd: RDD[TiRow]): Unit = {
-    if (tiTableInfo.isPkHandle) {
-      rdd.foreach(
-        row => handleCol.getType.convertToTiDBType(row.get(handleCol.getOffset, handleCol.getType))
-      )
-      handleCol.getType.convertToTiDBType()
-    }
-  }
-
   // currently deduplicate can only perform on pk is handle table.
   @throws(classOf[TiBatchWriteException])
   private def deduplicateIfNecessary(rdd: RDD[TiRow], necessary: Boolean): RDD[TiRow] =
@@ -568,10 +557,9 @@ class TiBatchWrite(@transient val df: DataFrame,
     // and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
     if (tiTableInfo.isPkHandle) {
-      // it is a workaround. pk is handle must be a number
-      row
-        .get(handleCol.getOffset, handleCol.getType)
-        .asInstanceOf[Number]
+      handleCol.getType
+        .convertToTiDBType(row.get(handleCol.getOffset, handleCol.getType))
+        .asInstanceOf[java.lang.Long]
         .longValue()
     } else {
       throw new TiBatchWriteException("cannot extract handle non pk is handle table")
