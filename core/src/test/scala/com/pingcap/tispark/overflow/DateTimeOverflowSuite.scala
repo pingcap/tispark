@@ -11,10 +11,25 @@ import org.apache.spark.sql.types._
 class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_overflow") {
 
   test("Test DATETIME YEAR Overflow") {
+    testDateTimeOverflow(false)
+  }
+
+  test("Test DATETIME as key YEAR Overflow") {
+    testDateTimeOverflow(true)
+  }
+
+  private def testDateTimeOverflow(testKey : Boolean): Unit = {
+
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 DATETIME(6))"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 DATETIME(6) primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 DATETIME(6))"
+      )
+    }
 
     val row = Row("10000-11-11 11:11:11")
     val schema = StructType(

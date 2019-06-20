@@ -49,8 +49,10 @@ public class IndexKey extends Key {
     for (int i = 0; i < indexColumns.size(); i++) {
       TiIndexColumn col = indexColumns.get(i);
       DataType colTp = tableInfo.getColumn(col.getOffset()).getType();
+      // using convertToTiDBType implicitly since the get method does not convert
+      Object convertedValue = colTp.convertToTiDBType(row.get(col.getOffset(), colTp));
       // truncate index's if necessary
-      Key key = TypedKey.toTypedKey(row.get(col.getOffset(), colTp), colTp, (int) col.getLength());
+      Key key = TypedKey.toTypedKey(convertedValue, colTp, (int) col.getLength());
       keys[i] = key;
     }
     return keys;

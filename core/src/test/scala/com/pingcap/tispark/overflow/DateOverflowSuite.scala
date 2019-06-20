@@ -11,10 +11,24 @@ import org.apache.spark.sql.types._
 class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow") {
 
   test("Test DATE YEAR Upper bound Overflow") {
+    testYearOverflow(false)
+  }
+
+  test("Test DATE as key YEAR Upper bound Overflow") {
+    testYearOverflow(true)
+  }
+
+  private def testYearOverflow(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 DATE)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 DATE primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 DATE)"
+      )
+    }
 
     val row = Row("10000-01-01")
     val schema = StructType(
@@ -38,10 +52,24 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
   }
 
   test("Test DATE Month Upper bound Overflow") {
+    testMonthOverflow(false)
+  }
+
+  test("Test DATE as key Month Upper bound Overflow") {
+    testMonthOverflow(true)
+  }
+
+  private def testMonthOverflow(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 DATE)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 DATE primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 DATE)"
+      )
+    }
 
     val row = Row("2019-13-01")
     val schema = StructType(

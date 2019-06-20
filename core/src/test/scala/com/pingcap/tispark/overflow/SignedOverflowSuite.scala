@@ -16,10 +16,24 @@ import org.apache.spark.sql.types._
 class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_overflow") {
 
   test("Test TINYINT Upper bound Overflow") {
+    testTinyIntUpperBound(false)
+  }
+
+  test("Test TINYINT as key Upper bound Overflow") {
+    testTinyIntUpperBound(true)
+  }
+
+  private def testTinyIntUpperBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 TINYINT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TINYINT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TINYINT)"
+      )
+    }
 
     val row = Row(128)
     val schema = StructType(
@@ -43,10 +57,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test TINYINT Lower bound Overflow") {
+    testTinyIntLowerBound(false)
+  }
+
+  test("Test TINYINT as key Lower bound Overflow") {
+    testTinyIntLowerBound(true)
+  }
+
+  private def testTinyIntLowerBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 TINYINT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TINYINT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TINYINT)"
+      )
+    }
 
     val row = Row(-129)
     val schema = StructType(
@@ -70,10 +98,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test SMALLINT Upper bound Overflow") {
+    testSmallIntUpperBound(false)
+  }
+
+  test("Test SMALLINT as key Upper bound Overflow") {
+    testSmallIntUpperBound(true)
+  }
+
+  private def testSmallIntUpperBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 SMALLINT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 SMALLINT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 SMALLINT)"
+      )
+    }
 
     val row = Row(32768)
     val schema = StructType(
@@ -97,10 +139,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test SMALLINT Lower bound Overflow") {
+    testSmallIntLowerBound(false)
+  }
+
+  test("Test SMALLINT as key Lower bound Overflow") {
+    testSmallIntLowerBound(true)
+  }
+
+  private def testSmallIntLowerBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 SMALLINT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 SMALLINT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 SMALLINT)"
+      )
+    }
 
     val row = Row(-32769)
     val schema = StructType(
@@ -124,10 +180,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test MEDIUMINT Upper bound Overflow") {
+    testMediumIntUpperBound(false)
+  }
+
+  test("Test MEDIUMINT as key Upper bound Overflow") {
+    testMediumIntUpperBound(true)
+  }
+
+  private def testMediumIntUpperBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 MEDIUMINT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 MEDIUMINT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 MEDIUMINT)"
+      )
+    }
 
     val row = Row(8388608)
     val schema = StructType(
@@ -151,10 +221,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test MEDIUMINT Lower bound Overflow") {
+    testMediumIntLowerBound(false)
+  }
+
+  test("Test MEDIUMINT as key Lower bound Overflow") {
+    testMediumIntLowerBound(true)
+  }
+
+  private def testMediumIntLowerBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 MEDIUMINT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 MEDIUMINT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 MEDIUMINT)"
+      )
+    }
 
     val row = Row(-8388609)
     val schema = StructType(
@@ -178,10 +262,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test INT Upper bound Overflow") {
+    testIntUpperBound(false)
+  }
+
+  test("Test INT as key Upper bound Overflow") {
+    testIntUpperBound(true)
+  }
+
+  private def testIntUpperBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 INT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 INT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 INT)"
+      )
+    }
 
     val row = Row(2147483648L)
     val schema = StructType(
@@ -205,10 +303,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test INT Lower bound Overflow") {
+    testIntLowerBound(false)
+  }
+
+  test("Test INT as key Lower bound Overflow") {
+    testIntLowerBound(true)
+  }
+
+  private def testIntLowerBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 INT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 INT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 INT)"
+      )
+    }
 
     val row = Row(-2147483649L)
     val schema = StructType(
@@ -232,10 +344,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BIGINT Upper bound Overflow") {
+    testBigIntUpperBound(false)
+  }
+
+  test("Test BIGINT as key Upper bound Overflow") {
+    testBigIntUpperBound(true)
+  }
+
+  private def testBigIntUpperBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BIGINT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIGINT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIGINT)"
+      )
+    }
 
     val row = Row("9223372036854775808")
     val schema = StructType(
@@ -259,10 +385,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BIGINT Lower bound Overflow") {
+    testBigIntLowerBound(false)
+  }
+
+  test("Test BIGINT as key Lower bound Overflow") {
+    testBigIntLowerBound(true)
+  }
+
+  private def testBigIntLowerBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BIGINT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIGINT primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIGINT)"
+      )
+    }
 
     val row = Row("-9223372036854775809")
     val schema = StructType(
@@ -286,10 +426,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BOOLEAN Upper bound Overflow") {
+    testBooleanUpperBound(false)
+  }
+
+  test("Test BOOLEAN as key Upper bound Overflow") {
+    testBooleanUpperBound(true)
+  }
+
+  private def testBooleanUpperBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BOOLEAN)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BOOLEAN primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BOOLEAN)"
+      )
+    }
 
     val row = Row(128)
     val schema = StructType(
@@ -313,10 +467,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BOOLEAN Lower bound Overflow") {
+    testBooleanLowerBound(false)
+  }
+
+  test("Test BOOLEAN as key Lower bound Overflow") {
+    testBooleanLowerBound(true)
+  }
+
+  private def testBooleanLowerBound(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BOOLEAN)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BOOLEAN primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BOOLEAN)"
+      )
+    }
 
     val row = Row(-129)
     val schema = StructType(

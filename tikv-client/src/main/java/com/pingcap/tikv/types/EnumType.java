@@ -26,8 +26,6 @@ import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 
-import static java.util.Objects.requireNonNull;
-
 public class EnumType extends DataType {
   public static final EnumType ENUM = new EnumType(MySQLType.TypeEnum);
 
@@ -115,17 +113,7 @@ public class EnumType extends DataType {
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    requireNonNull(value, "val is null");
-    long longVal = -1;
-    if (value instanceof Number) {
-      longVal = ((Number) value).longValue();
-    } else if (value instanceof String) {
-      longVal = parseEnumName((String)value);
-    }
-    if(longVal < 0 || longVal >= getElems().size()) {
-      throw new TypeException(
-              String.format("Cannot cast %s to long", value.getClass().getSimpleName()));
-    }
+    long longVal = Converter.convertToLong(value);
     IntegerCodec.writeULongFully(cdo, longVal, true);
   }
 

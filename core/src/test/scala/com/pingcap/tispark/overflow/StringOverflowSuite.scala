@@ -16,10 +16,24 @@ import org.apache.spark.sql.types.{StructField, _}
 class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_overflow") {
 
   test("Test CHAR Overflow") {
+    testCharOverflow(false)
+  }
+
+  test("Test CHAR as key Overflow") {
+    testCharOverflow(true)
+  }
+
+  private def testCharOverflow(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 CHAR(8))"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 CHAR(8) primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 CHAR(8))"
+      )
+    }
 
     val row = Row("123456789")
     val schema = StructType(
@@ -43,10 +57,24 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test VARCHAR Overflow") {
+    testVarcharOverflow(false)
+  }
+
+  test("Test VARCHAR as key Overflow") {
+    testVarcharOverflow(true)
+  }
+
+  private def testVarcharOverflow(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 VARCHAR(8))"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 VARCHAR(8) primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 VARCHAR(8))"
+      )
+    }
 
     val row = Row("123456789")
     val schema = StructType(
@@ -70,10 +98,24 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test TINYTEXT Overflow") {
+    testTinyTextOverflow(false)
+  }
+
+  test("Test TINYTEXT as key Overflow") {
+    testTinyTextOverflow(true)
+  }
+
+  private def testTinyTextOverflow(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 TINYTEXT)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TINYTEXT, primary key (c1(4)))"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TINYTEXT)"
+      )
+    }
 
     val base = "0123456789"
     var str = ""
@@ -102,10 +144,24 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test TEXT Overflow") {
+    testTextOverflow(false)
+  }
+
+  test("Test TEXT as key Overflow") {
+    testTextOverflow(true)
+  }
+
+  private def testTextOverflow(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 TEXT(8))"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TEXT(8), primary key (c1(4)))"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TEXT(8))"
+      )
+    }
 
     val row = Row("123456789")
     val schema = StructType(

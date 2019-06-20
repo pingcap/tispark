@@ -16,10 +16,24 @@ import org.apache.spark.sql.types._
 class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overflow") {
 
   test("Test VARBINARY Overflow") {
+    testVarbinaryOverflow(false)
+  }
+
+  test("Test VARBINARY as key Overflow") {
+    testVarbinaryOverflow(true)
+  }
+
+  private def testVarbinaryOverflow(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 VARBINARY(8))"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 VARBINARY(8), primary key (c1(4)))"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 VARBINARY(8))"
+      )
+    }
 
     val row = Row("0123456789")
     val schema = StructType(
@@ -43,14 +57,28 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
   }
 
   test("Test TINYBLOB Overflow") {
+    testTinyBlobOverflow(false)
+  }
+
+  test("Test TINYBLOB as key Overflow") {
+    testTinyBlobOverflow(true)
+  }
+
+  private def testTinyBlobOverflow(testKey : Boolean): Unit = {
     dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 TINYBLOB)"
-    )
+    if(testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TINYBLOB, primary key (c1(4)))"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 TINYBLOB)"
+      )
+    }
 
     val base = "0123456789"
     var str = ""
-    for (i <- 1 to 30) {
+    for (_ <- 1 to 30) {
       str = str + base
     }
     val row = Row(str)
