@@ -126,8 +126,7 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
     }
   }
 
-  // TODO: to support
-  ignore("Test Convert from java.sql.Timestamp to DATETIME") {
+  test("Test Convert from java.sql.Timestamp to DATETIME") {
     // success
     // java.sql.Timestamp -> DATETIME
     compareTiDBWriteWithJDBC {

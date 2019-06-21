@@ -62,37 +62,23 @@ public class TimestampType extends AbstractDateTimeType {
   @Override
   protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
-    return convertToMysqlTimestamp(value);
+    return convertToMysqlLocalTimestamp(value);
   }
 
-  private java.sql.Timestamp convertToMysqlTimestamp(Object value)
+  private java.sql.Timestamp convertToMysqlLocalTimestamp(Object value)
       throws ConvertNotSupportException {
     java.sql.Timestamp result;
     if (value instanceof Long) {
       result = new java.sql.Timestamp((Long) value);
     } else if (value instanceof String) {
-      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
-      // TODO: to support
-      // result = toUTCTimestamp(java.sql.Timestamp.valueOf((String)value));
+      result = java.sql.Timestamp.valueOf((String) value);
     } else if (value instanceof java.sql.Date) {
-      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
-      // TODO: to support
-      // result = toUTCTimestamp(new java.sql.Timestamp(((java.sql.Date)value).getTime()));
+      result = new java.sql.Timestamp(((java.sql.Date) value).getTime());
     } else if (value instanceof java.sql.Timestamp) {
-      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
-      // TODO: to support
-      // result = toUTCTimestamp((java.sql.Timestamp)value);
+      result = (java.sql.Timestamp) value;
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
-    return result;
-  }
-
-  private java.sql.Timestamp toUTCTimestamp(java.sql.Timestamp timestamp) {
-    DateTime dateTime = new DateTime(timestamp.getTime());
-    long packedLong = DateTimeCodec.toPackedLong(dateTime, DateTimeZone.getDefault());
-    DateTime utcDateTime = DateTimeCodec.fromPackedLong(packedLong, DateTimeZone.UTC);
-    Timestamp result = new Timestamp(utcDateTime.getMillis() + timestamp.getNanos() % 1000000);
     return result;
   }
 
