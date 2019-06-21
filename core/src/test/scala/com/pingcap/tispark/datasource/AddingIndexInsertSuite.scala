@@ -109,23 +109,11 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
       tidbWrite(List(row2, row4), schema)
     }
 
+    // TODO: do we need check conflict in data to be inserted
     intercept[TiBatchWriteException] {
-      // insert row2 row4
+      // insert row5 row5
       tidbWrite(List(row5, row5), schema)
     }
-  }
-
-  test("test pk is handle") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
-    )
-    jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
-    )
-    // insert row2 row3
-    tidbWrite(List(row2, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
   }
 
   override def afterAll(): Unit =

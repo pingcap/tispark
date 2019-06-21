@@ -192,7 +192,7 @@ class BaseDataSourceTest(val table: String,
       .toList
 
   protected def queryDatasourceTableScan(sortCol: String): DataFrame = {
-     sqlContext.read
+    sqlContext.read
       .format("tidb")
       .options(tidbOptions)
       .option("database", database)
@@ -201,7 +201,6 @@ class BaseDataSourceTest(val table: String,
       .load()
       .sort(sortCol)
   }
-
 
   protected def queryDatasourceTiDB(sortCol: String): DataFrame =
     sqlContext.read
