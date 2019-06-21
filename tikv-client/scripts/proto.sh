@@ -16,6 +16,10 @@
 
 kvproto_hash=a63718839aee85e3315e58d7bd8a49c721a43294
 
+raft_rs_hash=4fd768dc24bf9ac370f4ac2f2c3eeafef8214c66
+
+tipb_hash=c0b8f1a8c8395c319049600dc0efd278f1e26a0d
+
 if [ -d "kvproto" ]; then
 	cd kvproto; git fetch -p; git checkout ${kvproto_hash}; cd ..
 else
@@ -23,13 +27,13 @@ else
 fi
 
 if [ -d "raft-rs" ]; then
-	cd raft-rs; git pull origin master; cd ..
+	cd raft-rs; git fetch -p; git checkout ${raft_rs_hash}; cd ..
 else
-	git clone https://github.com/pingcap/raft-rs
+	git clone https://github.com/pingcap/raft-rs; cd raft-rs; git checkout ${raft_rs_hash}; cd ..
 fi
 
 if [ -d "tipb" ]; then
-	cd tipb; git pull origin master; cd ..
+	cd tipb; git fetch -p; git checkout ${tipb_hash}; cd ..
 else
-	git clone https://github.com/pingcap/tipb
+	git clone https://github.com/pingcap/tipb; cd tipb; git checkout ${tipb_hash}; cd ..
 fi
