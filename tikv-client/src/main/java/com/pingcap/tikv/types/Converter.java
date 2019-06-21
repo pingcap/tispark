@@ -24,6 +24,7 @@ import static com.pingcap.tikv.types.TimeType.SECOND;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.primitives.UnsignedLong;
+import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
@@ -229,24 +230,27 @@ public class Converter {
    * @param val value to be converted to DateTime
    * @return joda.time.DateTime indicating local Datetime
    */
-  public static DateTime convertToDateTime(Object val) {
+  public static ExtendedDateTime convertToDateTime(Object val) {
     requireNonNull(val, "val is null");
     if (val instanceof DateTime) {
-      return (DateTime) val;
+      return new ExtendedDateTime((DateTime) val);
     } else if (val instanceof String) {
       // interpret string as in local timezone
       try {
-        return strToDateTime((String) val, localDateTimeFormatter);
+        return new ExtendedDateTime(strToDateTime((String) val, localDateTimeFormatter));
       } catch (Exception e) {
         throw new TypeException(
             String.format("Error parsing string %s to datetime", (String) val), e);
       }
     } else if (val instanceof Long) {
-      return new DateTime((long) val);
+      return new ExtendedDateTime(new DateTime((long) val));
     } else if (val instanceof Timestamp) {
-      return new DateTime(((Timestamp) val).getTime());
+      Timestamp timestamp = (Timestamp) val;
+      DateTime dateTime = new DateTime(timestamp.getTime());
+      int nanos = timestamp.getNanos();
+      return new ExtendedDateTime(dateTime, (nanos / 1000) % 1000);
     } else if (val instanceof Date) {
-      return new DateTime(((Date) val).getTime());
+      return new ExtendedDateTime(new DateTime(((Date) val).getTime()));
     } else {
       throw new TypeException("Can not cast Object to LocalDateTime ");
     }
