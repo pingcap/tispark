@@ -56,10 +56,7 @@ public class DateTimeType extends AbstractDateTimeType {
   private java.sql.Timestamp convertToMysqlDateTime(Object value)
       throws ConvertNotSupportException {
     java.sql.Timestamp result;
-    if (value instanceof Long) {
-      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
-      // result = new java.sql.Timestamp((Long) value);
-    } else if (value instanceof String) {
+    if (value instanceof String) {
       result = java.sql.Timestamp.valueOf((String) value);
     } else if (value instanceof java.sql.Date) {
       result = new java.sql.Timestamp(((java.sql.Date) value).getTime());
