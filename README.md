@@ -146,10 +146,10 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.request.command.priority |  "Low" | "Low", "Normal", "High" which impacts resource to get in TiKV. Low is recommended for not disturbing OLTP workload |
 | spark.tispark.coprocess.streaming |  false | Whether to use streaming for response fetching (Experimental) |
 | spark.tispark.plan.unsupported_pushdown_exprs |  "" | A comma separated list of expressions. In case you have very old version of TiKV, you might disable some of the expression push-down if not supported |
-| spark.tispark.plan.downgrade.index_threshold | 10000 | If index scan ranges on one region exceeds this limit in original request, downgrade this region's request to table scan rather than original planned index scan |
-| spark.tispark.show_rowid |  true | If to show implicit row Id if exists |
+| spark.tispark.plan.downgrade.index_threshold | 1000000000 | If index scan ranges on one region exceeds this limit in original request, downgrade this region's request to table scan rather than original planned index scan, by default the downgrade is turned off |
+| spark.tispark.show_rowid |  false | If to show implicit row Id if exists |
 | spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
-| spark.tispark.request.isolation.level |  "RC" | Isolation level means whether do the resolve lock for the underlying tidb clusters. When you use the "RC", you will get the newest version of record smaller than your tso and ignore the locks. And if you use "SI", you will resolve the locks and get the records according whether resolved lock is committed or aborted  |
+| spark.tispark.request.isolation.level |  "SI" | Isolation level means whether do the resolve lock for the underlying tidb clusters. When you use the "RC", you will get the newest version of record smaller than your tso and ignore the locks. And if you use "SI", you will resolve the locks and get the records according whether resolved lock is committed or aborted  |
 
 ## Time Zone
 Time Zone can be set by using `-Duser.timezone` system property, e.g. `-Duser.timezone=GMT-7`, which will affect `Timestamp` type.  Please do not use `spark.sql.session.timeZone`.
