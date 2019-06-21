@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.*;
 
 import com.google.common.primitives.UnsignedLong;
+import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.Codec.*;
 import java.math.BigDecimal;
 import java.sql.Date;
@@ -341,48 +342,52 @@ public class CodecTest {
   public void fromPackedLongAndToPackedLongTest() {
     DateTimeZone utc = DateTimeZone.UTC;
     DateTimeZone otherTz = DateTimeZone.forOffsetHours(-8);
-    DateTime time = new DateTime(1999, 12, 12, 1, 1, 1, 999);
+    ExtendedDateTime time = new ExtendedDateTime(new DateTime(1999, 12, 12, 1, 1, 1, 999), 999);
     // Encode as UTC (loss timezone) and read it back as UTC
-    DateTime time1 =
+    ExtendedDateTime time1 =
         requireNonNull(DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time, utc), utc));
-    assertEquals(time.getMillis(), time1.getMillis());
+    assertTrue(equalExtendedDateTime(time, time1));
 
     // Parse String as -8 timezone, encode and read it back
     DateTimeFormatter formatter =
         DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss:SSSSSSS").withZone(otherTz);
-    DateTime time2 = DateTime.parse("2010-10-10 10:11:11:0000000", formatter);
-    DateTime time3 =
+    ExtendedDateTime time2 =
+        new ExtendedDateTime(DateTime.parse("2010-10-10 10:11:11:123456", formatter));
+    ExtendedDateTime time3 =
         requireNonNull(
             DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time2, otherTz), otherTz));
-    assertEquals(time2.getMillis(), time3.getMillis());
+    assertTrue(equalExtendedDateTime(time2, time3));
 
     // when packedLong is 0, then null is returned
-    DateTime time4 = DateTimeCodec.fromPackedLong(0, otherTz);
+    ExtendedDateTime time4 = DateTimeCodec.fromPackedLong(0, otherTz);
     assertNull(time4);
 
-    DateTime time5 = DateTime.parse("9999-12-31 23:59:59:0000000", formatter);
-    DateTime time6 =
+    ExtendedDateTime time5 =
+        new ExtendedDateTime(DateTime.parse("9999-12-31 23:59:59:123456", formatter));
+    ExtendedDateTime time6 =
         requireNonNull(
             DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time5, otherTz), otherTz));
-    assertEquals(time5.getMillis(), time6.getMillis());
+    assertTrue(equalExtendedDateTime(time5, time6));
 
-    DateTime time7 = DateTime.parse("1000-01-01 00:00:00:0000000", formatter);
-    DateTime time8 =
+    ExtendedDateTime time7 =
+        new ExtendedDateTime(DateTime.parse("1000-01-01 00:00:00:123456", formatter));
+    ExtendedDateTime time8 =
         requireNonNull(
             DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time7, otherTz), otherTz));
-    assertEquals(time7.getMillis(), time8.getMillis());
+    assertTrue(equalExtendedDateTime(time7, time8));
 
-    DateTime time9 = DateTime.parse("2017-01-05 23:59:59:5756010", formatter);
-    DateTime time10 =
+    ExtendedDateTime time9 =
+        new ExtendedDateTime(DateTime.parse("2017-01-05 23:59:59:5756010", formatter));
+    ExtendedDateTime time10 =
         requireNonNull(
             DateTimeCodec.fromPackedLong(DateTimeCodec.toPackedLong(time9, otherTz), otherTz));
-    assertEquals(time9.getMillis(), time10.getMillis());
+    assertTrue(equalExtendedDateTime(time9, time10));
 
     DateTimeFormatter formatter1 = DateTimeFormat.forPattern("yyyy-MM-dd");
-    DateTime date1 = DateTime.parse("2099-10-30", formatter1);
+    ExtendedDateTime date1 = new ExtendedDateTime(DateTime.parse("2099-10-30", formatter1));
     long time11 = DateTimeCodec.toPackedLong(date1, otherTz);
-    DateTime time12 = requireNonNull(DateTimeCodec.fromPackedLong(time11, otherTz));
-    assertEquals(time12.getMillis(), date1.getMillis());
+    ExtendedDateTime time12 = requireNonNull(DateTimeCodec.fromPackedLong(time11, otherTz));
+    assertTrue(equalExtendedDateTime(time12, date1));
 
     Calendar cal = Calendar.getInstance(otherTz.toTimeZone());
     cal.set(Calendar.HOUR_OF_DAY, 0);
@@ -390,10 +395,10 @@ public class CodecTest {
     cal.set(Calendar.SECOND, 0);
     cal.set(Calendar.MILLISECOND, 0);
     long millis = cal.getTimeInMillis();
-    DateTime time14 =
+    ExtendedDateTime time14 =
         requireNonNull(
             DateTimeCodec.fromPackedLong(DateCodec.toPackedLong(millis, otherTz), otherTz));
-    assertEquals(millis, time14.getMillis());
+    assertEquals(millis, time14.getDateTime().getMillis());
   }
 
   @Test
@@ -419,34 +424,35 @@ public class CodecTest {
     assertTrue(dst.isLocalDateTimeGap(time.toLocalDateTime()));
 
     // Try Decode a dst datetime
-    DateTime time12 =
+    ExtendedDateTime time12 =
         requireNonNull(
             DateTimeCodec.fromPackedLong(
                 ((((2007L * 13 + 3) << 5L | 11) << 17L) | (2 << 12)) << 24L, dst));
-    DateTime time22 =
+    ExtendedDateTime time22 =
         requireNonNull(
             DateTimeCodec.fromPackedLong(
                 ((((2007L * 13 + 3) << 5L | 11) << 17L) | (1 << 12)) << 24L, dst));
-    DateTime time23 =
+    ExtendedDateTime time23 =
         requireNonNull(
             DateTimeCodec.fromPackedLong(
                 ((((2007L * 13 + 3) << 5L | 11) << 17L) | (7 << 12)) << 24L, utc));
-    DateTime time24 = time23.toDateTime(dst);
+    DateTime time24 = time23.getDateTime().toDateTime(dst);
     // time11: 2007-03-11T03:00:00.000-04:00
     // time21: 2007-03-11T01:00:00.000-05:00
     // time12: 2007-03-11T03:00:00.000-04:00
     // time22: 2007-03-11T01:00:00.000-05:00
     // time23: 2007-03-11T07:00:00.000Z
     // time24: 2007-03-11T03:00:00.000-04:00
-    assertEquals(time11.getMillis(), time12.getMillis());
-    assertEquals(time21.getMillis(), time22.getMillis());
-    assertEquals(time12.getMillis(), time23.getMillis());
-    assertEquals(time23.getMillis(), time24.getMillis());
-    assertEquals(time22.getMillis() + 60 * 60 * 1000, time23.getMillis());
+    assertEquals(time11.getMillis(), time12.getDateTime().getMillis());
+    assertEquals(time21.getMillis(), time22.getDateTime().getMillis());
+    assertEquals(time12.getDateTime().getMillis(), time23.getDateTime().getMillis());
+    assertEquals(time23.getDateTime().getMillis(), time24.getMillis());
+    assertEquals(
+        time22.getDateTime().getMillis() + 60 * 60 * 1000, time23.getDateTime().getMillis());
 
-    assertEquals(time12.toLocalDateTime().getHourOfDay(), 3);
-    assertEquals(time22.toLocalDateTime().getHourOfDay(), 1);
-    assertEquals(time23.toLocalDateTime().getHourOfDay(), 7);
+    assertEquals(time12.getDateTime().toLocalDateTime().getHourOfDay(), 3);
+    assertEquals(time22.getDateTime().toLocalDateTime().getHourOfDay(), 1);
+    assertEquals(time23.getDateTime().toLocalDateTime().getHourOfDay(), 7);
     assertEquals(time24.toLocalDateTime().getHourOfDay(), 3);
 
     TimeZone.setDefault(defaultTimeZone);
@@ -456,7 +462,8 @@ public class CodecTest {
   @Test
   public void readNWriteDateTimeTest() {
     DateTimeZone otherTz = DateTimeZone.forOffsetHours(-8);
-    DateTime time = new DateTime(2007, 3, 11, 2, 0, 0, 0, DateTimeZone.UTC);
+    ExtendedDateTime time =
+        new ExtendedDateTime(new DateTime(2007, 3, 11, 2, 0, 0, 0, DateTimeZone.UTC));
 
     CodecDataOutput cdo = new CodecDataOutput();
     DateTimeCodec.writeDateTimeFully(cdo, time, otherTz);
@@ -486,17 +493,17 @@ public class CodecTest {
 
     CodecDataInput cdi = new CodecDataInput(cdo.toBytes());
     assertEquals(UINT_FLAG, cdi.readByte());
-    DateTime time2 = DateTimeCodec.readFromUInt(cdi, otherTz);
-    assertEquals(time.getMillis(), time2.getMillis());
+    ExtendedDateTime time2 = DateTimeCodec.readFromUInt(cdi, otherTz);
+    assertEquals(time.getDateTime().getMillis(), time2.getDateTime().getMillis());
     time2 = DateTimeCodec.readFromUInt(cdi, otherTz);
-    assertEquals(time.getMillis(), time2.getMillis());
+    assertEquals(time.getDateTime().getMillis(), time2.getDateTime().getMillis());
 
     cdo.reset();
     IntegerCodec.writeULongFully(cdo, DateTimeCodec.toPackedLong(time, otherTz), false);
     cdi = new CodecDataInput(cdo.toBytes());
     assertEquals(UVARINT_FLAG, cdi.readByte());
     time2 = DateTimeCodec.readFromUVarInt(cdi, otherTz);
-    assertEquals(time.getMillis(), time2.getMillis());
+    assertEquals(time.getDateTime().getMillis(), time2.getDateTime().getMillis());
   }
 
   @Test
@@ -553,5 +560,10 @@ public class CodecTest {
 
     DateTimeZone.setDefault(defaultDateTimeZone);
     TimeZone.setDefault(defaultTimeZone);
+  }
+
+  private boolean equalExtendedDateTime(ExtendedDateTime edt1, ExtendedDateTime edt2) {
+    return edt1.getMicrosOfMillis() == edt2.getMicrosOfMillis()
+        && edt1.getDateTime().getMillis() == edt2.getDateTime().getMillis();
   }
 }

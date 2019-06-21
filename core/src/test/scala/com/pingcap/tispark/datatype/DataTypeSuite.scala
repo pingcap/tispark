@@ -6,7 +6,7 @@ import java.util.Calendar
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{ByteType, DecimalType, DoubleType, FloatType, IntegerType, LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{ByteType, DecimalType, DoubleType, FloatType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 
 class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
 
@@ -145,8 +145,8 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
         StructField("c10", DoubleType),
         StructField("c11", DecimalType.SYSTEM_DEFAULT),
         StructField("c12", StringType),
-        StructField("c13", LongType),
-        StructField("c14", LongType),
+        StructField("c13", TimestampType),
+        StructField("c14", TimestampType),
         //StructField("c15", ),
         //StructField("c16", ),
         StructField("c17", StringType),
@@ -165,7 +165,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
         //StructField("c30", StringType),
       )
     )
-    val timestampInLong = Calendar.getInstance().getTimeInMillis
+    val timestamp = new Timestamp(Calendar.getInstance().getTimeInMillis)
     val row1 = Row(
       1,
       0.toByte,
@@ -180,8 +180,8 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
       23.456,
       BigDecimal(1.23),
       "2019-06-10",
-      timestampInLong,
-      timestampInLong,
+      timestamp,
+      timestamp,
       "PingCap",
       "TiSpark",
       "Tidb varbinary",
@@ -209,8 +209,8 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
       23.457,
       BigDecimal(1.24),
       "2019-06-10",
-      timestampInLong,
-      timestampInLong,
+      timestamp,
+      timestamp,
       "PingCap",
       "TiSpark",
       "Tidb varbinary",
@@ -226,7 +226,6 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
     )
     val data = List(row1, row2)
     tidbWrite(data, schema)
-    val timestamp = new Timestamp(timestampInLong)
     val row3 = Row(
       1,
       0.toByte,
@@ -442,20 +441,19 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
       """.stripMargin)
     val schema = StructType(
       List(
-        StructField("i", LongType),
+        StructField("i", TimestampType),
         StructField("c1", StringType)
       )
     )
     val timeInLong = Calendar.getInstance().getTimeInMillis
     val timeInLong1 = timeInLong + 12345
-    val row1 = Row(timeInLong, "test")
-    val row2 = Row(timeInLong1, "spark")
+    val row1 = Row(new Timestamp(timeInLong), "test")
+    val row2 = Row(new Timestamp(timeInLong1), "spark")
     var data = List(row1, row2)
-    val ref = List(Row(new Timestamp(timeInLong), "test"), Row(new Timestamp(timeInLong1), "spark"))
     tidbWrite(data, schema)
-    testTiDBSelect(ref)
+    testTiDBSelect(data)
 
-    val row3 = Row(timeInLong, "spark")
+    val row3 = Row(new Timestamp(timeInLong), "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)
@@ -473,20 +471,19 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
       """.stripMargin)
     val schema = StructType(
       List(
-        StructField("i", LongType),
+        StructField("i", TimestampType),
         StructField("c1", StringType)
       )
     )
     val timeInLong = Calendar.getInstance().getTimeInMillis
     val timeInLong1 = timeInLong + 12345
-    val row1 = Row(timeInLong, "test")
-    val row2 = Row(timeInLong1, "spark")
+    val row1 = Row(new Timestamp(timeInLong), "test")
+    val row2 = Row(new Timestamp(timeInLong1), "spark")
     var data = List(row1, row2)
-    val ref = List(Row(new Timestamp(timeInLong), "test"), Row(new Timestamp(timeInLong1), "spark"))
     tidbWrite(data, schema)
-    testTiDBSelect(ref)
+    testTiDBSelect(data)
 
-    val row3 = Row(timeInLong, "spark")
+    val row3 = Row(new Timestamp(timeInLong), "spark")
     data = List(row1, row3)
     intercept[TiBatchWriteException] {
       tidbWrite(data, schema)

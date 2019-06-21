@@ -236,8 +236,8 @@ The full conversion metrics is as follows.
 | DOUBLE               | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         |
 | DECIMAL              | true        | true     | true      | true        | true     | true      | true       | true       | true        | false    | false         |
 | DATE                 | false       | false    | false     | false       | true     | true      | false      | false      | false       | true     | true          |
-| DATETIME             | false       | false    | false     | false       | true     | false     | false      | true       | false       | true     | true          |
-| TIMESTAMP            | false       | false    | false     | false       | true     | false     | false      | true       | false       | true     | true          |
+| DATETIME             | false       | false    | false     | false       | false    | false     | false      | true       | false       | true     | true          |
+| TIMESTAMP            | false       | false    | false     | false       | false    | false     | false      | true       | false       | true     | true          |
 | TIME                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
 | YEAR                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
 | CHAR                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
