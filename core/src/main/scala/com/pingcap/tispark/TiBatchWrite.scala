@@ -20,21 +20,20 @@ import java.util
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
-import org.apache.spark.sql.functions.lit
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
-import com.pingcap.tikv.txn.TxnKVClient
 import com.pingcap.tikv.types.DataType.EncodeType
 import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
-import com.pingcap.tikv.{TiBatchWriteUtils, _}
+import com.pingcap.tikv.{TiBatchWriteUtils, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{DataFrame, Row, TiContext}
 import org.slf4j.LoggerFactory
 
@@ -81,6 +80,10 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private var uniqueIndices: List[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
+
+  @transient private var tiDBJDBCClient: TiDBJDBCClient = _
+  private var isEnableTableLock: Boolean = _
+  private var tableLocked: Boolean = false
 
   private def calculateSplitKeys(sampleRDD: RDD[Row],
                                  estimatedTotalSize: Long,
@@ -144,6 +147,32 @@ class TiBatchWrite(@transient val df: DataFrame,
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def write(): Unit = {
+    try {
+      doWrite()
+    } finally {
+      close()
+    }
+  }
+
+  private def close(): Unit = {
+    try {
+      unlockTable()
+    } catch {
+      case _: Throwable =>
+    }
+
+    try {
+      if (tiDBJDBCClient != null) {
+        tiDBJDBCClient.close()
+      }
+    } catch {
+      case _: Throwable =>
+    }
+  }
+
+  @throws(classOf[NoSuchTableException])
+  @throws(classOf[TiBatchWriteException])
+  private def doWrite(): Unit = {
     // check if write enable
     if (!tiContext.tiConf.isWriteEnable) {
       throw new TiBatchWriteException(
@@ -169,9 +198,8 @@ class TiBatchWrite(@transient val df: DataFrame,
     handleCol = tiTableInfo.getPKIsHandleColumn
     tableColSize = tiTableInfo.getColumns.size()
 
-    // check check check
+    // check unsupported
     checkUnsupported()
-    checkColumnNumbers()
 
     // check empty
     if (df.count() == 0) {
@@ -179,6 +207,15 @@ class TiBatchWrite(@transient val df: DataFrame,
       return
     }
 
+    // lock table
+    tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
+    isEnableTableLock = tiDBJDBCClient.isEnableTableLock
+    lockTable()
+
+    // check schema
+    checkColumnNumbers()
+
+    // auto increment
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
       val isProvidedID = tableColSize == colsInDf.length
       val autoIncrementColName = tiTableInfo.getAutoIncrementColInfo.getName
@@ -192,7 +229,8 @@ class TiBatchWrite(@transient val df: DataFrame,
           )
         }
 
-        val colOffset = colsInDf.zipWithIndex.find(col => autoIncrementColName.equals(col._1)).get._2
+        val colOffset =
+          colsInDf.zipWithIndex.find(col => autoIncrementColName.equals(col._1)).get._2
         colsMapInTiDB(autoIncrementColName).getOffset
         val hasNullValue = df
           .filter(row => row.get(colOffset) == null)
@@ -239,13 +277,11 @@ class TiBatchWrite(@transient val df: DataFrame,
       df.rdd
     }
 
+    // spark row -> tikv row
     val tiRowRdd = rdd.map(row => sparkRow2TiKVRow(row))
 
-    // continue check check check
+    // check value not null
     checkValueNotNull(tiRowRdd)
-
-    // TODO: lock table
-    // pending: https://internal.pingcap.net/jira/browse/TIDB-1628
 
     // region pre-split
     if (enableRegionPreSplit && handleCol != null) {
@@ -335,7 +371,14 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
     }
     val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
+
+    if (connectionLost()) {
+      throw new TiBatchWriteException("tidb's jdbc connection is lost!")
+    }
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
+
+    // unlock table
+    unlockTable()
 
     // executors secondary commit
     if (!options.skipCommitSecondaryKey) {
@@ -356,6 +399,41 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
     } else {
       logger.info("skipping commit secondary key")
+    }
+  }
+
+  private def lockTable(): Unit = {
+    if (isEnableTableLock) {
+      if (!tableLocked) {
+        tiDBJDBCClient.lockTableWriteLocal(options.database, options.table)
+        tableLocked = true
+      } else {
+        logger.warn("table already locked!")
+      }
+    } else {
+      // TODO: what if version of tidb does not support lock table
+    }
+  }
+
+  private def unlockTable(): Unit = {
+    if (isEnableTableLock) {
+      if (tableLocked) {
+        tiDBJDBCClient.unlockTables()
+        tableLocked = false
+      } else {
+        logger.warn("table already unlocked!")
+      }
+    } else {
+      // TODO: what if version of tidb does not support lock table
+    }
+  }
+
+  private def connectionLost(): Boolean = {
+    if (isEnableTableLock) {
+      tiDBJDBCClient.isClosed
+    } else {
+      // TODO: what if version of tidb does not support lock table
+      false
     }
   }
 

@@ -19,15 +19,15 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
     )
   )
 
-  private def compareRow(r1 : Row, r2 : Row) : Boolean = {
+  private def compareRow(r1: Row, r2: Row): Boolean = {
     r1.getAs[Int](0) < r2.getAs[Int](0)
   }
 
-  private def generateData(start : Int, length : Int, skipFirstCol : Boolean = false): List[Row] = {
-    val strings = Array("Hello","TiDB","Spark",null,"TiSpark")
+  private def generateData(start: Int, length: Int, skipFirstCol: Boolean = false): List[Row] = {
+    val strings = Array("Hello", "TiDB", "Spark", null, "TiSpark")
     val ret = ArrayBuffer[Row]()
-    for ( x <- start until start+length) {
-      if(skipFirstCol) {
+    for (x <- start until start + length) {
+      if (skipFirstCol) {
         ret += Row(strings(x % strings.length))
       } else {
         ret += Row(x, strings(x % strings.length))
@@ -45,28 +45,28 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
 
     var data = List(row1)
     // insert 2 rows
-    var insert = generateData(2,2)
-    data = data:::insert
+    var insert = generateData(2, 2)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
 
     // insert duplicate row
-    insert = generateData(2,2)
-    data = data:::insert
+    insert = generateData(2, 2)
+    data = data ::: insert
     // sort the data
     data = data.sortWith(compareRow)
     tidbWrite(insert, schema)
     testTiDBSelect(data)
 
     // insert ~100 rows
-    insert = generateData(5,95)
-    data = data:::insert
+    insert = generateData(5, 95)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
 
     // insert ~1000 rows
-    insert = generateData(101,900)
-    data = data:::insert
+    insert = generateData(101, 900)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
   }
@@ -78,29 +78,28 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
       s"insert into $dbtable values(2, 'TiDB')"
     )
 
-    var data = List(Row(2,"TiDB"))
+    var data = List(Row(2, "TiDB"))
     // insert 2 rows
-    var insert = generateData(3,2)
-    data = data:::insert
+    var insert = generateData(3, 2)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
 
-
     // insert duplicate row
-    insert = generateData(4,2)
+    insert = generateData(4, 2)
     intercept[TiBatchWriteException] {
       tidbWrite(insert, schema)
     }
 
     // insert ~100 rows
-    insert = generateData(5,95)
-    data = data:::insert
+    insert = generateData(5, 95)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
 
     // insert ~1000 rows
-    insert = generateData(101,900)
-    data = data:::insert
+    insert = generateData(101, 900)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
   }
@@ -112,10 +111,10 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
       s"insert into $dbtable values(2, 'TiDB')"
     )
 
-    var data = List(Row(2,"TiDB"))
+    var data = List(Row(2, "TiDB"))
     // insert 2 rows
-    val insert = generateData(3,100)
-    data = data:::insert
+    val insert = generateData(3, 100)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
   }
@@ -127,10 +126,10 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
       s"insert into $dbtable values(2, 'TiDB')"
     )
 
-    var data = List(Row(2,"TiDB"))
+    var data = List(Row(2, "TiDB"))
     // insert 2 rows
-    val insert = generateData(3,100)
-    data = data:::insert
+    val insert = generateData(3, 100)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
   }
@@ -142,10 +141,10 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
       s"insert into $dbtable values(2, 'TiDB')"
     )
 
-    var data = List(Row(2,"TiDB"))
+    var data = List(Row(2, "TiDB"))
     // insert 2 rows
-    val insert = generateData(3,100)
-    data = data:::insert
+    val insert = generateData(3, 100)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
   }
@@ -157,10 +156,10 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
       s"insert into $dbtable values(2, 'TiDB')"
     )
 
-    var data = List(Row(2,"TiDB"))
+    var data = List(Row(2, "TiDB"))
     // insert 2 rows
-    var insert = generateData(3,2)
-    data = data:::insert
+    var insert = generateData(3, 2)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
 
@@ -179,14 +178,14 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
     }
 
     //insert ~100 rows
-    insert = generateData(5,95)
-    data = data:::insert
+    insert = generateData(5, 95)
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
 
     //insert ~1000 rows
     insert = generateData(101, 900)
-    data = data:::insert
+    data = data ::: insert
     tidbWrite(insert, schema)
     testTiDBSelect(data)
   }
@@ -206,20 +205,20 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
     )
     // insert 2 rows
     var data = List(Row(1, "Hello"))
-    var insert = generateData(30000,2, true)
-    data = data:::generateData(30000,2)
+    var insert = generateData(30000, 2, true)
+    data = data ::: generateData(30000, 2)
     tidbWrite(insert, withOutIDSchema)
     testTiDBSelect(data)
 
     // insert ~100 rows
     insert = generateData(30002, 98, true)
-    data = data:::generateData(30002, 98)
+    data = data ::: generateData(30002, 98)
     tidbWrite(insert, withOutIDSchema)
     testTiDBSelect(data)
 
     // insert ~1000 rows
     insert = generateData(30100, 900, true)
-    data = data:::generateData(30100, 900)
+    data = data ::: generateData(30100, 900)
     tidbWrite(insert, withOutIDSchema)
     testTiDBSelect(data)
   }

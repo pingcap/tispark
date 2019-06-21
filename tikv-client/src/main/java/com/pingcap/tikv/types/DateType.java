@@ -64,9 +64,7 @@ public class DateType extends AbstractDateTimeType {
     } else if (value instanceof java.sql.Date) {
       result = (java.sql.Date) value;
     } else if (value instanceof java.sql.Timestamp) {
-      // TODO: to support
-      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
-      // result = new java.sql.Date(((java.sql.Timestamp) value).getTime());
+      result = new java.sql.Date(((java.sql.Timestamp) value).getTime());
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
