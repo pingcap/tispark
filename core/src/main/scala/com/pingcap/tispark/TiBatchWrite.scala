@@ -88,7 +88,7 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var isEnableTableLock: Boolean = _
   private var tableLocked: Boolean = false
 
-  private def calculateSplitKeys(sampleRDD: RDD[Row],
+  private def calculateSplitKeys(sampleRDD: RDD[TiRow],
                                  estimatedTotalSize: Long,
                                  sampleRDDCount: Long,
                                  tblInfo: TiTableInfo,
@@ -106,7 +106,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     if (regionNeed == 0) return List.empty
 
     val handleRdd: RDD[Long] = sampleRDD
-      .map(obj => -1L)
+      .map(row => extractHandleId(row))
       .sortBy(k => k)
     val step = sampleRDDCount / regionNeed
 
@@ -124,12 +124,13 @@ class TiBatchWrite(@transient val df: DataFrame,
     splitKeys
   }
 
-  private def calcRDDSize(rdd: RDD[Row]): Long =
+  private def calcRDDSize(rdd: RDD[TiRow]): Long =
     rdd
-      .map(_.mkString(",").getBytes("UTF-8").length.toLong)
+    // TODO make estimation more correctly
+      .map(row => row.fieldCount() * 64)
       .reduce(_ + _) //add the sizes together
 
-  private def estimateDataSize(sampledRDD: RDD[Row], options: TiDBOptions) = {
+  private def estimateDataSize(sampledRDD: RDD[TiRow], options: TiDBOptions) = {
     // get all data size
     val sampleRDDSize = calcRDDSize(sampledRDD)
     logger.info(s"sample data size is ${sampleRDDSize / (1024 * 1024)} MB")
@@ -281,7 +282,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     if (enableRegionPreSplit && handleCol != null) {
       logger.info("region pre split is enabled.")
       val sampleRDD =
-        rdd.sample(withReplacement = false, fraction = options.sampleFraction)
+        tiRowRdd.sample(withReplacement = false, fraction = options.sampleFraction)
       val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
       // only perform region presplit if sample rdd is not empty
       if (!sampleRDD.isEmpty()) {
