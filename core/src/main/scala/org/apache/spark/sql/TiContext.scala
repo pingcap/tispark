@@ -158,8 +158,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
     val tiRelation = TiDBRelation(
       tiSession,
       TiTableReference(dbName, tableName),
-      meta,
-      tiSession.getTimestamp
+      meta
     )(sqlContext)
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
