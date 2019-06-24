@@ -321,7 +321,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
       val rddDeletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
-      if (!options.upsert && !rddDeletion.isEmpty()) {
+      if (!options.replace && !rddDeletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
       generateKV(distinctWrappedRowRdd, remove = false) ++ generateKV(rddDeletion, remove = true)

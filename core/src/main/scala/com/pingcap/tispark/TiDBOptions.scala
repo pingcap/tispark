@@ -61,7 +61,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // if deduplicate is true, tispark will remove duplicate rows according to primary key before write to tidb
   val deduplicate: Boolean = parameters.getOrElse(TIDB_DEDUPLICATE, "false").toBoolean
 
-  val upsert: Boolean = parameters.getOrElse(TIDB_UPSERT, "false").toBoolean
+  val replace: Boolean = parameters.getOrElse(TIDB_REPLACE, "false").toBoolean
 
   // It is an optimize by the nature of 2pc protocol
   // We leave other txn, gc or read to resolve locks.
@@ -109,7 +109,7 @@ object TiDBOptions {
   val TIDB_DATABASE: String = newOption("database")
   val TIDB_TABLE: String = newOption("table")
   val TIDB_DEDUPLICATE: String = newOption("deduplicate")
-  val TIDB_UPSERT: String = newOption("upsert")
+  val TIDB_REPLACE: String = newOption("replace")
   val TIDB_SKIP_COMMIT_SECONDARY_KEY = newOption("skipCommitSecondaryKey")
   val TIDB_SAMPLE_FRACTION = newOption("sampleFraction")
 }
