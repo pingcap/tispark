@@ -28,7 +28,15 @@ import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class KeyRangeUtils {
   public static Range<Key> makeRange(ByteString startKey, ByteString endKey) {
-    return Range.closedOpen(toRawKey(startKey, true), toRawKey(endKey));
+    Key left = toRawKey(startKey, true);
+    Key right = toRawKey(endKey);
+
+    if (startKey.toByteArray().length == 0) {
+      // left = -INF
+      return Range.open(left, right);
+    } else {
+      return Range.closedOpen(left, right);
+    }
   }
 
   /**
