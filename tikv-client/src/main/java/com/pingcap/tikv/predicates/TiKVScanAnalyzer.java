@@ -290,7 +290,7 @@ public class TiKVScanAnalyzer {
     }
 
     // table name and columns
-    long tableColSize = table.getColumnLength() + 8;
+    long tableColSize = table.getColumnSize() + 8;
 
     if (index == null || index.isFakePrimaryKey()) {
       planBuilder
@@ -298,7 +298,7 @@ public class TiKVScanAnalyzer {
           .calculateCostAndEstimateCount(tableColSize)
           .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
     } else {
-      long indexSize = index.getIndexColumnLength() + 16;
+      long indexSize = index.getIndexColumnSize() + 16;
       planBuilder
           .setIndex(index)
           .setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()))

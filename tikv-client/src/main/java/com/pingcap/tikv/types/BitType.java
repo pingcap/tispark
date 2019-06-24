@@ -41,6 +41,15 @@ public class BitType extends IntegerType {
   }
 
   @Override
+  public long getSize() {
+    if (isLengthUnSpecified()) {
+      return getDefaultDataSize();
+    } else {
+      return (getLength() + 7) / 8 + getPrefixSize();
+    }
+  }
+
+  @Override
   protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
     Long result = Converter.safeConvertToUnsigned(value, this.unsignedUpperBound());

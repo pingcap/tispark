@@ -46,7 +46,7 @@ public class SetType extends DataType {
     for (int i = 0; i < 64; i++) {
       // In TiDB code base, it is taking complement of original value.
       // setIndexInvertValue[i] = ^setIndexValue[i] is invalid in Java.
-      tmpArr[i] = setIndexValue[i] ^ -1L;
+      tmpArr[i] = ~setIndexValue[i];
     }
     return tmpArr;
   }
