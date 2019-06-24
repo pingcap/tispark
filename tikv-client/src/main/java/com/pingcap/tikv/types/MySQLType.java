@@ -38,19 +38,19 @@ public enum MySQLType {
   TypeDatetime(12, 8, 1),
   TypeYear(13, 8, 1),
   TypeNewDate(14, 8, 1),
-  TypeVarchar(15, 256, 2),
+  TypeVarchar(15, 255, 2),
   TypeBit(16, 1, 1),
-  TypeJSON(0xf5, 256, 1),
+  TypeJSON(0xf5, 1024, 1),
   TypeNewDecimal(0xf6, 32, 1),
   TypeEnum(0xf7, 8, 1),
   TypeSet(0xf8, 8, 1),
-  TypeTinyBlob(0xf9, 256, 2),
-  TypeMediumBlob(0xfa, 21777216, 3),
-  TypeLongBlob(0xfb, 4294967296L, 4),
-  TypeBlob(0xfc, 65536, 2),
-  TypeVarString(0xfd, 256, 1),
-  TypeString(0xfe, 256, 1),
-  TypeGeometry(0xff, 256, 1);
+  TypeTinyBlob(0xf9, 255, 2),
+  TypeMediumBlob(0xfa, 21777215, 3),
+  TypeLongBlob(0xfb, 4294967295L, 4),
+  TypeBlob(0xfc, 65535, 2),
+  TypeVarString(0xfd, 255, 1),
+  TypeString(0xfe, 255, 1),
+  TypeGeometry(0xff, 1024, 1);
 
   private static final Map<Integer, MySQLType> typeMap = new HashMap<>();
   private static final Map<Integer, Long> sizeMap = new HashMap<>();
