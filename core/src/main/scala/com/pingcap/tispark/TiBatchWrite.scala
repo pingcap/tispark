@@ -664,7 +664,6 @@ class TiBatchWrite(@transient val df: DataFrame,
   //      pk is not handle case is equivalent to unique index.
   //      for non-unique index, handle will be encoded as part of index key. In contrast, unique
   //      index encoded handle to value.
-
   private def generateUniqueIndexKey(row: TiRow,
                                      handle: Long,
                                      index: TiIndexInfo,

@@ -44,6 +44,24 @@ class AddingIndexUpsertSuite extends BaseDataSourceTest("adding_index_replace") 
     testTiDBSelect(Seq(row2, row3, conflcitWithTwoIndices), "c1")
   }
 
+  test("test same key in one rdd") {
+    dropTable()
+    jdbcUpdate(
+      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
+    )
+    jdbcUpdate(
+      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+    )
+
+    // insert row2 row3
+    tidbWrite(List(row2, row3, row4), schema)
+    testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
+
+    val options = Some(Map("replace" -> "true", "deduplicate" -> "true"))
+    tidbWrite(List(row2), schema, options)
+    testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
+  }
+
   test("test unique index replace with primary key is handle") {
     dropTable()
     jdbcUpdate(
