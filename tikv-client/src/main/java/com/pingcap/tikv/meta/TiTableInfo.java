@@ -136,10 +136,6 @@ public class TiTableInfo implements Serializable {
     return columnSize;
   }
 
-  public boolean isLengthSpecified() {
-    return DataType.isLengthUnSpecified(columnSize);
-  }
-
   public TiColumnInfo getColumn(int offset) {
     if (offset < 0 || offset >= columns.size()) {
       throw new TiClientInternalException(String.format("Column offset %d out of bound", offset));

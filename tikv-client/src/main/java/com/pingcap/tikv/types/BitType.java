@@ -43,9 +43,9 @@ public class BitType extends IntegerType {
   @Override
   public long getSize() {
     if (isLengthUnSpecified()) {
-      return getDefaultDataSize();
+      return getPrefixSize() + getDefaultDataSize();
     } else {
-      return (getLength() + 7) / 8 + getPrefixSize();
+      return getPrefixSize() + (getLength() + 7) / 8;
     }
   }
 

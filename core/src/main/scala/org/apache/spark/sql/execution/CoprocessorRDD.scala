@@ -93,10 +93,10 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
       tiRdds.zipWithIndex.map {
         case (_, i) => b.append(s"partition p$i")
       }
-      b.append(s"with dag request: ${dagRequest.toString}")
+      b.append(s"with dag request: $dagRequest")
       b.toString()
     } else {
-      s"TiSpark $nodeName{${dagRequest.toString}}" +
+      s"TiSpark $nodeName{$dagRequest}" +
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
 
     }
@@ -169,10 +169,10 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
       tiHandleRDDs.zipWithIndex.map {
         case (_, i) => b.append(s"partition p$i")
       }
-      b.append(s"with dag request: ${dagRequest.toString}")
+      b.append(s"with dag request: $dagRequest")
       b.toString()
     } else {
-      s"TiDB $nodeName{${dagRequest.toString}}" +
+      s"TiDB $nodeName{$dagRequest}" +
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
     }
 
