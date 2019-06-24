@@ -65,7 +65,7 @@ public final class RowIDAllocator {
       if (newStart == Long.MAX_VALUE) {
         throw new TiBatchWriteException("cannot allocate more ids since it ");
       }
-      start = newStart;
+      start = newEnd - step;
       end = newEnd;
     }
   }
@@ -86,6 +86,8 @@ public final class RowIDAllocator {
         throw new TiBatchWriteException(
             "cannot allocate more ids since the start reaches " + "unsigned long's max value ");
       }
+      // update start and end
+      start = newEnd - step;
       end = newEnd;
     }
   }
