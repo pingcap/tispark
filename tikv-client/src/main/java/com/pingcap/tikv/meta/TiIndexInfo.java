@@ -43,7 +43,8 @@ public class TiIndexInfo implements Serializable {
   private final IndexType indexType;
   private final boolean isFakePrimaryKey;
 
-  private long indexColumnSize = 8;
+  // default index column size (TypeFlag + Int64)
+  private long indexColumnSize = 9;
 
   @JsonCreator
   @VisibleForTesting
