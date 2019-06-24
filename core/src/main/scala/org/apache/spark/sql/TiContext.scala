@@ -214,8 +214,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
         val rel: TiDBRelation = TiDBRelation(
           tiSession,
           TiTableReference(dbName, tableName, sizeInBytes),
-          meta,
-          tiSession.getTimestamp
+          meta
         )(sqlContext)
 
         val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
