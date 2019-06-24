@@ -557,7 +557,8 @@ class TiBatchWrite(@transient val df: DataFrame,
     // and then call `AddRecord` to add a new record.
     // Currently, only insert can set _tidb_rowid, update can not update _tidb_rowid.
     if (tiTableInfo.isPkHandle) {
-        row.get(handleCol.getOffset, handleCol.getType)
+      row
+        .get(handleCol.getOffset, handleCol.getType)
         .asInstanceOf[java.lang.Long]
         .longValue()
     } else {
@@ -576,7 +577,11 @@ class TiBatchWrite(@transient val df: DataFrame,
     val tiRow = ObjectRowImpl.create(fieldCount)
     for (i <- 0 until fieldCount) {
       // TODO: add tiDataType back
-      tiRow.set(colsMapInTiDB(colsInDf(i)).getOffset, null, colsMapInTiDB(colsInDf(i)).getType.convertToTiDBType(sparkRow(i)))
+      tiRow.set(
+        colsMapInTiDB(colsInDf(i)).getOffset,
+        null,
+        colsMapInTiDB(colsInDf(i)).getType.convertToTiDBType(sparkRow(i))
+      )
     }
     tiRow
   }
