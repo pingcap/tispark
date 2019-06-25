@@ -147,7 +147,7 @@ address = "pushgateway:9091"
 # into two which the left region's size will be region-split-size or a little
 # bit smaller.
 # region-max-size = "144MB"
-# region-split-size = "96MB"
+region-split-size = "9MB"
 
 [rocksdb]
 # Maximum number of concurrent background jobs (compactions and flushes)

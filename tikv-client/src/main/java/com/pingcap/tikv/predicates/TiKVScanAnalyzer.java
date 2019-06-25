@@ -141,10 +141,12 @@ public class TiKVScanAnalyzer {
           }
 
           if (isDoubleRead) {
-            cost *= tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
+            cost *=
+                0; // tableColSize * DOUBLE_READ_COST_FACTOR + indexSize * INDEX_SCAN_COST_FACTOR;
           } else {
             cost *= indexSize * INDEX_SCAN_COST_FACTOR;
           }
+          cost = 0;
         }
         return this;
       }

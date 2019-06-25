@@ -18,7 +18,7 @@ package com.pingcap.tispark.examples
 import com.pingcap.tispark.{TiBatchWrite, TiDBOptions}
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
 object TiBatchWriteRandomDataTest {
@@ -27,7 +27,7 @@ object TiBatchWriteRandomDataTest {
       throw new Exception("wrong arguments!")
     }
 
-    // test RANDOM_DATA 500000
+    // tispark_test index_read 200000
     val outputDatabase = args(0)
     val outputTable = args(1)
     val size = args(2).toInt
@@ -57,18 +57,19 @@ object TiBatchWriteRandomDataTest {
     spark.sql("show tables").show()
 
     val rdd: RDD[Row] = spark.sparkContext.makeRDD(1 to size, 12).map { i =>
-      Row(i)
+      Row(i, (i % 1000 + 10000).toString)
     }
 
     val schema = StructType(
       List(
-        StructField("i", IntegerType)
+        StructField("i", IntegerType),
+        StructField("c1", StringType)
       )
     )
 
     var df = spark.sqlContext.createDataFrame(rdd, schema)
 
-    for (i <- 1 to 184) {
+    for (i <- 2 to 184) {
       import org.apache.spark.sql.functions._
       df = df.withColumn(s"c$i", rand())
     }
@@ -93,9 +94,14 @@ object TiBatchWriteRandomDataTest {
 }
 
 /*
-CREATE TABLE RANDOM_DATA (
+create table index_read3(
+i varchar(20) NOT NULL primary key,
+c1 varchar(255)
+);
+
+create table index_read2(
 i int(11) NOT NULL primary key,
-c1 double,
+c1 varchar(255),
 c2 double,
 c3 double,
 c4 double,
@@ -279,5 +285,6 @@ c181 double,
 c182 double,
 c183 double,
 c184 double
-);
+)
+
  */
