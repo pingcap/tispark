@@ -119,41 +119,39 @@ public abstract class DataType implements Serializable {
     this.collation = collation;
   }
 
-  Long signedLowerBound() throws TypeException {
-    switch (this.getType()) {
-      case TypeTiny:
-        return MinInt8;
-      case TypeShort:
-        return MinInt16;
-      case TypeInt24:
-        return MinInt24;
-      case TypeLong:
-        return MinInt32;
-      case TypeLonglong:
-        return MinInt64;
-      default:
-        throw new TypeException("signedLowerBound: Input Type is not a mysql SIGNED type");
+  public Long signedLowerBound() throws TypeException {
+    if (this.getType() == MySQLType.TypeTiny) {
+      return MinInt8;
+    } else if (this.getType() == MySQLType.TypeShort) {
+      return MinInt16;
+    } else if (this.getType() == MySQLType.TypeInt24) {
+      return MinInt24;
+    } else if (this.getType() == MySQLType.TypeLong) {
+      return MinInt32;
+    } else if (this.getType() == MySQLType.TypeLonglong) {
+      return MinInt64;
+    } else {
+      throw new TypeException("Input Type is not a mysql SIGNED type");
     }
   }
 
-  Long signedUpperBound() throws TypeException {
-    switch (this.getType()) {
-      case TypeTiny:
-        return MaxInt8;
-      case TypeShort:
-        return MaxInt16;
-      case TypeInt24:
-        return MaxInt24;
-      case TypeLong:
-        return MaxInt32;
-      case TypeLonglong:
-        return MaxInt64;
-      default:
-        throw new TypeException("signedUpperBound: Input Type is not a mysql SIGNED type");
+  public Long signedUpperBound() throws TypeException {
+    if (this.getType() == MySQLType.TypeTiny) {
+      return MaxInt8;
+    } else if (this.getType() == MySQLType.TypeShort) {
+      return MaxInt16;
+    } else if (this.getType() == MySQLType.TypeInt24) {
+      return MaxInt24;
+    } else if (this.getType() == MySQLType.TypeLong) {
+      return MaxInt32;
+    } else if (this.getType() == MySQLType.TypeLonglong) {
+      return MaxInt64;
+    } else {
+      throw new TypeException("Input Type is not a mysql SIGNED type");
     }
   }
 
-  Long unsignedUpperBound() throws TypeException {
+  public Long unsignedUpperBound() throws TypeException {
     if (this.getType() == MySQLType.TypeTiny) {
       return MaxUint8;
     } else if (this.getType() == MySQLType.TypeShort) {

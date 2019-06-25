@@ -44,7 +44,7 @@ public class TiTableInfo implements Serializable {
   private final long maxColumnId;
   private final long maxIndexId;
   private final long oldSchemaId;
-  private final long columnSize;
+  private final long columnSize; // estimated column size
   private final TiPartitionInfo partitionInfo;
   private final TiColumnInfo primaryKeyColumn;
 
