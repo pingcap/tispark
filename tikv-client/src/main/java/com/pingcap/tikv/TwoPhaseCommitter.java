@@ -32,21 +32,14 @@ import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
+import org.tikv.kvproto.Kvrpcpb.Op;
 import org.tikv.kvproto.Metapb;
 
 public class TwoPhaseCommitter {
@@ -115,10 +108,9 @@ public class TwoPhaseCommitter {
 
     Kvrpcpb.Mutation mutation;
     if (!value.isEmpty()) {
-      mutation =
-          Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
+      mutation = Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Op.Put).build();
     } else {
-      mutation = Kvrpcpb.Mutation.newBuilder().setKey(key).setOp(Kvrpcpb.Op.Put).build();
+      mutation = Kvrpcpb.Mutation.newBuilder().setKey(key).setOp(Op.Del).build();
     }
     List<Kvrpcpb.Mutation> mutationList = Collections.singletonList(mutation);
 
@@ -270,7 +262,7 @@ public class TwoPhaseCommitter {
             Kvrpcpb.Mutation.newBuilder().setKey(key).setValue(value).setOp(Kvrpcpb.Op.Put).build();
       } else {
         // value can be null (table with one primary key integer column, data is encoded in key)
-        mutation = Kvrpcpb.Mutation.newBuilder().setKey(key).setOp(Kvrpcpb.Op.Put).build();
+        mutation = Kvrpcpb.Mutation.newBuilder().setKey(key).setOp(Kvrpcpb.Op.Del).build();
       }
       mutations.put(key, mutation);
     }

@@ -16,7 +16,8 @@
 
 package com.pingcap.tikv.statistics;
 
-import com.pingcap.tikv.key.*;
+import com.pingcap.tikv.key.Key;
+import com.pingcap.tikv.key.StatisticsKeyRangeBuilder;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.predicates.IndexRange;
 import com.pingcap.tikv.util.Pair;

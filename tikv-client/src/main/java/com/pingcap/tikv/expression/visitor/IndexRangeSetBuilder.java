@@ -18,8 +18,10 @@ package com.pingcap.tikv.expression.visitor;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import com.pingcap.tikv.expression.*;
+import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
+import com.pingcap.tikv.expression.StringRegExpression;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
@@ -71,7 +73,7 @@ public class IndexRangeSetBuilder extends RangeSetBuilder<TypedKey> {
     // under other encoding methods
     int prefixLen = lengths.getOrDefault(predicate.getColumnRef(), DataType.UNSPECIFIED_LEN);
     TypedKey literal = predicate.getTypedLiteral(prefixLen);
-    boolean loose = !DataType.isLengthSpecified(prefixLen);
+    boolean loose = !DataType.isLengthUnSpecified(prefixLen);
     // With prefix length specified, the filter is loosen and so should the ranges
     return visitComparisonBinaryExpr(node, context, literal, loose);
   }

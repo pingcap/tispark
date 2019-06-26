@@ -33,22 +33,11 @@ import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
-import com.pingcap.tikv.meta.TiColumnInfo;
-import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiIndexColumn;
-import com.pingcap.tikv.meta.TiIndexInfo;
-import com.pingcap.tikv.meta.TiPartitionDef;
-import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.meta.TiTimestamp;
+import com.pingcap.tikv.meta.*;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.util.Pair;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
@@ -56,6 +45,8 @@ public class TiKVScanAnalyzer {
   private static final double INDEX_SCAN_COST_FACTOR = 1.2;
   private static final double TABLE_SCAN_COST_FACTOR = 1.0;
   private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
+  private static final long TABLE_PREFIX_SIZE = 8;
+  private static final long INDEX_PREFIX_SIZE = 8;
 
   public static class TiKVScanPlan {
     public static class Builder {
@@ -290,7 +281,7 @@ public class TiKVScanAnalyzer {
     }
 
     // table name and columns
-    long tableColSize = table.getColumnLength() + 8;
+    long tableColSize = table.getColumnSize() + TABLE_PREFIX_SIZE;
 
     if (index == null || index.isFakePrimaryKey()) {
       planBuilder
@@ -298,7 +289,7 @@ public class TiKVScanAnalyzer {
           .calculateCostAndEstimateCount(tableColSize)
           .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
     } else {
-      long indexSize = index.getIndexColumnLength() + 16;
+      long indexSize = index.getIndexColumnSize() + TABLE_PREFIX_SIZE + INDEX_PREFIX_SIZE;
       planBuilder
           .setIndex(index)
           .setDoubleRead(!isCoveringIndex(columnList, index, table.isPkHandle()))

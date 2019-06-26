@@ -5,7 +5,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
 // TODO: once exception message is stable, we need also check the exception's message.
-class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
+class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   private val row1 = Row(1, 1, "Hello")
   private val row2 = Row(2, 2, "TiDB")
   private val row3 = Row(3, 3, "Spark")
@@ -108,10 +108,12 @@ class AddingIndexSuite extends BaseDataSourceTest("adding_index") {
       // insert row2 row4
       tidbWrite(List(row2, row4), schema)
     }
-
-    intercept[TiBatchWriteException] {
-      // insert row2 row4
-      tidbWrite(List(row5, row5), schema)
-    }
   }
+
+  override def afterAll(): Unit =
+    try {
+      dropTable()
+    } finally {
+      super.afterAll()
+    }
 }

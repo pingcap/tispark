@@ -15,11 +15,10 @@
 
 package com.pingcap.tikv.catalog;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
-import com.pingcap.tikv.*;
+import com.pingcap.tikv.KVMockServer;
+import com.pingcap.tikv.PDMockServerTest;
 import com.pingcap.tikv.meta.MetaUtils.MetaMockHelper;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;

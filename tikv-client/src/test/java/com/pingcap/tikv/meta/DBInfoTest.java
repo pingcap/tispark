@@ -15,7 +15,7 @@
 
 package com.pingcap.tikv.meta;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;

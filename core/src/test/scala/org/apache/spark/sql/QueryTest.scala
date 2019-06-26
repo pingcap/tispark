@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql
 
-import java.sql.{Date, ResultSet, Timestamp}
+import java.sql.{Date, Timestamp}
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 

@@ -1,7 +1,7 @@
 package com.pingcap.tispark.datasource
 
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types._
 
 class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condition") {
 

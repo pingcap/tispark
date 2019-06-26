@@ -21,7 +21,10 @@ import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.TypeException;
-import com.pingcap.tikv.types.*;
+import com.pingcap.tikv.types.BytesType;
+import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.StringType;
 
 public class TypedKey extends Key {
   private final DataType type;
@@ -95,7 +98,7 @@ public class TypedKey extends Key {
       return toTypedKey(prefixNext(((String) val).getBytes()), type, prefixLength);
     } else if (tp instanceof BytesType) {
       return toTypedKey(prefixNext(((byte[]) val)), type, prefixLength);
-    } else if (DataType.isLengthSpecified(prefixLength)) {
+    } else if (DataType.isLengthUnSpecified(prefixLength)) {
       if (tp instanceof IntegerType) {
         return toTypedKey(((long) val) + 1, type);
       } else {

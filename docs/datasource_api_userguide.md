@@ -23,16 +23,22 @@ Since TiDB is a database that supports transaction, TiDB Spark Connector also su
 2. no data in DataFrame will be written to TiDB successfully, if conflicts exist
 3. no partial changes is visible to other session until commit.
 
-## Upsert Semantics
-TiSpark only support `Append` SaveMode.
+## Replace and insert semantics 
+TiSpark only supports `Append` SaveMode. The behavior is controlled by 
+`replace` option. The default value is false. In addition, if `replace` is true,
+data to be inserted will be deduplicate before insertion.
 
-`Append` in TiSpark means `upsert`,
-1. if primary key exists in db, data will be updated
-2. if no same primary key exists, data will be inserted.
+If `replace` is true, then 
+* if primary key or unique index exists in db, data will be updated
+* if no same primary key or unique index exists, data will be inserted.
+
+If `replace` is false, then
+* if primary key or unique index exists in db, data having conflicts expects an expection.
+* if no same primary key or unique index exists, data will be inserted.
 
 | SaveMode | Support | Semantics |
 | -------- | ------- | --------- |
-| Append | true | TiSpark's `Append` means upsert. If primary key is same, data will be updated; if no same primary key exists, data will be inserted.  |
+| Append | true | TiSpark's `Append` means upsert or insert which is controlled by `replace` option. 
 | Overwrite | false |  - |
 | ErrorIfExists | false | - |
 | Ignore | false | - |
@@ -235,9 +241,9 @@ The full conversion metrics is as follows.
 | FLOAT                | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         |
 | DOUBLE               | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         |
 | DECIMAL              | true        | true     | true      | true        | true     | true      | true       | true       | true        | false    | false         |
-| DATE                 | false       | false    | false     | false       | true     | true      | false      | false      | false       | true     | false         |
-| DATETIME             | false       | false    | false     | false       | true     | false     | false      | true       | false       | true     | false         |
-| TIMESTAMP            | false       | false    | false     | false       | true     | false     | false      | false      | false       | false    | false         |
+| DATE                 | false       | false    | false     | false       | true     | true      | false      | false      | false       | true     | true          |
+| DATETIME             | false       | false    | false     | false       | false    | false     | false      | true       | false       | true     | true          |
+| TIMESTAMP            | false       | false    | false     | false       | false    | false     | false      | true       | false       | true     | true          |
 | TIME                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
 | YEAR                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
 | CHAR                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |

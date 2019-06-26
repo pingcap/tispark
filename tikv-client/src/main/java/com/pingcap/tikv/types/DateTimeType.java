@@ -17,6 +17,7 @@
 
 package com.pingcap.tikv.types;
 
+import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
@@ -55,16 +56,12 @@ public class DateTimeType extends AbstractDateTimeType {
   private java.sql.Timestamp convertToMysqlDateTime(Object value)
       throws ConvertNotSupportException {
     java.sql.Timestamp result;
-    if (value instanceof Long) {
-      result = new java.sql.Timestamp((Long) value);
-    } else if (value instanceof String) {
+    if (value instanceof String) {
       result = java.sql.Timestamp.valueOf((String) value);
     } else if (value instanceof java.sql.Date) {
       result = new java.sql.Timestamp(((java.sql.Date) value).getTime());
     } else if (value instanceof java.sql.Timestamp) {
-      // TODO: to support
-      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
-      // result = (java.sql.Timestamp) value;
+      result = (java.sql.Timestamp) value;
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
@@ -77,17 +74,17 @@ public class DateTimeType extends AbstractDateTimeType {
    */
   @Override
   protected Timestamp decodeNotNull(int flag, CodecDataInput cdi) {
-    DateTime dateTime = decodeDateTime(flag, cdi);
+    ExtendedDateTime extendedDateTime = decodeDateTime(flag, cdi);
     // Even though null is filtered out but data like 0000-00-00 exists
     // according to MySQL JDBC behavior, it's converted to null
-    if (dateTime == null) {
+    if (extendedDateTime == null) {
       return null;
     }
-    return new Timestamp(dateTime.getMillis());
+    return extendedDateTime.toTimeStamp();
   }
 
   @Override
   public DateTime getOriginDefaultValueNonNull(String value, long version) {
-    return Converter.convertToDateTime(value);
+    return Converter.convertToDateTime(value).getDateTime();
   }
 }

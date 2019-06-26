@@ -16,11 +16,7 @@
 package com.pingcap.tikv.txn;
 
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNotNull;
-import static junit.framework.TestCase.assertNotSame;
-import static junit.framework.TestCase.assertTrue;
-import static junit.framework.TestCase.fail;
+import static junit.framework.TestCase.*;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.ReadOnlyPDClient;
@@ -43,14 +39,7 @@ import java.util.function.Supplier;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
-import org.tikv.kvproto.Kvrpcpb.CommitRequest;
-import org.tikv.kvproto.Kvrpcpb.CommitResponse;
-import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
-import org.tikv.kvproto.Kvrpcpb.KeyError;
-import org.tikv.kvproto.Kvrpcpb.Mutation;
-import org.tikv.kvproto.Kvrpcpb.Op;
-import org.tikv.kvproto.Kvrpcpb.PrewriteRequest;
-import org.tikv.kvproto.Kvrpcpb.PrewriteResponse;
+import org.tikv.kvproto.Kvrpcpb.*;
 import org.tikv.kvproto.TikvGrpc;
 
 public class LockResolverTest {

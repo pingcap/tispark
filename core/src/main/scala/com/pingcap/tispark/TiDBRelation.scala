@@ -18,15 +18,14 @@ package com.pingcap.tispark
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalException}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
-import org.apache.spark.sql.{DataFrame, SaveMode}
 import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 
 import scala.collection.mutable.ListBuffer
 
@@ -126,7 +125,7 @@ case class TiDBRelation(session: TiSession,
 
   override def insert(data: DataFrame, overwrite: Boolean): Unit =
     // default forbid sql interface
-    // cause tispark provide `upsert` instead of `insert` semantic
+    // cause tispark provide `replace` instead of `insert` semantic
     if (session.getConf.isWriteAllowSparkSQL) {
       val saveMode = if (overwrite) {
         SaveMode.Overwrite
