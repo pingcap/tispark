@@ -17,6 +17,7 @@ package com.pingcap.tikv.codec;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import gnu.trove.list.array.TIntArrayList;
 import java.math.BigDecimal;
@@ -442,15 +443,15 @@ public class Codec {
   }
 
   public static class DateTimeCodec {
-
     /**
      * Encode a DateTime to a packed long converting to specific timezone
      *
-     * @param dateTime dateTime that need to be encoded.
+     * @param extendedDateTime dateTime with nanos that need to be encoded.
      * @param tz timezone used for converting to localDateTime
      * @return a packed long.
      */
-    public static long toPackedLong(DateTime dateTime, DateTimeZone tz) {
+    public static long toPackedLong(ExtendedDateTime extendedDateTime, DateTimeZone tz) {
+      DateTime dateTime = extendedDateTime.getDateTime();
       LocalDateTime localDateTime = dateTime.withZone(tz).toLocalDateTime();
       return toPackedLong(
           localDateTime.getYear(),
@@ -459,7 +460,7 @@ public class Codec {
           localDateTime.getHourOfDay(),
           localDateTime.getMinuteOfHour(),
           localDateTime.getSecondOfMinute(),
-          localDateTime.getMillisOfSecond() * 1000);
+          extendedDateTime.getMicrosOfSeconds());
     }
 
     /**
@@ -484,7 +485,7 @@ public class Codec {
      * @param tz timezone to interpret datetime parts
      * @return decoded DateTime using provided timezone
      */
-    public static DateTime fromPackedLong(long packed, DateTimeZone tz) {
+    public static ExtendedDateTime fromPackedLong(long packed, DateTimeZone tz) {
       // TODO: As for JDBC behavior, it can be configured to "round" or "toNull"
       // for now we didn't pass in session so we do a toNull behavior
       if (packed == 0) {
@@ -504,13 +505,16 @@ public class Codec {
       int microsec = (int) (packed % (1 << 24));
 
       try {
-        return new DateTime(year, month, day, hour, minute, second, microsec / 1000, tz);
+        DateTime dateTime =
+            new DateTime(year, month, day, hour, minute, second, microsec / 1000, tz);
+        return new ExtendedDateTime(dateTime, microsec % 1000);
       } catch (IllegalInstantException e) {
         LocalDateTime localDateTime =
             new LocalDateTime(year, month, day, hour, minute, second, microsec / 1000);
         DateTime dt = localDateTime.toLocalDate().toDateTimeAtStartOfDay(tz);
         long millis = dt.getMillis() + localDateTime.toLocalTime().getMillisOfDay();
-        return new DateTime(millis, tz);
+        DateTime dateTime = new DateTime(millis, tz);
+        return new ExtendedDateTime(dateTime, microsec % 1000);
       }
     }
 
@@ -519,11 +523,12 @@ public class Codec {
      * should be done beforehand
      *
      * @param cdo encoding output
-     * @param dateTime value to encode
+     * @param extendeddateTime value to encode
      * @param tz timezone used to converting local time
      */
-    public static void writeDateTimeFully(CodecDataOutput cdo, DateTime dateTime, DateTimeZone tz) {
-      long val = DateTimeCodec.toPackedLong(dateTime, tz);
+    public static void writeDateTimeFully(
+        CodecDataOutput cdo, ExtendedDateTime extendeddateTime, DateTimeZone tz) {
+      long val = DateTimeCodec.toPackedLong(extendeddateTime, tz);
       IntegerCodec.writeULongFully(cdo, val, true);
     }
 
@@ -532,11 +537,12 @@ public class Codec {
      * should be done beforehand The encoded value has no data type flag
      *
      * @param cdo encoding output
-     * @param dateTime value to encode
+     * @param extendedDateTime value to encode
      * @param tz timezone used to converting local time
      */
-    public static void writeDateTimeProto(CodecDataOutput cdo, DateTime dateTime, DateTimeZone tz) {
-      long val = DateTimeCodec.toPackedLong(dateTime, tz);
+    public static void writeDateTimeProto(
+        CodecDataOutput cdo, ExtendedDateTime extendedDateTime, DateTimeZone tz) {
+      long val = DateTimeCodec.toPackedLong(extendedDateTime, tz);
       IntegerCodec.writeULong(cdo, val);
     }
 
@@ -547,9 +553,9 @@ public class Codec {
      * @see DateTimeCodec#fromPackedLong(long, DateTimeZone)
      * @param cdi codec buffer input
      * @param tz timezone to interpret datetime parts
-     * @return decoded DateTime using provided timezone
+     * @return decoded ExtendedDateTime using provided timezone
      */
-    public static DateTime readFromUVarInt(CodecDataInput cdi, DateTimeZone tz) {
+    public static ExtendedDateTime readFromUVarInt(CodecDataInput cdi, DateTimeZone tz) {
       return DateTimeCodec.fromPackedLong(IntegerCodec.readUVarLong(cdi), tz);
     }
 
@@ -559,9 +565,9 @@ public class Codec {
      * @see DateTimeCodec#fromPackedLong(long, DateTimeZone)
      * @param cdi codec buffer input
      * @param tz timezone to interpret datetime parts
-     * @return decoded DateTime using provided timezone
+     * @return decoded ExtendedDateTime using provided timezone
      */
-    public static DateTime readFromUInt(CodecDataInput cdi, DateTimeZone tz) {
+    public static ExtendedDateTime readFromUInt(CodecDataInput cdi, DateTimeZone tz) {
       return DateTimeCodec.fromPackedLong(IntegerCodec.readULong(cdi), tz);
     }
   }

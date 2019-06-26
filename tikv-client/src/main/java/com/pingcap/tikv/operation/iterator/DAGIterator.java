@@ -165,7 +165,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       }
       List<Coprocessor.KeyRange> ranges = task.getRanges();
       TiRegion region = task.getRegion();
-      Metapb.Store store = regionTask.getStore();
+      Metapb.Store store = task.getStore();
 
       try {
         RegionStoreClient client = session.getRegionStoreClientBuilder().build(region, store);

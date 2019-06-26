@@ -15,7 +15,7 @@
 
 package org.apache.spark.sql
 
-import java.time.ZonedDateTime
+import java.util.concurrent.TimeUnit
 
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
@@ -23,7 +23,6 @@ import com.pingcap.tikv.expression._
 import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
-import com.pingcap.tikv.predicates.TiKVScanAnalyzer.TiKVScanPlan
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.utils.TiConverter._
@@ -39,6 +38,7 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
+import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -82,13 +82,14 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
-  private def timeZoneOffset(): Int =
-    sqlConf
-      .getConfString(
-        TiConfigConst.KV_TIMEZONE_OFFSET,
-        String.valueOf(ZonedDateTime.now.getOffset.getTotalSeconds)
-      )
-      .toInt
+  private def timeZoneOffsetInSeconds(): Int = {
+    val tz = DateTimeZone.getDefault
+    val instant = DateTime.now.getMillis
+    val offsetInMilliseconds = tz.getOffset(instant)
+    val hours = TimeUnit.MILLISECONDS.toHours(offsetInMilliseconds).toInt
+    val seconds = hours * 3600
+    seconds
+  }
 
   private def pushDownType(): PushDownType =
     if (useStreamingProcess()) {
@@ -151,7 +152,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     groupByList: Seq[NamedExpression],
     aggregates: Seq[AggregateExpression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
     aggregates.map { _.aggregateFunction }.foreach {
       case _: Average =>
@@ -242,7 +243,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     tiColumns: Seq[TiColumnRef],
     filters: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
@@ -278,7 +279,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     source: TiDBRelation,
     sortOrder: Seq[SortOrder]
   ): SparkPlan = {
-    val request = new TiDAGRequest(pushDownType(), timeZoneOffset())
+    val request = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
     request.setLimit(limit)
     addSortOrder(request, sortOrder)
     pruneFilterProject(projectList, filterPredicates, source, request)
@@ -319,7 +320,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
+    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
   ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))

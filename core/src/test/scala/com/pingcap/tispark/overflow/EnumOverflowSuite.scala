@@ -11,8 +11,21 @@ import org.apache.spark.sql.types._
 class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow") {
 
   test("Test ENUM Value Overflow") {
+    testEnumValueOverflow(false)
+  }
+
+  test("Test ENUM as key Value Overflow") {
+    testEnumValueOverflow(true)
+  }
+
+  private def testEnumValueOverflow(testKey: Boolean): Unit = {
+
     dropTable()
-    jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+    if (testKey) {
+      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
+    } else {
+      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+    }
 
     val row = Row("abc")
     val schema = StructType(
@@ -36,8 +49,21 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
   }
 
   test("Test ENUM Number Overflow") {
+    testEnumNumberOverflow(false)
+  }
+
+  test("Test ENUM as key Number Overflow") {
+    testEnumNumberOverflow(true)
+  }
+
+  private def testEnumNumberOverflow(testKey: Boolean): Unit = {
+
     dropTable()
-    jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+    if (testKey) {
+      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
+    } else {
+      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+    }
 
     val row = Row("5")
     val schema = StructType(

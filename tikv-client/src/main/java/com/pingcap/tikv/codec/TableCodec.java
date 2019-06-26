@@ -1,8 +1,6 @@
 package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.exception.ConvertNotSupportException;
-import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.DefaultRowReader;
@@ -24,12 +22,10 @@ public class TableCodec {
    * @param values
    * @return
    * @throws IllegalAccessException
-   * @throws ConvertNotSupportException
-   * @throws ConvertOverflowException
    */
   public static byte[] encodeRow(
       List<TiColumnInfo> columnInfos, Object[] values, boolean isPkHandle)
-      throws IllegalAccessException, ConvertNotSupportException, ConvertOverflowException {
+      throws IllegalAccessException {
     if (columnInfos.size() != values.length) {
       throw new IllegalAccessException(
           String.format(
@@ -43,8 +39,7 @@ public class TableCodec {
       TiColumnInfo col = columnInfos.get(i);
       if (!col.canSkip(isPkHandle)) {
         IntegerCodec.writeLongFully(cdo, col.getId(), false);
-        Object convertedValue = col.getType().convertToTiDBType(values[i]);
-        col.getType().encode(cdo, EncodeType.VALUE, convertedValue);
+        col.getType().encode(cdo, EncodeType.VALUE, values[i]);
       }
     }
 

@@ -21,13 +21,13 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
   private def createTable(): Unit =
     jdbcUpdate(s"create table $dbtable(i INT, c1 TIMESTAMP, c2 TIMESTAMP(6))")
 
-  test("Test Convert from java.lang.Long to TIMESTAMP") {
+  ignore("Test Convert from java.lang.Long to TIMESTAMP") {
     // success
     // java.lang.Long -> TIMESTAMP
     compareTiDBWriteWithJDBC {
       case (writeFunc, "tidbWrite") =>
         val a: java.lang.Long = java.sql.Timestamp.valueOf("2019-11-11 11:11:11").getTime
-        val b: java.lang.Long = java.sql.Timestamp.valueOf("1990-01-01 01:01:01.999").getTime
+        val b: java.lang.Long = java.sql.Timestamp.valueOf("1990-01-01 01:01:01.999999").getTime
 
         val row1 = Row(1, null, null)
         val row2 = Row(2, a, b)
@@ -41,7 +41,7 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
         )
 
         val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 11:11:11")
-        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1990-01-01 01:01:01.999")
+        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1990-01-01 01:01:01.999999")
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, readA, readB)
@@ -58,14 +58,13 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
     }
   }
 
-  // TODO: to support
-  ignore("Test Convert from String to TIMESTAMP") {
+  test("Test Convert from String to TIMESTAMP") {
     // success
     // String -> TIMESTAMP
     compareTiDBWriteWithJDBC {
-      case (writeFunc, _) =>
+      case (writeFunc, "tidbWrite") =>
         val row1 = Row(1, null, null)
-        val row2 = Row(2, "2019-11-11 11:11:11", "1990-01-01 01:01:01.999")
+        val row2 = Row(2, "2019-11-11 11:11:11", "1990-01-01 01:01:01.999999")
 
         val schema = StructType(
           List(
@@ -75,8 +74,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
           )
         )
 
-        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 04:11:11")
-        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1989-12-31 18:01:01.999")
+        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 11:11:11")
+        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1990-01-01 01:01:01.999999")
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, readA, readB)
@@ -87,15 +86,16 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
         // insert rows
         writeFunc(List(row1, row2), schema, None)
         compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+      case (writeFunc, "jdbcWrite") =>
+      // ignored because spark jdbc write does not use local time zone
     }
   }
 
-  // TODO: to support
-  ignore("Test Convert from java.sql.Date to TIMESTAMP") {
+  test("Test Convert from java.sql.Date to TIMESTAMP") {
     // success
     // java.sql.Date -> TIMESTAMP
     compareTiDBWriteWithJDBC {
-      case (writeFunc, _) =>
+      case (writeFunc, "tidbWrite") =>
         val a: java.sql.Date = java.sql.Date.valueOf("2019-11-11")
         val b: java.sql.Date = java.sql.Date.valueOf("1990-01-01")
 
@@ -110,8 +110,8 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
           )
         )
 
-        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-10 17:00:00.0")
-        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1989-12-31 17:00:00.0")
+        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 00:00:00.0")
+        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1990-01-01 00:00:00.0")
 
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, readA, readB)
@@ -122,17 +122,19 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
         // insert rows
         writeFunc(List(row1, row2), schema, None)
         compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+
+      case (writeFunc, "jdbcWrite") =>
+      // ignored because spark jdbc write does not use local time zone
     }
   }
 
-  // TODO: to support
-  ignore("Test Convert from java.sql.Timestamp to TIMESTAMP") {
+  test("Test Convert from java.sql.Timestamp to TIMESTAMP") {
     // success
     // java.sql.Timestamp -> TIMESTAMP
     compareTiDBWriteWithJDBC {
-      case (writeFunc, _) =>
+      case (writeFunc, "tidbWrite") =>
         val a: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 11:11:11")
-        val b: java.sql.Timestamp = java.sql.Timestamp.valueOf("1990-01-01 01:01:01.999")
+        val b: java.sql.Timestamp = java.sql.Timestamp.valueOf("1990-01-01 01:01:01.999999")
 
         val row1 = Row(1, null, null)
         val row2 = Row(2, a, b)
@@ -145,18 +147,15 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
           )
         )
 
-        val readA: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 04:11:11")
-        val readB: java.sql.Timestamp = java.sql.Timestamp.valueOf("1989-12-31 18:01:01.999")
-
-        val readRow1 = Row(1, null, null)
-        val readRow2 = Row(2, readA, readB)
-
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        compareTiDBSelectWithJDBC(Seq(row1, row2), readSchema)
+
+      case (writeFunc, "jdbcWrite") =>
+      // ignored because spark jdbc write does not use local time zone
     }
   }
 
