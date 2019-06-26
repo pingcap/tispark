@@ -2,14 +2,8 @@ package com.pingcap.tikv.expression.visitor;
 
 import static org.junit.Assert.*;
 
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.FuncCallExpr;
+import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.FuncCallExpr.Type;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
-import com.pingcap.tikv.expression.Not;
 import org.joda.time.DateTime;
 import org.junit.Test;
 

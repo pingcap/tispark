@@ -19,7 +19,6 @@ import java.nio.charset.Charset
 
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
-import org.apache.spark.sql.execution.HandleRDDExec
 
 class PrefixIndexTestSuite extends BaseTiSparkTest {
   // https://github.com/pingcap/tispark/issues/272

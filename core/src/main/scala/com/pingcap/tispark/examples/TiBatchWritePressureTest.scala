@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.examples
 
-import com.pingcap.tispark.{TiBatchWrite, TiDBOptions, TiTableReference}
+import com.pingcap.tispark.{TiBatchWrite, TiDBOptions}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{SparkSession, TiContext}
 

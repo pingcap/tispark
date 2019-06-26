@@ -1,6 +1,6 @@
 package com.pingcap.tikv.codec;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.meta.MetaUtils;
