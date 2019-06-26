@@ -92,9 +92,19 @@ public class EnumType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    if (flag != Codec.UVARINT_FLAG)
-      throw new TypeException("Invalid EnumType(IntegerType) flag: " + flag);
-    int idx = (int) IntegerCodec.readUVarLong(cdi) - 1;
+    int idx;
+    switch (flag) {
+        // encodeKey write UINT_FLAG
+      case Codec.UINT_FLAG:
+        idx = (int) IntegerCodec.readULong(cdi) - 1;
+        break;
+        // encodeValue write UVARINT_FLAG
+      case Codec.UVARINT_FLAG:
+        idx = (int) IntegerCodec.readUVarLong(cdi) - 1;
+        break;
+      default:
+        throw new TypeException("Invalid EnumType(IntegerType) flag: " + flag);
+    }
     if (idx < 0 || idx >= this.getElems().size())
       throw new TypeException("Index is out of range, better " + "take a look at tidb side.");
     return this.getElems().get(idx);
