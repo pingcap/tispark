@@ -38,7 +38,7 @@ If `replace` is false, then
 
 | SaveMode | Support | Semantics |
 | -------- | ------- | --------- |
-| Append | true | TiSpark's `Append` means upsert. If primary key is same, data will be updated; if no same primary key exists, data will be inserted.  |
+| Append | true | TiSpark's `Append` means upsert or insert which is controlled by `replace` option. 
 | Overwrite | false |  - |
 | ErrorIfExists | false | - |
 | Ignore | false | - |
