@@ -156,8 +156,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
     val tiRelation = TiDBRelation(
       tiSession,
       TiTableReference(dbName, tableName),
-      meta,
-      tiSession.getTimestamp
+      meta
     )(sqlContext)
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
@@ -202,8 +201,7 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
         val rel: TiDBRelation = TiDBRelation(
           tiSession,
           TiTableReference(dbName, tableName, sizeInBytes),
-          meta,
-          tiSession.getTimestamp
+          meta
         )(sqlContext)
 
         val viewName = getViewName(dbName, tableName, dbNameAsPrefix)
