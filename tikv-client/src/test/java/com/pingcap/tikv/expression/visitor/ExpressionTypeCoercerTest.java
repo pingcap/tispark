@@ -24,19 +24,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.ComparisonBinaryExpression;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.LogicalBinaryExpression;
+import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.IntegerType;
-import com.pingcap.tikv.types.RealType;
-import com.pingcap.tikv.types.StringType;
-import com.pingcap.tikv.types.TimestampType;
+import com.pingcap.tikv.types.*;
 import java.util.Map;
 import org.junit.Test;
 
