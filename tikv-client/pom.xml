@@ -216,7 +216,7 @@
                                     <filtering>true</filtering>
                                 </resource>
                                 <resource>
-                                    <directory>${basedir}/raft-rs/proto</directory>
+                                    <directory>${basedir}/raft-rs/proto/proto</directory>
                                     <filtering>true</filtering>
                                 </resource>
                                 <resource>
