@@ -56,7 +56,7 @@ public class TableCodec {
     return cdo.toBytes();
   }
 
-  public static Row decodeRow(byte[] value, long handle, TiTableInfo tableInfo) {
+  public static Row decodeRow(byte[] value, Long handle, TiTableInfo tableInfo) {
     CodecDataInput cdi = new CodecDataInput(value);
     List<DataType> newColTypes = new ArrayList<>();
     List<TiColumnInfo> colsWithoutPK =
@@ -72,6 +72,9 @@ public class TableCodec {
 
     RowReader rowReader = DefaultRowReader.create(cdi);
     Row row = rowReader.readRow(newColTypes.toArray(new DataType[0]));
+    if (handle == null && tableInfo.isPkHandle()) {
+      throw new IllegalArgumentException("when pk is handle, handle cannot be null");
+    }
     Object[] res = new Object[tableInfo.getColumns().size()];
     int offset = 0;
     for (int i = 0; i < tableInfo.getColumns().size(); i++) {

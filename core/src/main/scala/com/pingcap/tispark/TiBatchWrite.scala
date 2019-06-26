@@ -476,33 +476,34 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private def generateDataToBeRemovedRdd(rdd: RDD[WrappedRow], startTs: TiTimestamp) = {
     rdd
-      .map { wrappedRow =>
-        val rowBuf = mutable.ListBuffer.empty[WrappedRow]
+      .mapPartitions { wrappedRows =>
         val snapshot = TiSessionCache.getSession(tiConf).createSnapshot(startTs)
-        //  check handle key
-        if (handleCol != null) {
-          val oldValue = snapshot.get(buildRowKey(wrappedRow.row, wrappedRow.handle).bytes)
-          if (oldValue.nonEmpty) {
-            val oldRow = TableCodec.decodeRow(oldValue, wrappedRow.handle, tiTableInfo)
-            rowBuf += WrappedRow(oldRow, wrappedRow.handle)
+        wrappedRows.map { wrappedRow =>
+          val rowBuf = mutable.ListBuffer.empty[WrappedRow]
+          //  check handle key
+          if (handleCol != null) {
+            val oldValue = snapshot.get(buildRowKey(wrappedRow.row, wrappedRow.handle).bytes)
+            if (oldValue.nonEmpty) {
+              val oldRow = TableCodec.decodeRow(oldValue, wrappedRow.handle, tiTableInfo)
+              rowBuf += WrappedRow(oldRow, wrappedRow.handle)
+            }
           }
-        }
 
-        uniqueIndices.foreach { index =>
-          val oldValue = snapshot.get(buildUniqueIndexKey(wrappedRow.row, index).bytes)
-          if (oldValue.nonEmpty) {
-            val oldHandle = TableCodec.decodeHandle(oldValue)
-            val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
-            val oldRow = TableCodec.decodeRow(
-              oldRowValue,
-              oldHandle,
-              tiTableInfo
-            )
-            rowBuf += WrappedRow(oldRow, oldHandle)
+          uniqueIndices.foreach { index =>
+            val oldValue = snapshot.get(buildUniqueIndexKey(wrappedRow.row, index).bytes)
+            if (oldValue.nonEmpty) {
+              val oldHandle = TableCodec.decodeHandle(oldValue)
+              val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
+              val oldRow = TableCodec.decodeRow(
+                oldRowValue,
+                oldHandle,
+                tiTableInfo
+              )
+              rowBuf += WrappedRow(oldRow, oldHandle)
+            }
           }
+          rowBuf
         }
-
-        rowBuf
       }
       .flatMap(identity)
   }
