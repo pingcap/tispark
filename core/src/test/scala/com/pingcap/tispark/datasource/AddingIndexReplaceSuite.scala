@@ -1,6 +1,5 @@
 package com.pingcap.tispark.datasource
 
-import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
@@ -35,7 +34,7 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
 
-    val options = Some(Map("replace" -> "true", "deduplicate" -> "true"))
+    val options = Some(Map("replace" -> "true"))
 
     tidbWrite(List(row5, row5, conflcitWithOneIndex), schema, options)
     testTiDBSelect(Seq(row1, row2, row3, conflcitWithOneIndex, row5), "c1")
@@ -57,7 +56,7 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
 
-    val options = Some(Map("replace" -> "true", "deduplicate" -> "true"))
+    val options = Some(Map("replace" -> "true"))
     tidbWrite(List(row2), schema, options)
     testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
   }
@@ -74,7 +73,7 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
 
-    val options = Some(Map("replace" -> "true", "deduplicate" -> "true"))
+    val options = Some(Map("replace" -> "true"))
 
     tidbWrite(List(row5, row5, conflcitWithOneIndex), schema, options)
     testTiDBSelect(Seq(row1, row2, row3, conflcitWithOneIndex, row5), "c1")
@@ -95,20 +94,11 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
     tidbWrite(List(row2, row4, row5), schema)
     testTiDBSelect(Seq(row1, row2, row4, row5), "c1")
 
-    val notDeduplicateOpt = Some(Map("replace" -> "true", "deduplicate" -> "false"))
-    intercept[TiBatchWriteException] {
-      tidbWrite(
-        List(row3, row3, conflcitWithOneIndex, conflcitWithTwoIndices),
-        schema,
-        notDeduplicateOpt
-      )
-    }
-
-    val deduplicateOpt = Some(Map("replace" -> "true", "deduplicate" -> "true"))
+    val options = Some(Map("replace" -> "true"))
     tidbWrite(
       List(row3, row3, conflcitWithOneIndex, conflcitWithTwoIndices),
       schema,
-      deduplicateOpt
+      options
     )
     testTiDBSelect(Seq(row2, row3, conflcitWithOneIndex, conflcitWithTwoIndices), "c1")
   }

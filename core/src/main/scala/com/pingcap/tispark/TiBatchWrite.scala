@@ -584,16 +584,7 @@ class TiBatchWrite(@transient val df: DataFrame,
           .map(_._2.head)
       }
     }
-    if (options.deduplicate) {
-      mutableRdd
-    } else {
-      if (mutableRdd.count != rdd.count()) {
-        throw new TiBatchWriteException(
-          "data conflicts! set the parameter deduplicate."
-        )
-      }
-      mutableRdd
-    }
+    mutableRdd
   }
 
   @throws(classOf[NoSuchTableException])

@@ -108,12 +108,6 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
       // insert row2 row4
       tidbWrite(List(row2, row4), schema)
     }
-
-    // TODO: do we need check conflict in data to be inserted
-    intercept[TiBatchWriteException] {
-      // insert row5 row5
-      tidbWrite(List(row5, row5), schema)
-    }
   }
 
   override def afterAll(): Unit =

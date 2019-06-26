@@ -25,7 +25,8 @@ Since TiDB is a database that supports transaction, TiDB Spark Connector also su
 
 ## Replace and insert semantics 
 TiSpark only supports `Append` SaveMode. The behavior is controlled by 
-`replace` option.
+`replace` option. The default value is false. In addition, if `replace` is true,
+data to be inserted will be deduplicate before insertion.
 
 If `replace` is true, then 
 * if primary key or unique index exists in db, data will be updated
