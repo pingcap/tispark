@@ -17,10 +17,7 @@
 
 package com.pingcap.tikv.types;
 
-import static com.pingcap.tikv.types.TimeType.HOUR;
-import static com.pingcap.tikv.types.TimeType.MICROSECOND;
-import static com.pingcap.tikv.types.TimeType.MINUTE;
-import static com.pingcap.tikv.types.TimeType.SECOND;
+import static com.pingcap.tikv.types.TimeType.*;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.primitives.UnsignedLong;

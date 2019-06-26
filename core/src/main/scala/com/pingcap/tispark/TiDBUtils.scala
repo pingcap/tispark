@@ -1,12 +1,9 @@
 package com.pingcap.tispark
 
-import java.sql.{Connection, Driver, DriverManager, SQLException}
+import java.sql.{Connection, Driver, DriverManager}
 import java.util.Properties
 
-import org.apache.spark.sql.execution.datasources.jdbc.{DriverRegistry, DriverWrapper, JdbcUtils}
-import org.apache.spark.sql.jdbc.JdbcDialects
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, SQLContext, TiContext}
+import org.apache.spark.sql.execution.datasources.jdbc.{DriverRegistry, DriverWrapper}
 
 import scala.util.Try
 
