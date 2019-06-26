@@ -11,23 +11,35 @@ import org.apache.spark.sql.types._
 class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow") {
 
   test("Test BIT(1) Upper bound Overflow") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BIT(1))"
-    )
+    testBit1UpperBound(false)
+  }
+  test("Test BIT(1) as key Upper bound Overflow") {
+    testBit1UpperBound(true)
+  }
 
-    val row = Row(2)
+  private def testBit1UpperBound(testKey: Boolean): Unit = {
+
+    dropTable()
+    if (testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(1) primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(1))"
+      )
+    }
+
+    val row = Row(2.toByte)
     val schema = StructType(
       List(
-        StructField("c1", LongType)
+        StructField("c1", ByteType)
       )
     )
-    val jdbcErrorClass = classOf[java.lang.RuntimeException]
-    val jdbcErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
-    val tidbErrorClass = classOf[java.lang.RuntimeException]
-    val tidbErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "value 2 > upperBound 2"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
@@ -41,23 +53,36 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(1) Lower bound Overflow") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BIT(1))"
-    )
+    testBit1LowerBound(false)
+  }
 
-    val row = Row(-1)
+  test("Test BIT(1) as key Lower bound Overflow") {
+    testBit1LowerBound(true)
+  }
+
+  private def testBit1LowerBound(testKey: Boolean): Unit = {
+
+    dropTable()
+    if (testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(1) primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(1))"
+      )
+    }
+
+    val row = Row((-1).toByte)
     val schema = StructType(
       List(
-        StructField("c1", LongType)
+        StructField("c1", ByteType)
       )
     )
-    val jdbcErrorClass = classOf[java.lang.RuntimeException]
-    val jdbcErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
-    val tidbErrorClass = classOf[java.lang.RuntimeException]
-    val tidbErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "value -1 < lowerBound 0"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
@@ -71,23 +96,35 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(4) Upper bound Overflow") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BIT(4))"
-    )
+    testBit4UpperBound(false)
+  }
 
-    val row = Row(16)
+  test("Test BIT(4) as key Upper bound Overflow") {
+    testBit4UpperBound(true)
+  }
+
+  private def testBit4UpperBound(testKey: Boolean): Unit = {
+    dropTable()
+    if (testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(4) primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(4))"
+      )
+    }
+
+    val row = Row(16.toByte)
     val schema = StructType(
       List(
-        StructField("c1", LongType)
+        StructField("c1", ByteType)
       )
     )
-    val jdbcErrorClass = classOf[java.lang.RuntimeException]
-    val jdbcErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
-    val tidbErrorClass = classOf[java.lang.RuntimeException]
-    val tidbErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "value 16 > upperBound 16"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
@@ -101,23 +138,35 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(4) Lower bound Overflow") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BIT(4))"
-    )
+    testBit4LowerBound(false)
+  }
 
-    val row = Row(-1)
+  test("Test BIT(4) as key Lower bound Overflow") {
+    testBit4LowerBound(true)
+  }
+
+  private def testBit4LowerBound(testKey: Boolean): Unit = {
+    dropTable()
+    if (testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(4) primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(4))"
+      )
+    }
+
+    val row = Row((-1).toByte)
     val schema = StructType(
       List(
-        StructField("c1", LongType)
+        StructField("c1", ByteType)
       )
     )
-    val jdbcErrorClass = classOf[java.lang.RuntimeException]
-    val jdbcErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
-    val tidbErrorClass = classOf[java.lang.RuntimeException]
-    val tidbErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "value -1 < lowerBound 0"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
@@ -131,23 +180,36 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(8) Upper bound Overflow") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BIT(8))"
-    )
+    testBit8UpperBound(false)
+  }
 
-    val row = Row(256)
+  test("Test BIT(8) as key Upper bound Overflow") {
+    testBit8UpperBound(true)
+  }
+
+  private def testBit8UpperBound(testKey: Boolean): Unit = {
+
+    dropTable()
+    if (testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(8) primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(8))"
+      )
+    }
+
+    val row = Row(256L)
     val schema = StructType(
       List(
         StructField("c1", LongType)
       )
     )
-    val jdbcErrorClass = classOf[java.lang.RuntimeException]
-    val jdbcErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
-    val tidbErrorClass = classOf[java.lang.RuntimeException]
-    val tidbErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "value 256 > upperBound 256"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),
@@ -161,23 +223,35 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(8) Lower bound Overflow") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(c1 BIT(8))"
-    )
+    testBit8LowerBound(false)
+  }
 
-    val row = Row(-1)
+  test("Test BIT(8) as key Lower bound Overflow") {
+    testBit8LowerBound(true)
+  }
+
+  private def testBit8LowerBound(testKey: Boolean): Unit = {
+    dropTable()
+    if (testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(8) primary key)"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BIT(8))"
+      )
+    }
+
+    val row = Row(-1L)
     val schema = StructType(
       List(
         StructField("c1", LongType)
       )
     )
-    val jdbcErrorClass = classOf[java.lang.RuntimeException]
-    val jdbcErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
-    val tidbErrorClass = classOf[java.lang.RuntimeException]
-    val tidbErrorMsg =
-      "Error while encoding: java.lang.RuntimeException: java.lang.Integer is not a valid external type for schema of bigint\nif (assertnotnull(input[0, org.apache.spark.sql.Row, true]).isNullAt) null else validateexternaltype(getexternalrowfield(assertnotnull(input[0, org.apache.spark.sql.Row, true]), 0, c1), LongType) AS c1"
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "value -1 < lowerBound 0"
 
     compareTiDBWriteFailureWithJDBC(
       List(row),

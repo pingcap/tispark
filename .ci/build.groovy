@@ -29,6 +29,13 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                         cp -R /home/jenkins/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
                         mvn clean install -Dmaven.test.skip=true
+                        git diff --quiet
+                        formatted="\$?"
+                        if [[ "\${formatted}" -eq 1 ]]
+                        then
+                           echo "code format error"
+                           exit 1
+                        fi
                         """
                     }
                 }

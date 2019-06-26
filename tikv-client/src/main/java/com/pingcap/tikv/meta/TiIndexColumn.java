@@ -23,9 +23,9 @@ import java.io.Serializable;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiIndexColumn implements Serializable {
-  private String name;
-  private int offset;
-  private long length;
+  private final String name;
+  private final int offset;
+  private final long length;
 
   @JsonCreator
   public TiIndexColumn(
@@ -50,7 +50,7 @@ public class TiIndexColumn implements Serializable {
   }
 
   public boolean isLengthUnspecified() {
-    return DataType.isLengthSpecified(length);
+    return DataType.isLengthUnSpecified(length);
   }
 
   public boolean isPrefixIndex() {
