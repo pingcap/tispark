@@ -14,10 +14,10 @@
  */
 package org.apache.spark.sql.execution.command
 
-import org.apache.spark.sql.{Row, SparkSession, TiContext}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
 /**
  * TiCommand is used to inherit from [[org.apache.spark.sql.execution.command.RunnableCommand]]

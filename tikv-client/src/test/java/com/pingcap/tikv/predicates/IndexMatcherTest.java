@@ -15,10 +15,7 @@
 
 package com.pingcap.tikv.predicates;
 
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.greaterEqual;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessThan;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.*;
 import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
 import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
 import static org.junit.Assert.assertFalse;

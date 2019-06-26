@@ -1,11 +1,12 @@
 package org.apache.spark.sql.txn
 
 import java.sql.{DriverManager, SQLException}
-import org.tikv.kvproto.Kvrpcpb.IsolationLevel
+
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
-import org.apache.spark.sql.test.Utils.getOrElse
 import org.apache.spark.sql.test.TestConstants.{TiDB_PASSWORD, TiDB_USER}
+import org.apache.spark.sql.test.Utils.getOrElse
+import org.tikv.kvproto.Kvrpcpb.IsolationLevel
 
 // TODO: this test is not so useful at all
 // what I do is to construct a very long-running write operation

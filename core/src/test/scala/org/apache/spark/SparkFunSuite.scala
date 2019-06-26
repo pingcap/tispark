@@ -18,7 +18,6 @@ package org.apache.spark
 import java.io.File
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.util.AccumulatorContext
 import org.scalatest._
 import org.slf4j.Logger
 
