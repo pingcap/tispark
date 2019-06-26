@@ -325,13 +325,16 @@ class TiBatchWrite(@transient val df: DataFrame,
       if (!options.replace && !rddDeletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
-      val mergedRDD = generateKV(distinctWrappedRowRdd, remove = false) ++ generateKV(rddDeletion, remove = true)
+      val mergedRDD = generateKV(distinctWrappedRowRdd, remove = false) ++ generateKV(
+        rddDeletion,
+        remove = true
+      )
 
       mergedRDD.groupByKey().map {
-        case(key, iterable) =>
+        case (key, iterable) =>
           // if rdd contains same key, it means we need delete and update the value associated the
           val valueOpt = iterable.find(value => value.nonEmpty)
-          if(valueOpt.isDefined) {
+          if (valueOpt.isDefined) {
             (key, valueOpt.get)
           } else {
             (key, new Array[Byte](0))
