@@ -23,12 +23,17 @@ Since TiDB is a database that supports transaction, TiDB Spark Connector also su
 2. no data in DataFrame will be written to TiDB successfully, if conflicts exist
 3. no partial changes is visible to other session until commit.
 
-## Upsert Semantics
-TiSpark only support `Append` SaveMode.
+## Replace and insert semantics 
+TiSpark only supports `Append` SaveMode. The behavior is controlled by 
+`replace` option.
 
-`Append` in TiSpark means `upsert`,
-1. if primary key exists in db, data will be updated
-2. if no same primary key exists, data will be inserted.
+If `replace` is true, then 
+* if primary key or unique index exists in db, data will be updated
+* if no same primary key or unique index exists, data will be inserted.
+
+If `replace` is false, then
+* if primary key or unique index exists in db, data having conflicts expects an expection.
+* if no same primary key or unique index exists, data will be inserted.
 
 | SaveMode | Support | Semantics |
 | -------- | ------- | --------- |
