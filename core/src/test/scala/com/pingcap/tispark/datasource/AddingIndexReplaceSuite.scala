@@ -4,7 +4,7 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class AddingIndexUpsertSuite extends BaseDataSourceTest("adding_index_replace") {
+class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace") {
   private val row1 = Row(1, 1, 1, "Hello")
   private val row2 = Row(2, 2, 2, "TiDB")
   private val row3 = Row(3, 3, 3, "Spark")

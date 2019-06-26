@@ -23,7 +23,6 @@ import com.pingcap.tikv.exception.TiBatchWriteException;
  * to allocate all id for data to be written at once, hence it does not need run inside a txn.
  */
 public final class RowIDAllocator {
-  private long start;
   private long end;
   private final long dbId;
   private long step;
@@ -45,7 +44,7 @@ public final class RowIDAllocator {
   }
 
   public long getStart() {
-    return start;
+    return end - step;
   }
 
   public long getEnd() {
@@ -54,41 +53,36 @@ public final class RowIDAllocator {
 
   private void initSigned(Catalog catalog, long tableId) {
     long newEnd;
-    if (start == end) {
-      // get new start from TiKV, and calculate new end and set it back to TiKV.
-      long newStart = catalog.getAutoTableId(dbId, tableId);
-      long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
-      if (tmpStep != step) {
-        throw new TiBatchWriteException("cannot allocate ids for this write");
-      }
-      newEnd = catalog.getAutoTableId(dbId, tableId, tmpStep);
-      if (newStart == Long.MAX_VALUE) {
-        throw new TiBatchWriteException("cannot allocate more ids since it ");
-      }
-      start = newEnd - step;
-      end = newEnd;
+    // get new start from TiKV, and calculate new end and set it back to TiKV.
+    long newStart = catalog.getAutoTableId(dbId, tableId);
+    long tmpStep = Math.min(Long.MAX_VALUE - newStart, step);
+    if (tmpStep != step) {
+      throw new TiBatchWriteException("cannot allocate ids for this write");
     }
+    if (newStart == Long.MAX_VALUE) {
+      throw new TiBatchWriteException("cannot allocate more ids since it ");
+    }
+    newEnd = catalog.getAutoTableId(dbId, tableId, tmpStep);
+
+    end = newEnd;
   }
 
   private void initUnsigned(Catalog catalog, long tableId) {
     long newEnd;
-    if (start == end) {
-      // get new start from TiKV, and calculate new end and set it back to TiKV.
-      long newStart = catalog.getAutoTableId(dbId, tableId);
-      // for unsigned long, -1L is max value.
-      long tmpStep = UnsignedLongs.min(-1L - newStart, step);
-      if (tmpStep != step) {
-        throw new TiBatchWriteException("cannot allocate ids for this write");
-      }
-      newEnd = catalog.getAutoTableId(dbId, tableId, tmpStep);
-      // when compare unsigned long, the min value is largest value.
-      if (start == -1L) {
-        throw new TiBatchWriteException(
-            "cannot allocate more ids since the start reaches " + "unsigned long's max value ");
-      }
-      // update start and end
-      start = newEnd - step;
-      end = newEnd;
+    // get new start from TiKV, and calculate new end and set it back to TiKV.
+    long newStart = catalog.getAutoTableId(dbId, tableId);
+    // for unsigned long, -1L is max value.
+    long tmpStep = UnsignedLongs.min(-1L - newStart, step);
+    if (tmpStep != step) {
+      throw new TiBatchWriteException("cannot allocate ids for this write");
     }
+    // when compare unsigned long, the min value is largest value.
+    if (UnsignedLongs.compare(newStart, -1L) == 0) {
+      throw new TiBatchWriteException(
+          "cannot allocate more ids since the start reaches " + "unsigned long's max value ");
+    }
+    newEnd = catalog.getAutoTableId(dbId, tableId, tmpStep);
+
+    end = newEnd;
   }
 }

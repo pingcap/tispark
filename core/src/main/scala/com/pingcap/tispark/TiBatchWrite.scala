@@ -304,7 +304,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // for partition table, we need calculate each row and tell which physical table
     // that row is belong to.
-    // currently we only support upsert and insert.
+    // currently we only support replace and insert.
     val constraintCheckIsNeeded = handleCol != null || uniqueIndices.nonEmpty
 
     val encodedTiRowRDD = if (constraintCheckIsNeeded) {
@@ -321,12 +321,12 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
-      val rddDeletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
-      if (!options.replace && !rddDeletion.isEmpty()) {
+      val deletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
+      if (!options.replace && !deletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
       val mergedRDD = generateKV(distinctWrappedRowRdd, remove = false) ++ generateKV(
-        rddDeletion,
+        deletion,
         remove = true
       )
 
