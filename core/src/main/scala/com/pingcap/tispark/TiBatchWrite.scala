@@ -560,7 +560,6 @@ class TiBatchWrite(@transient val df: DataFrame,
       row
         .get(handleCol.getOffset, handleCol.getType)
         .asInstanceOf[java.lang.Long]
-        .longValue()
     } else {
       throw new TiBatchWriteException("cannot extract handle non pk is handle table")
     }
