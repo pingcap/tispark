@@ -71,7 +71,7 @@ public class IndexRangeSetBuilder extends RangeSetBuilder<TypedKey> {
     // under other encoding methods
     int prefixLen = lengths.getOrDefault(predicate.getColumnRef(), DataType.UNSPECIFIED_LEN);
     TypedKey literal = predicate.getTypedLiteral(prefixLen);
-    boolean loose = !DataType.isLengthSpecified(prefixLen);
+    boolean loose = !DataType.isLengthUnSpecified(prefixLen);
     // With prefix length specified, the filter is loosen and so should the ranges
     return visitComparisonBinaryExpr(node, context, literal, loose);
   }

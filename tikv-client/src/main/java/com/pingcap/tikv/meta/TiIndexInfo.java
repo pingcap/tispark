@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ColumnInfo;
 import com.pingcap.tidb.tipb.IndexInfo;
+import com.pingcap.tikv.exception.TiKVException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -40,8 +41,10 @@ public class TiIndexInfo implements Serializable {
   private final SchemaState schemaState;
   private final String comment;
   private final IndexType indexType;
-  private final long indexColumnLength;
   private final boolean isFakePrimaryKey;
+
+  // default index column size (TypeFlag + Int64)
+  private long indexColumnSize = 9;
 
   @JsonCreator
   @VisibleForTesting
@@ -62,15 +65,40 @@ public class TiIndexInfo implements Serializable {
     this.name = requireNonNull(name, "index name is null").getL();
     this.tableName = requireNonNull(tableName, "table name is null").getL();
     this.indexColumns = ImmutableList.copyOf(requireNonNull(indexColumns, "indexColumns is null"));
-    // TODO: Use more precise predication according to types
-    this.indexColumnLength =
-        indexColumns.stream().mapToLong(x -> x.isLengthUnspecified() ? 8 : x.getLength()).sum();
     this.isUnique = isUnique;
     this.isPrimary = isPrimary;
     this.schemaState = SchemaState.fromValue(schemaState);
     this.comment = comment;
     this.indexType = IndexType.fromValue(indexType);
     this.isFakePrimaryKey = isFakePrimaryKey;
+  }
+
+  private long calculateIndexColumnSize(TiIndexColumn indexColumn, List<TiColumnInfo> columns) {
+    for (TiColumnInfo column : columns) {
+      if (column.getName().equalsIgnoreCase(indexColumn.getName())) {
+        return column.getType().getSize();
+      }
+    }
+    throw new TiKVException(
+        String.format(
+            "Index column [%s] not found in table [%s] columns [%s]",
+            indexColumn.getName(), getTableName(), columns));
+  }
+
+  void calculateIndexSize(List<TiColumnInfo> columns) {
+    long ret = 0;
+    for (TiIndexColumn indexColumn : indexColumns) {
+      if (indexColumn.isLengthUnspecified()) {
+        ret += calculateIndexColumnSize(indexColumn, columns);
+      } else {
+        ret += indexColumn.getLength();
+      }
+    }
+    indexColumnSize = ret;
+  }
+
+  public long getIndexColumnSize() {
+    return this.indexColumnSize;
   }
 
   public static TiIndexInfo generateFakePrimaryKeyIndex(TiTableInfo table) {
@@ -105,10 +133,6 @@ public class TiIndexInfo implements Serializable {
 
   public List<TiIndexColumn> getIndexColumns() {
     return indexColumns;
-  }
-
-  public long getIndexColumnLength() {
-    return indexColumnLength;
   }
 
   public boolean isUnique() {

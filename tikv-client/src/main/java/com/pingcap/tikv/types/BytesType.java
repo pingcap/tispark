@@ -51,6 +51,15 @@ public class BytesType extends DataType {
     super(holder);
   }
 
+  @Override
+  public long getSize() {
+    if (isLengthUnSpecified()) {
+      return getPrefixSize() + getDefaultDataSize();
+    } else {
+      return getPrefixSize() + getLength();
+    }
+  }
+
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
