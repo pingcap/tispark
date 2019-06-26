@@ -31,11 +31,10 @@ import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
+import scalaj.http.Http
 
 import scala.collection.JavaConverters._
-import scala.collection.JavaConversions._
 import scala.collection.mutable
-import scalaj.http.Http
 
 class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = None)
     extends Serializable
@@ -108,7 +107,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
 
       var transCount = 0
       storeRegionId.asScala
-        .flatMap(_._2)
+        .flatMap(_._2.asScala)
         .foreach((regionId: lang.Long) => {
           val resStr = Http(s"$pdAddress/$regionIDPrefix/$regionId").asString
           val json: JValue = parse(resStr.body)
@@ -158,8 +157,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
     val tiRelation = TiDBRelation(
       tiSession,
       TiTableReference(dbName, tableName),
-      meta,
-      tiSession.getTimestamp
+      meta
     )(sqlContext)
     sqlContext.baseRelationToDataFrame(tiRelation)
   }
@@ -214,8 +212,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
         val rel: TiDBRelation = TiDBRelation(
           tiSession,
           TiTableReference(dbName, tableName, sizeInBytes),
-          meta,
-          tiSession.getTimestamp
+          meta
         )(sqlContext)
 
         val viewName = getViewName(dbName, tableName, dbNameAsPrefix)

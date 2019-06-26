@@ -6,7 +6,7 @@ import java.util.Calendar
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{ByteType, DecimalType, DoubleType, FloatType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
+import org.apache.spark.sql.types._
 
 class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
 

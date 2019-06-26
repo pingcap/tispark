@@ -23,12 +23,8 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.CatalogTransaction;
-import com.pingcap.tikv.expression.AggregateFunction;
+import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
-import com.pingcap.tikv.expression.ByItem;
-import com.pingcap.tikv.expression.ColumnRef;
-import com.pingcap.tikv.expression.Constant;
-import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.meta.TiTimestamp;

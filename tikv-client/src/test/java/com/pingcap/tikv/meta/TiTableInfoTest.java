@@ -21,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
-import java.io.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;

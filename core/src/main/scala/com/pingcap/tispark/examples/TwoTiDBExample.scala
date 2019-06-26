@@ -16,7 +16,7 @@
 package com.pingcap.tispark.examples
 
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, SQLContext, SparkSession}
+import org.apache.spark.sql.{SQLContext, SparkSession}
 
 /**
  * before run the code in IDE, please enable maven profile `local-debug`

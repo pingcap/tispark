@@ -15,15 +15,15 @@
 package org.apache.spark.sql.extensions
 
 import com.pingcap.tispark.statistics.StatisticsManager
-import org.apache.spark.sql.{AnalysisException, _}
+import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoTable, LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.catalyst.rules.Rule
-import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
-import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.{AnalysisException, _}
 
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
