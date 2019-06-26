@@ -34,6 +34,7 @@ public class TableCodecTest {
         // .addColumn("c4", TimestampType.TIMESTAMP)
         .addColumn("c5", VARCHAR255)
         .addColumn("c6", VARCHAR255)
+        .setPkHandle(true)
         // .appendIndex("testIndex", ImmutableList.of("c1", "c2"), false)
         .build();
   }
@@ -88,7 +89,7 @@ public class TableCodecTest {
       try {
         byte[] bytes = TableCodec.encodeRow(tblInfo.getColumns(), values, tblInfo.isPkHandle());
         // testing the correctness via decodeRow
-        Row row = TableCodec.decodeRow(bytes, tblInfo.getColumns());
+        Row row = TableCodec.decodeRow(bytes, 1L, tblInfo);
         for (int j = 0; j < tblInfo.getColumns().size(); j++) {
           assertEquals(row.get(j, null), values[j]);
         }

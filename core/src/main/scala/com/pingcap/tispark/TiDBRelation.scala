@@ -126,7 +126,7 @@ case class TiDBRelation(session: TiSession,
 
   override def insert(data: DataFrame, overwrite: Boolean): Unit =
     // default forbid sql interface
-    // cause tispark provide `upsert` instead of `insert` semantic
+    // cause tispark provide `replace` instead of `insert` semantic
     if (session.getConf.isWriteAllowSparkSQL) {
       val saveMode = if (overwrite) {
         SaveMode.Overwrite
