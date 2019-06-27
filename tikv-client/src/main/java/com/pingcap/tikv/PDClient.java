@@ -31,7 +31,6 @@ import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
-import com.pingcap.tikv.util.BackOffFunction.BackOffFuncType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
@@ -51,7 +50,6 @@ import org.tikv.kvproto.PDGrpc;
 import org.tikv.kvproto.PDGrpc.PDBlockingStub;
 import org.tikv.kvproto.PDGrpc.PDStub;
 import org.tikv.kvproto.Pdpb.*;
-import org.tikv.kvproto.Pdpb.Error;
 
 public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     implements ReadOnlyPDClient {
@@ -77,70 +75,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         PDGrpc.METHOD_GET_OPERATOR,
         request,
         new NoopHandler<>());
-  }
-
-  private boolean isScatterRegionFinish(GetOperatorResponse resp) {
-    // If the current operator of region is not `scatter-region`, we could assume
-    // that `scatter-operator` has finished or timeout.
-    boolean finished =
-        !resp.getDesc().equals(ByteString.copyFromUtf8("scatter-region"))
-            || resp.getStatus() != OperatorStatus.RUNNING;
-
-    if (resp.hasHeader()) {
-      ResponseHeader header = resp.getHeader();
-      if (header.hasError()) {
-        Error error = header.getError();
-        // heartbeat may not send to PD
-        if (error.getType() == ErrorType.REGION_NOT_FOUND) {
-          finished = true;
-        }
-      }
-    }
-    return finished;
-  }
-
-  public void waitScatterRegionFinish(long regionId) {
-    BackOffer backOffer = ConcreteBackOffer.newWaitScatterRegionBackOff();
-    for (; ; ) {
-      GetOperatorResponse resp = getOperator(regionId);
-      if (resp != null) {
-        if (isScatterRegionFinish(resp)) {
-          logger.info(String.format("wait scatter region on %d is finished", regionId));
-          return;
-        } else {
-          backOffer.doBackOff(
-              BackOffFuncType.BoRegionMiss, new GrpcException("waiting scatter region"));
-          logger.info(
-              String.format(
-                  "wait scatter region %d %s %s",
-                  regionId, resp.getDesc().toString(), resp.getStatus().toString()));
-        }
-      }
-    }
-  }
-
-  /**
-   * Sends request to pd to scatter region.
-   *
-   * @param left represents a region info
-   */
-  public void scatterRegion(TiRegion left) {
-    Supplier<ScatterRegionRequest> request =
-        () -> ScatterRegionRequest.newBuilder().setHeader(header).setRegionId(left.getId()).build();
-
-    PDErrorHandler<ScatterRegionResponse> handler =
-        new PDErrorHandler<>(
-            r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
-            this);
-
-    ScatterRegionResponse resp =
-        callWithRetry(
-            ConcreteBackOffer.newGetBackOff(), PDGrpc.METHOD_SCATTER_REGION, request, handler);
-    // TODO: maybe we should retry here, need dig into pd's codebase.
-    if (resp.hasHeader() && resp.getHeader().hasError()) {
-      throw new TiClientInternalException(
-          String.format("failed to scatter region because %s", resp.getHeader().getError()));
-    }
   }
 
   @Override

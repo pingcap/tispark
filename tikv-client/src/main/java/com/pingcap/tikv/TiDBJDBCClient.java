@@ -68,6 +68,19 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
+  // SPLIT TABLE table_name [INDEX index_name] BETWEEN (lower_value) AND (upper_value) REGIONS
+  // region_num
+  public boolean splitTableRegion(
+      String dbName, String tblName, long minVal, long maxVal, int regionNum) throws SQLException {
+    try (Statement tidbStmt = connection.createStatement()) {
+      String sql =
+          String.format(
+              "split table `%s.%s` between (%d) and (%d) regions %d",
+              dbName, tblName, minVal, maxVal, regionNum);
+      return tidbStmt.execute(sql);
+    }
+  }
+
   public boolean isClosed() throws SQLException {
     return connection.isClosed();
   }

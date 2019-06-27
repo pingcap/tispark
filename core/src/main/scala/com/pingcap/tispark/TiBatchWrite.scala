@@ -88,65 +88,6 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var isEnableTableLock: Boolean = _
   private var tableLocked: Boolean = false
 
-  private def calculateSplitKeys(sampleRDD: RDD[TiRow],
-                                 estimatedTotalSize: Long,
-                                 sampleRDDCount: Long,
-                                 tblInfo: TiTableInfo,
-                                 isUpdate: Boolean,
-                                 regionSplitNumber: Option[Int]): List[SerializableKey] = {
-
-    var regionNeed = (estimatedTotalSize / 96.0).toLong
-    // update region split number if user want more region
-    if (regionSplitNumber.isDefined) {
-      if (regionSplitNumber.get > regionNeed) {
-        regionNeed = regionSplitNumber.get
-      }
-    }
-    // if region split is not needed, just return an empty list
-    if (regionNeed == 0) return List.empty
-
-    val handleRdd: RDD[Long] = sampleRDD
-      .map(row => extractHandleId(row))
-      .sortBy(k => k)
-    val step = sampleRDDCount / regionNeed
-
-    val splitKeys = handleRdd.zipWithIndex
-      .filter {
-        case (_, idx) => idx % step == 0
-      }
-      .map { handleWithIdx =>
-        new SerializableKey(RowKey.toRowKey(tblInfo.getId, handleWithIdx._1).getBytes)
-      }
-      .collect()
-      .toList
-
-    logger.info("region need split %d times".format(splitKeys.length))
-    splitKeys
-  }
-
-  private def calcRDDSize(rdd: RDD[TiRow]): Long =
-    rdd
-    // TODO make estimation more correctly
-      .map(row => row.fieldCount() * 64)
-      .reduce(_ + _) //add the sizes together
-
-  private def estimateDataSize(sampledRDD: RDD[TiRow], options: TiDBOptions) = {
-    // get all data size
-    val sampleRDDSize = calcRDDSize(sampledRDD)
-    logger.info(s"sample data size is ${sampleRDDSize / (1024 * 1024)} MB")
-
-    val sampleRowCount = sampledRDD.count()
-    val sampleAvgRowSize = sampleRDDSize / sampleRowCount
-    logger.info(s"sample avg row size is $sampleAvgRowSize")
-
-    val estimatedTotalSize = (sampleRowCount * sampleAvgRowSize) / options.sampleFraction
-    val formatter = java.text.NumberFormat.getIntegerInstance
-
-    val estimateInMB = estimatedTotalSize / (1024 * 1024)
-    logger.info("estimatedTotalSize is %s MB".format(formatter.format(estimateInMB)))
-    (estimateInMB.toLong, sampleRowCount)
-  }
-
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def write(): Unit = {
@@ -277,27 +218,6 @@ class TiBatchWrite(@transient val df: DataFrame,
     // check value not null
     checkValueNotNull(tiRowRdd)
 
-    // region pre-split
-    if (enableRegionPreSplit && handleCol != null) {
-      logger.info("region pre split is enabled.")
-      val sampleRDD =
-        tiRowRdd.sample(withReplacement = false, fraction = options.sampleFraction)
-      val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
-      // only perform region presplit if sample rdd is not empty
-      if (!sampleRDD.isEmpty()) {
-        tiContext.tiSession.splitRegionAndScatter(
-          calculateSplitKeys(
-            sampleRDD,
-            dataSize,
-            sampleRDDCount,
-            tiTableInfo,
-            isUpdate = false,
-            regionSplitNumber
-          ).map(k => k.bytes).asJava
-        )
-      }
-    }
-
     // get timestamp as start_ts
     val startTimeStamp = tiSession.getTimestamp
 
@@ -306,6 +226,8 @@ class TiBatchWrite(@transient val df: DataFrame,
     // currently we only support replace and insert.
     val constraintCheckIsNeeded = handleCol != null || uniqueIndices.nonEmpty
 
+    // TODO: region pre split is time consuming we can async execute region pre split operation
+    // and generate key-value pairs.  Once the split is successful, we can continue insertion.
     val encodedTiRowRDD = if (constraintCheckIsNeeded) {
       val wrappedRowRdd = if (tiTableInfo.isPkHandle) {
         tiRowRdd.map { row =>
@@ -320,6 +242,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
+      preSplitTableRegion()
+
       val deletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
       if (!options.replace && !deletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
@@ -331,7 +255,9 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       mergedRDD.groupByKey().map {
         case (key, iterable) =>
-          // if rdd contains same key, it means we need delete and update the value associated the
+          // if rdd contains same key, it means we need first delete the old value and insert the new value associated the
+          // key. We can merge the two operation into one update operation.
+          // Note: the deletion operation's value of kv pair is empty.
           val valueOpt = iterable.find(value => value.nonEmpty)
           if (valueOpt.isDefined) {
             (key, valueOpt.get)
@@ -345,6 +271,9 @@ class TiBatchWrite(@transient val df: DataFrame,
       val wrappedRowRdd = tiRowRdd.zipWithIndex.map { row =>
         WrappedRow(row._1, row._2 + start)
       }
+
+//      wrappedRowRdd.map
+      preSplitTableRegion()
       generateKV(wrappedRowRdd, remove = false)
     }
 
@@ -756,6 +685,18 @@ class TiBatchWrite(@transient val df: DataFrame,
   // calculate the real physical table.
   private def locatePhysicalTable(row: TiRow): Long = {
     tiTableInfo.getId
+  }
+
+  private def preSplitTableRegion() = {
+    // region pre-split
+    if (enableRegionPreSplit && handleCol != null) {
+      logger.info("region pre split is enabled.")
+      val regions = getRegions
+      if (regions.size < 5) {
+        tiDBJDBCClient
+          .splitTableRegion(tiDBInfo.getName, tiTableInfo.getName, Int.MinValue, Int.MaxValue, 100)
+      }
+    }
   }
 }
 
