@@ -65,7 +65,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val skipCommitSecondaryKey: Boolean =
     parameters.getOrElse(TIDB_SKIP_COMMIT_SECONDARY_KEY, "true").toBoolean
 
-  val sampleFraction: Double = parameters.getOrElse(TIDB_SAMPLE_FRACTION, "0.01").toDouble
+  val regionSplitNum: Int = parameters.getOrElse(TIDB_REGION_SPLIT_NUM, "3").toInt
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -106,6 +106,6 @@ object TiDBOptions {
   val TIDB_DATABASE: String = newOption("database")
   val TIDB_TABLE: String = newOption("table")
   val TIDB_REPLACE: String = newOption("replace")
-  val TIDB_SKIP_COMMIT_SECONDARY_KEY = newOption("skipCommitSecondaryKey")
-  val TIDB_SAMPLE_FRACTION = newOption("sampleFraction")
+  val TIDB_SKIP_COMMIT_SECONDARY_KEY: String = newOption("skipCommitSecondaryKey")
+  val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
 }

@@ -19,7 +19,7 @@ import java.util
 
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.catalog.Catalog
-import com.pingcap.tikv.codec.{CodecDataInput, CodecDataOutput, KeyUtils, TableCodec}
+import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
@@ -30,7 +30,6 @@ import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
-import javax.annotation.Nonnull
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -40,7 +39,6 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
@@ -242,7 +240,9 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
-      preSplitTableRegion()
+      val minHandle = wrappedRowRdd.min().handle
+      val maxHandle = wrappedRowRdd.max().handle
+      preSplitTableRegion(minHandle, maxHandle)
 
       val deletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
       if (!options.replace && !deletion.isEmpty()) {
@@ -272,8 +272,9 @@ class TiBatchWrite(@transient val df: DataFrame,
         WrappedRow(row._1, row._2 + start)
       }
 
-//      wrappedRowRdd.map
-      preSplitTableRegion()
+      val minHandle = wrappedRowRdd.min().handle
+      val maxHandle = wrappedRowRdd.max().handle
+      preSplitTableRegion(minHandle, maxHandle)
       generateKV(wrappedRowRdd, remove = false)
     }
 
@@ -687,14 +688,20 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiTableInfo.getId
   }
 
-  private def preSplitTableRegion() = {
+  private def preSplitTableRegion(minHandle: Long, maxHandle: Long) = {
     // region pre-split
     if (enableRegionPreSplit && handleCol != null) {
       logger.info("region pre split is enabled.")
       val regions = getRegions
       if (regions.size < 5) {
         tiDBJDBCClient
-          .splitTableRegion(tiDBInfo.getName, tiTableInfo.getName, Int.MinValue, Int.MaxValue, 100)
+          .splitTableRegion(
+            tiDBInfo.getName,
+            tiTableInfo.getName,
+            minHandle,
+            maxHandle,
+            options.regionSplitNum
+          )
       }
     }
   }
@@ -718,7 +725,9 @@ class TiRegionPartitioner(regions: List[TiRegion]) extends Partitioner {
   }
 }
 
-case class WrappedRow(row: TiRow, handle: Long)
+case class WrappedRow(row: TiRow, handle: Long) extends Ordered[WrappedRow] {
+  override def compare(that: WrappedRow): Int = this.handle.toInt - that.handle.toInt
+}
 
 class SerializableKey(val bytes: Array[Byte]) extends Serializable {
   override def toString: String = KeyUtils.formatBytes(bytes)
