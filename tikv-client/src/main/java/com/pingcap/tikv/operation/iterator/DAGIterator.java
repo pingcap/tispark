@@ -82,6 +82,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
           return false;
         }
       } else if (!readNextRegionChunks()) {
+        System.out.println("hasNext() reach end of region chunks");
         return false;
       }
     }
@@ -102,6 +103,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
 
   private boolean advanceNextResponse() {
     if (!hasMoreResponse()) {
+      System.out.println("no more response");
       return false;
     }
 
@@ -115,16 +117,19 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     }
 
     if (chunkList == null || chunkList.isEmpty()) {
+      System.out.println("chunkList empty");
       return false;
     }
 
     chunkIndex = 0;
+    System.out.println("new chunk list");
     createDataInputReader();
     return true;
   }
 
   private boolean readNextRegionChunks() {
     if (eof || regionTasks == null || taskIndex >= regionTasks.size()) {
+      System.out.println("readNextRegionChunks() reach end of region chunks");
       return false;
     }
 
@@ -143,10 +148,11 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     }
 
     taskIndex++;
+    System.out.println("advance forward");
     return advanceNextResponse();
   }
 
-  private SelectResponse process(RangeSplitter.RegionTask regionTask) {
+  private synchronized SelectResponse process(RangeSplitter.RegionTask regionTask) {
     Queue<RangeSplitter.RegionTask> remainTasks = new ArrayDeque<>();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
     remainTasks.add(regionTask);

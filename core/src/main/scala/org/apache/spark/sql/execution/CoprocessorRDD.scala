@@ -209,7 +209,9 @@ case class RegionTaskExec(child: SparkPlan,
     "numIndexRangesScanned" -> SQLMetrics
       .createMetric(sparkContext, "number of index ranges scanned"),
     "numDowngradeRangesScanned" -> SQLMetrics
-      .createMetric(sparkContext, "number of downgrade ranges scanned")
+      .createMetric(sparkContext, "number of downgrade ranges scanned"),
+    "rowTotalSize" -> SQLMetrics
+      .createMetric(sparkContext, "sum of iterator size")
   )
 
   private val downgradeThreshold = 1000000000
@@ -247,6 +249,7 @@ case class RegionTaskExec(child: SparkPlan,
     numRegions: SQLMetric,
     numIndexRangesScanned: SQLMetric,
     numDowngradeRangesScanned: SQLMetric,
+    rowTotalSize: SQLMetric,
     downgradeDagRequest: TiDAGRequest
   ): (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] = { (index, iter) =>
     // For each partition, we do some initialization work
@@ -416,6 +419,7 @@ case class RegionTaskExec(child: SparkPlan,
 
       // The result iterator serves as an wrapper to the final result we fetched from region tasks
       val resultIter = new util.Iterator[UnsafeRow] {
+        var sz = 0
         override def hasNext: Boolean = {
 
           def proceedNextBatchTask(): Boolean = {
@@ -435,10 +439,20 @@ case class RegionTaskExec(child: SparkPlan,
 
           // RowIterator has not been initialized
           if (rowIterator == null) {
+            if (sz != 0) {
+              logger.info("rowIteratorSize = " + sz)
+              rowTotalSize += sz
+              sz = 0
+            }
             proceedNextBatchTask()
           } else {
             if (rowIterator.hasNext) {
               return true
+            }
+            if (sz != 0) {
+              logger.info("rowIteratorSize = " + sz)
+              rowTotalSize += sz
+              sz = 0
             }
             proceedNextBatchTask()
           }
@@ -446,6 +460,7 @@ case class RegionTaskExec(child: SparkPlan,
 
         override def next(): UnsafeRow = {
           numOutputRows += 1
+          sz += 1
           // Unsafe row projection
           project.initialize(index)
           val sparkRow = TiConverter.toSparkRow(rowIterator.next(), rowTransformer)
@@ -465,6 +480,7 @@ case class RegionTaskExec(child: SparkPlan,
     val numRegions = longMetric("numRegions")
     val numIndexRangesScanned = longMetric("numIndexRangesScanned")
     val numDowngradeRangesScanned = longMetric("numDowngradeRangesScanned")
+    val rowTotalSize = longMetric("rowTotalSize")
 
     val downgradeDagRequest = dagRequest.copy()
     // We need to clear index info in order to perform table scan
@@ -481,6 +497,7 @@ case class RegionTaskExec(child: SparkPlan,
         numRegions,
         numIndexRangesScanned,
         numDowngradeRangesScanned,
+        rowTotalSize,
         downgradeDagRequest
       )
     ).invoke()
