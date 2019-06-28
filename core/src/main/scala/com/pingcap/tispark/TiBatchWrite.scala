@@ -47,19 +47,13 @@ object TiBatchWrite {
 
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
-  def writeToTiDB(df: DataFrame,
-                  tiContext: TiContext,
-                  options: TiDBOptions,
-                  regionSplitNumber: Option[Int] = None,
-                  enableRegionPreSplit: Boolean = false): Unit =
-    new TiBatchWrite(df, tiContext, options, regionSplitNumber, enableRegionPreSplit).write()
+  def writeToTiDB(df: DataFrame, tiContext: TiContext, options: TiDBOptions): Unit =
+    new TiBatchWrite(df, tiContext, options).write()
 }
 
 class TiBatchWrite(@transient val df: DataFrame,
                    @transient val tiContext: TiContext,
-                   options: TiDBOptions,
-                   regionSplitNumber: Option[Int],
-                   enableRegionPreSplit: Boolean)
+                   options: TiDBOptions)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -690,16 +684,16 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private def preSplitTableRegion(minHandle: Long, maxHandle: Long) = {
     // region pre-split
-    if (enableRegionPreSplit && handleCol != null) {
+    if (options.enableRegionPreSplit) {
       logger.info("region pre split is enabled.")
       val regions = getRegions
       if (regions.size < 5) {
         tiDBJDBCClient
           .splitTableRegion(
-            tiDBInfo.getName,
-            tiTableInfo.getName,
-            minHandle,
-            maxHandle,
+            options.database,
+            options.table,
+            0,
+            Int.MaxValue,
             options.regionSplitNum
           )
       }

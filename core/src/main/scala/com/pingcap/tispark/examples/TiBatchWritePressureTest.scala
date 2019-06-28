@@ -32,9 +32,6 @@ object TiBatchWritePressureTest {
     val outputDatabase = args(2)
     val outputTable = args(3)
 
-    val regionSplitNumber = if (args.length >= 5) Some(args(4).toInt) else None
-    val enableRegionPreSplit = if (args.length >= 6) args(5).toBoolean else false
-
     // init
     val start = System.currentTimeMillis()
     val sparkConf = new SparkConf()
@@ -60,7 +57,7 @@ object TiBatchWritePressureTest {
     val options = new TiDBOptions(
       sparkConf.getAll.toMap ++ Map("database" -> outputDatabase, "table" -> outputTable)
     )
-    TiBatchWrite.writeToTiDB(df, ti, options, regionSplitNumber, enableRegionPreSplit)
+    TiBatchWrite.writeToTiDB(df, ti, options)
 
     // time
     val end = System.currentTimeMillis()
