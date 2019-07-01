@@ -11,15 +11,15 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to an
 Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
-The current stable version is **TiSpark 2.1** which is compatible with **Spark 2.3.0+** and **Spark 2.4.0+**.
+The current stable version is **TiSpark 2.1.1** which is compatible with **Spark 2.3.0+** and **Spark 2.4.0+**.
 
 The latest stable version compatible with **Spark 2.1.0+** is **TiSpark 1.2**
 
 **When using TiSpark 1.2, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
-**When using TiSpark 2.1 with Spark 2.3.0+, please use version `2.1-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1.1 with Spark 2.3.0+, please use version `2.1.1-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
-**When using TiSpark 2.1 with Spark 2.4.0+, please use version `2.1-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1.1 with Spark 2.4.0+, please use version `2.1.1-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
 You may also [build from sources](#how-to-build-from-sources) to try the new features on TiSpark master branch.
 
@@ -29,7 +29,7 @@ If you are using maven(recommended), add the following to your pom.xml:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-core</artifactId>
-      <version>2.1-spark_${spark.version}</version>
+      <version>2.1.1-spark_${spark.version}</version>
     </dependency>
 </dependencies>
 ```
