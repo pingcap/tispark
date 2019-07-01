@@ -133,16 +133,12 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       } // else {
       // if doReadNextRegionChunks returns false
       // readNextRegionChunks should not just return false
-      // readNextRegionChunks should read next region chunks
+      // readNextRegionChunks should continue read next region chunks
       // }
     }
   }
 
   private boolean doReadNextRegionChunks() {
-    if (eof || regionTasks == null || taskIndex >= regionTasks.size()) {
-      return false;
-    }
-
     try {
       switch (pushDownType) {
         case STREAMING:
