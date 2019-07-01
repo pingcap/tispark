@@ -14,7 +14,9 @@ class RegionSplitSuite extends BaseDataSourceTest("region_pre_split_test") {
 
   test("region pre split test") {
     dropTable()
-    jdbcUpdate(s"CREATE TABLE  $dbtable ( `a` int(11) DEFAULT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin")
+    jdbcUpdate(
+      s"CREATE TABLE  $dbtable ( `a` int(11) DEFAULT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
+    )
 
     val dbName = "tidb_tispark_test"
     val tableName = "region_pre_split_test"
