@@ -234,9 +234,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
-      val minHandle = wrappedRowRdd.min().handle
-      val maxHandle = wrappedRowRdd.max().handle
-      preSplitTableRegion(minHandle, maxHandle)
+      splitTableRegion(wrappedRowRdd)
 
       val deletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
       if (!options.replace && !deletion.isEmpty()) {
@@ -266,9 +264,7 @@ class TiBatchWrite(@transient val df: DataFrame,
         WrappedRow(row._1, row._2 + start)
       }
 
-      val minHandle = wrappedRowRdd.min().handle
-      val maxHandle = wrappedRowRdd.max().handle
-      preSplitTableRegion(minHandle, maxHandle)
+      splitTableRegion(wrappedRowRdd)
       generateKV(wrappedRowRdd, remove = false)
     }
 
@@ -682,21 +678,34 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiTableInfo.getId
   }
 
-  private def preSplitTableRegion(minHandle: Long, maxHandle: Long) = {
-    // region pre-split
-    if (options.enableRegionPreSplit) {
-      logger.info("region pre split is enabled.")
-      val regions = getRegions
-      if (regions.size < 5) {
-        tiDBJDBCClient
-          .splitTableRegion(
-            options.database,
-            options.table,
-            0,
-            Int.MaxValue,
-            options.regionSplitNum
-          )
-      }
+  private def splitTableRegion(wrappedRowRdd: RDD[WrappedRow]) = {
+    val rowSize = tiTableInfo.getColumnSize
+    val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
+    val minHandle = wrappedRowRdd.min().handle
+    val maxHandle = wrappedRowRdd.max().handle
+    // region split
+    if (options.enableRegionSplit && regionSplitNum > 1) {
+      logger.info("region split is enabled.")
+      tiDBJDBCClient
+        .splitTableRegion(
+          options.database,
+          options.table,
+          minHandle,
+          maxHandle,
+          regionSplitNum
+        )
+    }
+
+    // this is only used for test
+    if (options.enableRegionSplit && options.regionSplitNum != 0) {
+      tiDBJDBCClient
+        .splitTableRegion(
+          options.database,
+          options.table,
+          0,
+          Int.MaxValue,
+          options.regionSplitNum
+        )
     }
   }
 }
