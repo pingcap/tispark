@@ -35,7 +35,7 @@ import java.util.NoSuchElementException;
 public abstract class CoprocessIterator<T> implements Iterator<T> {
   protected final TiSession session;
   protected final List<RegionTask> regionTasks;
-  protected DAGRequest dagRequest;
+  protected final DAGRequest dagRequest;
   protected final DataType[] handleTypes;
   //  protected final ExecutorCompletionService<Iterator<SelectResponse>> completionService;
   protected RowReader rowReader;
