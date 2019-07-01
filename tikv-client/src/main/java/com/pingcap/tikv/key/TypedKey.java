@@ -95,7 +95,7 @@ public class TypedKey extends Key {
       return toTypedKey(prefixNext(((String) val).getBytes()), type, prefixLength);
     } else if (tp instanceof BytesType) {
       return toTypedKey(prefixNext(((byte[]) val)), type, prefixLength);
-    } else if (DataType.isLengthSpecified(prefixLength)) {
+    } else if (DataType.isLengthUnSpecified(prefixLength)) {
       if (tp instanceof IntegerType) {
         return toTypedKey(((long) val) + 1, type);
       } else {

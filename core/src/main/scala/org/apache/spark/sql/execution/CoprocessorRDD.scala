@@ -85,6 +85,8 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
 
   }
 
+  def dagRequest: TiDAGRequest = tiRdds.head.dagRequest
+
   override def verboseString: String =
     if (tiRdds.size > 1) {
       val b = new StringBuilder
@@ -92,11 +94,11 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
       tiRdds.zipWithIndex.map {
         case (_, i) => b.append(s"partition p$i")
       }
-      b.append(s"with dag request: ${tiRdds.head.dagRequest.toString}")
+      b.append(s"with dag request: $dagRequest")
       b.toString()
     } else {
-      s"TiSpark $nodeName{${tiRdds.head.dagRequest.toString}}" +
-        s"${TiUtil.getReqEstCountStr(tiRdds.head.dagRequest)}"
+      s"TiSpark $nodeName{$dagRequest}" +
+        s"${TiUtil.getReqEstCountStr(dagRequest)}"
 
     }
 
@@ -118,7 +120,7 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
 
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
 
-  val internalRDDs: List[RDD[InternalRow]] =
+  private val internalRDDs: List[RDD[InternalRow]] =
     tiHandleRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
   private lazy val project = UnsafeProjection.create(schema)
 
@@ -159,6 +161,8 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
 
   override def output: Seq[Attribute] = attributeRef
 
+  def dagRequest: TiDAGRequest = tiHandleRDDs.head.dagRequest
+
   override def verboseString: String =
     if (tiHandleRDDs.size > 1) {
       val b = new mutable.StringBuilder()
@@ -166,11 +170,11 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
       tiHandleRDDs.zipWithIndex.map {
         case (_, i) => b.append(s"partition p$i")
       }
-      b.append(s"with dag request: ${tiHandleRDDs.head.dagRequest.toString}")
+      b.append(s"with dag request: $dagRequest")
       b.toString()
     } else {
-      s"TiDB $nodeName{${tiHandleRDDs.head.dagRequest.toString}}" +
-        s"${TiUtil.getReqEstCountStr(tiHandleRDDs.head.dagRequest)}"
+      s"TiDB $nodeName{$dagRequest}" +
+        s"${TiUtil.getReqEstCountStr(dagRequest)}"
     }
 
   override def simpleString: String = verboseString
@@ -221,9 +225,9 @@ case class RegionTaskExec(child: SparkPlan,
   // used for driver to update PD cache
   private val callBackFunc = CacheInvalidateListener.getInstance()
 
-  def rowToInternalRow(row: Row,
-                       outputTypes: Seq[DataType],
-                       converters: Seq[Any => Any]): InternalRow = {
+  private def rowToInternalRow(row: Row,
+                               outputTypes: Seq[DataType],
+                               converters: Seq[Any => Any]): InternalRow = {
     val mutableRow = new GenericInternalRow(outputTypes.length)
     for (i <- outputTypes.indices) {
       mutableRow(i) = converters(i)(row(i))
@@ -232,7 +236,7 @@ case class RegionTaskExec(child: SparkPlan,
     mutableRow
   }
 
-  def isTaskRangeSizeInvalid(task: RegionTask): Boolean =
+  private def isTaskRangeSizeInvalid(task: RegionTask): Boolean =
     task == null ||
       task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
 

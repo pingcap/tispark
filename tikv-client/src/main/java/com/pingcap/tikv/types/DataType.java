@@ -180,7 +180,7 @@ public abstract class DataType implements Serializable {
     requireNonNull(cdo, "cdo is null");
     if (value == null) {
       encodeNull(cdo);
-    } else if (DataType.isLengthSpecified(prefixLength)) {
+    } else if (DataType.isLengthUnSpecified(prefixLength)) {
       encodeKey(cdo, value);
     } else if (isPrefixIndexSupported()) {
       byte[] bytes;
@@ -229,8 +229,26 @@ public abstract class DataType implements Serializable {
     return length;
   }
 
-  public boolean isLengthSpecified() {
-    return DataType.isLengthSpecified(length);
+  long getDefaultDataSize() {
+    return tp.getDefaultSize();
+  }
+
+  long getPrefixSize() {
+    return tp.getPrefixSize();
+  }
+
+  /**
+   * Size of data type
+   *
+   * @return size
+   */
+  public long getSize() {
+    // TiDB types are prepended with a type flag.
+    return getPrefixSize() + getDefaultDataSize();
+  }
+
+  public boolean isLengthUnSpecified() {
+    return DataType.isLengthUnSpecified(length);
   }
 
   public int getDecimal() {
@@ -317,7 +335,7 @@ public abstract class DataType implements Serializable {
     return (flag & NumFlag) > 0;
   }
 
-  public static boolean isLengthSpecified(long length) {
+  public static boolean isLengthUnSpecified(long length) {
     return length == UNSPECIFIED_LEN;
   }
 

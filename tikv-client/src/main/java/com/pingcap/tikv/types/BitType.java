@@ -36,6 +36,15 @@ public class BitType extends IntegerType {
     super(holder);
   }
 
+  @Override
+  public long getSize() {
+    if (isLengthUnSpecified()) {
+      return getPrefixSize() + getDefaultDataSize();
+    } else {
+      return getPrefixSize() + (getLength() + 7) / 8;
+    }
+  }
+
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
