@@ -123,6 +123,13 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     return true;
   }
 
+  /**
+   * chunk maybe empty while there is still data transmitting from TiKV. In this case, {@code
+   * readNextRegionChunks} cannot just returns false because the iterator thinks there is no data to
+   * process. This while loop ensures we can drain all possible data transmitting from TiKV.
+   *
+   * @return
+   */
   private boolean readNextRegionChunks() {
     while (true) {
       if (eof || regionTasks == null || taskIndex >= regionTasks.size()) {
@@ -130,11 +137,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       }
       if (doReadNextRegionChunks()) {
         return true;
-      } // else {
-      // if doReadNextRegionChunks returns false
-      // readNextRegionChunks should not just return false
-      // readNextRegionChunks should continue read next region chunks
-      // }
+      }
     }
   }
 
