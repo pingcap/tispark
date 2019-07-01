@@ -143,7 +143,11 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     }
 
     taskIndex++;
-    return advanceNextResponse();
+    if (advanceNextResponse()) {
+      return true;
+    } else {
+      return readNextRegionChunks();
+    }
   }
 
   private SelectResponse process(RangeSplitter.RegionTask regionTask) {
