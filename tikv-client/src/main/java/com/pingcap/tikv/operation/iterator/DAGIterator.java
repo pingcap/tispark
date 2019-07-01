@@ -124,6 +124,21 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
   }
 
   private boolean readNextRegionChunks() {
+    while (true) {
+      if (eof || regionTasks == null || taskIndex >= regionTasks.size()) {
+        return false;
+      }
+      if (doReadNextRegionChunks()) {
+        return true;
+      } // else {
+      // if doReadNextRegionChunks returns false
+      // readNextRegionChunks should not just return false
+      // readNextRegionChunks should read next region chunks
+      // }
+    }
+  }
+
+  private boolean doReadNextRegionChunks() {
     if (eof || regionTasks == null || taskIndex >= regionTasks.size()) {
       return false;
     }
@@ -143,11 +158,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     }
 
     taskIndex++;
-    if (advanceNextResponse()) {
-      return true;
-    } else {
-      return readNextRegionChunks();
-    }
+    return advanceNextResponse();
   }
 
   private SelectResponse process(RangeSplitter.RegionTask regionTask) {
