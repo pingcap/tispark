@@ -131,14 +131,16 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
    * @return
    */
   private boolean readNextRegionChunks() {
-    while (true) {
-      if (eof || regionTasks == null || taskIndex >= regionTasks.size()) {
-        return false;
-      }
+    while (hasNextRegionTask()) {
       if (doReadNextRegionChunks()) {
         return true;
       }
     }
+    return false;
+  }
+
+  private boolean hasNextRegionTask() {
+    return !(eof || regionTasks == null || taskIndex >= regionTasks.size());
   }
 
   private boolean doReadNextRegionChunks() {
