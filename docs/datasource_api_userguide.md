@@ -252,7 +252,7 @@ The full conversion metrics is as follows.
 | TEXT                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
 | MEDIUMTEXT           | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
 | LONGTEXT             | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
-| BINARY               | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
+| BINARY               | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
 | VARBINARY            | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
 | TINYBLOB             | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
 | BLOB                 | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |

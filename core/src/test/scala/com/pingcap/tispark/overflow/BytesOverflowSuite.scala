@@ -15,6 +15,47 @@ import org.apache.spark.sql.types._
  */
 class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overflow") {
 
+  test("Test BINARY Overflow") {
+    testBinaryOverflow(false)
+  }
+
+  test("Test BINARY as key Overflow") {
+    testBinaryOverflow(true)
+  }
+
+  private def testBinaryOverflow(testKey: Boolean): Unit = {
+    dropTable()
+    if (testKey) {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BINARY(8), primary key (c1(4)))"
+      )
+    } else {
+      jdbcUpdate(
+        s"create table $dbtable(c1 BINARY(8))"
+      )
+    }
+
+    val row = Row("0123456789")
+    val schema = StructType(
+      List(
+        StructField("c1", StringType)
+      )
+    )
+    val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
+    val jdbcErrorMsg = "Data truncation: Data too long for column 'c1' at row 1"
+    val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
+    val tidbErrorMsg = "length 10 > max length 8"
+
+    compareTiDBWriteFailureWithJDBC(
+      List(row),
+      schema,
+      jdbcErrorClass,
+      jdbcErrorMsg,
+      tidbErrorClass,
+      tidbErrorMsg
+    )
+  }
+
   test("Test VARBINARY Overflow") {
     testVarbinaryOverflow(false)
   }
