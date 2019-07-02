@@ -4,7 +4,7 @@ import com.pingcap.tikv.TiBatchWriteUtils
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
-class RegionSplitSuite extends BaseDataSourceTest("region_pre_split_test") {
+class RegionSplitSuite extends BaseDataSourceTest("region_split_test") {
   private val row1 = Row(1)
   private val schema = StructType(
     List(
