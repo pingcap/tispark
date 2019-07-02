@@ -214,9 +214,9 @@ The following is TiDB-specific options, which can be passed in through `TiDBOpti
 | spark.tispark.tidb.password | tidb.password | true | TiDB Password | - |
 | database | - | true | TiDB Database | - |
 | table | - | true | TiDB Table | - |
-| deduplicate | - | false | Duplicate rows (same primary key) will be removed from DataFrame before writing to TiDB. Only one row with same primary key will be written successfully. | false |
 | skipCommitSecondaryKey | - | false | skip commit secondary key | false |
-| sampleFraction | - | false | sample fraction, from 0 to 1 | 0.01 |
+| enableRegionSplit | - | true | do region split to avoid hot region during insertion
+| regionSplitNum | - | 3 | user defined region split number during insertion
 
 TiSpark's common options can also be passed in, e.g. `spark.tispark.plan.allow_agg_pushdown`, `spark.tispark.plan.allow_index_read`, etc.
 

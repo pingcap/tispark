@@ -703,7 +703,7 @@ class TiBatchWrite(@transient val df: DataFrame,
         // region split
         if (regionSplitNum > 1) {
           logger.info("region split is enabled.")
-          logger.info("regionSplitNum="+ regionSplitNum)
+          logger.info("regionSplitNum=" + regionSplitNum)
           tiDBJDBCClient
             .splitTableRegion(
               options.database,

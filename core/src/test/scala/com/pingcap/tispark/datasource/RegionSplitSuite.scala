@@ -23,12 +23,12 @@ class RegionSplitSuite extends BaseDataSourceTest("region_pre_split_test") {
       s"CREATE TABLE  $dbtable ( `a` int(11) DEFAULT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
     )
 
-    val dbName = "tidb_tispark_test"
-    val tableName = "region_pre_split_test"
     val options = Some(Map("enableRegionSplit" -> "true", "regionSplitNum" -> "3"))
+
     tidbWrite(List(row1), schema, options)
+
     val tiTableInfo =
-      ti.tiSession.getCatalog.getTable(dbName, tableName)
+      ti.tiSession.getCatalog.getTable(dbPrefix + database, table)
     val regionsNum = TiBatchWriteUtils.getRegionsByTable(ti.tiSession, tiTableInfo).size()
     assert(regionsNum == 3)
   }
