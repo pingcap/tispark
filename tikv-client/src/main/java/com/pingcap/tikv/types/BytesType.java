@@ -77,12 +77,6 @@ public class BytesType extends DataType {
   @Override
   protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
-    // TODO: do not support write to BINARY TYPE, because of this issue
-    //  https://github.com/pingcap/tispark/issues/774
-    if (this.isZeroFill()) {
-      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
-    }
-
     return convertToBytes(value);
   }
 
@@ -115,6 +109,14 @@ public class BytesType extends DataType {
     if (result.length > this.getLength()) {
       throw ConvertOverflowException.newMaxLengthException(result.length, this.getLength());
     }
+
+    // BINARY Type
+    if (this.getType() == MySQLType.TypeString && result.length < this.getLength()) {
+      byte[] fillZero = new byte[(int) this.getLength()];
+      System.arraycopy(result, 0, fillZero, 0, result.length);
+      result = fillZero;
+    }
+
     return result;
   }
 

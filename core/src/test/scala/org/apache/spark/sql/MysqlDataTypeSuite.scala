@@ -1,0 +1,48 @@
+/*
+ * Copyright 2019 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.spark.sql
+
+class MysqlDataTypeSuite extends BaseTiSparkTest {
+  private val table = "mysql_datatype"
+
+  test("Test Binary") {
+    tidbStmt.execute(s"drop table if exists $table")
+
+    tidbStmt.execute(s"create table $table(c1 BINARY(20))")
+    refreshConnections()
+
+    val testData = "0123456789"
+    tidbStmt.execute(s"insert into $table values ('$testData')")
+
+    val resultData = queryTiDBViaJDBC(s"select * from $table").head.head.asInstanceOf[Array[Byte]]
+
+    assert(resultData.length == 20)
+    for (i <- 0 until 20) {
+      if (i < 10) {
+        assert(resultData(i) == '0' + i)
+      } else {
+        assert(resultData(i) == 0)
+      }
+    }
+  }
+
+  override def afterAll(): Unit =
+    try {
+      tidbStmt.execute(s"drop table if exists $table")
+    } finally {
+      super.afterAll()
+    }
+}
