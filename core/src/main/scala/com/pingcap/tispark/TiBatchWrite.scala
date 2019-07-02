@@ -146,8 +146,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // lock table
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
-    isEnableTableLock = TiDBJDBCClient.isEnableTableLock
-    isEnableSplitRegion = TiDBJDBCClient.isEnableSplitTable
+    isEnableTableLock = tiDBJDBCClient.isEnableTableLock
+    isEnableSplitRegion = tiDBJDBCClient.isEnableSplitTable
     lockTable()
 
     // check schema
@@ -695,6 +695,7 @@ class TiBatchWrite(@transient val df: DataFrame,
           )
       } else {
         val rowSize = tiTableInfo.getEstimatedRowSizeInByte
+        //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
         val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
         val minHandle = wrappedRowRdd.min().handle
         val maxHandle = wrappedRowRdd.max().handle
