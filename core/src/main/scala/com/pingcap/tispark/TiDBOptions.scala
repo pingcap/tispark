@@ -65,7 +65,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val skipCommitSecondaryKey: Boolean =
     parameters.getOrElse(TIDB_SKIP_COMMIT_SECONDARY_KEY, "true").toBoolean
 
-  val regionSplitNum: Int = parameters.getOrElse(TIDB_REGION_SPLIT_NUM, "3").toInt
+  val regionSplitNum: Int = parameters.getOrElse(TIDB_REGION_SPLIT_NUM, "0").toInt
 
   val enableRegionSplit: Boolean =
     parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
