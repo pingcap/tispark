@@ -22,6 +22,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TiDBJDBCClient implements AutoCloseable {
   private Connection connection;
@@ -30,17 +31,15 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
   private static final String ENABLE_TABLE_LOCK_KEY = "enable-table-lock";
   private static final Boolean ENABLE_TABLE_LOCK_DEFAULT = false;
+  private static final String ENABLE_SPLIT_TABLE_KEY = "split-table";
+  private static final Boolean ENABLE_SPLIT_TABLE_DEFAULT = false;
 
   public TiDBJDBCClient(Connection connection) {
     this.connection = connection;
   }
 
   public boolean isEnableTableLock() throws IOException, SQLException {
-    String configJSON = (String) queryTiDBViaJDBC(SELECT_TIDB_CONFIG_SQL).get(0).get(0);
-    ObjectMapper objectMapper = new ObjectMapper();
-    TypeReference<HashMap<String, Object>> typeRef =
-        new TypeReference<HashMap<String, Object>>() {};
-    HashMap<String, Object> configMap = objectMapper.readValue(configJSON, typeRef);
+    Map<String, Object> configMap = readConfMapFronTiDB();
     Object enableTableLock =
         configMap.getOrDefault(ENABLE_TABLE_LOCK_KEY, ENABLE_TABLE_LOCK_DEFAULT);
     return (Boolean) enableTableLock;
@@ -66,6 +65,20 @@ public class TiDBJDBCClient implements AutoCloseable {
       String sql = "drop table if exists `" + databaseName + "`.`" + tableName + "`";
       return tidbStmt.execute(sql);
     }
+  }
+
+  private Map<String, Object> readConfMapFronTiDB() throws SQLException, IOException {
+    String configJSON = (String) queryTiDBViaJDBC(SELECT_TIDB_CONFIG_SQL).get(0).get(0);
+    ObjectMapper objectMapper = new ObjectMapper();
+    TypeReference<HashMap<String, Object>> typeRef =
+        new TypeReference<HashMap<String, Object>>() {};
+    return objectMapper.readValue(configJSON, typeRef);
+  }
+
+  public boolean isEnableSplitTable() throws IOException, SQLException {
+    Map<String, Object> configMap = readConfMapFronTiDB();
+    Object splitTable = configMap.getOrDefault(ENABLE_SPLIT_TABLE_KEY, ENABLE_SPLIT_TABLE_DEFAULT);
+    return (Boolean) splitTable;
   }
 
   // SPLIT TABLE table_name [INDEX index_name] BETWEEN (lower_value) AND (upper_value) REGIONS

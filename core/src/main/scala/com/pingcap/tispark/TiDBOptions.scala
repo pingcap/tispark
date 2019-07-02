@@ -68,9 +68,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val regionSplitNum: Int = parameters.getOrElse(TIDB_REGION_SPLIT_NUM, "3").toInt
 
   val enableRegionSplit: Boolean =
-    parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "false").toBoolean
-
-  val regionSize: Int = parameters.getOrElse(TIDB_REGION_SIZE, "96").toInt
+    parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -113,6 +111,5 @@ object TiDBOptions {
   val TIDB_REPLACE: String = newOption("replace")
   val TIDB_SKIP_COMMIT_SECONDARY_KEY: String = newOption("skipCommitSecondaryKey")
   val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
-  val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionPreSplit")
-  val TIDB_REGION_SIZE: String = newOption("regionSize")
+  val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
 }

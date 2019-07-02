@@ -78,6 +78,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   @transient private var tiDBJDBCClient: TiDBJDBCClient = _
   private var isEnableTableLock: Boolean = _
+  private var isEnableSplitRegion: Boolean = _
   private var tableLocked: Boolean = false
 
   @throws(classOf[NoSuchTableException])
@@ -146,6 +147,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     // lock table
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
     isEnableTableLock = tiDBJDBCClient.isEnableTableLock
+    isEnableSplitRegion = tiDBJDBCClient.isEnableSplitTable
     lockTable()
 
     // check schema
@@ -682,7 +684,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     // when data to be inserted is too small to do region split, we check is user set region split num.
     // If so, we do region split as user's intention. This is also useful for writing test case.
     if (options.enableRegionSplit) {
-      if (options.regionSplitNum != 0) {
+      if (options.regionSplitNum != 0 && isEnableSplitRegion) {
         tiDBJDBCClient
           .splitTableRegion(
             options.database,
@@ -693,11 +695,11 @@ class TiBatchWrite(@transient val df: DataFrame,
           )
       } else {
         val rowSize = tiTableInfo.getEstimatedRowSizeInByte
-        val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (options.regionSize * 1024 * 1024)
+        val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
         val minHandle = wrappedRowRdd.min().handle
         val maxHandle = wrappedRowRdd.max().handle
         // region split
-        if (regionSplitNum > 1) {
+        if (regionSplitNum > 1 && isEnableSplitRegion) {
           logger.info("region split is enabled.")
           tiDBJDBCClient
             .splitTableRegion(
@@ -709,9 +711,7 @@ class TiBatchWrite(@transient val df: DataFrame,
             )
         }
       }
-
     }
-
   }
 }
 

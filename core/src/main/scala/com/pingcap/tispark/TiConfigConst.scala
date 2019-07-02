@@ -39,7 +39,6 @@ object TiConfigConst {
   val DB_PREFIX: String = "spark.tispark.db_prefix"
   val WRITE_ALLOW_SPARK_SQL: String = "spark.tispark.write.allow_spark_sql"
   val WRITE_ENABLE: String = "spark.tispark.write.enable"
-
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"
 }

@@ -20,7 +20,7 @@ class RegionSplitSuite extends BaseDataSourceTest("region_pre_split_test") {
 
     val dbName = "tidb_tispark_test"
     val tableName = "region_pre_split_test"
-    val options = Some(Map("enableRegionPreSplit" -> "true"))
+    val options = Some(Map("enableRegionSplit" -> "true", "regionSplitNum" -> "3"))
     tidbWrite(List(row1), schema, options)
     val tiTableInfo =
       ti.tiSession.getCatalog.getTable(dbName, tableName)
