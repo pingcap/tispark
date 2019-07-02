@@ -214,7 +214,7 @@ The following is TiDB-specific options, which can be passed in through `TiDBOpti
 | spark.tispark.tidb.password | tidb.password | true | TiDB Password | - |
 | database | - | true | TiDB Database | - |
 | table | - | true | TiDB Table | - |
-| skipCommitSecondaryKey | - | false | skip commit secondary key | false |
+| skipCommitSecondaryKey | - | false | skip commit secondary key | true |
 | enableRegionSplit | - | false | do region split to avoid hot region during insertion | true|
 | regionSplitNum | - | false | user defined region split number during insertion | 0 |
 | replace | - | false | define the behavior of append. | false| 
