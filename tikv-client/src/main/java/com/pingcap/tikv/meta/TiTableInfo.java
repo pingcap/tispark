@@ -44,7 +44,7 @@ public class TiTableInfo implements Serializable {
   private final long maxColumnId;
   private final long maxIndexId;
   private final long oldSchemaId;
-  private final long columnSize; // estimated column size
+  private final long rowSize; // estimated row size
   private final TiPartitionInfo partitionInfo;
   private final TiColumnInfo primaryKeyColumn;
 
@@ -69,7 +69,7 @@ public class TiTableInfo implements Serializable {
     this.collate = collate;
     this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
     // TODO: Use more precise predication according to types
-    this.columnSize = columns.stream().mapToLong(TiColumnInfo::getSize).sum();
+    this.rowSize = columns.stream().mapToLong(TiColumnInfo::getSize).sum();
     this.pkIsHandle = pkIsHandle;
     this.indices = indices != null ? ImmutableList.copyOf(indices) : ImmutableList.of();
     this.indices.forEach(x -> x.calculateIndexSize(columns));
@@ -132,8 +132,8 @@ public class TiTableInfo implements Serializable {
     return columns;
   }
 
-  public long getColumnSize() {
-    return columnSize;
+  public long getEstimatedRowSizeInByte() {
+    return rowSize;
   }
 
   public TiColumnInfo getColumn(int offset) {

@@ -679,35 +679,39 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   private def splitTableRegion(wrappedRowRdd: RDD[WrappedRow]) = {
-    val rowSize = tiTableInfo.getColumnSize
-    val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
-    val minHandle = wrappedRowRdd.min().handle
-    val maxHandle = wrappedRowRdd.max().handle
-    // region split
-    if (options.enableRegionSplit && regionSplitNum > 1) {
-      logger.info("region split is enabled.")
-      tiDBJDBCClient
-        .splitTableRegion(
-          options.database,
-          options.table,
-          minHandle,
-          maxHandle,
-          regionSplitNum
-        )
-    }
-
     // when data to be inserted is too small to do region split, we check is user set region split num.
     // If so, we do region split as user's intention. This is also useful for writing test case.
-    if (options.enableRegionSplit && options.regionSplitNum != 0) {
-      tiDBJDBCClient
-        .splitTableRegion(
-          options.database,
-          options.table,
-          0,
-          Int.MaxValue,
-          options.regionSplitNum
-        )
+    if (options.enableRegionSplit) {
+      if (options.regionSplitNum != 0) {
+        tiDBJDBCClient
+          .splitTableRegion(
+            options.database,
+            options.table,
+            0,
+            Int.MaxValue,
+            options.regionSplitNum
+          )
+      } else {
+        val rowSize = tiTableInfo.getEstimatedRowSizeInByte
+        val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (options.regionSize * 1024 * 1024)
+        val minHandle = wrappedRowRdd.min().handle
+        val maxHandle = wrappedRowRdd.max().handle
+        // region split
+        if (regionSplitNum > 1) {
+          logger.info("region split is enabled.")
+          tiDBJDBCClient
+            .splitTableRegion(
+              options.database,
+              options.table,
+              minHandle,
+              maxHandle,
+              regionSplitNum
+            )
+        }
+      }
+
     }
+
   }
 }
 
