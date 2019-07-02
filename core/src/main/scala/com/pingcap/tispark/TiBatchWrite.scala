@@ -696,7 +696,8 @@ class TiBatchWrite(@transient val df: DataFrame,
         )
     }
 
-    // this is only used for test
+    // when data to be inserted is too small to do region split, we check is user set region split num.
+    // If so, we do region split as user's intention. This is also useful for writing test case.
     if (options.enableRegionSplit && options.regionSplitNum != 0) {
       tiDBJDBCClient
         .splitTableRegion(
