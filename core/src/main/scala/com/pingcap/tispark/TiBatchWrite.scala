@@ -683,8 +683,8 @@ class TiBatchWrite(@transient val df: DataFrame,
   private def splitTableRegion(wrappedRowRdd: RDD[WrappedRow]) = {
     // when data to be inserted is too small to do region split, we check is user set region split num.
     // If so, we do region split as user's intention. This is also useful for writing test case.
-    if (options.enableRegionSplit) {
-      if (options.regionSplitNum != 0 && isEnableSplitRegion) {
+    if (options.enableRegionSplit && isEnableSplitRegion) {
+      if (options.regionSplitNum != 0) {
         tiDBJDBCClient
           .splitTableRegion(
             options.database,
@@ -700,8 +700,9 @@ class TiBatchWrite(@transient val df: DataFrame,
         val minHandle = wrappedRowRdd.min().handle
         val maxHandle = wrappedRowRdd.max().handle
         // region split
-        if (regionSplitNum > 1 && isEnableSplitRegion) {
+        if (regionSplitNum > 1) {
           logger.info("region split is enabled.")
+          logger.info("regionSplitNum="+ regionSplitNum)
           tiDBJDBCClient
             .splitTableRegion(
               options.database,
