@@ -12,7 +12,7 @@ class RegionSplitSuite extends BaseDataSourceTest("region_split_test") {
     )
   )
 
-  test("region pre split test") {
+  test("region split test") {
     // do not test this case on tidb which does not support split region
     if (!isEnableSplitRegion) {
       cancel

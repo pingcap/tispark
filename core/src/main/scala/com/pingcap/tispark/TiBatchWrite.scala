@@ -696,20 +696,26 @@ class TiBatchWrite(@transient val df: DataFrame,
         val rowSize = tiTableInfo.getEstimatedRowSizeInByte
         //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
         val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
-        val minHandle = wrappedRowRdd.min().handle
-        val maxHandle = wrappedRowRdd.max().handle
         // region split
         if (regionSplitNum > 1) {
-          logger.info("region split is enabled.")
-          logger.info("regionSplitNum=" + regionSplitNum)
-          tiDBJDBCClient
-            .splitTableRegion(
-              options.database,
-              options.table,
-              minHandle,
-              maxHandle,
-              regionSplitNum
-            )
+          val minHandle = wrappedRowRdd.min().handle
+          val maxHandle = wrappedRowRdd.max().handle
+          val isValidSplit = maxHandle - minHandle > regionSplitNum * 1000
+          if (isValidSplit) {
+            logger.info("region split is enabled.")
+            logger.info("regionSplitNum=" + regionSplitNum)
+            tiDBJDBCClient
+              .splitTableRegion(
+                options.database,
+                options.table,
+                minHandle,
+                maxHandle,
+                regionSplitNum
+              )
+          } else {
+            logger.warn("region split is skipped")
+          }
+
         }
       }
     }
