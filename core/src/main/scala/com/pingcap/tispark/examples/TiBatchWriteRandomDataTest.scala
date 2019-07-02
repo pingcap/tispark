@@ -32,9 +32,6 @@ object TiBatchWriteRandomDataTest {
     val outputTable = args(1)
     val size = args(2).toInt
 
-    val enableRegionPreSplit = false
-    val regionSplitNumber = None
-
     // init
     val start = System.currentTimeMillis()
     val sparkConf = new SparkConf()
@@ -80,9 +77,7 @@ object TiBatchWriteRandomDataTest {
     TiBatchWrite.writeToTiDB(
       df,
       ti,
-      options,
-      regionSplitNumber,
-      enableRegionPreSplit
+      options
     )
 
     // time

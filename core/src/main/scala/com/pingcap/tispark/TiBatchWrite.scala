@@ -19,7 +19,7 @@ import java.util
 
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.catalog.Catalog
-import com.pingcap.tikv.codec.{CodecDataInput, CodecDataOutput, KeyUtils, TableCodec}
+import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
@@ -30,7 +30,6 @@ import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
-import javax.annotation.Nonnull
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -40,7 +39,6 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 object TiBatchWrite {
   type SparkRow = org.apache.spark.sql.Row
@@ -49,19 +47,13 @@ object TiBatchWrite {
 
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
-  def writeToTiDB(df: DataFrame,
-                  tiContext: TiContext,
-                  options: TiDBOptions,
-                  regionSplitNumber: Option[Int] = None,
-                  enableRegionPreSplit: Boolean = false): Unit =
-    new TiBatchWrite(df, tiContext, options, regionSplitNumber, enableRegionPreSplit).write()
+  def writeToTiDB(df: DataFrame, tiContext: TiContext, options: TiDBOptions): Unit =
+    new TiBatchWrite(df, tiContext, options).write()
 }
 
 class TiBatchWrite(@transient val df: DataFrame,
                    @transient val tiContext: TiContext,
-                   options: TiDBOptions,
-                   regionSplitNumber: Option[Int],
-                   enableRegionPreSplit: Boolean)
+                   options: TiDBOptions)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -86,66 +78,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   @transient private var tiDBJDBCClient: TiDBJDBCClient = _
   private var isEnableTableLock: Boolean = _
+  private var isEnableSplitRegion: Boolean = _
   private var tableLocked: Boolean = false
-
-  private def calculateSplitKeys(sampleRDD: RDD[TiRow],
-                                 estimatedTotalSize: Long,
-                                 sampleRDDCount: Long,
-                                 tblInfo: TiTableInfo,
-                                 isUpdate: Boolean,
-                                 regionSplitNumber: Option[Int]): List[SerializableKey] = {
-
-    var regionNeed = (estimatedTotalSize / 96.0).toLong
-    // update region split number if user want more region
-    if (regionSplitNumber.isDefined) {
-      if (regionSplitNumber.get > regionNeed) {
-        regionNeed = regionSplitNumber.get
-      }
-    }
-    // if region split is not needed, just return an empty list
-    if (regionNeed == 0) return List.empty
-
-    val handleRdd: RDD[Long] = sampleRDD
-      .map(row => extractHandleId(row))
-      .sortBy(k => k)
-    val step = sampleRDDCount / regionNeed
-
-    val splitKeys = handleRdd.zipWithIndex
-      .filter {
-        case (_, idx) => idx % step == 0
-      }
-      .map { handleWithIdx =>
-        new SerializableKey(RowKey.toRowKey(tblInfo.getId, handleWithIdx._1).getBytes)
-      }
-      .collect()
-      .toList
-
-    logger.info("region need split %d times".format(splitKeys.length))
-    splitKeys
-  }
-
-  private def calcRDDSize(rdd: RDD[TiRow]): Long =
-    rdd
-    // TODO make estimation more correctly
-      .map(row => row.fieldCount() * 64)
-      .reduce(_ + _) //add the sizes together
-
-  private def estimateDataSize(sampledRDD: RDD[TiRow], options: TiDBOptions) = {
-    // get all data size
-    val sampleRDDSize = calcRDDSize(sampledRDD)
-    logger.info(s"sample data size is ${sampleRDDSize / (1024 * 1024)} MB")
-
-    val sampleRowCount = sampledRDD.count()
-    val sampleAvgRowSize = sampleRDDSize / sampleRowCount
-    logger.info(s"sample avg row size is $sampleAvgRowSize")
-
-    val estimatedTotalSize = (sampleRowCount * sampleAvgRowSize) / options.sampleFraction
-    val formatter = java.text.NumberFormat.getIntegerInstance
-
-    val estimateInMB = estimatedTotalSize / (1024 * 1024)
-    logger.info("estimatedTotalSize is %s MB".format(formatter.format(estimateInMB)))
-    (estimateInMB.toLong, sampleRowCount)
-  }
 
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
@@ -213,6 +147,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     // lock table
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
     isEnableTableLock = tiDBJDBCClient.isEnableTableLock
+    isEnableSplitRegion = tiDBJDBCClient.isEnableSplitTable
     lockTable()
 
     // check schema
@@ -277,27 +212,6 @@ class TiBatchWrite(@transient val df: DataFrame,
     // check value not null
     checkValueNotNull(tiRowRdd)
 
-    // region pre-split
-    if (enableRegionPreSplit && handleCol != null) {
-      logger.info("region pre split is enabled.")
-      val sampleRDD =
-        tiRowRdd.sample(withReplacement = false, fraction = options.sampleFraction)
-      val (dataSize, sampleRDDCount) = estimateDataSize(sampleRDD, options)
-      // only perform region presplit if sample rdd is not empty
-      if (!sampleRDD.isEmpty()) {
-        tiContext.tiSession.splitRegionAndScatter(
-          calculateSplitKeys(
-            sampleRDD,
-            dataSize,
-            sampleRDDCount,
-            tiTableInfo,
-            isUpdate = false,
-            regionSplitNumber
-          ).map(k => k.bytes).asJava
-        )
-      }
-    }
-
     // get timestamp as start_ts
     val startTimeStamp = tiSession.getTimestamp
 
@@ -320,6 +234,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
+      splitTableRegion(wrappedRowRdd)
+
       val deletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
       if (!options.replace && !deletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
@@ -331,7 +247,9 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       mergedRDD.groupByKey().map {
         case (key, iterable) =>
-          // if rdd contains same key, it means we need delete and update the value associated the
+          // if rdd contains same key, it means we need first delete the old value and insert the new value associated the
+          // key. We can merge the two operation into one update operation.
+          // Note: the deletion operation's value of kv pair is empty.
           val valueOpt = iterable.find(value => value.nonEmpty)
           if (valueOpt.isDefined) {
             (key, valueOpt.get)
@@ -345,6 +263,8 @@ class TiBatchWrite(@transient val df: DataFrame,
       val wrappedRowRdd = tiRowRdd.zipWithIndex.map { row =>
         WrappedRow(row._1, row._2 + start)
       }
+
+      splitTableRegion(wrappedRowRdd)
       generateKV(wrappedRowRdd, remove = false)
     }
 
@@ -757,6 +677,49 @@ class TiBatchWrite(@transient val df: DataFrame,
   private def locatePhysicalTable(row: TiRow): Long = {
     tiTableInfo.getId
   }
+
+  private def splitTableRegion(wrappedRowRdd: RDD[WrappedRow]) = {
+    // when data to be inserted is too small to do region split, we check is user set region split num.
+    // If so, we do region split as user's intention. This is also useful for writing test case.
+    if (options.enableRegionSplit && isEnableSplitRegion) {
+      if (options.regionSplitNum != 0) {
+        tiDBJDBCClient
+          .splitTableRegion(
+            options.database,
+            options.table,
+            0,
+            Int.MaxValue,
+            options.regionSplitNum
+          )
+      } else {
+        //TODO refine this https://github.com/pingcap/tispark/issues/891
+        val rowSize = tiTableInfo.getEstimatedRowSizeInByte
+        //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
+        val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
+        // region split
+        if (regionSplitNum > 1) {
+          val minHandle = wrappedRowRdd.min().handle
+          val maxHandle = wrappedRowRdd.max().handle
+          val isValidSplit = maxHandle - minHandle > regionSplitNum * 1000
+          if (isValidSplit) {
+            logger.info("region split is enabled.")
+            logger.info("regionSplitNum=" + regionSplitNum)
+            tiDBJDBCClient
+              .splitTableRegion(
+                options.database,
+                options.table,
+                minHandle,
+                maxHandle,
+                regionSplitNum
+              )
+          } else {
+            logger.warn("region split is skipped")
+          }
+
+        }
+      }
+    }
+  }
 }
 
 class TiRegionPartitioner(regions: List[TiRegion]) extends Partitioner {
@@ -777,7 +740,9 @@ class TiRegionPartitioner(regions: List[TiRegion]) extends Partitioner {
   }
 }
 
-case class WrappedRow(row: TiRow, handle: Long)
+case class WrappedRow(row: TiRow, handle: Long) extends Ordered[WrappedRow] {
+  override def compare(that: WrappedRow): Int = this.handle.toInt - that.handle.toInt
+}
 
 class SerializableKey(val bytes: Array[Byte]) extends Serializable {
   override def toString: String = KeyUtils.formatBytes(bytes)

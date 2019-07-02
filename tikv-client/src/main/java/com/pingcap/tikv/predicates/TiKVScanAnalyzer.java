@@ -281,7 +281,7 @@ public class TiKVScanAnalyzer {
     }
 
     // table name and columns
-    long tableColSize = table.getColumnSize() + TABLE_PREFIX_SIZE;
+    long tableColSize = table.getEstimatedRowSizeInByte() + TABLE_PREFIX_SIZE;
 
     if (index == null || index.isFakePrimaryKey()) {
       planBuilder
