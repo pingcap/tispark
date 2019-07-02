@@ -694,6 +694,7 @@ class TiBatchWrite(@transient val df: DataFrame,
             options.regionSplitNum
           )
       } else {
+        //TODO refine this https://github.com/pingcap/tispark/issues/891
         val rowSize = tiTableInfo.getEstimatedRowSizeInByte
         //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
         val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
