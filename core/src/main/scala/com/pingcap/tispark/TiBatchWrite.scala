@@ -220,8 +220,6 @@ class TiBatchWrite(@transient val df: DataFrame,
     // currently we only support replace and insert.
     val constraintCheckIsNeeded = handleCol != null || uniqueIndices.nonEmpty
 
-    // TODO: region pre split is time consuming we can async execute region pre split operation
-    // and generate key-value pairs.  Once the split is successful, we can continue insertion.
     val encodedTiRowRDD = if (constraintCheckIsNeeded) {
       val wrappedRowRdd = if (tiTableInfo.isPkHandle) {
         tiRowRdd.map { row =>
