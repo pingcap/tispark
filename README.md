@@ -70,7 +70,7 @@ While TiSpark provides downward compatibility for TiDB, it guarantees **restrict
 | ----- | ------ |
 | 1.x | Spark v2.1.0+ |
 | 2.0 | Spark v2.3.0+ |
-| 2.1 | Spark v2.3.0+, Spark v2.4.0+ |
+| 2.1.x | Spark v2.3.0+, Spark v2.4.0+ |
 | Latest (master) | Spark v2.3.0+, Spark v2.4.0+ |
 
 ## How to migrate from Spark 2.1 to Spark 2.3/2.4
