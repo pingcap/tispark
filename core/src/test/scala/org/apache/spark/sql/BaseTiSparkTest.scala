@@ -20,6 +20,7 @@ package org.apache.spark.sql
 import java.sql.Statement
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.pingcap.tikv.TiDBJDBCClient
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
@@ -37,13 +38,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   private def tiCatalog = ti.tiCatalog
 
-  protected def isEnableTableLock: Boolean = {
-    val configJSON = queryTiDBViaJDBC("select @@tidb_config;").head.head.toString
-    val objectMapper = new ObjectMapper
-    val configMap = objectMapper.readValue(configJSON, classOf[java.util.HashMap[String, Object]])
-    val enableTableLock = configMap.getOrDefault("enable-table-lock", Boolean.box(false))
-    enableTableLock.asInstanceOf[Boolean]
-  }
+  protected def isEnableTableLock: Boolean = TiDBJDBCClient.isEnableTableLock
+
+  protected def isEnableSplitRegion: Boolean = TiDBJDBCClient.isEnableSplitTable
 
   protected def queryViaTiSpark(query: String): List[List[Any]] = {
     val df = sql(query)

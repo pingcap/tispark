@@ -13,6 +13,11 @@ class RegionSplitSuite extends BaseDataSourceTest("region_pre_split_test") {
   )
 
   test("region pre split test") {
+    // do test this case on tidb which does not support split region
+    if (!isEnableSplitRegion) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"CREATE TABLE  $dbtable ( `a` int(11) DEFAULT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"

@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 public class TiDBJDBCClient implements AutoCloseable {
-  private Connection connection;
+  private static Connection connection;
 
   private static final String UNLOCK_TABLES_SQL = "unlock tables";
   private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
@@ -38,7 +38,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     this.connection = connection;
   }
 
-  public boolean isEnableTableLock() throws IOException, SQLException {
+  public static boolean isEnableTableLock() throws IOException, SQLException {
     Map<String, Object> configMap = readConfMapFronTiDB();
     Object enableTableLock =
         configMap.getOrDefault(ENABLE_TABLE_LOCK_KEY, ENABLE_TABLE_LOCK_DEFAULT);
@@ -67,7 +67,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
   }
 
-  private Map<String, Object> readConfMapFronTiDB() throws SQLException, IOException {
+  private static Map<String, Object> readConfMapFronTiDB() throws SQLException, IOException {
     String configJSON = (String) queryTiDBViaJDBC(SELECT_TIDB_CONFIG_SQL).get(0).get(0);
     ObjectMapper objectMapper = new ObjectMapper();
     TypeReference<HashMap<String, Object>> typeRef =
@@ -75,7 +75,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     return objectMapper.readValue(configJSON, typeRef);
   }
 
-  public boolean isEnableSplitTable() throws IOException, SQLException {
+  public static boolean isEnableSplitTable() throws IOException, SQLException {
     Map<String, Object> configMap = readConfMapFronTiDB();
     Object splitTable = configMap.getOrDefault(ENABLE_SPLIT_TABLE_KEY, ENABLE_SPLIT_TABLE_DEFAULT);
     return (Boolean) splitTable;
@@ -103,7 +103,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     connection.close();
   }
 
-  private List<List<Object>> queryTiDBViaJDBC(String query) throws SQLException {
+  private static List<List<Object>> queryTiDBViaJDBC(String query) throws SQLException {
     ArrayList<List<Object>> result = new ArrayList<>();
 
     try (Statement tidbStmt = connection.createStatement()) {

@@ -146,8 +146,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // lock table
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
-    isEnableTableLock = tiDBJDBCClient.isEnableTableLock
-    isEnableSplitRegion = tiDBJDBCClient.isEnableSplitTable
+    isEnableTableLock = TiDBJDBCClient.isEnableTableLock
+    isEnableSplitRegion = TiDBJDBCClient.isEnableSplitTable
     lockTable()
 
     // check schema
