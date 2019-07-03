@@ -22,11 +22,13 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.codec.MyDecimal;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public class DecimalType extends DataType {
   public static final DecimalType DECIMAL = new DecimalType(MySQLType.TypeNewDecimal);
@@ -55,8 +57,8 @@ public class DecimalType extends DataType {
     return convertToMysqlDecimal(value);
   }
 
-  private java.math.BigDecimal convertToMysqlDecimal(Object value)
-      throws ConvertNotSupportException {
+  private MyDecimal convertToMysqlDecimal(Object value)
+      throws ConvertNotSupportException, ConvertOverflowException {
     java.math.BigDecimal result;
     if (value instanceof Boolean) {
       if ((Boolean) value) {
@@ -83,19 +85,48 @@ public class DecimalType extends DataType {
     } else {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
-    return result;
+
+    int length = (int) this.getLength();
+    int decimal = this.getDecimal();
+    return toGivenPrecisionAndFrac(result, length, decimal);
+  }
+
+  private MyDecimal toGivenPrecisionAndFrac(java.math.BigDecimal value, int precision, int frac)
+      throws ConvertOverflowException {
+    java.math.BigDecimal roundedValue = value.setScale(frac, RoundingMode.HALF_UP);
+
+    if (roundedValue.precision() > precision) {
+      throw ConvertOverflowException.newOutOfRange();
+    }
+
+    MyDecimal roundedMyDecimal = new MyDecimal();
+    roundedMyDecimal.fromString(roundedValue.toPlainString());
+    int[] bin = roundedMyDecimal.toBin(precision, frac);
+
+    MyDecimal resultMyDecimal = new MyDecimal();
+    resultMyDecimal.fromBin(precision, frac, bin);
+
+    return resultMyDecimal;
   }
 
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    BigDecimal val = Converter.convertToBigDecimal(value);
-    DecimalCodec.writeDecimalFully(cdo, val);
+    if (value instanceof MyDecimal) {
+      DecimalCodec.writeDecimalFully(cdo, (MyDecimal) value);
+    } else {
+      BigDecimal val = Converter.convertToBigDecimal(value);
+      DecimalCodec.writeDecimalFully(cdo, val);
+    }
   }
 
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    BigDecimal val = Converter.convertToBigDecimal(value);
-    DecimalCodec.writeDecimalFully(cdo, val);
+    if (value instanceof MyDecimal) {
+      DecimalCodec.writeDecimalFully(cdo, (MyDecimal) value);
+    } else {
+      BigDecimal val = Converter.convertToBigDecimal(value);
+      DecimalCodec.writeDecimalFully(cdo, val);
+    }
   }
 
   @Override
