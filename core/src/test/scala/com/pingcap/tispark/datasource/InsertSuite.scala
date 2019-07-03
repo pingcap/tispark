@@ -203,24 +203,26 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
         StructField("s", StringType)
       )
     )
+
+    var data = List(Row("Hello"))
+
     // insert 2 rows
-    var data = List(Row(1, "Hello"))
     var insert = generateData(30000, 2, true)
-    data = data ::: generateData(30000, 2)
+    data = data ::: insert
     tidbWrite(insert, withOutIDSchema)
-    testTiDBSelect(data)
+    testTiDBSelect(data, "i", "s")
 
     // insert ~100 rows
     insert = generateData(30002, 98, true)
-    data = data ::: generateData(30002, 98)
+    data = data ::: insert
     tidbWrite(insert, withOutIDSchema)
-    testTiDBSelect(data)
+    testTiDBSelect(data, "i", "s")
 
     // insert ~1000 rows
     insert = generateData(30100, 900, true)
-    data = data ::: generateData(30100, 900)
+    data = data ::: insert
     tidbWrite(insert, withOutIDSchema)
-    testTiDBSelect(data)
+    testTiDBSelect(data, "i", "s")
   }
 
   override def afterAll(): Unit =
