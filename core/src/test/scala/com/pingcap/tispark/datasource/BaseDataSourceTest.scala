@@ -63,13 +63,21 @@ class BaseDataSourceTest(val table: String,
       .save()
   }
 
-  protected def testTiDBSelect(expectedAnswer: Seq[Row], sortCol: String = "i"): Unit = {
+  protected def testTiDBSelect(expectedAnswer: Seq[Row],
+                               sortCol: String = "i",
+                               selectCol: String = null): Unit = {
     // check data source result & expected answer
-    val df = queryDatasourceTiDB(sortCol)
+    var df = queryDatasourceTiDB(sortCol)
+    if (selectCol != null) {
+      df = df.select(selectCol)
+    }
     checkAnswer(df, expectedAnswer)
 
     // check table scan
-    val df2 = queryDatasourceTableScan(sortCol)
+    var df2 = queryDatasourceTableScan(sortCol)
+    if (selectCol != null) {
+      df2 = df2.select(selectCol)
+    }
     checkAnswer(df2, expectedAnswer)
   }
 
