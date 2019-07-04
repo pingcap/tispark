@@ -19,12 +19,12 @@ If you are using maven, add the following to your pom.xml:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-core</artifactId>
-      <version>1.2</version>
+      <version>1.2.1</version>
     </dependency>
     <dependency>
       <groupId>com.pingcap.tikv</groupId>
       <artifactId>tikv-client</artifactId>
-      <version>1.2</version>
+      <version>1.2.1</version>
     </dependency>
 </dependencies>
 ```
