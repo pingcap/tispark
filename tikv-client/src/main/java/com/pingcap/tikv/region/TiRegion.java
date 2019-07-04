@@ -27,7 +27,6 @@ import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import com.pingcap.tikv.kvproto.Metapb;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Region;
-
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
@@ -41,7 +40,8 @@ public class TiRegion implements Serializable {
   private final IsolationLevel isolationLevel;
   private final Kvrpcpb.CommandPri commandPri;
 
-  public TiRegion(Region meta, Peer peer, IsolationLevel isolationLevel, Kvrpcpb.CommandPri commandPri) {
+  public TiRegion(
+      Region meta, Peer peer, IsolationLevel isolationLevel, Kvrpcpb.CommandPri commandPri) {
     Objects.requireNonNull(meta, "meta is null");
     this.meta = decodeRegion(meta);
     if (peer == null || peer.getId() == 0) {
@@ -141,12 +141,13 @@ public class TiRegion implements Serializable {
   }
 
   public String toString() {
-    return String.format("{Region[%d] ConfVer[%d] Version[%d] Store[%d] KeyRange[%s]:[%s]}",
-                          getId(),
-                          getRegionEpoch().getConfVer(),
-                          getRegionEpoch().getVersion(),
-                          getLeader().getStoreId(),
-                          KeyUtils.formatBytes(getStartKey()),
-                          KeyUtils.formatBytes(getEndKey()));
+    return String.format(
+        "{Region[%d] ConfVer[%d] Version[%d] Store[%d] KeyRange[%s]:[%s]}",
+        getId(),
+        getRegionEpoch().getConfVer(),
+        getRegionEpoch().getVersion(),
+        getLeader().getStoreId(),
+        KeyUtils.formatBytes(getStartKey()),
+        KeyUtils.formatBytes(getEndKey()));
   }
 }

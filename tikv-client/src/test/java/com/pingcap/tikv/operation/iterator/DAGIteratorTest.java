@@ -109,7 +109,6 @@ public class DAGIteratorTest {
     server.stop();
   }
 
-
   @Test
   public void staleEpochTest() throws Exception {
     Metapb.Store store =
@@ -128,9 +127,12 @@ public class DAGIteratorTest {
     req.resolve();
 
     List<KeyRange> keyRanges =
-        ImmutableList.of(createByteStringRange(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key4")));
+        ImmutableList.of(
+            createByteStringRange(
+                ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key4")));
 
-    pdServer.addGetRegionResp(GrpcUtils.makeGetRegionResponse(pdServer.getClusterId(), region.getMeta()));
+    pdServer.addGetRegionResp(
+        GrpcUtils.makeGetRegionResponse(pdServer.getClusterId(), region.getMeta()));
     pdServer.addGetStoreResp(GrpcUtils.makeGetStoreResponse(pdServer.getClusterId(), store));
     server.putError("key1", KVMockServer.STALE_EPOCH);
     CodecDataOutput cdo = new CodecDataOutput();
@@ -145,7 +147,6 @@ public class DAGIteratorTest {
     assertEquals(r.get(0, infer.getType(0)), 666L);
     assertEquals(r.get(1, infer.getType(1)), "value1");
   }
-
 
   private static KeyRange createByteStringRange(ByteString sKey, ByteString eKey) {
     return KeyRange.newBuilder().setStart(sKey).setEnd(eKey).build();

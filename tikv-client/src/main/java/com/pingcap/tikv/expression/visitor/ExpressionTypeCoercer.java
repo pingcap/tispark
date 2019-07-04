@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv.expression.visitor;
 
+import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.*;
@@ -24,29 +25,25 @@ import com.pingcap.tikv.types.DecimalType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.RealType;
 import com.pingcap.tikv.util.Pair;
-
 import java.util.IdentityHashMap;
 import java.util.List;
 
-import static java.util.Objects.requireNonNull;
-
 /**
- * Validate and infer expression type
- * Collected results are returned getTypeMap
- * For now we don't do any type promotion and only coerce from left to right.
+ * Validate and infer expression type Collected results are returned getTypeMap For now we don't do
+ * any type promotion and only coerce from left to right.
  */
 public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataType> {
   private final IdentityHashMap<Expression, DataType> typeMap = new IdentityHashMap<>();
-  private final static double MAX_CREDIBILITY = 1.0;
-  private final static double MIN_CREDIBILITY = 0.1;
-  private final static double COLUMN_REF_CRED = MAX_CREDIBILITY;
-  private final static double CONSTANT_CRED = MIN_CREDIBILITY;
-  private final static double LOGICAL_OP_CRED = MAX_CREDIBILITY;
-  private final static double COMPARISON_OP_CRED = MAX_CREDIBILITY;
-  private final static double SRING_REG_OP_CRED = MAX_CREDIBILITY;
-  private final static double FUNCTION_CRED = MAX_CREDIBILITY;
-  private final static double ISNULL_CRED = MAX_CREDIBILITY;
-  private final static double NOT_CRED = MAX_CREDIBILITY;
+  private static final double MAX_CREDIBILITY = 1.0;
+  private static final double MIN_CREDIBILITY = 0.1;
+  private static final double COLUMN_REF_CRED = MAX_CREDIBILITY;
+  private static final double CONSTANT_CRED = MIN_CREDIBILITY;
+  private static final double LOGICAL_OP_CRED = MAX_CREDIBILITY;
+  private static final double COMPARISON_OP_CRED = MAX_CREDIBILITY;
+  private static final double SRING_REG_OP_CRED = MAX_CREDIBILITY;
+  private static final double FUNCTION_CRED = MAX_CREDIBILITY;
+  private static final double ISNULL_CRED = MAX_CREDIBILITY;
+  private static final double NOT_CRED = MAX_CREDIBILITY;
 
   public IdentityHashMap<Expression, DataType> getTypeMap() {
     return typeMap;
@@ -80,7 +77,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   // Try to coerceType if needed
   // A column reference is source of coerce and constant is the subject to coerce
   // targetType null means no coerce needed from parent and choose the highest credibility result
-  protected Pair<DataType, Double> coerceType(DataType targetType, Expression...nodes) {
+  protected Pair<DataType, Double> coerceType(DataType targetType, Expression... nodes) {
     if (nodes.length == 0) {
       throw new TiExpressionException("failed to verify empty node list");
     }
@@ -167,32 +164,35 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
     FunctionType fType = node.getType();
     coerceType(null, node.getArgument());
     switch (fType) {
-      case Count: {
-        if (targetType != null && targetType.equals(IntegerType.BIGINT)) {
-          throw new TiExpressionException(String.format("Count cannot be %s", targetType));
+      case Count:
+        {
+          if (targetType != null && targetType.equals(IntegerType.BIGINT)) {
+            throw new TiExpressionException(String.format("Count cannot be %s", targetType));
+          }
+          typeMap.put(node, IntegerType.BIGINT);
+          return Pair.create(targetType, FUNCTION_CRED);
         }
-        typeMap.put(node, IntegerType.BIGINT);
-        return Pair.create(targetType, FUNCTION_CRED);
-      }
-      case Sum: {
-        if (targetType != null && targetType.equals(DecimalType.DECIMAL)) {
-          throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
+      case Sum:
+        {
+          if (targetType != null && targetType.equals(DecimalType.DECIMAL)) {
+            throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
+          }
+          DataType colType = node.getArgument().accept(this, null).first;
+          if (colType instanceof RealType) {
+            typeMap.put(node, RealType.DOUBLE);
+          } else {
+            typeMap.put(node, DecimalType.DECIMAL);
+          }
+          return Pair.create(targetType, FUNCTION_CRED);
         }
-        DataType colType = node.getArgument().accept(this, null).first;
-        if (colType instanceof RealType) {
-          typeMap.put(node, RealType.DOUBLE);
-        } else {
-          typeMap.put(node, DecimalType.DECIMAL);
-        }
-        return Pair.create(targetType, FUNCTION_CRED);
-      }
       case First:
       case Max:
-      case Min: {
-        Pair<DataType, Double> result = coerceType(targetType, node.getArgument());
-        typeMap.put(node, result.first);
-        return result;
-      }
+      case Min:
+        {
+          Pair<DataType, Double> result = coerceType(targetType, node.getArgument());
+          typeMap.put(node, result.first);
+          return result;
+        }
       default:
         throw new TiExpressionException(String.format("Unknown function %s", fType));
     }

@@ -31,7 +31,6 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 
-
 public class CatalogTransactionTest {
   private KVMockServer kvServer;
   private PDMockServer pdServer;
@@ -43,8 +42,12 @@ public class CatalogTransactionTest {
     pdServer = new PDMockServer();
     pdServer.start(CLUSTER_ID);
     kvServer = new KVMockServer();
-    kvServer.start(new TiRegion(MetaMockHelper.region, MetaMockHelper.region.getPeers(0),
-        IsolationLevel.RC, CommandPri.Low));
+    kvServer.start(
+        new TiRegion(
+            MetaMockHelper.region,
+            MetaMockHelper.region.getPeers(0),
+            IsolationLevel.RC,
+            CommandPri.Low));
     // No PD needed in this test
     conf = TiConfiguration.createDefault("127.0.0.1:" + pdServer.port);
   }

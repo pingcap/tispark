@@ -17,7 +17,6 @@
 
 package com.pingcap.tikv.region;
 
-
 import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
 import static com.pingcap.tikv.util.KeyRangeUtils.makeRange;
 
@@ -28,17 +27,14 @@ import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.kvproto.Metapb.Peer;
 import com.pingcap.tikv.kvproto.Metapb.Store;
 import com.pingcap.tikv.kvproto.Metapb.StoreState;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import com.pingcap.tikv.key.Key;
-
 import java.util.*;
-
 import org.apache.log4j.Logger;
-
 
 public class RegionManager {
   private static final Logger logger = Logger.getLogger(RegionManager.class);
@@ -53,8 +49,8 @@ public class RegionManager {
   }
 
   public static class RegionCache {
-    private final Map<Long, TiRegion>             regionCache;
-    private final Map<Long, Store>                storeCache;
+    private final Map<Long, TiRegion> regionCache;
+    private final Map<Long, Store> storeCache;
     private final RangeMap<Key, Long> keyToRegionIdCache;
     private final ReadOnlyPDClient pdClient;
 
@@ -112,9 +108,7 @@ public class RegionManager {
       return region;
     }
 
-    /**
-     * Removes region associated with regionId from regionCache.
-     */
+    /** Removes region associated with regionId from regionCache. */
     public synchronized void invalidateRegion(long regionId) {
       try {
         if (logger.isDebugEnabled()) {
@@ -131,7 +125,7 @@ public class RegionManager {
     public synchronized void invalidateAllRegionForStore(long storeId) {
       List<TiRegion> regionToRemove = new ArrayList<>();
       for (TiRegion r : regionCache.values()) {
-        if(r.getLeader().getStoreId() == storeId) {
+        if (r.getLeader().getStoreId() == storeId) {
           if (logger.isDebugEnabled()) {
             logger.debug(String.format("invalidateAllRegionForStore Region[%s]", r));
           }
@@ -149,7 +143,6 @@ public class RegionManager {
     public synchronized void invalidateStore(long storeId) {
       storeCache.remove(storeId);
     }
-
 
     public synchronized Store getStoreById(long id) {
       try {
@@ -215,7 +208,8 @@ public class RegionManager {
     TiRegion r = cache.regionCache.get(regionId);
     if (r != null) {
       if (!r.switchPeer(storeId)) {
-        // failed to switch leader, possibly region is outdated, we need to drop region cache from regionCache
+        // failed to switch leader, possibly region is outdated, we need to drop region cache from
+        // regionCache
         logger.warn("Cannot find peer when updating leader (" + regionId + "," + storeId + ")");
         // drop region cache using verId
         cache.invalidateRegion(regionId);
@@ -227,6 +221,7 @@ public class RegionManager {
 
   /**
    * Clears all cache when a TiKV server does not respond
+   *
    * @param regionId region's id
    * @param storeId TiKV store's id
    */

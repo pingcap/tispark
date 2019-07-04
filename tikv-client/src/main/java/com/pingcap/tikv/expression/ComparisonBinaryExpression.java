@@ -15,19 +15,17 @@
 
 package com.pingcap.tikv.expression;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.*;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.types.DataType;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.*;
-import static java.util.Objects.requireNonNull;
 
 public class ComparisonBinaryExpression implements Expression {
   public enum Type {
@@ -100,7 +98,7 @@ public class ComparisonBinaryExpression implements Expression {
   private final Expression left;
   private final Expression right;
   private final Type compType;
-  transient private Optional<NormalizedPredicate> normalizedPredicate;
+  private transient Optional<NormalizedPredicate> normalizedPredicate;
 
   public ComparisonBinaryExpression(Type type, Expression left, Expression right) {
     this.left = requireNonNull(left, "left expression is null");
@@ -159,10 +157,11 @@ public class ComparisonBinaryExpression implements Expression {
           break;
         default:
           throw new TiExpressionException(
-              String.format("PredicateNormalizer is not able to process type %s", getComparisonType())
-          );
+              String.format(
+                  "PredicateNormalizer is not able to process type %s", getComparisonType()));
       }
-      ComparisonBinaryExpression newExpression = new ComparisonBinaryExpression(newType, right, left);
+      ComparisonBinaryExpression newExpression =
+          new ComparisonBinaryExpression(newType, right, left);
       normalizedPredicate = Optional.of(new NormalizedPredicate(newExpression));
       return normalizedPredicate.get();
     } else if (getRight() instanceof Constant && getLeft() instanceof ColumnRef) {
@@ -188,9 +187,9 @@ public class ComparisonBinaryExpression implements Expression {
     }
 
     ComparisonBinaryExpression that = (ComparisonBinaryExpression) other;
-    return (compType == that.compType) &&
-        Objects.equals(left, that.left) &&
-        Objects.equals(right, that.right);
+    return (compType == that.compType)
+        && Objects.equals(left, that.left)
+        && Objects.equals(right, that.right);
   }
 
   @Override

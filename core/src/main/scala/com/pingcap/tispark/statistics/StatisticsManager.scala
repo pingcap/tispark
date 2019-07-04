@@ -19,12 +19,20 @@ package com.pingcap.tispark.statistics
 
 import com.google.common.cache.CacheBuilder
 import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo, TiTableInfo}
+import com.pingcap.tikv.meta.{
+  TiColumnInfo,
+  TiDAGRequest,
+  TiIndexInfo,
+  TiTableInfo
+}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
-import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
+import com.pingcap.tispark.statistics.estimate.{
+  DefaultTableSizeEstimator,
+  TableSizeEstimator
+}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 
@@ -52,20 +60,21 @@ private[statistics] case class StatisticsResult(histId: Long,
 }
 
 /**
- * Manager class for maintaining table statistics information cache.
- *
- * Statistics information is useful for index selection and broadcast join support in TiSpark currently,
- * and these are arranged follows:
- * `statisticsMap` contains `tableId`->[[TableStatistics]] data, each table(id) will have a [[TableStatistics]]
- * if you have loaded statistics information successfully.
- *
- * @param tiSession TiSession used for selecting statistics information from TiKV
- */
+  * Manager class for maintaining table statistics information cache.
+  *
+  * Statistics information is useful for index selection and broadcast join support in TiSpark currently,
+  * and these are arranged follows:
+  * `statisticsMap` contains `tableId`->[[TableStatistics]] data, each table(id) will have a [[TableStatistics]]
+  * if you have loaded statistics information successfully.
+  *
+  * @param tiSession TiSession used for selecting statistics information from TiKV
+  */
 class StatisticsManager(tiSession: TiSession) {
   private lazy val snapshot = tiSession.createSnapshot()
   private lazy val catalog = tiSession.getCatalog
   // An estimator used to calculate table size.
-  private var tableSizeEstimator: TableSizeEstimator = new DefaultTableSizeEstimator(this)
+  private var tableSizeEstimator: TableSizeEstimator =
+    new DefaultTableSizeEstimator(this)
   // Statistics information table columns explanation:
   // stats_meta:
   //       Version       | A time stamp assigned by pd, updates along with DDL updates.
@@ -87,74 +96,89 @@ class StatisticsManager(tiSession: TiSession) {
   //
   // More explanation could be found here
   // https://github.com/pingcap/docs/blob/master/sql/statistics.md
-  private[statistics] lazy val metaTable = catalog.getTable("mysql", "stats_meta")
-  private[statistics] lazy val histTable = catalog.getTable("mysql", "stats_histograms")
-  private[statistics] lazy val bucketTable = catalog.getTable("mysql", "stats_buckets")
+  private[statistics] lazy val metaTable =
+    catalog.getTable("mysql", "stats_meta")
+  private[statistics] lazy val histTable =
+    catalog.getTable("mysql", "stats_histograms")
+  private[statistics] lazy val bucketTable =
+    catalog.getTable("mysql", "stats_buckets")
   private final lazy val logger = LoggerFactory.getLogger(getClass.getName)
   private final val statisticsMap = CacheBuilder
     .newBuilder()
     .build[java.lang.Long, TableStatistics]
 
   /**
-   * Load statistics information maintained by TiDB to TiSpark.
-   *
-   * @param table   The table whose statistics info is needed.
-   * @param columns Concerning columns for `table`, only these columns' statistics information
-   *                will be loaded, if empty, all columns' statistics info will be loaded
-   */
-  def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit = synchronized {
-    require(table != null, "TableInfo should not be null")
-    if (!StatisticsHelper.isManagerReady(this)) {
-      logger.warn(
-        "Some of the statistics information table are not loaded properly, " +
-          "make sure you have executed analyze table command before these information could be used by TiSpark."
-      )
-      return
+    * Load statistics information maintained by TiDB to TiSpark.
+    *
+    * @param table   The table whose statistics info is needed.
+    * @param columns Concerning columns for `table`, only these columns' statistics information
+    *                will be loaded, if empty, all columns' statistics info will be loaded
+    */
+  def loadStatisticsInfo(table: TiTableInfo, columns: String*): Unit =
+    synchronized {
+      require(table != null, "TableInfo should not be null")
+      if (!StatisticsHelper.isManagerReady(this)) {
+        logger.warn(
+          "Some of the statistics information table are not loaded properly, " +
+            "make sure you have executed analyze table command before these information could be used by TiSpark."
+        )
+        return
+      }
+
+      val tblId = table.getId
+      val tblCols = table.getColumns
+      val loadAll = columns == null || columns.isEmpty
+      var neededColIds = mutable.ArrayBuffer[Long]()
+      if (!loadAll) {
+        // check whether input column could be found in the table
+        columns.distinct.foreach((col: String) => {
+          val isColValid = tblCols.exists(_.matchName(col))
+          if (!isColValid) {
+            throw new RuntimeException(
+              s"Column $col cannot be found in table ${table.getName}")
+          } else {
+            neededColIds += tblCols.find(_.matchName(col)).get.getId
+          }
+        })
+      }
+
+      // use cached one for incremental update
+      val tblStatistic = if (statisticsMap.asMap.containsKey(tblId)) {
+        statisticsMap.getIfPresent(tblId)
+      } else {
+        new TableStatistics(tblId)
+      }
+
+      loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
     }
 
-    val tblId = table.getId
-    val tblCols = table.getColumns
-    val loadAll = columns == null || columns.isEmpty
-    var neededColIds = mutable.ArrayBuffer[Long]()
-    if (!loadAll) {
-      // check whether input column could be found in the table
-      columns.distinct.foreach((col: String) => {
-        val isColValid = tblCols.exists(_.matchName(col))
-        if (!isColValid) {
-          throw new RuntimeException(s"Column $col cannot be found in table ${table.getName}")
-        } else {
-          neededColIds += tblCols.find(_.matchName(col)).get.getId
-        }
-      })
-    }
+  private[statistics] def readDAGRequest(req: TiDAGRequest): Iterator[Row] =
+    snapshot.tableRead(req)
 
-    // use cached one for incremental update
-    val tblStatistic = if (statisticsMap.asMap.containsKey(tblId)) {
-      statisticsMap.getIfPresent(tblId)
-    } else {
-      new TableStatistics(tblId)
-    }
-
-    loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
-  }
-
-  private[statistics] def readDAGRequest(req: TiDAGRequest): Iterator[Row] = snapshot.tableRead(req)
-
-  private def loadStatsFromStorage(tblId: Long,
-                                   tblStatistic: TableStatistics,
-                                   table: TiTableInfo,
-                                   loadAll: Boolean,
-                                   neededColIds: mutable.ArrayBuffer[Long]): Unit = {
+  private def loadStatsFromStorage(
+      tblId: Long,
+      tblStatistic: TableStatistics,
+      table: TiTableInfo,
+      loadAll: Boolean,
+      neededColIds: mutable.ArrayBuffer[Long]): Unit = {
     // load count, modify_count, version info
     loadMetaToTblStats(tblId, tblStatistic)
     val req = StatisticsHelper
-      .buildHistogramsRequest(histTable, tblId, snapshot.getTimestamp.getVersion)
+      .buildHistogramsRequest(histTable,
+                              tblId,
+                              snapshot.getTimestamp.getVersion)
 
     val rows = readDAGRequest(req)
     if (rows.isEmpty) return
 
     val requests = rows
-      .map { StatisticsHelper.extractStatisticsDTO(_, table, loadAll, neededColIds, histTable) }
+      .map {
+        StatisticsHelper.extractStatisticsDTO(_,
+                                              table,
+                                              loadAll,
+                                              neededColIds,
+                                              histTable)
+      }
       .filter { _ != null }
     val results = statisticsResultFromStorage(tblId, requests.toSeq)
 
@@ -164,7 +188,8 @@ class StatisticsManager(tiSession: TiSession) {
     statisticsMap.put(tblId, tblStatistic)
   }
 
-  private def putOrUpdateTblStats(tblStatistic: TableStatistics, result: StatisticsResult): Unit =
+  private def putOrUpdateTblStats(tblStatistic: TableStatistics,
+                                  result: StatisticsResult): Unit =
     if (result.hasIdxInfo) {
       val oldIdxSts = tblStatistic.getIndexHistMap.putIfAbsent(
         result.histId,
@@ -193,9 +218,12 @@ class StatisticsManager(tiSession: TiSession) {
       }
     }
 
-  private def loadMetaToTblStats(tableId: Long, tableStatistics: TableStatistics): Unit = {
+  private def loadMetaToTblStats(tableId: Long,
+                                 tableStatistics: TableStatistics): Unit = {
     val req =
-      StatisticsHelper.buildMetaRequest(metaTable, tableId, snapshot.getTimestamp.getVersion)
+      StatisticsHelper.buildMetaRequest(metaTable,
+                                        tableId,
+                                        snapshot.getTimestamp.getVersion)
 
     val rows = readDAGRequest(req)
     if (rows.isEmpty) return
@@ -206,10 +234,13 @@ class StatisticsManager(tiSession: TiSession) {
     tableStatistics.setVersion { row.getUnsignedLong(3) }
   }
 
-  private def statisticsResultFromStorage(tableId: Long,
-                                          requests: Seq[StatisticsDTO]): Seq[StatisticsResult] = {
+  private def statisticsResultFromStorage(
+      tableId: Long,
+      requests: Seq[StatisticsDTO]): Seq[StatisticsResult] = {
     val req =
-      StatisticsHelper.buildBucketRequest(bucketTable, tableId, snapshot.getTimestamp.getVersion)
+      StatisticsHelper.buildBucketRequest(bucketTable,
+                                          tableId,
+                                          snapshot.getTimestamp.getVersion)
 
     val rows = readDAGRequest(req)
     if (rows.isEmpty) return Nil
@@ -223,8 +254,12 @@ class StatisticsManager(tiSession: TiSession) {
         val (idxRows, colRows) = rowsById.partition { _.getLong(6) > 0 }
         val (idxReq, colReq) = requests.partition { _.isIndex > 0 }
         Array(
-          StatisticsHelper.extractStatisticResult(histId, idxRows.iterator, idxReq),
-          StatisticsHelper.extractStatisticResult(histId, colRows.iterator, colReq)
+          StatisticsHelper.extractStatisticResult(histId,
+                                                  idxRows.iterator,
+                                                  idxReq),
+          StatisticsHelper.extractStatisticResult(histId,
+                                                  colRows.iterator,
+                                                  colReq)
         )
       }
       .filter { _ != null }
@@ -235,19 +270,21 @@ class StatisticsManager(tiSession: TiSession) {
     statisticsMap.getIfPresent(id)
 
   /**
-   * Estimated row count of one table
-   * @param table table to evaluate
-   * @return estimated number of rows in this table
-   */
-  def estimatedRowCount(table: TiTableInfo): Long = tableSizeEstimator.estimatedCount(table)
+    * Estimated row count of one table
+    * @param table table to evaluate
+    * @return estimated number of rows in this table
+    */
+  def estimatedRowCount(table: TiTableInfo): Long =
+    tableSizeEstimator.estimatedCount(table)
 
   /**
-   * Estimated table size in bytes using statistic info.
-   *
-   * @param table table to estimate
-   * @return estimated table size in bytes
-   */
-  def estimateTableSize(table: TiTableInfo): Long = tableSizeEstimator.estimatedTableSize(table)
+    * Estimated table size in bytes using statistic info.
+    *
+    * @param table table to estimate
+    * @return estimated table size in bytes
+    */
+  def estimateTableSize(table: TiTableInfo): Long =
+    tableSizeEstimator.estimatedTableSize(table)
 
   def setEstimator(estimator: TableSizeEstimator): StatisticsManager = {
     this.tableSizeEstimator = estimator
@@ -271,7 +308,8 @@ object StatisticsManager {
 
   def getInstance(): StatisticsManager = {
     if (manager == null) {
-      throw new RuntimeException("StatisticsManager has not been initialized properly.")
+      throw new RuntimeException(
+        "StatisticsManager has not been initialized properly.")
     }
     manager
   }

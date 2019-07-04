@@ -15,16 +15,14 @@
 
 package com.pingcap.tikv.key;
 
+import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
+import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.FastByteComparisons;
-
 import java.util.Arrays;
-
-import static com.pingcap.tikv.codec.KeyUtils.formatBytes;
-import static java.util.Objects.requireNonNull;
 
 public class Key implements Comparable<Key> {
   protected static final byte[] TBL_PREFIX = new byte[] {'t'};
@@ -32,10 +30,10 @@ public class Key implements Comparable<Key> {
   protected final byte[] value;
   protected final int infFlag;
 
-  public final static Key EMPTY = createEmpty();
-  public final static Key NULL = createNull();
-  public final static Key MIN = createTypelessMin();
-  public final static Key MAX = createTypelessMax();
+  public static final Key EMPTY = createEmpty();
+  public static final Key NULL = createNull();
+  public static final Key MIN = createTypelessMin();
+  public static final Key MAX = createTypelessMax();
 
   private Key(byte[] value, boolean negative) {
     this.value = requireNonNull(value, "value is null");
@@ -123,7 +121,7 @@ public class Key implements Comparable<Key> {
     int i;
     byte[] newVal = Arrays.copyOf(value, value.length);
     for (i = newVal.length - 1; i >= 0; i--) {
-      newVal[i] ++;
+      newVal[i]++;
       if (newVal[i] != 0) {
         break;
       }
@@ -150,7 +148,7 @@ public class Key implements Comparable<Key> {
       return true;
     }
     if (other instanceof Key) {
-      return compareTo((Key)other) == 0;
+      return compareTo((Key) other) == 0;
     } else {
       return false;
     }

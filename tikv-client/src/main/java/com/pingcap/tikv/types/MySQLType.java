@@ -17,7 +17,6 @@
 
 package com.pingcap.tikv.types;
 
-
 import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;

@@ -21,8 +21,11 @@ import org.apache.spark.sql.functions.{col, sum}
 class IssueTestSuite extends BaseTiSparkSuite {
 
   test("test db prefix") {
-    ti.tidbMapTable(s"${dbPrefix}tispark_test", "full_data_type_table", dbNameAsPrefix = true)
-    val df = spark.sql(s"select count(*) from ${dbPrefix}tispark_test_full_data_type_table")
+    ti.tidbMapTable(s"${dbPrefix}tispark_test",
+                    "full_data_type_table",
+                    dbNameAsPrefix = true)
+    val df = spark.sql(
+      s"select count(*) from ${dbPrefix}tispark_test_full_data_type_table")
     df.explain()
     df.show
   }
@@ -43,9 +46,12 @@ class IssueTestSuite extends BaseTiSparkSuite {
     assert(spark.sql("select * from t limit 10").count() == 5)
     assert(spark.sql("select a from t limit 10").count() == 5)
 
-    judge("select count(1) from (select a from t limit 10) e", checkLimit = false)
-    judge("select count(a) from (select a from t limit 10) e", checkLimit = false)
-    judge("select count(1) from (select * from t limit 10) e", checkLimit = false)
+    judge("select count(1) from (select a from t limit 10) e",
+          checkLimit = false)
+    judge("select count(a) from (select a from t limit 10) e",
+          checkLimit = false)
+    judge("select count(1) from (select * from t limit 10) e",
+          checkLimit = false)
   }
 
   test("Test sql with limit without order by") {
@@ -73,10 +79,15 @@ class IssueTestSuite extends BaseTiSparkSuite {
   test("Test index task downgrade") {
     val sqlConf = ti.session.sqlContext.conf
     val prevRegionIndexScanDowngradeThreshold =
-      sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000")
-    sqlConf.setConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10")
-    val q = "select * from full_data_type_table_idx where tp_int < 1000000000 and tp_int > 0"
-    explainAndRunTest(q, q.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+      sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD,
+                            "10000")
+    sqlConf.setConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD,
+                          "10")
+    val q =
+      "select * from full_data_type_table_idx where tp_int < 1000000000 and tp_int > 0"
+    explainAndRunTest(
+      q,
+      q.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
     sqlConf.setConfString(
       TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD,
       prevRegionIndexScanDowngradeThreshold
@@ -87,8 +98,11 @@ class IssueTestSuite extends BaseTiSparkSuite {
     val tiConf = ti.tiConf
     val prevIndexScanBatchSize = tiConf.getIndexScanBatchSize
     tiConf.setIndexScanBatchSize(5)
-    val q = "select * from full_data_type_table_idx where tp_int < 1000000000 and tp_int > 0"
-    explainAndRunTest(q, q.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
+    val q =
+      "select * from full_data_type_table_idx where tp_int < 1000000000 and tp_int > 0"
+    explainAndRunTest(
+      q,
+      q.replace("full_data_type_table_idx", "full_data_type_table_idx_j"))
     tiConf.setIndexScanBatchSize(prevIndexScanBatchSize)
   }
 
@@ -136,7 +150,8 @@ class IssueTestSuite extends BaseTiSparkSuite {
         |         `k1` varchar(32) DEFAULT NULL
         |         ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin""".stripMargin
     )
-    tidbStmt.execute("insert into t1 values(1, 201707, 'aa'), (2, 201707, 'aa')")
+    tidbStmt.execute(
+      "insert into t1 values(1, 201707, 'aa'), (2, 201707, 'aa')")
     tidbStmt.execute("insert into t2 values(2, 201707, 'aa')")
     refreshConnections()
 
@@ -270,7 +285,8 @@ class IssueTestSuite extends BaseTiSparkSuite {
         List("\"\\u0001\""),
         List("[]"),
         List("\"中文\""),
-        List("[null,false,true,0,0.5,\"hello\",[\"nested_array\"],{\"nested\":\"object\"}]"),
+        List(
+          "[null,false,true,0,0.5,\"hello\",[\"nested_array\"],{\"nested\":\"object\"}]"),
         List(
           "{\"a\":null,\"b\":true,\"c\":false,\"d\":0,\"e\":0.5,\"f\":\"hello\",\"nested_array\":[1,2,3],\"nested_object\":{\"hello\":1}}"
         )

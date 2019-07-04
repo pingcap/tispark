@@ -43,17 +43,18 @@ object CacheInvalidateListener {
 
   def getInstance(): CacheInvalidateListener = {
     if (manager == null) {
-      throw new RuntimeException("CacheListenerManager has not been initialized properly.")
+      throw new RuntimeException(
+        "CacheListenerManager has not been initialized properly.")
     }
     manager
   }
 
   /**
-   * Initialize cache invalidation frame work for the given session.
-   *
-   * @param sc            The spark SparkContext used for attaching a cache listener.
-   * @param regionManager The RegionManager to invalidate local cache.
-   */
+    * Initialize cache invalidation frame work for the given session.
+    *
+    * @param sc            The spark SparkContext used for attaching a cache listener.
+    * @param regionManager The RegionManager to invalidate local cache.
+    */
   def initCacheListener(sc: SparkContext, regionManager: RegionManager): Unit =
     if (manager == null) {
       synchronized {
@@ -68,9 +69,12 @@ object CacheInvalidateListener {
       }
     }
 
-  def init(sc: SparkContext, regionManager: RegionManager, manager: CacheInvalidateListener): Unit =
+  def init(sc: SparkContext,
+           regionManager: RegionManager,
+           manager: CacheInvalidateListener): Unit =
     if (sc != null && regionManager != null) {
-      sc.register(manager.CACHE_INVALIDATE_ACCUMULATOR, manager.CACHE_ACCUMULATOR_NAME)
+      sc.register(manager.CACHE_INVALIDATE_ACCUMULATOR,
+                  manager.CACHE_ACCUMULATOR_NAME)
       sc.addSparkListener(
         new PDCacheInvalidateListener(
           manager.CACHE_INVALIDATE_ACCUMULATOR,

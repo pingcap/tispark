@@ -53,11 +53,11 @@ abstract class QueryTest extends PlanTest {
   }
 
   /**
-   * Compare whether lhs equals to rhs
-   *
-   * @param isOrdered whether the input data `lhs` and `rhs` are sorted
-   * @return true if results are the same
-   */
+    * Compare whether lhs equals to rhs
+    *
+    * @param isOrdered whether the input data `lhs` and `rhs` are sorted
+    * @return true if results are the same
+    */
   protected def compResult(lhs: List[List[Any]],
                            rhs: List[List[Any]],
                            isOrdered: Boolean = true): Boolean = {
@@ -146,8 +146,10 @@ abstract class QueryTest extends PlanTest {
           false
         } else if (!isOrdered) {
           comp(
-            lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
-            rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
+            lhs.sortWith((_1, _2) =>
+              _1.mkString("").compare(_2.mkString("")) < 0),
+            rhs.sortWith((_1, _2) =>
+              _1.mkString("").compare(_2.mkString("")) < 0)
           )
         } else {
           implicit object NullableListOrdering extends Ordering[List[Any]] {
@@ -171,14 +173,17 @@ abstract class QueryTest extends PlanTest {
 
   protected def toOutput(value: Any, colType: String): Any = value match {
     case _: BigDecimal =>
-      value.asInstanceOf[BigDecimal].setScale(2, BigDecimal.RoundingMode.HALF_UP)
+      value
+        .asInstanceOf[BigDecimal]
+        .setScale(2, BigDecimal.RoundingMode.HALF_UP)
     case _: Date if colType.equalsIgnoreCase("YEAR") =>
       value.toString.split("-")(0)
     case default =>
       default
   }
 
-  protected def dfData(df: DataFrame, schema: scala.Array[StructField]): List[List[Any]] =
+  protected def dfData(df: DataFrame,
+                       schema: scala.Array[StructField]): List[List[Any]] =
     df.collect()
       .map(row => {
         val rowRes = ArrayBuffer.empty[Any]
@@ -194,29 +199,31 @@ abstract class QueryTest extends PlanTest {
       .toList
 
   /**
-   * Runs the plan and makes sure the answer contains all of the keywords.
-   */
+    * Runs the plan and makes sure the answer contains all of the keywords.
+    */
   def checkKeywordsExist(df: DataFrame, keywords: String*): Unit = {
     val outputs = df.collect().map(_.mkString).mkString
     for (key <- keywords) {
-      assert(outputs.contains(key), s"Failed for $df ($key doesn't exist in result)")
+      assert(outputs.contains(key),
+             s"Failed for $df ($key doesn't exist in result)")
     }
   }
 
   /**
-   * Runs the plan and makes sure the answer does NOT contain any of the keywords.
-   */
+    * Runs the plan and makes sure the answer does NOT contain any of the keywords.
+    */
   def checkKeywordsNotExist(df: DataFrame, keywords: String*): Unit = {
     val outputs = df.collect().map(_.mkString).mkString
     for (key <- keywords) {
-      assert(!outputs.contains(key), s"Failed for $df ($key existed in the result)")
+      assert(!outputs.contains(key),
+             s"Failed for $df ($key existed in the result)")
     }
   }
 
   /**
-   * Evaluates a dataset to make sure that the result of calling collect matches the given
-   * expected answer.
-   */
+    * Evaluates a dataset to make sure that the result of calling collect matches the given
+    * expected answer.
+    */
   protected def checkDataset[T](ds: => Dataset[T], expectedAnswer: T*): Unit = {
     val result = getResult(ds)
 
@@ -231,10 +238,11 @@ abstract class QueryTest extends PlanTest {
   }
 
   /**
-   * Evaluates a dataset to make sure that the result of calling collect matches the given
-   * expected answer, after sort.
-   */
-  protected def checkDatasetUnorderly[T: Ordering](ds: => Dataset[T], expectedAnswer: T*): Unit = {
+    * Evaluates a dataset to make sure that the result of calling collect matches the given
+    * expected answer, after sort.
+    */
+  protected def checkDatasetUnorderly[T: Ordering](ds: => Dataset[T],
+                                                   expectedAnswer: T*): Unit = {
     val result = getResult(ds)
 
     if (!compare(result.toSeq.sorted, expectedAnswer.sorted)) {
@@ -291,12 +299,13 @@ abstract class QueryTest extends PlanTest {
   }
 
   /**
-   * Runs the plan and makes sure the answer matches the expected result.
-   *
-   * @param df the [[DataFrame]] to be executed
-   * @param expectedAnswer the expected result in a [[Seq]] of [[Row]]s.
-   */
-  protected def checkAnswer(df: => DataFrame, expectedAnswer: Seq[Row]): Unit = {
+    * Runs the plan and makes sure the answer matches the expected result.
+    *
+    * @param df the [[DataFrame]] to be executed
+    * @param expectedAnswer the expected result in a [[Seq]] of [[Row]]s.
+    */
+  protected def checkAnswer(df: => DataFrame,
+                            expectedAnswer: Seq[Row]): Unit = {
     val analyzedDF = try df
     catch {
       case ae: AnalysisException =>
@@ -327,12 +336,12 @@ abstract class QueryTest extends PlanTest {
     checkAnswer(df, expectedAnswer.collect())
 
   /**
-   * Runs the plan and makes sure the answer is within absTol of the expected result.
-   *
-   * @param dataFrame the [[DataFrame]] to be executed
-   * @param expectedAnswer the expected result in a [[Seq]] of [[Row]]s.
-   * @param absTol the absolute tolerance between actual and expected answers.
-   */
+    * Runs the plan and makes sure the answer is within absTol of the expected result.
+    *
+    * @param dataFrame the [[DataFrame]] to be executed
+    * @param expectedAnswer the expected result in a [[Seq]] of [[Row]]s.
+    * @param absTol the absolute tolerance between actual and expected answers.
+    */
   protected def checkAggregatesWithTol(dataFrame: DataFrame,
                                        expectedAnswer: Seq[Row],
                                        absTol: Double): Unit = {
@@ -355,8 +364,8 @@ abstract class QueryTest extends PlanTest {
     checkAggregatesWithTol(dataFrame, Seq(expectedAnswer), absTol)
 
   /**
-   * Asserts that a given [[Dataset]] will be executed using the given number of cached results.
-   */
+    * Asserts that a given [[Dataset]] will be executed using the given number of cached results.
+    */
   def assertCached(query: Dataset[_], numCachedTables: Int = 1): Unit = {
     val planWithCaching = query.queryExecution.withCachedData
     val cachedData = planWithCaching collect {
@@ -371,8 +380,8 @@ abstract class QueryTest extends PlanTest {
   }
 
   /**
-   * Asserts that a given [[Dataset]] does not have missing inputs in all the analyzed plans.
-   */
+    * Asserts that a given [[Dataset]] does not have missing inputs in all the analyzed plans.
+    */
   def assertEmptyMissingInput(query: Dataset[_]): Unit = {
     assert(
       query.queryExecution.analyzed.missingInput.isEmpty,
@@ -392,15 +401,15 @@ abstract class QueryTest extends PlanTest {
 object QueryTest {
 
   /**
-   * Runs the plan and makes sure the answer matches the expected result.
-   * If there was exception during the execution or the contents of the DataFrame does not
-   * match the expected result, an error message will be returned. Otherwise, a [[None]] will
-   * be returned.
-   *
-   * @param df the [[DataFrame]] to be executed
-   * @param expectedAnswer the expected result in a [[Seq]] of [[Row]]s.
-   * @param checkToRDD whether to verify deserialization to an RDD. This runs the query twice.
-   */
+    * Runs the plan and makes sure the answer matches the expected result.
+    * If there was exception during the execution or the contents of the DataFrame does not
+    * match the expected result, an error message will be returned. Otherwise, a [[None]] will
+    * be returned.
+    *
+    * @param df the [[DataFrame]] to be executed
+    * @param expectedAnswer the expected result in a [[Seq]] of [[Row]]s.
+    * @param checkToRDD whether to verify deserialization to an RDD. This runs the query twice.
+    */
   def checkAnswer(df: DataFrame,
                   expectedAnswer: Seq[Row],
                   checkToRDD: Boolean = true): Option[String] = {
@@ -460,7 +469,8 @@ object QueryTest {
   def sameRows(expectedAnswer: Seq[Row],
                sparkAnswer: Seq[Row],
                isSorted: Boolean = false): Option[String] = {
-    if (prepareAnswer(expectedAnswer, isSorted) != prepareAnswer(sparkAnswer, isSorted)) {
+    if (prepareAnswer(expectedAnswer, isSorted) != prepareAnswer(sparkAnswer,
+                                                                 isSorted)) {
       val errorMessage =
         s"""
            |== Results ==
@@ -477,12 +487,12 @@ object QueryTest {
   }
 
   /**
-   * Runs the plan and makes sure the answer is within absTol of the expected result.
-   *
-   * @param actualAnswer the actual result in a [[Row]].
-   * @param expectedAnswer the expected result in a[[Row]].
-   * @param absTol the absolute tolerance between actual and expected answers.
-   */
+    * Runs the plan and makes sure the answer is within absTol of the expected result.
+    *
+    * @param actualAnswer the actual result in a [[Row]].
+    * @param expectedAnswer the expected result in a[[Row]].
+    * @param absTol the absolute tolerance between actual and expected answers.
+    */
   protected def checkAggregatesWithTol(actualAnswer: Row,
                                        expectedAnswer: Row,
                                        absTol: Double): Unit = {

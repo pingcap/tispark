@@ -17,7 +17,6 @@
 package com.pingcap.tikv.statistics;
 
 import com.sangupta.murmur.Murmur3;
-
 import java.util.Arrays;
 
 public class CMSketch {
@@ -59,8 +58,7 @@ public class CMSketch {
   }
 
   // Hide constructor
-  private CMSketch() {
-  }
+  private CMSketch() {}
 
   public static CMSketch newCMSketch(int d, int w) {
     CMSketch sketch = new CMSketch();

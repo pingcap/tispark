@@ -15,24 +15,21 @@
 
 package com.pingcap.tikv.expression.visitor;
 
+import static java.util.Objects.requireNonNull;
+
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.meta.TiIndexColumn;
 
-import static java.util.Objects.requireNonNull;
-
 /**
- * Test if a predicate matches and index column entirely and can be convert to
- * index related ranges
+ * Test if a predicate matches and index column entirely and can be convert to index related ranges
  * If a predicate matches only partially, it returns false
  */
 public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
   private final boolean matchEqualTestOnly;
   private final TiIndexColumn indexColumn;
 
-  private IndexMatcher(
-      TiIndexColumn indexColumn,
-      boolean matchEqualTestOnly) {
+  private IndexMatcher(TiIndexColumn indexColumn, boolean matchEqualTestOnly) {
     this.matchEqualTestOnly = matchEqualTestOnly;
     this.indexColumn = requireNonNull(indexColumn, "index column is null");
   }
@@ -85,8 +82,8 @@ public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
   @Override
   protected Boolean visit(StringRegExpression node, Void context) {
     switch (node.getRegType()) {
-      // If the predicate is StartsWith(col, 'a'), this predicate
-      // indicates a range of ['a', +∞) which can be used by index scan
+        // If the predicate is StartsWith(col, 'a'), this predicate
+        // indicates a range of ['a', +∞) which can be used by index scan
       case STARTS_WITH:
         if (matchEqualTestOnly) {
           return false;
@@ -106,8 +103,7 @@ public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
         }
       case OR:
       case XOR:
-        return node.getLeft().accept(this, context) &&
-            node.getRight().accept(this, context);
+        return node.getLeft().accept(this, context) && node.getRight().accept(this, context);
       default:
         return false;
     }

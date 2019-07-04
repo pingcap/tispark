@@ -24,41 +24,41 @@ import com.pingcap.tispark.statistics.StatisticsManager
 abstract class TableSizeEstimator(statisticsManager: StatisticsManager) {
 
   /**
-   * Returns the estimated size of a row.
-   *
-   * @param table table to evaluate
-   * @return estimated row size in bytes
-   */
+    * Returns the estimated size of a row.
+    *
+    * @param table table to evaluate
+    * @return estimated row size in bytes
+    */
   def estimatedRowSize(table: TiTableInfo): Long
 
   /**
-   * Returns the estimated number of rows of table.
-   * @param table table to evaluate
-   * @return estimated rows ins this table
-   */
+    * Returns the estimated number of rows of table.
+    * @param table table to evaluate
+    * @return estimated rows ins this table
+    */
   def estimatedCount(table: TiTableInfo): Long
 
   /**
-   * Returns the estimated size of the table in bytes.
-   * @param table table to evaluate
-   * @return estimated table size of this table
-   */
+    * Returns the estimated size of the table in bytes.
+    * @param table table to evaluate
+    * @return estimated table size of this table
+    */
   def estimatedTableSize(table: TiTableInfo): Long
 }
 
 /**
- * An static estimator to estimate row size in bytes.
- * Refer to
- * https://pingcap.com/docs/sql/datatype/#tidb-data-type
- * and
- * https://dev.mysql.com/doc/refman/5.7/en/storage-requirements.html
- */
+  * An static estimator to estimate row size in bytes.
+  * Refer to
+  * https://pingcap.com/docs/sql/datatype/#tidb-data-type
+  * and
+  * https://dev.mysql.com/doc/refman/5.7/en/storage-requirements.html
+  */
 class DefaultTableSizeEstimator(statisticsManager: StatisticsManager)
     extends TableSizeEstimator(statisticsManager) {
 
   /**
-   * Returns Pseudo Table Size calculated roughly.
-   */
+    * Returns Pseudo Table Size calculated roughly.
+    */
   override def estimatedRowSize(table: TiTableInfo): Long = {
     // Magic number used for estimating table size
     val goldenSplitFactor = 0.618
@@ -102,11 +102,11 @@ class DefaultTableSizeEstimator(statisticsManager: StatisticsManager)
   }
 
   /**
-   * Returns the estimated number of rows of table.
-   *
-   * @param table table to evaluate
-   * @return estimated rows ins this table
-   */
+    * Returns the estimated number of rows of table.
+    *
+    * @param table table to evaluate
+    * @return estimated rows ins this table
+    */
   override def estimatedCount(table: TiTableInfo): Long = {
     val tblStats = statisticsManager.getTableStatistics(table.getId)
     if (tblStats != null) {
@@ -117,11 +117,11 @@ class DefaultTableSizeEstimator(statisticsManager: StatisticsManager)
   }
 
   /**
-   * Returns the estimated size of the table in bytes.
-   *
-   * @param table table to evaluate
-   * @return estimated table size of this table
-   */
+    * Returns the estimated size of the table in bytes.
+    *
+    * @param table table to evaluate
+    * @return estimated table size of this table
+    */
   override def estimatedTableSize(table: TiTableInfo): Long = {
     val tblCount = estimatedCount(table)
     if (tblCount == Long.MaxValue) {

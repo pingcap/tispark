@@ -15,6 +15,11 @@
 
 package com.pingcap.tikv;
 
+import static com.pingcap.tikv.GrpcUtils.encodeKey;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.kvproto.Metapb;
@@ -24,17 +29,11 @@ import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import java.io.IOException;
+import java.util.concurrent.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.util.concurrent.*;
-
-import static com.pingcap.tikv.GrpcUtils.encodeKey;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class PDClientTest {
 
@@ -53,8 +52,7 @@ public class PDClientTest {
             GrpcUtils.makeMember(1, "http://" + LOCAL_ADDR + ":" + server.port),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 1)),
             GrpcUtils.makeMember(2, "http://" + LOCAL_ADDR + ":" + (server.port + 2))));
-    TiConfiguration conf =
-        TiConfiguration.createDefault("127.0.0.1:" + server.port);
+    TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:" + server.port);
     session = TiSession.create(conf);
   }
 
@@ -66,9 +64,7 @@ public class PDClientTest {
   @Test
   public void testCreate() throws Exception {
     try (PDClient client = session.getPDClient()) {
-      assertEquals(
-          client.getLeaderWrapper().getLeaderInfo(),
-          LOCAL_ADDR + ":" + server.port);
+      assertEquals(client.getLeaderWrapper().getLeaderInfo(), LOCAL_ADDR + ":" + server.port);
       assertEquals(client.getHeader().getClusterId(), CLUSTER_ID);
     }
   }
@@ -249,7 +245,8 @@ public class PDClientTest {
           GrpcUtils.makeGetStoreResponse(
               server.getClusterId(),
               GrpcUtils.makeStore(storeId, testAddress, Metapb.StoreState.Tombstone)));
-      assertEquals(StoreState.Tombstone, client.getStoreAsync(defaultBackOff(), 0).get().getState());
+      assertEquals(
+          StoreState.Tombstone, client.getStoreAsync(defaultBackOff(), 0).get().getState());
     }
   }
 
@@ -267,8 +264,8 @@ public class PDClientTest {
         GrpcUtils.makeGetStoreResponse(
             server.getClusterId(), GrpcUtils.makeStore(storeId, "", Metapb.StoreState.Up)));
     try (PDClient client = session.getPDClient()) {
-      Callable<Store> storeCallable = () ->
-          client.getStore(ConcreteBackOffer.newCustomBackOff(5000), 0);
+      Callable<Store> storeCallable =
+          () -> client.getStore(ConcreteBackOffer.newCustomBackOff(5000), 0);
       Future<Store> storeFuture = service.submit(storeCallable);
       try {
         Store r = storeFuture.get(5, TimeUnit.SECONDS);

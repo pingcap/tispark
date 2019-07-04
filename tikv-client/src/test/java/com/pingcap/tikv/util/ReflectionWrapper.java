@@ -24,7 +24,7 @@ public class ReflectionWrapper {
 
   private Object obj;
 
-  public Object call(String methodName, Object...args) {
+  public Object call(String methodName, Object... args) {
     try {
       Method method = obj.getClass().getDeclaredMethod(methodName);
       method.setAccessible(true);

@@ -72,8 +72,7 @@ public class Snapshot {
 
   public ByteString get(ByteString key) {
     Pair<TiRegion, Store> pair = session.getRegionManager().getRegionStorePairByKey(key);
-    RegionStoreClient client =
-        RegionStoreClient.create(pair.first, pair.second, getSession());
+    RegionStoreClient client = RegionStoreClient.create(pair.first, pair.second, getSession());
     // TODO: Need to deal with lock error after grpc stable
     return client.get(ConcreteBackOffer.newGetBackOff(), key, timestamp.getVersion());
   }
@@ -86,15 +85,18 @@ public class Snapshot {
    */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest) {
     if (dagRequest.isIndexScan()) {
-      Iterator<Long> iter = getHandleIterator(
-          dagRequest,
-          RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(dagRequest.getRanges()),
-          session);
+      Iterator<Long> iter =
+          getHandleIterator(
+              dagRequest,
+              RangeSplitter.newSplitter(session.getRegionManager())
+                  .splitRangeByRegion(dagRequest.getRanges()),
+              session);
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
       return getRowIterator(
           dagRequest,
-          RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(dagRequest.getRanges()),
+          RangeSplitter.newSplitter(session.getRegionManager())
+              .splitRangeByRegion(dagRequest.getRanges()),
           session);
     }
   }
@@ -109,16 +111,10 @@ public class Snapshot {
    */
   public Iterator<Row> tableRead(TiDAGRequest dagRequest, List<RegionTask> task) {
     if (dagRequest.isDoubleRead()) {
-      Iterator<Long> iter = getHandleIterator(
-          dagRequest,
-          task,
-          session);
+      Iterator<Long> iter = getHandleIterator(dagRequest, task, session);
       return new IndexScanIterator(this, dagRequest, iter);
     } else {
-      return getRowIterator(
-          dagRequest,
-          task,
-          session);
+      return getRowIterator(dagRequest, task, session);
     }
   }
 
@@ -127,15 +123,11 @@ public class Snapshot {
    * scan
    *
    * @param dagRequest DAGRequest for coprocessor
-   * @param tasks      RegionTask of the coprocessor request to send
+   * @param tasks RegionTask of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
   public Iterator<Long> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
-    return getHandleIterator(
-        dagRequest,
-        tasks,
-        session
-    );
+    return getHandleIterator(dagRequest, tasks, session);
   }
 
   public Iterator<KvPair> scan(ByteString startKey) {
@@ -159,8 +151,9 @@ public class Snapshot {
         curKeyRange = makeRange(curRegion.getStartKey(), curRegion.getEndKey());
 
         try (RegionStoreClient client =
-                 RegionStoreClient.create(lastPair.first, lastPair.second, getSession())) {
-          List<KvPair> partialResult = client.batchGet(backOffer, keyBuffer, timestamp.getVersion());
+            RegionStoreClient.create(lastPair.first, lastPair.second, getSession())) {
+          List<KvPair> partialResult =
+              client.batchGet(backOffer, keyBuffer, timestamp.getVersion());
           // TODO: Add lock check
           result.addAll(partialResult);
         } catch (Exception e) {

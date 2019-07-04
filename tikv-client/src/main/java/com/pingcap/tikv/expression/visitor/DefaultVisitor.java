@@ -17,7 +17,7 @@ package com.pingcap.tikv.expression.visitor;
 
 import com.pingcap.tikv.expression.*;
 
-public class DefaultVisitor<R, C> extends Visitor<R,C> {
+public class DefaultVisitor<R, C> extends Visitor<R, C> {
   protected R process(Expression node, C context) {
     for (Expression expr : node.getChildren()) {
       expr.accept(this, context);

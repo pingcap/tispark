@@ -26,7 +26,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 public class BitType extends IntegerType {
   public static final BitType BIT = new BitType(MySQLType.TypeBit);
 
-  public static final MySQLType[] subTypes = new MySQLType[] { MySQLType.TypeBit };
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeBit};
 
   private BitType(MySQLType tp) {
     super(tp);
@@ -36,9 +36,7 @@ public class BitType extends IntegerType {
     super(holder);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     switch (flag) {

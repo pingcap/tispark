@@ -64,7 +64,8 @@ public class MyDecimal {
   public int precision() {
     int frac = this.digitsFrac;
     int digitsInt =
-        this.removeLeadingZeros()[1]; /*this function return an array and the second element is digitsInt*/
+        this.removeLeadingZeros()[
+            1]; /*this function return an array and the second element is digitsInt*/
     int precision = digitsInt + frac;
     // if no precision, it is just 0.
     if (precision == 0) {
@@ -74,8 +75,8 @@ public class MyDecimal {
   }
 
   /**
-   * Returns fraction digits that counts how many digits after ".".
-   * frac() reflects the actual effective fraction without trailing zero
+   * Returns fraction digits that counts how many digits after ".". frac() reflects the actual
+   * effective fraction without trailing zero
    */
   public int frac() {
     return digitsFrac;
@@ -154,8 +155,8 @@ public class MyDecimal {
     }
 
     this.negative = mask != 0;
-    this.digitsInt = (byte)(wordsInt * digitsPerWord + leadingDigits);
-    this.digitsFrac = (byte)(wordsFrac * digitsPerWord + trailingDigits);
+    this.digitsInt = (byte) (wordsInt * digitsPerWord + leadingDigits);
+    this.digitsFrac = (byte) (wordsFrac * digitsPerWord + trailingDigits);
 
     int wordIdx = 0;
     if (leadingDigits > 0) {
@@ -276,10 +277,10 @@ public class MyDecimal {
     int x = 0;
     switch (size) {
       case 1:
-        x = (byte)b[start];
+        x = (byte) b[start];
         break;
       case 2:
-        x = (((byte)b[start]) << 8) + (b[start + 1] & 0xFF);
+        x = (((byte) b[start]) << 8) + (b[start + 1] & 0xFF);
         break;
       case 3:
         int sign = b[start] & 128;
@@ -337,7 +338,8 @@ public class MyDecimal {
     for (; strIdx < str.length && Character.isDigit(str[strIdx]); ) {
       strIdx++;
     }
-    // we initialize strIdx in case of sign notation, here we need substract startIdx from strIdx casue strIdx is used for counting the number of digits.
+    // we initialize strIdx in case of sign notation, here we need substract startIdx from strIdx
+    // casue strIdx is used for counting the number of digits.
     int digitsInt = strIdx - startIdx;
     int digitsFrac;
     int endIdx;
@@ -371,7 +373,6 @@ public class MyDecimal {
         wordsFrac = wordBufLen - wordsInt;
         truncated = true;
       }
-
     }
 
     if (overflow || truncated) {
@@ -565,33 +566,33 @@ public class MyDecimal {
         so we can convert -9223372036854775808 correctly
       */
       long y = x;
-      x = x * wordBase - (long)this.wordBuf[wordIdx];
+      x = x * wordBase - (long) this.wordBuf[wordIdx];
       wordIdx++;
-      if (y < Long.MIN_VALUE/wordBase || x > y) {
-        	  /*
-			        the decimal is bigger than any possible integer
-			        return border integer depending on the sign
-			      */
-        	 if (this.negative) {
-        	   return Long.MIN_VALUE;
-           }
-           return Long.MAX_VALUE;
+      if (y < Long.MIN_VALUE / wordBase || x > y) {
+        /*
+          the decimal is bigger than any possible integer
+          return border integer depending on the sign
+        */
+        if (this.negative) {
+          return Long.MIN_VALUE;
+        }
+        return Long.MAX_VALUE;
       }
     }
 
     /* boundary case: 9223372036854775808 */
     if (!this.negative && x == Long.MIN_VALUE) {
-               return Long.MAX_VALUE;
+      return Long.MAX_VALUE;
     }
 
     if (!this.negative) {
       x = -x;
     }
     for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
-                  if (this.wordBuf[wordIdx] != 0){
-                    return x;
-                  }
-                  wordIdx++;
+      if (this.wordBuf[wordIdx] != 0) {
+        return x;
+      }
+      wordIdx++;
     }
     return x;
   }
@@ -724,7 +725,7 @@ public class MyDecimal {
 
       wordsIntFrom = wordsInt;
       leadingDigitsFrom = leadingDigits;
-      //TODO overflow here
+      // TODO overflow here
     } else if (intSize > iSizeFrom) {
       for (; intSize > iSizeFrom; ) {
         intSize--;
@@ -737,7 +738,7 @@ public class MyDecimal {
     if (fracSize < fracSizeFrom) {
       wordsFracFrom = wordsFrac;
       trailingDigitsFrom = trailingDigits;
-      //TODO truncated
+      // TODO truncated
     } else if (fracSize > fracSizeFrom && trailingDigitsFrom > 0) {
       if (wordsFrac == wordsFracFrom) {
         trailingDigitsFrom = trailingDigits;

@@ -19,7 +19,10 @@ import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 
 import com.pingcap.tikv.expression.ExpressionBlacklist
-import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
+import com.pingcap.tikv.expression.visitor.{
+  MetaResolver,
+  SupportedExpressionValidator
+}
 import com.pingcap.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
@@ -28,8 +31,19 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
-import org.apache.spark.sql.types.{DataType, DataTypes, MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.catalyst.expressions.{
+  AttributeReference,
+  Expression,
+  Literal,
+  NamedExpression
+}
+import org.apache.spark.sql.types.{
+  DataType,
+  DataTypes,
+  MetadataBuilder,
+  StructField,
+  StructType
+}
 import org.apache.spark.sql.{SparkSession, TiStrategy}
 import org.apache.spark.{sql, SparkConf}
 
@@ -57,7 +71,8 @@ object TiUtils {
   def isSupportedBasicExpression(expr: Expression,
                                  tiDBRelation: TiDBRelation,
                                  blacklist: ExpressionBlacklist): Boolean = {
-    if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
+    if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG))
+      return false
 
     BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpression =>
       MetaResolver.resolve(expr, tiDBRelation.table)
@@ -66,11 +81,11 @@ object TiUtils {
   }
 
   /**
-   * Is expression allowed to be pushed down
-   *
-   * @param expr the expression to examine
-   * @return whether expression can be pushed down
-   */
+    * Is expression allowed to be pushed down
+    *
+    * @param expr the expression to examine
+    * @return whether expression can be pushed down
+    */
   def isPushDownSupported(expr: Expression, source: TiDBRelation): Boolean = {
     val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
     source.table.getColumns
@@ -81,7 +96,8 @@ object TiUtils {
         // bit/duration type is not allowed to be pushed down
         case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
           val head = nameTypeMap.get(attr.name).head
-          return !head.isInstanceOf[BitType] && head.getType != MySQLType.TypeDuration
+          return !head
+            .isInstanceOf[BitType] && head.getType != MySQLType.TypeDuration
         // TODO:Currently we do not support literal null type push down
         // when Constant is ready to support literal null or we have other
         // options, remove this.
@@ -103,13 +119,17 @@ object TiUtils {
   def isSupportedFilter(expr: Expression,
                         source: TiDBRelation,
                         blacklist: ExpressionBlacklist): Boolean =
-    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
+    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(
+      expr,
+      source)
 
   // if contains UDF / functions that cannot be folded
   def isSupportedGroupingExpr(expr: NamedExpression,
                               source: TiDBRelation,
                               blacklist: ExpressionBlacklist): Boolean =
-    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
+    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(
+      expr,
+      source)
 
   // convert tikv-java client FieldType to Spark DataType
   def toSparkDataType(tp: TiDataType): DataType =
@@ -176,7 +196,8 @@ object TiUtils {
   }
 
   def sparkConfToTiConf(conf: SparkConf): TiConfiguration = {
-    val tiConf = TiConfiguration.createDefault(conf.get(TiConfigConst.PD_ADDRESSES))
+    val tiConf =
+      TiConfiguration.createDefault(conf.get(TiConfigConst.PD_ADDRESSES))
 
     if (conf.contains(TiConfigConst.GRPC_FRAME_SIZE)) {
       tiConf.setMaxFrameSize(conf.get(TiConfigConst.GRPC_FRAME_SIZE).toInt)
@@ -188,29 +209,35 @@ object TiUtils {
     }
 
     if (conf.contains(TiConfigConst.META_RELOAD_PERIOD)) {
-      tiConf.setMetaReloadPeriod(conf.get(TiConfigConst.META_RELOAD_PERIOD).toInt)
+      tiConf.setMetaReloadPeriod(
+        conf.get(TiConfigConst.META_RELOAD_PERIOD).toInt)
       tiConf.setMetaReloadPeriodUnit(TimeUnit.SECONDS)
     }
 
     if (conf.contains(TiConfigConst.INDEX_SCAN_BATCH_SIZE)) {
-      tiConf.setIndexScanBatchSize(conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
+      tiConf.setIndexScanBatchSize(
+        conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
     }
 
     if (conf.contains(TiConfigConst.INDEX_SCAN_CONCURRENCY)) {
-      tiConf.setIndexScanConcurrency(conf.get(TiConfigConst.INDEX_SCAN_CONCURRENCY).toInt)
+      tiConf.setIndexScanConcurrency(
+        conf.get(TiConfigConst.INDEX_SCAN_CONCURRENCY).toInt)
     }
 
     if (conf.contains(TiConfigConst.TABLE_SCAN_CONCURRENCY)) {
-      tiConf.setTableScanConcurrency(conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
+      tiConf.setTableScanConcurrency(
+        conf.get(TiConfigConst.TABLE_SCAN_CONCURRENCY).toInt)
     }
 
     if (conf.contains(TiConfigConst.REQUEST_ISOLATION_LEVEL)) {
-      val isolationLevel = IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL))
+      val isolationLevel =
+        IsolationLevel.valueOf(conf.get(TiConfigConst.REQUEST_ISOLATION_LEVEL))
       tiConf.setIsolationLevel(isolationLevel)
     }
 
     if (conf.contains(TiConfigConst.REQUEST_COMMAND_PRIORITY)) {
-      val priority = CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
+      val priority =
+        CommandPri.valueOf(conf.get(TiConfigConst.REQUEST_COMMAND_PRIORITY))
       tiConf.setCommandPriority(priority)
     }
 
@@ -225,9 +252,11 @@ object TiUtils {
   }
 
   def sessionInitialize(session: SparkSession, tiSession: TiSession): Unit = {
-    session.experimental.extraStrategies ++= Seq(new TiStrategy(session.sqlContext))
+    session.experimental.extraStrategies ++= Seq(
+      new TiStrategy(session.sqlContext))
     session.udf.register("ti_version", () => TiSparkVersion.version)
-    CacheInvalidateListener.initCacheListener(session.sparkContext, tiSession.getRegionManager)
+    CacheInvalidateListener.initCacheListener(session.sparkContext,
+                                              tiSession.getRegionManager)
     tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
     StatisticsManager.initStatisticsManager(tiSession, session)
   }

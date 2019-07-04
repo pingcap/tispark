@@ -33,12 +33,15 @@ import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
 
 /**
- * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
- * connection resource and relevant configurations.
- *
- * `tidb_config.properties` must be provided in test resources folder
- */
-trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfterAll {
+  * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
+  * connection resource and relevant configurations.
+  *
+  * `tidb_config.properties` must be provided in test resources folder
+  */
+trait SharedSQLContext
+    extends SparkFunSuite
+    with Eventually
+    with BeforeAndAfterAll {
   protected def spark: SparkSession = SharedSQLContext.spark
 
   protected def ti: TiContext = SharedSQLContext.ti
@@ -57,11 +60,12 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
-  protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections()
+  protected def refreshConnections(): Unit =
+    SharedSQLContext.refreshConnections()
 
   /**
-   * The [[TestSQLContext]] to use for all tests in this suite.
-   */
+    * The [[TestSQLContext]] to use for all tests in this suite.
+    */
   protected implicit def sqlContext: SQLContext = spark.sqlContext
 
   override protected def beforeAll(): Unit = {
@@ -114,8 +118,8 @@ object SharedSQLContext extends Logging {
   protected implicit def tidbStmt: Statement = _statement
 
   /**
-   * The [[TestSQLContext]] to use for all tests in this suite.
-   */
+    * The [[TestSQLContext]] to use for all tests in this suite.
+    */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
   protected var _sparkSession: SparkSession = _
@@ -126,14 +130,14 @@ object SharedSQLContext extends Logging {
   }
 
   /**
-   * Initialize the [[TestSparkSession]].  Generally, this is just called from
-   * beforeAll; however, in test using styles other than FunSuite, there is
-   * often code that relies on the session between test group constructs and
-   * the actual tests, which may need this session.  It is purely a semantic
-   * difference, but semantically, it makes more sense to call
-   * 'initializeSession' between a 'describe' and an 'it' call than it does to
-   * call 'beforeAll'.
-   */
+    * Initialize the [[TestSparkSession]].  Generally, this is just called from
+    * beforeAll; however, in test using styles other than FunSuite, there is
+    * often code that relies on the session between test group constructs and
+    * the actual tests, which may need this session.  It is purely a semantic
+    * difference, but semantically, it makes more sense to call
+    * 'initializeSession' between a 'describe' and an 'it' call than it does to
+    * call 'beforeAll'.
+    */
   protected def initializeSession(): Unit =
     if (_spark == null) {
       _spark = _sparkSession
@@ -172,7 +176,8 @@ object SharedSQLContext extends Logging {
       jdbcUrl =
         s"jdbc:mysql://$jdbcHostname:$jdbcPort/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
 
-      _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+      _tidbConnection =
+        DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
       _statement = _tidbConnection.createStatement()
 
       if (loadData && !forceNotLoad) {
@@ -215,7 +220,8 @@ object SharedSQLContext extends Logging {
       }
 
       import com.pingcap.tispark.TiConfigConst._
-      sparkConf.set(PD_ADDRESSES, getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
+      sparkConf.set(PD_ADDRESSES,
+                    getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379"))
       sparkConf.set(ALLOW_INDEX_READ, getOrElse(prop, ALLOW_INDEX_READ, "true"))
 
       dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
@@ -228,8 +234,8 @@ object SharedSQLContext extends Logging {
     }
 
   /**
-   * Make sure the [[TestSparkSession]] is initialized before any tests are run.
-   */
+    * Make sure the [[TestSparkSession]] is initialized before any tests are run.
+    */
   def init(forceNotLoad: Boolean = false): Unit = {
     initializeConf()
     initializeSession()
@@ -239,8 +245,8 @@ object SharedSQLContext extends Logging {
   }
 
   /**
-   * Stop the underlying resources, if any.
-   */
+    * Stop the underlying resources, if any.
+    */
   def stop(): Unit = {
     if (_spark != null) {
       _spark.sessionState.catalog.reset()

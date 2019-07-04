@@ -28,7 +28,7 @@ import java.math.BigDecimal;
 
 public class DecimalType extends DataType {
   public static final DecimalType DECIMAL = new DecimalType(MySQLType.TypeNewDecimal);
-  public static final MySQLType[] subTypes = new MySQLType[] { MySQLType.TypeNewDecimal };
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeNewDecimal};
 
   private DecimalType(MySQLType tp) {
     super(tp);
@@ -38,9 +38,7 @@ public class DecimalType extends DataType {
     super(holder);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag != Codec.DECIMAL_FLAG) {
@@ -72,9 +70,7 @@ public class DecimalType extends DataType {
     return ExprType.MysqlDecimal;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
     return new BigDecimal(value);

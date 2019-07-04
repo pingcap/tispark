@@ -21,7 +21,6 @@ import com.pingcap.tikv.operation.ErrorHandler;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import io.grpc.Status;
-
 import java.util.concurrent.Callable;
 
 public abstract class RetryPolicy<RespT> {

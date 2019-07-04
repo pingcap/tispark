@@ -42,10 +42,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   protected int index = -1;
   private boolean endOfScan = false;
 
-  public ScanIterator(
-      ByteString startKey,
-      TiSession session,
-      long version) {
+  public ScanIterator(ByteString startKey, TiSession session, long version) {
     this.startKey = requireNonNull(startKey, "start key is null");
     if (startKey.isEmpty()) {
       throw new IllegalArgumentException("start key cannot be empty");
@@ -69,8 +66,10 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     try (RegionStoreClient client = RegionStoreClient.create(region, store, session)) {
       BackOffer backOffer = ConcreteBackOffer.newScannerNextMaxBackOff();
       currentCache = client.scan(backOffer, startKey, version);
-      // currentCache is null means no keys found, whereas currentCache is empty means no values found
-      // the difference lies in whether to continue scanning, because chances are that the same key is
+      // currentCache is null means no keys found, whereas currentCache is empty means no values
+      // found
+      // the difference lies in whether to continue scanning, because chances are that the same key
+      // is
       // split in another region because of pending entries, region split, e.t.c.
       // See https://github.com/pingcap/tispark/issues/393 for details
       if (currentCache == null) {
@@ -95,9 +94,7 @@ public class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
   }
 
   private boolean isCacheDrained() {
-    return currentCache == null
-        || index >= currentCache.size()
-        || index == -1;
+    return currentCache == null || index >= currentCache.size() || index == -1;
   }
 
   @Override

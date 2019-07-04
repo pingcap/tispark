@@ -15,15 +15,13 @@
 
 package com.pingcap.tikv.codec;
 
+import static com.google.common.base.Preconditions.checkArgument;
 
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import gnu.trove.list.array.TIntArrayList;
-import org.joda.time.*;
-
 import java.math.BigDecimal;
 import java.util.Arrays;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import org.joda.time.*;
 
 public class Codec {
 
@@ -44,7 +42,6 @@ public class Codec {
     return flag == NULL_FLAG;
   }
 
-
   public static class IntegerCodec {
     private static final long SIGN_MASK = ~Long.MAX_VALUE;
 
@@ -57,8 +54,8 @@ public class Codec {
      *
      * @param cdo For outputting data in bytes array
      * @param lVal The data to encode
-     * @param comparable If the output should be memory comparable without decoding. In real TiDB use
-     *     case, if used in Key encoding, we output memory comparable format otherwise not
+     * @param comparable If the output should be memory comparable without decoding. In real TiDB
+     *     use case, if used in Key encoding, we output memory comparable format otherwise not
      */
     public static void writeLongFully(CodecDataOutput cdo, long lVal, boolean comparable) {
       if (comparable) {
@@ -75,8 +72,8 @@ public class Codec {
      *
      * @param cdo For outputting data in bytes array
      * @param lVal The data to encode, note that long is treated as unsigned
-     * @param comparable If the output should be memory comparable without decoding. In real TiDB use
-     *     case, if used in Key encoding, we output memory comparable format otherwise not
+     * @param comparable If the output should be memory comparable without decoding. In real TiDB
+     *     use case, if used in Key encoding, we output memory comparable format otherwise not
      */
     public static void writeULongFully(CodecDataOutput cdo, long lVal, boolean comparable) {
       if (comparable) {
@@ -444,7 +441,8 @@ public class Codec {
      */
     static long toPackedLong(DateTime dateTime, DateTimeZone tz) {
       LocalDateTime localDateTime = dateTime.withZone(tz).toLocalDateTime();
-      return toPackedLong(localDateTime.getYear(),
+      return toPackedLong(
+          localDateTime.getYear(),
           localDateTime.getMonthOfYear(),
           localDateTime.getDayOfMonth(),
           localDateTime.getHourOfDay(),
@@ -460,11 +458,7 @@ public class Codec {
 
     static long toPackedLong(LocalDate date) {
       return Codec.DateTimeCodec.toPackedLong(
-          date.getYear(),
-          date.getMonthOfYear(),
-          date.getDayOfMonth(),
-          0, 0, 0, 0
-      );
+          date.getYear(), date.getMonthOfYear(), date.getDayOfMonth(), 0, 0, 0, 0);
     }
 
     /**
@@ -472,19 +466,18 @@ public class Codec {
      *
      * @return a packed long.
      */
-    static long toPackedLong(int year, int month, int day, int hour, int minute,
-        int second, int micro) {
+    static long toPackedLong(
+        int year, int month, int day, int hour, int minute, int second, int micro) {
       long ymd = (year * 13 + month) << 5 | day;
       long hms = hour << 12 | minute << 6 | second;
       return ((ymd << 17 | hms) << 24) | micro;
     }
 
     /**
-     * Read datetime from packed Long which contains all parts of a datetime
-     * namely, year, month, day and hour, min and sec, millisec.
-     * The original representation does not indicate any timezone information
-     * In Timestamp type, it should be interpreted as UTC while in DateType
-     * it is interpreted as local timezone
+     * Read datetime from packed Long which contains all parts of a datetime namely, year, month,
+     * day and hour, min and sec, millisec. The original representation does not indicate any
+     * timezone information In Timestamp type, it should be interpreted as UTC while in DateType it
+     * is interpreted as local timezone
      *
      * @param packed long value that packs date / time parts
      * @param tz timezone to interpret datetime parts
@@ -512,9 +505,8 @@ public class Codec {
       try {
         return new DateTime(year, month, day, hour, minute, second, microsec / 1000, tz);
       } catch (IllegalInstantException e) {
-        LocalDateTime localDateTime = new LocalDateTime(
-            year, month, day, hour,
-            minute, second, microsec / 1000);
+        LocalDateTime localDateTime =
+            new LocalDateTime(year, month, day, hour, minute, second, microsec / 1000);
         DateTime dt = localDateTime.toLocalDate().toDateTimeAtStartOfDay(tz);
         long millis = dt.getMillis() + localDateTime.toLocalTime().getMillisOfDay();
         return new DateTime(millis, tz);
@@ -522,8 +514,9 @@ public class Codec {
     }
 
     /**
-     * Encode DateTime as packed long converting into specified timezone
-     * All timezone conversion should be done beforehand
+     * Encode DateTime as packed long converting into specified timezone All timezone conversion
+     * should be done beforehand
+     *
      * @param cdo encoding output
      * @param dateTime value to encode
      * @param tz timezone used to converting local time
@@ -534,9 +527,9 @@ public class Codec {
     }
 
     /**
-     * Encode DateTime as packed long converting into specified timezone
-     * All timezone conversion should be done beforehand
-     * The encoded value has no data type flag
+     * Encode DateTime as packed long converting into specified timezone All timezone conversion
+     * should be done beforehand The encoded value has no data type flag
+     *
      * @param cdo encoding output
      * @param dateTime value to encode
      * @param tz timezone used to converting local time
@@ -547,10 +540,10 @@ public class Codec {
     }
 
     /**
-     * Read datetime from packed Long encoded as unsigned var-len integer
-     * converting into specified timezone
-     * @see DateTimeCodec#fromPackedLong(long, DateTimeZone)
+     * Read datetime from packed Long encoded as unsigned var-len integer converting into specified
+     * timezone
      *
+     * @see DateTimeCodec#fromPackedLong(long, DateTimeZone)
      * @param cdi codec buffer input
      * @param tz timezone to interpret datetime parts
      * @return decoded DateTime using provided timezone
@@ -561,8 +554,8 @@ public class Codec {
 
     /**
      * Read datetime from packed Long as unsigned fixed-len integer
-     * @see DateTimeCodec#fromPackedLong(long, DateTimeZone)
      *
+     * @see DateTimeCodec#fromPackedLong(long, DateTimeZone)
      * @param cdi codec buffer input
      * @param tz timezone to interpret datetime parts
      * @return decoded DateTime using provided timezone

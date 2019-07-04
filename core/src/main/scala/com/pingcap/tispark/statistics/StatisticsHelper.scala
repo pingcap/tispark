@@ -18,7 +18,12 @@
 package com.pingcap.tispark.statistics
 
 import com.google.common.primitives.UnsignedLong
-import com.pingcap.tikv.expression.{ByItem, ColumnRef, ComparisonBinaryExpression, Constant}
+import com.pingcap.tikv.expression.{
+  ByItem,
+  ColumnRef,
+  ComparisonBinaryExpression,
+  Constant
+}
 import com.pingcap.tikv.key.{Key, TypedKey}
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
@@ -63,18 +68,20 @@ object StatisticsHelper {
       manager.bucketTable != null &&
       manager.histTable != null
 
-  private[statistics] def extractStatisticsDTO(row: Row,
-                                               table: TiTableInfo,
-                                               loadAll: Boolean,
-                                               neededColIds: mutable.ArrayBuffer[Long],
-                                               histTable: TiTableInfo): StatisticsDTO = {
+  private[statistics] def extractStatisticsDTO(
+      row: Row,
+      table: TiTableInfo,
+      loadAll: Boolean,
+      neededColIds: mutable.ArrayBuffer[Long],
+      histTable: TiTableInfo): StatisticsDTO = {
     if (row.fieldCount() < 6) return null
     val isIndex = row.getLong(1) > 0
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
     val histVer = row.getUnsignedLong(4)
     val nullCount = row.getLong(5)
-    val cMSketch = if (checkColExists(histTable, "cm_sketch")) row.getBytes(6) else null
+    val cMSketch =
+      if (checkColExists(histTable, "cm_sketch")) row.getBytes(6) else null
     // get index/col info for StatisticsDTO
     val indexInfos = table.getIndices
       .filter { _.getId == histID }
@@ -117,31 +124,35 @@ object StatisticsHelper {
     }
   }
 
-  private[statistics] def shouldUpdateHistogram(statistics: ColumnStatistics,
-                                                result: StatisticsResult): Boolean = {
+  private[statistics] def shouldUpdateHistogram(
+      statistics: ColumnStatistics,
+      result: StatisticsResult): Boolean = {
     if (statistics == null || result == null) return false
     shouldUpdateHistogram(statistics.getHistogram, result.histogram)
   }
 
-  private[statistics] def shouldUpdateHistogram(statistics: IndexStatistics,
-                                                result: StatisticsResult): Boolean = {
+  private[statistics] def shouldUpdateHistogram(
+      statistics: IndexStatistics,
+      result: StatisticsResult): Boolean = {
     if (statistics == null || result == null) return false
     shouldUpdateHistogram(statistics.getHistogram, result.histogram)
   }
 
   /**
-   * Check whether histogram should be updated according to version
-   */
-  private[statistics] def shouldUpdateHistogram(oldHis: Histogram, newHis: Histogram): Boolean = {
+    * Check whether histogram should be updated according to version
+    */
+  private[statistics] def shouldUpdateHistogram(oldHis: Histogram,
+                                                newHis: Histogram): Boolean = {
     if (oldHis == null || newHis == null) return false
     val oldVersion = UnsignedLong.fromLongBits(oldHis.getLastUpdateVersion)
     val newVersion = UnsignedLong.fromLongBits(newHis.getLastUpdateVersion)
     oldVersion.compareTo(newVersion) < 0
   }
 
-  private[statistics] def extractStatisticResult(histId: Long,
-                                                 rows: Iterator[Row],
-                                                 requests: Seq[StatisticsDTO]): StatisticsResult = {
+  private[statistics] def extractStatisticResult(
+      histId: Long,
+      rows: Iterator[Row],
+      requests: Seq[StatisticsDTO]): StatisticsResult = {
     val matches = requests.filter(_.colId == histId)
     if (matches.nonEmpty) {
       val matched = matches.head
@@ -158,8 +169,12 @@ object StatisticsHelper {
           var lowerBound: Key = null
           var upperBound: Key = null
           // all bounds are stored as blob in bucketTable currently, decode using blob type
-          lowerBound = TypedKey.toTypedKey(row.getBytes(2), DataTypeFactory.of(MySQLType.TypeBlob))
-          upperBound = TypedKey.toTypedKey(row.getBytes(3), DataTypeFactory.of(MySQLType.TypeBlob))
+          lowerBound = TypedKey.toTypedKey(
+            row.getBytes(2),
+            DataTypeFactory.of(MySQLType.TypeBlob))
+          upperBound = TypedKey.toTypedKey(
+            row.getBytes(3),
+            DataTypeFactory.of(MySQLType.TypeBlob))
           totalCount += count
           buckets += new Bucket(totalCount, repeats, lowerBound, upperBound)
         }
@@ -180,7 +195,8 @@ object StatisticsHelper {
       } else {
         val sketch = com.pingcap.tidb.tipb.CMSketch.parseFrom(rawData)
         val result =
-          CMSketch.newCMSketch(sketch.getRowsCount, sketch.getRows(0).getCountersCount)
+          CMSketch.newCMSketch(sketch.getRowsCount,
+                               sketch.getRows(0).getCountersCount)
         for (i <- 0 until sketch.getRowsCount) {
           val row = sketch.getRows(i)
           result.setCount(0)
@@ -192,7 +208,11 @@ object StatisticsHelper {
         }
         result
       }
-      StatisticsResult(histId, histogram, cMSketch, matched.idxInfo, matched.colInfo)
+      StatisticsResult(histId,
+                       histogram,
+                       cMSketch,
+                       matched.idxInfo,
+                       matched.colInfo)
     } else {
       null
     }

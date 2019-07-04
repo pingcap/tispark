@@ -81,7 +81,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       .load()
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
-  protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
+  protected def loadTestData(
+      databases: Seq[String] = defaultTestDatabases): Unit =
     try {
       tableNames = Seq.empty[String]
       for (dbName <- databases) {
@@ -146,13 +147,14 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     spark.sparkContext.setLogLevel(level)
 
   /** Rename JDBC tables
-   *   - currently we use table names with `_j` suffix for JDBC tests
-   *
-   * @param qSpark spark sql query
-   * @param skipJDBC if JDBC tests are skipped, no need to rename
-   * @return
-   */
-  private def replaceJDBCTableName(qSpark: String, skipJDBC: Boolean): String = {
+    *   - currently we use table names with `_j` suffix for JDBC tests
+    *
+    * @param qSpark spark sql query
+    * @param skipJDBC if JDBC tests are skipped, no need to rename
+    * @return
+    */
+  private def replaceJDBCTableName(qSpark: String,
+                                   skipJDBC: Boolean): String = {
     var qJDBC: String = null
     if (!skipJDBC) {
       qJDBC = qSpark + " "
@@ -161,17 +163,22 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
         // will never be possible, and the following operation holds correct.
         // e.g., for input Seq[t2, t, lt]
         // e.g., select * from t, t2, lt -> select * from t_j, t2_j, lt_j
-        qJDBC = qJDBC.replaceAllLiterally(" " + tableName + " ", " " + tableName + "_j ")
-        qJDBC = qJDBC.replaceAllLiterally(" " + tableName + ",", " " + tableName + "_j,")
+        qJDBC = qJDBC.replaceAllLiterally(" " + tableName + " ",
+                                          " " + tableName + "_j ")
+        qJDBC = qJDBC.replaceAllLiterally(" " + tableName + ",",
+                                          " " + tableName + "_j,")
       }
     }
     qJDBC
   }
 
-  protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
+  protected def judge(str: String,
+                      skipped: Boolean = false,
+                      checkLimit: Boolean = true): Unit =
     assert(execDBTSAndJudge(str, skipped, checkLimit))
 
-  private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
+  private def compSparkWithTiDB(sql: String,
+                                checkLimit: Boolean = true): Boolean =
     compSqlResult(sql, querySpark(sql), queryTiDB(sql), checkLimit)
 
   protected def execDBTSAndJudge(str: String,
@@ -219,7 +226,14 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     try {
       explainSpark(qSpark)
       if (qJDBC == null) {
-        runTest(qSpark, skipped, rSpark, rJDBC, rTiDB, skipJDBC, skipTiDB, checkLimit)
+        runTest(qSpark,
+                skipped,
+                rSpark,
+                rJDBC,
+                rTiDB,
+                skipJDBC,
+                skipTiDB,
+                checkLimit)
       } else {
         runTestWithoutReplaceTableName(
           qSpark,
@@ -238,25 +252,25 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     }
 
   /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
-   *    - TiSpark query throws exception
-   *    - Both TiDB and Spark-JDBC queries fails to execute
-   *    - Both TiDB and Spark-JDBC results differ from TiSpark result
-   *
-   * For JDBC tests we use different view names to distinguish, so table names in Spark SQL will be
-   * renamed in Spark-JDBC SQL
-   *
-   * rSpark, rJDBC and rTiDB are used when we want to guarantee a fixed result which might change due to
-   *    - Current incorrectness/instability in used version(s)
-   *    - Format differences for partial data types
-   *
-   * @param qSpark      query for TiSpark and TiDB
-   * @param rSpark      pre-calculated TiSpark result
-   * @param rJDBC       pre-calculated Spark-JDBC result
-   * @param rTiDB       pre-calculated TiDB result
-   * @param skipJDBC    whether not to run test for Spark-JDBC
-   * @param skipTiDB    whether not to run test for TiDB
-   * @param checkLimit  whether check if sql contains limit but not order by
-   */
+    *    - TiSpark query throws exception
+    *    - Both TiDB and Spark-JDBC queries fails to execute
+    *    - Both TiDB and Spark-JDBC results differ from TiSpark result
+    *
+    * For JDBC tests we use different view names to distinguish, so table names in Spark SQL will be
+    * renamed in Spark-JDBC SQL
+    *
+    * rSpark, rJDBC and rTiDB are used when we want to guarantee a fixed result which might change due to
+    *    - Current incorrectness/instability in used version(s)
+    *    - Format differences for partial data types
+    *
+    * @param qSpark      query for TiSpark and TiDB
+    * @param rSpark      pre-calculated TiSpark result
+    * @param rJDBC       pre-calculated Spark-JDBC result
+    * @param rTiDB       pre-calculated TiDB result
+    * @param skipJDBC    whether not to run test for Spark-JDBC
+    * @param skipTiDB    whether not to run test for TiDB
+    * @param checkLimit  whether check if sql contains limit but not order by
+    */
   protected def runTest(qSpark: String,
                         skipped: Boolean = false,
                         rSpark: List[List[Any]] = null,
@@ -278,32 +292,33 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     )
 
   /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
-   *    - TiSpark query throws exception
-   *    - Both TiDB and Spark-JDBC queries fails to execute
-   *    - Both TiDB and Spark-JDBC results differ from TiSpark result
-   *
-   *  rSpark, rJDBC and rTiDB are used when we want to guarantee a fixed result which might change due to
-   *    - Current incorrectness/instability in used version(s)
-   *    - Format differences for partial data types
-   *
-   * @param qSpark      query for TiSpark and TiDB
-   * @param qJDBC       query for Spark-JDBC
-   * @param rSpark      pre-calculated TiSpark result
-   * @param rJDBC       pre-calculated Spark-JDBC result
-   * @param rTiDB       pre-calculated TiDB result
-   * @param skipJDBC    whether not to run test for Spark-JDBC
-   * @param skipTiDB    whether not to run test for TiDB
-   * @param checkLimit  whether check if sql contains limit but not order by
-   */
-  private def runTestWithoutReplaceTableName(qSpark: String,
-                                             qJDBC: String,
-                                             skipped: Boolean = false,
-                                             rSpark: List[List[Any]] = null,
-                                             rJDBC: List[List[Any]] = null,
-                                             rTiDB: List[List[Any]] = null,
-                                             skipJDBC: Boolean = false,
-                                             skipTiDB: Boolean = false,
-                                             checkLimit: Boolean = true): Unit = {
+    *    - TiSpark query throws exception
+    *    - Both TiDB and Spark-JDBC queries fails to execute
+    *    - Both TiDB and Spark-JDBC results differ from TiSpark result
+    *
+    *  rSpark, rJDBC and rTiDB are used when we want to guarantee a fixed result which might change due to
+    *    - Current incorrectness/instability in used version(s)
+    *    - Format differences for partial data types
+    *
+    * @param qSpark      query for TiSpark and TiDB
+    * @param qJDBC       query for Spark-JDBC
+    * @param rSpark      pre-calculated TiSpark result
+    * @param rJDBC       pre-calculated Spark-JDBC result
+    * @param rTiDB       pre-calculated TiDB result
+    * @param skipJDBC    whether not to run test for Spark-JDBC
+    * @param skipTiDB    whether not to run test for TiDB
+    * @param checkLimit  whether check if sql contains limit but not order by
+    */
+  private def runTestWithoutReplaceTableName(
+      qSpark: String,
+      qJDBC: String,
+      skipped: Boolean = false,
+      rSpark: List[List[Any]] = null,
+      rJDBC: List[List[Any]] = null,
+      rTiDB: List[List[Any]] = null,
+      skipJDBC: Boolean = false,
+      skipTiDB: Boolean = false,
+      checkLimit: Boolean = true): Unit = {
     if (skipped) {
       logger.warn(s"Test is skipped. [With Spark SQL: $qSpark]")
       return
@@ -344,7 +359,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
         try {
           r3 = queryTiDB(qSpark)
         } catch {
-          case e: Throwable => logger.warn(s"TiDB failed when executing:$qSpark", e) // TiDB failed
+          case e: Throwable =>
+            logger.warn(s"TiDB failed when executing:$qSpark", e) // TiDB failed
         }
       }
       if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {
@@ -364,7 +380,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     else s"[len: ${result.length}] = ${result.map(mapStringList).mkString(",")}"
 
   private def mapStringList(result: List[Any]): String =
-    if (result == null) "null" else "List(" + result.map(mapString).mkString(",") + ")"
+    if (result == null) "null"
+    else "List(" + result.map(mapString).mkString(",") + ")"
 
   private def mapString(result: Any): String =
     if (result == null) "null"
