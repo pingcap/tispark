@@ -19,7 +19,12 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
-import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
+import com.pingcap.tispark.{
+  TiConfigConst,
+  TiPartition,
+  TiSessionCache,
+  TiTableReference
+}
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
@@ -31,14 +36,14 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /**
- * RDD used for retrieving handles from TiKV. Result is arranged as
- * {{{
- *   RegionId(long):[handle1, handle2, handle3...](long[])
- * }}}
- * K-V pair, the key is regionId which stands for the id of a region in TiKV, value
- * is a list of primitive long which represents the handles lie in that region.
- *
- */
+  * RDD used for retrieving handles from TiKV. Result is arranged as
+  * {{{
+  *   RegionId(long):[handle1, handle2, handle3...](long[])
+  * }}}
+  * K-V pair, the key is regionId which stands for the id of a region in TiKV, value
+  * is a list of primitive long which represents the handles lie in that region.
+  *
+  */
 class TiHandleRDD(val dagRequest: TiDAGRequest,
                   val tiConf: TiConfiguration,
                   val tableRef: TiTableReference,
@@ -112,7 +117,8 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
       hostTasksMap.addBinding(task.getHost, task)
       val tasks = hostTasksMap(task.getHost)
       if (tasks.size >= taskPerSplit) {
-        result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+        result.append(
+          new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
         index += 1
         hostTasksMap.remove(task.getHost)
 
@@ -120,7 +126,8 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
     }
     // add rest
     for (tasks <- hostTasksMap.values) {
-      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+      result.append(
+        new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
       index += 1
     }
     result.toArray

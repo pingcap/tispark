@@ -23,13 +23,13 @@ import org.apache.spark.util.AccumulatorV2
 import scala.collection.JavaConversions._
 
 /**
- * A cache invalidate request collector.
- *
- * In common execution of a spark job, executor nodes may receive cache invalidate information
- * and flush executor's own cache store in that node, without explicitly notifying driver node
- * to invalidate cache information. This class is used for accumulating cache invalidate event
- * and make driver node easier to decide when to update it's PD-cache.
- */
+  * A cache invalidate request collector.
+  *
+  * In common execution of a spark job, executor nodes may receive cache invalidate information
+  * and flush executor's own cache store in that node, without explicitly notifying driver node
+  * to invalidate cache information. This class is used for accumulating cache invalidate event
+  * and make driver node easier to decide when to update it's PD-cache.
+  */
 class CacheInvalidateAccumulator
     extends AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] {
   private final val eventSet: util.Set[CacheInvalidateEvent] =
@@ -43,7 +43,8 @@ class CacheInvalidateAccumulator
     eventSet.add(v)
   }
 
-  override def copy(): AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] = {
+  override def copy()
+    : AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]] = {
     val accumulator = new CacheInvalidateAccumulator
     eventSet.synchronized {
       accumulator.eventSet.addAll(eventSet)
@@ -51,7 +52,9 @@ class CacheInvalidateAccumulator
     accumulator
   }
 
-  override def merge(other: AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]]): Unit =
+  override def merge(
+      other: AccumulatorV2[CacheInvalidateEvent, Seq[CacheInvalidateEvent]])
+    : Unit =
     eventSet.addAll(other.value)
 
   override def value: Seq[CacheInvalidateEvent] = eventSet.toList

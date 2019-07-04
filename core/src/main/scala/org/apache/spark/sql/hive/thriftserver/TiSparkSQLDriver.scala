@@ -31,7 +31,7 @@ import org.apache.spark.sql.{AnalysisException, SQLContext}
 import org.apache.spark.sql.execution.QueryExecution
 
 private[hive] class TiSparkSQLDriver(
-  val context: SQLContext = TiSparkSQLEnv.sqlContext
+    val context: SQLContext = TiSparkSQLEnv.sqlContext
 ) extends Driver
     with Logging {
 

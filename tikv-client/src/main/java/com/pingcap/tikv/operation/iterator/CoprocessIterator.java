@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv.operation.iterator;
 
+import static java.util.Objects.requireNonNull;
+
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tikv.TiSession;
@@ -27,18 +29,15 @@ import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-
-import static java.util.Objects.requireNonNull;
 
 public abstract class CoprocessIterator<T> implements Iterator<T> {
   protected final TiSession session;
   protected final List<RegionTask> regionTasks;
   protected DAGRequest dagRequest;
-  protected static final DataType[] handleTypes = new DataType[]{IntegerType.INT};
+  protected static final DataType[] handleTypes = new DataType[] {IntegerType.INT};
   //  protected final ExecutorCompletionService<Iterator<SelectResponse>> completionService;
   protected RowReader rowReader;
   protected CodecDataInput dataInput;
@@ -48,10 +47,8 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
   protected List<Chunk> chunkList;
   protected SchemaInfer schemaInfer;
 
-  CoprocessIterator(DAGRequest req,
-                    List<RegionTask> regionTasks,
-                    TiSession session,
-                    SchemaInfer infer) {
+  CoprocessIterator(
+      DAGRequest req, List<RegionTask> regionTasks, TiSession session, SchemaInfer infer) {
     this.dagRequest = req;
     this.session = session;
     this.regionTasks = regionTasks;
@@ -60,16 +57,14 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
 
   abstract void submitTasks();
 
-  public static CoprocessIterator<Row> getRowIterator(TiDAGRequest req,
-                                                      List<RegionTask> regionTasks,
-                                                      TiSession session) {
+  public static CoprocessIterator<Row> getRowIterator(
+      TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     return new DAGIterator<Row>(
         req.buildScan(req.isIndexScan() && !req.isDoubleRead()),
         regionTasks,
         session,
         SchemaInfer.create(req),
-        req.getPushDownType()
-    ) {
+        req.getPushDownType()) {
       @Override
       public Row next() {
         if (hasNext()) {
@@ -81,16 +76,10 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
     };
   }
 
-  public static CoprocessIterator<Long> getHandleIterator(TiDAGRequest req,
-                                                          List<RegionTask> regionTasks,
-                                                          TiSession session) {
+  public static CoprocessIterator<Long> getHandleIterator(
+      TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     return new DAGIterator<Long>(
-        req.buildScan(true),
-        regionTasks,
-        session,
-        SchemaInfer.create(req),
-        req.getPushDownType()
-    ) {
+        req.buildScan(true), regionTasks, session, SchemaInfer.create(req), req.getPushDownType()) {
       @Override
       public Long next() {
         if (hasNext()) {
@@ -113,8 +102,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
 
   void createDataInputReader() {
     requireNonNull(chunkList, "Chunk list should not be null.");
-    if (0 > chunkIndex ||
-        chunkIndex >= chunkList.size()) {
+    if (0 > chunkIndex || chunkIndex >= chunkList.size()) {
       throw new IllegalArgumentException();
     }
     dataInput = new CodecDataInput(chunkList.get(chunkIndex).getRowsData());

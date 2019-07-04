@@ -38,7 +38,8 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
     explainAndRunTest("select b from prefix where b >= \"bbc\" and b < \"bbd\"")
     // FIXME: following test results in INDEX range [bb, bb] and TABLE range (-INF, bbc), while the table range should have been [bb, bb]
     // FYI, the predicate is [[b] LESS_THAN "bbc"], Not(IsNull([b])), [[b] EQUAL "bb"]
-    explainAndRunTest("select c, b from prefix where b = \"bb\" and b < \"bbc\"")
+    explainAndRunTest(
+      "select c, b from prefix where b = \"bb\" and b < \"bbc\"")
     println(Charset.defaultCharset())
     explainAndRunTest(
       "select c, b from prefix where b > \"ÿ\" and b < \"ÿÿc\"",
@@ -54,7 +55,8 @@ class PrefixIndexTestSuite extends BaseTiSparkSuite {
       rTiDB = List(List(7, "ÿÿ"), List(8, "ÿÿ0"), List(9, "ÿÿÿ"))
     )
     explainAndRunTest("select a, b from prefix where b LIKE 'b%b'")
-    explainAndRunTest("select a, b from prefix where b LIKE 'ÿ%'", skipJDBC = true)
+    explainAndRunTest("select a, b from prefix where b LIKE 'ÿ%'",
+                      skipJDBC = true)
     explainAndRunTest("select a, b from prefix where b LIKE '%b'")
     explainAndRunTest("select a, b from prefix where b LIKE '%'")
   }

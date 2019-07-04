@@ -20,12 +20,14 @@ import org.apache.spark.sql.internal.{SQLConf, SessionState}
 import org.apache.spark.{SparkConf, SparkContext}
 
 /**
- * A special [[SparkSession]] prepared for testing.
- */
+  * A special [[SparkSession]] prepared for testing.
+  */
 class TestSparkSession(sc: SparkContext) extends SparkSession(sc) { self =>
   def this(sparkConf: SparkConf) {
     this(
-      new SparkContext("local[2]", "test-sql-context", sparkConf.set("spark.sql.testkey", "true"))
+      new SparkContext("local[2]",
+                       "test-sql-context",
+                       sparkConf.set("spark.sql.testkey", "true"))
     )
   }
 
@@ -34,25 +36,28 @@ class TestSparkSession(sc: SparkContext) extends SparkSession(sc) { self =>
   }
 
   @transient
-  protected[sql] override lazy val sessionState: SessionState = new SessionState(self) {
-    override lazy val conf: SQLConf = {
-      new SQLConf {
-        clear()
-        override def clear(): Unit = {
-          super.clear()
-          // Make sure we start with the default test configs even after clear
-          TestSQLContext.overrideConfs.foreach { case (key, value) => setConfString(key, value) }
+  protected[sql] override lazy val sessionState: SessionState =
+    new SessionState(self) {
+      override lazy val conf: SQLConf = {
+        new SQLConf {
+          clear()
+          override def clear(): Unit = {
+            super.clear()
+            // Make sure we start with the default test configs even after clear
+            TestSQLContext.overrideConfs.foreach {
+              case (key, value) => setConfString(key, value)
+            }
+          }
         }
       }
     }
-  }
 }
 
 object TestSQLContext {
 
   /**
-   * A map used to store all confs that need to be overridden in sql/core unit tests.
-   */
+    * A map used to store all confs that need to be overridden in sql/core unit tests.
+    */
   val overrideConfs: Map[String, String] =
     Map(
       // Fewer shuffle partitions to speed up testing.

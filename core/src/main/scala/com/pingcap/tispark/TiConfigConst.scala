@@ -27,16 +27,20 @@ object TiConfigConst {
   val ALLOW_AGG_PUSHDOWN: String = "spark.tispark.plan.allow_agg_pushdown"
   val TASK_PER_SPLIT: String = "spark.tispark.task_per_split"
   val PD_CLUSTER_ID: String = "spark.tispark.pd.clusterid"
-  val REQUEST_COMMAND_PRIORITY: String = "spark.tispark.request.command.priority"
+  val REQUEST_COMMAND_PRIORITY: String =
+    "spark.tispark.request.command.priority"
   val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
   val ALLOW_INDEX_READ: String = "spark.tispark.plan.allow_index_read"
   val COPROCESS_STREAMING: String = "spark.tispark.coprocess.streaming"
-  val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"
-  val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String = "spark.tispark.plan.downgrade.index_threshold"
+  val UNSUPPORTED_PUSHDOWN_EXPR: String =
+    "spark.tispark.plan.unsupported_pushdown_exprs"
+  val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String =
+    "spark.tispark.plan.downgrade.index_threshold"
   val KV_TIMEZONE_OFFSET: String = "spark.tispark.request.timezone.offset"
   val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported_mysql_types"
   val ENABLE_AUTO_LOAD_STATISTICS: String = "spark.tispark.statistics.auto_load"
-  val CACHE_EXPIRE_AFTER_ACCESS: String = "spark.tispark.statistics.expire_after_access"
+  val CACHE_EXPIRE_AFTER_ACCESS: String =
+    "spark.tispark.statistics.expire_after_access"
   val SHOW_ROWID: String = "spark.tispark.show_rowid"
   val DB_PREFIX: String = "spark.tispark.db_prefix"
 }

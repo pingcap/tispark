@@ -52,7 +52,7 @@ public class CatalogTransaction {
 
   private static ByteString KEY_DB = ByteString.copyFromUtf8("DBs");
   private static ByteString KEY_TABLE = ByteString.copyFromUtf8("Table");
-  private static ByteString KEY_SCHEMA_VERSION =  ByteString.copyFromUtf8("SchemaVersionKey");
+  private static ByteString KEY_SCHEMA_VERSION = ByteString.copyFromUtf8("SchemaVersionKey");
 
   private static final String ENCODED_DB_PREFIX = "DB";
 
@@ -180,5 +180,4 @@ public class CatalogTransaction {
       throw new TiClientInternalException("Error parsing Json", e1);
     }
   }
-
 }

@@ -24,12 +24,10 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import gnu.trove.list.array.TLongArrayList;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutorCompletionService;
-
 
 public class IndexScanIterator implements Iterator<Row> {
   private final Iterator<Long> handleIterator;
@@ -70,12 +68,13 @@ public class IndexScanIterator implements Iterator<Row> {
         while (handleIterator.hasNext()) {
           TLongArrayList handles = feedBatch();
           batchCount++;
-          completionService.submit(() -> {
-            List<RegionTask> tasks = RangeSplitter
-                .newSplitter(session.getRegionManager())
-                .splitAndSortHandlesByRegion(dagReq.getTableInfo().getId(), handles);
-            return CoprocessIterator.getRowIterator(dagReq, tasks, session);
-          });
+          completionService.submit(
+              () -> {
+                List<RegionTask> tasks =
+                    RangeSplitter.newSplitter(session.getRegionManager())
+                        .splitAndSortHandlesByRegion(dagReq.getTableInfo().getId(), handles);
+                return CoprocessIterator.getRowIterator(dagReq, tasks, session);
+              });
         }
         while (batchCount > 0) {
           rowIterator = completionService.take().get();

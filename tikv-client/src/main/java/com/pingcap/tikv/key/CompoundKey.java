@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv.key;
 
-
 import com.google.common.base.Joiner;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import java.util.ArrayList;
@@ -32,8 +31,7 @@ public class CompoundKey extends Key {
 
   public static CompoundKey concat(Key lKey, Key rKey) {
     Builder builder = newBuilder();
-    builder.append(lKey)
-           .append(rKey);
+    builder.append(lKey).append(rKey);
     return builder.build();
   }
 
@@ -50,7 +48,7 @@ public class CompoundKey extends Key {
 
     public Builder append(Key key) {
       if (key instanceof CompoundKey) {
-        CompoundKey compKey = (CompoundKey)key;
+        CompoundKey compKey = (CompoundKey) key;
         for (Key child : compKey.getKeys()) {
           append(child);
         }

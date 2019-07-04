@@ -20,7 +20,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import org.apache.hadoop.hive.conf.HiveConf
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars
-import org.apache.hive.service.cli.thrift.{ThriftBinaryCLIService, ThriftHttpCLIService}
+import org.apache.hive.service.cli.thrift.{
+  ThriftBinaryCLIService,
+  ThriftHttpCLIService
+}
 import org.apache.hive.service.server.HiveServer2
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.internal.Logging
@@ -34,9 +37,9 @@ import org.apache.spark.util.{ShutdownHookManager, Utils}
 object TiHiveThriftServer2 extends Logging {
 
   /**
-   * :: DeveloperApi ::
-   * Starts a new thrift server with the given context.
-   */
+    * :: DeveloperApi ::
+    * Starts a new thrift server with the given context.
+    */
   @DeveloperApi
   def startWithContext(sqlContext: SQLContext): Unit = {
     val server = new HiveThriftServer2(sqlContext)
@@ -50,11 +53,13 @@ object TiHiveThriftServer2 extends Logging {
     server.start()
     listener = new HiveThriftServer2Listener(server, sqlContext.conf)
     sqlContext.sparkContext.addSparkListener(listener)
-    uiTab = if (sqlContext.sparkContext.getConf.getBoolean("spark.ui.enabled", true)) {
-      Some(new ThriftServerTab(sqlContext.sparkContext))
-    } else {
-      None
-    }
+    uiTab =
+      if (sqlContext.sparkContext.getConf
+            .getBoolean("spark.ui.enabled", true)) {
+        Some(new ThriftServerTab(sqlContext.sparkContext))
+      } else {
+        None
+      }
   }
 
   def main(args: Array[String]) {
@@ -81,7 +86,8 @@ object TiHiveThriftServer2 extends Logging {
       server.init(executionHive.conf)
       server.start()
       logInfo("TiHiveThriftServer2 started")
-      listener = new HiveThriftServer2Listener(server, TiSparkSQLEnv.sqlContext.conf)
+      listener =
+        new HiveThriftServer2Listener(server, TiSparkSQLEnv.sqlContext.conf)
 //      HiveThriftServer2.listener = listener
 
       TiSparkSQLEnv.sparkContext.addSparkListener(listener)

@@ -35,7 +35,7 @@ public class KeyRangeUtils {
    * Build a Coprocessor Range with CLOSED_OPEN endpoints
    *
    * @param startKey startKey
-   * @param endKey   endKey
+   * @param endKey endKey
    * @return a CLOSED_OPEN range for coprocessor
    */
   public static KeyRange makeCoprocRange(ByteString startKey, ByteString endKey) {
@@ -52,12 +52,12 @@ public class KeyRangeUtils {
     if (!range.hasLowerBound() || !range.hasUpperBound()) {
       throw new TiClientInternalException("range is not bounded");
     }
-    if (range.lowerBoundType().equals(BoundType.OPEN) ||
-        range.upperBoundType().equals(BoundType.CLOSED)) {
+    if (range.lowerBoundType().equals(BoundType.OPEN)
+        || range.upperBoundType().equals(BoundType.CLOSED)) {
       throw new TiClientInternalException("range must be CLOSED_OPEN");
     }
-    return makeCoprocRange(range.lowerEndpoint().toByteString(),
-        range.upperEndpoint().toByteString());
+    return makeCoprocRange(
+        range.lowerEndpoint().toByteString(), range.upperEndpoint().toByteString());
   }
 
   /**
@@ -119,7 +119,7 @@ public class KeyRangeUtils {
     // use ceil for split step
     int step = (ranges.size() + splitNum - 1) / splitNum;
     ImmutableList.Builder<KeyRange> rangeBuilder = ImmutableList.builder();
-    for (int i = 0, nowPos = 0; i < splitNum; i ++) {
+    for (int i = 0, nowPos = 0; i < splitNum; i++) {
       int nextPos = Math.min(nowPos + step - 1, ranges.size() - 1);
       KeyRange first = ranges.get(nowPos);
       KeyRange last = ranges.get(nextPos);

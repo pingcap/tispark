@@ -23,7 +23,12 @@ import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.{TiConfigConst, TiPartition, TiSessionCache, TiTableReference}
+import com.pingcap.tispark.{
+  TiConfigConst,
+  TiPartition,
+  TiSessionCache,
+  TiTableReference
+}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
@@ -55,42 +60,43 @@ class TiRDD(val dagRequest: TiDAGRequest,
   // used for driver to update PD cache
   private val callBackFunc = CacheInvalidateListener.getInstance()
 
-  override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    dagRequest.resolve()
+  override def compute(split: Partition, context: TaskContext): Iterator[Row] =
+    new Iterator[Row] {
+      dagRequest.resolve()
 
-    // bypass, sum return a long type
-    private val tiPartition = split.asInstanceOf[TiPartition]
-    private val session = TiSessionCache.getSession(tiConf)
-    session.injectCallBackFunc(callBackFunc)
-    private val snapshot = session.createSnapshot(ts)
-    private[this] val tasks = tiPartition.tasks
+      // bypass, sum return a long type
+      private val tiPartition = split.asInstanceOf[TiPartition]
+      private val session = TiSessionCache.getSession(tiConf)
+      session.injectCallBackFunc(callBackFunc)
+      private val snapshot = session.createSnapshot(ts)
+      private[this] val tasks = tiPartition.tasks
 
-    private val iterator = snapshot.tableRead(dagRequest, tasks)
-    private val finalTypes = rowTransformer.getTypes.toList
+      private val iterator = snapshot.tableRead(dagRequest, tasks)
+      private val finalTypes = rowTransformer.getTypes.toList
 
-    def toSparkRow(row: TiRow): Row = {
-      val transRow = rowTransformer.transform(row)
-      val rowArray = new Array[Any](finalTypes.size)
+      def toSparkRow(row: TiRow): Row = {
+        val transRow = rowTransformer.transform(row)
+        val rowArray = new Array[Any](finalTypes.size)
 
-      for (i <- 0 until transRow.fieldCount) {
-        rowArray(i) = transRow.get(i, finalTypes(i))
+        for (i <- 0 until transRow.fieldCount) {
+          rowArray(i) = transRow.get(i, finalTypes(i))
+        }
+
+        Row.fromSeq(rowArray)
       }
 
-      Row.fromSeq(rowArray)
-    }
-
-    override def hasNext: Boolean = {
-      // Kill the task in case it has been marked as killed. This logic is from
-      // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
-      // to avoid performance overhead.
-      if (context.isInterrupted()) {
-        throw new TaskKilledException
+      override def hasNext: Boolean = {
+        // Kill the task in case it has been marked as killed. This logic is from
+        // InterruptibleIterator, but we inline it here instead of wrapping the iterator in order
+        // to avoid performance overhead.
+        if (context.isInterrupted()) {
+          throw new TaskKilledException
+        }
+        iterator.hasNext
       }
-      iterator.hasNext
-    }
 
-    override def next(): Row = toSparkRow(iterator.next)
-  }
+      override def next(): Row = toSparkRow(iterator.next)
+    }
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =
     split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
@@ -111,7 +117,8 @@ class TiRDD(val dagRequest: TiDAGRequest,
       hostTasksMap.addBinding(task.getHost, task)
       val tasks = hostTasksMap(task.getHost)
       if (tasks.size >= taskPerSplit) {
-        result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+        result.append(
+          new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
         index += 1
         hostTasksMap.remove(task.getHost)
 
@@ -119,7 +126,8 @@ class TiRDD(val dagRequest: TiDAGRequest,
     }
     // add rest
     for (tasks <- hostTasksMap.values) {
-      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+      result.append(
+        new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
       index += 1
     }
     result.toArray

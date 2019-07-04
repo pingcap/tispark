@@ -19,14 +19,13 @@ package com.pingcap.tikv.types;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.sql.Date;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
-import java.sql.Date;
-
 public class DateType extends AbstractDateTimeType {
   public static final DateType DATE = new DateType(MySQLType.TypeDate);
-  public static final MySQLType[] subTypes = new MySQLType[] { MySQLType.TypeDate };
+  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeDate};
 
   private DateType(MySQLType tp) {
     super(tp);
@@ -46,9 +45,7 @@ public class DateType extends AbstractDateTimeType {
     return Converter.convertToDate(value);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Date decodeNotNull(int flag, CodecDataInput cdi) {
     DateTime dateTime = decodeDateTime(flag, cdi);

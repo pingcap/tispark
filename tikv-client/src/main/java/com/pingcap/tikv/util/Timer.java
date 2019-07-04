@@ -17,7 +17,7 @@ package com.pingcap.tikv.util;
 
 import java.util.concurrent.TimeUnit;
 
-final public class Timer {
+public final class Timer {
   private long startTime;
 
   public Timer() {

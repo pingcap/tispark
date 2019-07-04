@@ -45,7 +45,13 @@ public class TiDBInfo {
     this.schemaState = SchemaState.fromValue(schemaState);
   }
 
-  private TiDBInfo(long id, String name, String charset, String collate, List<TiTableInfo> tables, SchemaState schemaState) {
+  private TiDBInfo(
+      long id,
+      String name,
+      String charset,
+      String collate,
+      List<TiTableInfo> tables,
+      SchemaState schemaState) {
     this.id = id;
     this.name = name;
     this.charset = charset;
@@ -90,7 +96,7 @@ public class TiDBInfo {
     if (!(other instanceof TiDBInfo)) {
       return false;
     }
-    TiDBInfo otherDB = (TiDBInfo)other;
+    TiDBInfo otherDB = (TiDBInfo) other;
     return otherDB.getId() == getId() && otherDB.getName().equals(getName());
   }
 

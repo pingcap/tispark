@@ -25,13 +25,11 @@ import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.predicates.IndexRange;
 import com.pingcap.tikv.types.DataTypeFactory;
 import com.pingcap.tikv.types.MySQLType;
-
 import java.util.List;
 
 /**
- * Each Index will have a single {@link IndexStatistics} to store {@link Histogram} info
- * and {@link CMSketch} info, if any.
- *
+ * Each Index will have a single {@link IndexStatistics} to store {@link Histogram} info and {@link
+ * CMSketch} info, if any.
  */
 public class IndexStatistics {
   private Histogram histogram;
@@ -80,14 +78,16 @@ public class IndexStatistics {
       Key lKey;
       Key uKey;
       if (pointKey != Key.EMPTY) {
-        Key convertedKey = TypedKey.toTypedKey(pointKey.getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
-        Key convertedNext = TypedKey.toTypedKey(pointKey.next().getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
+        Key convertedKey =
+            TypedKey.toTypedKey(pointKey.getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
+        Key convertedNext =
+            TypedKey.toTypedKey(pointKey.next().getBytes(), DataTypeFactory.of(MySQLType.TypeBlob));
         // TODO: Implement CMSketch point query
-//        if (cmSketch != null) {
-//          rowCount += cmSketch.queryBytes(convertedKey.getBytes());
-//        } else {
+        //        if (cmSketch != null) {
+        //          rowCount += cmSketch.queryBytes(convertedKey.getBytes());
+        //        } else {
         rowCount += histogram.betweenRowCount(convertedKey, convertedNext);
-//        }
+        //        }
       }
       if (range != null) {
         lPointKey = pointKey;

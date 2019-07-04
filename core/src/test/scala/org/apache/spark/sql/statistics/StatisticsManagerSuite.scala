@@ -40,7 +40,8 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
   }
 
   private def initTable(): Unit = {
-    fDataIdxTbl = ti.meta.getTable("tispark_test", "full_data_type_table_idx").get
+    fDataIdxTbl =
+      ti.meta.getTable("tispark_test", "full_data_type_table_idx").get
     fDataTbl = ti.meta.getTable("tispark_test", "full_data_type_table").get
   }
 
@@ -93,20 +94,27 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     val tbFixedFloat = ti.meta.getTable("tispark_test", "tb_fixed_float").get
     val tbFixedTime = ti.meta.getTable("tispark_test", "tb_fixed_time").get
     val intBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedInt)
-    val floatBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedFloat)
-    val timeBytes = StatisticsManager.getInstance().estimateTableSize(tbFixedTime)
+    val floatBytes =
+      StatisticsManager.getInstance().estimateTableSize(tbFixedFloat)
+    val timeBytes =
+      StatisticsManager.getInstance().estimateTableSize(tbFixedTime)
     assert(intBytes >= 18 * 4)
     assert(floatBytes >= 22 * 4)
     assert(timeBytes >= 19 * 2)
   }
 
-  ignore("select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
+  ignore(
+    "select count(1) from full_data_type_table_idx where tp_int = 2006469139 or tp_int < 0") {
     val indexes = fDataIdxTbl.getIndices
-    val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
+    val idx = indexes
+      .filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int")))
+      .head
 
     val eq1: Expression =
-      equal(ColumnRef.create("tp_int", fDataIdxTbl), Constant.create(2006469139))
-    val eq2: Expression = lessEqual(ColumnRef.create("tp_int", fDataIdxTbl), Constant.create(0))
+      equal(ColumnRef.create("tp_int", fDataIdxTbl),
+            Constant.create(2006469139))
+    val eq2: Expression =
+      lessEqual(ColumnRef.create("tp_int", fDataIdxTbl), Constant.create(0))
     val or: Expression = LogicalBinaryExpression.or(eq1, eq2)
 
     val expressions = ImmutableList.of(or)
@@ -117,12 +125,16 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
     "select tp_int from full_data_type_table_idx where tp_int < 5390653 and tp_int > -46759812"
   ) {
     val indexes = fDataIdxTbl.getIndices
-    val idx = indexes.filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int"))).head
+    val idx = indexes
+      .filter(_.getIndexColumns.asScala.exists(_.matchName("tp_int")))
+      .head
 
     val le1: Expression =
-      lessThan(ColumnRef.create("tp_int", fDataIdxTbl), Constant.create(5390653))
+      lessThan(ColumnRef.create("tp_int", fDataIdxTbl),
+               Constant.create(5390653))
     val gt: Expression =
-      greaterThan(ColumnRef.create("tp_int", fDataIdxTbl), Constant.create(-46759812))
+      greaterThan(ColumnRef.create("tp_int", fDataIdxTbl),
+                  Constant.create(-46759812))
     val and: Expression = LogicalBinaryExpression.and(le1, gt)
 
     val expressions = ImmutableList.of(and)
@@ -134,8 +146,12 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
                          expectedCount: Long): Unit = {
     val result = ScanAnalyzer.extractConditions(expressions, fDataIdxTbl, idx)
     val irs =
-      expressionToIndexRanges(result.getPointPredicates, result.getRangePredicate, fDataIdxTbl, idx)
-    val tblStatistics = StatisticsManager.getInstance().getTableStatistics(fDataIdxTbl.getId)
+      expressionToIndexRanges(result.getPointPredicates,
+                              result.getRangePredicate,
+                              fDataIdxTbl,
+                              idx)
+    val tblStatistics =
+      StatisticsManager.getInstance().getTableStatistics(fDataIdxTbl.getId)
     val idxStatistics = tblStatistics.getIndexHistMap.get(idx.getId)
     val rc = idxStatistics.getRowCount(irs).toLong
     assert(rc == expectedCount)
@@ -175,10 +191,10 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
       .isDefined
 
   /**
-   * Extract first Coprocessor tiRdd exec node from the given query
-   *
-   * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
-   */
+    * Extract first Coprocessor tiRdd exec node from the given query
+    *
+    * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
+    */
   private def extractCoprocessorRDD(executedPlan: SparkPlan): CoprocessorRDD =
     executedPlan
       .find(_.isInstanceOf[CoprocessorRDD])
@@ -186,10 +202,10 @@ class StatisticsManagerSuite extends BaseTiSparkSuite {
       .asInstanceOf[CoprocessorRDD]
 
   /**
-   * Extract first handle rdd exec node from the given query
-   *
-   * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
-   */
+    * Extract first handle rdd exec node from the given query
+    *
+    * @throws java.util.NoSuchElementException if the query does not contain any handle rdd exec node.
+    */
   private def extractHandleRDDExec(executedPlan: SparkPlan): HandleRDDExec =
     executedPlan
       .find(_.isInstanceOf[HandleRDDExec])

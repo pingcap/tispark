@@ -16,7 +16,15 @@
 package org.apache.spark.sql.catalyst.expressions.aggregate
 
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
-import org.apache.spark.sql.catalyst.expressions.{Add, AttributeReference, Cast, Coalesce, Expression, ExpressionDescription, Literal}
+import org.apache.spark.sql.catalyst.expressions.{
+  Add,
+  AttributeReference,
+  Cast,
+  Coalesce,
+  Expression,
+  ExpressionDescription,
+  Literal
+}
 import org.apache.spark.sql.catalyst.util.TypeUtils
 import org.apache.spark.sql.types._
 
@@ -60,7 +68,8 @@ case class PromotedSum(child: Expression) extends DeclarativeAggregate {
     if (child.nullable) {
       Seq(
         /* sum = */
-        Coalesce(Seq(Add(Coalesce(Seq(sum, zero)), Cast(child, sumDataType)), sum))
+        Coalesce(
+          Seq(Add(Coalesce(Seq(sum, zero)), Cast(child, sumDataType)), sum))
       )
     } else {
       Seq(

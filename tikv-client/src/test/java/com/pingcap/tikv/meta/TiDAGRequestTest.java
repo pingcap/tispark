@@ -15,6 +15,11 @@
 
 package com.pingcap.tikv.meta;
 
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Expr;
@@ -25,19 +30,13 @@ import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.kvproto.Coprocessor;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
-import org.junit.Test;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
-
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.lessEqual;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
 
 public class TiDAGRequestTest {
   private static TiTableInfo createTable() {
@@ -84,10 +83,8 @@ public class TiDAGRequestTest {
         .addAggregate(sum, ExpressionTypeCoercer.inferType(sum))
         .addAggregate(min, ExpressionTypeCoercer.inferType(min))
         .addFilter(plus(c1, c2))
-        .addGroupByItem(
-            ByItem.create(ColumnRef.create("c2", table), true))
-        .addOrderByItem(
-            ByItem.create(ColumnRef.create("c3", table), false))
+        .addGroupByItem(ByItem.create(ColumnRef.create("c2", table), true))
+        .addOrderByItem(ByItem.create(ColumnRef.create("c3", table), false))
         .setTableInfo(table)
         .setStartTs(666)
         .setTruncateMode(TiDAGRequest.TruncateMode.IgnoreTruncation)

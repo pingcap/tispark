@@ -77,7 +77,8 @@ public class MetaUtils {
       return this;
     }
 
-    public TableBuilder appendIndex(long iid, String indexName, List<String> colNames, boolean isPk) {
+    public TableBuilder appendIndex(
+        long iid, String indexName, List<String> colNames, boolean isPk) {
       List<TiIndexColumn> indexCols =
           colNames
               .stream()
@@ -154,14 +155,9 @@ public class MetaUtils {
           GrpcUtils.makeGetStoreResponse(
               pdServer.getClusterId(),
               GrpcUtils.makeStore(
-                  STORE_ID,
-                  LOCAL_ADDR + ":" + kvServer.getPort(),
-                  Metapb.StoreState.Up)));
+                  STORE_ID, LOCAL_ADDR + ":" + kvServer.getPort(), Metapb.StoreState.Up)));
 
-      pdServer.addGetRegionResp(
-          GrpcUtils.makeGetRegionResponse(
-              pdServer.getClusterId(),
-              region));
+      pdServer.addGetRegionResp(GrpcUtils.makeGetRegionResponse(pdServer.getClusterId(), region));
     }
 
     private ByteString getDBKey(long id) {
@@ -174,11 +170,14 @@ public class MetaUtils {
     }
 
     public void addDatabase(long id, String name) {
-      String dbJson = String.format("{\n"
-          + " \"id\":%d,\n"
-          + " \"db_name\":{\"O\":\"%s\",\"L\":\"%s\"},\n"
-          + " \"charset\":\"utf8\",\"collate\":\"utf8_bin\",\"state\":5\n"
-          + "}", id, name, name.toLowerCase());
+      String dbJson =
+          String.format(
+              "{\n"
+                  + " \"id\":%d,\n"
+                  + " \"db_name\":{\"O\":\"%s\",\"L\":\"%s\"},\n"
+                  + " \"charset\":\"utf8\",\"collate\":\"utf8_bin\",\"state\":5\n"
+                  + "}",
+              id, name, name.toLowerCase());
 
       kvServer.put(getDBKey(id), ByteString.copyFromUtf8(dbJson));
     }
@@ -189,7 +188,8 @@ public class MetaUtils {
 
     private ByteString getKeyForTable(long dbId, long tableId) {
       ByteString dbKey = ByteString.copyFrom(String.format("%s:%d", "DB", dbId).getBytes());
-      ByteString tableKey = ByteString.copyFrom(String.format("%s:%d", "Table", tableId).getBytes());
+      ByteString tableKey =
+          ByteString.copyFrom(String.format("%s:%d", "Table", tableId).getBytes());
 
       CodecDataOutput cdo = new CodecDataOutput();
       cdo.write(new byte[] {'m'});
@@ -216,51 +216,52 @@ public class MetaUtils {
     }
 
     public void addTable(int dbId, int tableId, String tableName) {
-      String tableJson = String.format(
-          "\n"
-              + "{\n"
-              + "   \"id\": %d,\n"
-              + "   \"name\": {\n"
-              + "      \"O\": \"%s\",\n"
-              + "      \"L\": \"%s\"\n"
-              + "   },\n"
-              + "   \"charset\": \"\",\n"
-              + "   \"collate\": \"\",\n"
-              + "   \"cols\": [\n"
-              + "      {\n"
-              + "         \"id\": 1,\n"
-              + "         \"name\": {\n"
-              + "            \"O\": \"c1\",\n"
-              + "            \"L\": \"c1\"\n"
-              + "         },\n"
-              + "         \"offset\": 0,\n"
-              + "         \"origin_default\": null,\n"
-              + "         \"default\": null,\n"
-              + "         \"type\": {\n"
-              + "            \"Tp\": 3,\n"
-              + "            \"Flag\": 139,\n"
-              + "            \"Flen\": 11,\n"
-              + "            \"Decimal\": -1,\n"
-              + "            \"Charset\": \"binary\",\n"
-              + "            \"Collate\": \"binary\",\n"
-              + "            \"Elems\": null\n"
-              + "         },\n"
-              + "         \"state\": 5,\n"
-              + "         \"comment\": \"\"\n"
-              + "      }\n"
-              + "   ],\n"
-              + "   \"index_info\": [],\n"
-              + "   \"fk_info\": null,\n"
-              + "   \"state\": 5,\n"
-              + "   \"pk_is_handle\": true,\n"
-              + "   \"comment\": \"\",\n"
-              + "   \"auto_inc_id\": 0,\n"
-              + "   \"max_col_id\": 4,\n"
-              + "   \"max_idx_id\": 1\n"
-              + "}", tableId, tableName, tableName.toLowerCase());
+      String tableJson =
+          String.format(
+              "\n"
+                  + "{\n"
+                  + "   \"id\": %d,\n"
+                  + "   \"name\": {\n"
+                  + "      \"O\": \"%s\",\n"
+                  + "      \"L\": \"%s\"\n"
+                  + "   },\n"
+                  + "   \"charset\": \"\",\n"
+                  + "   \"collate\": \"\",\n"
+                  + "   \"cols\": [\n"
+                  + "      {\n"
+                  + "         \"id\": 1,\n"
+                  + "         \"name\": {\n"
+                  + "            \"O\": \"c1\",\n"
+                  + "            \"L\": \"c1\"\n"
+                  + "         },\n"
+                  + "         \"offset\": 0,\n"
+                  + "         \"origin_default\": null,\n"
+                  + "         \"default\": null,\n"
+                  + "         \"type\": {\n"
+                  + "            \"Tp\": 3,\n"
+                  + "            \"Flag\": 139,\n"
+                  + "            \"Flen\": 11,\n"
+                  + "            \"Decimal\": -1,\n"
+                  + "            \"Charset\": \"binary\",\n"
+                  + "            \"Collate\": \"binary\",\n"
+                  + "            \"Elems\": null\n"
+                  + "         },\n"
+                  + "         \"state\": 5,\n"
+                  + "         \"comment\": \"\"\n"
+                  + "      }\n"
+                  + "   ],\n"
+                  + "   \"index_info\": [],\n"
+                  + "   \"fk_info\": null,\n"
+                  + "   \"state\": 5,\n"
+                  + "   \"pk_is_handle\": true,\n"
+                  + "   \"comment\": \"\",\n"
+                  + "   \"auto_inc_id\": 0,\n"
+                  + "   \"max_col_id\": 4,\n"
+                  + "   \"max_idx_id\": 1\n"
+                  + "}",
+              tableId, tableName, tableName.toLowerCase());
 
-      kvServer.put(getKeyForTable(dbId, tableId),
-          ByteString.copyFromUtf8(tableJson));
+      kvServer.put(getKeyForTable(dbId, tableId), ByteString.copyFromUtf8(tableJson));
     }
 
     public void dropTable(long dbId, long tableId) {

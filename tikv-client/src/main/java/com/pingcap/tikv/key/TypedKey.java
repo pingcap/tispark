@@ -15,13 +15,12 @@
 
 package com.pingcap.tikv.key;
 
+import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.types.DataType;
-
-import static java.util.Objects.requireNonNull;
 
 public class TypedKey extends Key {
   private final DataType type;
@@ -45,8 +44,8 @@ public class TypedKey extends Key {
   }
 
   /**
-   * Map a typed value into TypedKey, only encoding first prefixLength bytes
-   * When prefixLength is DataType.UNSPECIFIED_LEN, encode full length of value
+   * Map a typed value into TypedKey, only encoding first prefixLength bytes When prefixLength is
+   * DataType.UNSPECIFIED_LEN, encode full length of value
    *
    * @param val value
    * @param type type of value
@@ -71,7 +70,8 @@ public class TypedKey extends Key {
     } else if (val instanceof byte[]) {
       return toTypedKey(nextValue(((byte[]) val)), type, prefixLength);
     } else {
-      throw new TypeException("Type for TypedKey in next() function must be either String or Byte array");
+      throw new TypeException(
+          "Type for TypedKey in next() function must be either String or Byte array");
     }
   }
 

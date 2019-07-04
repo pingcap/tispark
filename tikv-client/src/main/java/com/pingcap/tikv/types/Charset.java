@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv.types;
 
-
 public class Charset {
   // CharsetBin is used for marking binary charset.
   public static final String CharsetBin = "binary";

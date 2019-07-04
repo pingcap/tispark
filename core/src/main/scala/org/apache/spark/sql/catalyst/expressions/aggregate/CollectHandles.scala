@@ -17,30 +17,35 @@ package org.apache.spark.sql.catalyst.expressions.aggregate
 
 import gnu.trove.list.linked.TLongLinkedList
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression}
+import org.apache.spark.sql.catalyst.expressions.{
+  AttributeReference,
+  Expression
+}
 import org.apache.spark.sql.catalyst.util.GenericArrayData
 import org.apache.spark.sql.execution.RegionTaskExec
 import org.apache.spark.sql.types._
 
 /**
- * An aggregation function that are expressed in terms of imperative initialize(), update(),
- * and merge() functions which operate on Row-based aggregation buffers.
- *
- * This [[CollectHandles]] is used for collecting handles from TiKV to a list and serves as an
- * aggregation function used in [[RegionTaskExec]]
- *
- * @see [[ImperativeAggregate]]
- */
+  * An aggregation function that are expressed in terms of imperative initialize(), update(),
+  * and merge() functions which operate on Row-based aggregation buffers.
+  *
+  * This [[CollectHandles]] is used for collecting handles from TiKV to a list and serves as an
+  * aggregation function used in [[RegionTaskExec]]
+  *
+  * @see [[ImperativeAggregate]]
+  */
 case class CollectHandles(child: Expression,
                           mutableAggBufferOffset: Int = 0,
                           inputAggBufferOffset: Int = 0)
     extends ImperativeAggregate {
   def this(child: Expression) = this(child, 0, 0)
 
-  override def withNewMutableAggBufferOffset(newMutableAggBufferOffset: Int): ImperativeAggregate =
+  override def withNewMutableAggBufferOffset(
+      newMutableAggBufferOffset: Int): ImperativeAggregate =
     copy(mutableAggBufferOffset = newMutableAggBufferOffset)
 
-  override def withNewInputAggBufferOffset(newInputAggBufferOffset: Int): ImperativeAggregate =
+  override def withNewInputAggBufferOffset(
+      newInputAggBufferOffset: Int): ImperativeAggregate =
     copy(inputAggBufferOffset = newInputAggBufferOffset)
 
   override def prettyName: String = "CollectHandles"
@@ -60,7 +65,8 @@ case class CollectHandles(child: Expression,
 
   override def aggBufferAttributes: Seq[AttributeReference] = Nil
 
-  override def aggBufferSchema: StructType = StructType.fromAttributes(aggBufferAttributes)
+  override def aggBufferSchema: StructType =
+    StructType.fromAttributes(aggBufferAttributes)
 
   override def inputAggBufferAttributes: Seq[AttributeReference] = Nil
 

@@ -47,35 +47,41 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
     conf.getBoolean("spark.tispark.statistics.auto_load", defaultValue = true)
 
   class DebugTool {
-    def getRegionDistribution(dbName: String, tableName: String): Map[String, Integer] =
-      RegionUtils.getRegionDistribution(tiSession, dbName, tableName).asScala.toMap
+    def getRegionDistribution(dbName: String,
+                              tableName: String): Map[String, Integer] =
+      RegionUtils
+        .getRegionDistribution(tiSession, dbName, tableName)
+        .asScala
+        .toMap
 
     /**
-     * Balance region leaders of a single table.
-     *
-     * e.g.
-     * `balanceRegionByTable("http://172.16.20.3:2379", "tpch_idx", "lineitem", 20)`
-     * This method call will try to balance table `lineitem`'s leader distribution by
-     * transforming those leaders reside in a single heavily used TiKV to other TiKVs.
-     *
-     * @param pdAddr    The PD address
-     * @param dbName    Database name
-     * @param tableName Table name
-     * @param maxTrans  Maximum number of transformations this function can perform
-     * @return The re-distributed information of original table
-     */
+      * Balance region leaders of a single table.
+      *
+      * e.g.
+      * `balanceRegionByTable("http://172.16.20.3:2379", "tpch_idx", "lineitem", 20)`
+      * This method call will try to balance table `lineitem`'s leader distribution by
+      * transforming those leaders reside in a single heavily used TiKV to other TiKVs.
+      *
+      * @param pdAddr    The PD address
+      * @param dbName    Database name
+      * @param tableName Table name
+      * @param maxTrans  Maximum number of transformations this function can perform
+      * @return The re-distributed information of original table
+      */
     def balanceRegionByTable(pdAddr: String,
                              dbName: String,
                              tableName: String,
                              maxTrans: Int = 50): Map[String, Integer] = {
       val regionIDPrefix = "pd/api/v1/region/id"
       val operatorsPrefix = "pd/api/v1/operators"
-      val storeRegionId = RegionUtils.getStoreRegionIdDistribution(tiSession, dbName, tableName)
+      val storeRegionId =
+        RegionUtils.getStoreRegionIdDistribution(tiSession, dbName, tableName)
       val storeRegionCount = mutable.Map[Long, Long]()
 
-      storeRegionId.asScala.foreach((tuple: (lang.Long, java.util.List[lang.Long])) => {
-        storeRegionCount(tuple._1) = tuple._2.size()
-      })
+      storeRegionId.asScala.foreach(
+        (tuple: (lang.Long, java.util.List[lang.Long])) => {
+          storeRegionCount(tuple._1) = tuple._2.size()
+        })
 
       val avgRegionCount = storeRegionCount.values.sum / storeRegionCount.size
 
@@ -138,7 +144,9 @@ class TiContext(val session: SparkSession) extends Serializable with Logging {
   }
 
   // add backtick for table name in case it contains, e.g., a minus sign
-  private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =
+  private def getViewName(dbName: String,
+                          tableName: String,
+                          dbNameAsPrefix: Boolean): String =
     "`" + (if (dbNameAsPrefix) dbName + "_" + tableName else tableName) + "`"
 
   // tidbMapTable does not do any check any meta information

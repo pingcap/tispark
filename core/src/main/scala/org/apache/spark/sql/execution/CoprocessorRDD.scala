@@ -27,13 +27,28 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.{TiConfigConst, TiDBRelation, TiSessionCache, TiUtils}
+import com.pingcap.tispark.{
+  TiConfigConst,
+  TiDBRelation,
+  TiSessionCache,
+  TiUtils
+}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, GenericInternalRow, SortOrder, UnsafeProjection, UnsafeRow}
-import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
+import org.apache.spark.sql.catalyst.expressions.{
+  Attribute,
+  AttributeReference,
+  GenericInternalRow,
+  SortOrder,
+  UnsafeProjection,
+  UnsafeRow
+}
+import org.apache.spark.sql.catalyst.plans.physical.{
+  Partitioning,
+  UnknownPartitioning
+}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.execution.metric.SQLMetrics
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
@@ -43,17 +58,20 @@ import org.apache.spark.sql.{Row, SparkSession}
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExecNode {
+case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD)
+    extends LeafExecNode {
 
   override lazy val metrics = Map(
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
+    "numOutputRows" -> SQLMetrics.createMetric(sparkContext,
+                                               "number of output rows")
   )
 
   override val nodeName: String = "CoprocessorRDD"
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
   override val outputOrdering: Seq[SortOrder] = Nil
 
-  val internalRdd: RDD[InternalRow] = RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
+  val internalRdd: RDD[InternalRow] =
+    RDDConversions.rowToRowRdd(tiRdd, output.map(_.dataType))
   private lazy val project = UnsafeProjection.create(schema)
 
   protected override def doExecute(): RDD[InternalRow] = {
@@ -75,16 +93,17 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdd: TiRDD) extends LeafExec
 }
 
 /**
- * HandleRDDExec is used for scanning handles from TiKV as a LeafExecNode in index plan.
- * Providing handle scan via a TiHandleRDD.
- *
- * @param tiHandleRDD handle source
- */
+  * HandleRDDExec is used for scanning handles from TiKV as a LeafExecNode in index plan.
+  * Providing handle scan via a TiHandleRDD.
+  *
+  * @param tiHandleRDD handle source
+  */
 case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   override val nodeName: String = "HandleRDD"
 
   override lazy val metrics = Map(
-    "numOutputRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions")
+    "numOutputRegions" -> SQLMetrics.createMetric(sparkContext,
+                                                  "number of regions")
   )
 
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
@@ -106,7 +125,10 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
   }
 
   final lazy val attributeRef = Seq(
-    AttributeReference("RegionId", LongType, nullable = false, Metadata.empty)(),
+    AttributeReference("RegionId",
+                       LongType,
+                       nullable = false,
+                       Metadata.empty)(),
     AttributeReference(
       "Handles",
       ArrayType(LongType, containsNull = false),
@@ -125,16 +147,16 @@ case class HandleRDDExec(tiHandleRDD: TiHandleRDD) extends LeafExecNode {
 }
 
 /**
- * RegionTaskExec is used for issuing requests which are generated based on handles retrieved from
- * [[HandleRDDExec]] aggregated by a [[org.apache.spark.sql.execution.aggregate.SortAggregateExec]]
- * with [[org.apache.spark.sql.catalyst.expressions.aggregate.CollectHandles]] as aggregate function.
- *
- * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
- * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
- *
- * Refer to code in [[TiDBRelation]] and [[CoprocessorRDD]] for further details.
- *
- */
+  * RegionTaskExec is used for issuing requests which are generated based on handles retrieved from
+  * [[HandleRDDExec]] aggregated by a [[org.apache.spark.sql.execution.aggregate.SortAggregateExec]]
+  * with [[org.apache.spark.sql.catalyst.expressions.aggregate.CollectHandles]] as aggregate function.
+  *
+  * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
+  * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
+  *
+  * Refer to code in [[TiDBRelation]] and [[CoprocessorRDD]] for further details.
+  *
+  */
 case class RegionTaskExec(child: SparkPlan,
                           output: Seq[Attribute],
                           dagRequest: TiDAGRequest,
@@ -145,9 +167,12 @@ case class RegionTaskExec(child: SparkPlan,
     extends UnaryExecNode {
 
   override lazy val metrics = Map(
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
-    "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of handles used in double scan"),
-    "numDowngradedTasks" -> SQLMetrics.createMetric(sparkContext, "number of downgraded tasks"),
+    "numOutputRows" -> SQLMetrics.createMetric(sparkContext,
+                                               "number of output rows"),
+    "numHandles" -> SQLMetrics
+      .createMetric(sparkContext, "number of handles used in double scan"),
+    "numDowngradedTasks" -> SQLMetrics
+      .createMetric(sparkContext, "number of downgraded tasks"),
     "numIndexScanTasks" -> SQLMetrics
       .createMetric(sparkContext, "number of index double read tasks"),
     "numRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions"),
@@ -159,7 +184,10 @@ case class RegionTaskExec(child: SparkPlan,
 
   private val sqlConf = sqlContext.conf
   private val downgradeThreshold =
-    sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
+    sqlConf
+      .getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD,
+                     "10000")
+      .toInt
   private lazy val project = UnsafeProjection.create(schema)
 
   type TiRow = com.pingcap.tikv.row.Row
@@ -217,7 +245,8 @@ case class RegionTaskExec(child: SparkPlan,
           numRegions += 1
 
           val completionService =
-            new ExecutorCompletionService[util.Iterator[TiRow]](session.getThreadPoolForIndexScan)
+            new ExecutorCompletionService[util.Iterator[TiRow]](
+              session.getThreadPoolForIndexScan)
           var rowIterator: util.Iterator[TiRow] = null
 
           // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
@@ -233,14 +262,15 @@ case class RegionTaskExec(child: SparkPlan,
           val indexTaskRanges = indexTasks.flatMap { _.getRanges }
 
           /**
-           * Checks whether the number of handle ranges retrieved from TiKV exceeds the `downgradeThreshold` after handle merge.
-           *
-           * @return true, the number of handle ranges retrieved exceeds the `downgradeThreshold` after handle merge, false otherwise.
-           */
+            * Checks whether the number of handle ranges retrieved from TiKV exceeds the `downgradeThreshold` after handle merge.
+            *
+            * @return true, the number of handle ranges retrieved exceeds the `downgradeThreshold` after handle merge, false otherwise.
+            */
           def satisfyDowngradeThreshold: Boolean =
             indexTaskRanges.size() > downgradeThreshold
 
-          def submitTasks(tasks: List[RegionTask], dagRequest: TiDAGRequest): Unit = {
+          def submitTasks(tasks: List[RegionTask],
+                          dagRequest: TiDAGRequest): Unit = {
             taskCount += 1
             val task = new Callable[util.Iterator[TiRow]] {
               override def call(): util.Iterator[TiRow] =
@@ -250,12 +280,12 @@ case class RegionTaskExec(child: SparkPlan,
           }
 
           /**
-           * If one task's ranges list exceeds some threshold, we split it into two sub tasks and
-           * each has half of the original ranges.
-           *
-           * @param task task to examine
-           * @return split task list
-           */
+            * If one task's ranges list exceeds some threshold, we split it into two sub tasks and
+            * each has half of the original ranges.
+            *
+            * @param task task to examine
+            * @return split task list
+            */
           def splitTasks(task: RegionTask): mutable.Seq[RegionTask] = {
             val finalTasks = mutable.ListBuffer[RegionTask]()
             val queue = mutable.Queue[RegionTask]()
@@ -268,7 +298,9 @@ case class RegionTaskExec(child: SparkPlan,
                 front.getRanges
                   .grouped((front.getRanges.size() + 1) / 2)
                   .foreach(range => {
-                    queue += RegionTask.newInstance(front.getRegion, front.getStore, range)
+                    queue += RegionTask.newInstance(front.getRegion,
+                                                    front.getStore,
+                                                    range)
                   })
               } else {
                 // add all ranges satisfying task range size to final task list
@@ -326,12 +358,12 @@ case class RegionTaskExec(child: SparkPlan,
             }
 
           /**
-           * We merge potentially discrete index ranges from `taskRanges` into one large range
-           * and create a new [[RegionTask]] for the downgraded plan to execute. Should add
-           * filters for DAG request.
-           *
-           * @param taskRanges the index scan ranges
-           */
+            * We merge potentially discrete index ranges from `taskRanges` into one large range
+            * and create a new [[RegionTask]] for the downgraded plan to execute. Should add
+            * filters for DAG request.
+            *
+            * @param taskRanges the index scan ranges
+            */
           def doDowngradeScan(taskRanges: List[KeyRange]): Unit = {
             // Restore original filters to perform downgraded table scan logic
             // TODO: Maybe we can optimize splitRangeByRegion if we are sure the key ranges are in the same region?
@@ -342,12 +374,14 @@ case class RegionTaskExec(child: SparkPlan,
                   .splitSortedRangeInRegion(taskRanges, downgradeSplitFactor)
               } catch {
                 case e: Exception =>
-                  logger.warn("Encountered problems when splitting range for single region.")
+                  logger.warn(
+                    "Encountered problems when splitting range for single region.")
                   logger.warn("Retrying split with unified logic")
                   logger.warn("Exception message: " + e.getMessage)
                   RangeSplitter
                     .newSplitter(session.getRegionManager)
-                    .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges))
+                    .splitRangeByRegion(
+                      KeyRangeUtils.mergeSortedRanges(taskRanges))
               }
 
             downgradeTasks.foreach { task =>
@@ -386,7 +420,8 @@ case class RegionTaskExec(child: SparkPlan,
           val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
           val finalTypes = rowTransformer.getTypes.toList
           val outputTypes = output.map(_.dataType)
-          val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
+          val converters =
+            outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
 
           def toSparkRow(row: TiRow): Row = {
             val transRow = rowTransformer.transform(row)

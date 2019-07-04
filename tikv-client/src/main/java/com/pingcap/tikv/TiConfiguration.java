@@ -19,7 +19,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.pingcap.tikv.kvproto.Kvrpcpb.CommandPri;
 import com.pingcap.tikv.kvproto.Kvrpcpb.IsolationLevel;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,7 +71,7 @@ public class TiConfiguration implements Serializable {
 
   private static List<HostAndPort> strToHostAndPort(String addressStr) {
     Objects.requireNonNull(addressStr);
-    String [] addrs = addressStr.split(",");
+    String[] addrs = addressStr.split(",");
     ImmutableList.Builder<HostAndPort> addrsBuilder = ImmutableList.builder();
     for (String addr : addrs) {
       addrsBuilder.add(HostAndPort.fromString(addr));

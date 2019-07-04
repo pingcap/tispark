@@ -46,7 +46,9 @@ class Count0Suite extends BaseTiSparkSuite {
   )
 
   // count(distinct_*) cases
-  private val allCases = countCases.map { _.replace(")", "))").replace("count", "count(distinct") } ++ countCases
+  private val allCases = countCases.map {
+    _.replace(")", "))").replace("count", "count(distinct")
+  } ++ countCases
 
   allCases foreach { query =>
     {

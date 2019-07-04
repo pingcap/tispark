@@ -23,17 +23,18 @@ import com.pingcap.tikv.key.Key;
 /**
  * Bucket is histogram element.
  *
- * Bucket bound is the smallest and greatest values stored in the bucket. The lower and upper bound
- * are stored in bucket as lowerBound and upperBound.
- * <p>
- * A bucket count is the number of items stored in all previous buckets and the current bucket.
- * Bucket counts are always in increasing order.
- * <p>
- * A bucket repeat is the number of repeats of the greatest bucket value, it can be used to find popular values.
+ * <p>Bucket bound is the smallest and greatest values stored in the bucket. The lower and upper
+ * bound are stored in bucket as lowerBound and upperBound.
  *
- * Note that lowerBound and upperBound keys should be 'comparable objects', and these bounds are encoded
- * as `binary` type in TiDB. Intuitively, you should also use Keys encoded as binary format to do comparison
- * in row count estimation.
+ * <p>A bucket count is the number of items stored in all previous buckets and the current bucket.
+ * Bucket counts are always in increasing order.
+ *
+ * <p>A bucket repeat is the number of repeats of the greatest bucket value, it can be used to find
+ * popular values.
+ *
+ * <p>Note that lowerBound and upperBound keys should be 'comparable objects', and these bounds are
+ * encoded as `binary` type in TiDB. Intuitively, you should also use Keys encoded as binary format
+ * to do comparison in row count estimation.
  */
 public class Bucket implements Comparable<Bucket> {
   public long count;
@@ -56,9 +57,7 @@ public class Bucket implements Comparable<Bucket> {
     assert upperBound != null;
   }
 
-  /**
-   * used for binary search only
-   */
+  /** used for binary search only */
   public Bucket(Key upperBound) {
     this.upperBound = upperBound;
     assert upperBound != null;
@@ -104,8 +103,14 @@ public class Bucket implements Comparable<Bucket> {
 
   @Override
   public String toString() {
-    return "{count=" + count + ", repeats=" + repeats + ", range=[" + lowerBound + ", "
-        + upperBound.toString() + "]}";
+    return "{count="
+        + count
+        + ", repeats="
+        + repeats
+        + ", range=["
+        + lowerBound
+        + ", "
+        + upperBound.toString()
+        + "]}";
   }
-
 }

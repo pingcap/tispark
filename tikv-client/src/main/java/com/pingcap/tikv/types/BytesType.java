@@ -37,10 +37,11 @@ public class BytesType extends DataType {
   public static final BytesType TEXT = new BytesType(MySQLType.TypeBlob);
   public static final BytesType TINY_BLOB = new BytesType(MySQLType.TypeTinyBlob);
 
-  public static final MySQLType[] subTypes = new MySQLType[] {
-      MySQLType.TypeBlob, MySQLType.TypeLongBlob,
-      MySQLType.TypeMediumBlob, MySQLType.TypeTinyBlob
-  };
+  public static final MySQLType[] subTypes =
+      new MySQLType[] {
+        MySQLType.TypeBlob, MySQLType.TypeLongBlob,
+        MySQLType.TypeMediumBlob, MySQLType.TypeTinyBlob
+      };
 
   protected BytesType(MySQLType tp) {
     super(tp);
@@ -50,9 +51,7 @@ public class BytesType extends DataType {
     super(holder);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     if (flag == Codec.COMPACT_BYTES_FLAG) {
@@ -69,27 +68,21 @@ public class BytesType extends DataType {
     return true;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
     byte[] bytes = Converter.convertToBytes(value);
     BytesCodec.writeBytesFully(cdo, bytes);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
     byte[] bytes = Converter.convertToBytes(value);
     BytesCodec.writeCompactBytesFully(cdo, bytes);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     byte[] bytes = Converter.convertToBytes(value);
@@ -101,9 +94,7 @@ public class BytesType extends DataType {
     return getCharset().equals(Charset.CharsetBin) ? ExprType.Bytes : ExprType.String;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   @Override
   public Object getOriginDefaultValueNonNull(String value) {
     return value;

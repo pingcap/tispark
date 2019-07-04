@@ -27,12 +27,33 @@ import com.pingcap.tikv.predicates.ScanAnalyzer.ScanPlan
 import com.pingcap.tikv.predicates.{PredicateUtils, ScanAnalyzer}
 import com.pingcap.tispark.TiUtils._
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiUtils}
+import com.pingcap.tispark.{
+  BasicExpression,
+  TiConfigConst,
+  TiDBRelation,
+  TiUtils
+}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Cast, Divide, Expression, IntegerLiteral, NamedExpression, SortOrder}
-import org.apache.spark.sql.catalyst.planning.{PhysicalAggregation, PhysicalOperation}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{
+  AggregateExpression,
+  _
+}
+import org.apache.spark.sql.catalyst.expressions.{
+  Alias,
+  Attribute,
+  AttributeSet,
+  Cast,
+  Divide,
+  Expression,
+  IntegerLiteral,
+  NamedExpression,
+  SortOrder
+}
+import org.apache.spark.sql.catalyst.planning.{
+  PhysicalAggregation,
+  PhysicalOperation
+}
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution._
@@ -55,13 +76,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
 
   private def blacklist: ExpressionBlacklist = {
-    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
+    val blacklistString =
+      sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
     new ExpressionBlacklist(blacklistString)
   }
 
   def typeBlackList: TypeBlacklist = {
     val blacklistString =
-      sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "time,enum,set,year")
+      sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES,
+                            "time,enum,set,year")
     new TypeBlacklist(blacklistString)
   }
 
@@ -99,9 +122,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       .flatten
 
   private def toCoprocessorRDD(
-    source: TiDBRelation,
-    output: Seq[Attribute],
-    dagRequest: TiDAGRequest
+      source: TiDBRelation,
+      output: Seq[Attribute],
+      dagRequest: TiDAGRequest
   ): SparkPlan = {
     val table = source.table
     dagRequest.setTableInfo(table)
@@ -113,7 +136,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       .exists { typeBlackList.isUnsupportedType }
 
     if (notAllowPushDown) {
-      throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
+      throw new IgnoreUnsupportedTypeException(
+        "Unsupported type found in fields: " + typeBlackList)
     } else {
       if (dagRequest.isDoubleRead) {
         source.dagRequestToRegionTaskExec(dagRequest, output)
@@ -125,10 +149,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def aggregationToDAGRequest(
-    groupByList: Seq[NamedExpression],
-    aggregates: Seq[AggregateExpression],
-    source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
+      groupByList: Seq[NamedExpression],
+      aggregates: Seq[AggregateExpression],
+      source: TiDBRelation,
+      dagRequest: TiDAGRequest =
+        new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
     aggregates.map { _.aggregateFunction }.foreach {
       case _: Average =>
@@ -136,11 +161,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
       case f @ Sum(BasicExpression(arg)) =>
         dagRequest
-          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
+          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg),
+                        fromSparkType(f.dataType))
 
       case f @ PromotedSum(BasicExpression(arg)) =>
         dagRequest
-          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
+          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg),
+                        fromSparkType(f.dataType))
 
       case f @ Count(args) if args.length == 1 =>
         val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
@@ -151,11 +178,13 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
       case f @ Min(BasicExpression(arg)) =>
         dagRequest
-          .addAggregate(AggregateFunction.newCall(FunctionType.Min, arg), fromSparkType(f.dataType))
+          .addAggregate(AggregateFunction.newCall(FunctionType.Min, arg),
+                        fromSparkType(f.dataType))
 
       case f @ Max(BasicExpression(arg)) =>
         dagRequest
-          .addAggregate(AggregateFunction.newCall(FunctionType.Max, arg), fromSparkType(f.dataType))
+          .addAggregate(AggregateFunction.newCall(FunctionType.Max, arg),
+                        fromSparkType(f.dataType))
 
       case f @ First(BasicExpression(arg), _) =>
         dagRequest
@@ -191,7 +220,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   def referencedTiColumns(expression: TiExpression): Seq[TiColumnRef] =
     PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
 
-  def extractTiColumnRefFromExpression(expression: TiExpression): mutable.HashSet[TiColumnRef] = {
+  def extractTiColumnRefFromExpression(
+      expression: TiExpression): mutable.HashSet[TiColumnRef] = {
     val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
     expression match {
       case r: TiColumnRef => set += r
@@ -204,7 +234,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     set
   }
 
-  def extractTiColumnRefFromExpressions(expressions: Seq[TiExpression]): Seq[TiColumnRef] = {
+  def extractTiColumnRefFromExpressions(
+      expressions: Seq[TiExpression]): Seq[TiColumnRef] = {
     val set: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
     for (expression <- expressions) {
       extractTiColumnRefFromExpression(expression).foreach { set += _ }
@@ -213,34 +244,39 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   /**
-   * build a Seq of used TiColumnRef from AttributeSet and bound them to souce table
-   *
-   * @param attributeSet AttributeSet containing projects w/ or w/o filters
-   * @param source source TiDBRelation
-   * @return a Seq of TiColumnRef extracted
-   */
+    * build a Seq of used TiColumnRef from AttributeSet and bound them to souce table
+    *
+    * @param attributeSet AttributeSet containing projects w/ or w/o filters
+    * @param source source TiDBRelation
+    * @return a Seq of TiColumnRef extracted
+    */
   def buildTiColumnRefFromColumnSet(attributeSet: AttributeSet,
                                     source: TiDBRelation): Seq[TiColumnRef] = {
     val tiColumnSet: Seq[TiExpression] = attributeSet.toSeq.collect {
       case BasicExpression(expr) => expr
     }
     val resolver = new MetaResolver(source.table)
-    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(tiColumnSet)
+    val tiColumns: Seq[TiColumnRef] = extractTiColumnRefFromExpressions(
+      tiColumnSet)
     tiColumns.foreach { resolver.resolve(_) }
     tiColumns
   }
 
   private def filterToDAGRequest(
-    tiColumns: Seq[TiColumnRef],
-    filters: Seq[Expression],
-    source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
+      tiColumns: Seq[TiColumnRef],
+      filters: Seq[Expression],
+      source: TiDBRelation,
+      dagRequest: TiDAGRequest =
+        new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): TiDAGRequest = {
-    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
+    val tiFilters: Seq[TiExpression] = filters.collect {
+      case BasicExpression(expr) => expr
+    }
 
     val scanBuilder: ScanAnalyzer = new ScanAnalyzer
 
-    val tblStatistics = StatisticsManager.getInstance().getTableStatistics(source.table.getId)
+    val tblStatistics =
+      StatisticsManager.getInstance().getTableStatistics(source.table.getId)
 
     val tableScanPlan =
       scanBuilder.buildTableScan(tiFilters.asJava, source.table, tblStatistics)
@@ -270,7 +306,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     dagRequest
   }
 
-  private def addSortOrder(request: TiDAGRequest, sortOrder: Seq[SortOrder]): Unit =
+  private def addSortOrder(request: TiDAGRequest,
+                           sortOrder: Seq[SortOrder]): Unit =
     sortOrder.foreach { order: SortOrder =>
       request.addOrderByItem(
         ByItem.create(
@@ -281,11 +318,11 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     }
 
   private def pruneTopNFilterProject(
-    limit: Int,
-    projectList: Seq[NamedExpression],
-    filterPredicates: Seq[Expression],
-    source: TiDBRelation,
-    sortOrder: Seq[SortOrder]
+      limit: Int,
+      projectList: Seq[NamedExpression],
+      filterPredicates: Seq[Expression],
+      source: TiDBRelation,
+      sortOrder: Seq[SortOrder]
   ): SparkPlan = {
     val request = new TiDAGRequest(pushDownType(), timeZoneOffset())
     request.setLimit(limit)
@@ -293,26 +330,34 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     pruneFilterProject(projectList, filterPredicates, source, request)
   }
 
-  private def collectLimit(limit: Int, child: LogicalPlan): SparkPlan = child match {
-    case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
-        if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
-      pruneTopNFilterProject(limit, projectList, filters, source, Nil)
-    case _ => planLater(child)
-  }
+  private def collectLimit(limit: Int, child: LogicalPlan): SparkPlan =
+    child match {
+      case PhysicalOperation(projectList,
+                             filters,
+                             LogicalRelation(source: TiDBRelation, _, _))
+          if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
+        pruneTopNFilterProject(limit, projectList, filters, source, Nil)
+      case _ => planLater(child)
+    }
 
   private def takeOrderedAndProject(
-    limit: Int,
-    sortOrder: Seq[SortOrder],
-    child: LogicalPlan,
-    project: Seq[NamedExpression]
+      limit: Int,
+      sortOrder: Seq[SortOrder],
+      child: LogicalPlan,
+      project: Seq[NamedExpression]
   ): SparkPlan = {
     // If sortOrder is empty, limit must be greater than 0
     if (limit < 0 || (sortOrder.isEmpty && limit == 0)) {
-      return execution.TakeOrderedAndProjectExec(limit, sortOrder, project, planLater(child))
+      return execution.TakeOrderedAndProjectExec(limit,
+                                                 sortOrder,
+                                                 project,
+                                                 planLater(child))
     }
 
     child match {
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _))
+      case PhysicalOperation(projectList,
+                             filters,
+                             LogicalRelation(source: TiDBRelation, _, _))
           if filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) =>
         execution.TakeOrderedAndProjectExec(
           limit,
@@ -320,15 +365,20 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           project,
           pruneTopNFilterProject(limit, projectList, filters, source, sortOrder)
         )
-      case _ => execution.TakeOrderedAndProjectExec(limit, sortOrder, project, planLater(child))
+      case _ =>
+        execution.TakeOrderedAndProjectExec(limit,
+                                            sortOrder,
+                                            project,
+                                            planLater(child))
     }
   }
 
   private def pruneFilterProject(
-    projectList: Seq[NamedExpression],
-    filterPredicates: Seq[Expression],
-    source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffset())
+      projectList: Seq[NamedExpression],
+      filterPredicates: Seq[Expression],
+      source: TiDBRelation,
+      dagRequest: TiDAGRequest =
+        new TiDAGRequest(pushDownType(), timeZoneOffset())
   ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))
@@ -336,13 +386,15 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
 
     val (pushdownFilters: Seq[Expression], residualFilters: Seq[Expression]) =
       filterPredicates.partition(
-        (expression: Expression) => TiUtils.isSupportedFilter(expression, source, blacklist)
+        (expression: Expression) =>
+          TiUtils.isSupportedFilter(expression, source, blacklist)
       )
 
     val residualFilter: Option[Expression] =
       residualFilters.reduceLeftOption(catalyst.expressions.And)
 
-    val tiColumns = buildTiColumnRefFromColumnSet(projectSet ++ filterSet, source)
+    val tiColumns =
+      buildTiColumnRefFromColumnSet(projectSet ++ filterSet, source)
 
     filterToDAGRequest(tiColumns, pushdownFilters, source, dagRequest)
 
@@ -363,33 +415,37 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
-      projectSeq.foreach(attr => dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
+      projectSeq.foreach(attr =>
+        dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic
       val projectSeq: Seq[Attribute] = (projectSet ++ filterSet).toSeq
-      projectSeq.foreach(attr => dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
+      projectSeq.foreach(attr =>
+        dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
-      ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
+      ProjectExec(projectList,
+                  residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
     }
   }
 
   private def groupAggregateProjection(
-    tiColumns: Seq[TiColumnRef],
-    groupingExpressions: Seq[NamedExpression],
-    aggregateExpressions: Seq[AggregateExpression],
-    resultExpressions: Seq[NamedExpression],
-    source: TiDBRelation,
-    dagReq: TiDAGRequest
+      tiColumns: Seq[TiColumnRef],
+      groupingExpressions: Seq[NamedExpression],
+      aggregateExpressions: Seq[AggregateExpression],
+      resultExpressions: Seq[NamedExpression],
+      source: TiDBRelation,
+      dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
     val deterministicAggAliases = aggregateExpressions.collect {
       case e if e.deterministic => e.canonicalized -> Alias(e, e.toString())()
     }.toMap
 
     def aliasPushedPartialResult(e: AggregateExpression): Alias =
-      deterministicAggAliases.getOrElse(e.canonicalized, Alias(e, e.toString())())
+      deterministicAggAliases.getOrElse(e.canonicalized,
+                                        Alias(e, e.toString())())
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
       // As `aggExpr` is being pushing down to TiKV, we need to replace the original Catalyst
@@ -406,30 +462,42 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
       val partialResultRef = aliasPushedPartialResult(aggExpr).toAttribute
 
       aggExpr.aggregateFunction match {
-        case e: Max         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Min         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: Sum         => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: PromotedSum => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case e: First       => aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
-        case _: Count       => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
-        case _: Average     => throw new IllegalStateException("All AVGs should have been rewritten.")
-        case _              => aggExpr
+        case e: Max =>
+          aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Min =>
+          aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: Sum =>
+          aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: PromotedSum =>
+          aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case e: First =>
+          aggExpr.copy(aggregateFunction = e.copy(child = partialResultRef))
+        case _: Count => aggExpr.copy(aggregateFunction = Sum(partialResultRef))
+        case _: Average =>
+          throw new IllegalStateException(
+            "All AVGs should have been rewritten.")
+        case _ => aggExpr
       }
     }
 
     tiColumns foreach { dagReq.addRequiredColumn }
 
-    aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
+    aggregationToDAGRequest(groupingExpressions,
+                            aggregateExpressions.distinct,
+                            source,
+                            dagReq)
 
     val aggregateAttributes =
-      aggregateExpressions.map(expr => aliasPushedPartialResult(expr).toAttribute)
+      aggregateExpressions.map(expr =>
+        aliasPushedPartialResult(expr).toAttribute)
     val groupAttributes = groupingExpressions.map(_.toAttribute)
 
     // output of Coprocessor plan should contain all references within
     // aggregates and group by expressions
     val output = aggregateAttributes ++ groupAttributes
 
-    val groupExpressionMap = groupingExpressions.map(expr => expr.exprId -> expr.toAttribute).toMap
+    val groupExpressionMap =
+      groupingExpressions.map(expr => expr.exprId -> expr.toAttribute).toMap
 
     // resultExpression might refer to some of the group by expressions
     // Those expressions originally refer to table columns but now it refers to
@@ -453,15 +521,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
   }
 
   private def isValidAggregates(
-    groupingExpressions: Seq[NamedExpression],
-    aggregateExpressions: Seq[AggregateExpression],
-    filters: Seq[Expression],
-    source: TiDBRelation
+      groupingExpressions: Seq[NamedExpression],
+      aggregateExpressions: Seq[AggregateExpression],
+      filters: Seq[Expression],
+      source: TiDBRelation
   ): Boolean =
     allowAggregationPushdown &&
       filters.forall(TiUtils.isSupportedFilter(_, source, blacklist)) &&
-      groupingExpressions.forall(TiUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
-      aggregateExpressions.forall(TiUtils.isSupportedAggregate(_, source, blacklist)) &&
+      groupingExpressions.forall(
+        TiUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
+      aggregateExpressions.forall(
+        TiUtils.isSupportedAggregate(_, source, blacklist)) &&
       !aggregateExpressions.exists(_.isDistinct)
 
   // We do through similar logic with original Spark as in SparkStrategies.scala
@@ -472,7 +542,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
     plan match {
       case logical.ReturnAnswer(rootPlan) =>
         rootPlan match {
-          case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+          case logical.Limit(IntegerLiteral(limit),
+                             logical.Sort(order, true, child)) =>
             takeOrderedAndProject(limit, order, child, child.output) :: Nil
           case logical.Limit(
               IntegerLiteral(limit),
@@ -483,7 +554,8 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
             execution.CollectLimitExec(limit, collectLimit(limit, child)) :: Nil
           case other => planLater(other) :: Nil
         }
-      case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+      case logical
+            .Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
         takeOrderedAndProject(limit, order, child, child.output) :: Nil
       case logical.Limit(
           IntegerLiteral(limit),
@@ -492,7 +564,9 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
         takeOrderedAndProject(limit, order, child, projectList) :: Nil
 
       // Collapse filters and projections and push plan directly
-      case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _)) =>
+      case PhysicalOperation(projectList,
+                             filters,
+                             LogicalRelation(source: TiDBRelation, _, _)) =>
         pruneFilterProject(projectList, filters, source) :: Nil
 
       // Basic logic of original Spark's aggregation plan is:
@@ -512,10 +586,17 @@ class TiStrategy(context: SQLContext) extends Strategy with Logging {
           aggregateExpressions,
           resultExpressions,
           TiAggregationProjection(filters, _, `source`, projects)
-          ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
-        val projectSet = AttributeSet((projects ++ filters).flatMap { _.references })
+          )
+          if isValidAggregates(groupingExpressions,
+                               aggregateExpressions,
+                               filters,
+                               source) =>
+        val projectSet = AttributeSet((projects ++ filters).flatMap {
+          _.references
+        })
         val tiColumns = buildTiColumnRefFromColumnSet(projectSet, source)
-        val dagReq: TiDAGRequest = filterToDAGRequest(tiColumns, filters, source)
+        val dagReq: TiDAGRequest =
+          filterToDAGRequest(tiColumns, filters, source)
         groupAggregateProjection(
           tiColumns,
           groupingExpressions,
@@ -532,7 +613,10 @@ object TiAggregation {
   type ReturnType = PhysicalAggregation.ReturnType
 
   def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
-    case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
+    case PhysicalAggregation(groupingExpressions,
+                             aggregateExpressions,
+                             resultExpressions,
+                             child) =>
       // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
       // converted `Sum`s and `Count`s down to TiKV.
       val (averages, averagesEliminated) = aggregateExpressions.partition {
@@ -546,7 +630,8 @@ object TiAggregation {
         case a @ AggregateExpression(Average(ref), _, _, _) =>
           // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
           // scenarios to stay consistent with original spark's Average behaviour
-          val sum = if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
+          val sum =
+            if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
           a.resultAttribute -> Seq(
             a.copy(aggregateFunction = sum, resultId = newExprId),
             a.copy(aggregateFunction = Count(ref), resultId = newExprId)
@@ -566,23 +651,30 @@ object TiAggregation {
         .map { case e: NamedExpression => e }
 
       val rewrittenAggregateExpressions = {
-        val extraSumsAndCounts = rewriteMap.values.reduceOption { _ ++ _ } getOrElse Nil
+        val extraSumsAndCounts = rewriteMap.values
+          .reduceOption { _ ++ _ } getOrElse Nil
         (averagesEliminated ++ extraSumsAndCounts).distinct
       }
 
-      Some(groupingExpressions, rewrittenAggregateExpressions, rewrittenResultExpressions, child)
+      Some(groupingExpressions,
+           rewrittenAggregateExpressions,
+           rewrittenResultExpressions,
+           child)
 
     case _ => Option.empty[ReturnType]
   }
 }
 
 object TiAggregationProjection {
-  type ReturnType = (Seq[Expression], LogicalPlan, TiDBRelation, Seq[NamedExpression])
+  type ReturnType =
+    (Seq[Expression], LogicalPlan, TiDBRelation, Seq[NamedExpression])
 
   def unapply(plan: LogicalPlan): Option[ReturnType] = plan match {
     // Only push down aggregates projection when all filters can be applied and
     // all projection expressions are column references
-    case PhysicalOperation(projects, filters, rel @ LogicalRelation(source: TiDBRelation, _, _))
+    case PhysicalOperation(projects,
+                           filters,
+                           rel @ LogicalRelation(source: TiDBRelation, _, _))
         if projects.forall(_.isInstanceOf[Attribute]) =>
       Some((filters, rel, source, projects))
     case _ => Option.empty[ReturnType]

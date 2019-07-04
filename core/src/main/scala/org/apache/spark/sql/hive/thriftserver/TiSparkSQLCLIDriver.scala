@@ -43,9 +43,9 @@ import org.apache.spark.sql.hive.HiveUtils
 import org.apache.spark.util.ShutdownHookManager
 
 /**
- * This code doesn't support remote connections in Hive 1.2+, as the underlying CliDriver
- * has dropped its support.
- */
+  * This code doesn't support remote connections in Hive 1.2+, as the underlying CliDriver
+  * has dropped its support.
+  */
 private[hive] object TiSparkSQLCLIDriver extends Logging {
   private val prompt = "tispark-sql"
   private val continuedPrompt = "".padTo(prompt.length, ' ')
@@ -54,10 +54,10 @@ private[hive] object TiSparkSQLCLIDriver extends Logging {
   installSignalHandler()
 
   /**
-   * Install an interrupt callback to cancel all Spark jobs. In Hive's CliDriver#processLine(),
-   * a signal handler will invoke this registered callback if a Ctrl+C signal is detected while
-   * a command is being processed by the current thread.
-   */
+    * Install an interrupt callback to cancel all Spark jobs. In Hive's CliDriver#processLine(),
+    * a signal handler will invoke this registered callback if a Ctrl+C signal is detected while
+    * a command is being processed by the current thread.
+    */
   def installSignalHandler() {
     HiveInterruptUtils.add(new HiveInterruptCallback {
       override def interrupt() {
@@ -128,7 +128,8 @@ private[hive] object TiSparkSQLCLIDriver extends Logging {
       var loader = conf.getClassLoader
       val auxJars = HiveConf.getVar(conf, HiveConf.ConfVars.HIVEAUXJARS)
       if (StringUtils.isNotBlank(auxJars)) {
-        loader = Utilities.addToClassPath(loader, StringUtils.split(auxJars, ","))
+        loader =
+          Utilities.addToClassPath(loader, StringUtils.split(auxJars, ","))
       }
       conf.setClassLoader(loader)
       Thread.currentThread().setContextClassLoader(loader)
@@ -311,7 +312,7 @@ private[hive] class TiSparkSQLCLIDriver extends CliDriver with Logging {
   }
 
   override def setHiveVariables(
-    hiveVariables: java.util.Map[String, String]
+      hiveVariables: java.util.Map[String, String]
   ): Unit =
     hiveVariables.asScala.foreach(
       kv => TiSparkSQLEnv.sqlContext.conf.setConfString(kv._1, kv._2)

@@ -27,8 +27,10 @@ import org.apache.spark.sql.sources.BaseRelation
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
 import org.apache.spark.sql.types.StructType
 
-class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaManager)(
-  @transient val sqlContext: SQLContext
+class TiDBRelation(session: TiSession,
+                   tableRef: TiTableReference,
+                   meta: MetaManager)(
+    @transient val sqlContext: SQLContext
 ) extends BaseRelation {
   val table: TiTableInfo = meta
     .getTable(tableRef.databaseName, tableRef.tableName)
@@ -42,16 +44,27 @@ class TiDBRelation(session: TiSession, tableRef: TiTableReference, meta: MetaMan
     val ts: TiTimestamp = session.getTimestamp
     dagRequest.setStartTs(ts.getVersion)
 
-    new TiRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
+    new TiRDD(dagRequest,
+              session.getConf,
+              tableRef,
+              ts,
+              session,
+              sqlContext.sparkSession)
   }
 
-  def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
+  def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest,
+                                 output: Seq[Attribute]): SparkPlan = {
     val ts: TiTimestamp = session.getTimestamp
     dagRequest.setStartTs(ts.getVersion)
     dagRequest.resolve()
 
     val tiHandleRDD =
-      new TiHandleRDD(dagRequest, session.getConf, tableRef, ts, session, sqlContext.sparkSession)
+      new TiHandleRDD(dagRequest,
+                      session.getConf,
+                      tableRef,
+                      ts,
+                      session,
+                      sqlContext.sparkSession)
     val handlePlan = HandleRDDExec(tiHandleRDD)
     // collect handles as a list
     val aggFunc = CollectHandles(handlePlan.attributeRef.last)

@@ -15,7 +15,6 @@
 
 package com.pingcap.tikv;
 
-
 import static com.pingcap.tikv.key.Key.toRawKey;
 
 import com.google.common.collect.ImmutableList;
@@ -81,8 +80,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
   }
 
   public void put(String key, String value) {
-    put(ByteString.copyFromUtf8(key),
-        ByteString.copyFromUtf8(value));
+    put(ByteString.copyFromUtf8(key), ByteString.copyFromUtf8(value));
   }
 
   public void put(String key, ByteString data) {
@@ -146,7 +144,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
       if (errorCode != null) {
         setErrorInfo(errorCode, errBuilder);
         builder.setRegionError(errBuilder.build());
-        //builder.setError("");
+        // builder.setError("");
       }
       responseObserver.onNext(builder.build());
       responseObserver.onCompleted();
@@ -322,8 +320,8 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
 
       Coprocessor.Response.Builder builderWrap = Coprocessor.Response.newBuilder();
       SelectResponse.Builder builder = SelectResponse.newBuilder();
-      com.pingcap.tikv.kvproto.Errorpb.Error.Builder errBuilder = com.pingcap.tikv.kvproto.Errorpb.Error.newBuilder();
-
+      com.pingcap.tikv.kvproto.Errorpb.Error.Builder errBuilder =
+          com.pingcap.tikv.kvproto.Errorpb.Error.newBuilder();
 
       for (Coprocessor.KeyRange keyRange : keyRanges) {
         Integer errorCode = errorMap.remove(keyRange.getStart());
@@ -345,11 +343,7 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
                   .stream()
                   .filter(Objects::nonNull)
                   .filter(kv -> kv.getKey().compareTo(toRawKey(keyRange.getEnd())) <= 0)
-                  .map(
-                      kv ->
-                          Chunk.newBuilder()
-                              .setRowsData(kv.getValue())
-                              .build())
+                  .map(kv -> Chunk.newBuilder().setRowsData(kv.getValue()).build())
                   .collect(Collectors.toList()));
         }
       }

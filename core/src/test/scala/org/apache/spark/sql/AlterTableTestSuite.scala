@@ -39,7 +39,8 @@ class AlterTableTestSuite extends BaseTiSparkSuite {
     if (!defaultNullOnly) {
       refreshConnections() // refresh since we need to load data again
       judge("select * from t")
-      tidbStmt.execute(s"alter table t add column c2 $dataType default $defaultVal2")
+      tidbStmt.execute(
+        s"alter table t add column c2 $dataType default $defaultVal2")
       refreshConnections()
       judge("select * from t")
     }

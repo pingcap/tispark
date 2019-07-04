@@ -15,6 +15,14 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.*;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
+import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
@@ -28,19 +36,10 @@ import com.pingcap.tikv.meta.MetaUtils;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
-import org.junit.Test;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
-import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.*;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.equal;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.notEqual;
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.and;
-import static com.pingcap.tikv.expression.LogicalBinaryExpression.or;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
 
 public class PredicateUtilsTest {
   private static TiTableInfo createTable() {
@@ -80,7 +79,10 @@ public class PredicateUtilsTest {
     ColumnRef col5 = ColumnRef.create("c5", table);
     Set<ColumnRef> baseline = ImmutableSet.of(col1, col2, col3, col4, col5);
 
-    Expression expression = and(c1, and(c2, and(col1, and(divide(col4, and(plus(col1, c1), minus(col2, col5))), col3))));
+    Expression expression =
+        and(
+            c1,
+            and(c2, and(col1, and(divide(col4, and(plus(col1, c1), minus(col2, col5))), col3))));
     Set<ColumnRef> columns = PredicateUtils.extractColumnRefFromExpression(expression);
     assertEquals(baseline, columns);
   }
@@ -104,7 +106,8 @@ public class PredicateUtilsTest {
     Expression predicate2 = or(equal(c3, col4), equal(c4, col4));
     Expression rangePredicate = notEqual(col5, c1);
     List<IndexRange> indexRanges =
-        PredicateUtils.expressionToIndexRanges(ImmutableList.of(predicate1, predicate2), Optional.of(rangePredicate), table, null);
+        PredicateUtils.expressionToIndexRanges(
+            ImmutableList.of(predicate1, predicate2), Optional.of(rangePredicate), table, null);
     assertEquals(8, indexRanges.size());
     Key indexKey1 = CompoundKey.concat(key1, key3);
     Key indexKey2 = CompoundKey.concat(key1, key4);

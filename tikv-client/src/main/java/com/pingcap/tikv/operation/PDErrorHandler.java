@@ -20,9 +20,8 @@ package com.pingcap.tikv.operation;
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.kvproto.Pdpb;
-import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.BackOffFunction;
-
+import com.pingcap.tikv.util.BackOffer;
 import java.util.function.Function;
 
 public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
@@ -42,8 +41,8 @@ public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
     Pdpb.Error error = getError.apply(resp);
     if (error != null) {
       client.updateLeader();
-      backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoPDRPC,
-          new GrpcException(error.toString()));
+      backOffer.doBackOff(
+          BackOffFunction.BackOffFuncType.BoPDRPC, new GrpcException(error.toString()));
       return true;
     }
     return false;

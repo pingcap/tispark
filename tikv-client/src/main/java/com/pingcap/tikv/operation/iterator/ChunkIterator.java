@@ -20,7 +20,6 @@ package com.pingcap.tikv.operation.iterator;
 import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tikv.exception.TiClientInternalException;
-
 import java.util.Iterator;
 import java.util.List;
 
@@ -83,8 +82,7 @@ public abstract class ChunkIterator<T> implements Iterator<T> {
     // loop until the end of chunk list or first non empty chunk
     do {
       chunkIndex += 1;
-    } while (chunkIndex < chunks.size() &&
-             chunks.get(chunkIndex).getRowsMetaCount() == 0);
+    } while (chunkIndex < chunks.size() && chunks.get(chunkIndex).getRowsMetaCount() == 0);
     // return if remaining things left
     return chunkIndex < chunks.size();
   }

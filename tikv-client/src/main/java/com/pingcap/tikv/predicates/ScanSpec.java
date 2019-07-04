@@ -15,6 +15,8 @@
 
 package com.pingcap.tikv.predicates;
 
+import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiExpressionException;
@@ -24,15 +26,12 @@ import com.pingcap.tikv.meta.TiIndexColumn;
 import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
-
 import java.util.*;
-
-import static com.pingcap.tikv.predicates.PredicateUtils.mergeCNFExpressions;
-import static java.util.Objects.requireNonNull;
 
 public class ScanSpec {
   public static class Builder {
-    private final IdentityHashMap<TiIndexColumn, List<Expression>> pointPredicates = new IdentityHashMap<>();
+    private final IdentityHashMap<TiIndexColumn, List<Expression>> pointPredicates =
+        new IdentityHashMap<>();
     private TiIndexColumn rangeColumn;
     private final TiTableInfo table;
     private final TiIndexInfo index;
@@ -93,8 +92,10 @@ public class ScanSpec {
           pointTypes.add(type);
         }
       }
-      Optional<Expression> newRangePred = rangePredicates.isEmpty() ?
-          Optional.empty() : Optional.of(mergeCNFExpressions(rangePredicates));
+      Optional<Expression> newRangePred =
+          rangePredicates.isEmpty()
+              ? Optional.empty()
+              : Optional.of(mergeCNFExpressions(rangePredicates));
       pushedPredicates.addAll(rangePredicates);
 
       Set<Expression> newResidualPredicates = new HashSet<>(residualPredicates);
@@ -112,10 +113,7 @@ public class ScanSpec {
         rangeType = Optional.of(col.getType());
       }
 
-      return new ScanSpec(
-          ImmutableList.copyOf(points),
-          newRangePred,
-          newResidualPredicates);
+      return new ScanSpec(ImmutableList.copyOf(points), newRangePred, newResidualPredicates);
     }
   }
 

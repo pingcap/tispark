@@ -63,7 +63,8 @@ class TPCHQuerySuite extends BaseTiSparkSuite {
         case scan: DataSourceScanExec =>
           scan.relation match {
             case _: JDBCRelation =>
-              fail("Coprocessor plan should not use JDBC Scan as data source node!")
+              fail(
+                "Coprocessor plan should not use JDBC Scan as data source node!")
             case _ =>
           }
         case _ =>

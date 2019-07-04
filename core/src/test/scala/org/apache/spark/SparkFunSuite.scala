@@ -22,7 +22,10 @@ import org.apache.spark.util.AccumulatorContext
 import org.scalatest._
 import org.slf4j.Logger
 
-abstract class SparkFunSuite extends FunSuite with BeforeAndAfterAll with Logging {
+abstract class SparkFunSuite
+    extends FunSuite
+    with BeforeAndAfterAll
+    with Logging {
   protected val logger: Logger = log
 
   // helper function
@@ -33,12 +36,12 @@ abstract class SparkFunSuite extends FunSuite with BeforeAndAfterAll with Loggin
     getTestResourceFile(file).getCanonicalPath
 
   /**
-   * Log the suite name and the test name before and after each test.
-   *
-   * Subclasses should never override this method. If they wish to run
-   * custom code before and after each test, they should mix in the
-   * {{org.scalatest.BeforeAndAfter}} trait instead.
-   */
+    * Log the suite name and the test name before and after each test.
+    *
+    * Subclasses should never override this method. If they wish to run
+    * custom code before and after each test, they should mix in the
+    * {{org.scalatest.BeforeAndAfter}} trait instead.
+    */
   final protected override def withFixture(test: NoArgTest): Outcome = {
     val testName = test.text
     val suiteName = this.getClass.getName

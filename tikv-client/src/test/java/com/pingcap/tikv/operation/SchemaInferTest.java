@@ -23,12 +23,12 @@ import static org.junit.Assert.assertEquals;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.catalog.CatalogTransaction;
+import com.pingcap.tikv.expression.AggregateFunction;
+import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.AggregateFunction;
-import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
@@ -47,7 +47,8 @@ public class SchemaInferTest {
   private ColumnRef name = ColumnRef.create("name", table);
   private Expression sum = AggregateFunction.newCall(FunctionType.Sum, number);
   private ByItem simpleGroupBy = ByItem.create(name, false);
-  private ByItem complexGroupBy = ByItem.create(plus(name, Constant.create("1", StringType.VARCHAR)), false);
+  private ByItem complexGroupBy =
+      ByItem.create(plus(name, Constant.create("1", StringType.VARCHAR)), false);
 
   @Test
   public void simpleSelectSchemaInferTest() throws Exception {

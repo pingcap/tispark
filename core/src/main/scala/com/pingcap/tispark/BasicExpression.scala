@@ -19,7 +19,28 @@ import java.sql.Timestamp
 
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, AttributeReference, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, StartsWith, Subtract}
+import org.apache.spark.sql.catalyst.expressions.{
+  Add,
+  Alias,
+  AttributeReference,
+  Contains,
+  Divide,
+  EndsWith,
+  EqualTo,
+  Expression,
+  GreaterThan,
+  GreaterThanOrEqual,
+  IsNotNull,
+  IsNull,
+  LessThan,
+  LessThanOrEqual,
+  Like,
+  Literal,
+  Multiply,
+  Not,
+  StartsWith,
+  Subtract
+}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
@@ -41,15 +62,19 @@ object BasicExpression {
         // and this number of date has compensate of timezone
         // and must be restored by DateTimeUtils.daysToMillis
         case DateType =>
-          new DateTime(DateTimeUtils.daysToMillis(value.asInstanceOf[DateTimeUtils.SQLDate]))
-        case TimestampType  => new Timestamp(value.asInstanceOf[Long] / 1000)
-        case StringType     => value.toString
-        case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
-        case _              => value
+          new DateTime(
+            DateTimeUtils.daysToMillis(
+              value.asInstanceOf[DateTimeUtils.SQLDate]))
+        case TimestampType => new Timestamp(value.asInstanceOf[Long] / 1000)
+        case StringType    => value.toString
+        case _: DecimalType =>
+          value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
+        case _ => value
       }
     }
 
-  def isSupportedExpression(expr: Expression, requestTypes: RequestTypes): Boolean =
+  def isSupportedExpression(expr: Expression,
+                            requestTypes: RequestTypes): Boolean =
     requestTypes match {
       case RequestTypes.REQ_TYPE_DAG if expr.children.nonEmpty =>
         val childType = expr.children.head.dataType
@@ -57,7 +82,8 @@ object BasicExpression {
         // we do not support this expression in DAG mode
         expr.children.forall(
           (e: Expression) =>
-            childType.eq(e.dataType) && isSupportedExpression(e, requestTypes) // Do it recursively
+            childType
+              .eq(e.dataType) && isSupportedExpression(e, requestTypes) // Do it recursively
         )
       // For other request types we assume them supported
       // by default
