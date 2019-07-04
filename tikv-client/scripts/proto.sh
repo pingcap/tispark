@@ -14,21 +14,26 @@
 #   limitations under the License.
 #
 
+kvproto_hash=762fbf48a7e77a60d0eb623629842e9b06979743
+
+raft_rs_hash=3799cfa482e288a0fc4a3a6c365c6681afd85b3a
+
+tipb_hash=a2a2b2ab2ee4b8cd4349418ac1c1cde289798485
+
 if [ -d "kvproto" ]; then
-    # cd kvproto; git pull origin master; cd ..
-    cd kvproto; git checkout 497dd34f807bccdb5bd01009c62c5fd5ced404f3; cd ..
+	cd kvproto; git fetch -p; git checkout ${kvproto_hash}; cd ..
 else
-    git clone https://github.com/pingcap/kvproto; cd kvproto; git checkout 497dd34f807bccdb5bd01009c62c5fd5ced404f3; cd ..
+	git clone https://github.com/pingcap/kvproto; cd kvproto; git checkout ${kvproto_hash}; cd ..
 fi
 
 if [ -d "raft-rs" ]; then
-    cd raft-rs; git pull origin master; cd ..
+	cd raft-rs; git fetch -p; git checkout ${raft_rs_hash}; cd ..
 else
-    git clone https://github.com/pingcap/raft-rs
+	git clone https://github.com/pingcap/raft-rs; cd raft-rs; git checkout ${raft_rs_hash}; cd ..
 fi
 
 if [ -d "tipb" ]; then
-    cd tipb; git pull origin master; cd ..
-else 
-    git clone https://github.com/pingcap/tipb
+	cd tipb; git fetch -p; git checkout ${tipb_hash}; cd ..
+else
+	git clone https://github.com/pingcap/tipb; cd tipb; git checkout ${tipb_hash}; cd ..
 fi
