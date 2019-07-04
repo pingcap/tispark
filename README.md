@@ -7,7 +7,7 @@
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) to serve as a one-stop solution for online transactions and analysis.
 
 ## Getting TiSpark
-The current stable version is 1.2 which is compatible with Spark 2.1.0+.
+The current stable version is 1.2.1 which is compatible with Spark 2.1.0+.
 
 **When using Spark 2.1.0+, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
@@ -19,20 +19,20 @@ If you are using maven, add the following to your pom.xml:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-core</artifactId>
-      <version>1.2</version>
+      <version>1.2.1</version>
     </dependency>
     <dependency>
       <groupId>com.pingcap.tikv</groupId>
       <artifactId>tikv-client</artifactId>
-      <version>1.2</version>
+      <version>1.2.1</version>
     </dependency>
 </dependencies>
 ```
 
 If you're using SBT, add the following line to your build file:
 ```scala
-libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.2"
-libraryDependencies += "com.pingcap.tikv" % "tikv-client" % "1.2"
+libraryDependencies += "com.pingcap.tispark" % "tispark-core" % "1.2.1"
+libraryDependencies += "com.pingcap.tikv" % "tikv-client" % "1.2.1"
 ```
 
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
