@@ -11,15 +11,15 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to an
 Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
-The current stable version is **TiSpark 2.1** which is compatible with **Spark 2.3.0+** and **Spark 2.4.0+**.
+The current stable version is **TiSpark 2.1.1** which is compatible with **Spark 2.3.0+** and **Spark 2.4.0+**.
 
-The latest stable version compatible with **Spark 2.1.0+** is **TiSpark 1.2**
+The latest stable version compatible with **Spark 2.1.0+** is **TiSpark 1.2.1**
 
-**When using TiSpark 1.2, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
+**When using TiSpark 1.2.1, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
-**When using TiSpark 2.1 with Spark 2.3.0+, please use version `2.1-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1.1 with Spark 2.3.0+, please use version `2.1.1-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
-**When using TiSpark 2.1 with Spark 2.4.0+, please use version `2.1-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1.1 with Spark 2.4.0+, please use version `2.1.1-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
 You may also [build from sources](#how-to-build-from-sources) to try the new features on TiSpark master branch.
 
@@ -29,7 +29,7 @@ If you are using maven(recommended), add the following to your pom.xml:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-core</artifactId>
-      <version>2.1-spark_${spark.version}</version>
+      <version>2.1.1-spark_${spark.version}</version>
     </dependency>
 </dependencies>
 ```
@@ -37,7 +37,7 @@ If you are using maven(recommended), add the following to your pom.xml:
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
 
 ## How to build from sources
-TiSpark now supports Spark 2.3.0+/2.4.0+. The previous version for Spark 2.1.0+ will only contain bug fixes in future, you may still get Spark 2.1 support until TiSpark 1.2.
+TiSpark now supports Spark 2.3.0+/2.4.0+. The previous version for Spark 2.1.0+ will only contain bug fixes in future, you may still get Spark 2.1 support until TiSpark 1.2.1.
 ```
 git clone https://github.com/pingcap/tispark.git
 ```
@@ -51,6 +51,15 @@ mvn clean install -Dmaven.test.skip=true -P spark-2.4
 
 Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.
 
+## How to choose TiSpark Version
+
+| Spark Version | Stable TiSpark Version |
+| ------------- | ---------------------- |
+| Spark-2.4.x | TiSpark-2.1.1 |
+| Spark-2.3.x | TiSpark-2.1.1 |
+| Spark-2.2.x | TiSpark-1.2.1 |
+| Spark-2.1.x | TiSpark-1.2.1 |
+
 ## Maximum TiDB/TiKV/PD version supported by TiSpark
 
 Each latest TiSpark version guarantees *backward compatibility* for TiDB components, i.e., supports TiDB/TiKV/PD until a certain release. Its reason varies, amongst which the most common one is that the new features and bug-fixes provided by TiDB components requires update on API, dependencies, etc.
@@ -58,7 +67,7 @@ Each latest TiSpark version guarantees *backward compatibility* for TiDB compone
 | TiSpark Version | Maximum TiDB Version | Maximum TiKV Version | Maximum PD Version |
 | ----- | ------ | ------ | ------ |
 | < 1.2 | v2.1.4 | v2.1.4 | v2.1.4 |
-| 1.2 | v2.1.x | v2.1.x | v2.1.x |
+| 1.2.x | v2.1.x | v2.1.x | v2.1.x |
 | 2.x | v3.0.0-beta | v3.0.0-beta | v3.0.0-beta |
 | Latest (master) | Latest | Latest | Latest |
 
@@ -70,7 +79,7 @@ While TiSpark provides downward compatibility for TiDB, it guarantees **restrict
 | ----- | ------ |
 | 1.x | Spark v2.1.0+ |
 | 2.0 | Spark v2.3.0+ |
-| 2.1 | Spark v2.3.0+, Spark v2.4.0+ |
+| 2.1.x | Spark v2.3.0+, Spark v2.4.0+ |
 | Latest (master) | Spark v2.3.0+, Spark v2.4.0+ |
 
 ## How to migrate from Spark 2.1 to Spark 2.3/2.4
