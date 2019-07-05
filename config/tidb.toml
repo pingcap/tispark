@@ -29,7 +29,7 @@ lease = "10s"
 split-table = true
 
 # delay-clean-table-lock is used to control whether delayed-release the table lock in the abnormal situation. (Milliseconds)
-delay-clean-table-lock = 10000
+delay-clean-table-lock = 60000
 
 # The limit of concurrent executed sessions.
 # token-limit = 1000

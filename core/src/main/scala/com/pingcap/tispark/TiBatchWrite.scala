@@ -42,8 +42,8 @@ import scala.collection.mutable
 
 object TiBatchWrite {
   // Milliseconds
-  private val MIN_DELAY_CLEAN_TABLE_LOCK = 10000
-  private val DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA = 4000
+  private val MIN_DELAY_CLEAN_TABLE_LOCK = 60000
+  private val DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA = 30000
   private val PRIMARY_KEY_COMMIT_BACKOFF = MIN_DELAY_CLEAN_TABLE_LOCK - DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA
 
   type SparkRow = org.apache.spark.sql.Row
