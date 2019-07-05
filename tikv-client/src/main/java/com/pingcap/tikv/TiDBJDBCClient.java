@@ -91,7 +91,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     return objectMapper.readValue(configJSON, typeRef);
   }
 
-  public boolean isEnableSplitTable() throws IOException, SQLException {
+  public boolean isEnableSplitRegion() throws IOException, SQLException {
     Map<String, Object> configMap = readConfMapFromTiDB();
     Object splitTable = configMap.getOrDefault(ENABLE_SPLIT_TABLE_KEY, ENABLE_SPLIT_TABLE_DEFAULT);
     return (Boolean) splitTable;
@@ -107,6 +107,44 @@ public class TiDBJDBCClient implements AutoCloseable {
               "split table %s.%s between (%d) and (%d) regions %d",
               dbName, tblName, minVal, maxVal, regionNum);
       return tidbStmt.execute(sql);
+    }
+  }
+
+  public boolean splitIndexRegion(
+      String dbName, String tblName, String idxName, List<List<String>> splitPoints)
+      throws SQLException {
+    // SPLIT TABLE t1 INDEX idx4 ("a", "2000-01-01 00:00:01"), ("b", "2019-04-17 14:26:19"), ("c",
+    // "");
+    StringBuilder sb = new StringBuilder();
+    sb.append("split table ")
+        .append(dbName)
+        .append(".")
+        .append(tblName)
+        .append(" index ")
+        .append(idxName)
+        .append(" by");
+
+    for (int i = 0; i < splitPoints.size(); i++) {
+      List<String> splitPoint = splitPoints.get(i);
+      StringBuilder splitPointStr = new StringBuilder("(");
+      for (int j = 0; j < splitPoint.size(); j++) {
+        splitPointStr.append("\"");
+        splitPointStr.append(splitPoint.get(j));
+        if (j < splitPoint.size() - 1) {
+          splitPointStr.append(",");
+        }
+        splitPointStr.append("\"");
+      }
+      splitPointStr.append(")");
+      sb.append(splitPointStr);
+
+      if (i < splitPoints.size() - 1) {
+        sb.append(",");
+      }
+    }
+
+    try (Statement tidbStmt = connection.createStatement()) {
+      return tidbStmt.execute(sb.toString());
     }
   }
 

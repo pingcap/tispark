@@ -15,14 +15,29 @@
 
 package com.pingcap.tikv;
 
+import com.pingcap.tikv.key.IndexKey;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
+import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.region.TiRegion;
 import java.util.ArrayList;
 import java.util.List;
 
 public class TiBatchWriteUtils {
+
+  public static List<TiRegion> getRegionByIndex(TiSession session, TiTableInfo table, TiIndexInfo index) {
+    ArrayList<TiRegion> regionList = new ArrayList<>();
+    Key min = IndexKey.toIndexKey(table.getId(), index.getId());
+    Key max = min.nextPrefix();
+
+    while (min.compareTo(max) < 0) {
+      TiRegion region = session.getRegionManager().getRegionByKey(min.toByteString());
+      regionList.add(region);
+      min = Key.toRawKey(region.getEndKey());
+    }
+    return regionList;
+  }
 
   public static List<TiRegion> getRegionsByTable(TiSession session, TiTableInfo table) {
     ArrayList<TiRegion> regionList = new ArrayList<>();
