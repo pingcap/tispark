@@ -31,6 +31,8 @@ public class TiDBJDBCClient implements AutoCloseable {
   private static final String SELECT_TIDB_CONFIG_SQL = "select @@tidb_config";
   private static final String ENABLE_TABLE_LOCK_KEY = "enable-table-lock";
   private static final Boolean ENABLE_TABLE_LOCK_DEFAULT = false;
+  private static final String DELAY_CLEAN_TABLE_LOCK = "delay-clean-table-lock";
+  private static final int DELAY_CLEAN_TABLE_LOCK_DEFAULT = 0;
   private static final String ENABLE_SPLIT_TABLE_KEY = "split-table";
   private static final Boolean ENABLE_SPLIT_TABLE_DEFAULT = false;
 
@@ -43,6 +45,20 @@ public class TiDBJDBCClient implements AutoCloseable {
     Object enableTableLock =
         configMap.getOrDefault(ENABLE_TABLE_LOCK_KEY, ENABLE_TABLE_LOCK_DEFAULT);
     return (Boolean) enableTableLock;
+  }
+
+  /**
+   * get enable-table-lock config from tidb
+   *
+   * @return Milliseconds
+   * @throws IOException
+   * @throws SQLException
+   */
+  public int getDelayCleanTableLock() throws IOException, SQLException {
+    Map<String, Object> configMap = readConfMapFromTiDB();
+    Object enableTableLock =
+        configMap.getOrDefault(DELAY_CLEAN_TABLE_LOCK, DELAY_CLEAN_TABLE_LOCK_DEFAULT);
+    return (int) enableTableLock;
   }
 
   public boolean lockTableWriteLocal(String databaseName, String tableName) throws SQLException {

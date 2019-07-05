@@ -41,6 +41,11 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 object TiBatchWrite {
+  // Milliseconds
+  private val MIN_DELAY_CLEAN_TABLE_LOCK = 60000
+  private val DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA = 30000
+  private val PRIMARY_KEY_COMMIT_BACKOFF = MIN_DELAY_CLEAN_TABLE_LOCK - DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA
+
   type SparkRow = org.apache.spark.sql.Row
   type TiRow = com.pingcap.tikv.row.Row
   type TiDataType = com.pingcap.tikv.types.DataType
@@ -146,7 +151,26 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // lock table
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
-    isEnableTableLock = tiDBJDBCClient.isEnableTableLock
+    isEnableTableLock = {
+      if (tiDBJDBCClient.isEnableTableLock) {
+        if (tiDBJDBCClient.getDelayCleanTableLock >= MIN_DELAY_CLEAN_TABLE_LOCK) {
+          true
+        } else {
+          logger.warn(
+            s"table lock disabled! to enable table lock, please set tidb config: delay-clean-table-lock >= $MIN_DELAY_CLEAN_TABLE_LOCK"
+          )
+          false
+        }
+      } else {
+        false
+      }
+    }
+    if (!isEnableTableLock) {
+      logger.warn(
+        s"table lock disabled! to enable table lock, please set tidb config: enable-table-lock = true"
+      )
+    }
+
     isEnableSplitRegion = tiDBJDBCClient.isEnableSplitTable
     lockTable()
 
@@ -324,7 +348,7 @@ class TiBatchWrite(@transient val df: DataFrame,
         s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs"
       )
     }
-    val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_COMMIT_BACKOFF)
+    val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(PRIMARY_KEY_COMMIT_BACKOFF)
 
     if (connectionLost()) {
       throw new TiBatchWriteException("tidb's jdbc connection is lost!")
