@@ -47,6 +47,7 @@ public class TiColumnInfo implements Serializable {
   // If version is 0 then timestamp's default value will be read and decoded as local timezone.
   // if version is 1 then timestamp's default value will be read and decoded as utc.
   private final long version;
+  private final String generatedExprString;
 
   static TiColumnInfo getRowIdColumn(int offset) {
     return new TiColumnInfo(-1, "_tidb_rowid", offset, IntegerType.ROW_ID_TYPE, true);
@@ -64,7 +65,8 @@ public class TiColumnInfo implements Serializable {
       @JsonProperty("origin_default") String originalDefaultValue,
       @JsonProperty("default") String defaultValue,
       @JsonProperty("comment") String comment,
-      @JsonProperty("version") long version) {
+      @JsonProperty("version") long version,
+      @JsonProperty("generated_expr_string") String generatedExprString) {
     this.id = id;
     this.name = requireNonNull(name, "column name is null").getL();
     this.offset = offset;
@@ -77,6 +79,7 @@ public class TiColumnInfo implements Serializable {
     // Refactor against original tidb code
     this.isPrimaryKey = (type.getFlag() & PK_MASK) > 0;
     this.version = version;
+    this.generatedExprString = generatedExprString;
   }
 
   public TiColumnInfo(
@@ -88,7 +91,8 @@ public class TiColumnInfo implements Serializable {
       String originalDefaultValue,
       String defaultValue,
       String comment,
-      long version) {
+      long version,
+      String generatedExprString) {
     this.id = id;
     this.name = requireNonNull(name, "column name is null").toLowerCase();
     this.offset = offset;
@@ -99,6 +103,7 @@ public class TiColumnInfo implements Serializable {
     this.originDefaultValue = originalDefaultValue;
     this.isPrimaryKey = (type.getFlag() & PK_MASK) > 0;
     this.version = version;
+    this.generatedExprString = generatedExprString;
   }
 
   TiColumnInfo copyWithoutPrimaryKey() {
@@ -114,7 +119,8 @@ public class TiColumnInfo implements Serializable {
         this.originDefaultValue,
         this.defaultValue,
         this.comment,
-        this.version);
+        this.version,
+        this.generatedExprString);
   }
 
   @VisibleForTesting
@@ -129,6 +135,7 @@ public class TiColumnInfo implements Serializable {
     this.originDefaultValue = "1";
     this.defaultValue = "";
     this.version = DataType.COLUMN_VERSION_FLAG;
+    this.generatedExprString = "";
   }
 
   public long getId() {
@@ -340,5 +347,13 @@ public class TiColumnInfo implements Serializable {
     // TODO: 1. get default value if its null or value is null
     //      2. if generated or generatedStored is false
     return isPrimaryKey & isPkHandle;
+  }
+
+  public String getGeneratedExprString() {
+    return generatedExprString;
+  }
+
+  public boolean isGeneratedColumn() {
+    return generatedExprString != null && !generatedExprString.isEmpty();
   }
 }

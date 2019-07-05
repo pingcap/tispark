@@ -214,7 +214,8 @@ public class TiTableInfo implements Serializable {
             col.getOriginDefaultValue(),
             col.getDefaultValue(),
             col.getComment(),
-            col.getVersion())
+            col.getVersion(),
+            col.getGeneratedExprString())
         .copyWithoutPrimaryKey();
   }
 
@@ -252,5 +253,14 @@ public class TiTableInfo implements Serializable {
   public boolean isPartitionEnabled() {
     if (partitionInfo == null) return false;
     return partitionInfo.isEnable();
+  }
+
+  public boolean hasGeneratedColumn() {
+    for (TiColumnInfo col : getColumns()) {
+      if (col.isGeneratedColumn()) {
+        return true;
+      }
+    }
+    return false;
   }
 }
