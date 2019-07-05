@@ -437,13 +437,21 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   @throws(classOf[TiBatchWriteException])
-  private def checkUnsupported(): Unit =
+  private def checkUnsupported(): Unit = {
     // write to partition table
     if (tiTableInfo.isPartitionEnabled) {
       throw new TiBatchWriteException(
         "tispark currently does not support write data to partition table!"
       )
     }
+
+    // write to table with generated column
+    if (tiTableInfo.hasGeneratedColumn) {
+      throw new TiBatchWriteException(
+        "tispark currently does not support write data to table with generated column!"
+      )
+    }
+  }
 
   private def checkColumnNumbers(): Unit = {
     if (!tiTableInfo.hasAutoIncrementColumn && colsInDf.length != tableColSize) {
