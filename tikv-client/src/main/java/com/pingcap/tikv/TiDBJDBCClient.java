@@ -48,7 +48,7 @@ public class TiDBJDBCClient implements AutoCloseable {
   }
 
   /**
-   * get delay clean table lock
+   * get enable-table-lock config from tidb
    *
    * @return Milliseconds
    * @throws IOException
