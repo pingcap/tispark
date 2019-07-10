@@ -26,7 +26,8 @@ import java.util.List;
 
 public class TiBatchWriteUtils {
 
-  public static List<TiRegion> getRegionByIndex(TiSession session, TiTableInfo table, TiIndexInfo index) {
+  public static List<TiRegion> getRegionByIndex(
+      TiSession session, TiTableInfo table, TiIndexInfo index) {
     ArrayList<TiRegion> regionList = new ArrayList<>();
     Key min = IndexKey.toIndexKey(table.getId(), index.getId());
     Key max = min.nextPrefix();

@@ -732,7 +732,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private def splitIndexRegion(wrappedRowRdd: RDD[WrappedRow]) = {
     if (options.enableRegionSplit && isEnableSplitRegion) {
-      val regionSplitNum = if(options.regionSplitNum != 0) {
+      val regionSplitNum = if (options.regionSplitNum != 0) {
         options.regionSplitNum
       } else {
         estimateRegionSplitNum(wrappedRowRdd)

@@ -31,7 +31,9 @@ class RegionSplitSuite extends BaseDataSourceTest("region_split_test") {
 
     val tiTableInfo =
       ti.tiSession.getCatalog.getTable(dbPrefix + database, table)
-    val regionsNum = TiBatchWriteUtils.getRegionByIndex(ti.tiSession, tiTableInfo, tiTableInfo.getIndices.get(0)).size()
+    val regionsNum = TiBatchWriteUtils
+      .getRegionByIndex(ti.tiSession, tiTableInfo, tiTableInfo.getIndices.get(0))
+      .size()
     assert(regionsNum == 4)
   }
 
