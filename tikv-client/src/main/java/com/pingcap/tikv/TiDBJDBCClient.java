@@ -117,9 +117,11 @@ public class TiDBJDBCClient implements AutoCloseable {
     // "");
     StringBuilder sb = new StringBuilder();
     sb.append("split table ")
+        .append("`")
         .append(dbName)
-        .append(".")
+        .append("`.`")
         .append(tblName)
+        .append("`")
         .append(" index ")
         .append(idxName)
         .append(" by");
