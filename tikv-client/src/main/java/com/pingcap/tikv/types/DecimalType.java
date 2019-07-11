@@ -91,6 +91,18 @@ public class DecimalType extends DataType {
     return toGivenPrecisionAndFrac(result, length, decimal);
   }
 
+  /**
+   * convert a BigDecimal to a MyDecimal according to a give precision and frac, e.g.
+   * toGivenPrecisionAndFrac(1.234, 3, 2) = 1.23 toGivenPrecisionAndFrac(1.235, 3, 2) = 1.25
+   * toGivenPrecisionAndFrac(1.235, 5, 4) = 1.2350 toGivenPrecisionAndFrac(11.235, 4, 3) throw
+   * ConvertOverflowException
+   *
+   * @param value
+   * @param precision
+   * @param frac
+   * @return
+   * @throws ConvertOverflowException
+   */
   private MyDecimal toGivenPrecisionAndFrac(java.math.BigDecimal value, int precision, int frac)
       throws ConvertOverflowException {
     java.math.BigDecimal roundedValue = value.setScale(frac, RoundingMode.HALF_UP);
