@@ -135,7 +135,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
-    colsInDf = df.columns.toList
+    colsInDf = df.columns.toList.map(_.toLowerCase())
     uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
     handleCol = tiTableInfo.getPKIsHandleColumn
     tableColSize = tiTableInfo.getColumns.size()
