@@ -294,6 +294,11 @@ Currently you could adjust these configs in your spark.conf file.
 | --------   | -----:   | :----: |
 | spark.tispark.statistics.auto_load | true | Whether to load statistics info automatically during database mapping. |
 
+## Reading partition table from TiDB
+Currently, only range partition table is limited supported. If partition expression having function expression 
+rather than `year` then partition pruning will not be applied. Such scan can be considered full table scan if there is no
+index in the schema. 
+
 ## FAQ
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?
