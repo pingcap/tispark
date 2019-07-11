@@ -296,8 +296,7 @@ Currently you could adjust these configs in your spark.conf file.
 
 ## Reading partition table from TiDB
 Currently, only range partition table is limited supported. If partition expression having function expression 
-rather than `year` then partition pruning will not be applied. Such scan can be considered full table scan if there is no
-index in the schema. 
+rather than `year` then partition pruning will not be applied. Such scan can be considered full table scan if there is no index in the schema. 
 
 ## FAQ
 
