@@ -39,4 +39,8 @@ public class ConvertOverflowException extends RuntimeException {
   public static ConvertOverflowException newEnumException(Object value) {
     return new ConvertOverflowException("Incorrect enum value: '" + value + "'");
   }
+
+  public static ConvertOverflowException newOutOfRange() {
+    return new ConvertOverflowException("Out of range");
+  }
 }
