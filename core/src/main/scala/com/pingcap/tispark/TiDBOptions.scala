@@ -63,7 +63,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // It is an optimize by the nature of 2pc protocol
   // We leave other txn, gc or read to resolve locks.
   val skipCommitSecondaryKey: Boolean =
-    parameters.getOrElse(TIDB_SKIP_COMMIT_SECONDARY_KEY, "true").toBoolean
+    parameters.getOrElse(TIDB_SKIP_COMMIT_SECONDARY_KEY, "false").toBoolean
 
   val regionSplitNum: Int = parameters.getOrElse(TIDB_REGION_SPLIT_NUM, "0").toInt
 
