@@ -2,7 +2,7 @@ package com.pingcap.tispark.datasource
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
 class UpperCaseColumnNameSuite
     extends BaseDataSourceTest("test_datasource_uppser_case_column_name") {
