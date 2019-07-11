@@ -766,7 +766,7 @@ class TiRegionPartitioner(regions: List[TiRegion], writeConcurrency: Int) extend
       val region = regions(i)
       val range = KeyRangeUtils.makeRange(region.getStartKey, region.getEndKey)
       if (range.contains(rawKey)) {
-        return if (writeConcurrency <= 0) i else i % writeConcurrency
+        return i % numPartitions
       }
     }
     0
