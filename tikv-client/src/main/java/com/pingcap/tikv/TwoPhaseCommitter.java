@@ -96,8 +96,8 @@ public class TwoPhaseCommitter {
    */
   private static final int TXN_COMMIT_BATCH_SIZE = 768 * 1024;
 
-  /** unit is second */
-  private static final long DEFAULT_BATCH_WRITE_LOCK_TTL = 3000;
+  /** unit is millisecond */
+  private static final long DEFAULT_BATCH_WRITE_LOCK_TTL = 3600000;
 
   private static final long MAX_RETRY_TIMES = 3;
 
@@ -109,10 +109,21 @@ public class TwoPhaseCommitter {
   /** start timestamp of transaction which get from PD */
   private final long startTs;
 
+  /** unit is millisecond */
+  private final long lockTTL;
+
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
     this.kvClient = TiSessionCache.getSession(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
+    this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
+  }
+
+  public TwoPhaseCommitter(TiConfiguration conf, long startTime, long lockTTL) {
+    this.kvClient = TiSessionCache.getSession(conf).createTxnClient();
+    this.regionManager = kvClient.getRegionManager();
+    this.startTs = startTime;
+    this.lockTTL = lockTTL;
   }
 
   public void close() throws Exception {}
@@ -552,11 +563,11 @@ public class TwoPhaseCommitter {
 
   private long getTxnLockTTL(long startTime) {
     // TODO: calculate txn lock ttl
-    return DEFAULT_BATCH_WRITE_LOCK_TTL;
+    return this.lockTTL;
   }
 
   private long getTxnLockTTL(long startTime, int txnSize) {
     // TODO: calculate txn lock ttl
-    return DEFAULT_BATCH_WRITE_LOCK_TTL;
+    return this.lockTTL;
   }
 }

@@ -317,14 +317,15 @@ class TiBatchWrite(@transient val df: DataFrame,
     logger.info(s"startTS: $startTs")
 
     // driver primary pre-write
-    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs)
+    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs, options.lockTTLSeconds * 1000)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
 
     // executors secondary pre-write
     finalWriteRDD.foreachPartition { iterator =>
-      val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
+      val ti2PCClientOnExecutor =
+        new TwoPhaseCommitter(tiConf, startTs, options.lockTTLSeconds * 1000)
 
       val pairs = iterator.map {
         case (key, row) =>
