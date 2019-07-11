@@ -70,6 +70,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val enableRegionSplit: Boolean =
     parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
 
+  val lockTTLSeconds: Long = parameters.getOrElse(TIDB_LOCK_TTL_SECONDS, "3600").toLong
+
   // ------------------------------------------------------------
   // Calculated parameters
   // ------------------------------------------------------------
@@ -112,4 +114,5 @@ object TiDBOptions {
   val TIDB_SKIP_COMMIT_SECONDARY_KEY: String = newOption("skipCommitSecondaryKey")
   val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
+  val TIDB_LOCK_TTL_SECONDS: String = newOption("lockTTLSeconds")
 }

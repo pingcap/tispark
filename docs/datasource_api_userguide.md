@@ -23,12 +23,12 @@ Since TiDB is a database that supports transaction, TiDB Spark Connector also su
 2. no data in DataFrame will be written to TiDB successfully, if conflicts exist
 3. no partial changes is visible to other session until commit.
 
-## Replace and insert semantics 
-TiSpark only supports `Append` SaveMode. The behavior is controlled by 
+## Replace and insert semantics
+TiSpark only supports `Append` SaveMode. The behavior is controlled by
 `replace` option. The default value is false. In addition, if `replace` is true,
 data to be inserted will be deduplicate before insertion.
 
-If `replace` is true, then 
+If `replace` is true, then
 * if primary key or unique index exists in db, data will be updated
 * if no same primary key or unique index exists, data will be inserted.
 
@@ -38,7 +38,7 @@ If `replace` is false, then
 
 | SaveMode | Support | Semantics |
 | -------- | ------- | --------- |
-| Append | true | TiSpark's `Append` means upsert or insert which is controlled by `replace` option. 
+| Append | true | TiSpark's `Append` means upsert or insert which is controlled by `replace` option.
 | Overwrite | false |  - |
 | ErrorIfExists | false | - |
 | Ignore | false | - |
@@ -205,19 +205,20 @@ df.write
 ## TiDB Options
 The following is TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
-|    Key    | Short Name | Required | Description | Default |
-| ---------- | --------- | -------- | ----------- | ------- |
-| spark.tispark.pd.addresses | - | true | PD Cluster Addresses, split by comma | - |
-| spark.tispark.tidb.addr | tidb.addr | true | TiDB Address, currently only support one instance | - |
-| spark.tispark.tidb.port | tidb.port | true | TiDB Port | - |
-| spark.tispark.tidb.user | tidb.user | true | TiDB User | - |
-| spark.tispark.tidb.password | tidb.password | true | TiDB Password | - |
-| database | - | true | TiDB Database | - |
-| table | - | true | TiDB Table | - |
-| skipCommitSecondaryKey | - | false | skip commit secondary key | true |
-| enableRegionSplit | - | false | do region split to avoid hot region during insertion | true|
-| regionSplitNum | - | false | user defined region split number during insertion | 0 |
-| replace | - | false | define the behavior of append. | false| 
+| Key                         | Short Name    | Required | Description                                                                                   | Default |
+| --------------------------- | ------------- | -------- | --------------------------------------------------------------------------------------------- | ------- |
+| spark.tispark.pd.addresses  | -             | true     | PD Cluster Addresses, split by comma                                                          | -       |
+| spark.tispark.tidb.addr     | tidb.addr     | true     | TiDB Address, currently only support one instance                                             | -       |
+| spark.tispark.tidb.port     | tidb.port     | true     | TiDB Port                                                                                     | -       |
+| spark.tispark.tidb.user     | tidb.user     | true     | TiDB User                                                                                     | -       |
+| spark.tispark.tidb.password | tidb.password | true     | TiDB Password                                                                                 | -       |
+| database                    | -             | true     | TiDB Database                                                                                 | -       |
+| table                       | -             | true     | TiDB Table                                                                                    | -       |
+| skipCommitSecondaryKey      | -             | false    | skip commit secondary key                                                                     | true    |
+| enableRegionSplit           | -             | false    | do region split to avoid hot region during insertion                                          | true    |
+| regionSplitNum              | -             | false    | user defined region split number during insertion                                             | 0       |
+| replace                     | -             | false    | define the behavior of append.                                                                | false   |
+| lockTTLSeconds              | -             | false    | tikv lock ttl, write duration must < `lockTTLSeconds`, otherwise write may fail because of gc | 3600    |
 
 TiSpark's common options can also be passed in, e.g. `spark.tispark.plan.allow_agg_pushdown`, `spark.tispark.plan.allow_index_read`, etc.
 
