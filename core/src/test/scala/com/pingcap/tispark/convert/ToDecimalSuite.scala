@@ -240,11 +240,15 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
     // java.lang.Float -> DECIMAL
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
-        val a: java.lang.Float = 1.1f
-        val b: java.lang.Float = -2.2f
+        val a1: java.lang.Float = 1.1f
+        val a2: java.lang.Float = -2.2f
+        val a3: java.lang.Float = 1.2e-2f
+        val a4: java.lang.Float = 1.4e-25f
+        val a5: java.lang.Float = -1.4e-25f
+        val a6: java.lang.Float = 1.88e-4f
 
         val row1 = Row(1, null, null, null, null, null, null)
-        val row2 = Row(2, a, b, a, b, a, b)
+        val row2 = Row(2, a1, a2, a3, a4, a5, a6)
 
         val schema = StructType(
           List(
@@ -259,14 +263,14 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
         )
 
         val readA1: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 1)
-        val readA3: java.math.BigDecimal = java.math.BigDecimal.valueOf(1100, 3)
-        val readA5: java.math.BigDecimal = java.math.BigDecimal.valueOf(110000, 5)
-        val readB2: java.math.BigDecimal = java.math.BigDecimal.valueOf(-220, 2)
-        val readB4: java.math.BigDecimal = java.math.BigDecimal.valueOf(-22000, 4)
-        val readB6: java.math.BigDecimal = java.math.BigDecimal.valueOf(-2200000, 6)
+        val readA2: java.math.BigDecimal = java.math.BigDecimal.valueOf(-220, 2)
+        val readA3: java.math.BigDecimal = java.math.BigDecimal.valueOf(12, 3)
+        val readA4: java.math.BigDecimal = java.math.BigDecimal.valueOf(0, 4)
+        val readA5: java.math.BigDecimal = java.math.BigDecimal.valueOf(0, 5)
+        val readA6: java.math.BigDecimal = java.math.BigDecimal.valueOf(188, 6)
 
         val readRow1 = Row(1, null, null, null, null, null, null)
-        val readRow2 = Row(2, readA1, readB2, readA3, readB4, readA5, readB6)
+        val readRow2 = Row(2, readA1, readA2, readA3, readA4, readA5, readA6)
 
         dropTable()
         createTable()
@@ -282,11 +286,15 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
     // java.lang.Double -> DECIMAL
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
-        val a: java.lang.Double = 1.1d
-        val b: java.lang.Double = -2.2d
+        val a1: java.lang.Double = 1.1d
+        val a2: java.lang.Double = -2.2d
+        val a3: java.lang.Double = 1.2e-2d
+        val a4: java.lang.Double = 1.4e-25d
+        val a5: java.lang.Double = -1.4e-25d
+        val a6: java.lang.Double = 1.88e-4d
 
         val row1 = Row(1, null, null, null, null, null, null)
-        val row2 = Row(2, a, b, a, b, a, b)
+        val row2 = Row(2, a1, a2, a3, a4, a5, a6)
 
         val schema = StructType(
           List(
@@ -301,15 +309,14 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
         )
 
         val readA1: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 1)
-        val readA3: java.math.BigDecimal = java.math.BigDecimal.valueOf(1100, 3)
-        val readA5: java.math.BigDecimal = java.math.BigDecimal.valueOf(110000, 5)
-        val readB2: java.math.BigDecimal = java.math.BigDecimal.valueOf(-220, 2)
-        val readB4: java.math.BigDecimal = java.math.BigDecimal.valueOf(-22000, 4)
-        val readB6: java.math.BigDecimal = java.math.BigDecimal.valueOf(-2200000, 6)
+        val readA2: java.math.BigDecimal = java.math.BigDecimal.valueOf(-220, 2)
+        val readA3: java.math.BigDecimal = java.math.BigDecimal.valueOf(12, 3)
+        val readA4: java.math.BigDecimal = java.math.BigDecimal.valueOf(0, 4)
+        val readA5: java.math.BigDecimal = java.math.BigDecimal.valueOf(0, 5)
+        val readA6: java.math.BigDecimal = java.math.BigDecimal.valueOf(188, 6)
 
         val readRow1 = Row(1, null, null, null, null, null, null)
-        val readRow2 = Row(2, readA1, readB2, readA3, readB4, readA5, readB6)
-
+        val readRow2 = Row(2, readA1, readA2, readA3, readA4, readA5, readA6)
         dropTable()
         createTable()
 

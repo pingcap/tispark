@@ -429,6 +429,11 @@ public class Codec {
       writeDecimal(cdo, val);
     }
 
+    public static void writeDecimalFully(CodecDataOutput cdo, MyDecimal val) {
+      cdo.writeByte(DECIMAL_FLAG);
+      writeDecimal(cdo, val);
+    }
+
     /**
      * Encoding a double value to byte buffer
      *

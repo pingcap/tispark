@@ -16,12 +16,13 @@
 package com.pingcap.tikv.codec;
 
 import com.google.common.annotations.VisibleForTesting;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
 // TODO: We shouldn't allow empty MyDecimal
 // TODO: It seems MyDecimal to BigDecimal is very slow
-public class MyDecimal {
+public class MyDecimal implements Serializable {
   // how many digits that a word has
   private static final int digitsPerWord = 9;
   // MyDecimal can holds at most 9 words.
@@ -52,7 +53,6 @@ public class MyDecimal {
   // The following are fields of MyDecimal
   private int digitsInt;
   private int digitsFrac;
-  private int resultFrac;
   private boolean negative;
   private int[] wordBuf = new int[maxWordBufLen];
 
@@ -206,7 +206,6 @@ public class MyDecimal {
       wordIdx++;
     }
 
-    this.resultFrac = frac;
     return binSize;
   }
 
@@ -438,11 +437,10 @@ public class MyDecimal {
     if (allZero) {
       this.negative = false;
     }
-
-    this.resultFrac = this.digitsFrac;
   }
 
   // Returns a decimal string.
+  @Override
   public String toString() {
     char[] str;
     int digitsFrac = this.digitsFrac;
