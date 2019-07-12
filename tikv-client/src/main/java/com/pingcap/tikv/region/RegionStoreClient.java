@@ -154,7 +154,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       throws TiClientInternalException, KeyException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("ScanResponse failed without a cause");
+      throw new TiClientInternalException("GetResponse failed without a cause");
     }
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
@@ -190,7 +190,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private List<KvPair> doBatchGet(BatchGetResponse resp, BackOffer bo) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("ScanResponse failed without a cause");
+      throw new TiClientInternalException("BatchGetResponse failed without a cause");
     }
     if (resp.hasRegionError()) {
       throw new RegionException(resp.getRegionError());
