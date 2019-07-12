@@ -72,6 +72,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   val lockTTLSeconds: Long = parameters.getOrElse(TIDB_LOCK_TTL_SECONDS, "3600").toLong
 
+  val writeConcurrency: Int = parameters.getOrElse(TIDB_WRITE_CONCURRENCY, "0").toInt
+
   // ------------------------------------------------------------
   // Calculated parameters
   // ------------------------------------------------------------
@@ -115,4 +117,5 @@ object TiDBOptions {
   val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
   val TIDB_LOCK_TTL_SECONDS: String = newOption("lockTTLSeconds")
+  val TIDB_WRITE_CONCURRENCY: String = newOption("writeConcurrency")
 }

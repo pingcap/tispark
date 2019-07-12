@@ -547,7 +547,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     val tableId = tiTableInfo.getId
 
     val regions = getRegions
-    val tiRegionPartitioner = new TiRegionPartitioner(regions)
+    val tiRegionPartitioner = new TiRegionPartitioner(regions, options.writeConcurrency)
 
     logger.info(
       s"find ${regions.size} regions in $tiTableRef tableId: $tableId"
@@ -755,8 +755,8 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 }
 
-class TiRegionPartitioner(regions: List[TiRegion]) extends Partitioner {
-  override def numPartitions: Int = regions.length
+class TiRegionPartitioner(regions: List[TiRegion], writeConcurrency: Int) extends Partitioner {
+  override def numPartitions: Int = if (writeConcurrency <= 0) regions.length else writeConcurrency
 
   override def getPartition(key: Any): Int = {
     val serializableKey = key.asInstanceOf[SerializableKey]
@@ -766,7 +766,7 @@ class TiRegionPartitioner(regions: List[TiRegion]) extends Partitioner {
       val region = regions(i)
       val range = KeyRangeUtils.makeRange(region.getStartKey, region.getEndKey)
       if (range.contains(rawKey)) {
-        return i
+        return i % numPartitions
       }
     }
     0
