@@ -392,6 +392,8 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
       .getStart
   }
+
+  @throws(classOf[TiBatchWriteException])
   private def lockTable(): Unit = {
     if (isEnableTableLock) {
       if (!tableLocked) {
@@ -401,10 +403,15 @@ class TiBatchWrite(@transient val df: DataFrame,
         logger.warn("table already locked!")
       }
     } else {
-      // TODO: what if version of tidb does not support lock table
+      if (tiContext.tiConf.isWriteWithoutLockTable) {
+        logger.warn("write without lock table is enabled! only for test!")
+      } else {
+        throw new TiBatchWriteException("current tidb does not support LockTable or is disabled!")
+      }
     }
   }
 
+  @throws(classOf[TiBatchWriteException])
   private def unlockTable(): Unit = {
     if (isEnableTableLock) {
       if (tableLocked) {
@@ -414,7 +421,11 @@ class TiBatchWrite(@transient val df: DataFrame,
         logger.warn("table already unlocked!")
       }
     } else {
-      // TODO: what if version of tidb does not support lock table
+      if (tiContext.tiConf.isWriteWithoutLockTable) {
+        logger.warn("write without lock table is enabled! only for test!")
+      } else {
+        throw new TiBatchWriteException("current tidb does not support LockTable or is disabled!")
+      }
     }
   }
 

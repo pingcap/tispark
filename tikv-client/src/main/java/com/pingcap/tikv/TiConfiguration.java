@@ -47,6 +47,7 @@ public class TiConfiguration implements Serializable {
   private static final String DEF_DB_PREFIX = "";
   private static final boolean DEF_WRITE_ENABLE = false;
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
+  private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -67,6 +68,7 @@ public class TiConfiguration implements Serializable {
 
   private boolean writeAllowSparkSQL = DEF_WRITE_ALLOW_SPARK_SQL;
   private boolean writeEnable = DEF_WRITE_ENABLE;
+  private boolean writeWithoutLockTable = DEF_WRITE_WITHOUT_LOCK_TABLE;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -230,6 +232,14 @@ public class TiConfiguration implements Serializable {
 
   public void setWriteEnable(boolean writeEnable) {
     this.writeEnable = writeEnable;
+  }
+
+  public boolean isWriteWithoutLockTable() {
+    return writeWithoutLockTable;
+  }
+
+  public void setWriteWithoutLockTable(boolean writeWithoutLockTable) {
+    this.writeWithoutLockTable = writeWithoutLockTable;
   }
 
   public boolean isWriteAllowSparkSQL() {

@@ -180,6 +180,10 @@ object TiUtil {
       tiConf.setWriteEnable(conf.get(TiConfigConst.WRITE_ENABLE).toBoolean)
     }
 
+    if (conf.contains(TiConfigConst.WRITE_WITHOUT_LOCK_TABLE)) {
+      tiConf.setWriteWithoutLockTable(conf.get(TiConfigConst.WRITE_WITHOUT_LOCK_TABLE).toBoolean)
+    }
+
     if (conf.contains(TiConfigConst.WRITE_ALLOW_SPARK_SQL)) {
       tiConf.setWriteAllowSparkSQL(conf.get(TiConfigConst.WRITE_ALLOW_SPARK_SQL).toBoolean)
     }
