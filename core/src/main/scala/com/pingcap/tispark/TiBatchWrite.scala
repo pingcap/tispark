@@ -723,6 +723,14 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiTableInfo.getId
   }
 
+  private def estimateRegionSplitNumForIndex(wrappedRowRdd: RDD[WrappedRow],
+                                             tiIndexInfo: TiIndexInfo) = {
+    //TODO refine this https://github.com/pingcap/tispark/issues/891
+    val rowSize = tiIndexInfo.getIndexColumnSize
+    //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
+    (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
+  }
+
   private def estimateRegionSplitNum(wrappedRowRdd: RDD[WrappedRow]) = {
     //TODO refine this https://github.com/pingcap/tispark/issues/891
     val rowSize = tiTableInfo.getEstimatedRowSizeInByte
@@ -732,25 +740,35 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private def splitIndexRegion(wrappedRowRdd: RDD[WrappedRow]) = {
     if (options.enableRegionSplit && isEnableSplitRegion) {
-      val regionSplitNum = if (options.regionSplitNum != 0) {
-        options.regionSplitNum
-      } else {
-        estimateRegionSplitNum(wrappedRowRdd)
-      }
-
-      val sampledDataList =
-        wrappedRowRdd.takeSample(withReplacement = false, num = regionSplitNum.toInt).toList
       val indices = tiTableInfo.getIndices.asScala
-      indices.foreach { index =>
+      val regionSplitNums = indices.map { index =>
+        if (options.regionSplitNum != 0) {
+          options.regionSplitNum
+        } else {
+          estimateRegionSplitNumForIndex(wrappedRowRdd, index)
+        }
+      }
+      val sampledDataRdds =
+        regionSplitNums.map { num =>
+          wrappedRowRdd.takeSample(withReplacement = false, num = num.toInt)
+        }.toList
+
+      indices.zipWithIndex.foreach { indexWithIdx =>
+        val index = indexWithIdx._1
+        val idx = indexWithIdx._2
         val indexCols = index.getIndexColumns
-        val splitIndicesList = sampledDataList.map { value =>
-          val colBuffer = mutable.ListBuffer.empty[String]
-          for (i <- 0 until indexCols.size()) {
-            val col = indexCols.get(i)
-            colBuffer += value.row.get(col.getOffset, null).toString
+
+        val splitIndicesList = sampledDataRdds(idx)
+          .map { value =>
+            val colBuffer = mutable.ListBuffer.empty[String]
+            for (i <- 0 until indexCols.size()) {
+              val col = indexCols.get(i)
+              colBuffer += value.row.get(col.getOffset, null).toString
+            }
+            colBuffer.toList.asJava
           }
-          colBuffer.toList.asJava
-        }.asJava
+          .toList
+          .asJava
 
         tiDBJDBCClient
           .splitIndexRegion(
