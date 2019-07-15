@@ -44,7 +44,6 @@ import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Coprocessor.Request;
 import org.tikv.kvproto.Coprocessor.Response;
 import org.tikv.kvproto.Errorpb;
-import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.*;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.TikvGrpc;
@@ -82,6 +81,24 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
   public TiRegion getRegion() {
     return region;
+  }
+
+  private boolean checkLockError(BackOffer backOffer, KeyError error) {
+    if (error.hasLocked()) {
+      Lock lock = new Lock(error.getLocked());
+      boolean ok =
+          lockResolverClient.resolveLocks(
+              backOffer, new ArrayList<>(Collections.singletonList(lock)));
+      if (!ok) {
+        // if not resolve all locks, we wait and retry
+        backOffer.doBackOff(BoTxnLockFast, new KeyException((error.getLocked().toString())));
+      }
+      return false;
+    } else {
+      // retry or abort
+      // this should trigger Spark to retry the txn
+      throw new KeyException(error);
+    }
   }
 
   /**
@@ -123,24 +140,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
   }
 
-  private boolean checkLockError(BackOffer backOffer, Kvrpcpb.KeyError error) {
-    if (error.hasLocked()) {
-      Lock lock = new Lock(error.getLocked());
-      boolean ok =
-          lockResolverClient.resolveLocks(
-              backOffer, new ArrayList<>(Collections.singletonList(lock)));
-      if (!ok) {
-        // if not resolve all locks, we wait and retry
-        backOffer.doBackOff(BoTxnLockFast, new KeyException((error.getLocked().toString())));
-      }
-      return false;
-    } else {
-      // retry or abort
-      // this should trigger Spark to retry the txn
-      throw new KeyException(error);
-    }
-  }
-
   /**
    * @param backOffer
    * @param resp
@@ -157,7 +156,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       throw new TiClientInternalException("GetResponse failed without a cause");
     }
     if (resp.hasRegionError()) {
-      throw new RegionException(resp.getRegionError());
+      backOffer.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
+      return false;
     }
 
     if (resp.hasError()) {
@@ -222,24 +222,43 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
   public List<KvPair> scan(
       BackOffer backOffer, ByteString startKey, long version, boolean keyOnly) {
-    Supplier<ScanRequest> request =
-        () ->
-            ScanRequest.newBuilder()
-                .setContext(region.getContext())
-                .setStartKey(startKey)
-                .setVersion(version)
-                .setKeyOnly(keyOnly)
-                .setLimit(getConf().getScanBatchSize())
-                .build();
+    while (true) {
+      // we should refresh region
+      region = regionManager.getRegionByKey(startKey);
 
-    KVErrorHandler<ScanResponse> handler =
-        new KVErrorHandler<>(
-            regionManager,
-            this,
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
-    return doScan(backOffer, resp);
+      Supplier<ScanRequest> request =
+          () ->
+              ScanRequest.newBuilder()
+                  .setContext(region.getContext())
+                  .setStartKey(startKey)
+                  .setVersion(version)
+                  .setKeyOnly(keyOnly)
+                  .setLimit(getConf().getScanBatchSize())
+                  .build();
+
+      KVErrorHandler<ScanResponse> handler =
+          new KVErrorHandler<>(
+              regionManager,
+              this,
+              region,
+              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+      ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
+      if (isScanSuccess(backOffer, resp)) {
+        return doScan(backOffer, resp);
+      }
+    }
+  }
+
+  private boolean isScanSuccess(BackOffer backOffer, ScanResponse resp) {
+    if (resp == null) {
+      this.regionManager.onRequestFail(region);
+      throw new TiClientInternalException("ScanResponse failed without a cause");
+    }
+    if (resp.hasRegionError()) {
+      backOffer.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
+      return false;
+    }
+    return true;
   }
 
   // TODO: remove helper and change to while style
@@ -247,14 +266,6 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   // which we shoule retry not throw
   // exception
   private List<KvPair> doScan(BackOffer backOffer, ScanResponse resp) {
-    if (resp == null) {
-      this.regionManager.onRequestFail(region);
-      throw new TiClientInternalException("ScanResponse failed without a cause");
-    }
-    if (resp.hasRegionError()) {
-      throw new RegionException(resp.getRegionError());
-    }
-
     // Check if kvPair contains error, it should be a Lock if hasError is true.
     List<KvPair> kvPairs = resp.getPairsList();
     List<KvPair> newKvPairs = new ArrayList<>();
