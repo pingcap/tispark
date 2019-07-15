@@ -115,6 +115,24 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return region;
   }
 
+  private boolean checkLockError(BackOffer backOffer, KeyError error) {
+    if (error.hasLocked()) {
+      Lock lock = new Lock(error.getLocked());
+      boolean ok =
+          lockResolverClient.resolveLocks(
+              backOffer, new ArrayList<>(Collections.singletonList(lock)));
+      if (!ok) {
+        // if not resolve all locks, we wait and retry
+        backOffer.doBackOff(BoTxnLockFast, new KeyException((error.getLocked().toString())));
+      }
+      return false;
+    } else {
+      // retry or abort
+      // this should trigger Spark to retry the txn
+      throw new KeyException(error);
+    }
+  }
+
   /**
    * Fetch a value according to a key
    *
@@ -169,29 +187,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("GetResponse failed without a cause");
     }
-
     if (resp.hasRegionError()) {
       backOffer.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
       return false;
     }
 
     if (resp.hasError()) {
-      if (resp.getError().hasLocked()) {
-        Lock lock = new Lock(resp.getError().getLocked());
-        boolean ok =
-            lockResolverClient.resolveLocks(
-                backOffer, new ArrayList<>(Collections.singletonList(lock)));
-        if (!ok) {
-          // if not resolve all locks, we wait and retry
-          backOffer.doBackOff(
-              BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
-        }
-        return false;
-      } else {
-        // retry or abort
-        // this should trigger Spark to retry the txn
-        throw new KeyException(resp.getError());
-      }
+      return checkLockError(backOffer, resp.getError());
     }
     return true;
   }
@@ -218,6 +220,13 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
 
   // TODO: deal with resolve locks and region errors
   private List<KvPair> doBatchGet(BatchGetResponse resp, BackOffer bo) {
+    if (resp == null) {
+      this.regionManager.onRequestFail(region);
+      throw new TiClientInternalException("BatchGetResponse failed without a cause");
+    }
+    if (resp.hasRegionError()) {
+      throw new RegionException(resp.getRegionError());
+    }
     List<Lock> locks = new ArrayList<>();
 
     for (KvPair pair : resp.getPairsList()) {
@@ -238,51 +247,54 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
         bo.doBackOff(BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
       }
 
-      // TODO: we should retry
-      // fix me
-    }
-
-    if (resp.hasRegionError()) {
-      // TODO, we should redo the split and redo the batchGet
-      throw new RegionException(resp.getRegionError());
+      // FIXME: we should retry
     }
     return resp.getPairsList();
   }
 
   public List<KvPair> scan(
       BackOffer backOffer, ByteString startKey, long version, boolean keyOnly) {
-    Supplier<ScanRequest> request =
-        () ->
-            ScanRequest.newBuilder()
-                .setContext(region.getContext())
-                .setStartKey(startKey)
-                .setVersion(version)
-                .setKeyOnly(keyOnly)
-                .setLimit(getConf().getScanBatchSize())
-                .build();
+    while (true) {
+      // we should refresh region
+      region = regionManager.getRegionByKey(startKey);
 
-    KVErrorHandler<ScanResponse> handler =
-        new KVErrorHandler<>(
-            regionManager,
-            this,
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
-    return doScan(resp, backOffer);
+      Supplier<ScanRequest> request =
+          () ->
+              ScanRequest.newBuilder()
+                  .setContext(region.getContext())
+                  .setStartKey(startKey)
+                  .setVersion(version)
+                  .setKeyOnly(keyOnly)
+                  .setLimit(getConf().getScanBatchSize())
+                  .build();
+
+      KVErrorHandler<ScanResponse> handler =
+          new KVErrorHandler<>(
+              regionManager,
+              this,
+              region,
+              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+      ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
+      if (isScanSuccess(backOffer, resp)) {
+        return doScan(resp);
+      }
+    }
   }
 
-  // TODO: remove helper and change to while style
-  // needs to be fixed as batchGet
-  // which we shoule retry not throw
-  // exception
-  private List<KvPair> doScan(ScanResponse resp, BackOffer bo) {
+  private boolean isScanSuccess(BackOffer backOffer, ScanResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("ScanResponse failed without a cause");
     }
+    if (resp.hasRegionError()) {
+      backOffer.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
+      return false;
+    }
+    return true;
+  }
 
-    List<Lock> locks = new ArrayList<>();
-
+  // TODO: resolve locks after scan
+  private List<KvPair> doScan(ScanResponse resp) {
     // Check if kvPair contains error, it should be a Lock if hasError is true.
     List<KvPair> kvPairs = resp.getPairsList();
     for (int i = 0; i < kvPairs.size(); i++) {
@@ -494,19 +506,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     }
     // If we find locks, we first resolve and let its caller retry.
     if (resp.hasError()) {
-      if (resp.getError().hasLocked()) {
-        Lock lock = new Lock(resp.getError().getLocked());
-        boolean ok =
-            lockResolverClient.resolveLocks(
-                backOffer, new ArrayList<>(Collections.singletonList(lock)));
-        if (!ok) {
-          backOffer.doBackOff(
-              BoTxnLockFast, new KeyException((resp.getError().getLocked().toString())));
-        }
-        return false;
-      } else {
-        throw new KeyException(resp.getError());
-      }
+      return checkLockError(backOffer, resp.getError());
     }
     return true;
   }
