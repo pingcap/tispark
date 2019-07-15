@@ -244,7 +244,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
               resp -> resp.hasRegionError() ? resp.getRegionError() : null);
       ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
       if (isScanSuccess(backOffer, resp)) {
-        return doScan(backOffer, resp);
+        return doScan(resp);
       }
     }
   }
@@ -261,11 +261,8 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return true;
   }
 
-  // TODO: remove helper and change to while style
-  // needs to be fixed as batchGet
-  // which we shoule retry not throw
-  // exception
-  private List<KvPair> doScan(BackOffer backOffer, ScanResponse resp) {
+  // TODO: resolve locks after scan
+  private List<KvPair> doScan(ScanResponse resp) {
     // Check if kvPair contains error, it should be a Lock if hasError is true.
     List<KvPair> kvPairs = resp.getPairsList();
     List<KvPair> newKvPairs = new ArrayList<>();
