@@ -126,7 +126,7 @@ public class TiDBJDBCClient implements AutoCloseable {
       String dbName, String tblName, String idxName, List<List<String>> splitPoints)
       throws SQLException {
 
-    if(splitPoints.isEmpty()) {
+    if (splitPoints.isEmpty()) {
       return false;
     }
     StringBuilder sb = new StringBuilder();
