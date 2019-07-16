@@ -23,8 +23,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TiDBJDBCClient implements AutoCloseable {
+  private final Logger logger = LoggerFactory.getLogger(getClass().getName());
   private Connection connection;
 
   private static final String UNLOCK_TABLES_SQL = "unlock tables";
@@ -99,14 +102,16 @@ public class TiDBJDBCClient implements AutoCloseable {
 
   // SPLIT TABLE table_name [INDEX index_name] BETWEEN (lower_value) AND (upper_value) REGIONS
   // region_num
-  public boolean splitTableRegion(
-      String dbName, String tblName, long minVal, long maxVal, long regionNum) throws SQLException {
+  public void splitTableRegion(
+      String dbName, String tblName, long minVal, long maxVal, long regionNum) {
     try (Statement tidbStmt = connection.createStatement()) {
       String sql =
           String.format(
               "split table %s.%s between (%d) and (%d) regions %d",
               dbName, tblName, minVal, maxVal, regionNum);
-      return tidbStmt.execute(sql);
+      tidbStmt.execute(sql);
+    } catch (Exception ignored) {
+      logger.warn("failed to split table region");
     }
   }
 
@@ -115,19 +120,17 @@ public class TiDBJDBCClient implements AutoCloseable {
    * by ("a", "2000-01-01 00:00:01"), ("b", "2019-04-17 14:26:19"), ("c", ""); if you have a table
    * t1 and index idx4.
    *
-   * @param dbName
-   * @param tblName
-   * @param idxName
-   * @param splitPoints
+   * @param dbName database name in tidb
+   * @param tblName table name in tidb
+   * @param idxName index name in table
+   * @param splitPoints represents the index column's value.
    * @return
-   * @throws SQLException
    */
-  public boolean splitIndexRegion(
-      String dbName, String tblName, String idxName, List<List<String>> splitPoints)
-      throws SQLException {
+  public void splitIndexRegion(
+      String dbName, String tblName, String idxName, List<List<String>> splitPoints) {
 
     if (splitPoints.isEmpty()) {
-      return false;
+      return;
     }
     StringBuilder sb = new StringBuilder();
     sb.append("split table ")
@@ -160,7 +163,9 @@ public class TiDBJDBCClient implements AutoCloseable {
     }
 
     try (Statement tidbStmt = connection.createStatement()) {
-      return tidbStmt.execute(sb.toString());
+      tidbStmt.execute(sb.toString());
+    } catch (Exception ignored) {
+      logger.warn("failed to split index region");
     }
   }
 
