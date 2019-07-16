@@ -20,12 +20,12 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
 class TiBatchWriteSuite extends BaseTiSparkTest {
 
-  private val database = "tpch_test"
+  private val database = tpchDBName
 
   private val tables =
     "CUSTOMER" ::
-      // "LINEITEM" has index, current not support
-      // "NATION" has index, current not support
+      "LINEITEM" ::
+      "NATION" ::
       "ORDERS" ::
       "PART" ::
       "PARTSUPP" ::
