@@ -24,7 +24,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
 
   private val tables =
     "CUSTOMER" ::
-      "LINEITEM" ::
+      //"LINEITEM" :: to large for test
       "NATION" ::
       "ORDERS" ::
       "PART" ::
