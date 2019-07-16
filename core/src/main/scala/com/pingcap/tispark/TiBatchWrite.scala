@@ -779,7 +779,6 @@ class TiBatchWrite(@transient val df: DataFrame,
           )
       }
     }
-
   }
 
   // when data to be inserted is too small to do region split, we check is user set region split num.
