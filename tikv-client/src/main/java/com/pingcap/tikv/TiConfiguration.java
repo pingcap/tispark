@@ -45,7 +45,7 @@ public class TiConfiguration implements Serializable {
   private static final IsolationLevel DEF_ISOLATION_LEVEL = IsolationLevel.SI;
   private static final boolean DEF_SHOW_ROWID = false;
   private static final String DEF_DB_PREFIX = "";
-  private static final boolean DEF_WRITE_ENABLE = false;
+  private static final boolean DEF_WRITE_ENABLE = true;
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
 

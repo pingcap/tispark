@@ -36,22 +36,12 @@ If `replace` is false, then
 * if primary key or unique index exists in db, data having conflicts expects an expection.
 * if no same primary key or unique index exists, data will be inserted.
 
-| SaveMode | Support | Semantics |
-| -------- | ------- | --------- |
-| Append | true | TiSpark's `Append` means upsert or insert which is controlled by `replace` option.
-| Overwrite | false |  - |
-| ErrorIfExists | false | - |
-| Ignore | false | - |
-
-Currently TiSpark only support writing data to such tables:
-1. the table does not contain a primary key
-2. the table's primary key is `TINYINT`、`SMALLINT`、`MEDIUMINT` or `INTEGER`
-3. the table's primary key is `auto increment`
-
 ## Using the Spark Connector With Extensions Enabled
 The connector adheres to the standard Spark API, but with the addition of TiDB-specific options.
 
 The connector can be used both with or without extensions enabled. Here's examples about how to use it with extensions.
+
+See [code examples with extensions](https://github.com/pingcap/tispark-test/blob/master/tispark-examples/src/main/scala/com/pingcap/tispark/examples/TiDataSourceExampleWithExtensions.scala).
 
 ### init SparkConf
 ```scala
@@ -87,26 +77,39 @@ df.show()
 
 ### Write using scala
 ```scala
-// use tidb config in spark config if does not provide in data source config
-val tidbOptions: Map[String, String] = Map()
+/* create table before run the code
+ CREATE TABLE tpch_test.target_table_orders (
+   `O_ORDERKEY` int(11) NOT NULL,
+   `O_CUSTKEY` int(11) NOT NULL,
+   `O_ORDERSTATUS` char(1) NOT NULL,
+   `O_TOTALPRICE` decimal(15,2) NOT NULL,
+   `O_ORDERDATE` date NOT NULL,
+   `O_ORDERPRIORITY` char(15) NOT NULL,
+   `O_CLERK` char(15) NOT NULL,
+   `O_SHIPPRIORITY` int(11) NOT NULL,
+   `O_COMMENT` varchar(79) NOT NULL
+ )
+*/
 
-// data to write
-val df = sqlContext.read
-  .format("tidb")
-  .options(tidbOptions)
-  .option("database", "tpch_test")
-  .option("table", "ORDERS")
-  .load()
+ // use tidb config in spark config if does not provide in data source config
+ val tidbOptions: Map[String, String] = Map()
 
-// Append
-// if target_table_append does not exist, it will be created automatically
-df.write
-  .format("tidb")
-  .options(tidbOptions)
-  .option("database", "tpch_test")
-  .option("table", "target_table_append")
-  .mode("append")
-  .save()
+ // data to write
+ val df = sqlContext.read
+   .format("tidb")
+   .options(tidbOptions)
+   .option("database", "tpch_test")
+   .option("table", "ORDERS")
+   .load()
+
+ // Append
+ df.write
+   .format("tidb")
+   .options(tidbOptions)
+   .option("database", "tpch_test")
+   .option("table", "target_table_orders")
+   .mode("append")
+   .save()
 ```
 
 ### Use another TiDB
@@ -115,7 +118,7 @@ TiDB config can be overwrite in data source options, thus one can connect to a d
 ```scala
 // tidb config priority: data source config > spark config
 val tidbOptions: Map[String, String] = Map(
-  "tidb.addr" -> "tidb",
+  "tidb.addr" -> "anotherTidbIP",
   "tidb.password" -> "",
   "tidb.port" -> "4000",
   "tidb.user" -> "root",
@@ -135,6 +138,8 @@ df.show()
 
 ## Using the Spark Connector Without Extensions Enabled
 Let's see how to use the connector without extensions enabled.
+
+See [code examples without extensions](https://github.com/pingcap/tispark-test/blob/master/tispark-examples/src/main/scala/com/pingcap/tispark/examples/TiDataSourceExampleWithoutExtensions.scala).
 
 ### init SparkConf
 ```scala
@@ -175,29 +180,38 @@ df.show()
 
 ## Write using scala
 ```scala
+/* create table before run the code
+ CREATE TABLE tpch_test.target_table_customer (
+  `C_CUSTKEY` int(11) NOT NULL,
+  `C_NAME` varchar(25) NOT NULL,
+  `C_ADDRESS` varchar(40) NOT NULL,
+  `C_NATIONKEY` int(11) NOT NULL,
+  `C_PHONE` char(15) NOT NULL,
+  `C_ACCTBAL` decimal(15,2) NOT NULL,
+  `C_MKTSEGMENT` char(10) NOT NULL,
+  `C_COMMENT` varchar(117) NOT NULL
+)
+*/
+
+// Common options can also be passed in,
+// e.g. spark.tispark.plan.allow_agg_pushdown, spark.tispark.plan.allow_index_read, etc.
+// spark.tispark.plan.allow_index_read is optional
 val tidbOptions: Map[String, String] = Map(
-  "tidb.addr" -> "tidb",
+  "tidb.addr" -> "127.0.0.1",
   "tidb.password" -> "",
   "tidb.port" -> "4000",
   "tidb.user" -> "root",
-  "spark.tispark.pd.addresses" -> "pd0:2379"
+  "spark.tispark.pd.addresses" -> "127.0.0.1:2379"
 )
 
-// data to write
-val df = sqlContext.read
-  .format("tidb")
-  .options(tidbOptions)
-  .option("database", "tpch_test")
-  .option("table", "ORDERS")
-  .load()
+val df = readUsingScala(sqlContext)
 
 // Append
-// if target_table_append does not exist, it will be created automatically
 df.write
   .format("tidb")
   .options(tidbOptions)
   .option("database", "tpch_test")
-  .option("table", "target_table_append")
+  .option("table", "target_table_customer")
   .mode("append")
   .save()
 ```
@@ -220,7 +234,6 @@ The following is TiDB-specific options, which can be passed in through `TiDBOpti
 | replace                     | -             | false    | define the behavior of append.                                                                              | false   |
 | lockTTLSeconds              | -             | false    | tikv lock ttl, write duration must < `lockTTLSeconds`, otherwise write may fail because of gc               | 3600    |
 | writeConcurrency            | -             | false    | maximum number of threads writing data to tikv, suggest `writeConcurrency` <= 8 * `number of TiKV instance` | 0       |
-TiSpark's common options can also be passed in, e.g. `spark.tispark.plan.allow_agg_pushdown`, `spark.tispark.plan.allow_index_read`, etc.
 
 ## TiDB Version and Configuration for Write
 TiDB's version should >= 3.0 and make sure that the following tidb's configs are correctly set.
@@ -229,7 +242,7 @@ TiDB's version should >= 3.0 and make sure that the following tidb's configs are
 # enable-table-lock is used to control table lock feature. The default value is false, indicating the table lock feature is disabled.
 enable-table-lock: true
 
-# delay-clean-table-lock is used to control the time (Milliseconds) of delay before unlock the table in the abnormal situation. 
+# delay-clean-table-lock is used to control the time (Milliseconds) of delay before unlock the table in the abnormal situation.
 delay-clean-table-lock: 60000
 
 # When create table, split a separated region for it. It is recommended to
@@ -248,34 +261,35 @@ The following SparkSQL Data Type is currently not supported for writing to TiDB:
 
 The full conversion metrics is as follows.
 
-| Write support        | BooleanType | ByteType | ShortType | IntegerType | LongType | FloatType | DoubleType | StringType | DecimalType | DateType | TimestampType |
-| -------------------- | ----------- | -------- | --------- | ----------- | -------- | --------- | ---------- | ---------- | ----------- | -------- | ------------- |
-| BIT                  | true        | true     | true      | true        | true     | true      | true       | false      | false       | false    | false         |
-| BOOLEAN              | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
-| TINYINT [UNSIGNED]   | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
-| SMALLINT [UNSIGNED]  | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
-| MEDIUMINT [UNSIGNED] | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
-| INTEGER [UNSIGNED]   | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
-| BIGINT [UNSIGNED]    | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
-| FLOAT                | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         |
-| DOUBLE               | true        | true     | true      | true        | true     | true      | true       | true       | false       | true     | false         |
-| DECIMAL              | true        | true     | true      | true        | true     | true      | true       | true       | true        | false    | false         |
-| DATE                 | false       | false    | false     | false       | true     | true      | false      | false      | false       | true     | true          |
-| DATETIME             | false       | false    | false     | false       | false    | false     | false      | true       | false       | true     | true          |
-| TIMESTAMP            | false       | false    | false     | false       | false    | false     | false      | true       | false       | true     | true          |
-| TIME                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
-| YEAR                 | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
-| CHAR                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
-| VARCHAR              | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
-| TINYTEXT             | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
-| TEXT                 | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
-| MEDIUMTEXT           | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
-| LONGTEXT             | true        | true     | true      | true        | true     | false     | false      | true       | true        | true     | true          |
-| BINARY               | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
-| VARBINARY            | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
-| TINYBLOB             | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
-| BLOB                 | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
-| MEDIUMBLOB           | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
-| LONGBLOB             | true        | true     | true      | true        | true     | false     | false      | true       | false       | false    | false         |
-| ENUM                 | true        | true     | true      | true        | true     | true      | true       | true       | false       | false    | false         |
-| SET                  | false       | false    | false     | false       | false    | false     | false      | false      | false       | false    | false         |
+
+| Write      | Boolean            | Byte               | Short              | Integer            | Long               | Float              | Double             | String             | Decimal            | Date               | Timestamp          |
+| ---------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
+| BIT        | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :x:                |
+| BOOLEAN    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| TINYINT    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| SMALLINT   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| MEDIUMINT  | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| INTEGER    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| BIGINT     | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| FLOAT      | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :white_check_mark: | :x:                |
+| DOUBLE     | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :white_check_mark: | :x:                |
+| DECIMAL    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                |
+| DATE       | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                | :white_check_mark: | :white_check_mark: |
+| DATETIME   | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :x:                | :white_check_mark: | :white_check_mark: |
+| TIMESTAMP  | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :white_check_mark: | :x:                | :white_check_mark: | :white_check_mark: |
+| TIME       | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                |
+| YEAR       | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                |
+| CHAR       | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| VARCHAR    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| TINYTEXT   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| TEXT       | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| MEDIUMTEXT | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| LONGTEXT   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| BINARY     | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :x:                | :x:                | :x:                |
+| VARBINARY  | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :x:                | :x:                | :x:                |
+| TINYBLOB   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :x:                | :x:                | :x:                |
+| BLOB       | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :x:                | :x:                | :x:                |
+| MEDIUMBLOB | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :x:                | :x:                | :x:                |
+| LONGBLOB   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :x:                | :x:                | :x:                |
+| ENUM       | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
+| SET        | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                |
