@@ -20,7 +20,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
 class TiBatchWriteSuite extends BaseTiSparkTest {
 
-  private var database = _
+  private var database: String = _
 
   private val tables =
     "CUSTOMER" ::
