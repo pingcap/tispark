@@ -67,7 +67,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
       setCurrentDatabase(database)
 
       // select
-      tidbStmt.execute(s"select * from ${batchWriteTablePrefix}_$table")
+      queryTiDBViaJDBC(s"select * from ${batchWriteTablePrefix}_$table")
 
       // assert
       val originCount = queryViaTiSpark(s"select count(*) from $table").head.head.asInstanceOf[Long]
