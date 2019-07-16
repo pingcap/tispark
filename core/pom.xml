@@ -16,8 +16,6 @@
 
     <properties>
         <scalaj.version>2.3.0</scalaj.version>
-        <mysql.connector.version>5.1.44</mysql.connector.version>
-        <play.version>2.6.8</play.version>
     </properties>
 
     <dependencies>
@@ -41,37 +39,31 @@
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
             <version>2.8.1</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
             <version>2.8.1</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>${spark.scope}</scope>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.hadoop</groupId>
@@ -83,19 +75,16 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-unsafe_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
-            <scope>${spark.scope}</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>2.7.2</version>
-            <scope>${spark.scope}</scope>
         </dependency>
         <!-- For tests -->
         <dependency>
@@ -213,9 +202,6 @@
                     <encoding>UTF-8</encoding>
                     <showWarnings>true</showWarnings>
                     <showDeprecation>true</showDeprecation>
-                    <includes>
-                        <include>src/main/${profile.source.directory}</include>
-                    </includes>
                 </configuration>
             </plugin>
             <!-- Jar Plug-in -->
@@ -254,9 +240,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>2.9.1</version>
-                <configuration>
-                    <skip>${javadoc.skip}</skip>
-                </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -269,44 +252,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <!--GPG Signed Components-->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <version>1.5</version>
-                <configuration>
-                    <keyname>Yifei Wu</keyname>
-                    <skip>${gpg.skip}</skip>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- Assembly Plug-in -->
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>assemble-all</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <!-- Rename Jar to contain Spark Version -->
-                    <!--<finalName>${artifactId}-${version}-spark-${spark.version}-jar-with-dependencies</finalName>-->
-                </configuration>
-            </plugin>
             <!-- Scala Format Plug-in -->
             <plugin>
                 <groupId>org.antipathy</groupId>
@@ -315,12 +260,11 @@
                 <configuration>
                     <sourceDirectories> <!-- (Optional) Paths to source-directories. Overrides ${project.build.sourceDirectory} -->
                         <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
-                        <sourceDirectory>${project.basedir}/src/main/${profile.source.directory}</sourceDirectory>
                     </sourceDirectories>
                     <testSourceDirectories> <!-- (Optional) Paths to test-source-directories. Overrides ${project.build.testSourceDirectory} -->
                         <param>${project.basedir}/src/test/scala</param>
                     </testSourceDirectories>
-                    <configLocation>${project.basedir}/scalafmt.conf</configLocation>
+                    <configLocation>${project.parent.basedir}/scalafmt.conf</configLocation>
                 </configuration>
                 <executions>
                     <execution>
@@ -354,24 +298,6 @@
                         <goals>
                             <goal>test</goal>
                         </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>src/main/${profile.source.directory}</source>
-                            </sources>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

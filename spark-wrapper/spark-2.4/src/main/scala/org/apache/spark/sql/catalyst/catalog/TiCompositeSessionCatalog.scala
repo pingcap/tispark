@@ -300,7 +300,14 @@ class TiCompositeSessionCatalog(val tiContext: TiContext)
   override def isTemporaryTable(name: TableIdentifier): Boolean =
     sessionCatalog.isTemporaryTable(name)
 
-  override def refreshTable(name: TableIdentifier): Unit = sessionCatalog.refreshTable(name)
+  override def refreshTable(name: TableIdentifier): Unit =
+    if (isTemporaryTable(name)) {
+      sessionCatalog.refreshTable(name)
+    } else {
+      catalogOf(name.database)
+        .getOrElse(throw new NoSuchDatabaseException(name.database.getOrElse(getCurrentDatabase)))
+        .refreshTable(name)
+    }
 
   override def clearTempTables(): Unit = sessionCatalog.clearTempTables()
 

@@ -19,7 +19,7 @@ import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.EmptyFunctionRegistry
 
-class TiConcreteSessionCatalog(val tiContext: TiContext)(tiExternalCatalog: TiDirectExternalCatalog)
+class TiConcreteSessionCatalog(val tiContext: TiContext)(tiExternalCatalog: ExternalCatalog)
     extends SessionCatalog(
       tiExternalCatalog,
       EmptyFunctionRegistry,

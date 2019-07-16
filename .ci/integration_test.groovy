@@ -33,7 +33,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     // parse mvn profile
     def m4 = ghprbCommentBody =~ /profile\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m4) {
-        MVN_PROFILE = "-P ${m4[0][1]}"
+        MVN_PROFILE = "-P${m4[0][1]}"
     }
     
     def readfile = { filename ->
@@ -130,6 +130,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     sh """
                         cp .ci/log4j-ci.properties core/src/test/resources/log4j.properties
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+                        mvn compile ${MVN_PROFILE} -DskipCloneProtoFiles=true
                         mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr} -DskipCloneProtoFiles=true
                     """
                 }
@@ -143,7 +144,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     """
                     sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
-                        mvn test -am -pl tikv-client -DskipCloneProtoFiles=true
+                        mvn test ${MVN_PROFILE} -am -pl tikv-client -DskipCloneProtoFiles=true
                     """
                     unstash "CODECOV_TOKEN"
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'

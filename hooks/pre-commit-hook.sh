@@ -27,6 +27,8 @@ fi
 echo "$(tput setaf 3)* Formatting staged changes... $(tput sgr 0)"
 (cd ${DIR}/core/; mvn org.antipathy:mvn-scalafmt_2.11:0.10_1.5.1:format)
 (cd ${DIR}/tikv-client/; mvn com.coveo:fmt-maven-plugin:2.6.0:format)
+(cd ${DIR}/spark-wrapper/spark-2.3/; mvn org.antipathy:mvn-scalafmt_2.11:0.10_1.5.1:format)
+(cd ${DIR}/spark-wrapper/spark-2.4/; mvn org.antipathy:mvn-scalafmt_2.11:0.10_1.5.1:format)
 (cd ${DIR}/)
 git diff --quiet
 formatted=$?
