@@ -229,7 +229,7 @@ TiDB's version should >= 3.0 and make sure that the following tidb's configs are
 # enable-table-lock is used to control table lock feature. The default value is false, indicating the table lock feature is disabled.
 enable-table-lock: true
 
-# delay-clean-table-lock is used to control whether delayed-release the table lock in the abnormal situation. (Milliseconds)
+# delay-clean-table-lock is used to control the time (Milliseconds) of delay before unlock the table in the abnormal situation. 
 delay-clean-table-lock: 60000
 
 # When create table, split a separated region for it. It is recommended to
