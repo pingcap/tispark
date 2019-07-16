@@ -122,14 +122,14 @@ abstract class QueryTest extends PlanTest {
               }
               true
             }
-          case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
-            val l = toDouble(lhs)
-            val r = toDouble(rhs)
-            Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
           case _: java.math.BigDecimal if rhs.isInstanceOf[java.math.BigDecimal] =>
             lhs
               .asInstanceOf[java.math.BigDecimal]
               .compareTo(rhs.asInstanceOf[java.math.BigDecimal]) == 0
+          case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
+            val l = toDouble(lhs)
+            val r = toDouble(rhs)
+            Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
           case _: Number | _: BigInt | _: java.math.BigInteger =>
             toInteger(lhs) == toInteger(rhs)
           case _: Timestamp =>
