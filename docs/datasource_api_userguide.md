@@ -223,10 +223,10 @@ The following is TiDB-specific options, which can be passed in through `TiDBOpti
 TiSpark's common options can also be passed in, e.g. `spark.tispark.plan.allow_agg_pushdown`, `spark.tispark.plan.allow_index_read`, etc.
 
 ## TiDB Version and Configuration for Write
-TiDB's version should >= 3.0 and make sure that the following config is correctly set.
+TiDB's version should >= 3.0 and make sure that the following tidb's configs are correctly set.
 
 ```
-# enable-table-lock is used to control table lock feature. Default is false, indicate the table lock feature is disabled.
+# enable-table-lock is used to control table lock feature. The default value is false, indicating the table lock feature is disabled.
 enable-table-lock: true
 
 # delay-clean-table-lock is used to control whether delayed-release the table lock in the abnormal situation. (Milliseconds)
