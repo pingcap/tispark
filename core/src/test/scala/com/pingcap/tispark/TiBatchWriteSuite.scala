@@ -20,7 +20,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
 class TiBatchWriteSuite extends BaseTiSparkTest {
 
-  private val database = tpchDBName
+  private var database = _
 
   private val tables =
     "CUSTOMER" ::
@@ -37,6 +37,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
+    database = tpchDBName
     setCurrentDatabase(database)
     for (table <- tables) {
       tidbStmt.execute(s"drop table if exists ${batchWriteTablePrefix}_$table")
