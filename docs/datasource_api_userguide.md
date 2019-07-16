@@ -222,6 +222,23 @@ The following is TiDB-specific options, which can be passed in through `TiDBOpti
 | writeConcurrency            | -             | false    | maximum number of threads writing data to tikv, suggest `writeConcurrency` <= 8 * `number of TiKV instance` | 0       |
 TiSpark's common options can also be passed in, e.g. `spark.tispark.plan.allow_agg_pushdown`, `spark.tispark.plan.allow_index_read`, etc.
 
+## TiDB Version and Configuration for Write
+TiDB's version should >= 3.0 and make sure that the following tidb's configs are correctly set.
+
+```
+# enable-table-lock is used to control table lock feature. The default value is false, indicating the table lock feature is disabled.
+enable-table-lock: true
+
+# delay-clean-table-lock is used to control the time (Milliseconds) of delay before unlock the table in the abnormal situation. 
+delay-clean-table-lock: 60000
+
+# When create table, split a separated region for it. It is recommended to
+# turn off this option if there will be a large number of tables created.
+split-table: true
+```
+
+If your TiDB's version is < 3.0 and want to have a try, you can set `spark.tispark.write.without_lock_table` to `true` to enable write, but no ACID is guaranteed.
+
 ## Type Conversion for Write
 The following SparkSQL Data Type is currently not supported for writing to TiDB:
 - BinaryType
