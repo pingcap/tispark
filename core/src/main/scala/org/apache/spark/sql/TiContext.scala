@@ -23,7 +23,7 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.catalog._
@@ -57,11 +57,11 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
 
   lazy val tiConcreteCatalog: TiSessionCatalog =
-    new TiConcreteSessionCatalog(this)(new TiDirectExternalCatalog(this))
+    new TiConcreteSessionCatalog(this)(ReflectionUtil.newTiDirectExternalCatalog(this))
 
   lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
 
-  lazy val tiCatalog: TiSessionCatalog = new TiCompositeSessionCatalog(this)
+  lazy val tiCatalog: TiSessionCatalog = ReflectionUtil.newTiCompositeSessionCatalog(this)
 
   val debug: DebugTool = new DebugTool
 
@@ -84,7 +84,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
      * This method call will try to balance table `lineitem`'s leader distribution by
      * transforming those leaders reside in a single heavily used TiKV to other TiKVs.
      *
-     * @param pdAddress    The PD address
+     * @param pdAddress The PD address
      * @param dbName    Database name
      * @param tableName Table name
      * @param maxTrans  Maximum number of transformations this function can perform

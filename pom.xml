@@ -65,14 +65,14 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
         <spark.version>2.3.3</spark.version>
-        <spark.scope>provided</spark.scope>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11</scala.version>
         <scalatest.version>3.0.4</scalatest.version>
-        <profile.source.directory>spark-2.3</profile.source.directory>
+        <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
+        <mysql.connector.version>5.1.44</mysql.connector.version>
+        <gpg.keyname>fake gpg keyname</gpg.keyname>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
-        <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
     </properties>
 
     <profiles>
@@ -84,13 +84,6 @@
             <id>spark-2.4</id>
             <properties>
                 <spark.version>2.4.3</spark.version>
-                <profile.source.directory>spark-2.4</profile.source.directory>
-            </properties>
-        </profile>
-        <profile>
-            <id>local-debug</id>
-            <properties>
-                <spark.scope>compile</spark.scope>
             </properties>
         </profile>
     </profiles>
@@ -107,8 +100,11 @@
     </distributionManagement>
 
     <modules>
-        <module>core</module>
         <module>tikv-client</module>
+        <module>core</module>
+        <module>spark-wrapper/spark-2.3</module>
+        <module>spark-wrapper/spark-2.4</module>
+        <module>assembly</module>
     </modules>
 
     <build>
@@ -152,6 +148,7 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>1.5</version>
                 <configuration>
+                    <keyname>${gpg.keyname}</keyname>
                     <skip>${gpg.skip}</skip>
                 </configuration>
                 <executions>
