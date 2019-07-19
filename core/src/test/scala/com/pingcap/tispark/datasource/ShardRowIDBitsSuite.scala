@@ -13,7 +13,7 @@ class ShardRowIDBitsSuite extends BaseDataSourceTest("test_shard_row_id_bits") {
     )
   )
 
-  test("reading from a table with shard_row_id_bits") {
+  test("reading and writing a table with shard_row_id_bits") {
     dropTable()
     jdbcUpdate(
       s"CREATE TABLE  $dbtable ( `a` int(11))  SHARD_ROW_ID_BITS = 4"
