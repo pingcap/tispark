@@ -48,7 +48,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   protected def isEnableSplitRegion: Boolean = {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     val tiDBJDBCClient = new TiDBJDBCClient(conn)
-    tiDBJDBCClient.isEnableTableLock
+    tiDBJDBCClient.isEnableSplitRegion
   }
 
   protected def queryViaTiSpark(query: String): List[List[Any]] = {

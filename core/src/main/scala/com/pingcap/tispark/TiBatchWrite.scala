@@ -171,7 +171,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
     }
 
-    isEnableSplitRegion = tiDBJDBCClient.isEnableSplitTable
+    isEnableSplitRegion = tiDBJDBCClient.isEnableSplitRegion
     lockTable()
 
     // check schema
@@ -258,7 +258,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
-      splitTableRegion(wrappedRowRdd)
+      splitTableRegion(distinctWrappedRowRdd)
+      splitIndexRegion(distinctWrappedRowRdd)
 
       val deletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
       if (!options.replace && !deletion.isEmpty()) {
@@ -392,6 +393,8 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
       .getStart
   }
+
+  @throws(classOf[TiBatchWriteException])
   private def lockTable(): Unit = {
     if (isEnableTableLock) {
       if (!tableLocked) {
@@ -401,10 +404,15 @@ class TiBatchWrite(@transient val df: DataFrame,
         logger.warn("table already locked!")
       }
     } else {
-      // TODO: what if version of tidb does not support lock table
+      if (tiContext.tiConf.isWriteWithoutLockTable) {
+        logger.warn("write without lock table is enabled! only for test!")
+      } else {
+        throw new TiBatchWriteException("current tidb does not support LockTable or is disabled!")
+      }
     }
   }
 
+  @throws(classOf[TiBatchWriteException])
   private def unlockTable(): Unit = {
     if (isEnableTableLock) {
       if (tableLocked) {
@@ -414,7 +422,11 @@ class TiBatchWrite(@transient val df: DataFrame,
         logger.warn("table already unlocked!")
       }
     } else {
-      // TODO: what if version of tidb does not support lock table
+      if (tiContext.tiConf.isWriteWithoutLockTable) {
+        logger.warn("write without lock table is enabled! only for test!")
+      } else {
+        throw new TiBatchWriteException("current tidb does not support LockTable or is disabled!")
+      }
     }
   }
 
@@ -711,9 +723,68 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiTableInfo.getId
   }
 
+  private def estimateRegionSplitNumForIndex(wrappedRowRdd: RDD[WrappedRow],
+                                             tiIndexInfo: TiIndexInfo) = {
+    //TODO refine this https://github.com/pingcap/tispark/issues/891
+    val rowSize = tiIndexInfo.getIndexColumnSize
+    //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
+    (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
+  }
+
+  private def estimateRegionSplitNum(wrappedRowRdd: RDD[WrappedRow]) = {
+    //TODO refine this https://github.com/pingcap/tispark/issues/891
+    val rowSize = tiTableInfo.getEstimatedRowSizeInByte
+    //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
+    (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
+  }
+
+  private def splitIndexRegion(wrappedRowRdd: RDD[WrappedRow]) = {
+    if (options.enableRegionSplit && isEnableSplitRegion) {
+      val indices = tiTableInfo.getIndices.asScala
+      val regionSplitNums = indices.map { index =>
+        if (options.regionSplitNum != 0) {
+          options.regionSplitNum
+        } else {
+          estimateRegionSplitNumForIndex(wrappedRowRdd, index)
+        }
+      }
+      val sampledDataRdds =
+        regionSplitNums.map { num =>
+          wrappedRowRdd.takeSample(withReplacement = false, num = num.toInt)
+        }.toList
+
+      indices.zipWithIndex.foreach { indexWithIdx =>
+        val index = indexWithIdx._1
+        val idx = indexWithIdx._2
+        val indexCols = index.getIndexColumns
+
+        val splitIndicesList = sampledDataRdds(idx)
+          .map { value =>
+            val colBuffer = mutable.ListBuffer.empty[String]
+            for (i <- 0 until indexCols.size()) {
+              val col = indexCols.get(i)
+              colBuffer += value.row.get(col.getOffset, null).toString
+            }
+            colBuffer.toList.asJava
+          }
+          .toList
+          .asJava
+
+        tiDBJDBCClient
+          .splitIndexRegion(
+            options.database,
+            options.table,
+            index.getName,
+            splitIndicesList
+          )
+      }
+    }
+  }
+
+  // when data to be inserted is too small to do region split, we check is user set region split num.
+  // If so, we do region split as user's intention. This is also useful for writing test case.
+  // We assume the data to be inserted is ruled by normal distribution.
   private def splitTableRegion(wrappedRowRdd: RDD[WrappedRow]) = {
-    // when data to be inserted is too small to do region split, we check is user set region split num.
-    // If so, we do region split as user's intention. This is also useful for writing test case.
     if (options.enableRegionSplit && isEnableSplitRegion) {
       if (options.regionSplitNum != 0) {
         tiDBJDBCClient
@@ -725,10 +796,7 @@ class TiBatchWrite(@transient val df: DataFrame,
             options.regionSplitNum
           )
       } else {
-        //TODO refine this https://github.com/pingcap/tispark/issues/891
-        val rowSize = tiTableInfo.getEstimatedRowSizeInByte
-        //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
-        val regionSplitNum = (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
+        val regionSplitNum = estimateRegionSplitNum(wrappedRowRdd)
         // region split
         if (regionSplitNum > 1) {
           val minHandle = wrappedRowRdd.min().handle
@@ -736,7 +804,7 @@ class TiBatchWrite(@transient val df: DataFrame,
           val isValidSplit = maxHandle - minHandle > regionSplitNum * 1000
           if (isValidSplit) {
             logger.info("region split is enabled.")
-            logger.info("regionSplitNum=" + regionSplitNum)
+            logger.info("region split num is " + regionSplitNum)
             tiDBJDBCClient
               .splitTableRegion(
                 options.database,
@@ -748,7 +816,6 @@ class TiBatchWrite(@transient val df: DataFrame,
           } else {
             logger.warn("region split is skipped")
           }
-
         }
       }
     }
