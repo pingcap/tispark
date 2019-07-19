@@ -68,10 +68,11 @@
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11</scala.version>
         <scalatest.version>3.0.4</scalatest.version>
-        <gpg.keyname>fake gpg keyname</gpg.keyname>
-        <gpg.skip>true</gpg.skip>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
         <mysql.connector.version>5.1.44</mysql.connector.version>
+        <gpg.keyname>fake gpg keyname</gpg.keyname>
+        <gpg.skip>true</gpg.skip>
+        <javadoc.skip>true</javadoc.skip>
     </properties>
 
     <profiles>
