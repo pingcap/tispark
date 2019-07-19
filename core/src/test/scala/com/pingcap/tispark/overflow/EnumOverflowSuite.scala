@@ -22,9 +22,9 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
 
     dropTable()
     if (testKey) {
-      jdbcUpdate(s"create table $dbTable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
+      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
     } else {
-      jdbcUpdate(s"create table $dbTable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
     }
 
     val row = Row("abc")
@@ -60,9 +60,9 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
 
     dropTable()
     if (testKey) {
-      jdbcUpdate(s"create table $dbTable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
+      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
     } else {
-      jdbcUpdate(s"create table $dbTable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
     }
 
     val row = Row("5")

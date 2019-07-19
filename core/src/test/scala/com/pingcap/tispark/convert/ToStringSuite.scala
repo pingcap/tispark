@@ -29,7 +29,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
   private def createTable(): Unit =
     jdbcUpdate(
-      s"create table $dbTable(i INT, c1 CHAR(255), c2 VARCHAR(255), c3 TINYTEXT, c4 TEXT, c5 MEDIUMTEXT, c6 LONGTEXT)"
+      s"create table $dbtable(i INT, c1 CHAR(255), c2 VARCHAR(255), c3 TINYTEXT, c4 TEXT, c5 MEDIUMTEXT, c6 LONGTEXT)"
     )
 
   test("Test Convert from java.lang.Boolean to STRING") {

@@ -27,11 +27,11 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 BINARY(8), primary key (c1(4)))"
+        s"create table $dbtable(c1 BINARY(8), primary key (c1(4)))"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 BINARY(8))"
+        s"create table $dbtable(c1 BINARY(8))"
       )
     }
 
@@ -68,11 +68,11 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 VARBINARY(8), primary key (c1(4)))"
+        s"create table $dbtable(c1 VARBINARY(8), primary key (c1(4)))"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 VARBINARY(8))"
+        s"create table $dbtable(c1 VARBINARY(8))"
       )
     }
 
@@ -109,11 +109,11 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 TINYBLOB, primary key (c1(4)))"
+        s"create table $dbtable(c1 TINYBLOB, primary key (c1(4)))"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 TINYBLOB)"
+        s"create table $dbtable(c1 TINYBLOB)"
       )
     }
 

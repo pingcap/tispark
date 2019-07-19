@@ -15,10 +15,10 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
     tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 
     jdbcUpdate(
-      s"create table $dbTable(i int, s varchar(128)) partition by range(i) (partition p0 values less than maxvalue)"
+      s"create table $dbtable(i int, s varchar(128)) partition by range(i) (partition p0 values less than maxvalue)"
     )
     jdbcUpdate(
-      s"insert into $dbTable values(null, 'Hello')"
+      s"insert into $dbtable values(null, 'Hello')"
     )
 
     val row1 = Row(null, "Hello")
@@ -48,7 +48,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
   test("Check Virtual Generated Column") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbTable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2))"
+      s"create table $dbtable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2))"
     )
 
     val row1 = Row(1, 2, 3)
@@ -73,7 +73,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
   test("Check Stored Generated Column") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbTable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2) STORED)"
+      s"create table $dbtable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2) STORED)"
     )
 
     val row1 = Row(1, 2, 3)

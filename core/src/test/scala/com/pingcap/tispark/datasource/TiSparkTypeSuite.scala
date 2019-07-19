@@ -17,9 +17,9 @@ class TiSparkTypeSuite extends BaseDataSourceTest("type_test") {
   )
   test("bigint test") {
     dropTable()
-    jdbcUpdate(s"create table $dbTable(i bigint, s varchar(128))")
+    jdbcUpdate(s"create table $dbtable(i bigint, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbTable values(null, 'Hello'), (2, 'TiDB')"
+      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
     )
 
     tidbWrite(List(row3, row5), schema)

@@ -22,11 +22,11 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 DATE primary key)"
+        s"create table $dbtable(c1 DATE primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 DATE)"
+        s"create table $dbtable(c1 DATE)"
       )
     }
 
@@ -63,11 +63,11 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 DATE primary key)"
+        s"create table $dbtable(c1 DATE primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 DATE)"
+        s"create table $dbtable(c1 DATE)"
       )
     }
 

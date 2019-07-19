@@ -24,18 +24,18 @@ class DataSourceWithoutExtensionsSuite
 
   test("Test Select without extensions") {
     dropTable()
-    jdbcUpdate(s"create table $dbTable(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbTable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
+      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
     testTiDBSelect(Seq(row1, row2, row3, row4))
   }
 
   test("Test Write Append without extensions") {
     dropTable()
-    jdbcUpdate(s"create table $dbTable(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbTable values(null, 'Hello'), (2, 'TiDB')"
+      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
     )
 
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
@@ -54,7 +54,7 @@ class DataSourceWithoutExtensionsSuite
 
   test("Test Write Overwrite without extensions") {
     dropTable()
-    jdbcUpdate(s"create table $dbTable(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
 
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
@@ -77,9 +77,9 @@ class DataSourceWithoutExtensionsSuite
 
   test("Test Simple Comparisons without extensions") {
     dropTable()
-    jdbcUpdate(s"create table $dbTable(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbTable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
+      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
     testTiDBSelectFilter("s = 'Hello'", Seq(row1))
     testTiDBSelectFilter("i > 2", Seq(row3, row4))

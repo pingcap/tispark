@@ -27,11 +27,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 TINYINT primary key)"
+        s"create table $dbtable(c1 TINYINT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 TINYINT)"
+        s"create table $dbtable(c1 TINYINT)"
       )
     }
 
@@ -68,11 +68,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 TINYINT primary key)"
+        s"create table $dbtable(c1 TINYINT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 TINYINT)"
+        s"create table $dbtable(c1 TINYINT)"
       )
     }
 
@@ -109,11 +109,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 SMALLINT primary key)"
+        s"create table $dbtable(c1 SMALLINT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 SMALLINT)"
+        s"create table $dbtable(c1 SMALLINT)"
       )
     }
 
@@ -150,11 +150,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 SMALLINT primary key)"
+        s"create table $dbtable(c1 SMALLINT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 SMALLINT)"
+        s"create table $dbtable(c1 SMALLINT)"
       )
     }
 
@@ -191,11 +191,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 MEDIUMINT primary key)"
+        s"create table $dbtable(c1 MEDIUMINT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 MEDIUMINT)"
+        s"create table $dbtable(c1 MEDIUMINT)"
       )
     }
 
@@ -232,11 +232,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 MEDIUMINT primary key)"
+        s"create table $dbtable(c1 MEDIUMINT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 MEDIUMINT)"
+        s"create table $dbtable(c1 MEDIUMINT)"
       )
     }
 
@@ -273,11 +273,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 INT primary key)"
+        s"create table $dbtable(c1 INT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 INT)"
+        s"create table $dbtable(c1 INT)"
       )
     }
 
@@ -314,11 +314,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 INT primary key)"
+        s"create table $dbtable(c1 INT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 INT)"
+        s"create table $dbtable(c1 INT)"
       )
     }
 
@@ -355,11 +355,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 BIGINT primary key)"
+        s"create table $dbtable(c1 BIGINT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 BIGINT)"
+        s"create table $dbtable(c1 BIGINT)"
       )
     }
 
@@ -396,11 +396,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 BIGINT primary key)"
+        s"create table $dbtable(c1 BIGINT primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 BIGINT)"
+        s"create table $dbtable(c1 BIGINT)"
       )
     }
 
@@ -437,11 +437,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 BOOLEAN primary key)"
+        s"create table $dbtable(c1 BOOLEAN primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 BOOLEAN)"
+        s"create table $dbtable(c1 BOOLEAN)"
       )
     }
 
@@ -478,11 +478,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 BOOLEAN primary key)"
+        s"create table $dbtable(c1 BOOLEAN primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 BOOLEAN)"
+        s"create table $dbtable(c1 BOOLEAN)"
       )
     }
 

@@ -17,7 +17,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
 
   private def createTable(): Unit =
     jdbcUpdate(
-      s"create table $dbTable(i INT, c1 BINARY(5), c2 VARBINARY(255), c3 TINYBLOB, c4 BLOB, c5 MEDIUMBLOB, c6 LONGBLOB)"
+      s"create table $dbtable(i INT, c1 BINARY(5), c2 VARBINARY(255), c3 TINYBLOB, c4 BLOB, c5 MEDIUMBLOB, c6 LONGBLOB)"
     )
 
   test("Test Convert from java.lang.Boolean to BYTES") {

@@ -23,10 +23,10 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   test("test column type can be truncated") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbTable(pk int, i int, s varchar(128), unique index(s(2)))"
+      s"create table $dbtable(pk int, i int, s varchar(128), unique index(s(2)))"
     )
     jdbcUpdate(
-      s"insert into $dbTable values(1, 1, 'Hello')"
+      s"insert into $dbtable values(1, 1, 'Hello')"
     )
     // insert row2 row3
     tidbWrite(List(row2, row3), schema)
@@ -41,10 +41,10 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   test("no pk, no unique index case") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbTable(pk int, i int, s varchar(128), index(i))"
+      s"create table $dbtable(pk int, i int, s varchar(128), index(i))"
     )
     jdbcUpdate(
-      s"insert into $dbTable values(1, 1, 'Hello')"
+      s"insert into $dbtable values(1, 1, 'Hello')"
     )
     // insert row2 row3
     tidbWrite(List(row2, row3), schema)
@@ -60,10 +60,10 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   test("pk is not handle adding unique index") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbTable(pk int, i int, s varchar(128), unique index(i), primary key(s))"
+      s"create table $dbtable(pk int, i int, s varchar(128), unique index(i), primary key(s))"
     )
     jdbcUpdate(
-      s"insert into $dbTable values(1, 1, 'Hello')"
+      s"insert into $dbtable values(1, 1, 'Hello')"
     )
     // insert row2 row3
     tidbWrite(List(row2, row3), schema)
@@ -78,10 +78,10 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   test("pk is handle adding unique index") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbTable(pk int, i int, s varchar(128), unique index(i), primary key(pk))"
+      s"create table $dbtable(pk int, i int, s varchar(128), unique index(i), primary key(pk))"
     )
     jdbcUpdate(
-      s"insert into $dbTable values(1, 1, 'Hello')"
+      s"insert into $dbtable values(1, 1, 'Hello')"
     )
     // insert row2 row3
     tidbWrite(List(row2, row3), schema)
@@ -95,9 +95,9 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
 
   test("Test no pk adding unique index") {
     dropTable()
-    jdbcUpdate(s"create table $dbTable(pk int, i int, s varchar(128), unique index(i))")
+    jdbcUpdate(s"create table $dbtable(pk int, i int, s varchar(128), unique index(i))")
     jdbcUpdate(
-      s"insert into $dbTable values(1, 1, 'Hello')"
+      s"insert into $dbtable values(1, 1, 'Hello')"
     )
 
     // insert row2 row3

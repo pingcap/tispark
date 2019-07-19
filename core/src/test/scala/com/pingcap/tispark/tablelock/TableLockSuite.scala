@@ -10,7 +10,7 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
 
   private def createTable(): Unit =
     jdbcUpdate(
-      s"create table $dbTable(i INT)"
+      s"create table $dbtable(i INT)"
     )
 
   override protected def dropTable(): Unit = {
@@ -66,7 +66,7 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
     // fail write in another jdbc session
     val caught = intercept[java.sql.SQLException] {
       tidbStmt.execute(
-        s"insert into $dbTable values(1),(2),(3),(4),(null)"
+        s"insert into $dbtable values(1),(2),(3),(4),(null)"
       )
     }
     assert(
@@ -78,7 +78,7 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
 
     // insert data
     tidbStmt.execute(
-      s"insert into $dbTable values(1),(2),(3),(4),(null)"
+      s"insert into $dbtable values(1),(2),(3),(4),(null)"
     )
 
     // drop table
@@ -104,7 +104,7 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
     assert(tiDBJDBCClient.lockTableWriteLocal(database, table))
 
     // read data
-    tidbStmt.executeQuery(s"select * from $dbTable")
+    tidbStmt.executeQuery(s"select * from $dbtable")
 
     // unlock tables
     assert(tiDBJDBCClient.unlockTables())

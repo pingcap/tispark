@@ -23,11 +23,11 @@ class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbTable(c1 DATETIME(6) primary key)"
+        s"create table $dbtable(c1 DATETIME(6) primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbTable(c1 DATETIME(6))"
+        s"create table $dbtable(c1 DATETIME(6))"
       )
     }
 

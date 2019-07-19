@@ -14,7 +14,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
 
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i INT,
                   |c1 BIT(1),
                   |c2 BIT(8),
@@ -50,7 +50,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
       """.stripMargin)
 
     jdbcUpdate(s"""
-                  |insert into $dbTable values(
+                  |insert into $dbtable values(
                   |1,
                   |B'1',
                   |B'01111100',
@@ -98,7 +98,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
   test("Test different data type") {
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i INT primary key,
                   |c1 BIT(1),
                   |c2 BIT(8),
@@ -290,7 +290,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // integer pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i INT primary key,
                   |c1 varchar(64)
                   |)
@@ -318,7 +318,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // decimal pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i decimal(3,2) primary key,
                   |c1 varchar(64)
                   |)
@@ -346,7 +346,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // char pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i char(4) primary key,
                   |c1 varchar(64)
                   |)
@@ -374,7 +374,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // char pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i varchar(4) primary key,
                   |c1 varchar(64)
                   |)
@@ -402,7 +402,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // char pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i date primary key,
                   |c1 varchar(64)
                   |)
@@ -432,7 +432,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // datetime pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i DATETIME primary key,
                   |c1 varchar(64)
                   |)
@@ -462,7 +462,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // timestamp pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i timestamp primary key,
                   |c1 varchar(64)
                   |)
@@ -492,7 +492,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // timestamp pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i text,
                   |c1 varchar(64),
                   |primary key(i(128))
@@ -521,7 +521,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // blob pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i blob,
                   |c1 varchar(64),
                   |primary key(i(128))
@@ -551,7 +551,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // enum pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i ENUM('male','female','both','unknown') primary key,
                   |c1 varchar(64)
                   |)
@@ -579,7 +579,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     // enum pk
     dropTable()
     jdbcUpdate(s"""
-                  |create table $dbTable(
+                  |create table $dbtable(
                   |i int,
                   |i1 int,
                   |c1 varchar(64),

@@ -24,7 +24,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
 
   private def createTable(): Unit =
     jdbcUpdate(
-      s"""create table $dbTable(i INT,
+      s"""create table $dbtable(i INT,
          |c1 DECIMAL(38, 1),
          |c2 DECIMAL(38, 2),
          |c3 DECIMAL(38, 3),

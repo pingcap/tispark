@@ -29,7 +29,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
   private def createTable(): Unit =
     jdbcUpdate(
-      s"create table $dbTable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT, c6 BOOLEAN)"
+      s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT, c6 BOOLEAN)"
     )
 
   test("Test Convert from java.lang.Boolean to SINGED") {

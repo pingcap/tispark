@@ -12,9 +12,9 @@ class FilterPushdownSuite extends BaseDataSourceTest("test_datasource_filter_pus
     super.beforeAll()
 
     dropTable()
-    jdbcUpdate(s"create table $dbTable(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbTable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
+      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
     )
   }
 
