@@ -19,7 +19,7 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
   )
 
   private def createTable(): Unit =
-    jdbcUpdate(s"create table $dbtable(i INT, c1 TIMESTAMP, c2 TIMESTAMP(6))")
+    jdbcUpdate(s"create table $dbTable(i INT, c1 TIMESTAMP, c2 TIMESTAMP(6))")
 
   ignore("Test Convert from java.lang.Long to TIMESTAMP") {
     // success

@@ -27,11 +27,11 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 CHAR(8) primary key)"
+        s"create table $dbTable(c1 CHAR(8) primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 CHAR(8))"
+        s"create table $dbTable(c1 CHAR(8))"
       )
     }
 
@@ -68,11 +68,11 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 VARCHAR(8) primary key)"
+        s"create table $dbTable(c1 VARCHAR(8) primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 VARCHAR(8))"
+        s"create table $dbTable(c1 VARCHAR(8))"
       )
     }
 
@@ -109,11 +109,11 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 TINYTEXT, primary key (c1(4)))"
+        s"create table $dbTable(c1 TINYTEXT, primary key (c1(4)))"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 TINYTEXT)"
+        s"create table $dbTable(c1 TINYTEXT)"
       )
     }
 
@@ -155,11 +155,11 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 TEXT(8), primary key (c1(4)))"
+        s"create table $dbTable(c1 TEXT(8), primary key (c1(4)))"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 TEXT(8))"
+        s"create table $dbTable(c1 TEXT(8))"
       )
     }
 

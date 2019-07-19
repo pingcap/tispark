@@ -20,7 +20,7 @@ class RegionSplitSuite extends BaseDataSourceTest("region_split_test") {
 
     dropTable()
     jdbcUpdate(
-      s"CREATE TABLE  $dbtable ( `a` int(11) DEFAULT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
+      s"CREATE TABLE  $dbTable ( `a` int(11) DEFAULT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
     )
 
     val options = Some(Map("enableRegionSplit" -> "true", "regionSplitNum" -> "3"))

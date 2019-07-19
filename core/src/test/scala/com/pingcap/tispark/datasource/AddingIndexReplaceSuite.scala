@@ -25,10 +25,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   test("test unique index replace with primary key is handle and index") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2), index(s))"
+      s"create table $dbTable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2), index(s))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      s"insert into $dbTable values(1, 1, 1, 'Hello')"
     )
     // insert row2 row3
     tidbWrite(List(row2, row3, row4), schema)
@@ -46,10 +46,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   test("test same key in one rdd") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
+      s"create table $dbTable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      s"insert into $dbTable values(1, 1, 1, 'Hello')"
     )
 
     // insert row2 row3
@@ -64,10 +64,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   test("test unique index replace with primary key is handle") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2))"
+      s"create table $dbTable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      s"insert into $dbTable values(1, 1, 1, 'Hello')"
     )
     // insert row2 row3
     tidbWrite(List(row2, row3, row4), schema)
@@ -85,10 +85,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   test("test unique index replace without primary key") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), unique index(c1), unique index(c2))"
+      s"create table $dbTable(pk int, c1 int, c2 int, s varchar(128), unique index(c1), unique index(c2))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      s"insert into $dbTable values(1, 1, 1, 'Hello')"
     )
     // insert row2 row3
     tidbWrite(List(row2, row4, row5), schema)
@@ -106,10 +106,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   test("test pk is handle") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
+      s"create table $dbTable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      s"insert into $dbTable values(1, 1, 1, 'Hello')"
     )
     // insert row2 row3
     tidbWrite(List(row2, row3, row4), schema)

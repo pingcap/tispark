@@ -27,7 +27,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
 
   private def createTable(): Unit =
     jdbcUpdate(
-      s"""create table $dbtable(i INT,
+      s"""create table $dbTable(i INT,
          | c1 TINYINT UNSIGNED,
          | c2 SMALLINT UNSIGNED,
          | c3 MEDIUMINT UNSIGNED,

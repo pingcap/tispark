@@ -22,11 +22,11 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(1) primary key)"
+        s"create table $dbTable(c1 BIT(1) primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(1))"
+        s"create table $dbTable(c1 BIT(1))"
       )
     }
 
@@ -65,11 +65,11 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(1) primary key)"
+        s"create table $dbTable(c1 BIT(1) primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(1))"
+        s"create table $dbTable(c1 BIT(1))"
       )
     }
 
@@ -107,11 +107,11 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(4) primary key)"
+        s"create table $dbTable(c1 BIT(4) primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(4))"
+        s"create table $dbTable(c1 BIT(4))"
       )
     }
 
@@ -149,11 +149,11 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(4) primary key)"
+        s"create table $dbTable(c1 BIT(4) primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(4))"
+        s"create table $dbTable(c1 BIT(4))"
       )
     }
 
@@ -192,11 +192,11 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(8) primary key)"
+        s"create table $dbTable(c1 BIT(8) primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(8))"
+        s"create table $dbTable(c1 BIT(8))"
       )
     }
 
@@ -234,11 +234,11 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(8) primary key)"
+        s"create table $dbTable(c1 BIT(8) primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIT(8))"
+        s"create table $dbTable(c1 BIT(8))"
       )
     }
 

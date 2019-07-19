@@ -21,6 +21,7 @@ import java.sql.{Date, Timestamp}
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
+import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
@@ -29,7 +30,7 @@ import org.apache.spark.sql.types.StructField
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-abstract class QueryTest extends PlanTest {
+abstract class QueryTest extends SparkFunSuite {
 
   protected def spark: SparkSession
 
@@ -156,14 +157,24 @@ abstract class QueryTest extends PlanTest {
         case (row, i) => !compRow(row, query(i))
       }
 
+    def toComparableString(row: List[Any]): String = {
+      row.map {
+        case a: Array[Byte] => a.mkString("[", ",", "]")
+        case s              => s.toString
+      }.mkString
+    }
+
+    def sortComp(l: List[Any], r: List[Any]): Boolean =
+      toComparableString(l).compareTo(toComparableString(r)) < 0
+
     if (lhs != null && rhs != null) {
       try {
         if (lhs.length != rhs.length) {
           false
         } else if (!isOrdered) {
           comp(
-            lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
-            rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
+            lhs.sortWith((_1, _2) => sortComp(_1, _2)),
+            rhs.sortWith((_1, _2) => sortComp(_1, _2))
           )
         } else {
           implicit object NullableListOrdering extends Ordering[List[Any]] {

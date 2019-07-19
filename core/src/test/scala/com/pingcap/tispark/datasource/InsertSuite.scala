@@ -38,9 +38,9 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
 
   test("Test insert to table without primary key") {
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbTable(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello')"
+      s"insert into $dbTable values(null, 'Hello')"
     )
 
     var data = List(row1)
@@ -73,9 +73,9 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
 
   test("Test insert to table with primary key (primary key is handle)") {
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i int primary key, s varchar(128))")
+    jdbcUpdate(s"create table $dbTable(i int primary key, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
+      s"insert into $dbTable values(2, 'TiDB')"
     )
 
     var data = List(Row(2, "TiDB"))
@@ -106,9 +106,9 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
 
   test("Test insert to table with primary key with tiny int") {
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i tinyint primary key, s varchar(128))")
+    jdbcUpdate(s"create table $dbTable(i tinyint primary key, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
+      s"insert into $dbTable values(2, 'TiDB')"
     )
 
     var data = List(Row(2, "TiDB"))
@@ -121,9 +121,9 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
 
   test("Test insert to table with primary key with small int") {
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i smallint primary key, s varchar(128))")
+    jdbcUpdate(s"create table $dbTable(i smallint primary key, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
+      s"insert into $dbTable values(2, 'TiDB')"
     )
 
     var data = List(Row(2, "TiDB"))
@@ -136,9 +136,9 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
 
   test("Test insert to table with primary key with medium int") {
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i mediumint primary key, s varchar(128))")
+    jdbcUpdate(s"create table $dbTable(i mediumint primary key, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
+      s"insert into $dbTable values(2, 'TiDB')"
     )
 
     var data = List(Row(2, "TiDB"))
@@ -151,9 +151,9 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
 
   test("Test insert to table with primary key (auto increase case 1)") {
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
+    jdbcUpdate(s"create table $dbTable(i int primary key AUTO_INCREMENT, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtable values(2, 'TiDB')"
+      s"insert into $dbTable values(2, 'TiDB')"
     )
 
     var data = List(Row(2, "TiDB"))
@@ -193,9 +193,9 @@ class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
   test("Test insert to table with primary key (auto increase case 2)") {
 
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
+    jdbcUpdate(s"create table $dbTable(i int primary key AUTO_INCREMENT, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtable(s) values('Hello')"
+      s"insert into $dbTable(s) values('Hello')"
     )
 
     val withOutIDSchema = StructType(

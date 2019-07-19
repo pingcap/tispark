@@ -955,6 +955,24 @@ public class TiDAGRequest implements Serializable {
     init(hasIndex());
   }
 
+  public enum IndexScanType {
+    INDEX_SCAN,
+    COVERING_INDEX_SCAN,
+    TABLE_SCAN
+  }
+
+  public IndexScanType getIndexScanType() {
+    if (hasIndex()) {
+      if (isDoubleRead) {
+        return IndexScanType.INDEX_SCAN;
+      } else {
+        return IndexScanType.COVERING_INDEX_SCAN;
+      }
+    } else {
+      return IndexScanType.TABLE_SCAN;
+    }
+  }
+
   @Override
   public String toString() {
     init();
@@ -963,15 +981,17 @@ public class TiDAGRequest implements Serializable {
       sb.append(String.format("[table: %s] ", tableInfo.getName()));
     }
 
-    if (hasIndex()) {
-      if (isDoubleRead) {
+    switch (getIndexScanType()) {
+      case INDEX_SCAN:
         sb.append("IndexScan");
-      } else {
+        sb.append(String.format("[Index: %s] ", indexInfo.getName()));
+        break;
+      case COVERING_INDEX_SCAN:
         sb.append("CoveringIndexScan");
-      }
-      sb.append(String.format("[Index: %s] ", indexInfo.getName()));
-    } else {
-      sb.append("TableScan");
+        sb.append(String.format("[Index: %s] ", indexInfo.getName()));
+        break;
+      case TABLE_SCAN:
+        sb.append("TableScan");
     }
 
     if (!getFields().isEmpty()) {

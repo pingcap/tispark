@@ -1,0 +1,6 @@
+drop table if exists `data_type_test_pk`.`test_longblob`;
+CREATE TABLE `data_type_test_pk`.`test_longblob` (
+  `col_longblob` longblob not null,
+  PRIMARY KEY (`col_longblob`(5))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+insert into `data_type_test_pk`.`test_longblob` values (X'99f78b04e5953f7b752d210d4b9bda6bdaaba696cae74201545e445234b682f62339faf416881a83f76e5c05ccb194'),(X'70a2ee99b404e5931988e2a02e60f1d65078b2c6a141f9a6a13d1cb6f3edc931b1a64c22322a09'),(X'0b31f0c4049311a92641'),(X'd6a9528d683343d2a47d7def96f0e332cbbe8a6918a6c89fa1fffe74a3f72c79'),(X'244c83be84260e4adae09f55c5ff535c645bce830beea086eea6eb2e80'),(X'6fb517e01f759eff1672b5253443'),(X'cc1a24289ec61f7a6b268666a8'),(X'1cd066f3c9aecc5215dc9d8bff2cc5e40312308c164d77b8'),(X'9f3e162cfad477cbd85ad804'),(X'db5134f7e3dde6ab089f'),(X'2644e22918111e1809ea9a33f6ef24dacbd68640f78502e9d5fcf8e9d975e01d458b0f92a0ceb8ba792f'),(X'cc7034cafd77a6c2c38a2fff2fff073033b7b2520206bd7038499cb49e9ccdd3f11a1d'),(X'4bf3148f3aeee9a97c7e3e1170627b39cc8a18c5'),(X'dd44fc16e6c5e1e79e7982c894411f2e80'),(X'ad37ffdc3ff325e44c51a3'),(X'1edc5051fb24a93ef3f00acc14401e00c70dafdfe1'),(X'd6281e3de00651eed0f133c05b4403'),(X'fb9fe75e49b396a0fa82de2e357ccb4f3196b8ed9bbf89159540e85c'),(X'9d806bde3f21250090ff3ff047c2cfbd0e29aca085849633510ef13b'),(X'f73bcde86f5a6be9573a0cd8e80426cdaa');

@@ -64,7 +64,7 @@ class IssueTestSuite extends BaseTiSparkTest {
       "insert into t values(1),(2),(3),(4),(null)"
     )
 
-    assert(spark.sql("select * from t limit 10").count() == 5)
+    assert(spark.sql("select * from t limit 10").count() === 4)
     assert(spark.sql("select a from t limit 10").count() == 5)
 
     judge("select count(1) from (select a from t order by a limit 10) e", checkLimit = false)
@@ -296,6 +296,25 @@ class IssueTestSuite extends BaseTiSparkTest {
     )
   }
 
+  test("..") {
+    tidbStmt.execute("drop table if exists test_binary")
+    tidbStmt.execute("""
+                       |CREATE TABLE `test_binary` (
+                       |  `c` enum('a','b') NOT NULL
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
+                     """.stripMargin)
+    tidbStmt.execute(
+      "insert into test_binary set c = 'a'"
+    )
+    val query = "select * from test_binary"
+    spark.sql(query).show
+    val r = tidbStmt.executeQuery(query)
+    while (r.next()) {
+      println(r.getBytes(1))
+    }
+    explainTestAndCollect(query)
+  }
+
   override def afterAll(): Unit =
     try {
       tidbStmt.execute("drop table if exists t")
@@ -306,6 +325,7 @@ class IssueTestSuite extends BaseTiSparkTest {
       tidbStmt.execute("drop table if exists set_t")
       tidbStmt.execute("drop table if exists enum_t")
       tidbStmt.execute("drop table if exists table_group_by_bigint")
+      tidbStmt.execute("drop table if exists test_binary")
     } finally {
       super.afterAll()
     }

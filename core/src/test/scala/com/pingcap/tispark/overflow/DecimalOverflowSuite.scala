@@ -39,7 +39,7 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
           dropTable()
 
           jdbcUpdate(
-            s"create table $dbtable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))"
+            s"create table $dbTable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))"
           )
 
           val row1 = Row(1, testData.writeData)
@@ -77,7 +77,7 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
       dropTable()
 
       jdbcUpdate(
-        s"create table $dbtable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))"
+        s"create table $dbTable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))"
       )
 
       val row1 = Row(1, testData.writeData)

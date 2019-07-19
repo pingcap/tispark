@@ -18,10 +18,10 @@ import scala.collection.mutable.ArrayBuffer
 // set isTidbConfigPropertiesInjectedToSparkEnabled = true
 // will load tidb_config.properties to SparkConf
 class BaseDataSourceTest(val table: String,
+                         val database: String = "tispark_test",
                          val _enableTidbConfigPropertiesInjectedToSpark: Boolean = true)
     extends BaseTiSparkTest {
-  protected val database: String = "tispark_test"
-  protected val dbtable = s"$database.$table"
+  protected def dbTable = s"$database.$table"
 
   override def beforeAll(): Unit = {
     enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark
@@ -33,7 +33,7 @@ class BaseDataSourceTest(val table: String,
   protected def jdbcUpdate(query: String): Unit =
     tidbStmt.execute(query)
 
-  protected def dropTable(): Unit = jdbcUpdate(s"drop table if exists $dbtable")
+  protected def dropTable(): Unit = jdbcUpdate(s"drop table if exists $dbTable")
 
   protected def tidbWrite(rows: List[Row],
                           schema: StructType,
@@ -57,7 +57,7 @@ class BaseDataSourceTest(val table: String,
     df.write
       .format("jdbc")
       .option("url", jdbcUrl)
-      .option("dbtable", dbtable)
+      .option("dbtable", dbTable)
       .option("isolationLevel", "REPEATABLE_READ")
       .mode("append")
       .save()
@@ -147,7 +147,7 @@ class BaseDataSourceTest(val table: String,
                                           sortCol: String = "i",
                                           skipTiDBAndExpectedAnswerCheck: Boolean = false,
                                           skipJDBCReadCheck: Boolean = false): Unit = {
-    val sql = s"select * from $dbtable order by $sortCol"
+    val sql = s"select * from $dbTable order by $sortCol"
     val answer = seqRowToList(expectedAnswer, schema)
 
     val jdbcResult = queryTiDBViaJDBC(sql)
@@ -172,7 +172,7 @@ class BaseDataSourceTest(val table: String,
   }
 
   protected def compareTiDBSelectWithJDBC_V2(sortCol: String = "i"): Unit = {
-    val sql = s"select * from $dbtable order by $sortCol"
+    val sql = s"select * from $dbTable order by $sortCol"
 
     // check jdbc result & data source result
     val jdbcResult = queryTiDBViaJDBC(sql)

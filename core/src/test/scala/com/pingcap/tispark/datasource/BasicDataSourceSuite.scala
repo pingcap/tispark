@@ -22,9 +22,9 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
     super.beforeAll()
 
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbTable(i int, s varchar(128))")
     jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
+      s"insert into $dbTable values(null, 'Hello'), (2, 'TiDB')"
     )
   }
 

@@ -36,7 +36,7 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   )
 
   private def createTable(): Unit =
-    jdbcUpdate(s"""create table $dbtable(i INT,
+    jdbcUpdate(s"""create table $dbTable(i INT,
                   |c1 ENUM('male', 'female', 'both', 'unknown'),
                   |c2 ENUM('male', 'female', 'both', 'unknown'),
                   |c3 ENUM('male', 'female', 'both', 'unknown'),

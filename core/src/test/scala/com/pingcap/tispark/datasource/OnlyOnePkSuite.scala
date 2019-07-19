@@ -18,7 +18,7 @@ class OnlyOnePkSuite extends BaseDataSourceTest("test_datasource_only_one_pk") {
     super.beforeAll()
 
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i int primary key)")
+    jdbcUpdate(s"create table $dbTable(i int primary key)")
   }
 
   test("Test Write Append") {

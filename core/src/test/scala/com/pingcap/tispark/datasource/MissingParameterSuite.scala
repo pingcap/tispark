@@ -16,7 +16,7 @@ class MissingParameterSuite extends BaseDataSourceTest("test_datasource_missing_
 
   test("Missing parameter: database") {
     dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    jdbcUpdate(s"create table $dbTable(i int, s varchar(128))")
 
     val caught = intercept[IllegalArgumentException] {
       val rows = row1 :: Nil

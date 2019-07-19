@@ -19,9 +19,9 @@ package org.apache.spark.sql
 
 import java.sql.Statement
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.pingcap.tikv.TiDBJDBCClient
 import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tikv.meta.TiTableInfo
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
@@ -75,6 +75,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       retSet += row.toList
     }
     retSet.toList
+  }
+
+  protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {
+    ti.meta.getTable(s"$dbPrefix$databaseName", tableName).get
   }
 
   protected def getTableColumnNames(tableName: String): List[String] = {

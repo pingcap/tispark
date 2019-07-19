@@ -41,7 +41,7 @@ class ColumnMappingSuite
   test("Test different column order with full schema") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(i int primary key auto_increment, s varchar(128), c varchar(128))"
+      s"create table $dbTable(i int primary key auto_increment, s varchar(128), c varchar(128))"
     )
 
     var posMap = List(1, 2, 0)
@@ -101,7 +101,7 @@ class ColumnMappingSuite
   test("Test different column order without auto increment column") {
     dropTable()
     jdbcUpdate(
-      s"create table $dbtable(i int primary key auto_increment, s varchar(128), c varchar(128))"
+      s"create table $dbTable(i int primary key auto_increment, s varchar(128), c varchar(128))"
     )
 
     // insert 2 rows

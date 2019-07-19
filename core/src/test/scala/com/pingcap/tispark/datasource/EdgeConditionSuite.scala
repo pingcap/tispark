@@ -27,10 +27,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
+      s"create table $dbTable(i int, primary key (i))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1)"
+      s"insert into $dbTable values(1)"
     )
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4))
@@ -51,10 +51,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
+      s"create table $dbTable(i int, primary key (i))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1)"
+      s"insert into $dbTable values(1)"
     )
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4))
@@ -75,10 +75,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, primary key (i))"
+      s"create table $dbTable(i int NOT NULL AUTO_INCREMENT, primary key (i))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1)"
+      s"insert into $dbTable values(1)"
     )
     tidbWrite(List(row2, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4))
@@ -99,10 +99,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtable(i varchar(128))"
+      s"create table $dbTable(i varchar(128))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values('Hello')"
+      s"insert into $dbTable values('Hello')"
     )
     tidbWrite(List(row1, row3, row4), schema)
     testTiDBSelect(Seq(row1, row2, row3, row4))
@@ -141,7 +141,7 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtable($createTableSchemaStr)"
+      s"create table $dbTable($createTableSchemaStr)"
     )
 
     tidbWrite(List(row1, row2), schema)
@@ -160,10 +160,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
+      s"create table $dbTable(i int, primary key (i))"
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1)"
+      s"insert into $dbTable values(1)"
     )
     tidbWrite(List(), schema)
     testTiDBSelect(Seq(row1))
@@ -185,7 +185,7 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     dropTable()
 
     jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
+      s"create table $dbTable(i int, primary key (i))"
     )
     tidbWrite(list, schema)
     testTiDBSelect(list)

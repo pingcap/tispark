@@ -1,0 +1,6 @@
+drop table if exists `data_type_test_pk`.`test_varchar`;
+CREATE TABLE `data_type_test_pk`.`test_varchar` (
+  `col_varchar` varchar(40) not null,
+  PRIMARY KEY (`col_varchar`(5))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+insert into `data_type_test_pk`.`test_varchar` values ('bIBdEsxz8Vxq5nSh5V8rhokmcYWHUVa5xiejccKU'),('WUfHXwk3hAOOPql49IS48ZsMEQjNVtJ0mF2ieI4l'),('81xAymMcVF7lD9HPNogQ6dbgQzNNgm3RC0LvANkD'),('Q69C17la3V3gH0cXo0RPPRaAH4ku8KObYmHchWt0'),('NQ7a23F0VxcOlWHsixLHdrM88pkorLoPPHtuzZSe'),('FXRgMJ1cLQgHPRU9sWqwLrilBaykNBczIzhNExvL'),('Se1OOqlaGJi4g5cknGMUh4RgjsofDETxES0VdTM6'),('NAx3eA6qRZQeHWuMC2vuhJBWpnS82mfZ9EDGlDN3'),('EYXhDPq71WJmeI6RyYMSZtJELSWpSfoJCO3DZ5LG'),('56Kslu61NeSpCqHJpT9NpfC3RwmnYtulq8R49kP2'),('uXbq6U6ERAnUDVLlJXLhsjoWfLRns9brweYbk1ml'),('ynlYe0JgNG9E5vQQgQIGQAbShevsmfdUmlKj6LqI'),('xY4iG9Sllts9a3qtIgvP8CsWUJW3OLKaJ3dBpjs6'),('Roe4gzMghhOqcToJwbryGT1KyS1X7q9Zs2nEGYtv'),('CCb33diAGBkMWkm3dX0llMQDNoJ4eiXwQuX015Ic'),('nEuLBDwxuq3PGCZ8UCj6PO8fHHQmWiNFB9wWeikb'),('RGNK2x5Kft0HQVSnnqdnNy01aWU3tUArn8glbNnx'),('9cVbplN2plPtrR9nJP8xweAuO0T6butXiE48WkD8'),('fQsSm420pJWtDvPWcOnjtQaPIQlQjDa3HoSOEfOI'),('EkIGAsyxddQ005NDccEFz3KlY8A32d0My7oNq6kX');

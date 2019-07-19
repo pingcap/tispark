@@ -208,9 +208,8 @@ public class Histogram {
     double lessCountA = lessRowCount(a);
     double lessCountB = lessRowCount(b);
     // If lessCountA is not less than lessCountB, it may be that they fall to the same bucket and we
-    // cannot estimate
-    // the fraction, so we use `totalCount / NDV` to estimate the row count, but the result should
-    // not greater than lessCountB.
+    // cannot estimate the fraction, so we use `totalCount / NDV` to estimate the row count, but the
+    // result should not be greater than lessCountB.
     if (lessCountA >= lessCountB) {
       return Math.min(lessCountB, totalRowCount() / numberOfDistinctValue);
     }

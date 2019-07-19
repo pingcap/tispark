@@ -120,56 +120,53 @@ public abstract class DataType implements Serializable {
   }
 
   public Long signedLowerBound() throws TypeException {
-    if (this.getType() == MySQLType.TypeTiny) {
-      return MinInt8;
-    } else if (this.getType() == MySQLType.TypeShort) {
-      return MinInt16;
-    } else if (this.getType() == MySQLType.TypeInt24) {
-      return MinInt24;
-    } else if (this.getType() == MySQLType.TypeLong) {
-      return MinInt32;
-    } else if (this.getType() == MySQLType.TypeLonglong) {
-      return MinInt64;
-    } else {
-      throw new TypeException("Input Type is not a mysql SIGNED type");
+    switch (this.getType()) {
+      case TypeTiny:
+        return MinInt8;
+      case TypeShort:
+        return MinInt16;
+      case TypeInt24:
+        return MinInt24;
+      case TypeLong:
+        return MinInt32;
+      case TypeLonglong:
+        return MinInt64;
+      default:
+        throw new TypeException("Signed Lower Bound: Input Type is not a mysql SIGNED type");
     }
   }
 
   public Long signedUpperBound() throws TypeException {
-    if (this.getType() == MySQLType.TypeTiny) {
-      return MaxInt8;
-    } else if (this.getType() == MySQLType.TypeShort) {
-      return MaxInt16;
-    } else if (this.getType() == MySQLType.TypeInt24) {
-      return MaxInt24;
-    } else if (this.getType() == MySQLType.TypeLong) {
-      return MaxInt32;
-    } else if (this.getType() == MySQLType.TypeLonglong) {
-      return MaxInt64;
-    } else {
-      throw new TypeException("Input Type is not a mysql SIGNED type");
+    switch (this.getType()) {
+      case TypeTiny:
+        return MaxInt8;
+      case TypeShort:
+        return MaxInt16;
+      case TypeInt24:
+        return MaxInt24;
+      case TypeLong:
+        return MaxInt32;
+      case TypeLonglong:
+        return MaxInt64;
+      default:
+        throw new TypeException("Signed Upper Bound: Input Type is not a mysql SIGNED type");
     }
   }
 
   public Long unsignedUpperBound() throws TypeException {
-    if (this.getType() == MySQLType.TypeTiny) {
-      return MaxUint8;
-    } else if (this.getType() == MySQLType.TypeShort) {
-      return MaxUint16;
-    } else if (this.getType() == MySQLType.TypeInt24) {
-      return MaxUint24;
-    } else if (this.getType() == MySQLType.TypeLong) {
-      return MaxUint32;
-    } else if (this.getType() == MySQLType.TypeLonglong) {
-      return MaxUint64;
-    } else if (this.getType() == MySQLType.TypeBit) {
-      return MaxUint64;
-    } else if (this.getType() == MySQLType.TypeEnum) {
-      return MaxUint64;
-    } else if (this.getType() == MySQLType.TypeSet) {
-      return MaxUint64;
-    } else {
-      throw new TypeException("Input Type is not a mysql UNSIGNED type");
+    switch (this.getType()) {
+      case TypeTiny:
+        return MaxUint8;
+      case TypeShort:
+        return MaxUint16;
+      case TypeInt24:
+        return MaxUint24;
+      case TypeLong:
+        return MaxUint32;
+      case TypeLonglong:
+        return MaxUint64;
+      default:
+        throw new TypeException("Unsigned Upper Bound: Input Type is not a mysql UNSIGNED type");
     }
   }
 
@@ -343,6 +340,10 @@ public abstract class DataType implements Serializable {
     return tp.getPrefixSize();
   }
 
+  public int getDefaultLength() {
+    return tp.getDefaultLength();
+  }
+
   /**
    * Size of data type
    *
@@ -355,6 +356,10 @@ public abstract class DataType implements Serializable {
 
   public boolean isLengthUnSpecified() {
     return DataType.isLengthUnSpecified(length);
+  }
+
+  public boolean isDecimalUnSpecified() {
+    return DataType.isLengthUnSpecified(decimal);
   }
 
   public int getDecimal() {

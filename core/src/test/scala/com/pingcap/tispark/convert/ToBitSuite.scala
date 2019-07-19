@@ -34,7 +34,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
 
   private def createTable(): Unit =
     jdbcUpdate(
-      s"create table $dbtable(i INT, c1 BIT(1), c2 BIT(8),  c3 BIT(64))"
+      s"create table $dbTable(i INT, c1 BIT(1), c2 BIT(8),  c3 BIT(64))"
     )
 
   test("Test Convert from java.lang.Boolean to BIT") {

@@ -21,7 +21,7 @@ class UpperCaseColumnNameSuite
 
     dropTable()
     jdbcUpdate(s"""
-                  |CREATE TABLE $dbtable (O_ORDERKEY INTEGER NOT NULL,
+                  |CREATE TABLE $dbTable (O_ORDERKEY INTEGER NOT NULL,
                   |                       O_CUSTKEY INTEGER NOT NULL);
        """.stripMargin)
   }

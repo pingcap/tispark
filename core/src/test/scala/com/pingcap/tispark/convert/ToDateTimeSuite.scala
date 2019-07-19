@@ -23,7 +23,7 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
   )
 
   private def createTable(): Unit =
-    jdbcUpdate(s"create table $dbtable(i INT, c1 DATETIME(0), c2 DATETIME(3), c3 DATETIME(6))")
+    jdbcUpdate(s"create table $dbTable(i INT, c1 DATETIME(0), c2 DATETIME(3), c3 DATETIME(6))")
 
   override def beforeAll(): Unit = {
     super.beforeAll()

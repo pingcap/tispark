@@ -26,11 +26,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED primary key)"
+        s"create table $dbTable(c1 TINYINT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED)"
+        s"create table $dbTable(c1 TINYINT UNSIGNED)"
       )
     }
 
@@ -67,11 +67,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED primary key)"
+        s"create table $dbTable(c1 TINYINT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED)"
+        s"create table $dbTable(c1 TINYINT UNSIGNED)"
       )
     }
 
@@ -108,11 +108,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)"
+        s"create table $dbTable(c1 SMALLINT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED)"
+        s"create table $dbTable(c1 SMALLINT UNSIGNED)"
       )
     }
 
@@ -149,11 +149,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)"
+        s"create table $dbTable(c1 SMALLINT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED)"
+        s"create table $dbTable(c1 SMALLINT UNSIGNED)"
       )
     }
 
@@ -190,11 +190,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)"
+        s"create table $dbTable(c1 MEDIUMINT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED)"
+        s"create table $dbTable(c1 MEDIUMINT UNSIGNED)"
       )
     }
 
@@ -231,11 +231,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)"
+        s"create table $dbTable(c1 MEDIUMINT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED)"
+        s"create table $dbTable(c1 MEDIUMINT UNSIGNED)"
       )
     }
 
@@ -272,11 +272,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED primary key)"
+        s"create table $dbTable(c1 INT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED)"
+        s"create table $dbTable(c1 INT UNSIGNED)"
       )
     }
 
@@ -313,11 +313,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED primary key)"
+        s"create table $dbTable(c1 INT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED)"
+        s"create table $dbTable(c1 INT UNSIGNED)"
       )
     }
 
@@ -357,11 +357,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED primary key)"
+        s"create table $dbTable(c1 BIGINT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED)"
+        s"create table $dbTable(c1 BIGINT UNSIGNED)"
       )
     }
 
@@ -398,11 +398,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     dropTable()
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED primary key)"
+        s"create table $dbTable(c1 BIGINT UNSIGNED primary key)"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED)"
+        s"create table $dbTable(c1 BIGINT UNSIGNED)"
       )
     }
 

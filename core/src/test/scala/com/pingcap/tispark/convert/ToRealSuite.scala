@@ -26,7 +26,7 @@ class ToRealSuite extends BaseDataSourceTest("test_data_type_convert_to_real") {
   )
 
   private def createTable(): Unit =
-    jdbcUpdate(s"create table $dbtable(i INT, c1 FLOAT, c2 DOUBLE)")
+    jdbcUpdate(s"create table $dbTable(i INT, c1 FLOAT, c2 DOUBLE)")
 
   test("Test Convert from java.lang.Boolean to REAL") {
     // success
