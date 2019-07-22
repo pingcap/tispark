@@ -46,7 +46,9 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
   StatisticsManager.initStatisticsManager(tiSession)
-  sparkSession.udf.register("ti_version", () => TiSparkVersion.version)
+  sparkSession.udf.register("ti_version", () => {
+    s"${TiSparkVersion.version}\n${TiSparkInfo.info}"
+  })
   sparkSession.udf.register(
     "time_to_str",
     (value: Long, frac: Int) => Converter.convertDurationToStr(value, frac)

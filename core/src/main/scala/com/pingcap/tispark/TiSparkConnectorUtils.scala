@@ -10,33 +10,23 @@ object TiSparkConnectorUtils extends Logging {
 
   private val sessionToContextMap: mutable.HashMap[SparkSession, TiContext] = mutable.HashMap()
 
-  /**
-   * Check Spark version, if Spark version matches SUPPORT_SPARK_VERSION enable PushDown,
-   * otherwise disable it.
-   */
-  private val SUPPORT_SPARK_VERSION = "2.3" :: "2.4" :: Nil
-
   def checkVersionAndEnablePushdown(session: SparkSession, tiContext: TiContext): Boolean = {
     val tiExtensionsEnabled = TiExtensions.enabled()
     if (tiExtensionsEnabled) {
       logWarning("TiExtensions already enabled! Do not need to enable push down!")
     }
 
-    val supportVersion = SUPPORT_SPARK_VERSION.find(session.version.startsWith) match {
-      case Some(_) => true
-      case None    => false
-    }
-    if (!supportVersion) {
+    if (!TiSparkInfo.versionSupport()) {
       logWarning(
         s"Spark version ${session.version} does not support push down! " +
-          s"Only ${SUPPORT_SPARK_VERSION.mkString(",")} support push down."
+          s"Only ${TiSparkInfo.SUPPORTED_SPARK_VERSION.mkString(",")} support push down."
       )
     }
 
     // put tiContext into map, this will be used later when
     // create tiStrategy.
     sessionToContextMap.put(session, tiContext)
-    if (supportVersion && !tiExtensionsEnabled) {
+    if (TiSparkInfo.versionSupport() && !tiExtensionsEnabled) {
       enablePushdownSession(session)
       true
     } else {

@@ -19,6 +19,7 @@ import java.io.File
 import java.lang.reflect.Method
 import java.net.{URL, URLClassLoader}
 
+import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.InternalRow
@@ -38,16 +39,6 @@ import scala.reflect.ClassTag
 object ReflectionUtil {
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
-  val sparkVersion: String = org.apache.spark.SPARK_VERSION
-
-  val sparkMajorVersion: String = if (sparkVersion.startsWith("2.3")) {
-    "2.3"
-  } else if (sparkVersion.startsWith("2.4")) {
-    "2.4"
-  } else {
-    ""
-  }
-
   // In Spark 2.3.0 and 2.3.1 the method declaration is:
   // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
   //      f: (Int, Iterator[T]) => Iterator[U],
@@ -60,39 +51,40 @@ object ReflectionUtil {
   //      isOrderSensitive: Boolean = false): RDD[U]
   //
   // Hereby we use reflection to support different Spark versions.
-  private val mapPartitionsWithIndexInternal: Method = sparkVersion match {
-    case "2.3.0" | "2.3.1" =>
-      classOf[RDD[InternalRow]].getDeclaredMethod(
-        "mapPartitionsWithIndexInternal",
-        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
-        classOf[Boolean],
-        classOf[ClassTag[UnsafeRow]]
-      )
-    case _ =>
-      // Spark version >= 2.3.2
-      try {
+  private val mapPartitionsWithIndexInternal: Method =
+    TiSparkInfo.SPARK_VERSION match {
+      case "2.3.0" | "2.3.1" =>
         classOf[RDD[InternalRow]].getDeclaredMethod(
           "mapPartitionsWithIndexInternal",
           classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
           classOf[Boolean],
-          classOf[Boolean],
           classOf[ClassTag[UnsafeRow]]
         )
-      } catch {
-        case _: Throwable =>
-          throw ScalaReflectionException(
-            "Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
-              .format(sparkVersion)
+      case _ =>
+        // Spark version >= 2.3.2
+        try {
+          classOf[RDD[InternalRow]].getDeclaredMethod(
+            "mapPartitionsWithIndexInternal",
+            classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+            classOf[Boolean],
+            classOf[Boolean],
+            classOf[ClassTag[UnsafeRow]]
           )
-      }
-  }
+        } catch {
+          case _: Throwable =>
+            throw ScalaReflectionException(
+              "Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
+                .format(TiSparkInfo.SPARK_VERSION)
+            )
+        }
+    }
 
   case class ReflectionMapPartitionWithIndexInternal(
     rdd: RDD[InternalRow],
     internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
   ) {
     def invoke(): RDD[InternalRow] =
-      sparkVersion match {
+      TiSparkInfo.SPARK_VERSION match {
         case "2.3.0" | "2.3.1" =>
           mapPartitionsWithIndexInternal
             .invoke(
@@ -122,7 +114,7 @@ object ReflectionUtil {
 
     val sparkWrapperClassURL: URL = if (tisparkClassPath.isDirectory) {
       val classDir = new File(
-        s"${tisparkClassPath.getAbsolutePath}/../../../spark-wrapper/spark-$sparkMajorVersion/target/classes/"
+        s"${tisparkClassPath.getAbsolutePath}/../../../spark-wrapper/spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/target/classes/"
       )
       if (!classDir.exists()) {
         throw new Exception(
@@ -131,7 +123,9 @@ object ReflectionUtil {
       }
       classDir.toURI.toURL
     } else {
-      new URL(s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-$sparkMajorVersion/")
+      new URL(
+        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/"
+      )
     }
     logger.info(s"spark wrapper class url: ${sparkWrapperClassURL.toString}")
 
