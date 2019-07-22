@@ -1,0 +1,41 @@
+<assembly>
+    <id>jar</id>
+
+    <formats>
+        <format>jar</format>
+    </formats>
+
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <dependencySets>
+        <dependencySet>
+            <includes>
+                <include>com.pingcap.tispark:tispark-core:jar</include>
+                <include>com.pingcap.tikv:tikv-client:jar</include>
+                <include>mysql:mysql-connector-java:jar</include>
+            </includes>
+            <unpack>true</unpack>
+        </dependencySet>
+    </dependencySets>
+
+    <fileSets>
+        <fileSet>
+            <directory>
+                ${project.parent.basedir}/spark-wrapper/spark-2.3/target/classes/
+            </directory>
+            <outputDirectory>resources/spark-wrapper-spark-2.3</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>
+                ${project.parent.basedir}/spark-wrapper/spark-2.4/target/classes/
+            </directory>
+            <outputDirectory>resources/spark-wrapper-spark-2.4</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>

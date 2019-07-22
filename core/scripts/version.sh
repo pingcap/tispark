@@ -22,16 +22,5 @@ TiSparkGitBranch=`git rev-parse --abbrev-ref HEAD`
 echo '
 package com.pingcap.tispark
 
-import java.io.InputStream
-import java.util.Properties
-
 object TiSparkVersion {
-  val confStream: InputStream = Thread
-    .currentThread()
-    .getContextClassLoader
-    .getResourceAsStream("config.properties")
-  val prop = new Properties()
-  if (confStream != null) {
-    prop.load(confStream)
-  }
-  val version: String = "Release Version: '${TiSparkReleaseVersion}'\\nSupported Spark Version: " + prop.getProperty("spark.supported_version", "spark-2.3") + "\\nGit Commit Hash: '${TiSparkGitHash}'\\nGit Branch: '${TiSparkGitBranch}'\\nUTC Build Time: '${TiSparkBuildTS}'" }' > core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
+  val version: String = "Release Version: '${TiSparkReleaseVersion}'\\nGit Commit Hash: '${TiSparkGitHash}'\\nGit Branch: '${TiSparkGitBranch}'\\nUTC Build Time: '${TiSparkBuildTS}'" }' > core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala

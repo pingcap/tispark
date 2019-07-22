@@ -15,11 +15,19 @@
 
 package com.pingcap.tispark.utils
 
+import java.io.File
 import java.lang.reflect.Method
+import java.net.{URL, URLClassLoader}
 
+import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.UnsafeRow
+import org.apache.spark.sql.catalyst.catalog.{ExternalCatalog, TiSessionCatalog}
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
+import org.apache.spark.sql.catalyst.expressions.{NamedExpression, UnsafeRow}
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
 
@@ -29,7 +37,7 @@ import scala.reflect.ClassTag
  * reflections in future.
  */
 object ReflectionUtil {
-  val spark_version: String = org.apache.spark.SPARK_VERSION
+  private val logger = LoggerFactory.getLogger(getClass.getName)
 
   // In Spark 2.3.0 and 2.3.1 the method declaration is:
   // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
@@ -43,39 +51,40 @@ object ReflectionUtil {
   //      isOrderSensitive: Boolean = false): RDD[U]
   //
   // Hereby we use reflection to support different Spark versions.
-  private val mapPartitionsWithIndexInternal: Method = spark_version match {
-    case "2.3.0" | "2.3.1" =>
-      classOf[RDD[InternalRow]].getDeclaredMethod(
-        "mapPartitionsWithIndexInternal",
-        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
-        classOf[Boolean],
-        classOf[ClassTag[UnsafeRow]]
-      )
-    case _ =>
-      // Spark version >= 2.3.2
-      try {
+  private val mapPartitionsWithIndexInternal: Method =
+    TiSparkInfo.SPARK_VERSION match {
+      case "2.3.0" | "2.3.1" =>
         classOf[RDD[InternalRow]].getDeclaredMethod(
           "mapPartitionsWithIndexInternal",
           classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
           classOf[Boolean],
-          classOf[Boolean],
           classOf[ClassTag[UnsafeRow]]
         )
-      } catch {
-        case _: Throwable =>
-          throw ScalaReflectionException(
-            "Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
-              .format(spark_version)
+      case _ =>
+        // Spark version >= 2.3.2
+        try {
+          classOf[RDD[InternalRow]].getDeclaredMethod(
+            "mapPartitionsWithIndexInternal",
+            classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+            classOf[Boolean],
+            classOf[Boolean],
+            classOf[ClassTag[UnsafeRow]]
           )
-      }
-  }
+        } catch {
+          case _: Throwable =>
+            throw ScalaReflectionException(
+              "Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
+                .format(TiSparkInfo.SPARK_VERSION)
+            )
+        }
+    }
 
   case class ReflectionMapPartitionWithIndexInternal(
     rdd: RDD[InternalRow],
     internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
   ) {
     def invoke(): RDD[InternalRow] =
-      spark_version match {
+      TiSparkInfo.SPARK_VERSION match {
         case "2.3.0" | "2.3.1" =>
           mapPartitionsWithIndexInternal
             .invoke(
@@ -96,5 +105,61 @@ object ReflectionUtil {
             )
             .asInstanceOf[RDD[InternalRow]]
       }
+  }
+
+  lazy val classLoader: URLClassLoader = {
+    val tisparkClassUrl = this.getClass.getProtectionDomain.getCodeSource.getLocation
+    val tisparkClassPath = new File(tisparkClassUrl.getFile)
+    logger.info(s"tispark class url: ${tisparkClassUrl.toString}")
+
+    val sparkWrapperClassURL: URL = if (tisparkClassPath.isDirectory) {
+      val classDir = new File(
+        s"${tisparkClassPath.getAbsolutePath}/../../../spark-wrapper/spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/target/classes/"
+      )
+      if (!classDir.exists()) {
+        throw new Exception(
+          "cannot find spark wrapper classes! please compile the spark-wrapper project first!"
+        )
+      }
+      classDir.toURI.toURL
+    } else {
+      new URL(
+        s"jar:$tisparkClassUrl!/resources/spark-wrapper-spark-${TiSparkInfo.SPARK_MAJOR_VERSION}/"
+      )
+    }
+    logger.info(s"spark wrapper class url: ${sparkWrapperClassURL.toString}")
+
+    new URLClassLoader(Array(sparkWrapperClassURL), this.getClass.getClassLoader)
+  }
+
+  def newTiDirectExternalCatalog(tiContext: TiContext): ExternalCatalog = {
+    val clazz =
+      classLoader.loadClass("org.apache.spark.sql.catalyst.catalog.TiDirectExternalCatalog")
+    clazz
+      .getDeclaredConstructor(classOf[TiContext])
+      .newInstance(tiContext)
+      .asInstanceOf[ExternalCatalog]
+  }
+
+  def newTiCompositeSessionCatalog(tiContext: TiContext): TiSessionCatalog = {
+    val clazz =
+      classLoader.loadClass("org.apache.spark.sql.catalyst.catalog.TiCompositeSessionCatalog")
+    clazz
+      .getDeclaredConstructor(classOf[TiContext])
+      .newInstance(tiContext)
+      .asInstanceOf[TiSessionCatalog]
+  }
+
+  def callTiAggregationImplUnapply(
+    plan: LogicalPlan
+  ): Option[(Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)] = {
+    val clazz =
+      classLoader.loadClass("org.apache.spark.sql.TiAggregationImpl")
+    clazz
+      .getDeclaredMethod("unapply", classOf[LogicalPlan])
+      .invoke(null, plan)
+      .asInstanceOf[Option[
+        (Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)
+      ]]
   }
 }
