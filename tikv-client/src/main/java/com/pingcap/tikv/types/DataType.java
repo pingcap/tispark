@@ -164,6 +164,9 @@ public abstract class DataType implements Serializable {
       case TypeLong:
         return MaxUint32;
       case TypeLonglong:
+      case TypeBit:
+      case TypeEnum:
+      case TypeSet:
         return MaxUint64;
       default:
         throw new TypeException("Unsigned Upper Bound: Input Type is not a mysql UNSIGNED type");
