@@ -90,8 +90,6 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     for (i <- 0 until tiTableInfo.getColumns.size()) {
       println(s"$i -> ${tiTableInfo.getColumn(i).getType}")
     }
-
-    // compareTiDBSelectWithJDBC_V2()
   }
 
   //todo support TIME/YEAR/BINARY/SET
