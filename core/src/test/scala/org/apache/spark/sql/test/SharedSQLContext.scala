@@ -241,7 +241,7 @@ object SharedSQLContext extends Logging {
       val source = Source.fromFile(path)
       val queryString = source.mkString
       source.close()
-      _tidbConnection.setCatalog("tispark_test")
+      _tidbConnection.setCatalog("mysql")
       _statement = _tidbConnection.createStatement()
       _statement.execute(queryString)
       logger.info(s"Load $fullFileName successfully.")
