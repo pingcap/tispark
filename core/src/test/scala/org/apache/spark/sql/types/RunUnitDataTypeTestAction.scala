@@ -26,7 +26,6 @@ trait RunUnitDataTypeTestAction extends UnitDataTypeTestAction {
   def startUnsignedTest(typeName: String): Unit
 
   def test(): Unit = {
-    println(dataTypes)
     for (dataType <- dataTypes) {
       val typeName = getTypeName(dataType)
       startTest(typeName)

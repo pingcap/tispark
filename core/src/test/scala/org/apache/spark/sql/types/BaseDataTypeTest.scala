@@ -26,7 +26,7 @@ class BaseDataTypeTest extends BaseTiSparkTest with RunUnitDataTypeTestAction {
   val dataTypes: List[ReflectedDataType] = List(TINYINT)
   val unsignedDataTypes: List[ReflectedDataType] = List(TINYINT)
   val dataTypeTestDir: String = "dataType-test"
-  val database: String = "data_type_test"
+  val database: String = "data_type_test_example"
   val testDesc: String = "Base test for data types"
 
   def startTest(typeName: String): Unit = {

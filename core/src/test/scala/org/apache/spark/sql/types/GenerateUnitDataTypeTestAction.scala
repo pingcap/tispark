@@ -55,7 +55,6 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestAction with BaseTes
   }
 
   def init(): Unit = {
-    println(dataTypes)
     for (dataType <- dataTypes) {
       val typeName = getTypeName(dataType)
       val len = genLen(dataType)
