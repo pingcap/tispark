@@ -19,118 +19,35 @@ package org.apache.spark.sql.types
 
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.test.SharedSQLContext
-import org.apache.spark.sql.test.generator.{Data, Index, Schema}
-import org.apache.spark.sql.test.generator.DataType._
-import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isVarString, randomDataGenerator, schemaGenerator}
+import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, TINYINT}
 
-import scala.util.Random
-
-class BaseDataTypeTest extends BaseTiSparkTest {
+class BaseDataTypeTest extends BaseTiSparkTest with RunUnitDataTypeTestAction {
 
   val dataTypes: List[ReflectedDataType] = List(TINYINT)
   val unsignedDataTypes: List[ReflectedDataType] = List(TINYINT)
-  val dataTypeTestDir = "dataType-test"
-  val database = "data_type_test"
-  val testDesc = "Base test for data types"
-  val r: Random = new Random(1234)
-  private val extraDesc = "unsigned"
+  val dataTypeTestDir: String = "dataType-test"
+  val database: String = "data_type_test"
+  val testDesc: String = "Base test for data types"
 
-  def simpleSelect(dbName: String, dataType: String): Unit = {
-    setCurrentDatabase(dbName)
-    val tblName = getTableName(dataType)
-    val query = s"select ${getColumnName(dataType)} from $tblName"
-    runTest(query)
-  }
-
-  def simpleSelect(dbName: String, dataType: String, desc: String): Unit = {
-    setCurrentDatabase(dbName)
-    val tblName = getTableName(dataType, desc)
-    val query = s"select ${getColumnName(dataType)} from $tblName"
-    runTest(query)
-  }
-
-  def getTableName(dataType: String): String = s"test_$dataType"
-
-  def getTableName(dataType: String, desc: String): String = s"test_${desc}_$dataType"
-
-  def getColumnName(dataType: String): String = s"col_$dataType"
-
-  def getIndexName(dataType: String): String = s"idx_$dataType"
-
-  def genSchema(dataType: ReflectedDataType,
-                tableName: String,
-                len: String,
-                desc: String): Schema = {
-    schemaGenerator(
-      database,
-      tableName,
-      r,
-      List(
-        (dataType, len, desc)
-      ),
-      List.empty[Index]
-    )
-  }
-
-  def genData(schema: Schema): Data = randomDataGenerator(schema, 20, dataTypeTestDir, r)
-
-  def genLen(dataType: ReflectedDataType): String = {
-    val baseType = getBaseType(dataType)
-    val length = getLength(baseType)
-    logger.warn(dataType + " " + length)
-    dataType match {
-      case DECIMAL                       => s"$length,${getDecimal(baseType)}"
-      case _ if isVarString(dataType)    => s"$length"
-      case _ if isCharOrBinary(dataType) => "10"
-      case _                             => ""
+  def startTest(typeName: String): Unit = {
+    test(s"${preDescription}Test $typeName - $testDesc") {
+      simpleSelect(database, typeName)
     }
   }
 
-  def init(): Unit = {
-    for (dataType <- dataTypes) {
-      val typeName = getTypeName(dataType)
-      val len = genLen(dataType)
-      val tableName = getTableName(typeName)
-      val schema = genSchema(dataType, tableName, len, "")
-      val data = genData(schema)
-      data.save()
-    }
-    for (dataType <- unsignedDataTypes) {
-      val typeName = getTypeName(dataType)
-      val len = genLen(dataType)
-      val tableName = getTableName(typeName, extraDesc)
-      val schema = genSchema(dataType, tableName, len, extraDesc)
-      val data = genData(schema)
-      data.save()
+  def startUnsignedTest(typeName: String): Unit = {
+    test(s"${preDescription}Test $extraDesc $typeName - $testDesc") {
+      simpleSelect(database, typeName, extraDesc)
     }
   }
 
-  def run(): Unit = {
+  def check(): Unit = {
     SharedSQLContext.init()
     if (generateData) {
-      logger.info("generating data")
-      init()
-    }
-    val preDescription = if (generateData) "Generating Data for " else ""
-    for (dataType <- dataTypes) {
-      val typeName = getTypeName(dataType)
-      test(s"${preDescription}Test $typeName - $testDesc") {
-        if (generateData) {
-          loadSQLFile(dataTypeTestDir, getTableName(typeName))
-        } else {
-          simpleSelect(database, typeName)
-        }
-      }
-    }
-    for (dataType <- unsignedDataTypes) {
-      val typeName = getTypeName(dataType)
-      test(s"${preDescription}Test $extraDesc $typeName - $testDesc") {
-        if (generateData) {
-          loadSQLFile(dataTypeTestDir, getTableName(typeName, extraDesc))
-        } else {
-          simpleSelect(database, typeName, extraDesc)
-        }
-      }
+      BaseGenerateDataType(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc).test()
     }
   }
+
+  check()
+  test()
 }

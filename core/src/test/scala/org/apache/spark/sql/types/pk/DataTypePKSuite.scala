@@ -15,14 +15,13 @@
 
 package org.apache.spark.sql.types.pk
 
+import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
-import org.apache.spark.sql.test.generator._
-import org.apache.spark.sql.types.DataTypeNormalSuite
+import org.apache.spark.sql.types.{GeneratePKDataType, RunUnitDataTypeTestAction}
 
-import scala.util.Random
-
-class DataTypePKSuite extends DataTypeNormalSuite {
+class DataTypePKSuite extends BaseTiSparkTest with RunUnitDataTypeTestAction {
 
   override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: stringType
   override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
@@ -30,29 +29,25 @@ class DataTypePKSuite extends DataTypeNormalSuite {
   override val database = "data_type_test_pk"
   override val testDesc = "Test for single PK column data types (and unsigned types)"
 
-  private def genIndex(dataType: ReflectedDataType, r: Random, len: String): List[Index] = {
-    if (isStringType(dataType)) {
-      List(PrimaryKey(List(PrefixColumn(1, r.nextInt(4) + 2))))
-    } else {
-      List(PrimaryKey(List(DefaultColumn(1))))
+  def startTest(typeName: String): Unit = {
+    test(s"${preDescription}Test $typeName - $testDesc") {
+      simpleSelect(database, typeName)
     }
   }
 
-  override def genSchema(dataType: ReflectedDataType,
-                         tableName: String,
-                         len: String,
-                         desc: String): Schema = {
-    val index = genIndex(dataType, r, len)
-    schemaGenerator(
-      database,
-      tableName,
-      r,
-      List(
-        (dataType, len, desc)
-      ),
-      index
-    )
+  def startUnsignedTest(typeName: String): Unit = {
+    test(s"${preDescription}Test $extraDesc $typeName - $testDesc") {
+      simpleSelect(database, typeName, extraDesc)
+    }
   }
 
-  run()
+  def check(): Unit = {
+    SharedSQLContext.init()
+    if (generateData) {
+      GeneratePKDataType(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc).test()
+    }
+  }
+
+  check()
+  test()
 }

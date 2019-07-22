@@ -15,14 +15,38 @@
 
 package org.apache.spark.sql.types
 
+import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
-class DataTypeNormalSuite extends BaseDataTypeTest {
+class DataTypeNormalSuite extends BaseTiSparkTest with RunUnitDataTypeTestAction {
 
   override val dataTypes: List[ReflectedDataType] = numeric
   override val unsignedDataTypes: List[ReflectedDataType] = numeric
   override val dataTypeTestDir = "dataType-test"
   override val database = "data_type_test"
   override val testDesc = "Test for single column data types (and unsigned types)"
+
+  def startTest(typeName: String): Unit = {
+    test(s"${preDescription}Test $typeName - $testDesc") {
+      simpleSelect(database, typeName)
+    }
+  }
+
+  def startUnsignedTest(typeName: String): Unit = {
+    test(s"${preDescription}Test $extraDesc $typeName - $testDesc") {
+      simpleSelect(database, typeName, extraDesc)
+    }
+  }
+
+  def check(): Unit = {
+    SharedSQLContext.init()
+    if (generateData) {
+      BaseGenerateDataType(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc).test()
+    }
+  }
+
+  check()
+  test()
 }

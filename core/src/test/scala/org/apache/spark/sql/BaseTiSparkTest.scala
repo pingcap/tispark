@@ -29,7 +29,7 @@ import org.apache.spark.sql.test.SharedSQLContext
 
 import scala.collection.mutable.ArrayBuffer
 
-class BaseTiSparkTest extends QueryTest with SharedSQLContext {
+class BaseTiSparkTest extends QueryTest with SharedSQLContext with BaseTestGenerationSpec {
 
   protected var tidbStmt: Statement = _
 
@@ -426,6 +426,22 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     df.explain
     df.show
     df.collect.foreach(println)
+  }
+
+  def simpleSelect(dbName: String, dataType: String): Unit = {
+    spark.sql("show databases").show(false)
+    setCurrentDatabase(dbName)
+    val tblName = getTableName(dataType)
+    val query = s"select ${getColumnName(dataType)} from $tblName"
+    runTest(query)
+  }
+
+  def simpleSelect(dbName: String, dataType: String, desc: String): Unit = {
+    spark.sql("show databases").show(false)
+    setCurrentDatabase(dbName)
+    val tblName = getTableName(dataType, desc)
+    val query = s"select ${getColumnName(dataType)} from $tblName"
+    runTest(query)
   }
 
   protected def time[A](f: => A): A = {

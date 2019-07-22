@@ -62,7 +62,8 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
     case _ => s"\'$value\'"
   }
 
-  private val sql = s"drop table if exists `$database`.`$table`;\n" +
+  private val sql = s"create database if not exists `$database`;\n" +
+    s"drop table if exists `$database`.`$table`;\n" +
     s"${schema.toString};\n" +
     s"insert into `$database`.`$table` values $text;"
 
@@ -70,7 +71,7 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
     import java.io._
     // FileWriter
     val path = getClass.getResource("/")
-    val file = new File(path.getPath + "/../../src/test/resources/" + fileName)
+    val file = new File(path.getPath + fileName)
     file.getParentFile.mkdirs()
     file.createNewFile()
     val bw = new BufferedWriter(new FileWriter(file))

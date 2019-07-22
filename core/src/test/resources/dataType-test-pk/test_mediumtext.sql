@@ -1,6 +1,0 @@
-drop table if exists `data_type_test_pk`.`test_mediumtext`;
-CREATE TABLE `data_type_test_pk`.`test_mediumtext` (
-  `col_mediumtext` mediumtext not null,
-  PRIMARY KEY (`col_mediumtext`(3))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
-insert into `data_type_test_pk`.`test_mediumtext` values ('4OiN8T1mpm7f8lB1zen65J6elBGU'),('Ns6QuiGLy9dOH'),('y579WC1l83Bh'),('g30j0lAd7K82yq1tCzxRj9mzHYzw5Rb'),('u6fBpg49MlqpQpKS0UZTtrZIKqJSg2AHiy9jwRLoIr'),('HYUzHgjuwCsYzoKXDKi4VR2pJVAxIqCmhNJiv9d7a'),('fwXygtEqfIosnx3mWBvtuU'),('zX2rnaBDzAL7XU9T3gOGEmm0n4xd'),('zWE1Fb0v92sv7jokh3CkGWL0FuUzCFwx5gjFNTo3qBM'),('WoMushbEm2cM4UNbRRkY3AVWMaDuBYbsooHucDmed2TbSEa'),('vTB4u7raPqxBpdnwlDZMG4CDH6Avi0elDb01NBei0nkgYn'),('y9B090GQPOUdnzzZusxEySeqxpsvQI4KAnyvvqe0Rn'),('Z3pZdbw4AOe47NylnTJJSNFdizRrUiLPfqo7k38Ke10rr1n1H'),('4a5CCEX1yKTFCSDLuIk2v1OH2pvrYrFZUEp1JLgGhaDtTIR41'),('eZ3f9PGcTyr'),('VHVvwGawMFp56tnV5gDU7BYyOf9PZOKJO5mt9ACJxcw'),('PKkTO7zfvRP0GW8hWKhhMaMgQ9cmJy'),('Nyb1CbsOyMy7vnHFUCbePvNt2JqjNyrxsR'),('rAMxpI875tvJdbwMRkw'),('sOh0TNomKIbWIV35IrYjK7A3bI9UEcqQ7pscc');

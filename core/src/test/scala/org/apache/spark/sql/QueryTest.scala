@@ -70,7 +70,7 @@ abstract class QueryTest extends SparkFunSuite {
       case d: Number               => d.doubleValue()
       case d: String               => BigDecimal(d).doubleValue()
       case d: Boolean              => if (d) 1d else 0d
-      case _                       => 0.0
+      case _                       => Double.NaN
     }
 
     def toInteger(x: Any): Long = x match {
@@ -155,6 +155,7 @@ abstract class QueryTest extends SparkFunSuite {
 
     def toComparableString(row: List[Any]): String = {
       row.map {
+        case null           => "null"
         case a: Array[Byte] => a.mkString("[", ",", "]")
         case s              => s.toString
       }.mkString

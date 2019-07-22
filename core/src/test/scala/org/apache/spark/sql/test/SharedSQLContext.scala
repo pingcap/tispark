@@ -236,11 +236,11 @@ object SharedSQLContext extends Logging {
   protected def loadSQLFile(directory: String, file: String): Unit = {
     val fullFileName = s"$directory/$file.sql"
     try {
-      val queryString = resourceToString(
-        fullFileName,
-        classLoader = Thread.currentThread().getContextClassLoader
-      )
-
+      val path = getClass.getResource("/" + fullFileName).getPath
+      import scala.io.Source
+      val source = Source.fromFile(path)
+      val queryString = source.mkString
+      source.close()
       _tidbConnection.setCatalog("tispark_test")
       _statement = _tidbConnection.createStatement()
       _statement.execute(queryString)
