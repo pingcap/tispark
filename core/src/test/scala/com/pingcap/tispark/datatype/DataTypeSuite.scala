@@ -8,10 +8,7 @@ import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
-class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
-
-  override protected val database: String = "test"
-  override protected val dbtable = s"$database.test_data_type"
+class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
 
   test("Test Read different types") {
 
@@ -87,13 +84,11 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type") {
                   |'a,b'
                   |)
        """.stripMargin)
-    val tiTableInfo = ti.tiSession.getCatalog.getTable(s"$dbPrefix$database", table)
+
+    val tiTableInfo = getTableInfo(database, table)
     for (i <- 0 until tiTableInfo.getColumns.size()) {
       println(s"$i -> ${tiTableInfo.getColumn(i).getType}")
     }
-    assert(tiTableInfo != null)
-
-    // compareTiDBSelectWithJDBC_V2()
   }
 
   //todo support TIME/YEAR/BINARY/SET

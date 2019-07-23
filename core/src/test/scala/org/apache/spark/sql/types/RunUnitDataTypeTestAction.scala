@@ -15,16 +15,24 @@
  *
  */
 
-package org.apache.spark.sql.test
+package org.apache.spark.sql.types
 
-object TestConstants {
-  val TiDB_ADDRESS = "tidb.addr"
-  val TiDB_PORT = "tidb.port"
-  val TiDB_USER = "tidb.user"
-  val TiDB_PASSWORD = "tidb.password"
-  val TPCH_DB_NAME = "tpch.db"
-  val TPCDS_DB_NAME = "tpcds.db"
-  val SHOULD_LOAD_DATA = "test.data.load"
-  val SHOULD_GENERATE_DATA = "test.data.generate"
-  val SHOULD_SKIP_TEST = "test.skip"
+import org.apache.spark.sql.test.generator.DataType.getTypeName
+
+trait RunUnitDataTypeTestAction extends UnitDataTypeTestAction {
+
+  def startTest(typeName: String): Unit
+
+  def startUnsignedTest(typeName: String): Unit
+
+  def test(): Unit = {
+    for (dataType <- dataTypes) {
+      val typeName = getTypeName(dataType)
+      startTest(typeName)
+    }
+    for (dataType <- unsignedDataTypes) {
+      val typeName = getTypeName(dataType)
+      startUnsignedTest(typeName)
+    }
+  }
 }

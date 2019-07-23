@@ -31,6 +31,7 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 // https://dev.mysql.com/doc/refman/8.0/en/time.html
 
 public class TimeType extends DataType {
+  public static final TimeType TIME = new TimeType(MySQLType.TypeDuration);
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeDuration};
   protected static final long NANOSECOND = 1;
   protected static final long MICROSECOND = 1000 * NANOSECOND;

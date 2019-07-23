@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 public class JsonType extends DataType {
 
+  public static final JsonType JSON = new JsonType(MySQLType.TypeJSON);
   private static final int KEY_ENTRY_LENGTH = 6;
   private static final int VALUE_ENTRY_SIZE = 5;
 

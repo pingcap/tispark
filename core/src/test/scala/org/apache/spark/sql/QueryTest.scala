@@ -21,6 +21,7 @@ import java.sql.{Date, Timestamp}
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
+import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
@@ -29,7 +30,7 @@ import org.apache.spark.sql.types.StructField
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
-abstract class QueryTest extends PlanTest {
+abstract class QueryTest extends SparkFunSuite {
 
   protected def spark: SparkSession
 
@@ -61,6 +62,7 @@ abstract class QueryTest extends PlanTest {
   protected def compResult(lhs: List[List[Any]],
                            rhs: List[List[Any]],
                            isOrdered: Boolean = true): Boolean = {
+    // If cannot be converted to double, it is also not comparable.
     def toDouble(x: Any): Double = x match {
       case d: Double               => d
       case d: Float                => d.toDouble
@@ -69,7 +71,7 @@ abstract class QueryTest extends PlanTest {
       case d: Number               => d.doubleValue()
       case d: String               => BigDecimal(d).doubleValue()
       case d: Boolean              => if (d) 1d else 0d
-      case _                       => 0.0
+      case _                       => Double.NaN
     }
 
     def toInteger(x: Any): Long = x match {
@@ -152,14 +154,25 @@ abstract class QueryTest extends PlanTest {
         case (row, i) => !compRow(row, query(i))
       }
 
+    def toComparableString(row: List[Any]): String = {
+      row.map {
+        case null           => "null"
+        case a: Array[Byte] => a.mkString("[", ",", "]")
+        case s              => s.toString
+      }.mkString
+    }
+
+    def sortComp(l: List[Any], r: List[Any]): Boolean =
+      toComparableString(l).compareTo(toComparableString(r)) < 0
+
     if (lhs != null && rhs != null) {
       try {
         if (lhs.length != rhs.length) {
           false
         } else if (!isOrdered) {
           comp(
-            lhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0),
-            rhs.sortWith((_1, _2) => _1.mkString("").compare(_2.mkString("")) < 0)
+            lhs.sortWith((_1, _2) => sortComp(_1, _2)),
+            rhs.sortWith((_1, _2) => sortComp(_1, _2))
           )
         } else {
           implicit object NullableListOrdering extends Ordering[List[Any]] {

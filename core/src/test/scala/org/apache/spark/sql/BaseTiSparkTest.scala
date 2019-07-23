@@ -19,9 +19,9 @@ package org.apache.spark.sql
 
 import java.sql.Statement
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.pingcap.tikv.TiDBJDBCClient
 import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tikv.meta.TiTableInfo
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
@@ -29,7 +29,7 @@ import org.apache.spark.sql.test.SharedSQLContext
 
 import scala.collection.mutable.ArrayBuffer
 
-class BaseTiSparkTest extends QueryTest with SharedSQLContext {
+class BaseTiSparkTest extends QueryTest with SharedSQLContext with BaseTestGenerationSpec {
 
   protected var tidbStmt: Statement = _
 
@@ -75,6 +75,13 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       retSet += row.toList
     }
     retSet.toList
+  }
+
+  protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {
+    ti.meta.getTable(s"$dbPrefix$databaseName", tableName) match {
+      case Some(table) => table
+      case None        => fail(s"table info $databaseName.$tableName not found")
+    }
   }
 
   protected def getTableColumnNames(tableName: String): List[String] = {
@@ -422,6 +429,22 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     df.explain
     df.show
     df.collect.foreach(println)
+  }
+
+  def simpleSelect(dbName: String, dataType: String): Unit = {
+    spark.sql("show databases").show(false)
+    setCurrentDatabase(dbName)
+    val tblName = getTableName(dataType)
+    val query = s"select ${getColumnName(dataType)} from $tblName"
+    runTest(query)
+  }
+
+  def simpleSelect(dbName: String, dataType: String, desc: String): Unit = {
+    spark.sql("show databases").show(false)
+    setCurrentDatabase(dbName)
+    val tblName = getTableName(dataType, desc)
+    val query = s"select ${getColumnName(dataType)} from $tblName"
+    runTest(query)
   }
 
   protected def time[A](f: => A): A = {

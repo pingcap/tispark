@@ -23,7 +23,7 @@ public class RegionException extends TiKVException {
   private final Error regionErr;
 
   public RegionException(Error regionErr) {
-    super("Region Exception occurred" + regionErr.getMessage());
+    super("Region Exception occurred - " + regionErr.getMessage());
     this.regionErr = regionErr;
   }
 

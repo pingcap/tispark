@@ -75,6 +75,9 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def refreshConnections(isHiveEnabled: Boolean): Unit =
     SharedSQLContext.refreshConnections(isHiveEnabled)
 
+  protected def loadSQLFile(directory: String, file: String): Unit =
+    SharedSQLContext.loadSQLFile(directory, file)
+
   protected def stop(): Unit = SharedSQLContext.stop()
 
   protected def paramConf(): Properties = SharedSQLContext._tidbConf
@@ -92,6 +95,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def tidbPort: Int = SharedSQLContext.tidbPort
 
   protected def pdAddresses: String = SharedSQLContext.pdAddresses
+
+  protected def generateData: Boolean = SharedSQLContext.generateData
 
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
@@ -152,6 +157,7 @@ object SharedSQLContext extends Logging {
   protected var tidbAddr: String = _
   protected var tidbPort: Int = _
   protected var pdAddresses: String = _
+  protected var generateData: Boolean = _
 
   protected implicit def spark: SparkSession = _spark
 
@@ -227,33 +233,59 @@ object SharedSQLContext extends Logging {
     logger.info("Analyzing table finished.")
   }
 
-  private def initializeTiDB(forceNotLoad: Boolean = false): Unit =
+  protected def loadSQLFile(directory: String, file: String): Unit = {
+    val fullFileName = s"$directory/$file.sql"
+    try {
+      val path = getClass.getResource("/" + fullFileName).getPath
+      import scala.io.Source
+      val source = Source.fromFile(path)
+      val queryString = source.mkString
+      source.close()
+      _tidbConnection.setCatalog("mysql")
+      _statement = _tidbConnection.createStatement()
+      _statement.execute(queryString)
+      logger.info(s"Load $fullFileName successfully.")
+    } catch {
+      case e: Exception =>
+        logger.error(
+          s"Load $fullFileName failed. Maybe the file does not exist or has syntax error."
+        )
+        throw e
+    }
+  }
+
+  private def initializeJDBCUrl(): Unit = {
+    tidbUser = getOrElse(_tidbConf, TiDB_USER, "root")
+
+    tidbPassword = getOrElse(_tidbConf, TiDB_PASSWORD, "")
+
+    tidbAddr = getOrElse(_tidbConf, TiDB_ADDRESS, "127.0.0.1")
+
+    tidbPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
+
+    _tidbOptions = Map(
+      TiDB_ADDRESS -> tidbAddr,
+      TiDB_PASSWORD -> tidbPassword,
+      TiDB_PORT -> s"$tidbPort",
+      TiDB_USER -> tidbUser,
+      PD_ADDRESSES -> pdAddresses
+    )
+
+    jdbcUrl =
+      s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
+        s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false" +
+        s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10"
+
+    _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
+    _statement = _tidbConnection.createStatement()
+  }
+
+  private def initializeTiDBConnection(forceNotLoad: Boolean = false): Unit =
     if (_tidbConnection == null) {
-      tidbUser = getOrElse(_tidbConf, TiDB_USER, "root")
 
-      tidbPassword = getOrElse(_tidbConf, TiDB_PASSWORD, "")
-
-      tidbAddr = getOrElse(_tidbConf, TiDB_ADDRESS, "127.0.0.1")
-
-      tidbPort = Integer.parseInt(getOrElse(_tidbConf, TiDB_PORT, "4000"))
-
-      _tidbOptions = Map(
-        TiDB_ADDRESS -> tidbAddr,
-        TiDB_PASSWORD -> tidbPassword,
-        TiDB_PORT -> s"$tidbPort",
-        TiDB_USER -> tidbUser,
-        PD_ADDRESSES -> pdAddresses
-      )
+      initializeJDBCUrl()
 
       val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toLowerCase.toBoolean
-
-      jdbcUrl =
-        s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
-          s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false" +
-          s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10"
-
-      _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
-      _statement = _tidbConnection.createStatement()
 
       if (loadData) {
         logger.info("load data is enabled")
@@ -264,39 +296,21 @@ object SharedSQLContext extends Logging {
       if (loadData && !forceNotLoad) {
         logger.info("Loading TiSparkTestData")
         // Load index test data
-        var queryString = resourceToString(
-          s"tispark-test/IndexTest.sql",
-          classLoader = Thread.currentThread().getContextClassLoader
-        )
-        _statement.execute(queryString)
-        logger.info("Load IndexTest.sql successfully.")
+        loadSQLFile("tispark-test", "IndexTest")
         // Load expression test data
-        queryString = resourceToString(
-          s"tispark-test/TiSparkTest.sql",
-          classLoader = Thread.currentThread().getContextClassLoader
-        )
-        _statement.execute(queryString)
-        logger.info("Load TiSparkTest.sql successfully.")
-        // Load tpch test data
-        queryString = resourceToString(
-          s"tispark-test/TPCHData.sql",
-          classLoader = Thread.currentThread().getContextClassLoader
-        )
-        _statement.execute(queryString)
-        logger.info("Load TPCHData.sql successfully.")
+        loadSQLFile("tispark-test", "TiSparkTest")
+        // Load TPC-H test data
+        loadSQLFile("tispark-test", "TPCHData")
         // Load resolveLock test data
-        queryString = resourceToString(
-          s"resolveLock-test/ddl.sql",
-          classLoader = Thread.currentThread().getContextClassLoader
-        )
-        _statement.execute(queryString)
-        logger.info("Load resolveLock-test.ddl.sql successfully.")
+        loadSQLFile("resolveLock-test", "ddl")
         initStatistics()
       }
     }
 
-  private def initializeConf(isHiveEnabled: Boolean = false,
-                             isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true): Unit =
+  private def initializeSparkConf(
+    isHiveEnabled: Boolean = false,
+    isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true
+  ): Unit =
     if (_tidbConf == null) {
       val confStream = Thread
         .currentThread()
@@ -322,6 +336,12 @@ object SharedSQLContext extends Logging {
 
       _tidbConf = prop
       sparkConf = new SparkConf()
+
+      generateData = getOrElse(_tidbConf, SHOULD_GENERATE_DATA, "true").toLowerCase.toBoolean
+
+      if (generateData) {
+        logger.info("generate data is enabled")
+      }
 
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
         sparkConf.set(PD_ADDRESSES, pdAddresses)
@@ -358,9 +378,9 @@ object SharedSQLContext extends Logging {
   def init(forceNotLoad: Boolean = false,
            isHiveEnabled: Boolean = false,
            isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true): Unit = {
-    initializeConf(isHiveEnabled, isTidbConfigPropertiesInjectedToSparkEnabled)
+    initializeSparkConf(isHiveEnabled, isTidbConfigPropertiesInjectedToSparkEnabled)
     initializeSparkSession()
-    initializeTiDB(forceNotLoad)
+    initializeTiDBConnection(forceNotLoad)
   }
 
   /**
