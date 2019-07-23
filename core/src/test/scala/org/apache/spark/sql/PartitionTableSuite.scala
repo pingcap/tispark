@@ -18,8 +18,8 @@ package org.apache.spark.sql
 import com.pingcap.tikv.meta.TiDAGRequest
 import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 
-class PartitionTableSuite extends BaseTiSparkSuite {
-  def enablePartitionForTiDB() = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
+class PartitionTableSuite extends BaseTiSparkTest {
+  def enablePartitionForTiDB(): Boolean = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 
   test("read from partition table stack overflow") {
     val partSQL = (1 to 1023).map(i => s"PARTITION p$i VALUES LESS THAN ($i)").mkString(",")

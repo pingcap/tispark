@@ -13,14 +13,15 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package org.apache.spark.sql.test.generator
 
-class BaseInitialOnceSuite extends BaseTiSparkTest {
-  private var init = false
+trait Index {
+  val indexColumns: List[IndexColumn]
+  val isPrimaryKey: Boolean = false
+}
 
-  override def beforeAll(): Unit =
-    if (!init) {
-      super.beforeAll()
-      init = true
-    }
+case class Key(indexColumns: List[IndexColumn]) extends Index {}
+
+case class PrimaryKey(indexColumns: List[IndexColumn]) extends Index {
+  override val isPrimaryKey: Boolean = true
 }

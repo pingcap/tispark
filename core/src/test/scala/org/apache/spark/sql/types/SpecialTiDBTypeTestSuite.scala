@@ -1,8 +1,26 @@
-package org.apache.spark.sql
+/*
+ *
+ * Copyright 2017 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package org.apache.spark.sql.types
 
 import com.pingcap.tikv.types.Converter
+import org.apache.spark.sql.BaseTiSparkTest
 
-class TiDBTypeTestSuite extends BaseTiSparkSuite {
+class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
   test("adding time type index test") {
     tidbStmt.execute("drop table if exists t_t")
     tidbStmt.execute("CREATE TABLE `t_t` (`t` time(3), index `idx_t`(t))")
@@ -12,13 +30,13 @@ class TiDBTypeTestSuite extends BaseTiSparkSuite {
     refreshConnections()
     val df = spark.sql("select * from t_t")
     val data = dfData(df, df.schema.fields)
-    assert(data(0)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("18:59:59")))
-    assert(data(1)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("17:59:59")))
-    assert(data(2)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
+    assert(data(0)(0) === Converter.convertStrToDuration("18:59:59"))
+    assert(data(1)(0) === Converter.convertStrToDuration("17:59:59"))
+    assert(data(2)(0) === Converter.convertStrToDuration("12:59:59"))
 
     val where = spark.sql("select * from t_t where t = 46799000000000")
-    val wheredata = dfData(where, where.schema.fields)
-    assert(wheredata(0)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
+    val whereData = dfData(where, where.schema.fields)
+    assert(whereData(0)(0) === Converter.convertStrToDuration("12:59:59"))
   }
 
   test("adding time type") {
@@ -30,13 +48,13 @@ class TiDBTypeTestSuite extends BaseTiSparkSuite {
     refreshConnections()
     val df = spark.sql("select * from t_t")
     val data = dfData(df, df.schema.fields)
-    assert(data(0)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("18:59:59")))
-    assert(data(1)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("17:59:59")))
-    assert(data(2)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
+    assert(data(0)(0) === Converter.convertStrToDuration("18:59:59"))
+    assert(data(1)(0) === Converter.convertStrToDuration("17:59:59"))
+    assert(data(2)(0) === Converter.convertStrToDuration("12:59:59"))
 
     val where = spark.sql("select * from t_t where t = 46799000000000")
-    val wheredata = dfData(where, where.schema.fields)
-    assert(wheredata(0)(0).asInstanceOf[Long].equals(Converter.convertStrToDuration("12:59:59")))
+    val whereData = dfData(where, where.schema.fields)
+    assert(whereData(0)(0) === Converter.convertStrToDuration("12:59:59"))
   }
 
   test("adding year type") {

@@ -18,7 +18,7 @@ package org.apache.spark.sql
 import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
-class IssueTestSuite extends BaseTiSparkSuite {
+class IssueTestSuite extends BaseTiSparkTest {
   test("fix partition table pruning when partdef contains bigint") {
     tidbStmt.execute("DROP TABLE IF EXISTS t")
     tidbStmt.execute(

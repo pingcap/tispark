@@ -1,11 +1,30 @@
+/*
+ *
+ * Copyright 2017 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package org.apache.spark.sql.txn
 
 import java.sql.{DriverManager, SQLException}
-import org.tikv.kvproto.Kvrpcpb.IsolationLevel
-import org.apache.spark.sql.BaseTiSparkSuite
+
+import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.catalyst.expressions.UnsafeRow
 import org.apache.spark.sql.catalyst.util.resourceToString
-import org.apache.spark.sql.test.Utils.getOrElse
 import org.apache.spark.sql.test.TestConstants.{TiDB_PASSWORD, TiDB_USER}
+import org.apache.spark.sql.test.Utils.getOrElse
+import org.tikv.kvproto.Kvrpcpb.IsolationLevel
 
 // TODO: this test is not so useful at all
 // what I do is to construct a very long-running write operation
@@ -16,7 +35,7 @@ import org.apache.spark.sql.test.TestConstants.{TiDB_PASSWORD, TiDB_USER}
 // What makes the resolveLock almost doesn't happen. What I think
 // the most useful way is to implement a mock kv, which delay the time
 // between prewrite and commit which cause the txn to rollback
-class TxnTestSuite extends BaseTiSparkSuite {
+class TxnTestSuite extends BaseTiSparkTest {
   protected final val sumString = resourceToString(
     s"resolveLock-test/sum_account.sql",
     classLoader = Thread.currentThread().getContextClassLoader
@@ -51,20 +70,15 @@ class TxnTestSuite extends BaseTiSparkSuite {
    * @return Unit
    */
   protected def queryTIDBTxn(query: Seq[String], wait: Boolean): Unit = {
-    val jdbcUsername = getOrElse(paramConf(), TiDB_USER, "root")
-
-    val jdbcPassword = getOrElse(paramConf(), TiDB_PASSWORD, "")
-
-    val conn = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+    val conn = DriverManager.getConnection(jdbcUrl)
     try {
       //Assume a valid connection object conn
       conn.setAutoCommit(false)
       val stmt = conn.createStatement()
-      query.foreach {
-        case q: String =>
-          stmt.executeUpdate(q)
-          if (wait)
-            Thread.sleep(2000)
+      query.foreach { q: String =>
+        stmt.executeUpdate(q)
+        if (wait)
+          Thread.sleep(2000)
       }
       conn.commit()
     } catch {
@@ -122,7 +136,7 @@ class TxnTestSuite extends BaseTiSparkSuite {
                       giveString.replace("$1", num).replace("$2", id1),
                       getString.replace("$1", num).replace("$2", id2)
                     )
-                    queryTIDBTxn(queries, true)
+                    queryTIDBTxn(queries, wait = true)
                   }
                 )
               case 2 =>
@@ -149,7 +163,7 @@ class TxnTestSuite extends BaseTiSparkSuite {
 
                         val queries = array.map(_._1) ++ array.map(_._2)
 
-                        queryTIDBTxn(queries, false)
+                        queryTIDBTxn(queries, wait = false)
                       }
                     )
                 }

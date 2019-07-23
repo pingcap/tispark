@@ -17,8 +17,7 @@
 
 package org.apache.spark.sql
 
-import java.sql.Statement
-
+import com.pingcap.tikv.meta.TiTableInfo
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
@@ -26,7 +25,7 @@ import org.apache.spark.sql.test.SharedSQLContext
 
 import scala.collection.mutable.ArrayBuffer
 
-class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
+class BaseTiSparkTest extends QueryTest with SharedSQLContext with BaseTestGenerationSpec {
 
   private val defaultTestDatabases: Seq[String] = Seq("tispark_test")
 
@@ -41,23 +40,11 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     dfData(df, schema)
   }
 
-  protected def queryTiDBViaJDBC(query: String): List[List[Any]] = {
-    val resultSet = callWithRetry(tidbStmt.executeQuery(query))
-    val rsMetaData = resultSet.getMetaData
-    val retSet = ArrayBuffer.empty[List[Any]]
-    val retSchema = ArrayBuffer.empty[String]
-    for (i <- 1 to rsMetaData.getColumnCount) {
-      retSchema += rsMetaData.getColumnTypeName(i)
+  protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {
+    ti.meta.getTable(s"$dbPrefix$databaseName", tableName) match {
+      case Some(table) => table
+      case None        => fail(s"table info $databaseName.$tableName not found")
     }
-    while (resultSet.next()) {
-      val row = ArrayBuffer.empty[Any]
-
-      for (i <- 1 to rsMetaData.getColumnCount) {
-        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
-      }
-      retSet += row.toList
-    }
-    retSet.toList
   }
 
   protected def getTableColumnNames(tableName: String): List[String] = {
@@ -406,4 +393,35 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
         case _ =>
           result.toString
       }
+
+  protected def explainTestAndCollect(sql: String): Unit = {
+    val df = spark.sql(sql)
+    df.explain
+    df.show
+    df.collect.foreach(println)
+  }
+
+  def simpleSelect(dbName: String, dataType: String): Unit = {
+    spark.sql("show databases").show(false)
+    setCurrentDatabase(dbName)
+    val tblName = getTableName(dataType)
+    val query = s"select ${getColumnName(dataType)} from $tblName"
+    runTest(query)
+  }
+
+  def simpleSelect(dbName: String, dataType: String, desc: String): Unit = {
+    spark.sql("show databases").show(false)
+    setCurrentDatabase(dbName)
+    val tblName = getTableName(dataType, desc)
+    val query = s"select ${getColumnName(dataType)} from $tblName"
+    runTest(query)
+  }
+
+  protected def time[A](f: => A): A = {
+    val s = System.currentTimeMillis
+    val ret = f
+    println(s"time: ${(System.currentTimeMillis() - s) / 1e3}s")
+    ret
+  }
+
 }

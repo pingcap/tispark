@@ -15,16 +15,22 @@
  *
  */
 
-package org.apache.spark.sql.test
+package org.apache.spark.sql.types
 
-object TestConstants {
-  val TiDB_ADDRESS = "tidb.addr"
-  val TiDB_PORT = "tidb.port"
-  val TiDB_USER = "tidb.user"
-  val TiDB_PASSWORD = "tidb.password"
-  val TPCH_DB_NAME = "tpch.db"
-  val TPCDS_DB_NAME = "tpcds.db"
-  val SHOULD_LOAD_DATA = "test.data.load"
-  val SHOULD_GENERATE_DATA = "test.data.generate"
-  val SHOULD_SKIP_TEST = "test.skip"
+import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, TINYINT}
+
+import scala.util.Random
+
+trait UnitDataTypeTestAction {
+  val dataTypes: List[ReflectedDataType]
+  val unsignedDataTypes: List[ReflectedDataType]
+  val dataTypeTestDir: String
+  val database: String
+  val testDesc: String
+  // Randomizer for tests
+  val r: Random = new Random(1234)
+  val extraDesc = "unsigned"
+  val preDescription: String = ""
+
+  def test(): Unit
 }

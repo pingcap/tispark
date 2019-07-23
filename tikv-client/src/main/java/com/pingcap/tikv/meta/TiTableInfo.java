@@ -27,7 +27,9 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataTypeFactory;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -37,6 +39,7 @@ public class TiTableInfo implements Serializable {
   private final String charset;
   private final String collate;
   private final List<TiColumnInfo> columns;
+  private final Map<String, TiColumnInfo> columnsMap;
   private final List<TiIndexInfo> indices;
   private final boolean pkIsHandle;
   private final String comment;
@@ -44,9 +47,12 @@ public class TiTableInfo implements Serializable {
   private final long maxColumnId;
   private final long maxIndexId;
   private final long oldSchemaId;
-  private final long columnSize; // estimated column size
+  private final long rowSize; // estimated row size
   private final TiPartitionInfo partitionInfo;
+  private final TiColumnInfo primaryKeyColumn;
   private final TiViewInfo viewInfo;
+  private final long version;
+  private final long updateTimestamp;
 
   @JsonCreator
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -64,14 +70,20 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("max_idx_id") long maxIndexId,
       @JsonProperty("old_schema_id") long oldSchemaId,
       @JsonProperty("partition") TiPartitionInfo partitionInfo,
-      @JsonProperty("view") TiViewInfo viewInfo) {
+      @JsonProperty("view") TiViewInfo viewInfo,
+      @JsonProperty("version") long version,
+      @JsonProperty("update_timestamp") long updateTimestamp) {
     this.id = id;
     this.name = name.getL();
     this.charset = charset;
     this.collate = collate;
     this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
+    this.columnsMap = new HashMap<>();
+    for (TiColumnInfo col : this.columns) {
+      this.columnsMap.put(col.getName(), col);
+    }
     // TODO: Use more precise predication according to types
-    this.columnSize = columns.stream().mapToLong(TiColumnInfo::getSize).sum();
+    this.rowSize = columns.stream().mapToLong(TiColumnInfo::getSize).sum();
     this.pkIsHandle = pkIsHandle;
     this.indices = indices != null ? ImmutableList.copyOf(indices) : ImmutableList.of();
     this.indices.forEach(x -> x.calculateIndexSize(columns));
@@ -82,10 +94,43 @@ public class TiTableInfo implements Serializable {
     this.oldSchemaId = oldSchemaId;
     this.partitionInfo = partitionInfo;
     this.viewInfo = viewInfo;
+    this.version = version;
+    this.updateTimestamp = updateTimestamp;
+
+    TiColumnInfo primaryKey = null;
+    for (TiColumnInfo col : this.columns) {
+      if (col.isPrimaryKey()) {
+        primaryKey = col;
+        break;
+      }
+    }
+    primaryKeyColumn = primaryKey;
   }
 
   public boolean isView() {
     return this.viewInfo != null;
+  }
+
+  // auto increment column must be a primary key column
+  public boolean hasAutoIncrementColumn() {
+    if (primaryKeyColumn != null) {
+      return primaryKeyColumn.isAutoIncrement();
+    }
+    return false;
+  }
+
+  // auto increment column must be a primary key column
+  public TiColumnInfo getAutoIncrementColInfo() {
+    if (hasAutoIncrementColumn()) {
+      return primaryKeyColumn;
+    }
+    return null;
+  }
+
+  public boolean isAutoIncColUnsigned() {
+    TiColumnInfo col = getAutoIncrementColInfo();
+    if (col == null) return false;
+    return col.getType().isUnsigned();
   }
 
   public long getId() {
@@ -108,8 +153,12 @@ public class TiTableInfo implements Serializable {
     return columns;
   }
 
-  public long getColumnSize() {
-    return columnSize;
+  public long getEstimatedRowSizeInByte() {
+    return rowSize;
+  }
+
+  public TiColumnInfo getColumn(String name) {
+    return this.columnsMap.get(name.toLowerCase());
   }
 
   public TiColumnInfo getColumn(int offset) {
@@ -159,9 +208,13 @@ public class TiTableInfo implements Serializable {
         .build();
   }
 
+  public boolean hasPrimaryKey() {
+    return primaryKeyColumn != null;
+  }
+
   // Only Integer Column will be a PK column
   // and there exists only one PK column
-  TiColumnInfo getPrimaryKeyColumn() {
+  public TiColumnInfo getPKIsHandleColumn() {
     if (isPkHandle()) {
       for (TiColumnInfo col : getColumns()) {
         if (col.isPrimaryKey()) {
@@ -172,27 +225,31 @@ public class TiTableInfo implements Serializable {
     return null;
   }
 
+  private TiColumnInfo copyColumn(TiColumnInfo col) {
+    DataType type = col.getType();
+    InternalTypeHolder typeHolder = type.toTypeHolder();
+    typeHolder.setFlag(type.getFlag() & (~DataType.PriKeyFlag));
+    DataType newType = DataTypeFactory.of(typeHolder);
+    return new TiColumnInfo(
+            col.getId(),
+            col.getName(),
+            col.getOffset(),
+            newType,
+            col.getSchemaState(),
+            col.getOriginDefaultValue(),
+            col.getDefaultValue(),
+            col.getDefaultValueBit(),
+            col.getComment(),
+            col.getVersion(),
+            col.getGeneratedExprString())
+        .copyWithoutPrimaryKey();
+  }
+
   public TiTableInfo copyTableWithRowId() {
     if (!isPkHandle()) {
       ImmutableList.Builder<TiColumnInfo> newColumns = ImmutableList.builder();
       for (TiColumnInfo col : getColumns()) {
-        DataType type = col.getType();
-        InternalTypeHolder typeHolder = type.toTypeHolder();
-        typeHolder.setFlag(type.getFlag() & (~DataType.PriKeyFlag));
-        DataType newType = DataTypeFactory.of(typeHolder);
-        TiColumnInfo newCol =
-            new TiColumnInfo(
-                col.getId(),
-                col.getName(),
-                col.getOffset(),
-                newType,
-                col.getSchemaState(),
-                col.getOriginDefaultValue(),
-                col.getDefaultValue(),
-                col.getDefaultValueBit(),
-                col.getComment(),
-                col.getVersion());
-        newColumns.add(newCol.copyWithoutPrimaryKey());
+        newColumns.add(copyColumn(col));
       }
       newColumns.add(TiColumnInfo.getRowIdColumn(getColumns().size()));
       return new TiTableInfo(
@@ -209,7 +266,9 @@ public class TiTableInfo implements Serializable {
           getMaxIndexId(),
           getOldSchemaId(),
           partitionInfo,
-          null);
+          null,
+          version,
+          updateTimestamp);
     } else {
       return this;
     }
@@ -223,5 +282,22 @@ public class TiTableInfo implements Serializable {
   public boolean isPartitionEnabled() {
     if (partitionInfo == null) return false;
     return partitionInfo.isEnable();
+  }
+
+  public boolean hasGeneratedColumn() {
+    for (TiColumnInfo col : getColumns()) {
+      if (col.isGeneratedColumn()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public long getVersion() {
+    return version;
+  }
+
+  public long getUpdateTimestamp() {
+    return updateTimestamp;
   }
 }

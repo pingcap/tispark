@@ -27,28 +27,16 @@ import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
-import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.PrunedPartitionBuilder;
 import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
-import com.pingcap.tikv.meta.TiColumnInfo;
-import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.meta.TiIndexColumn;
-import com.pingcap.tikv.meta.TiIndexInfo;
-import com.pingcap.tikv.meta.TiPartitionDef;
-import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.meta.TiTimestamp;
+import com.pingcap.tikv.meta.*;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.util.Pair;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
@@ -152,7 +140,7 @@ public class TiKVScanAnalyzer {
       }
     }
 
-    TiKVScanPlan(
+    private TiKVScanPlan(
         Map<Long, List<KeyRange>> keyRanges,
         Set<Expression> filters,
         TiIndexInfo index,
@@ -172,7 +160,7 @@ public class TiKVScanAnalyzer {
     private final Map<Long, List<KeyRange>> keyRanges;
     private final Set<Expression> filters;
     private final double cost;
-    private TiIndexInfo index;
+    private final TiIndexInfo index;
     private final boolean isDoubleRead;
     private final double estimatedRowCount;
     private final List<TiPartitionDef> prunedParts;
@@ -248,7 +236,7 @@ public class TiKVScanAnalyzer {
     if (minPlan.isIndexScan()) {
       dagRequest.setIndexInfo(minPlan.getIndex());
       // need to set isDoubleRead to true for dagRequest in case of double read
-      dagRequest.setIsDoubleRead(minPlan.isDoubleRead);
+      dagRequest.setIsDoubleRead(minPlan.isDoubleRead());
     }
 
     dagRequest.setTableInfo(table);
@@ -272,8 +260,6 @@ public class TiKVScanAnalyzer {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
-    MetaResolver.resolve(conditions, table);
-
     TiKVScanPlan.Builder planBuilder = TiKVScanPlan.Builder.newBuilder();
     ScanSpec result = extractConditions(conditions, table, index);
 
@@ -292,7 +278,7 @@ public class TiKVScanAnalyzer {
     }
 
     // table name and columns
-    long tableColSize = table.getColumnSize() + TABLE_PREFIX_SIZE;
+    long tableColSize = table.getEstimatedRowSizeInByte() + TABLE_PREFIX_SIZE;
 
     if (index == null || index.isFakePrimaryKey()) {
       planBuilder
@@ -397,7 +383,7 @@ public class TiKVScanAnalyzer {
   @VisibleForTesting
   private Map<Long, List<KeyRange>> buildIndexScanKeyRangeWithIds(
       List<Long> ids, TiIndexInfo index, List<IndexRange> indexRanges) {
-    Map<Long, List<KeyRange>> idRanes = new HashMap<>();
+    Map<Long, List<KeyRange>> idRanges = new HashMap<>();
     for (long id : ids) {
       List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       for (IndexRange ir : indexRanges) {
@@ -406,9 +392,9 @@ public class TiKVScanAnalyzer {
         ranges.add(indexScanKeyRangeBuilder.compute());
       }
 
-      idRanes.put(id, ranges);
+      idRanges.put(id, ranges);
     }
-    return idRanes;
+    return idRanges;
   }
 
   @VisibleForTesting
@@ -436,6 +422,10 @@ public class TiKVScanAnalyzer {
   // query engine doesn't have to lookup the table again compared with double read.
   boolean isCoveringIndex(
       List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
+    if (columns.isEmpty()) {
+      return false;
+    }
+
     Map<String, TiIndexColumn> colInIndex =
         indexColumns
             .getIndexColumns()

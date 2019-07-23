@@ -59,45 +59,7 @@ object DefaultTableSizeEstimator extends TableSizeEstimator {
    * Returns Pseudo Table Size calculated roughly.
    */
   override def estimatedRowSize(table: TiTableInfo): Long = {
-    // Magic number used for estimating table size
-    val goldenSplitFactor = 0.618
-    val complementFactor = 1 - goldenSplitFactor
-
-    import scala.collection.JavaConversions._
-    table.getColumns
-      .map(_.getType.getType)
-      .map {
-        case TypeTiny       => 1
-        case TypeShort      => 2
-        case TypeInt24      => 3
-        case TypeLong       => 4
-        case TypeLonglong   => 8
-        case TypeFloat      => 4
-        case TypeDouble     => 8
-        case TypeDecimal    => 10
-        case TypeNewDecimal => 10
-        case TypeNull       => 1
-        case TypeTimestamp  => 4
-        case TypeDate       => 3
-        case TypeYear       => 1
-        case TypeDatetime   => 8
-        case TypeDuration   => 3
-        case TypeString     => 255 * goldenSplitFactor
-        case TypeVarchar    => 255 * goldenSplitFactor
-        case TypeVarString  => 255 * goldenSplitFactor
-        case TypeTinyBlob   => 1 << (8 * goldenSplitFactor).toInt
-        case TypeBlob       => 1 << (16 * goldenSplitFactor).toInt
-        case TypeMediumBlob => 1 << (24 * goldenSplitFactor).toInt
-        case TypeLongBlob   => 1 << (32 * goldenSplitFactor).toInt
-        case TypeEnum       => 2
-        case TypeSet        => 8
-        case TypeBit        => 8 * goldenSplitFactor
-        case TypeJSON       => 1 << (10 * goldenSplitFactor).toInt
-        case _ =>
-          complementFactor * Int.MaxValue // for other types we just estimate as complementFactor * Int.MaxValue
-      }
-      .sum
-      .toLong
+    table.getEstimatedRowSizeInByte
   }
 
   /**

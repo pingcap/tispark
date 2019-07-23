@@ -13,14 +13,6 @@
  * limitations under the License.
  */
 
-package org.apache.spark.sql
+package org.apache.spark.sql.test.generator
 
-class BaseInitialOnceSuite extends BaseTiSparkTest {
-  private var init = false
-
-  override def beforeAll(): Unit =
-    if (!init) {
-      super.beforeAll()
-      init = true
-    }
-}
+class TestSQLGenerator {}

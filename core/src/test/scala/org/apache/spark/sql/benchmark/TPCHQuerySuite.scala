@@ -17,12 +17,12 @@
 
 package org.apache.spark.sql.benchmark
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation
 import org.apache.spark.sql.execution.{CoprocessorRDD, DataSourceScanExec}
 
-class TPCHQuerySuite extends BaseTiSparkSuite {
+class TPCHQuerySuite extends BaseTiSparkTest {
   private val tpchQueries = Seq(
     "q1",
     "q2",

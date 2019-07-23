@@ -21,6 +21,7 @@ public class RegionException extends RuntimeException {
   private final Error regionErr;
 
   public RegionException(Error regionErr) {
+    super("Region Exception occurred - " + regionErr.getMessage());
     this.regionErr = regionErr;
   }
 

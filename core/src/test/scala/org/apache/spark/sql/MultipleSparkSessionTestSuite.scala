@@ -15,7 +15,7 @@
 
 package org.apache.spark.sql
 
-class MultipleSparkSessionTestSuite extends BaseTiSparkSuite {
+class MultipleSparkSessionTestSuite extends BaseTiSparkTest {
   test("Test multiple Spark Session register udf") {
     val sparkSession1 = spark
     assert(sparkSession1.sql("select ti_version()").count() === 1)

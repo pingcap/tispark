@@ -1,6 +1,6 @@
 package org.apache.spark.sql
 
-class ViewTestSuite extends BaseTiSparkSuite {
+class ViewTestSuite extends BaseTiSparkTest {
   private val table = "test_view"
 
   test("Test View") {

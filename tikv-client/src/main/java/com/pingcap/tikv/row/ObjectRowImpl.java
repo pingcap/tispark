@@ -17,6 +17,7 @@
 
 package com.pingcap.tikv.row;
 
+import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
 import java.sql.Date;
@@ -175,10 +176,20 @@ public class ObjectRowImpl implements Row {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    for (Object x : values) {
-      builder.append(x);
-      builder.append(",");
+    builder.append("(");
+    for (int i = 0; i < values.length; i++) {
+      if (values[i] instanceof byte[]) {
+        builder.append("[");
+        builder.append(KeyUtils.formatBytes(((byte[]) values[i])));
+        builder.append("]");
+      } else {
+        builder.append(values[i]);
+      }
+      if (i < values.length - 1) {
+        builder.append(",");
+      }
     }
+    builder.append(")");
     return builder.toString();
   }
 }

@@ -23,34 +23,34 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum MySQLType {
-  TypeDecimal(0, 16, 1),
-  TypeTiny(1, 1, 1),
-  TypeShort(2, 2, 1),
-  TypeLong(3, 4, 1),
-  TypeFloat(4, 4, 1),
-  TypeDouble(5, 8, 1),
-  TypeNull(6, 8, 1),
-  TypeTimestamp(7, 32, 1),
-  TypeLonglong(8, 8, 1),
-  TypeInt24(9, 3, 1),
-  TypeDate(10, 3, 1),
-  TypeDuration(11, 8, 1),
-  TypeDatetime(12, 8, 1),
-  TypeYear(13, 8, 1),
-  TypeNewDate(14, 8, 1),
-  TypeVarchar(15, 255, 2),
-  TypeBit(16, 1, 1),
-  TypeJSON(0xf5, 1024, 1),
-  TypeNewDecimal(0xf6, 32, 1),
-  TypeEnum(0xf7, 8, 1),
-  TypeSet(0xf8, 8, 1),
-  TypeTinyBlob(0xf9, 255, 2),
-  TypeMediumBlob(0xfa, 21777215, 3),
-  TypeLongBlob(0xfb, 4294967295L, 4),
-  TypeBlob(0xfc, 65535, 2),
-  TypeVarString(0xfd, 255, 1),
-  TypeString(0xfe, 255, 1),
-  TypeGeometry(0xff, 1024, 1);
+  TypeDecimal(0, 16, 1, 11),
+  TypeTiny(1, 1, 1, 4),
+  TypeShort(2, 2, 1, 6),
+  TypeLong(3, 4, 1, 11),
+  TypeFloat(4, 4, 1, -1),
+  TypeDouble(5, 8, 1, -1),
+  TypeNull(6, 8, 1, -1),
+  TypeTimestamp(7, 32, 1, -1),
+  TypeLonglong(8, 8, 1, 20),
+  TypeInt24(9, 3, 1, 9),
+  TypeDate(10, 3, 1, -1),
+  TypeDuration(11, 8, 1, -1),
+  TypeDatetime(12, 8, 1, -1),
+  TypeYear(13, 8, 1, 4),
+  TypeNewDate(14, 8, 1, -1),
+  TypeVarchar(15, 255, 2, -1),
+  TypeBit(16, 1, 1, 1),
+  TypeJSON(0xf5, 1024, 1, -1),
+  TypeNewDecimal(0xf6, 32, 1, 11),
+  TypeEnum(0xf7, 8, 1, -1),
+  TypeSet(0xf8, 8, 1, -1),
+  TypeTinyBlob(0xf9, 255, 2, -1),
+  TypeMediumBlob(0xfa, 21777215, 3, -1),
+  TypeLongBlob(0xfb, 4294967295L, 4, -1),
+  TypeBlob(0xfc, 65535, 2, -1),
+  TypeVarString(0xfd, 255, 1, -1),
+  TypeString(0xfe, 255, 1, 1),
+  TypeGeometry(0xff, 1024, 1, -1);
 
   private static final Map<Integer, MySQLType> typeMap = new HashMap<>();
   private static final Map<Integer, Long> sizeMap = new HashMap<>();
@@ -64,14 +64,16 @@ public enum MySQLType {
     }
   }
 
-  private int typeCode;
-  private long defaultSize;
-  private int prefixSize;
+  private final int typeCode;
+  private final long defaultSize;
+  private final int prefixSize;
+  private final int defaultLength;
 
-  MySQLType(int tp, long sz, int lengthSz) {
+  MySQLType(int tp, long sz, int lengthSz, int M) {
     typeCode = tp;
     defaultSize = sz;
     prefixSize = lengthSz;
+    defaultLength = M;
   }
 
   public int getTypeCode() {
@@ -84,6 +86,10 @@ public enum MySQLType {
 
   public long getPrefixSize() {
     return prefixSize;
+  }
+
+  public int getDefaultLength() {
+    return defaultLength;
   }
 
   public static MySQLType fromTypeCode(int typeCode) {

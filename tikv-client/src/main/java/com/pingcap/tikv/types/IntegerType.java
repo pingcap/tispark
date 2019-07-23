@@ -35,6 +35,7 @@ public class IntegerType extends DataType {
   public static final IntegerType INT = new IntegerType(MySQLType.TypeLong);
   public static final IntegerType BIGINT = new IntegerType(MySQLType.TypeLonglong);
   public static final IntegerType BOOLEAN = TINYINT;
+  public static final IntegerType YEAR = new IntegerType(MySQLType.TypeYear);
 
   public static final IntegerType ROW_ID_TYPE =
       new IntegerType(MySQLType.TypeLonglong, PriKeyFlag, 20, 0);

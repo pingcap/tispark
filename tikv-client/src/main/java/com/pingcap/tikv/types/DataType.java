@@ -242,6 +242,10 @@ public abstract class DataType implements Serializable {
     return tp.getPrefixSize();
   }
 
+  public int getDefaultLength() {
+    return tp.getDefaultLength();
+  }
+
   /**
    * Size of data type
    *
@@ -254,6 +258,10 @@ public abstract class DataType implements Serializable {
 
   public boolean isLengthUnSpecified() {
     return DataType.isLengthUnSpecified(length);
+  }
+
+  public boolean isDecimalUnSpecified() {
+    return DataType.isLengthUnSpecified(decimal);
   }
 
   public int getDecimal() {

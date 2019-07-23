@@ -17,11 +17,11 @@ package org.apache.spark.sql.expression.index
 
 import java.nio.charset.Charset
 
-import org.apache.spark.sql.BaseTiSparkSuite
+import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.execution.HandleRDDExec
 
-class PrefixIndexTestSuite extends BaseTiSparkSuite {
+class PrefixIndexTestSuite extends BaseTiSparkTest {
   // https://github.com/pingcap/tispark/issues/272
   test("Prefix index read does not work correctly") {
     tidbStmt.execute(

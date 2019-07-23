@@ -1,4 +1,5 @@
 /*
+ *
  * Copyright 2017 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,14 +12,18 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package org.apache.spark.sql.catalyst.plans
+package org.apache.spark.sql
 
-import org.apache.spark.SparkFunSuite
-import org.apache.spark.sql.catalyst.expressions.PredicateHelper
+trait BaseTestGenerationSpec {
+  protected def getTableName(dataType: String): String = s"test_$dataType"
 
-/**
- * Provides helper methods for comparing plans.
- */
-abstract class PlanTest extends SparkFunSuite with PredicateHelper {}
+  protected def getTableName(dataType: String, desc: String): String = s"test_${desc}_$dataType"
+
+  protected def getColumnName(dataType: String): String = s"col_$dataType"
+
+  protected def getIndexName(dataType: String): String = s"idx_$dataType"
+
+}
