@@ -44,7 +44,7 @@ class DataTypePKSuite extends BaseTiSparkTest with RunUnitDataTypeTestAction {
   def check(): Unit = {
     SharedSQLContext.init()
     if (generateData) {
-      GeneratePKDataType(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc).test()
+      GeneratePKDataType.apply(this).test()
     }
   }
 

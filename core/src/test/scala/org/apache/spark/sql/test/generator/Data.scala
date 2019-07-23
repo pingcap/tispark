@@ -62,10 +62,10 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
     case _ => s"\'$value\'"
   }
 
-  private val sql = s"create database if not exists `$database`;\n" +
-    s"drop table if exists `$database`.`$table`;\n" +
+  private val sql = s"CREATE DATABASE IF NOT EXISTS `$database`;\n" +
+    s"DROP TABLE IF EXISTS `$database`.`$table`;\n" +
     s"${schema.toString};\n" +
-    s"insert into `$database`.`$table` values $text;"
+    s"INSERT INTO `$database`.`$table` VALUES $text;"
 
   def save(): Unit = {
     import java.io._

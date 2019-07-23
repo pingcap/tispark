@@ -86,7 +86,6 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
        """.stripMargin)
 
     val tiTableInfo = getTableInfo(database, table)
-    assert(tiTableInfo !== null)
     for (i <- 0 until tiTableInfo.getColumns.size()) {
       println(s"$i -> ${tiTableInfo.getColumn(i).getType}")
     }

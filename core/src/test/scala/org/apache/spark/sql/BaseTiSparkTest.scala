@@ -78,7 +78,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext with BaseTestGener
   }
 
   protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {
-    ti.meta.getTable(s"$dbPrefix$databaseName", tableName).get
+    ti.meta.getTable(s"$dbPrefix$databaseName", tableName) match {
+      case Some(table) => table
+      case None        => fail(s"table info $databaseName.$tableName not found")
+    }
   }
 
   protected def getTableColumnNames(tableName: String): List[String] = {

@@ -62,6 +62,7 @@ abstract class QueryTest extends SparkFunSuite {
   protected def compResult(lhs: List[List[Any]],
                            rhs: List[List[Any]],
                            isOrdered: Boolean = true): Boolean = {
+    // If cannot be converted to double, it is also not comparable.
     def toDouble(x: Any): Double = x match {
       case d: Double               => d
       case d: Float                => d.toDouble

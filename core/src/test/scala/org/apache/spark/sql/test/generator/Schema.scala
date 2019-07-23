@@ -34,7 +34,6 @@ case class Schema(database: String,
                   indexColumns: Map[String, (List[(String, Integer)], Boolean)]) {
 
   // validations
-  // assert(dataTypes.size == columnNames.size, "data type size not equal to column name size")
   assert(columnDesc.size == columnNames.size, "columnDesc size not equal to column name size")
   assert(columnNames.forall(columnDesc.contains), "column desc not present for some columns")
 

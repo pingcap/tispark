@@ -59,7 +59,7 @@ object TestDataGenerator {
   val dateAndDateTime: List[ReflectedDataType] = timestamps ::: dates ::: durations ::: years
 
   val stringAndBinaries: List[ReflectedDataType] = strings ::: binaries
-  // TODO: support enum and set
+  // TODO: support enum and set https://github.com/pingcap/tispark/issues/946
   // val stringType: List[DataType] = texts ::: strings ::: binaries ::: enums ::: sets
   val stringType: List[ReflectedDataType] = texts ::: strings ::: binaries ::: bytes
   val varString: List[ReflectedDataType] = List(VARCHAR, VARBINARY)
@@ -78,22 +78,23 @@ object TestDataGenerator {
   // data types used in TPC-H tests
   val tpchDataTypes: List[ReflectedDataType] = List(INT, DECIMAL, DATE, VARCHAR, CHAR)
 
-//  def isBits(dataType: DataType): Boolean = bits.contains(dataType)
-//  def isBooleans(dataType: DataType): Boolean = booleans.contains(dataType)
-//  def isIntegers(dataType: DataType): Boolean = integers.contains(dataType)
-//  def isDecimals(dataType: DataType): Boolean = decimals.contains(dataType)
-//  def isDoubles(dataType: DataType): Boolean = doubles.contains(dataType)
-//  def isTimestamps(dataType: DataType): Boolean = timestamps.contains(dataType)
-//  def isDates(dataType: DataType): Boolean = dates.contains(dataType)
-//  def isDurations(dataType: DataType): Boolean = durations.contains(dataType)
-//  def isYears(dataType: DataType): Boolean = years.contains(dataType)
-//  def isTexts(dataType: DataType): Boolean = texts.contains(dataType)
-//  def isStrings(dataType: DataType): Boolean = strings.contains(dataType)
-//  def isBinaries(dataType: DataType): Boolean = binaries.contains(dataType)
-//  def isBytes(dataType: DataType): Boolean = bytes.contains(dataType)
-//  def isEnums(dataType: DataType): Boolean = enums.contains(dataType)
-//  def isSets(dataType: DataType): Boolean = sets.contains(dataType)
-//  def isJsons(dataType: DataType): Boolean = jsons.contains(dataType)
+  ///////////////////// Functions to Judge Catalog of DataType ////////////////////////
+  //  def isBits(dataType: DataType): Boolean = bits.contains(dataType)
+  //  def isBooleans(dataType: DataType): Boolean = booleans.contains(dataType)
+  //  def isIntegers(dataType: DataType): Boolean = integers.contains(dataType)
+  //  def isDecimals(dataType: DataType): Boolean = decimals.contains(dataType)
+  //  def isDoubles(dataType: DataType): Boolean = doubles.contains(dataType)
+  //  def isTimestamps(dataType: DataType): Boolean = timestamps.contains(dataType)
+  //  def isDates(dataType: DataType): Boolean = dates.contains(dataType)
+  //  def isDurations(dataType: DataType): Boolean = durations.contains(dataType)
+  //  def isYears(dataType: DataType): Boolean = years.contains(dataType)
+  //  def isTexts(dataType: DataType): Boolean = texts.contains(dataType)
+  //  def isStrings(dataType: DataType): Boolean = strings.contains(dataType)
+  //  def isBinaries(dataType: DataType): Boolean = binaries.contains(dataType)
+  //  def isBytes(dataType: DataType): Boolean = bytes.contains(dataType)
+  //  def isEnums(dataType: DataType): Boolean = enums.contains(dataType)
+  //  def isSets(dataType: DataType): Boolean = sets.contains(dataType)
+  //  def isJsons(dataType: DataType): Boolean = jsons.contains(dataType)
   def isNumeric(dataType: ReflectedDataType): Boolean = numeric.contains(dataType)
   def isStringType(dataType: ReflectedDataType): Boolean = stringType.contains(dataType)
   def isVarString(dataType: ReflectedDataType): Boolean = varString.contains(dataType)
@@ -332,7 +333,6 @@ class TestDataGenerator extends SparkFunSuite {
         Key(List(DefaultColumn(3), DefaultColumn(5)))
       )
     )
-    println(schema)
     val answer = """CREATE TABLE `tispark_test`.`test_table` (
                    |  `col_int0` int not null,
                    |  `col_int1` int default null,
@@ -369,7 +369,6 @@ class TestDataGenerator extends SparkFunSuite {
       )
     )
     val data: Data = TestDataGenerator.randomDataGenerator(schema, 10, "tispark-test", r)
-    println(data)
     data.save()
   }
 }

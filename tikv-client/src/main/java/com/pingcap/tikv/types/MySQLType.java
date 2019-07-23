@@ -67,13 +67,13 @@ public enum MySQLType {
   private final int typeCode;
   private final long defaultSize;
   private final int prefixSize;
-  private final int defaultM;
+  private final int defaultLength;
 
   MySQLType(int tp, long sz, int lengthSz, int M) {
     typeCode = tp;
     defaultSize = sz;
     prefixSize = lengthSz;
-    defaultM = M;
+    defaultLength = M;
   }
 
   public int getTypeCode() {
@@ -89,7 +89,7 @@ public enum MySQLType {
   }
 
   public int getDefaultLength() {
-    return defaultM;
+    return defaultLength;
   }
 
   public static MySQLType fromTypeCode(int typeCode) {

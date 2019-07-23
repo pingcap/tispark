@@ -37,3 +37,9 @@ case class GeneratePKDataType(dataTypes: List[ReflectedDataType],
     loadSQLFile(dataTypeTestDir, getTableName(typeName, extraDesc))
   }
 }
+
+object GeneratePKDataType {
+  def apply(u: UnitDataTypeTestAction): GeneratePKDataTypeTestAction = {
+    GeneratePKDataType(u.dataTypes, u.unsignedDataTypes, u.dataTypeTestDir, u.database, u.testDesc)
+  }
+}
