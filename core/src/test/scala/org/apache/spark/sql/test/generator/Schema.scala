@@ -37,10 +37,6 @@ case class Schema(database: String,
   assert(columnDesc.size == columnNames.size, "columnDesc size not equal to column name size")
   assert(columnNames.forall(columnDesc.contains), "column desc not present for some columns")
 
-  val columnInfo: List[ColumnInfo] = columnNames.map { col =>
-    val x = columnDesc(col)
-    ColumnInfo(col, x._1, x._2, x._3)
-  }
   val indexInfo: List[IndexInfo] = indexColumns.map { idx =>
     IndexInfo(idx._1, idx._2._1.map { x =>
       IndexColumnInfo(x._1, x._2)
@@ -48,6 +44,24 @@ case class Schema(database: String,
   }.toList
 
   assert(indexInfo.count(_.isPrimary) <= 1, "more than one primary key exist in schema")
+
+  private val pkIndexInfo = indexInfo.filter(_.isPrimary)
+  private val pkColumnName = if (pkIndexInfo.isEmpty) {
+    ""
+  } else if (pkIndexInfo.head.indexColumns.size == 1) {
+    pkIndexInfo.head.indexColumns.head.column
+  } else {
+    throw new IllegalArgumentException("Multi-column Primary key/Unique index not supported yet")
+  }
+
+  val columnInfo: List[ColumnInfo] = columnNames.map { col =>
+    val x = columnDesc(col)
+    if (col == pkColumnName) {
+      ColumnInfo(col, x._1, x._2, x._3 + " primary key")
+    } else {
+      ColumnInfo(col, x._1, x._2, x._3)
+    }
+  }
 
   // column info to string
   private val columns: List[String] = columnInfo.map(_.toString)

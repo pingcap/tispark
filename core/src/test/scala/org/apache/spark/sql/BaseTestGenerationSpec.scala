@@ -18,6 +18,9 @@
 package org.apache.spark.sql
 
 trait BaseTestGenerationSpec {
+
+  protected val rowCount: Int = 50
+
   protected def getTableName(dataType: String): String = s"test_$dataType"
 
   protected def getTableName(dataType: String, desc: String): String = s"test_${desc}_$dataType"

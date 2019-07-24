@@ -15,14 +15,12 @@
 
 package org.apache.spark.sql.types.pk
 
-import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
-import org.apache.spark.sql.types.{GeneratePKDataType, RunUnitDataTypeTestAction}
+import org.apache.spark.sql.types.{BaseDataTypeTest, DataTypePKGenerator, RunUnitDataTypeTestAction}
 
-class DataTypePKSuite extends BaseTiSparkTest with RunUnitDataTypeTestAction {
-
+class DataTypePKSuite extends BaseDataTypeTest with RunUnitDataTypeTestAction {
   override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: stringType
   override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
   override val dataTypeTestDir = "dataType-test-pk"
@@ -44,7 +42,7 @@ class DataTypePKSuite extends BaseTiSparkTest with RunUnitDataTypeTestAction {
   def check(): Unit = {
     SharedSQLContext.init()
     if (generateData) {
-      GeneratePKDataType.apply(this).test()
+      DataTypePKGenerator.apply(this).test()
     }
   }
 

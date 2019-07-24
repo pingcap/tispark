@@ -268,11 +268,17 @@ object TestDataGenerator {
                                   offset: Int,
                                   r: Random,
                                   valueGenerator: ValueGenerator): Unit = {
-    if (valueGenerator.randomNull(r)) {
-      row.setNull(offset)
-    } else {
-      val value = valueGenerator.randomValue(r)
+    if (valueGenerator.isPrimaryKey) {
+      assert(!valueGenerator.nullable, "Generate fails: Value cannot be null for primary key")
+      val value = valueGenerator.randomUniqueValue(r)
       row.set(offset, valueGenerator.tiDataType, value)
+    } else {
+      if (valueGenerator.randomNull(r)) {
+        row.setNull(offset)
+      } else {
+        val value = valueGenerator.randomValue(r)
+        row.set(offset, valueGenerator.tiDataType, value)
+      }
     }
   }
 

@@ -41,7 +41,7 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestAction with BaseTes
     )
   }
 
-  def genData(schema: Schema): Data = randomDataGenerator(schema, 20, dataTypeTestDir, r)
+  def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)
 
   def genLen(dataType: ReflectedDataType): String = {
     val baseType = getBaseType(dataType)

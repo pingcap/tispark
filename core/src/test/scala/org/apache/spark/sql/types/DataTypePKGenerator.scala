@@ -20,11 +20,11 @@ package org.apache.spark.sql.types
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
-case class GeneratePKDataType(dataTypes: List[ReflectedDataType],
-                              unsignedDataTypes: List[ReflectedDataType],
-                              dataTypeTestDir: String,
-                              database: String,
-                              testDesc: String)
+case class DataTypePKGenerator(dataTypes: List[ReflectedDataType],
+                               unsignedDataTypes: List[ReflectedDataType],
+                               dataTypeTestDir: String,
+                               database: String,
+                               testDesc: String)
     extends BaseTiSparkTest
     with GeneratePKDataTypeTestAction {
   def loadTestData(typeName: String): Unit = {
@@ -38,8 +38,8 @@ case class GeneratePKDataType(dataTypes: List[ReflectedDataType],
   }
 }
 
-object GeneratePKDataType {
+object DataTypePKGenerator {
   def apply(u: UnitDataTypeTestAction): GeneratePKDataTypeTestAction = {
-    GeneratePKDataType(u.dataTypes, u.unsignedDataTypes, u.dataTypeTestDir, u.database, u.testDesc)
+    DataTypePKGenerator(u.dataTypes, u.unsignedDataTypes, u.dataTypeTestDir, u.database, u.testDesc)
   }
 }
