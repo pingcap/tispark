@@ -67,7 +67,6 @@ case class ValueGenerator(dataType: ReflectedDataType,
         case b: Array[Byte] => b.mkString("[", ",", "]")
         case x              => x.toString
       }
-      println(value, hashedValue)
       if (!set.apply(hashedValue)) {
         set += hashedValue
         return value

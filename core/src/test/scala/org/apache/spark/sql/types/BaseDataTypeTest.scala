@@ -7,13 +7,13 @@ trait BaseDataTypeTest extends BaseTiSparkTest {
     setCurrentDatabase(dbName)
     val tblName = getTableName(dataType)
     val query = s"select ${getColumnName(dataType)} from $tblName"
-    explainAndRunTest(query)
+    runTest(query)
   }
 
   def simpleSelect(dbName: String, dataType: String, desc: String): Unit = {
     setCurrentDatabase(dbName)
     val tblName = getTableName(dataType, desc)
     val query = s"select ${getColumnName(dataType)} from $tblName"
-    explainAndRunTest(query)
+    runTest(query)
   }
 }
