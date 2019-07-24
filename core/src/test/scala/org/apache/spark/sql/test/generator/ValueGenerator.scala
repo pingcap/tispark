@@ -18,6 +18,7 @@ package org.apache.spark.sql.test.generator
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator.{getLength, isNumeric}
 
+import scala.collection.mutable
 import scala.util.Random
 
 case class ValueGenerator(dataType: ReflectedDataType,
@@ -54,6 +55,23 @@ case class ValueGenerator(dataType: ReflectedDataType,
   def randomNull(r: Random): Boolean = {
     // 5% of non-null data be null
     !tiDataType.isNotNull && r.nextInt(20) == 0
+  }
+
+  val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
+
+  def randomUniqueValue(r: Random): Any = {
+    while (true) {
+      val value = randomValue(r)
+      val hashedValue = value match {
+        case null           => "null"
+        case b: Array[Byte] => b.mkString("[", ",", "]")
+        case x              => x.toString
+      }
+      if (!set.apply(hashedValue)) {
+        set += hashedValue
+        return value
+      }
+    }
   }
 
   def randomValue(r: Random): Any = {

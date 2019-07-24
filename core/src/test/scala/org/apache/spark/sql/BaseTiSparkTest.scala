@@ -431,22 +431,6 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext with BaseTestGener
     df.collect.foreach(println)
   }
 
-  def simpleSelect(dbName: String, dataType: String): Unit = {
-    spark.sql("show databases").show(false)
-    setCurrentDatabase(dbName)
-    val tblName = getTableName(dataType)
-    val query = s"select ${getColumnName(dataType)} from $tblName"
-    runTest(query)
-  }
-
-  def simpleSelect(dbName: String, dataType: String, desc: String): Unit = {
-    spark.sql("show databases").show(false)
-    setCurrentDatabase(dbName)
-    val tblName = getTableName(dataType, desc)
-    val query = s"select ${getColumnName(dataType)} from $tblName"
-    runTest(query)
-  }
-
   protected def time[A](f: => A): A = {
     val s = System.currentTimeMillis
     val ret = f

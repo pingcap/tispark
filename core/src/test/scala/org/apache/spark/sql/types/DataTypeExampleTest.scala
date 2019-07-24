@@ -1,5 +1,6 @@
 /*
- * Copyright 2019 PingCAP, Inc.
+ *
+ * Copyright 2017 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11,20 +12,20 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.apache.spark.sql.types
 
 import org.apache.spark.sql.test.SharedSQLContext
-import org.apache.spark.sql.test.generator.DataType._
-import org.apache.spark.sql.test.generator.TestDataGenerator._
+import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, TINYINT}
 
-class DataTypeNormalSuite extends BaseDataTypeTest with RunUnitDataTypeTestAction {
-  override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: stringType
-  override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override val dataTypeTestDir = "dataType-test"
-  override val database = "data_type_test"
-  override val testDesc = "Test for single column data types (and unsigned types)"
+class DataTypeExampleTest extends BaseDataTypeTest with RunUnitDataTypeTestAction {
+  val dataTypes: List[ReflectedDataType] = List(TINYINT)
+  val unsignedDataTypes: List[ReflectedDataType] = List(TINYINT)
+  val dataTypeTestDir: String = "dataType-test"
+  val database: String = "data_type_test_example"
+  val testDesc: String = "Base test for data types"
 
   def startTest(typeName: String): Unit = {
     test(s"${preDescription}Test $typeName - $testDesc") {
