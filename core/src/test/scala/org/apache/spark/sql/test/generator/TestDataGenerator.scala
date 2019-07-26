@@ -86,8 +86,8 @@ object TestDataGenerator {
   //  def isBits(dataType: DataType): Boolean = bits.contains(dataType)
   //  def isBooleans(dataType: DataType): Boolean = booleans.contains(dataType)
   //  def isIntegers(dataType: DataType): Boolean = integers.contains(dataType)
-  //  def isDecimals(dataType: DataType): Boolean = decimals.contains(dataType)
-  //  def isDoubles(dataType: DataType): Boolean = doubles.contains(dataType)
+  def isDecimals(dataType: ReflectedDataType): Boolean = decimals.contains(dataType)
+  def isDoubles(dataType: ReflectedDataType): Boolean = doubles.contains(dataType)
   //  def isTimestamps(dataType: DataType): Boolean = timestamps.contains(dataType)
   //  def isDates(dataType: DataType): Boolean = dates.contains(dataType)
   //  def isDurations(dataType: DataType): Boolean = durations.contains(dataType)
@@ -270,15 +270,15 @@ object TestDataGenerator {
     Schema(database, table, columnNames, columnDesc.toMap, idxColumns)
   }
 
-  private def generateRandomValue(row: TiRow,
-                                  offset: Int,
-                                  r: Random,
-                                  valueGenerator: ValueGenerator): Unit = {
-    val value = valueGenerator.next(r)
+  private def generateRandomColValue(row: TiRow,
+                                     offset: Int,
+                                     r: Random,
+                                     colValueGenerator: ColumnValueGenerator): Unit = {
+    val value = colValueGenerator.next(r)
     if (value == null) {
       row.setNull(offset)
     } else {
-      row.set(offset, valueGenerator.tiDataType, value)
+      row.set(offset, colValueGenerator.tiDataType, value)
     }
   }
 
@@ -319,7 +319,7 @@ object TestDataGenerator {
     while (true) {
       for (i <- schema.columnInfo.indices) {
         val columnInfo = schema.columnInfo(i)
-        generateRandomValue(row, i, r, columnInfo.generator)
+        generateRandomColValue(row, i, r, columnInfo.generator)
       }
       if (pkOffset.nonEmpty) {
         val value = pkOffset.map { i =>
@@ -335,7 +335,7 @@ object TestDataGenerator {
     throw new RuntimeException("Inaccessible")
   }
 
-  private def generateRandomRows(schema: Schema, n: Long, r: Random): List[TiRow] = {
+  def generateRandomRows(schema: Schema, n: Long, r: Random): List[TiRow] = {
     val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
     // offset of pk columns
     val pkOffset: List[Int] = {

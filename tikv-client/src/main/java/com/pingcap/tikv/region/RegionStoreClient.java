@@ -87,6 +87,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
   private boolean checkLockError(BackOffer backOffer, KeyError error) {
     if (error.hasLocked()) {
       Lock lock = new Lock(error.getLocked());
+      logger.warn("resolving lock");
       boolean ok =
           lockResolverClient.resolveLocks(
               backOffer, new ArrayList<>(Collections.singletonList(lock)));

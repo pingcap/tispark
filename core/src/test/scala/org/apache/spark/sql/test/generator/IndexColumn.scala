@@ -77,8 +77,8 @@ case class ColumnInfo(columnName: String,
     }
   }
 
-  val generator: ValueGenerator =
-    ValueGenerator(
+  val generator: ColumnValueGenerator =
+    ColumnValueGenerator(
       dataType,
       len,
       decimal,

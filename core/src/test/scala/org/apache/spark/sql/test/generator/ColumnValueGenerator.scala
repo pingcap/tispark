@@ -23,15 +23,15 @@ import org.apache.spark.sql.test.generator.TestDataGenerator.{checkUnique, getLe
 import scala.collection.mutable
 import scala.util.Random
 
-case class ValueGenerator(dataType: ReflectedDataType,
-                          M: Long = -1,
-                          D: Int = -1,
-                          nullable: Boolean = true,
-                          isUnsigned: Boolean = false,
-                          noDefault: Boolean = false,
-                          default: Any = null,
-                          isPrimaryKey: Boolean = false,
-                          isUnique: Boolean = false) {
+case class ColumnValueGenerator(dataType: ReflectedDataType,
+                                M: Long = -1,
+                                D: Int = -1,
+                                nullable: Boolean = true,
+                                isUnsigned: Boolean = false,
+                                noDefault: Boolean = false,
+                                default: Any = null,
+                                isPrimaryKey: Boolean = false,
+                                isUnique: Boolean = false) {
 
   private val flag: Int = {
     import com.pingcap.tikv.types.DataType._
@@ -137,65 +137,73 @@ case class ValueGenerator(dataType: ReflectedDataType,
     }
   }
 
+  def randomUnsignedValue(r: Random): Any = {
+    if (!isNumeric(dataType)) {
+      throw new IllegalArgumentException("unsigned type is not numeric")
+    }
+    dataType match {
+      case BIT =>
+        val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
+        bit.map(_ => r.nextBoolean)
+      case BOOLEAN   => r.nextInt(1 << 1)
+      case TINYINT   => r.nextInt(1 << 8)
+      case SMALLINT  => r.nextInt(1 << 16)
+      case MEDIUMINT => r.nextInt(1 << 24)
+      case INT       => r.nextInt + (1L << 31)
+      case BIGINT    => toUnsignedBigInt(r.nextLong)
+      case FLOAT     => Math.abs(r.nextFloat)
+      case DOUBLE    => Math.abs(r.nextDouble)
+      case DECIMAL =>
+        val len = getLength(tiDataType)
+        val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
+        (BigDecimal.apply(Math.abs(r.nextLong()) % Math.pow(10, len)) / BigDecimal.apply(
+          Math.pow(10, decimal)
+        )).bigDecimal
+    }
+  }
+
+  def randomSignedValue(r: Random): Any = {
+    dataType match {
+      case BIT =>
+        val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
+        bit.map(_ => r.nextBoolean)
+      case BOOLEAN   => r.nextInt(1 << 1)
+      case TINYINT   => (r.nextInt(1 << 8) - (1 << 7)).longValue()
+      case SMALLINT  => (r.nextInt(1 << 16) - (1 << 15)).longValue()
+      case MEDIUMINT => (r.nextInt(1 << 24) - (1 << 23)).longValue()
+      case INT       => r.nextInt.longValue
+      case BIGINT    => r.nextLong
+      case FLOAT     => r.nextFloat.doubleValue
+      case DOUBLE    => r.nextDouble
+      case DECIMAL =>
+        val len = getLength(tiDataType)
+        val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
+        (BigDecimal.apply(r.nextLong % Math.pow(10, len)) / BigDecimal.apply(
+          Math.pow(10, decimal)
+        )).bigDecimal
+      case VARCHAR   => generateRandomString(r, tiDataType.getLength)
+      case VARBINARY => generateRandomBinary(r, tiDataType.getLength)
+      case CHAR | TEXT | TINYTEXT | MEDIUMTEXT | LONGTEXT =>
+        generateRandomString(r, getRandomLength(dataType, r))
+      case BINARY | BLOB | TINYBLOB | MEDIUMBLOB | LONGBLOB =>
+        generateRandomBinary(r, getRandomLength(dataType, r))
+      case DATE =>
+        // start from 1000-01-01 to 9999-01-01
+        val milliseconds = -30610253143000L + (Math.abs(r.nextLong) % (9000L * 365 * 24 * 60 * 60 * 1000))
+        new java.sql.Date(milliseconds)
+      case TIMESTAMP =>
+        // start from 1970-01-01 00:00:01 to 2038-01-19 03:14:07
+        val milliseconds = Math.abs(r.nextInt * 1000L + 1000L) + Math.abs(r.nextInt(1000))
+        new java.sql.Timestamp(milliseconds)
+      case _ => throw new RuntimeException(s"random $dataType generator not supported yet")
+    }
+  }
+
   def randomValue(r: Random): Any = {
     if (tiDataType.isUnsigned) {
-      if (!isNumeric(dataType)) {
-        throw new IllegalArgumentException("unsigned type is not numeric")
-      }
-      dataType match {
-        case BIT =>
-          val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
-          bit.map(_ => r.nextBoolean)
-        case BOOLEAN   => r.nextInt(1 << 1)
-        case TINYINT   => r.nextInt(1 << 8)
-        case SMALLINT  => r.nextInt(1 << 16)
-        case MEDIUMINT => r.nextInt(1 << 24)
-        case INT       => r.nextInt + (1L << 31)
-        case BIGINT    => toUnsignedBigInt(r.nextLong)
-        case FLOAT     => Math.abs(r.nextFloat)
-        case DOUBLE    => Math.abs(r.nextDouble)
-        case DECIMAL =>
-          val len = getLength(tiDataType)
-          val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
-          (BigDecimal.apply(Math.abs(r.nextLong()) % Math.pow(10, len)) / BigDecimal.apply(
-            Math.pow(10, decimal)
-          )).bigDecimal
-      }
+      randomUnsignedValue(r)
     } else {
-      dataType match {
-        case BIT =>
-          val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
-          bit.map(_ => r.nextBoolean)
-        case BOOLEAN   => r.nextInt(1 << 1)
-        case TINYINT   => r.nextInt(1 << 8) - (1 << 7)
-        case SMALLINT  => r.nextInt(1 << 16) - (1 << 15)
-        case MEDIUMINT => r.nextInt(1 << 24) - (1 << 23)
-        case INT       => r.nextInt
-        case BIGINT    => r.nextLong
-        case FLOAT     => r.nextFloat
-        case DOUBLE    => r.nextDouble
-        case DECIMAL =>
-          val len = getLength(tiDataType)
-          val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
-          (BigDecimal.apply(r.nextLong % Math.pow(10, len)) / BigDecimal.apply(
-            Math.pow(10, decimal)
-          )).bigDecimal
-        case VARCHAR   => generateRandomString(r, tiDataType.getLength)
-        case VARBINARY => generateRandomBinary(r, tiDataType.getLength)
-        case CHAR | TEXT | TINYTEXT | MEDIUMTEXT | LONGTEXT =>
-          generateRandomString(r, getRandomLength(dataType, r))
-        case BINARY | BLOB | TINYBLOB | MEDIUMBLOB | LONGBLOB =>
-          generateRandomBinary(r, getRandomLength(dataType, r))
-        case DATE =>
-          // start from 1000-01-01 to 9999-01-01
-          val milliseconds = -30610253143000L + (Math.abs(r.nextLong) % (9000L * 365 * 24 * 60 * 60 * 1000))
-          new java.sql.Date(milliseconds)
-        case TIMESTAMP =>
-          // start from 1970-01-01 00:00:01 to 2038-01-19 03:14:07
-          val milliseconds = Math.abs(r.nextInt * 1000L + 1000L) + Math.abs(r.nextInt(1000))
-          new java.sql.Timestamp(milliseconds)
-        case _ => throw new RuntimeException(s"random $dataType generator not supported yet")
-      }
+      randomSignedValue(r)
     }
   }
 

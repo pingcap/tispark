@@ -17,7 +17,9 @@
 
 package org.apache.spark.sql.test.generator
 
+import com.pingcap.tispark.utils.{TiConverter, TiUtil}
 import org.apache.spark.sql.test.generator.DataType._
+import org.apache.spark.sql.types.{StructField, StructType}
 
 /**
  * Case class for Schema of TiDB table
