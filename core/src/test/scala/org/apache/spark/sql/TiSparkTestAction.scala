@@ -17,19 +17,13 @@
 
 package org.apache.spark.sql
 
-trait BaseTestGenerationSpec {
+import scala.util.Random
 
-  protected val rowCount: Int = 50
+trait TiSparkTestAction {
+  val database: String
+  val testDesc: String
+  // Randomizer for tests
+  val r: Random = new Random(1234)
 
-  private def toString(dataTypes: Seq[String]) = dataTypes.map(_.head).mkString("_")
-
-  protected def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
-
-  protected def getTableNameWithDesc(desc: String, dataTypes: String*): String =
-    s"test_${desc}_${toString(dataTypes)}"
-
-  protected def getColumnName(dataType: String): String = s"col_$dataType"
-
-  protected def getIndexName(dataTypes: String*): String = s"idx_${toString(dataTypes)}"
-
+  def test(): Unit
 }

@@ -18,25 +18,22 @@
 package org.apache.spark.sql.types
 
 import org.apache.spark.sql.BaseTestGenerationSpec
-import org.apache.spark.sql.test.generator.{Data, Index, Schema}
 import org.apache.spark.sql.test.generator.DataType.{getBaseType, getTypeName, DECIMAL, ReflectedDataType}
+import org.apache.spark.sql.test.generator.{Data, Index, Schema}
 import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isVarString, randomDataGenerator, schemaGenerator}
 
-trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestAction with BaseTestGenerationSpec {
-
+trait GenerateMultiColumnDataTypeTestAction
+    extends MultiColumnDataTypeTestAction
+    with BaseTestGenerationSpec {
   override val preDescription: String = "Generating Data for "
 
-  def genSchema(dataType: ReflectedDataType,
-                tableName: String,
-                len: String,
-                desc: String): Schema = {
+  def genSchema(tableName: String,
+                dataTypesWithDescription: List[(ReflectedDataType, String, String)]): Schema = {
     schemaGenerator(
       database,
       tableName,
       r,
-      List(
-        (dataType, len, desc)
-      ),
+      dataTypesWithDescription,
       List.empty[Index]
     )
   }
@@ -55,37 +52,20 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestAction with BaseTes
   }
 
   def init(): Unit = {
-    for (dataType <- dataTypes) {
-      val typeName = getTypeName(dataType)
+    val tableName = getTableName(dataTypes.map(getTypeName): _*)
+    val dataTypesWithDescription = dataTypes.map { dataType =>
       val len = genLen(dataType)
-      val tableName = getTableName(typeName)
-      val schema = genSchema(dataType, tableName, len, "")
-      val data = genData(schema)
-      data.save()
+      (dataType, len, "")
     }
-    for (dataType <- unsignedDataTypes) {
-      val typeName = getTypeName(dataType)
-      val len = genLen(dataType)
-      val tableName = getTableNameWithDesc(extraDesc, typeName)
-      val schema = genSchema(dataType, tableName, len, extraDesc)
-      val data = genData(schema)
-      data.save()
-    }
+    val schema = genSchema(tableName, dataTypesWithDescription)
+    val data = genData(schema)
+    data.save()
   }
 
-  def loadTestData(typeName: String): Unit
-
-  def loadUnsignedTestData(typeName: String): Unit
+  def loadTestData(dataTypes: List[ReflectedDataType]): Unit
 
   def test(): Unit = {
     init()
-    for (dataType <- dataTypes) {
-      val typeName = getTypeName(dataType)
-      loadTestData(typeName)
-    }
-    for (dataType <- unsignedDataTypes) {
-      val typeName = getTypeName(dataType)
-      loadUnsignedTestData(typeName)
-    }
+    loadTestData(dataTypes)
   }
 }

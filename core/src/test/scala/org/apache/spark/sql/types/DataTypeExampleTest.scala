@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, TINYINT}
 
 class DataTypeExampleTest extends BaseDataTypeTest with RunUnitDataTypeTestAction {
@@ -40,9 +39,9 @@ class DataTypeExampleTest extends BaseDataTypeTest with RunUnitDataTypeTestActio
   }
 
   def check(): Unit = {
-    SharedSQLContext.init()
     if (generateData) {
-      BaseGenerateDataType(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc).test()
+      BaseDataTypeGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
+        .test()
     }
   }
 

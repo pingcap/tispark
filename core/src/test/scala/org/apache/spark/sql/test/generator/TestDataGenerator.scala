@@ -1,4 +1,5 @@
 /*
+ *
  * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.apache.spark.sql.test.generator
@@ -268,29 +270,82 @@ object TestDataGenerator {
                                   offset: Int,
                                   r: Random,
                                   valueGenerator: ValueGenerator): Unit = {
-    if (valueGenerator.isPrimaryKey) {
-      assert(!valueGenerator.nullable, "Generate fails: Value cannot be null for primary key")
-      val value = valueGenerator.randomUniqueValue(r)
-      row.set(offset, valueGenerator.tiDataType, value)
+    val value = valueGenerator.next(r)
+    if (value == null) {
+      row.setNull(offset)
     } else {
-      if (valueGenerator.randomNull(r)) {
-        row.setNull(offset)
-      } else {
-        val value = valueGenerator.randomValue(r)
-        row.set(offset, valueGenerator.tiDataType, value)
-      }
+      row.set(offset, valueGenerator.tiDataType, value)
     }
   }
 
-  private def generateRandomRows(schema: Schema, n: Long, r: Random): List[TiRow] = {
-    (1.toLong to n).map { _ =>
-      val length = schema.columnInfo.length
-      val row: TiRow = ObjectRowImpl.create(length)
+  def hash(value: Any): String = value match {
+    case null           => "null"
+    case b: Array[Byte] => b.mkString("[", ",", "]")
+    case list: List[Any] =>
+      val ret = StringBuilder.newBuilder
+      ret ++= "("
+      for (i <- list.indices) {
+        if (i > 0) ret ++= ","
+        ret ++= hash(list(i))
+      }
+      ret ++= ")"
+      ret.toString
+    case x => x.toString
+  }
+
+  def checkUnique(value: Any, set: mutable.Set[Any]): Boolean = {
+    val hashedValue = hash(value)
+    if (!set.apply(hashedValue)) {
+      set += hashedValue
+      true
+    } else {
+      false
+    }
+  }
+
+  private def generateRandomRow(schema: Schema,
+                                r: Random,
+                                pkOffset: List[Int],
+                                set: mutable.Set[Any]): TiRow = {
+    val length = schema.columnInfo.length
+    val row: TiRow = ObjectRowImpl.create(length)
+    while (true) {
       for (i <- schema.columnInfo.indices) {
         val columnInfo = schema.columnInfo(i)
         generateRandomValue(row, i, r, columnInfo.generator)
       }
-      row
+      if (pkOffset.nonEmpty) {
+        val value = pkOffset.map { i =>
+          row.get(i, schema.columnInfo(i).generator.tiDataType)
+        }
+        if (checkUnique(value, set)) {
+          return row
+        }
+      } else {
+        return row
+      }
+    }
+    throw new RuntimeException("Inaccessible")
+  }
+
+  private def generateRandomRows(schema: Schema, n: Long, r: Random): List[TiRow] = {
+    val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
+    // offset of pk columns
+    val pkOffset: List[Int] = {
+      val primary = schema.indexInfo.filter(_.isPrimary)
+      if (primary.nonEmpty && primary.size == 1) {
+        primary.head.indexColumns.map(x => schema.columnNames.indexOf(x.column))
+      } else {
+        List.empty[Int]
+      }
+    }
+    schema.columnInfo.foreach { col =>
+      col.generator.reset()
+      col.generator.preGenerateRandomValues(r, n)
+    }
+
+    (1.toLong to n).map { _ =>
+      generateRandomRow(schema, r, pkOffset, set)
     }.toList
   }
 

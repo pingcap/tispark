@@ -1,4 +1,5 @@
 /*
+ *
  * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,12 +12,13 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.apache.spark.sql.test.generator
 
 import org.apache.spark.sql.test.generator.DataType._
-import org.apache.spark.sql.test.generator.TestDataGenerator.{getLength, isNumeric}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{checkUnique, getLength, isNumeric, isStringType}
 
 import scala.collection.mutable
 import scala.util.Random
@@ -52,23 +54,76 @@ case class ValueGenerator(dataType: ReflectedDataType,
   import com.pingcap.tikv.meta.Collation._
   val tiDataType: TiDataType = getType(dataType, flag, M, D, "", DEF_COLLATION_CODE)
 
+  val rangeSize: Long = dataType match {
+    case BIT       => 1 << tiDataType.getLength.toInt
+    case BOOLEAN   => 1 << 1
+    case TINYINT   => 1 << 8
+    case SMALLINT  => 1 << 16
+    case MEDIUMINT => 1 << 24
+    case INT       => 1L << 32
+    // just treat the range size as infinity, the value is meaningless
+    case _ => Long.MaxValue
+  }
+
+  private var generatedRandomValues: List[Any] = List.empty[Any]
+  private var curPos = 0
+
+  ////////////////// Calculate Type Bound //////////////////
+  private val lowerBound: Any = {
+    if (tiDataType.isUnsigned) {
+      dataType match {
+        case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT => 0L
+        case _                                             => null
+      }
+    } else {
+      dataType match {
+        case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT => tiDataType.signedLowerBound()
+        case _                                             => null
+      }
+    }
+  }
+
+  private val upperBound: Any = {
+    if (tiDataType.isUnsigned) {
+      dataType match {
+        case TINYINT | SMALLINT | MEDIUMINT | INT => tiDataType.unsignedUpperBound()
+        case BIGINT                               => toUnsignedBigInt(tiDataType.unsignedUpperBound())
+        case _                                    => null
+      }
+    } else {
+      dataType match {
+        case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT => tiDataType.signedUpperBound()
+        case _                                             => null
+      }
+    }
+  }
+
+  private val specialBound: List[String] = {
+    val list: List[String] = dataType match {
+      case BIT                                                                     => List("b\'\'", "\'\'")
+      case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT if !tiDataType.isUnsigned => List("-1")
+      case _ if isStringType(dataType)                                             => List("")
+      case _                                                                       => List.empty[String]
+    }
+    if (lowerBound != null && upperBound != null) {
+      list ::: List(lowerBound.toString, upperBound.toString)
+    } else {
+      list
+    }
+  }
+
+  def toUnsignedBigInt(l: Long): BigInt = BigInt.long2bigInt(l) - BigInt.long2bigInt(Long.MinValue)
+
+  ////////////////// Generate Random Value //////////////////
   def randomNull(r: Random): Boolean = {
     // 5% of non-null data be null
     !tiDataType.isNotNull && r.nextInt(20) == 0
   }
 
-  val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
-
-  def randomUniqueValue(r: Random): Any = {
+  def randomUniqueValue(r: Random, set: mutable.Set[Any]): Any = {
     while (true) {
       val value = randomValue(r)
-      val hashedValue = value match {
-        case null           => "null"
-        case b: Array[Byte] => b.mkString("[", ",", "]")
-        case x              => x.toString
-      }
-      if (!set.apply(hashedValue)) {
-        set += hashedValue
+      if (checkUnique(value, set)) {
         return value
       }
     }
@@ -88,7 +143,7 @@ case class ValueGenerator(dataType: ReflectedDataType,
         case SMALLINT  => r.nextInt(1 << 16)
         case MEDIUMINT => r.nextInt(1 << 24)
         case INT       => r.nextInt() + (1L << 31)
-        case BIGINT    => BigInt.long2bigInt(r.nextLong()) - BigInt.long2bigInt(Long.MinValue)
+        case BIGINT    => toUnsignedBigInt(r.nextLong())
         case FLOAT     => Math.abs(r.nextFloat())
         case DOUBLE    => Math.abs(r.nextDouble())
         case DECIMAL =>
@@ -149,6 +204,62 @@ case class ValueGenerator(dataType: ReflectedDataType,
     val b: Array[Byte] = new Array[Byte](length.toInt)
     r.nextBytes(b)
     b
+  }
+
+  // pre-generate n random values
+  def preGenerateRandomValues(r: Random, n: Long): Unit = {
+    if (n <= 1e6) {
+      generatedRandomValues = if (isPrimaryKey) {
+        val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
+        set += specialBound
+        (0L until n - specialBound.size).map { _ =>
+          randomUniqueValue(r, set)
+        }.toList ++ specialBound
+      } else {
+        (0L until n - specialBound.size).map { _ =>
+          randomValue(r)
+        }.toList ++ specialBound
+      }
+      assert(generatedRandomValues.size == n)
+      curPos = 0
+    }
+  }
+
+  ////////////////// Iterator //////////////////
+  def next(r: Random): Any = {
+    if (randomNull(r)) {
+      null
+    } else {
+      if (generatedRandomValues.isEmpty) {
+        if (isPrimaryKey) {
+          val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
+          randomUniqueValue(r, set)
+        } else {
+          randomValue(r)
+        }
+      } else {
+        next
+      }
+    }
+  }
+
+  def hasNext: Boolean = curPos < generatedRandomValues.size
+
+  def next: Any = {
+    assert(
+      generatedRandomValues.nonEmpty,
+      "Values not pre-generated, please generate values first to use next()"
+    )
+    assert(
+      hasNext,
+      s"Generated random values(${generatedRandomValues.size}) is less than needed(${curPos + 1})."
+    )
+    curPos += 1
+    generatedRandomValues(curPos - 1)
+  }
+
+  def reset(): Unit = {
+    curPos = 0
   }
 
   ////////////////// To Description String //////////////////

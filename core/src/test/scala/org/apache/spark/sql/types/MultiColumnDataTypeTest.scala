@@ -1,0 +1,66 @@
+/*
+ *
+ * Copyright 2019 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package org.apache.spark.sql.types
+
+import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.test.SharedSQLContext
+import org.apache.spark.sql.test.generator.DataType._
+import org.apache.spark.sql.test.generator.TestDataGenerator._
+
+trait MultiColumnDataTypeTest extends BaseTiSparkTest {
+
+  private val ops = List(">", "=", "<", "<>")
+
+  implicit class C[X](xs: Traversable[X]) {
+    def cross[Y](ys: Traversable[Y]): Traversable[(X, Y)] = for { x <- xs; y <- ys } yield (x, y)
+  }
+
+  def getOperations(dataType: ReflectedDataType): List[(String, String)] = List(("is", "null")) ++ {
+    ops cross {
+      dataType match {
+        case BOOLEAN                     => List("false", "true")
+        case TINYINT                     => List("1", "0")
+        case _ if isNumeric(dataType)    => List("1", "2333")
+        case _ if isStringType(dataType) => List("\'PingCAP\'", "\'\'")
+        case _                           => List.empty[String]
+      }
+    }
+  }
+
+  def simpleSelect(dbName: String, dataTypes: ReflectedDataType*): Unit = {
+    val typeNames = dataTypes.map(getTypeName)
+    val tblName = getTableName(typeNames: _*)
+    val columnNames = typeNames.map(getColumnName)
+    for (i <- columnNames.indices) {
+      for (j <- i + 1 until columnNames.size) {
+        val col = columnNames(j)
+        val types = dataTypes(j)
+        for ((op, value) <- getOperations(types)) {
+          val query = s"select ${columnNames(i)} from $tblName where $col $op $value"
+          test(query) {
+            setCurrentDatabase(dbName)
+            runTest(query)
+          }
+        }
+      }
+    }
+  }
+
+  // initialize test framework
+  SharedSQLContext.init()
+}

@@ -20,7 +20,7 @@ package org.apache.spark.sql.types
 import org.apache.spark.sql.TiSparkTestAction
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
-trait UnitDataTypeTestAction extends TiSparkTestAction {
+trait MultiColumnDataTypeTestAction extends TiSparkTestAction {
   val dataTypes: List[ReflectedDataType]
   val unsignedDataTypes: List[ReflectedDataType]
   val dataTypeTestDir: String
