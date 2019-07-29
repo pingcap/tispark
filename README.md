@@ -11,19 +11,30 @@ TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to an
 Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
-The current stable version is **TiSpark 2.1.1** which is compatible with **Spark 2.3.0+** and **Spark 2.4.0+**.
+The current stable version is **TiSpark 2.2.0** which is compatible with **Spark 2.3.x** and **Spark 2.4.x**.
 
 The latest stable version compatible with **Spark 2.1.0+** is **TiSpark 1.2.1**
 
 **When using TiSpark 1.2.1, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
-**When using TiSpark 2.1.1 with Spark 2.3.0+, please use version `2.1.1-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1.1 with Spark 2.3.x, please use version `2.1.1-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
-**When using TiSpark 2.1.1 with Spark 2.4.0+, please use version `2.1.1-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1.1 with Spark 2.4.x, please use version `2.1.1-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
 You may also [build from sources](#how-to-build-from-sources) to try the new features on TiSpark master branch.
 
 If you are using maven(recommended), add the following to your pom.xml:
+```xml
+<dependencies>
+    <dependency>
+      <groupId>com.pingcap.tispark</groupId>
+      <artifactId>tispark-assembly</artifactId>
+      <version>2.2.0</version>
+    </dependency>
+</dependencies>
+```
+
+If you want to use TiSpark-2.1.x, please use the following configuration:
 ```xml
 <dependencies>
     <dependency>
@@ -37,17 +48,14 @@ If you are using maven(recommended), add the following to your pom.xml:
 For other build tools, you can visit search.maven.org and search with GroupId [![Maven Search](https://img.shields.io/badge/com.pingcap-tikv/tispark-green.svg)](http://search.maven.org/#search%7Cga%7C1%7Cpingcap)(This search will also list all available modules of TiSpark including tikv-client).
 
 ## How to build from sources
-TiSpark now supports Spark 2.3.0+/2.4.0+. The previous version for Spark 2.1.0+ will only contain bug fixes in future, you may still get Spark 2.1 support until TiSpark 1.2.1.
+TiSpark now supports Spark 2.3.x/2.4.x. The previous version for Spark 2.1.x will only contain bug fixes in future, you may still get Spark 2.1.x support until TiSpark 1.2.1.
 ```
 git clone https://github.com/pingcap/tispark.git
 ```
 To build all TiSpark modules from sources, please run command under TiSpark root directory:
 ```
-mvn clean install -Dmaven.test.skip=true -P spark-2.3
-or
-mvn clean install -Dmaven.test.skip=true -P spark-2.4
+mvn clean install -Dmaven.test.skip=true
 ```
-**Please note that after you need to specify major version of Spark according to the Spark version you are using.**
 
 Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.
 
@@ -55,31 +63,32 @@ Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need
 
 | Spark Version | Stable TiSpark Version |
 | ------------- | ---------------------- |
-| Spark-2.4.x | TiSpark-2.1.1 |
-| Spark-2.3.x | TiSpark-2.1.1 |
-| Spark-2.2.x | TiSpark-1.2.1 |
-| Spark-2.1.x | TiSpark-1.2.1 |
+| Spark-2.4.x   | TiSpark-2.2.0          |
+| Spark-2.3.x   | TiSpark-2.2.0          |
+| Spark-2.2.x   | TiSpark-1.2.1          |
+| Spark-2.1.x   | TiSpark-1.2.1          |
 
 ## Maximum TiDB/TiKV/PD version supported by TiSpark
 
 Each latest TiSpark version guarantees *backward compatibility* for TiDB components, i.e., supports TiDB/TiKV/PD until a certain release. Its reason varies, amongst which the most common one is that the new features and bug-fixes provided by TiDB components requires update on API, dependencies, etc.
 
 | TiSpark Version | Maximum TiDB Version | Maximum TiKV Version | Maximum PD Version |
-| ----- | ------ | ------ | ------ |
-| < 1.2 | v2.1.4 | v2.1.4 | v2.1.4 |
-| 1.2.x | v2.1.x | v2.1.x | v2.1.x |
-| 2.x | v3.0.0-beta | v3.0.0-beta | v3.0.0-beta |
-| Latest (master) | Latest | Latest | Latest |
+| --------------- | -------------------- | -------------------- | ------------------ |
+| < 1.2           | v2.1.4               | v2.1.4               | v2.1.4             |
+| 1.2.x           | v2.1.x               | v2.1.x               | v2.1.x             |
+| 2.x             | v3.0.1               | v3.0.1               | v3.0.1             |
+| Latest (master) | Latest               | Latest               | Latest             |
 
 ## Available Spark version supported by TiSpark
 
 While TiSpark provides downward compatibility for TiDB, it guarantees **restricted** Spark version support for means of catching up to the latest Datasource API changes.
 
-| TiSpark Version | Spark Version |
-| ----- | ------ |
-| 1.x | Spark v2.1.0+ |
-| 2.0 | Spark v2.3.0+ |
-| 2.1.x | Spark v2.3.0+, Spark v2.4.0+ |
+| TiSpark Version | Spark Version                |
+| --------------- | ---------------------------- |
+| 1.x             | Spark v2.1.0+                |
+| 2.0             | Spark v2.3.0+                |
+| 2.1.x           | Spark v2.3.0+, Spark v2.4.0+ |
+| 2.2.x           | Spark v2.3.0+, Spark v2.4.0+ |
 | Latest (master) | Spark v2.3.0+, Spark v2.4.0+ |
 
 ## How to migrate from Spark 2.1 to Spark 2.3/2.4
@@ -98,7 +107,7 @@ For users using Spark 2.1 who wish to migrate to latest TiSpark on Spark 2.3/2.4
 
 - In addition, you can deploy and utilize tools from the Spark ecosystem for further data processing and manipulation on TiDB. For example, using TiSpark for data analysis and ETL; retrieving data from TiKV as a machine learning data source; generating reports from the scheduling system  and so on.
 
-TiSpark depends on the existence of TiKV clusters and PDs. It also needs to setup and use Spark clustering platform. 
+TiSpark depends on the existence of TiKV clusters and PDs. It also needs to setup and use Spark clustering platform.
 
 A thin layer of TiSpark. Most of the logic is inside tikv-client library.
 https://github.com/pingcap/tispark/tree/master/tikv-client
@@ -110,7 +119,7 @@ https://github.com/pingcap/tispark/tree/master/tikv-client
 
 From Spark-shell:
 ```
-./bin/spark-shell --jars /wherever-it-is/tispark-core-${version}-jar-with-dependencies.jar
+./bin/spark-shell --jars /wherever-it-is/tispark-assembly-${version}.jar
 ```
 For TiSpark version >= 2.0:
 ```
@@ -127,15 +136,17 @@ ti.tidbMapDatabase ("tpch_test")
 spark.sql("select count(*) from lineitem").show
 ```
 
-**Please Note: For now even if you use TiSpark 2.0+, for spark-submit on pyspark, tidbMapDatabase is still required and TiExtension is not supported yet. We are working on it.
+**Please Note: For now even if you use TiSpark 2.0+, for spark-submit on pyspark, tidbMapDatabase is still required and TiExtension is not supported yet (because of [SPARK-25003](https://issues.apache.org/jira/browse/SPARK-25003)). We are working on it.
 
 ## Current Version
 ```
 spark.sql("select ti_version()").show
 ```
 
-## TiDB Data Source API	
+## TiDB Data Source API
 When using the TiDB Data Source API, please follow the document for [TiDB Data Source API User Guide](./docs/datasource_api_userguide.md).
+
+Currently TiSpark natively supports writing data to TiKV directly by using Data source api.
 
 ## Configuration
 
@@ -187,4 +198,3 @@ tidb-user@googlegroups.com
 
 ## License
 TiSpark is under the Apache 2.0 license. See the [LICENSE](./LICENSE) file for details.
-
