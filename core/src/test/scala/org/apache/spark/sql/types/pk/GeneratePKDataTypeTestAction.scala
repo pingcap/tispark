@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,12 @@
  *
  */
 
-package org.apache.spark.sql.types
+package org.apache.spark.sql.types.pk
 
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 import org.apache.spark.sql.test.generator.TestDataGenerator.{isStringType, schemaGenerator}
-import org.apache.spark.sql.test.generator.{DefaultColumn, Index, PrefixColumn, PrimaryKey, Schema}
+import org.apache.spark.sql.test.generator._
+import org.apache.spark.sql.types.GenerateUnitDataTypeTestAction
 
 import scala.util.Random
 

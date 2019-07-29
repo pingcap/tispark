@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,13 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, TINYINT}
+import org.apache.spark.sql.TiSparkTestSpec
+import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
-import scala.util.Random
-
-trait UnitDataTypeTestAction {
+trait MultiColumnDataTypeTestSpec extends TiSparkTestSpec {
   val dataTypes: List[ReflectedDataType]
   val unsignedDataTypes: List[ReflectedDataType]
   val dataTypeTestDir: String
-  val database: String
-  val testDesc: String
-  // Randomizer for tests
-  val r: Random = new Random(1234)
-  val extraDesc = "unsigned"
-  val preDescription: String = ""
 
-  def test(): Unit
+  val extraDesc = "unsigned"
 }

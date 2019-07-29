@@ -17,22 +17,13 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.test.generator.DataType.getTypeName
+import org.apache.spark.sql.TiSparkTestSpec
+import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
-trait RunUnitDataTypeTestAction extends UnitDataTypeTestSpec {
+trait UnitDataTypeTestSpec extends TiSparkTestSpec {
+  val dataTypes: List[ReflectedDataType]
+  val unsignedDataTypes: List[ReflectedDataType]
+  val dataTypeTestDir: String
 
-  def startTest(typeName: String): Unit
-
-  def startUnsignedTest(typeName: String): Unit
-
-  def test(): Unit = {
-    for (dataType <- dataTypes) {
-      val typeName = getTypeName(dataType)
-      startTest(typeName)
-    }
-    for (dataType <- unsignedDataTypes) {
-      val typeName = getTypeName(dataType)
-      startUnsignedTest(typeName)
-    }
-  }
+  val extraDesc = "unsigned"
 }

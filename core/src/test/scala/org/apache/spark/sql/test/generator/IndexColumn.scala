@@ -1,4 +1,5 @@
 /*
+ *
  * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.apache.spark.sql.test.generator
@@ -54,14 +56,15 @@ case class ColumnInfo(columnName: String,
     }
   }
 
-  private val baseType = getBaseType(dataType)
-
-  private val (len, decimal): (Long, Int) = if (length._1 == null) {
-    (getLength(baseType), getDecimal(baseType))
-  } else if (length._2 == null) {
-    (length._1.toLong, getDecimal(baseType))
-  } else {
-    (length._1.toLong, length._2)
+  val (len, decimal): (Long, Int) = {
+    val baseType = getBaseType(dataType)
+    if (length._1 == null) {
+      (getLength(baseType), getDecimal(baseType))
+    } else if (length._2 == null) {
+      (length._1.toLong, getDecimal(baseType))
+    } else {
+      (length._1.toLong, length._2)
+    }
   }
 
   {

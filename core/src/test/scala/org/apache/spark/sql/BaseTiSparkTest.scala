@@ -29,7 +29,7 @@ import org.apache.spark.sql.test.SharedSQLContext
 
 import scala.collection.mutable.ArrayBuffer
 
-class BaseTiSparkTest extends QueryTest with SharedSQLContext with BaseTestGenerationSpec {
+class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected var tidbStmt: Statement = _
 
@@ -360,7 +360,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext with BaseTestGener
       try {
         r1 = queryViaTiSpark(qSpark)
       } catch {
-        case e: Throwable => fail(e)
+        case e: Throwable =>
+          logger.error(s"TiSpark failed when executing: $qSpark")
+          fail(e)
       }
     }
 
@@ -378,7 +380,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext with BaseTestGener
         r2 = queryViaTiSpark(qJDBC)
       } catch {
         case e: Throwable =>
-          logger.warn(s"Spark with JDBC failed when executing:$qJDBC", e) // JDBC failed
+          logger.warn(s"Spark with JDBC failed when executing: $qJDBC", e) // JDBC failed
       }
     }
 
@@ -387,7 +389,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext with BaseTestGener
         try {
           r3 = queryTiDBViaJDBC(qSpark)
         } catch {
-          case e: Throwable => logger.warn(s"TiDB failed when executing:$qSpark", e) // TiDB failed
+          case e: Throwable => logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
         }
       }
       if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {

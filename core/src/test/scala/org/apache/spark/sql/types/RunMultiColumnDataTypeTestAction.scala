@@ -17,22 +17,13 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.test.generator.DataType.getTypeName
+import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
-trait RunUnitDataTypeTestAction extends UnitDataTypeTestSpec {
+trait RunMultiColumnDataTypeTestAction extends MultiColumnDataTypeTestSpec {
 
-  def startTest(typeName: String): Unit
-
-  def startUnsignedTest(typeName: String): Unit
+  def startTest(dataTypes: List[ReflectedDataType]): Unit
 
   def test(): Unit = {
-    for (dataType <- dataTypes) {
-      val typeName = getTypeName(dataType)
-      startTest(typeName)
-    }
-    for (dataType <- unsignedDataTypes) {
-      val typeName = getTypeName(dataType)
-      startUnsignedTest(typeName)
-    }
+    startTest(dataTypes)
   }
 }

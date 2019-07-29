@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,11 @@
  *
  */
 
-package org.apache.spark.sql.types
+package org.apache.spark.sql.types.pk
 
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
+import org.apache.spark.sql.types.UnitDataTypeTestSpec
 
 case class DataTypePKGenerator(dataTypes: List[ReflectedDataType],
                                unsignedDataTypes: List[ReflectedDataType],
@@ -34,12 +35,12 @@ case class DataTypePKGenerator(dataTypes: List[ReflectedDataType],
 
   def loadUnsignedTestData(typeName: String): Unit = {
     logger.info(s"${preDescription}Test $extraDesc $typeName - $testDesc")
-    loadSQLFile(dataTypeTestDir, getTableName(typeName, extraDesc))
+    loadSQLFile(dataTypeTestDir, getTableNameWithDesc(extraDesc, typeName))
   }
 }
 
 object DataTypePKGenerator {
-  def apply(u: UnitDataTypeTestAction): GeneratePKDataTypeTestAction = {
+  def apply(u: UnitDataTypeTestSpec): GeneratePKDataTypeTestAction = {
     DataTypePKGenerator(u.dataTypes, u.unsignedDataTypes, u.dataTypeTestDir, u.database, u.testDesc)
   }
 }

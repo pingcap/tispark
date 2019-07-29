@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,17 @@ package org.apache.spark.sql
 
 trait BaseTestGenerationSpec {
 
-  protected val rowCount: Int = 50
+  protected val rowCount: Int
 
-  protected def getTableName(dataType: String): String = s"test_$dataType"
+  protected val preDescription: String = "Generating Data for "
 
-  protected def getTableName(dataType: String, desc: String): String = s"test_${desc}_$dataType"
+  def getTableName(dataTypes: String*): String
 
-  protected def getColumnName(dataType: String): String = s"col_$dataType"
+  def getTableNameWithDesc(desc: String, dataTypes: String*): String
 
-  protected def getIndexName(dataType: String): String = s"idx_$dataType"
+  def getColumnName(dataType: String): String = s"col_$dataType"
+
+  def getIndexName(dataTypes: String*): String =
+    s"idx_${dataTypes.map(getColumnName).mkString("_")}"
 
 }

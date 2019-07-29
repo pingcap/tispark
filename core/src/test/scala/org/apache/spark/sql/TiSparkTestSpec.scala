@@ -15,24 +15,15 @@
  *
  */
 
-package org.apache.spark.sql.types
+package org.apache.spark.sql
 
-import org.apache.spark.sql.test.generator.DataType.getTypeName
+import scala.util.Random
 
-trait RunUnitDataTypeTestAction extends UnitDataTypeTestSpec {
+trait TiSparkTestSpec {
+  val database: String
+  val testDesc: String
+  // Randomizer for tests
+  val r: Random = new Random(1234)
 
-  def startTest(typeName: String): Unit
-
-  def startUnsignedTest(typeName: String): Unit
-
-  def test(): Unit = {
-    for (dataType <- dataTypes) {
-      val typeName = getTypeName(dataType)
-      startTest(typeName)
-    }
-    for (dataType <- unsignedDataTypes) {
-      val typeName = getTypeName(dataType)
-      startUnsignedTest(typeName)
-    }
-  }
+  def test(): Unit
 }

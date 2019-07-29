@@ -26,7 +26,6 @@ import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
 import org.apache.spark.{SparkConf, SparkContext, SparkFunSuite}

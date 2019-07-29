@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ package org.apache.spark.sql.types
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
-case class BaseGenerateDataType(dataTypes: List[ReflectedDataType],
-                                unsignedDataTypes: List[ReflectedDataType],
-                                dataTypeTestDir: String,
-                                database: String,
-                                testDesc: String)
+case class BaseDataTypeGenerator(dataTypes: List[ReflectedDataType],
+                                 unsignedDataTypes: List[ReflectedDataType],
+                                 dataTypeTestDir: String,
+                                 database: String,
+                                 testDesc: String)
     extends BaseTiSparkTest
     with GenerateUnitDataTypeTestAction {
   def loadTestData(typeName: String): Unit = {
@@ -34,6 +34,6 @@ case class BaseGenerateDataType(dataTypes: List[ReflectedDataType],
 
   def loadUnsignedTestData(typeName: String): Unit = {
     logger.info(s"${preDescription}Test $extraDesc $typeName - $testDesc")
-    loadSQLFile(dataTypeTestDir, getTableName(typeName, extraDesc))
+    loadSQLFile(dataTypeTestDir, getTableNameWithDesc(extraDesc, typeName))
   }
 }
