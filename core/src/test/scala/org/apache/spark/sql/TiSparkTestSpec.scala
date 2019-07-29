@@ -19,7 +19,7 @@ package org.apache.spark.sql
 
 import scala.util.Random
 
-trait TiSparkTestAction {
+trait TiSparkTestSpec {
   val database: String
   val testDesc: String
   // Randomizer for tests

@@ -17,35 +17,45 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.{BaseTestGenerationSpec, BaseTiSparkTest}
 import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
 trait MultiColumnDataTypeTest extends BaseTiSparkTest {
 
-  private val ops = List(">", "=", "<", "<>")
+  protected val generator: BaseTestGenerationSpec
+
+  private val cmps: List[String] = List(">", "<")
+  private val eqs: List[String] = List("=", "<>")
 
   implicit class C[X](xs: Traversable[X]) {
     def cross[Y](ys: Traversable[Y]): Traversable[(X, Y)] = for { x <- xs; y <- ys } yield (x, y)
   }
 
-  def getOperations(dataType: ReflectedDataType): List[(String, String)] = List(("is", "null")) ++ {
-    ops cross {
-      dataType match {
-        case BOOLEAN                     => List("false", "true")
-        case TINYINT                     => List("1", "0")
-        case _ if isNumeric(dataType)    => List("1", "2333")
-        case _ if isStringType(dataType) => List("\'PingCAP\'", "\'\'")
-        case _                           => List.empty[String]
+  def getOperations(dataType: ReflectedDataType): List[(String, String)] =
+    List(("is", "null")) ++ {
+      (cmps ++ eqs) cross {
+        dataType match {
+          case TINYINT                     => List("1", "0")
+          case _ if isNumeric(dataType)    => List("1", "2333")
+          case _ if isStringType(dataType) => List("\'PingCAP\'", "\'\'")
+          case _                           => List.empty[String]
+        }
+      }
+    } ++ {
+      eqs cross {
+        dataType match {
+          case BOOLEAN => List("false", "true")
+          case _       => List.empty[String]
+        }
       }
     }
-  }
 
   def simpleSelect(dbName: String, dataTypes: ReflectedDataType*): Unit = {
     val typeNames = dataTypes.map(getTypeName)
-    val tblName = getTableName(typeNames: _*)
-    val columnNames = typeNames.map(getColumnName)
+    val tblName = generator.getTableName(typeNames: _*)
+    val columnNames = typeNames.map(generator.getColumnName)
     for (i <- columnNames.indices) {
       for (j <- i + 1 until columnNames.size) {
         val col = columnNames(j)

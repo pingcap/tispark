@@ -17,14 +17,13 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.TiSparkTestAction
+import org.apache.spark.sql.TiSparkTestSpec
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
-trait UnitDataTypeTestAction extends TiSparkTestAction {
+trait MultiColumnDataTypeTestSpec extends TiSparkTestSpec {
   val dataTypes: List[ReflectedDataType]
   val unsignedDataTypes: List[ReflectedDataType]
   val dataTypeTestDir: String
 
   val extraDesc = "unsigned"
-  val preDescription: String = ""
 }

@@ -29,19 +29,21 @@ class MultiColumnDataTypeSuite
   val database: String = "multi_column_data_type_test"
   val testDesc: String = "Base test for multi-column data types"
 
+  override val generator = BaseMultiColumnDataTypeGenerator(
+    dataTypes,
+    unsignedDataTypes,
+    dataTypeTestDir,
+    database,
+    testDesc
+  )
+
   def startTest(dataTypes: List[ReflectedDataType]): Unit = {
     simpleSelect(database, dataTypes: _*)
   }
 
   def check(): Unit = {
     if (generateData) {
-      BaseMultiColumnDataTypeGenerator(
-        dataTypes,
-        unsignedDataTypes,
-        dataTypeTestDir,
-        database,
-        testDesc
-      ).test()
+      generator.test()
     }
   }
 

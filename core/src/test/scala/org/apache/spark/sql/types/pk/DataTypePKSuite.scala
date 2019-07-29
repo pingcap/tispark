@@ -28,21 +28,24 @@ class DataTypePKSuite extends BaseDataTypeTest with RunUnitDataTypeTestAction {
   override val database = "data_type_test_pk"
   override val testDesc = "Test for single PK column data types (and unsigned types)"
 
+  override lazy protected val generator =
+    DataTypePKGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
+
   def startTest(typeName: String): Unit = {
-    test(s"${preDescription}Test $typeName - $testDesc") {
+    test(s"Test $typeName - $testDesc") {
       simpleSelect(database, typeName)
     }
   }
 
   def startUnsignedTest(typeName: String): Unit = {
-    test(s"${preDescription}Test $extraDesc $typeName - $testDesc") {
+    test(s"Test $extraDesc $typeName - $testDesc") {
       simpleSelect(database, typeName, extraDesc)
     }
   }
 
   def check(): Unit = {
     if (generateData) {
-      DataTypePKGenerator.apply(this).test()
+      generator.test()
     }
   }
 

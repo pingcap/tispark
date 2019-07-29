@@ -19,7 +19,7 @@ package org.apache.spark.sql.types.pk
 
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
-import org.apache.spark.sql.types.UnitDataTypeTestAction
+import org.apache.spark.sql.types.UnitDataTypeTestSpec
 
 case class DataTypePKGenerator(dataTypes: List[ReflectedDataType],
                                unsignedDataTypes: List[ReflectedDataType],
@@ -40,7 +40,7 @@ case class DataTypePKGenerator(dataTypes: List[ReflectedDataType],
 }
 
 object DataTypePKGenerator {
-  def apply(u: UnitDataTypeTestAction): GeneratePKDataTypeTestAction = {
+  def apply(u: UnitDataTypeTestSpec): GeneratePKDataTypeTestAction = {
     DataTypePKGenerator(u.dataTypes, u.unsignedDataTypes, u.dataTypeTestDir, u.database, u.testDesc)
   }
 }

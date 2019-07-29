@@ -22,9 +22,21 @@ import org.apache.spark.sql.test.generator.{Data, Index, Schema}
 import org.apache.spark.sql.test.generator.DataType.{getBaseType, getTypeName, DECIMAL, ReflectedDataType}
 import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isVarString, randomDataGenerator, schemaGenerator}
 
-trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestAction with BaseTestGenerationSpec {
+trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestGenerationSpec {
 
-  override val preDescription: String = "Generating Data for "
+  override val rowCount = 50
+
+  private def toString(dataTypes: Seq[String]) = {
+    assert(dataTypes.size == 1, "Unit data type tests can not manage multiple columns")
+    dataTypes.mkString("_")
+  }
+
+  override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
+
+  override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
+    s"test_${desc}_${toString(dataTypes)}"
+
+  override def getIndexName(dataTypes: String*): String = s"idx_${toString(dataTypes)}"
 
   def genSchema(dataType: ReflectedDataType,
                 tableName: String,

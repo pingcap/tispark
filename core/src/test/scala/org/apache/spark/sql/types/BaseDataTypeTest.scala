@@ -17,21 +17,25 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.{BaseTestGenerationSpec, BaseTiSparkTest}
 import org.apache.spark.sql.test.SharedSQLContext
 
 trait BaseDataTypeTest extends BaseTiSparkTest {
+
+  protected val generator: BaseTestGenerationSpec
+
   def simpleSelect(dbName: String, dataType: String): Unit = {
     setCurrentDatabase(dbName)
-    val tblName = getTableName(dataType)
-    val query = s"select ${getColumnName(dataType)} from $tblName"
+    val tblName = generator.getTableName(dataType)
+    val query = s"select ${generator.getColumnName(dataType)} from $tblName"
     runTest(query)
   }
 
   def simpleSelect(dbName: String, dataType: String, desc: String): Unit = {
     setCurrentDatabase(dbName)
-    val tblName = getTableNameWithDesc(dataType, desc)
-    val query = s"select ${getColumnName(dataType)} from $tblName"
+    val tblName = generator.getTableNameWithDesc(desc, dataType)
+    val query = s"select ${generator.getColumnName(dataType)} from $tblName"
+    println(query)
     runTest(query)
   }
 

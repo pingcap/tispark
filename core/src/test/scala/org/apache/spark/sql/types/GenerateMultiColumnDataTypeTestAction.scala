@@ -23,9 +23,17 @@ import org.apache.spark.sql.test.generator.{Data, Index, Schema}
 import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isVarString, randomDataGenerator, schemaGenerator}
 
 trait GenerateMultiColumnDataTypeTestAction
-    extends MultiColumnDataTypeTestAction
+    extends MultiColumnDataTypeTestSpec
     with BaseTestGenerationSpec {
-  override val preDescription: String = "Generating Data for "
+
+  override val rowCount = 50
+
+  private def toString(dataTypes: Seq[String]): String = dataTypes.hashCode().toString
+
+  override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
+
+  override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
+    s"test_${desc}_${toString(dataTypes)}"
 
   def genSchema(tableName: String,
                 dataTypesWithDescription: List[(ReflectedDataType, String, String)]): Schema = {

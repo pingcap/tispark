@@ -19,17 +19,17 @@ package org.apache.spark.sql
 
 trait BaseTestGenerationSpec {
 
-  protected val rowCount: Int = 50
+  protected val rowCount: Int
 
-  private def toString(dataTypes: Seq[String]) = dataTypes.map(_.head).mkString("_")
+  protected val preDescription: String = "Generating Data for "
 
-  protected def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
+  def getTableName(dataTypes: String*): String
 
-  protected def getTableNameWithDesc(desc: String, dataTypes: String*): String =
-    s"test_${desc}_${toString(dataTypes)}"
+  def getTableNameWithDesc(desc: String, dataTypes: String*): String
 
-  protected def getColumnName(dataType: String): String = s"col_$dataType"
+  def getColumnName(dataType: String): String = s"col_$dataType"
 
-  protected def getIndexName(dataTypes: String*): String = s"idx_${toString(dataTypes)}"
+  def getIndexName(dataTypes: String*): String =
+    s"idx_${dataTypes.map(getColumnName).mkString("_")}"
 
 }

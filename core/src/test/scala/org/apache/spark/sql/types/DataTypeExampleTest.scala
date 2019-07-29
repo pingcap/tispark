@@ -26,22 +26,24 @@ class DataTypeExampleTest extends BaseDataTypeTest with RunUnitDataTypeTestActio
   val database: String = "data_type_test_example"
   val testDesc: String = "Base test for data types"
 
+  override lazy protected val generator =
+    BaseDataTypeGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
+
   def startTest(typeName: String): Unit = {
-    test(s"${preDescription}Test $typeName - $testDesc") {
+    test(s"Test $typeName - $testDesc") {
       simpleSelect(database, typeName)
     }
   }
 
   def startUnsignedTest(typeName: String): Unit = {
-    test(s"${preDescription}Test $extraDesc $typeName - $testDesc") {
+    test(s"Test $extraDesc $typeName - $testDesc") {
       simpleSelect(database, typeName, extraDesc)
     }
   }
 
   def check(): Unit = {
     if (generateData) {
-      BaseDataTypeGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
-        .test()
+      generator.test()
     }
   }
 
