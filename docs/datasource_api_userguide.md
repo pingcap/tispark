@@ -1,7 +1,7 @@
 # TiDB Data Source API User Guide
 The TiDB Connector for Spark enables using TiDB as an Apache Spark data source, similar to other data sources (PostgreSQL, HDFS, S3, etc.).
 
-The TiDB connector support spark-2.3.0+.
+The TiDB connector support spark-2.3.x and spark-2.4.x.
 
 ## Interaction Between TiDB and Spark
 The connector supports bi-directional data movement between TiDB and Spark cluster.
@@ -9,13 +9,6 @@ The connector supports bi-directional data movement between TiDB and Spark clust
 Using the connector, you can perform the following operations:
   - Populate a Spark DataFrame from a table in TiDB.
   - Write the contents of a Spark DataFrame to a table in TiDB.
-
-## Query Pushdown
-For optimal performance, you typically want to avoid reading lots of data or transferring large intermediate results between systems.
-
-Query pushdown leverages these performance efficiencies by enabling large and complex Spark logical plans (in parts) to be processed in TiKV.
-
-Pushdown is not possible in all situations. For example, Spark UDFs cannot be pushed down to TiKV.
 
 ## Transaction support for Write
 Since TiDB is a database that supports transaction, TiDB Spark Connector also support transaction, which means:
@@ -54,7 +47,6 @@ val sparkConf = new SparkConf()
   .setIfMissing("spark.tispark.tidb.password", "")
   .setIfMissing("spark.tispark.tidb.port", "4000")
   .setIfMissing("spark.tispark.tidb.user", "root")
-
 
 val spark = SparkSession.builder.config(sparkConf).getOrCreate()
 val sqlContext = spark.sqlContext
@@ -110,30 +102,6 @@ df.show()
    .option("table", "target_table_orders")
    .mode("append")
    .save()
-```
-
-### Use another TiDB
-TiDB config can be overwrite in data source options, thus one can connect to a different TiDB.
-
-```scala
-// tidb config priority: data source config > spark config
-val tidbOptions: Map[String, String] = Map(
-  "tidb.addr" -> "anotherTidbIP",
-  "tidb.password" -> "",
-  "tidb.port" -> "4000",
-  "tidb.user" -> "root",
-  "spark.tispark.pd.addresses" -> "pd0:2379"
-)
-
-val df = sqlContext.read
-  .format("tidb")
-  .options(tidbOptions)
-  .option("database", "tpch_test")
-  .option("table", "CUSTOMER")
-  .load()
-  .filter("C_CUSTKEY = 1")
-  .select("C_NAME")
-df.show()
 ```
 
 ## Using the Spark Connector Without Extensions Enabled
@@ -236,7 +204,9 @@ The following is TiDB-specific options, which can be passed in through `TiDBOpti
 | writeConcurrency            | -             | false    | maximum number of threads writing data to tikv, suggest `writeConcurrency` <= 8 * `number of TiKV instance` | 0       |
 
 ## TiDB Version and Configuration for Write
-TiDB's version should >= 3.0 and make sure that the following tidb's configs are correctly set.
+TiDB's version should >= 4.0 and make sure that the following tidb's configs are correctly set.
+
+**IMPORTANT: currently TiDB-4.0 is not released yet, but you can use code on tidb's master branch.**
 
 ```
 # enable-table-lock is used to control table lock feature. The default value is false, indicating the table lock feature is disabled.
@@ -250,7 +220,7 @@ delay-clean-table-lock: 60000
 split-table: true
 ```
 
-If your TiDB's version is < 3.0 and want to have a try, you can set `spark.tispark.write.without_lock_table` to `true` to enable write, but no ACID is guaranteed.
+**If your TiDB's version is <= 4.0 and want to have a try, you can set `spark.tispark.write.without_lock_table` to `true` to enable write, but no ACID is guaranteed.**
 
 ## Type Conversion for Write
 The following SparkSQL Data Type is currently not supported for writing to TiDB:
