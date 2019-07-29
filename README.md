@@ -13,7 +13,7 @@ Read the [Quick Start](./docs/userguide.md).
 ## Getting TiSpark
 The current stable version is **TiSpark 2.2.0** which is compatible with **Spark 2.3.x** and **Spark 2.4.x**.
 
-The latest stable version compatible with **Spark 2.1.0+** is **TiSpark 1.2.1**
+The latest stable version compatible with **Spark 2.1.x** is **TiSpark 1.2.1**
 
 **When using TiSpark 1.2.1, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
