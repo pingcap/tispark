@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [TiSpark 2.2.0]
 ### New Features
-* Natively support writing data to TiDB using Spark Data Source API
+* Natively support writing data to TiKV using Spark Data Source API
 * Support select from partition table [#916](https://github.com/pingcap/tispark/pull/916)
 * Release one tispark jar instead of two [#933](https://github.com/pingcap/tispark/pull/933)
 * add spark version to tispark udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
