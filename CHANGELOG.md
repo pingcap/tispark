@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file.
 ### New Features
 * Natively support writing data to TiKV using Spark Data Source API
 * Support select from partition table [#916](https://github.com/pingcap/tispark/pull/916)
-* Release one tispark jar instead of two [#933](https://github.com/pingcap/tispark/pull/933)
-* add spark version to tispark udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
+* Release one tispark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
+* Add spark version to tispark udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
 
 ## [TiSpark 2.1.2] 2019-07-29
 ### Fixes
@@ -55,10 +55,10 @@ All notable changes to this project will be documented in this file.
 ## [TiSpark 2.0]
 ### Features
 * Work with Spark 2.3
-* Support use $database statement
+* Support use `$database` statement
 * Support show databases statement
 * Support show tables statement
-* No need to use TiContext.mapTiDBDatabase, use $database.$table to identify a table instead
+* No need to use `TiContext.mapTiDBDatabase`, use `$database.$table` to identify a table instead
 * Support data type SET and ENUM
 * Support data type YEAR
 * Support data type TIME
