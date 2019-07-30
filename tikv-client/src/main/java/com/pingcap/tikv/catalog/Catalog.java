@@ -85,7 +85,9 @@ public class Catalog implements AutoCloseable {
       if (tableMap == null) {
         tableMap = loadTables(db);
       }
-      return ImmutableList.copyOf(tableMap.values());
+      Collection<TiTableInfo> tables = tableMap.values();
+      tables.removeIf(TiTableInfo::isView);
+      return ImmutableList.copyOf(tables);
     }
 
     public TiTableInfo getTable(TiDBInfo db, String tableName) {
@@ -93,7 +95,9 @@ public class Catalog implements AutoCloseable {
       if (tableMap == null) {
         tableMap = loadTables(db);
       }
-      return tableMap.get(tableName.toLowerCase());
+      TiTableInfo tbl = tableMap.get(tableName.toLowerCase());
+      if (tbl.isView()) return null;
+      return tbl;
     }
 
     private Map<String, TiTableInfo> loadTables(TiDBInfo db) {
