@@ -85,7 +85,9 @@ public class Catalog implements AutoCloseable {
       if (tableMap == null) {
         tableMap = loadTables(db);
       }
-      return ImmutableList.copyOf(tableMap.values());
+      Collection<TiTableInfo> tables = tableMap.values();
+      tables.removeIf(TiTableInfo::isView);
+      return ImmutableList.copyOf(tables);
     }
 
     public TiTableInfo getTable(TiDBInfo db, String tableName) {
@@ -93,7 +95,11 @@ public class Catalog implements AutoCloseable {
       if (tableMap == null) {
         tableMap = loadTables(db);
       }
-      return tableMap.get(tableName.toLowerCase());
+      TiTableInfo tbl = tableMap.get(tableName.toLowerCase());
+      // https://github.com/pingcap/tispark/issues/961
+      // TODO: support reading from view table in the future.
+      if (tbl != null && tbl.isView()) return null;
+      return tbl;
     }
 
     private Map<String, TiTableInfo> loadTables(TiDBInfo db) {
