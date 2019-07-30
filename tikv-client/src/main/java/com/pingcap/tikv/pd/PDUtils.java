@@ -15,8 +15,9 @@
 
 package com.pingcap.tikv.pd;
 
-import com.google.common.collect.ImmutableList;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class PDUtils {
@@ -29,10 +30,11 @@ public class PDUtils {
   }
 
   public static List<URI> addrsToUrls(String[] addrs) {
-    ImmutableList.Builder<URI> urlsBuilder = new ImmutableList.Builder<>();
+    ArrayList<URI> urlsBuilder = new ArrayList<>();
     for (String addr : addrs) {
       urlsBuilder.add(addrToUrl(addr));
     }
-    return urlsBuilder.build();
+    Collections.sort(urlsBuilder);
+    return Collections.unmodifiableList(urlsBuilder);
   }
 }

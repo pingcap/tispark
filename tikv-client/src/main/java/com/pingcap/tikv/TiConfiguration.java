@@ -18,7 +18,6 @@ package com.pingcap.tikv;
 import com.pingcap.tikv.pd.PDUtils;
 import java.io.Serializable;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -52,7 +51,8 @@ public class TiConfiguration implements Serializable {
   private TimeUnit metaReloadUnit = DEF_META_RELOAD_UNIT;
   private int metaReloadPeriod = DEF_META_RELOAD_PERIOD;
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
-  private List<URI> pdAddrs = new ArrayList<>();
+  private final List<URI> pdAddrs;
+  private final String pdAddsStr;
   private int indexScanBatchSize = DEF_INDEX_SCAN_BATCH_SIZE;
   private int indexScanConcurrency = DEF_INDEX_SCAN_CONCURRENCY;
   private int tableScanConcurrency = DEF_TABLE_SCAN_CONCURRENCY;
@@ -62,10 +62,18 @@ public class TiConfiguration implements Serializable {
   private boolean showRowId = DEF_SHOW_ROWID;
   private String dbPrefix = DEF_DB_PREFIX;
 
+  private TiConfiguration(String pdAddrsStr) {
+    this.pdAddrs = strToURI(pdAddrsStr);
+    StringBuilder sb = new StringBuilder();
+    for (URI uri : this.pdAddrs) {
+      sb.append(uri.toString());
+    }
+    pdAddsStr = sb.toString();
+  }
+
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
-    TiConfiguration conf = new TiConfiguration();
-    conf.pdAddrs = strToURI(pdAddrsStr);
+    TiConfiguration conf = new TiConfiguration(pdAddrsStr);
     return conf;
   }
 
@@ -113,6 +121,10 @@ public class TiConfiguration implements Serializable {
 
   public List<URI> getPdAddrs() {
     return pdAddrs;
+  }
+
+  public String getPdAddrsString() {
+    return pdAddsStr;
   }
 
   public int getScanBatchSize() {
