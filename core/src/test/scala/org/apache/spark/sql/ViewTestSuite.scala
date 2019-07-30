@@ -19,5 +19,6 @@ class ViewTestSuite extends BaseTiSparkTest {
     refreshConnections()
 
     judge(s"select * from $table")
+    intercept[AnalysisException](spark.sql("select * from v"))
   }
 }
