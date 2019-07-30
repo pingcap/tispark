@@ -46,8 +46,10 @@ public class TiTableInfo implements Serializable {
   private final long oldSchemaId;
   private final long columnSize; // estimated column size
   private final TiPartitionInfo partitionInfo;
+  private final TiViewInfo viewInfo;
 
   @JsonCreator
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public TiTableInfo(
       @JsonProperty("id") long id,
       @JsonProperty("name") CIStr name,
@@ -61,7 +63,8 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("max_col_id") long maxColumnId,
       @JsonProperty("max_idx_id") long maxIndexId,
       @JsonProperty("old_schema_id") long oldSchemaId,
-      @JsonProperty("partition") TiPartitionInfo partitionInfo) {
+      @JsonProperty("partition") TiPartitionInfo partitionInfo,
+      @JsonProperty("view") TiViewInfo viewInfo) {
     this.id = id;
     this.name = name.getL();
     this.charset = charset;
@@ -78,6 +81,11 @@ public class TiTableInfo implements Serializable {
     this.maxIndexId = maxIndexId;
     this.oldSchemaId = oldSchemaId;
     this.partitionInfo = partitionInfo;
+    this.viewInfo = viewInfo;
+  }
+
+  public boolean isView() {
+    return this.viewInfo != null;
   }
 
   public long getId() {
@@ -199,7 +207,8 @@ public class TiTableInfo implements Serializable {
           getMaxColumnId(),
           getMaxIndexId(),
           getOldSchemaId(),
-          partitionInfo);
+          partitionInfo,
+          null);
     } else {
       return this;
     }
