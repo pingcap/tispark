@@ -49,7 +49,7 @@ public class TiTableInfo implements Serializable {
   private final TiColumnInfo primaryKeyColumn;
 
   @JsonCreator
-  @JsonIgnoreProperties
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public TiTableInfo(
       @JsonProperty("id") long id,
       @JsonProperty("name") CIStr name,
