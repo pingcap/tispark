@@ -21,6 +21,34 @@ import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 class PartitionTableSuite extends BaseTiSparkTest {
   def enablePartitionForTiDB(): Boolean = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 
+  test("test read from range partition and partition function (mod) is not supported by tispark") {
+    enablePartitionForTiDB()
+    tidbStmt.execute("DROP TABLE IF EXISTS `pt`")
+    tidbStmt.execute("""
+                       |CREATE TABLE `pt` (
+                       |  `id` int(11) DEFAULT NULL,
+                       |  `name` varchar(50) DEFAULT NULL,
+                       |  `purchased` date DEFAULT NULL,
+                       |  index `idx_id`(`id`)
+                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                       |PARTITION BY RANGE (mod(year(purchased), 4)) (
+                       |  PARTITION p0 VALUES LESS THAN (1),
+                       |  PARTITION p1 VALUES LESS THAN (2),
+                       |  PARTITION p2 VALUES LESS THAN (3),
+                       |  PARTITION p3 VALUES LESS THAN (MAXVALUE)
+                       |)
+                     """.stripMargin)
+
+    tidbStmt.execute("insert into `pt` values(1, 'name', '1995-10-10')")
+    refreshConnections()
+
+    judge("select * from pt")
+    judge("select * from pt where name = 'name'")
+    judge("select * from pt where name != 'name'")
+    judge("select * from pt where purchased = date'1995-10-10'")
+    judge("select * from pt where purchased != date'1995-10-10'")
+  }
+
   test("constant folding does not apply case") {
     enablePartitionForTiDB()
     tidbStmt.execute(

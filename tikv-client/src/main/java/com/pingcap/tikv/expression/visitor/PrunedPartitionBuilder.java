@@ -18,6 +18,7 @@ package com.pingcap.tikv.expression.visitor;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.exception.UnsupportedPartitionExprException;
+import com.pingcap.tikv.exception.UnsupportedSyntaxException;
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.meta.TiPartitionDef;
@@ -71,7 +72,7 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
 
     try {
       partExprs = generateRangePartExprs(tblInfo);
-    } catch (UnsupportedPartitionExprException e) {
+    } catch (UnsupportedSyntaxException | UnsupportedPartitionExprException e) {
       return false;
     }
 
