@@ -125,7 +125,16 @@ public class TiConfiguration implements Serializable {
   }
 
   public String getPdAddrsString() {
-    return pdAddrs.toString();
+    StringBuilder sb = new StringBuilder();
+    sb.append("[");
+    for (int i = 0; i < pdAddrs.size(); i++) {
+      sb.append(pdAddrs.get(i).toString());
+      if (i != pdAddrs.size() - 1) {
+        sb.append(",");
+      }
+    }
+    sb.append("]");
+    return sb.toString();
   }
 
   public int getScanBatchSize() {
