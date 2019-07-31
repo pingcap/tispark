@@ -21,6 +21,23 @@ import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 class PartitionTableSuite extends BaseTiSparkTest {
   def enablePartitionForTiDB(): Boolean = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 
+  test("reading from hash partition") {
+    enablePartitionForTiDB()
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute(
+      """create table t (id int) partition by hash(id) PARTITIONS 4
+        |""".stripMargin
+    )
+    tidbStmt.execute("insert into `t` values(5)")
+    tidbStmt.execute("insert into `t` values(15)")
+    tidbStmt.execute("insert into `t` values(25)")
+    tidbStmt.execute("insert into `t` values(35)")
+    refreshConnections()
+
+    judge("select * from t")
+    judge("select * from t where id < 10")
+  }
+
   test("test read from range partition and partition function (mod) is not supported by tispark") {
     enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `pt`")
