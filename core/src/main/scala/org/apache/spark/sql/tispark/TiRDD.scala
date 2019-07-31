@@ -61,7 +61,7 @@ class TiRDD(val dagRequest: TiDAGRequest,
 
     // bypass, sum return a long type
     private val tiPartition = split.asInstanceOf[TiPartition]
-    private val session = TiSessionCache.getSession(tiConf)
+    private val session = TiSession.create(tiConf)
     session.injectCallBackFunc(callBackFunc)
     private val snapshot = session.createSnapshot(dagRequest.getStartTs)
     private[this] val tasks = tiPartition.tasks

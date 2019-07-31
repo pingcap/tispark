@@ -41,7 +41,7 @@ public class Snapshot {
   public Snapshot(@Nonnull TiTimestamp timestamp, TiConfiguration conf) {
     this.timestamp = timestamp;
     this.conf = conf;
-    this.session = TiSessionCache.getSession(conf);
+    this.session = TiSession.create(conf);
   }
 
   public TiSession getSession() {
