@@ -7,7 +7,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
     def MVN_PROFILE = ""
-    def PARALLEL_NUMBER = 9
+    def PARALLEL_NUMBER = 18
     
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
@@ -96,11 +96,16 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         sed -i 's/\\.scala//g' test
                         shuf test -o  test2
                         mv test2 test
-                        split test -n r/$PARALLEL_NUMBER test_unit_ -a 1 --numeric-suffixes=1
+                        split test -n r/$PARALLEL_NUMBER test_unit_ -a 2 --numeric-suffixes=1
                         """
 
                         for (int i = 1; i <= PARALLEL_NUMBER; i++) {
-                            sh """cat test_unit_$i"""
+                            if(i < 10) {
+                                sh """cat test_unit_0$i"""
+                            } else {
+                                sh """cat test_unit_$i"""
+                            }
+
                         }
 
                         sh """
@@ -120,7 +125,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     
             def run_tispark_test = { chunk_suffix ->
                 dir("go/src/github.com/pingcap/tispark") {
-                    run_chunks = readfile("test_unit_${chunk_suffix}")
+                    if(chunk_suffix < 10) {
+                        run_chunks = readfile("test_unit_0${chunk_suffix}")
+                    } else {
+                        run_chunks = readfile("test_unit_${chunk_suffix}")
+                    }
+
                     print run_chunks
                     def mvnStr = get_mvn_str(run_chunks)
                     sh """
