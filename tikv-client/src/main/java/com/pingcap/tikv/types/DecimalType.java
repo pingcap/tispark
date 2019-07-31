@@ -28,7 +28,8 @@ import java.math.BigDecimal;
 
 public class DecimalType extends DataType {
   public static final DecimalType DECIMAL = new DecimalType(MySQLType.TypeNewDecimal);
-  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeNewDecimal};
+  public static final MySQLType[] subTypes =
+      new MySQLType[] {MySQLType.TypeNewDecimal, MySQLType.TypeDecimal};
 
   private DecimalType(MySQLType tp) {
     super(tp);

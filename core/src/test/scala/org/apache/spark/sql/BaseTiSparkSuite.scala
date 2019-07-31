@@ -114,6 +114,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
           .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
           .load()
           .filter(s"table_schema = '$dbName'")
+          .filter(s"TABLE_TYPE='BASE TABLE'")
           .select("TABLE_NAME")
         val tables = tableDF.collect().map((row: Row) => row.get(0).toString)
         tables.foreach(createOrReplaceTempView(dbName, _))

@@ -130,7 +130,20 @@ public class MetaUtils {
         name = "Table" + tid;
       }
       return new TiTableInfo(
-          tid, CIStr.newCIStr(name), "", "", pkHandle, columns, indices, "", 0, 0, 0, 0, partInfo);
+          tid,
+          CIStr.newCIStr(name),
+          "",
+          "",
+          pkHandle,
+          columns,
+          indices,
+          "",
+          0,
+          0,
+          0,
+          0,
+          partInfo,
+          null);
     }
   }
 
