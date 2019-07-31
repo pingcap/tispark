@@ -18,7 +18,7 @@
 package org.apache.spark.sql.test.generator
 
 import org.apache.spark.sql.test.generator.DataType._
-import org.apache.spark.sql.test.generator.TestDataGenerator.{checkUnique, getLength, isNumeric, isStringType}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{checkUnique, getLength, isBinaryCharset, isCharCharset, isNumeric}
 
 import scala.collection.mutable
 import scala.util.Random
@@ -30,7 +30,8 @@ case class ValueGenerator(dataType: ReflectedDataType,
                           isUnsigned: Boolean = false,
                           noDefault: Boolean = false,
                           default: Any = null,
-                          isPrimaryKey: Boolean = false) {
+                          isPrimaryKey: Boolean = false,
+                          isUnique: Boolean = false) {
 
   private val flag: Int = {
     import com.pingcap.tikv.types.DataType._
@@ -38,6 +39,9 @@ case class ValueGenerator(dataType: ReflectedDataType,
     if (isPrimaryKey) {
       ret |= PriKeyFlag
       ret |= NotNullFlag
+    }
+    if (isUnique) {
+      ret |= UniqueKeyFlag
     }
     if (!nullable) {
       ret |= NotNullFlag
@@ -50,6 +54,8 @@ case class ValueGenerator(dataType: ReflectedDataType,
     }
     ret
   }
+
+  private val generateUnique = isPrimaryKey || isUnique
 
   import com.pingcap.tikv.meta.Collation._
   val tiDataType: TiDataType = getType(dataType, flag, M, D, "", DEF_COLLATION_CODE)
@@ -98,15 +104,16 @@ case class ValueGenerator(dataType: ReflectedDataType,
     }
   }
 
-  private val specialBound: List[String] = {
-    val list: List[String] = dataType match {
-      case BIT                                                                     => List("b\'\'", "\'\'")
-      case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT if !tiDataType.isUnsigned => List("-1")
-      case _ if isStringType(dataType)                                             => List("")
+  private val specialBound: List[Any] = {
+    val list: List[Any] = dataType match {
+      case BIT                                                                     => List(Array[Byte]())
+      case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT if !tiDataType.isUnsigned => List(-1L)
+      case _ if isCharCharset(dataType)                                            => List("")
+      case _ if isBinaryCharset(dataType)                                          => List(Array[Byte]())
       case _                                                                       => List.empty[String]
     }
     if (lowerBound != null && upperBound != null) {
-      list ::: List(lowerBound.toString, upperBound.toString)
+      list ::: List(lowerBound, upperBound)
     } else {
       list
     }
@@ -151,7 +158,7 @@ case class ValueGenerator(dataType: ReflectedDataType,
           val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
           (BigDecimal.apply(Math.abs(r.nextLong()) % Math.pow(10, len)) / BigDecimal.apply(
             Math.pow(10, decimal)
-          )).bigDecimal.toPlainString
+          )).bigDecimal
       }
     } else {
       dataType match {
@@ -171,7 +178,7 @@ case class ValueGenerator(dataType: ReflectedDataType,
           val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
           (BigDecimal.apply(r.nextLong() % Math.pow(10, len)) / BigDecimal.apply(
             Math.pow(10, decimal)
-          )).bigDecimal.toPlainString
+          )).bigDecimal
         case VARCHAR   => generateRandomString(r, tiDataType.getLength)
         case VARBINARY => generateRandomBinary(r, tiDataType.getLength)
         case CHAR | TEXT | TINYTEXT | MEDIUMTEXT | LONGTEXT =>
@@ -209,9 +216,10 @@ case class ValueGenerator(dataType: ReflectedDataType,
   // pre-generate n random values
   def preGenerateRandomValues(r: Random, n: Long): Unit = {
     if (n <= 1e6) {
-      generatedRandomValues = if (isPrimaryKey) {
+      generatedRandomValues = if (generateUnique) {
+        assert(n <= rangeSize, "random generator cannot generate unique value less than available")
         val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
-        set += specialBound
+        set += specialBound.map(TestDataGenerator.hash)
         (0L until n - specialBound.size).map { _ =>
           randomUniqueValue(r, set)
         }.toList ++ specialBound
@@ -231,7 +239,7 @@ case class ValueGenerator(dataType: ReflectedDataType,
       null
     } else {
       if (generatedRandomValues.isEmpty) {
-        if (isPrimaryKey) {
+        if (generateUnique) {
           val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
           randomUniqueValue(r, set)
         } else {
@@ -251,9 +259,13 @@ case class ValueGenerator(dataType: ReflectedDataType,
       "Values not pre-generated, please generate values first to use next()"
     )
     assert(
-      hasNext,
+      hasNext || !generateUnique,
       s"Generated random values(${generatedRandomValues.size}) is less than needed(${curPos + 1})."
     )
+    if (!hasNext) {
+      // reuse previous generated data
+      curPos = 0
+    }
     curPos += 1
     generatedRandomValues(curPos - 1)
   }
@@ -279,7 +291,8 @@ case class ValueGenerator(dataType: ReflectedDataType,
     val nullString = if (!nullable) " not null" else ""
     val defaultString = if (!noDefault) s" default $default" else ""
     val unsignedString = if (isUnsigned) " unsigned" else ""
-    s"$unsignedString$nullString$defaultString"
+    val uniqueString = if (isUnique) " unique" else ""
+    s"$unsignedString$nullString$uniqueString$defaultString"
   }
 
   override def toString: String = {

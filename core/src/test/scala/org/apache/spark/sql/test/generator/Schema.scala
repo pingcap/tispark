@@ -48,12 +48,10 @@ case class Schema(database: String,
   assert(indexInfo.count(_.isPrimary) <= 1, "more than one primary key exist in schema")
 
   private val pkIndexInfo = indexInfo.filter(_.isPrimary)
-  private val pkColumnName = if (pkIndexInfo.isEmpty) {
+  val pkColumnName: String = if (pkIndexInfo.isEmpty) {
     ""
-  } else if (pkIndexInfo.head.indexColumns.size == 1) {
-    pkIndexInfo.head.indexColumns.head.column
   } else {
-    throw new IllegalArgumentException("Multi-column Primary key/Unique index not supported yet")
+    pkIndexInfo.head.indexColumns.map(_.column).mkString(",")
   }
 
   val columnInfo: List[ColumnInfo] = columnNames.map { col =>

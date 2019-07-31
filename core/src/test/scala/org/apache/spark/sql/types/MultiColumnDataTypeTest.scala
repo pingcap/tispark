@@ -22,6 +22,8 @@ import org.apache.spark.sql.test.SharedSQLContext
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
+import scala.collection.mutable
+
 trait MultiColumnDataTypeTest extends BaseTiSparkTest {
 
   protected val generator: BaseTestGenerationSpec
@@ -53,18 +55,25 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
     }
 
   def simpleSelect(dbName: String, dataTypes: ReflectedDataType*): Unit = {
-    val typeNames = dataTypes.map(getTypeName)
-    val tblName = generator.getTableName(typeNames: _*)
-    val columnNames = typeNames.map(generator.getColumnName)
-    for (i <- columnNames.indices) {
-      for (j <- i + 1 until columnNames.size) {
-        val col = columnNames(j)
-        val types = dataTypes(j)
-        for ((op, value) <- getOperations(types)) {
-          val query = s"select ${columnNames(i)} from $tblName where $col $op $value"
-          test(query) {
-            setCurrentDatabase(dbName)
-            runTest(query)
+    for (i <- 5 until 7) { //dataTypes.indices) {
+      for (j <- 5 until 7) { //dataTypes.indices) {
+        val dt = List(dataTypes(i), dataTypes(j)) ++ dataTypes
+        val tableName = generator.getTableName(dt.map(getTypeName): _*)
+        val typeNames = dt.map(getTypeName)
+        val columnNames = typeNames.zipWithIndex.map { x =>
+          generator.getColumnName(x._1)
+        }
+        for (u <- columnNames.indices) {
+          for (v <- u + 1 until columnNames.size) {
+            val col = columnNames(v)
+            val types = dt(v)
+            for ((op, value) <- getOperations(types)) {
+              val query = s"select ${columnNames(u)} from $tableName where $col $op $value"
+              test((u, v) + query) {
+                setCurrentDatabase(dbName)
+                runTest(query)
+              }
+            }
           }
         }
       }

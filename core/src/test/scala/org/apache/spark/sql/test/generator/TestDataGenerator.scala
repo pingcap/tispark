@@ -61,9 +61,11 @@ object TestDataGenerator {
   val dateAndDateTime: List[ReflectedDataType] = timestamps ::: dates ::: durations ::: years
 
   val stringAndBinaries: List[ReflectedDataType] = strings ::: binaries
+  val charCharset: List[ReflectedDataType] = strings ::: texts
+  val binaryCharset: List[ReflectedDataType] = binaries ::: bytes
   // TODO: support enum and set https://github.com/pingcap/tispark/issues/946
   // val stringType: List[DataType] = texts ::: strings ::: binaries ::: enums ::: sets
-  val stringType: List[ReflectedDataType] = texts ::: strings ::: binaries ::: bytes
+  val stringType: List[ReflectedDataType] = charCharset ::: binaryCharset
   val varString: List[ReflectedDataType] = List(VARCHAR, VARBINARY)
 
   val unsignedType: List[ReflectedDataType] = numeric
@@ -100,6 +102,8 @@ object TestDataGenerator {
   def isNumeric(dataType: ReflectedDataType): Boolean = numeric.contains(dataType)
   def isStringType(dataType: ReflectedDataType): Boolean = stringType.contains(dataType)
   def isVarString(dataType: ReflectedDataType): Boolean = varString.contains(dataType)
+  def isCharCharset(dataType: ReflectedDataType): Boolean = charCharset.contains(dataType)
+  def isBinaryCharset(dataType: ReflectedDataType): Boolean = binaryCharset.contains(dataType)
   def isCharOrBinary(dataType: ReflectedDataType): Boolean = stringAndBinaries.contains(dataType)
 
   def getLength(dataType: TiDataType): Long =

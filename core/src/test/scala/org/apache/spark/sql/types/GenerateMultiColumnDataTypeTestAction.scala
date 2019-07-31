@@ -28,7 +28,7 @@ trait GenerateMultiColumnDataTypeTestAction
 
   override val rowCount = 50
 
-  private def toString(dataTypes: Seq[String]): String = dataTypes.hashCode().toString
+  private def toString(dataTypes: Seq[String]): String = Math.abs(dataTypes.hashCode()).toString
 
   override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
 
