@@ -125,11 +125,15 @@ public class TiConfiguration implements Serializable {
   }
 
   public String getPdAddrsString() {
+    return listToString(pdAddrs);
+  }
+
+  public static <E> String listToString(List<E> list) {
     StringBuilder sb = new StringBuilder();
     sb.append("[");
-    for (int i = 0; i < pdAddrs.size(); i++) {
-      sb.append(pdAddrs.get(i).toString());
-      if (i != pdAddrs.size() - 1) {
+    for (int i = 0; i < list.size(); i++) {
+      sb.append(list.get(i).toString());
+      if (i != list.size() - 1) {
         sb.append(",");
       }
     }
