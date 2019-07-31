@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -39,7 +40,11 @@ public class TiPartitionDef implements Serializable {
       @JsonProperty("comment") String comment) {
     this.id = id;
     this.name = name.getL();
-    this.lessThan = ImmutableList.copyOf(lessThan);
+    if (lessThan == null || lessThan.isEmpty()) {
+      this.lessThan = new ArrayList<>();
+    } else {
+      this.lessThan = ImmutableList.copyOf(lessThan);
+    }
     this.comment = comment;
   }
 
