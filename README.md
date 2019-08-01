@@ -110,7 +110,7 @@ https://github.com/pingcap/tispark/tree/master/tikv-client
 
 From Spark-shell:
 ```
-./bin/spark-shell --jars /wherever-it-is/tispark-core-${version}-jar-with-dependencies.jar
+./bin/spark-shell --jars /wherever-it-is/tispark-${name_with_version}.jar
 ```
 For TiSpark version >= 2.0:
 ```
