@@ -338,3 +338,7 @@ A: You can use the existing Spark cluster without a separate deployment, but if 
 Q: Can I mix Spark with TiKV?
 
 A: If TiDB and TiKV are overloaded and run critical online tasks, consider deploying TiSpark separately. You also need to consider using different NICs to ensure that OLTP's network resources are not compromised and affect online business. If the online business requirements are not high or the loading is not large enough, you can consider mixing TiSpark with TiKV deployment.
+
+Q: How to use PySpark with TiSpark?
+
+A: Please follow [TiSpark on PySpark](../python/README_spark2.1.md).
