@@ -25,8 +25,9 @@ import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.catalog.{ExternalCatalog, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.expressions.{NamedExpression, UnsafeRow}
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, UnsafeRow}
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.types.{DataType, Metadata}
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -38,6 +39,13 @@ import scala.reflect.ClassTag
  */
 object ReflectionUtil {
   private val logger = LoggerFactory.getLogger(getClass.getName)
+
+  private val SPARK_WRAPPER_CLASS = "com.pingcap.tispark.SparkWrapper"
+  private val TI_AGGREGATION_IMPL_CLASS = "org.apache.spark.sql.TiAggregationImpl"
+  private val TI_DIRECT_EXTERNAL_CATALOG_CLASS =
+    "org.apache.spark.sql.catalyst.catalog.TiDirectExternalCatalog"
+  private val TI_COMPOSITE_SESSION_CATALOG_CLASS =
+    "org.apache.spark.sql.catalyst.catalog.TiCompositeSessionCatalog"
 
   // In Spark 2.3.0 and 2.3.1 the method declaration is:
   // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
@@ -133,18 +141,32 @@ object ReflectionUtil {
   }
 
   def newTiDirectExternalCatalog(tiContext: TiContext): ExternalCatalog = {
-    val clazz =
-      classLoader.loadClass("org.apache.spark.sql.catalyst.catalog.TiDirectExternalCatalog")
-    clazz
+    classLoader
+      .loadClass(TI_DIRECT_EXTERNAL_CATALOG_CLASS)
       .getDeclaredConstructor(classOf[TiContext])
       .newInstance(tiContext)
       .asInstanceOf[ExternalCatalog]
   }
 
+  def callTiDirectExternalCatalogDatabaseExists(obj: Object, db: String): Boolean = {
+    classLoader
+      .loadClass(TI_DIRECT_EXTERNAL_CATALOG_CLASS)
+      .getDeclaredMethod("databaseExists", classOf[String])
+      .invoke(obj, db)
+      .asInstanceOf[Boolean]
+  }
+
+  def callTiDirectExternalCatalogTableExists(obj: Object, db: String, table: String): Boolean = {
+    classLoader
+      .loadClass(TI_DIRECT_EXTERNAL_CATALOG_CLASS)
+      .getDeclaredMethod("tableExists", classOf[String], classOf[String])
+      .invoke(obj, db, table)
+      .asInstanceOf[Boolean]
+  }
+
   def newTiCompositeSessionCatalog(tiContext: TiContext): TiSessionCatalog = {
-    val clazz =
-      classLoader.loadClass("org.apache.spark.sql.catalyst.catalog.TiCompositeSessionCatalog")
-    clazz
+    classLoader
+      .loadClass(TI_COMPOSITE_SESSION_CATALOG_CLASS)
       .getDeclaredConstructor(classOf[TiContext])
       .newInstance(tiContext)
       .asInstanceOf[TiSessionCatalog]
@@ -153,13 +175,45 @@ object ReflectionUtil {
   def callTiAggregationImplUnapply(
     plan: LogicalPlan
   ): Option[(Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)] = {
-    val clazz =
-      classLoader.loadClass("org.apache.spark.sql.TiAggregationImpl")
-    clazz
+    classLoader
+      .loadClass(TI_AGGREGATION_IMPL_CLASS)
       .getDeclaredMethod("unapply", classOf[LogicalPlan])
       .invoke(null, plan)
       .asInstanceOf[Option[
         (Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)
       ]]
+  }
+
+  def newSubqueryAlias(identifier: String, child: LogicalPlan): SubqueryAlias = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod("newSubqueryAlias", classOf[String], classOf[LogicalPlan])
+      .invoke(null, identifier, child)
+      .asInstanceOf[SubqueryAlias]
+  }
+
+  def newAlias(child: Expression, name: String): Alias = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod("newAlias", classOf[Expression], classOf[String])
+      .invoke(null, child, name)
+      .asInstanceOf[Alias]
+  }
+
+  def newAttributeReference(name: String,
+                            dataType: DataType,
+                            nullable: java.lang.Boolean = false,
+                            metadata: Metadata = Metadata.empty): AttributeReference = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod(
+        "newAttributeReference",
+        classOf[String],
+        classOf[DataType],
+        classOf[Boolean],
+        classOf[Metadata]
+      )
+      .invoke(null, name, dataType, nullable, metadata)
+      .asInstanceOf[AttributeReference]
   }
 }

@@ -28,6 +28,7 @@ import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiConverter._
 import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
@@ -389,11 +390,11 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
     val deterministicAggAliases = aggregateExpressions.collect {
-      case e if e.deterministic => e.canonicalized -> Alias(e, e.toString())()
+      case e if e.deterministic => e.canonicalized -> newAlias(e, e.toString())
     }.toMap
 
     def aliasPushedPartialResult(e: AggregateExpression): Alias =
-      deterministicAggAliases.getOrElse(e.canonicalized, Alias(e, e.toString())())
+      deterministicAggAliases.getOrElse(e.canonicalized, newAlias(e, e.toString()))
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
       // As `aggExpr` is being pushing down to TiKV, we need to replace the original Catalyst
