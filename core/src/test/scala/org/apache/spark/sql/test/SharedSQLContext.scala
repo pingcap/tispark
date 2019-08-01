@@ -69,6 +69,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def initStatistics(): Unit = SharedSQLContext.initStatistics()
 
+  protected def initializeTimeZone(): Unit = SharedSQLContext.initializeTimeZone()
+
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
 
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections(false)
@@ -105,11 +107,6 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected implicit def sqlContext: SQLContext = spark.sqlContext
 
   protected implicit def sc: SparkContext = spark.sqlContext.sparkContext
-
-  protected def initializeTimeZone(): Unit = {
-    // Set default time zone to GMT-7
-    tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
-  }
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -240,8 +237,9 @@ object SharedSQLContext extends Logging {
   }
 
   protected def initializeTimeZone(): Unit = {
+    _statement = _tidbConnection.createStatement()
     // Set default time zone to GMT-7
-    tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
+    _statement.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
   protected def loadSQLFile(directory: String, file: String): Unit = {
@@ -253,7 +251,6 @@ object SharedSQLContext extends Logging {
       val queryString = source.mkString
       source.close()
       _tidbConnection.setCatalog("mysql")
-      _statement = _tidbConnection.createStatement()
       initializeTimeZone()
       _statement.execute(queryString)
       logger.info(s"Load $fullFileName successfully.")

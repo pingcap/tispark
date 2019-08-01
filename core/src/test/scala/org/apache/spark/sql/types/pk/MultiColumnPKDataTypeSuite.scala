@@ -21,7 +21,7 @@ import org.apache.spark.sql.test.generator.DataType.{getTypeName, BIGINT, INT, R
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 import org.apache.spark.sql.types.{MultiColumnDataTypeTest, RunMultiColumnDataTypeTestAction}
 
-class MultiColumnPKDataTypeSuite
+abstract class MultiColumnPKDataTypeSuite
     extends MultiColumnDataTypeTest
     with RunMultiColumnDataTypeTestAction {
   val dataTypes: List[ReflectedDataType] = baseDataTypes
@@ -65,16 +65,33 @@ class MultiColumnPKDataTypeSuite
     startTest(dataTypes, i, j)
   }
 
-  override def test(): Unit = {
-    for (i <- dataTypes.indices) {
-      for (j <- dataTypes.indices) {
-        if (i != j) {
-          check(i, j)
-          test(i, j)
-        }
+  val tests: Map[Int, Seq[(Int, Int)]] = {
+    val size = dataTypes.size
+    dataTypes.indices
+      .flatten { i =>
+        dataTypes.indices
+          .filter { j =>
+            i != j
+          }
+          .map { j =>
+            (i, j)
+          }
       }
-    }
+      .groupBy {
+        case (i, j) =>
+          (i * size + j) % size
+      }
   }
 
-  test()
+  val currentTest: Seq[(Int, Int)]
+
+  def getId: Int = getClass.getName.substring(getClass.getName.length - 2).toInt
+
+  override def test(): Unit = {
+    currentTest.foreach {
+      case (i, j) =>
+        check(i, j)
+        test(i, j)
+    }
+  }
 }
