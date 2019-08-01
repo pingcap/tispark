@@ -72,6 +72,7 @@ trait GenerateMultiColumnDataTypeTestAction
   def loadTestData(tableName: String): Unit
 
   def test(): Unit = {
+    cols = dataTypes
     val tableName = getTableName(dataTypes.map(getTypeName): _*)
     init(tableName)
     loadTestData(tableName)
