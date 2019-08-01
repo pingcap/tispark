@@ -309,7 +309,7 @@ rather than `year` then partition pruning will not be applied. Such scan can be 
 |Worker port | 	(random)   |  SPARK_WORKER_PORT |   |
 |Block manager port  |(random)   | spark.blockManager.port  |   |
 |Shuffle server	  |7337   | spark.shuffle.service.port  | 		Optional; only applies if you use the external shuffle service.  |
-|Application web UI	|4040|	spark.ui.port |
+|Application web UI	|4040|	spark.ui.port | if 4040 is used, then 4041 will be used
 
 ## FAQ
 
