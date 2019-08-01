@@ -283,8 +283,11 @@ object TestDataGenerator {
   }
 
   def hash(value: Any): String = value match {
-    case null           => "null"
-    case b: Array[Byte] => b.mkString("[", ",", "]")
+    case null                  => "null"
+    case b: Array[Byte]        => b.mkString("[", ",", "]")
+    case t: java.sql.Timestamp =>
+      // timestamp was indexed as Integer when treated as unique key
+      s"${t.getTime / 1000}"
     case list: List[Any] =>
       val ret = StringBuilder.newBuilder
       ret ++= "("

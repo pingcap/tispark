@@ -29,6 +29,8 @@ trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTyp
 
   override val rowCount: Int = 10
 
+  private val dataTypesWithDescription = dataTypes.map { genDescription }
+
   private def genIndex(dataTypesWithDescription: List[(ReflectedDataType, String, String)],
                        r: Random): List[Index] = {
     assert(
@@ -67,45 +69,44 @@ trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTyp
       pk.nonEmpty && pk.head.nonEmpty,
       "Schema incorrect for PK tests, must contain valid PK info"
     )
-    val cnt = if (pk.size == 1) {
-      if (pk.head == "col_boolean") {
-        2
-      } else if (pk.head == "col_tinyint") {
-        256
-      } else {
-        rowCount
-      }
-    } else {
+    val cnt: Int = Math.min(
+      (schema.pkIndexInfo.head.indexColumns.map {
+        case b if b.column.contains("col_bit")     => if (b.length == null) 2 else 1 << b.length.toInt
+        case b if b.column.contains("col_boolean") => 2
+        case i if i.column.contains("col_tinyint") => 256
+        case _                                     => 500
+      }.product + 2) / 3,
       rowCount
-    }
+    )
+    assert(cnt > 0, "row count should be greater than 0")
     randomDataGenerator(schema, cnt, dataTypeTestDir, r)
   }
 
-  def addDescription(dataType: ReflectedDataType): (ReflectedDataType, String, String) = {
+  def genDescription(dataType: ReflectedDataType): (ReflectedDataType, String, String) = {
     val len = genLen(dataType)
     (dataType, len, "")
   }
 
-  def addDescriptionNotNullable(
+  def genDescriptionNotNullable(
     dataType: ReflectedDataType
   ): (ReflectedDataType, String, String) = {
     val len = genLen(dataType)
     (dataType, len, "not null")
   }
 
-  override def init(): Unit = {
-    val dataTypesWithDescription = dataTypes.map { addDescription }
-    for (i <- 5 until 7) { //dataTypes.indices) {
-      for (j <- 5 until 7) { //dataTypes.indices) {
-        val dt = List(dataTypes(i), dataTypes(j)) ++ dataTypes
-        val tableName = getTableName(dt.map(getTypeName): _*)
-        val schema = genSchema(
-          tableName,
-          List(addDescriptionNotNullable(dataTypes(i)), addDescriptionNotNullable(dataTypes(j))) ++ dataTypesWithDescription
-        )
-        val data = genData(schema)
-        data.save()
-      }
-    }
+  def init(tableName: String, i: Int, j: Int): Unit = {
+    val schema = genSchema(
+      tableName,
+      List(genDescriptionNotNullable(dataTypes(i)), genDescriptionNotNullable(dataTypes(j))) ++ dataTypesWithDescription
+    )
+    val data = genData(schema)
+    data.save()
+  }
+
+  def test(i: Int, j: Int): Unit = {
+    cols = List(dataTypes(i), dataTypes(j)) ++ dataTypes
+    val tableName = getTableName(cols.map(getTypeName): _*)
+    init(tableName, i, j)
+    loadTestData(tableName)
   }
 }

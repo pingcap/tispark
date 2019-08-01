@@ -45,6 +45,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def ti: TiContext = SharedSQLContext.ti
 
+  protected def tidbStmt: Statement = SharedSQLContext.tidbStmt
+
   protected def tidbConn: Connection = SharedSQLContext.tidbConn
 
   protected def tidbOptions: Map[String, String] = SharedSQLContext.tidbOptions
@@ -103,6 +105,11 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected implicit def sqlContext: SQLContext = spark.sqlContext
 
   protected implicit def sc: SparkContext = spark.sqlContext.sparkContext
+
+  protected def initializeTimeZone(): Unit = {
+    // Set default time zone to GMT-7
+    tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
+  }
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -232,6 +239,11 @@ object SharedSQLContext extends Logging {
     logger.info("Analyzing table finished.")
   }
 
+  protected def initializeTimeZone(): Unit = {
+    // Set default time zone to GMT-7
+    tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
+  }
+
   protected def loadSQLFile(directory: String, file: String): Unit = {
     val fullFileName = s"$directory/$file.sql"
     try {
@@ -242,6 +254,7 @@ object SharedSQLContext extends Logging {
       source.close()
       _tidbConnection.setCatalog("mysql")
       _statement = _tidbConnection.createStatement()
+      initializeTimeZone()
       _statement.execute(queryString)
       logger.info(s"Load $fullFileName successfully.")
     } catch {
@@ -273,7 +286,8 @@ object SharedSQLContext extends Logging {
     jdbcUrl =
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
         s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false" +
-        s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10"
+        s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
+        s"&allowMultiQueries=true&useLegacyDatetimeCode=false&serverTimezone=${timeZone.getDisplayName}"
 
     _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
     _statement = _tidbConnection.createStatement()

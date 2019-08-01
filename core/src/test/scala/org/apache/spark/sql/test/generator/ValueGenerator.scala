@@ -108,6 +108,7 @@ case class ValueGenerator(dataType: ReflectedDataType,
     val list: List[Any] = dataType match {
       case BIT                                                                     => List(Array[Byte]())
       case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT if !tiDataType.isUnsigned => List(-1L)
+      case TIMESTAMP                                                               => List(new java.sql.Timestamp(1000))
       case _ if isCharCharset(dataType)                                            => List("")
       case _ if isBinaryCharset(dataType)                                          => List(Array[Byte]())
       case _                                                                       => List.empty[String]
@@ -144,15 +145,15 @@ case class ValueGenerator(dataType: ReflectedDataType,
       dataType match {
         case BIT =>
           val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
-          bit.map(_ => r.nextBoolean())
+          bit.map(_ => r.nextBoolean)
         case BOOLEAN   => r.nextInt(1 << 1)
         case TINYINT   => r.nextInt(1 << 8)
         case SMALLINT  => r.nextInt(1 << 16)
         case MEDIUMINT => r.nextInt(1 << 24)
-        case INT       => r.nextInt() + (1L << 31)
-        case BIGINT    => toUnsignedBigInt(r.nextLong())
-        case FLOAT     => Math.abs(r.nextFloat())
-        case DOUBLE    => Math.abs(r.nextDouble())
+        case INT       => r.nextInt + (1L << 31)
+        case BIGINT    => toUnsignedBigInt(r.nextLong)
+        case FLOAT     => Math.abs(r.nextFloat)
+        case DOUBLE    => Math.abs(r.nextDouble)
         case DECIMAL =>
           val len = getLength(tiDataType)
           val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
@@ -164,19 +165,19 @@ case class ValueGenerator(dataType: ReflectedDataType,
       dataType match {
         case BIT =>
           val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
-          bit.map(_ => r.nextBoolean())
+          bit.map(_ => r.nextBoolean)
         case BOOLEAN   => r.nextInt(1 << 1)
         case TINYINT   => r.nextInt(1 << 8) - (1 << 7)
         case SMALLINT  => r.nextInt(1 << 16) - (1 << 15)
         case MEDIUMINT => r.nextInt(1 << 24) - (1 << 23)
-        case INT       => r.nextInt()
-        case BIGINT    => r.nextLong()
-        case FLOAT     => r.nextFloat()
-        case DOUBLE    => r.nextDouble()
+        case INT       => r.nextInt
+        case BIGINT    => r.nextLong
+        case FLOAT     => r.nextFloat
+        case DOUBLE    => r.nextDouble
         case DECIMAL =>
           val len = getLength(tiDataType)
           val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
-          (BigDecimal.apply(r.nextLong() % Math.pow(10, len)) / BigDecimal.apply(
+          (BigDecimal.apply(r.nextLong % Math.pow(10, len)) / BigDecimal.apply(
             Math.pow(10, decimal)
           )).bigDecimal
         case VARCHAR   => generateRandomString(r, tiDataType.getLength)
@@ -185,7 +186,15 @@ case class ValueGenerator(dataType: ReflectedDataType,
           generateRandomString(r, getRandomLength(dataType, r))
         case BINARY | BLOB | TINYBLOB | MEDIUMBLOB | LONGBLOB =>
           generateRandomBinary(r, getRandomLength(dataType, r))
-        case _ => throw new RuntimeException("not supported yet")
+        case DATE =>
+          // start from 1000-01-01 to 9999-01-01
+          val milliseconds = -30610253143000L + (Math.abs(r.nextLong) % (9000L * 365 * 24 * 60 * 60 * 1000))
+          new java.sql.Date(milliseconds)
+        case TIMESTAMP =>
+          // start from 1970-01-01 00:00:01 to 2038-01-19 03:14:07
+          val milliseconds = Math.abs(r.nextInt * 1000L + 1000L) + Math.abs(r.nextInt(1000))
+          new java.sql.Timestamp(milliseconds)
+        case _ => throw new RuntimeException(s"random $dataType generator not supported yet")
       }
     }
   }
@@ -228,7 +237,10 @@ case class ValueGenerator(dataType: ReflectedDataType,
           randomValue(r)
         }.toList ++ specialBound
       }
-      assert(generatedRandomValues.size == n)
+      assert(
+        generatedRandomValues.size >= n,
+        s"Generate values size=$generatedRandomValues less than n=$n"
+      )
       curPos = 0
     }
   }

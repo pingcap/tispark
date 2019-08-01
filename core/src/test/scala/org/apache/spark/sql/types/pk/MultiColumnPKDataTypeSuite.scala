@@ -17,15 +17,15 @@
 
 package org.apache.spark.sql.types.pk
 
-import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
-import org.apache.spark.sql.test.generator.TestDataGenerator.{numeric, stringType}
+import org.apache.spark.sql.test.generator.DataType.{getTypeName, BIGINT, INT, ReflectedDataType}
+import org.apache.spark.sql.test.generator.TestDataGenerator._
 import org.apache.spark.sql.types.{MultiColumnDataTypeTest, RunMultiColumnDataTypeTestAction}
 
 class MultiColumnPKDataTypeSuite
     extends MultiColumnDataTypeTest
     with RunMultiColumnDataTypeTestAction {
-  val dataTypes: List[ReflectedDataType] = numeric ::: stringType
-  val unsignedDataTypes: List[ReflectedDataType] = numeric
+  val dataTypes: List[ReflectedDataType] = baseDataTypes
+  val unsignedDataTypes: List[ReflectedDataType] = List(INT, BIGINT)
   val dataTypeTestDir: String = "multi-column-dataType-test-pk"
   val database: String = "multi_column_pk_data_type_test"
   val testDesc: String = "Base test for multi-column pk data types"
@@ -38,16 +38,43 @@ class MultiColumnPKDataTypeSuite
     testDesc
   )
 
-  def startTest(dataTypes: List[ReflectedDataType]): Unit = {
-    simpleSelect(database, dataTypes: _*)
-  }
-
-  def check(): Unit = {
-    if (generateData) {
-      generator.test()
+  def startTest(dataTypes: List[ReflectedDataType], i: Int, j: Int): Unit = {
+    val dt = List(dataTypes(i), dataTypes(j)) ++ dataTypes
+    val tableName = generator.getTableName(dt.map(getTypeName): _*)
+    val typeNames = dt.map(getTypeName)
+    val columnNames = typeNames.zipWithIndex.map { x =>
+      generator.getColumnNameByOffset(x._2)
+    }
+    for (u <- dt.indices) {
+      val col1 = columnNames(u)
+      for (v <- u + 1 until dt.size) {
+        val col2 = columnNames(v)
+        val dataType = dt(v)
+        simpleSelect(database, tableName, col1, col2, dataType)
+      }
     }
   }
 
-  check()
+  def check(i: Int, j: Int): Unit = {
+    if (generateData) {
+      generator.test(i, j)
+    }
+  }
+
+  def test(i: Int, j: Int): Unit = {
+    startTest(dataTypes, i, j)
+  }
+
+  override def test(): Unit = {
+    for (i <- dataTypes.indices) {
+      for (j <- dataTypes.indices) {
+        if (i != j) {
+          check(i, j)
+          test(i, j)
+        }
+      }
+    }
+  }
+
   test()
 }

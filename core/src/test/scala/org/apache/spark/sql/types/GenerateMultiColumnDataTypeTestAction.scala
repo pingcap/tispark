@@ -59,8 +59,7 @@ trait GenerateMultiColumnDataTypeTestAction
     }
   }
 
-  def init(): Unit = {
-    val tableName = getTableName(dataTypes.map(getTypeName): _*)
+  def init(tableName: String): Unit = {
     val dataTypesWithDescription = dataTypes.map { dataType =>
       val len = genLen(dataType)
       (dataType, len, "")
@@ -70,10 +69,11 @@ trait GenerateMultiColumnDataTypeTestAction
     data.save()
   }
 
-  def loadTestData(dataTypes: List[ReflectedDataType]): Unit
+  def loadTestData(tableName: String): Unit
 
   def test(): Unit = {
-    init()
-    loadTestData(dataTypes)
+    val tableName = getTableName(dataTypes.map(getTypeName): _*)
+    init(tableName)
+    loadTestData(tableName)
   }
 }

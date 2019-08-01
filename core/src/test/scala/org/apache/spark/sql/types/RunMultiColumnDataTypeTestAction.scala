@@ -21,7 +21,7 @@ import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 
 trait RunMultiColumnDataTypeTestAction extends MultiColumnDataTypeTestSpec {
 
-  def startTest(dataTypes: List[ReflectedDataType]): Unit
+  def startTest(dataTypes: List[ReflectedDataType]): Unit = ???
 
   def test(): Unit = {
     startTest(dataTypes)

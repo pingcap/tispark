@@ -47,7 +47,7 @@ case class Schema(database: String,
 
   assert(indexInfo.count(_.isPrimary) <= 1, "more than one primary key exist in schema")
 
-  private val pkIndexInfo = indexInfo.filter(_.isPrimary)
+  val pkIndexInfo = indexInfo.filter(_.isPrimary)
   val pkColumnName: String = if (pkIndexInfo.isEmpty) {
     ""
   } else {

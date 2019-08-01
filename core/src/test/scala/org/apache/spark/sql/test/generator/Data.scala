@@ -46,21 +46,20 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
     case null       => null
     case _: Boolean => value.toString
     case _: Number  => value.toString
-    case _: Array[Byte] =>
-      s"X\'${value
-        .asInstanceOf[Array[Byte]]
-        .map { b =>
-          String.format("%02x", new java.lang.Byte(b))
-        }
-        .mkString}\'"
-    case _: Array[Boolean] =>
-      s"b\'${value
-        .asInstanceOf[Array[Boolean]]
-        .map {
-          case true  => "1"
-          case false => "0"
-        }
-        .mkString}\'"
+    case arr: Array[Byte] =>
+      s"X\'${arr.map { b =>
+        String.format("%02x", new java.lang.Byte(b))
+      }.mkString}\'"
+    case arr: Array[Boolean] =>
+      s"b\'${arr.map {
+        case true  => "1"
+        case false => "0"
+      }.mkString}\'"
+    case ts: java.sql.Timestamp =>
+      // convert to Timestamp output with current TimeZone
+      val zonedDateTime = ts.toLocalDateTime.atZone(java.util.TimeZone.getDefault.toZoneId)
+      val milliseconds = zonedDateTime.toEpochSecond * 1000L + zonedDateTime.getNano / 1000000
+      s"\'${new java.sql.Timestamp(milliseconds)}\'"
     case _ => s"\'$value\'"
   }
 
