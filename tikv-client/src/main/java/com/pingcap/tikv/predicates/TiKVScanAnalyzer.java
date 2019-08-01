@@ -106,7 +106,6 @@ public class TiKVScanAnalyzer {
 
       // TODO: Fine-grained statistics usage
       Builder calculateCostAndEstimateCount(long tableColSize) {
-        cost = 100.0;
         cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
         return this;
       }
@@ -266,6 +265,8 @@ public class TiKVScanAnalyzer {
     TiKVScanPlan.Builder planBuilder = TiKVScanPlan.Builder.newBuilder();
     ScanSpec result = extractConditions(conditions, table, index);
 
+    // this is calcuated for downgrade if there is no statstics info we can
+    // retrieve from TiKV.
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
     planBuilder.setCost(cost);
 
