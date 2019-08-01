@@ -26,13 +26,13 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession, TiSessionCache}
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
+import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.utils.{TiConverter, TiUtil}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, GenericInternalRow, SortOrder, UnsafeProjection, UnsafeRow}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, GenericInternalRow, SortOrder, UnsafeProjection, UnsafeRow}
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
@@ -149,13 +149,13 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
   }
 
   final lazy val attributeRef = Seq(
-    AttributeReference("RegionId", LongType, nullable = false, Metadata.empty)(),
-    AttributeReference(
+    newAttributeReference("RegionId", LongType, nullable = false, Metadata.empty),
+    newAttributeReference(
       "Handles",
       ArrayType(LongType, containsNull = false),
       nullable = false,
       Metadata.empty
-    )()
+    )
   )
 
   override def output: Seq[Attribute] = attributeRef
