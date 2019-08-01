@@ -23,7 +23,8 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark._
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.utils.{ReflectionUtil, TiUtil}
+import com.pingcap.tispark.utils.ReflectionUtil._
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.catalog._
@@ -59,11 +60,11 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
 
   lazy val tiConcreteCatalog: TiSessionCatalog =
-    new TiConcreteSessionCatalog(this)(ReflectionUtil.newTiDirectExternalCatalog(this))
+    new TiConcreteSessionCatalog(this)(newTiDirectExternalCatalog(this))
 
   lazy val sessionCatalog: SessionCatalog = sqlContext.sessionState.catalog
 
-  lazy val tiCatalog: TiSessionCatalog = ReflectionUtil.newTiCompositeSessionCatalog(this)
+  lazy val tiCatalog: TiSessionCatalog = newTiCompositeSessionCatalog(this)
 
   val debug: DebugTool = new DebugTool
 
