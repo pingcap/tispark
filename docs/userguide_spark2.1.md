@@ -328,6 +328,19 @@ Currently you could adjust these configs in your spark.conf file.
 | Property Name | Default | Description
 | --------   | -----:   | :----: |
 | spark.tispark.statistics.auto_load | true | Whether to load statistics info automatically during database mapping. |
+
+## Common Port numbers used by Spark Cluster
+|Port Name| Default Value Port Number   | Configuration Property   | Nots|
+|---------------| ------------- |-----|-----|
+|Master web UI		  | 8080  | spark.master.ui.port  or SPARK_MASTER_WEBUI_PORT| The value set by the spark.master.ui.port property takes precedence.  |
+|Worker web UI  |   8081| spark.worker.ui.port or SPARK_WORKER_WEBUI_PORT  | The value set by the spark.worker.ui.port takes precedence.|
+|History server web UI   |18080   | spark.history.ui.port	  |Optional; only applies if you use the history server.   |
+|Master port   | 7077  | 		SPARK_MASTER_PORT	  |   |
+|Master REST port   | 6066  | spark.master.rest.port  | Not needed if you disable the REST service.   |
+|Worker port | 	(random)   |  SPARK_WORKER_PORT |   |
+|Block manager port  |(random)   | spark.blockManager.port  |   |
+|Shuffle server	  |7337   | spark.shuffle.service.port  | 		Optional; only applies if you use the external shuffle service.  |
+|Application web UI	|4040|	spark.ui.port |
   
 ## FAQ
 
