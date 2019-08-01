@@ -79,7 +79,7 @@ abstract class MultiColumnPKDataTypeSuite
       }
       .groupBy {
         case (i, j) =>
-          (i * size + j) % size
+          (i * size + j) % 20
       }
   }
 
