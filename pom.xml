@@ -64,7 +64,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version>2.3.3</spark.version>
+        <spark.version.compile>2.3.3</spark.version.compile>
+        <spark.version.test>2.4.3</spark.version.test>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11</scala.version>
         <scalatest.version>3.0.4</scalatest.version>
@@ -73,20 +74,9 @@
         <gpg.keyname>fake gpg keyname</gpg.keyname>
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
+        <skipFetchTestData>false</skipFetchTestData>
+        <skipCloneProtoFiles>false</skipCloneProtoFiles>
     </properties>
-
-    <profiles>
-        <profile>
-            <id>spark-2.3</id>
-            <!--Use Default Global settings-->
-        </profile>
-        <profile>
-            <id>spark-2.4</id>
-            <properties>
-                <spark.version>2.4.3</spark.version>
-            </properties>
-        </profile>
-    </profiles>
 
     <distributionManagement>
         <snapshotRepository>
@@ -106,6 +96,19 @@
         <module>spark-wrapper/spark-2.4</module>
         <module>assembly</module>
     </modules>
+
+    <profiles>
+        <profile>
+            <id>jenkins</id>
+            <modules>
+                <module>core-test</module>
+            </modules>
+            <properties>
+                <skipFetchTestData>true</skipFetchTestData>
+                <skipCloneProtoFiles>true</skipCloneProtoFiles>
+            </properties>
+        </profile>
+    </profiles>
 
     <build>
         <pluginManagement>
