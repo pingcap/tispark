@@ -23,7 +23,7 @@ import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.catalog.{ExternalCatalog, TiSessionCatalog}
+import org.apache.spark.sql.catalyst.catalog.{CatalogTable, ExternalCatalog, SessionCatalog, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, UnsafeRow}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
@@ -215,5 +215,19 @@ object ReflectionUtil {
       )
       .invoke(null, name, dataType, nullable, metadata)
       .asInstanceOf[AttributeReference]
+  }
+
+  def callSessionCatalogCreateTable(obj: SessionCatalog,
+                                    tableDefinition: CatalogTable,
+                                    ignoreIfExists: java.lang.Boolean): Unit = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod(
+        "callSessionCatalogCreateTable",
+        classOf[SessionCatalog],
+        classOf[CatalogTable],
+        classOf[Boolean]
+      )
+      .invoke(null, obj, tableDefinition, ignoreIfExists)
   }
 }
