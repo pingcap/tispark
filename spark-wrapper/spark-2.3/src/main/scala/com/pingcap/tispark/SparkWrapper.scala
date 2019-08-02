@@ -14,6 +14,7 @@
  */
 package com.pingcap.tispark
 
+import org.apache.spark.sql.catalyst.catalog.{CatalogTable, SessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.types.{DataType, Metadata}
@@ -36,5 +37,11 @@ object SparkWrapper {
                             nullable: Boolean,
                             metadata: Metadata): AttributeReference = {
     AttributeReference(name, dataType, nullable, metadata)()
+  }
+
+  def callSessionCatalogCreateTable(obj: SessionCatalog,
+                                    tableDefinition: CatalogTable,
+                                    ignoreIfExists: Boolean): Unit = {
+    obj.createTable(tableDefinition, ignoreIfExists)
   }
 }

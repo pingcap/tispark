@@ -28,7 +28,6 @@
         <joda-time.version>2.9.9</joda-time.version>
         <joda-convert.version>1.9.2</joda-convert.version>
         <proto.folder>${basedir}/proto</proto.folder>
-        <skipCloneProtoFiles>false</skipCloneProtoFiles>
     </properties>
 
     <dependencies>

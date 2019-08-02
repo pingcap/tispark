@@ -14,7 +14,8 @@
 #   limitations under the License.
 #
 
-cd ..
+TISPARK_HOME="$(cd "`dirname "$0"`"/../..; pwd)"
+
 TiSparkReleaseVersion=2.3.0-SNAPSHOT
 TiSparkBuildTS=`date -u '+%Y-%m-%d %I:%M:%S'`
 TiSparkGitHash=`git rev-parse HEAD`
@@ -23,4 +24,4 @@ echo '
 package com.pingcap.tispark
 
 object TiSparkVersion {
-  val version: String = "Release Version: '${TiSparkReleaseVersion}'\\nGit Commit Hash: '${TiSparkGitHash}'\\nGit Branch: '${TiSparkGitBranch}'\\nUTC Build Time: '${TiSparkBuildTS}'" }' > core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
+  val version: String = "Release Version: '${TiSparkReleaseVersion}'\\nGit Commit Hash: '${TiSparkGitHash}'\\nGit Branch: '${TiSparkGitBranch}'\\nUTC Build Time: '${TiSparkBuildTS}'" }' > ${TISPARK_HOME}/core/src/main/scala/com/pingcap/tispark/TiSparkVersion.scala
