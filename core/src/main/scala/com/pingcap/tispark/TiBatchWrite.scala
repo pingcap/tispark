@@ -387,7 +387,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       .create(
         tiDBInfo.getId,
         tiTableInfo.getId,
-        catalog,
+        tiSession.getConf,
         tiTableInfo.isAutoIncColUnsigned,
         step
       )
