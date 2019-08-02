@@ -284,7 +284,7 @@ object SharedSQLContext extends Logging {
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
         s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false" +
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
-        s"&allowMultiQueries=true&useLegacyDatetimeCode=false&serverTimezone=${timeZone.getDisplayName}"
+        s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}"
 
     _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
     _statement = _tidbConnection.createStatement()

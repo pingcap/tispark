@@ -66,7 +66,7 @@ abstract class MultiColumnPKDataTypeSuite
   }
 
   val tests: Map[Int, Seq[(Int, Int)]] = {
-    val size = dataTypes.size
+    val size = dataTypes.size - 1
     dataTypes.indices
       .flatten { i =>
         dataTypes.indices
@@ -79,8 +79,9 @@ abstract class MultiColumnPKDataTypeSuite
       }
       .groupBy {
         case (i, j) =>
-          (i * size + j) % 20
+          (i * size + (if (i > j) j else j - 1)) % 36
       }
+      .withDefaultValue(Seq.empty[(Int, Int)])
   }
 
   val currentTest: Seq[(Int, Int)]
