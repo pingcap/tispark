@@ -18,7 +18,7 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
       ti.tiSession.getCatalog.getTable(dbName, tableName)
     // corner case allocate unsigned long's max value.
     val allocator =
-      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog, true, -2L)
+      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getConf, true, -2L)
     assert(allocator.getEnd - allocator.getStart == -2L)
   }
 
@@ -35,11 +35,11 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
     val tiTableInfo =
       ti.tiSession.getCatalog.getTable(dbName, tableName)
     var allocator =
-      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog, false, 1000)
+      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getConf, false, 1000)
     assert(allocator.getEnd - allocator.getStart == 1000)
 
     allocator = RowIDAllocator
-      .create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getCatalog, false, 10000)
+      .create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getConf, false, 10000)
     assert(allocator.getEnd - allocator.getStart == 10000)
   }
 
