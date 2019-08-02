@@ -23,7 +23,7 @@ jsparkSession = self._jvm.SparkSession.builder().getOrCreate()
 
 4. Run this command in your `$SPARK_HOME` directory:
 ```
-./bin/pyspark --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar
+./bin/pyspark --jars /where-ever-it-is/tispark-${name_with_version}.jar
 ```
 
 5. To use TiSpark, run these commands:
@@ -72,7 +72,7 @@ spark.sql("select count(*) from customer").show()
 
 3. Prepare your TiSpark environment as above and execute
 ```bash
-./bin/spark-submit --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar test.py
+./bin/spark-submit --jars /where-ever-it-is/tispark-${name_with_version}.jar test.py
 ```
 
 4. Result:

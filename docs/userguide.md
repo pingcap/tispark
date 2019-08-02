@@ -112,13 +112,13 @@ Download the TiSpark's jar package [here](http://download.pingcap.org/tispark-la
 Running TiSpark on an existing Spark cluster does not require a reboot of the cluster. You can use Spark's `--jars` parameter to introduce TiSpark as a dependency:
 
 ```
-spark-shell --jars $your_path_to/tispark-core-${version}-jar-with-dependencies.jar
+spark-shell --jars $your_path_to/tispark-${name_with_version}.jar
 ```
 
 If you want to deploy TiSpark as a default component, simply place the TiSpark jar package into the jars path for each node of the Spark cluster and restart the Spark cluster:
 
 ```
-cp $your_path_to/tispark-core-${version}-jar-with-dependencies.jar $SPARK_HOME/jars
+cp $your_path_to/tispark-${name_with_version}.jar $SPARK_HOME/jars
 ```
 
 In this way,  you can use either `Spark-Submit` or `Spark-Shell` to use TiSpark directly.
@@ -324,3 +324,7 @@ A: If TiDB and TiKV are overloaded and run critical online tasks, consider deplo
 Q: How to use PySpark with TiSpark?
 
 A: Please follow [TiSpark on PySpark](../python/README.md).
+
+Q: How to use SparkR with TiSpark?
+
+A: Please follow [TiSpark on SparkR](../R/README.md).
