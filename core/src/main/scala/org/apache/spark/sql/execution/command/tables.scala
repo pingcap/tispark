@@ -220,7 +220,7 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
         partitionColumnNames = sourceTableDesc.partitionColumnNames,
         bucketSpec = sourceTableDesc.bucketSpec
       )
-    catalog.createTable(newTableDesc, delegate.ifNotExists)
+    callSessionCatalogCreateTable(catalog, newTableDesc, delegate.ifNotExists)
     Seq.empty[Row]
   }
 }
