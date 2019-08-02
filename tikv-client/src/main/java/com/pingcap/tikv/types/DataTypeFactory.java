@@ -45,6 +45,7 @@ public class DataTypeFactory {
     extractTypeMap(SetType.subTypes, SetType.class, builder, instBuilder);
     extractTypeMap(JsonType.subTypes, JsonType.class, builder, instBuilder);
     extractTypeMap(TimeType.subTypes, TimeType.class, builder, instBuilder);
+    extractTypeMap(UninitializedType.subTypes, UninitializedType.class, builder, instBuilder);
     dataTypeCreatorMap = builder.build();
     dataTypeInstanceMap = instBuilder.build();
   }
