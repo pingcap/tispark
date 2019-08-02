@@ -64,12 +64,6 @@ public final class RowIDAllocator {
   public long getEnd() {
     return end;
   }
-  /**
-   * read current row id from TiKV and write the calculated value back to TiKV. The calculation rule
-   * is start(read from TiKV) + step.
-   */
-
-  /** read current row id from TiKV according to database id and table id. */
 
   // set key value pair to tikv via two phase committer protocol.
   private void set(ByteString key, byte[] value) {
@@ -154,7 +148,10 @@ public final class RowIDAllocator {
     ByteString tableKey = MetaCodec.tableKey(tableId);
     return !MetaCodec.hashGet(dbKey, tableKey, snapshot).isEmpty();
   }
-
+  /**
+   * read current row id from TiKV and write the calculated value back to TiKV. The calculation rule
+   * is start(read from TiKV) + step.
+   */
   public long getAutoTableId(long dbId, long tableId, long step, Snapshot snapshot) {
     if (isDBExisted(dbId, snapshot) && isTableExisted(dbId, tableId, snapshot)) {
       return updateHash(
@@ -175,6 +172,7 @@ public final class RowIDAllocator {
     throw new IllegalArgumentException("table or database is not existed");
   }
 
+  /** read current row id from TiKV according to database id and table id. */
   public long getAutoTableId(long dbId, long tableId, Snapshot snapshot) {
     ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
     ByteString tblKey = MetaCodec.autoTableIDKey(tableId);
