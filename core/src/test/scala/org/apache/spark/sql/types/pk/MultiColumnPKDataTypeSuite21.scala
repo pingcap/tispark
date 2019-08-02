@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.types.pk
 
-class MultiColumnPKDataTypeSuite21 extends MultiColumnPKDataTypeSuite {
+class MultiColumnPKDataTypeSuite21 extends MultiColumnPKDataTypeSuites {
   override val currentTest: Seq[(Int, Int)] = tests(getId)
 
   test()

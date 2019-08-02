@@ -21,7 +21,7 @@ import org.apache.spark.sql.test.generator.DataType.{getTypeName, BIGINT, INT, R
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 import org.apache.spark.sql.types.{MultiColumnDataTypeTest, RunMultiColumnDataTypeTestAction}
 
-abstract class MultiColumnPKDataTypeSuite
+trait MultiColumnPKDataTypeSuites
     extends MultiColumnDataTypeTest
     with RunMultiColumnDataTypeTestAction {
   val dataTypes: List[ReflectedDataType] = baseDataTypes
