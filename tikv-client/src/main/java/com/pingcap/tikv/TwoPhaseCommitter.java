@@ -113,14 +113,14 @@ public class TwoPhaseCommitter {
   private final long lockTTL;
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
-    this.kvClient = TiSession.create(conf).createTxnClient();
+    this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
   }
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime, long lockTTL) {
-    this.kvClient = TiSession.create(conf).createTxnClient();
+    this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = lockTTL;
