@@ -19,7 +19,6 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.region.TiRegion;
 import java.io.IOException;
 import org.junit.Before;
-import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Pdpb;
 
@@ -42,7 +41,12 @@ public class MockServerTest extends PDMockServerTest {
             .addPeers(Metapb.Peer.newBuilder().setId(11).setStoreId(13))
             .build();
 
-    region = new TiRegion(r, r.getPeers(0), Kvrpcpb.IsolationLevel.RC, Kvrpcpb.CommandPri.Low);
+    region =
+        new TiRegion(
+            r,
+            r.getPeers(0),
+            session.getConf().getIsolationLevel(),
+            session.getConf().getCommandPriority());
     pdServer.addGetRegionResp(Pdpb.GetRegionResponse.newBuilder().setRegion(r).build());
     server = new KVMockServer();
     port = server.start(region);

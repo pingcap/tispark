@@ -38,6 +38,7 @@ import com.pingcap.tikv.util.*;
 import io.grpc.ManagedChannel;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Coprocessor.KeyRange;
@@ -166,28 +167,50 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
     return true;
   }
 
-  // TODO: batch get should consider key range split
-  public List<KvPair> batchGet(BackOffer backOffer, Iterable<ByteString> keys, long version) {
-    Supplier<BatchGetRequest> request =
-        () ->
-            BatchGetRequest.newBuilder()
-                .setContext(region.getContext())
-                .addAllKeys(keys)
-                .setVersion(version)
-                .build();
-    KVErrorHandler<BatchGetResponse> handler =
-        new KVErrorHandler<>(
-            regionManager,
-            this,
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-    BatchGetResponse resp =
-        callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
-    return doBatchGet(resp, backOffer);
+  public List<KvPair> batchGet(BackOffer backOffer, List<ByteString> keys, long version) {
+    List<KvPair> result = new ArrayList<>();
+    while (true) {
+      // re-split keys
+      Map<TiRegion, List<ByteString>> map =
+          keys.stream().collect(Collectors.groupingBy(regionManager::getRegionByKey));
+      boolean ok = true;
+      for (Map.Entry<TiRegion, List<ByteString>> entry : map.entrySet()) {
+        TiRegion newRegion = entry.getKey();
+        if (!newRegion.equals(region)) {
+          RegionStoreClient newRegionStoreClient =
+              new RegionStoreClientBuilder(conf, this.channelFactory, this.regionManager)
+                  .build(newRegion);
+          result.addAll(newRegionStoreClient.batchGet(backOffer, entry.getValue(), version));
+        } else {
+          Supplier<BatchGetRequest> request =
+              () ->
+                  BatchGetRequest.newBuilder()
+                      .setContext(region.getContext())
+                      .addAllKeys(entry.getValue())
+                      .setVersion(version)
+                      .build();
+          KVErrorHandler<BatchGetResponse> handler =
+              new KVErrorHandler<>(
+                  regionManager,
+                  this,
+                  region,
+                  resp -> resp.hasRegionError() ? resp.getRegionError() : null);
+          BatchGetResponse resp =
+              callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
+          if (isBatchGetSuccess(backOffer, resp)) {
+            result.addAll(resp.getPairsList());
+          } else {
+            ok = false;
+          }
+        }
+      }
+      if (ok) {
+        return result;
+      }
+    }
   }
 
-  // TODO: deal with resolve locks and region errors
-  private List<KvPair> doBatchGet(BatchGetResponse resp, BackOffer bo) {
+  private boolean isBatchGetSuccess(BackOffer bo, BatchGetResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("BatchGetResponse failed without a cause");
@@ -213,11 +236,10 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       if (!ok) {
         // if not resolve all locks, we wait and retry
         bo.doBackOff(BoTxnLockFast, new KeyException((resp.getPairsList().get(0).getError())));
+        return false;
       }
-
-      // FIXME: we should retry
     }
-    return resp.getPairsList();
+    return true;
   }
 
   public List<KvPair> scan(
