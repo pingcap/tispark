@@ -24,7 +24,7 @@ import com.pingcap.tikv.operation.iterator.CoprocessIterator
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
-import com.pingcap.tikv.{TiConfiguration, TiSession, TiSessionCache}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.utils.{TiConverter, TiUtil}
@@ -252,7 +252,7 @@ case class RegionTaskExec(child: SparkPlan,
     // For each partition, we do some initialization work
     val logger = Logger.getLogger(getClass.getName)
     logger.debug(s"In partition No.$index")
-    val session = TiSessionCache.getSession(tiConf)
+    val session = TiSession.getInstance(tiConf)
     session.injectCallBackFunc(callBackFunc)
     val batchSize = tiConf.getIndexScanBatchSize
 

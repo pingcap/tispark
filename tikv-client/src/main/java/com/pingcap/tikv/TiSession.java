@@ -24,6 +24,8 @@ import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -44,7 +46,22 @@ public class TiSession implements AutoCloseable {
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
 
-  public TiSession(TiConfiguration conf) {
+  private static Map<String, TiSession> sessionCachedMap = new HashMap<>();
+
+  // Since we create session as singleton now, configuration change will not
+  // reflect change
+  public static synchronized TiSession getInstance(TiConfiguration conf) {
+    String key = conf.getPdAddrsString();
+    if (sessionCachedMap.containsKey(key)) {
+      return sessionCachedMap.get(key);
+    }
+
+    TiSession newSession = new TiSession(conf);
+    sessionCachedMap.put(key, newSession);
+    return newSession;
+  }
+
+  private TiSession(TiConfiguration conf) {
     this.conf = conf;
     this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
     this.regionManager = null;
