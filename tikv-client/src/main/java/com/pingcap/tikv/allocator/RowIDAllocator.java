@@ -49,9 +49,9 @@ public final class RowIDAllocator {
       long dbId, long tableId, TiConfiguration conf, boolean unsigned, long step) {
     RowIDAllocator allocator = new RowIDAllocator(dbId, step, conf);
     if (unsigned) {
-      allocator.initUnsigned(TiSession.getInstance(conf).createSnapshot(), tableId);
+      allocator.initUnsigned(TiSession.create(conf).createSnapshot(), tableId);
     } else {
-      allocator.initSigned(TiSession.getInstance(conf).createSnapshot(), tableId);
+      allocator.initSigned(TiSession.create(conf).createSnapshot(), tableId);
     }
     return allocator;
   }
@@ -66,7 +66,7 @@ public final class RowIDAllocator {
 
   // set key value pair to tikv via two phase committer protocol.
   private void set(ByteString key, byte[] value) {
-    TiSession session = TiSession.getInstance(conf);
+    TiSession session = TiSession.create(conf);
     TwoPhaseCommitter twoPhaseCommitter =
         new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
 
