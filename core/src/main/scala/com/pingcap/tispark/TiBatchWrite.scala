@@ -128,7 +128,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiTableRef = options.tiTableRef
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
     tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
-    catalog = TiSessionCache.getSession(tiConf).getCatalog
+    catalog = TiSession.getInstance(tiConf).getCatalog
 
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
@@ -433,7 +433,7 @@ class TiBatchWrite(@transient val df: DataFrame,
   private def generateDataToBeRemovedRdd(rdd: RDD[WrappedRow], startTs: TiTimestamp) = {
     rdd
       .mapPartitions { wrappedRows =>
-        val snapshot = TiSessionCache.getSession(tiConf).createSnapshot(startTs)
+        val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs)
         wrappedRows.map { wrappedRow =>
           val rowBuf = mutable.ListBuffer.empty[WrappedRow]
           //  check handle key

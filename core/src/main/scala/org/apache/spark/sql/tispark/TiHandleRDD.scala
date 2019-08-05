@@ -18,7 +18,7 @@ package org.apache.spark.sql.tispark
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
-import com.pingcap.tikv.{TiConfiguration, TiSession, TiSessionCache}
+import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
@@ -52,7 +52,7 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
     new Iterator[Row] {
       dagRequest.resolve()
       private val tiPartition = split.asInstanceOf[TiPartition]
-      private val session = TiSessionCache.getSession(tiConf)
+      private val session = TiSession.getInstance(tiConf)
       private val snapshot = session.createSnapshot(ts)
       private[this] val tasks = tiPartition.tasks
 

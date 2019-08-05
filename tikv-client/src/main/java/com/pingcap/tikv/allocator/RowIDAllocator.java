@@ -19,7 +19,6 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.TiSessionCache;
 import com.pingcap.tikv.TwoPhaseCommitter;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -67,7 +66,7 @@ public final class RowIDAllocator {
 
   // set key value pair to tikv via two phase committer protocol.
   private void set(ByteString key, byte[] value) {
-    TiSession session = TiSessionCache.getSession(conf);
+    TiSession session = TiSession.getInstance(conf);
     TwoPhaseCommitter twoPhaseCommitter =
         new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
 
