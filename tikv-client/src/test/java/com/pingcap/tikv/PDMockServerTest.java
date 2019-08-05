@@ -40,7 +40,7 @@ public abstract class PDMockServerTest {
             GrpcUtils.makeMember(2, "http://" + addr + ":" + (pdServer.port + 1)),
             GrpcUtils.makeMember(3, "http://" + addr + ":" + (pdServer.port + 2))));
     TiConfiguration conf = TiConfiguration.createDefault(addr + ":" + pdServer.port);
-    session = TiSession.getInstance(conf);
+    session = TiSession.create(conf);
   }
 
   @After

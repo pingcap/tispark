@@ -61,10 +61,6 @@ public class TiSession implements AutoCloseable {
     return newSession;
   }
 
-  public static TiSession create(TiConfiguration conf) {
-    return new TiSession(conf);
-  }
-
   private TiSession(TiConfiguration conf) {
     this.conf = conf;
     this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
@@ -182,6 +178,10 @@ public class TiSession implements AutoCloseable {
       }
     }
     return res;
+  }
+
+  public static TiSession create(TiConfiguration conf) {
+    return new TiSession(conf);
   }
 
   /**

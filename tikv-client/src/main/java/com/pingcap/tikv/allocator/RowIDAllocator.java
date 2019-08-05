@@ -66,7 +66,7 @@ public final class RowIDAllocator {
 
   // set key value pair to tikv via two phase committer protocol.
   private void set(ByteString key, byte[] value) {
-    TiSession session = TiSession.create(conf);
+    TiSession session = TiSession.getInstance(conf);
     TwoPhaseCommitter twoPhaseCommitter =
         new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
 
