@@ -190,6 +190,8 @@ public class ObjectRowImpl implements Row {
         builder.append("[");
         builder.append(KeyUtils.formatBytes(((byte[]) values[i])));
         builder.append("]");
+      } else if (values[i] instanceof BigDecimal) {
+        builder.append(((BigDecimal) values[i]).toPlainString());
       } else {
         builder.append(values[i]);
       }

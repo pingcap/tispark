@@ -17,11 +17,15 @@
 
 package org.apache.spark.sql
 
+import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
+
 trait BaseTestGenerationSpec {
 
   protected val rowCount: Int
 
   protected val preDescription: String = "Generating Data for "
+
+  protected var cols: List[ReflectedDataType] = List.empty[ReflectedDataType]
 
   def getTableName(dataTypes: String*): String
 
@@ -29,7 +33,30 @@ trait BaseTestGenerationSpec {
 
   def getColumnName(dataType: String): String = s"col_$dataType"
 
+  def getColumnNameByOffset(offset: Int): String = {
+    assert(
+      cols.size > offset,
+      "column length incorrect, maybe `cols` is not initialized correctly?"
+    )
+    val dataType = cols(offset)
+    val suffix = if (cols.count(_ == dataType) > 1) {
+      var cnt = 0
+      for (i <- 0 until offset) {
+        if (cols(i) == dataType) {
+          cnt += 1
+        }
+      }
+      s"$cnt"
+    } else {
+      ""
+    }
+    s"${getColumnName(dataType.toString)}$suffix"
+  }
+
   def getIndexName(dataTypes: String*): String =
     s"idx_${dataTypes.map(getColumnName).mkString("_")}"
+
+  def getIndexNameByOffset(offsets: Int*): String =
+    s"idx_${offsets.map(getColumnNameByOffset).mkString("_")}"
 
 }

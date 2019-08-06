@@ -15,15 +15,10 @@
  *
  */
 
-package org.apache.spark.sql.types
+package org.apache.spark.sql.types.pk
 
-import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
+class MultiColumnPKDataTypeSuite15 extends MultiColumnPKDataTypeSuites {
+  override val currentTest: Seq[(Int, Int)] = tests(getId)
 
-trait RunMultiColumnDataTypeTestAction extends MultiColumnDataTypeTestSpec {
-
-  def startTest(dataTypes: List[ReflectedDataType]): Unit = ???
-
-  def test(): Unit = {
-    startTest(dataTypes)
-  }
+  test()
 }

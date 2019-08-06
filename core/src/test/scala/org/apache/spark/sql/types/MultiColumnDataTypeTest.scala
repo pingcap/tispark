@@ -52,21 +52,16 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
       }
     }
 
-  def simpleSelect(dbName: String, dataTypes: ReflectedDataType*): Unit = {
-    val typeNames = dataTypes.map(getTypeName)
-    val tblName = generator.getTableName(typeNames: _*)
-    val columnNames = typeNames.map(generator.getColumnName)
-    for (i <- columnNames.indices) {
-      for (j <- i + 1 until columnNames.size) {
-        val col = columnNames(j)
-        val types = dataTypes(j)
-        for ((op, value) <- getOperations(types)) {
-          val query = s"select ${columnNames(i)} from $tblName where $col $op $value"
-          test(query) {
-            setCurrentDatabase(dbName)
-            runTest(query)
-          }
-        }
+  def simpleSelect(dbName: String,
+                   tableName: String,
+                   col1: String,
+                   col2: String,
+                   dataType: ReflectedDataType): Unit = {
+    for ((op, value) <- getOperations(dataType)) {
+      val query = s"select $col1 from $tableName where $col2 $op $value"
+      test(query) {
+        setCurrentDatabase(dbName)
+        runTest(query)
       }
     }
   }
