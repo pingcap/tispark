@@ -26,7 +26,6 @@ class BaseDataSourceTest(val table: String,
   override def beforeAll(): Unit = {
     enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark
     super.beforeAllWithoutLoadData()
-    tidbStmt = tidbConn.createStatement()
     initializeTimeZone()
   }
 

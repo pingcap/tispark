@@ -31,8 +31,6 @@ import scala.collection.mutable.ArrayBuffer
 
 class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
-  protected var tidbStmt: Statement = _
-
   private val defaultTestDatabases: Seq[String] = Seq("tispark_test")
 
   protected var tableNames: Seq[String] = _
@@ -164,12 +162,6 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   override def beforeAll(): Unit = {
     beforeAllWithoutLoadData()
     loadTestData()
-  }
-
-  protected def initializeTimeZone(): Unit = {
-    tidbStmt = tidbConn.createStatement()
-    // Set default time zone to GMT-7
-    tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
   protected case class TestTables(dbName: String, tables: String*)
