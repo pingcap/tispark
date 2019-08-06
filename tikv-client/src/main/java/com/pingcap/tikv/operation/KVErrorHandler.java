@@ -17,41 +17,56 @@
 
 package com.pingcap.tikv.operation;
 
+import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
+
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.event.CacheInvalidateEvent;
 import com.pingcap.tikv.exception.GrpcException;
+import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionErrorReceiver;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.txn.Lock;
+import com.pingcap.tikv.txn.LockResolverClient;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.function.Function;
 import org.apache.log4j.Logger;
 import org.tikv.kvproto.Errorpb;
+import org.tikv.kvproto.Kvrpcpb;
 
 // TODO: consider refactor to Builder mode
+// TODO: KVErrorHandler should resolve locks if it could.
 public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private static final Logger logger = Logger.getLogger(KVErrorHandler.class);
-  private static final int NO_LEADER_STORE_ID =
-      0; // if there's currently no leader of a store, store id is set to 0
+  // if a store does not have leader currently, store id is set to 0
+  private static final int NO_LEADER_STORE_ID = 0;
   private final Function<RespT, Errorpb.Error> getRegionError;
+  private final Function<RespT, Kvrpcpb.KeyError> getKeyError;
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
   private final RegionManager regionManager;
   private final RegionErrorReceiver recv;
+  private final LockResolverClient lockResolverClient;
   private final TiRegion ctxRegion;
 
   public KVErrorHandler(
       RegionManager regionManager,
       RegionErrorReceiver recv,
+      LockResolverClient lockResolverClient,
       TiRegion ctxRegion,
-      Function<RespT, Errorpb.Error> getRegionError) {
+      Function<RespT, Errorpb.Error> getRegionError,
+      Function<RespT, Kvrpcpb.KeyError> getKeyError) {
     this.ctxRegion = ctxRegion;
     this.recv = recv;
+    this.lockResolverClient = lockResolverClient;
     this.regionManager = regionManager;
     this.getRegionError = getRegionError;
+    this.getKeyError = getKeyError;
     this.cacheInvalidateCallBack =
         regionManager != null ? regionManager.getCacheInvalidateCallback() : null;
   }
@@ -114,6 +129,25 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     } else {
       logger.warn(
           "Failed to send notification back to driver since CacheInvalidateCallBack is null in executor node.");
+    }
+  }
+
+  private boolean checkLockError(BackOffer backOffer, Kvrpcpb.KeyError error) {
+    if (error.hasLocked()) {
+      Lock lock = new Lock(error.getLocked());
+      boolean ok =
+          lockResolverClient.resolveLocks(
+              backOffer, new ArrayList<>(Collections.singletonList(lock)));
+      if (!ok) {
+        // if not resolve all locks, we wait and retry
+        backOffer.doBackOff(BoTxnLockFast, new KeyException((error.getLocked().toString())));
+        return true;
+      }
+      return false;
+    } else {
+      // retry or abort
+      // this should trigger Spark to retry the txn
+      throw new KeyException(error);
     }
   }
 
@@ -233,6 +267,11 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       invalidateRegionStoreCache(ctxRegion);
     }
 
+    // Region error handling logic
+    Kvrpcpb.KeyError keyError = getKeyError.apply(resp);
+    if (keyError != null) {
+      return checkLockError(backOffer, keyError);
+    }
     return false;
   }
 

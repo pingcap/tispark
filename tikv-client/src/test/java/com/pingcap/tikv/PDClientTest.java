@@ -258,7 +258,7 @@ public class PDClientTest extends PDMockServerTest {
           () -> client.getStore(ConcreteBackOffer.newCustomBackOff(5000), 0);
       Future<Store> storeFuture = service.submit(storeCallable);
       try {
-        Store r = storeFuture.get(5, TimeUnit.SECONDS);
+        Store r = storeFuture.get(50, TimeUnit.SECONDS);
         assertEquals(r.getId(), storeId);
       } catch (TimeoutException e) {
         fail();

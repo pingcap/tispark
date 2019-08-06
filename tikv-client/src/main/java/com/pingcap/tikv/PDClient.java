@@ -218,7 +218,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return leaderWrapper;
   }
 
-  class LeaderWrapper {
+  static class LeaderWrapper {
     private final String leaderInfo;
     private final PDBlockingStub blockingStub;
     private final PDStub asyncStub;
@@ -348,6 +348,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private PDClient(TiConfiguration conf, ChannelFactory channelFactory) {
     super(conf, channelFactory);
+    initCluster();
+    this.blockingStub = getBlockingStub();
+    this.asyncStub = getAsyncStub();
   }
 
   private void initCluster() {
@@ -383,19 +386,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   static PDClient createRaw(TiConfiguration conf, ChannelFactory channelFactory) {
-    PDClient client = null;
-    try {
-      client = new PDClient(conf, channelFactory);
-      client.initCluster();
-    } catch (Exception e) {
-      if (client != null) {
-        try {
-          client.close();
-        } catch (InterruptedException ignore) {
-        }
-      }
-      throw e;
-    }
-    return client;
+    return new PDClient(conf, channelFactory);
   }
 }

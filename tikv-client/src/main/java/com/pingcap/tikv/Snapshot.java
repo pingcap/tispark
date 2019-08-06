@@ -21,11 +21,9 @@ import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getRowIterat
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
+import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.operation.iterator.IndexScanIterator;
-import com.pingcap.tikv.operation.iterator.ScanIterator;
-import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.Iterator;
@@ -63,9 +61,8 @@ public class Snapshot {
   }
 
   public ByteString get(ByteString key) {
-    RegionStoreClient client = session.getRegionStoreClientBuilder().build(key);
-    // TODO: Need to deal with lock error after grpc stable
-    return client.get(ConcreteBackOffer.newGetBackOff(), key, timestamp.getVersion());
+    return new KVClient(session.getConf(), session.getRegionStoreClientBuilder())
+        .get(key, timestamp.getVersion());
   }
 
   /**
@@ -111,7 +108,8 @@ public class Snapshot {
   }
 
   public Iterator<KvPair> scan(ByteString startKey) {
-    return new ScanIterator(startKey, session, timestamp.getVersion());
+    return new ConcreteScanIterator(
+        session.getConf(), session.getRegionStoreClientBuilder(), startKey, timestamp.getVersion());
   }
 
   public TiConfiguration getConf() {
