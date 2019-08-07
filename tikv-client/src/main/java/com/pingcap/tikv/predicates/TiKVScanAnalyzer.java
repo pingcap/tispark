@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class TiKVScanAnalyzer {
-  private static final double INDEX_SCAN_COST_FACTOR = 1.2;
+  private static final double INDEX_SCAN_COST_FACTOR = 0.00002;
   private static final double TABLE_SCAN_COST_FACTOR = 1.0;
   private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
   private static final long TABLE_PREFIX_SIZE = 8;
