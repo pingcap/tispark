@@ -38,13 +38,12 @@ import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.util.Pair;
 import java.util.*;
-import java.util.stream.Collectors;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 
 public class TiKVScanAnalyzer {
-  private static final double INDEX_SCAN_COST_FACTOR = 0.00002;
+  private static final double INDEX_SCAN_COST_FACTOR = 0.000000000001;
   private static final double TABLE_SCAN_COST_FACTOR = 1.0;
-  private static final double DOUBLE_READ_COST_FACTOR = TABLE_SCAN_COST_FACTOR * 3;
+  private static final double DOUBLE_READ_COST_FACTOR = 0;
   private static final long TABLE_PREFIX_SIZE = 8;
   private static final long INDEX_PREFIX_SIZE = 8;
 
@@ -426,7 +425,7 @@ public class TiKVScanAnalyzer {
   // query engine doesn't have to lookup the table again compared with double read.
   boolean isCoveringIndex(
       List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
-    Map<String, TiIndexColumn> colInIndex =
+    /* Map<String, TiIndexColumn> colInIndex =
         indexColumns
             .getIndexColumns()
             .stream()
@@ -453,7 +452,8 @@ public class TiKVScanAnalyzer {
         return false;
       }
     }
-    return true;
+    return true;*/
+    return false;
   }
 
   @VisibleForTesting

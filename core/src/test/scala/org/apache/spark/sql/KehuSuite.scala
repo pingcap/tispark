@@ -15,12 +15,38 @@
 
 package org.apache.spark.sql
 
-class BeikeSuite extends BaseTiSparkTest {
-  test("beike") {
+class KehuSuite extends BaseTiSparkTest {
+  /*
+  use test;
+
+  create table ttt (
+`id` bigint(20) NOT NULL AUTO_INCREMENT,
+`collection_code` int(4) ,
+PRIMARY KEY (`id`),
+KEY `idx_collection_code` (`collection_code`)
+);
+
+insert into ttt values(1, 1);
+insert into ttt values(2, 1);
+insert into ttt values(3, 2);
+insert into ttt values(4, 3);
+   */
+
+  test("kehu") {
     spark.sql("use tidb_test")
     spark
       .sql("SELECT collection_code,count(1) as a from ttt group by collection_code")
       .explain(true)
     spark.sql("SELECT collection_code,count(1) as a from ttt group by collection_code").show(false)
+  }
+
+  test("kehu2") {
+    spark.sql("use tidb_test")
+    spark
+      .sql("SELECT id, collection_code,count(1) as a from ttt group by collection_code, id")
+      .explain(true)
+    spark
+      .sql("SELECT id, collection_code,count(1) as a from ttt group by collection_code, id")
+      .show(false)
   }
 }
