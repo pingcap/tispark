@@ -633,7 +633,7 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
             regionManager,
             this,
             region,
-            StreamingResponse::getFirstRegionError // TODO: handle all errors in streaming respinse
+            StreamingResponse::getFirstRegionError // TODO: handle all errors in streaming response
             );
 
     StreamingResponse responseIterator =

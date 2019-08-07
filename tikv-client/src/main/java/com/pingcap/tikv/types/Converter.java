@@ -236,8 +236,7 @@ public class Converter {
       try {
         return new ExtendedDateTime(strToDateTime((String) val, localDateTimeFormatter));
       } catch (Exception e) {
-        throw new TypeException(
-            String.format("Error parsing string %s to datetime", (String) val), e);
+        throw new TypeException(String.format("Error parsing string %s to datetime", val), e);
       }
     } else if (val instanceof Long) {
       return new ExtendedDateTime(new DateTime((long) val));
@@ -268,7 +267,7 @@ public class Converter {
       try {
         return new Date(DateTime.parse((String) val, localDateFormatter).toDate().getTime());
       } catch (Exception e) {
-        throw new TypeException(String.format("Error parsing string %s to date", (String) val), e);
+        throw new TypeException(String.format("Error parsing string %s to date", val), e);
       }
     } else if (val instanceof Long) {
       return new Date((long) val);

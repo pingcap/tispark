@@ -265,7 +265,7 @@ public class TiKVScanAnalyzer {
     TiKVScanPlan.Builder planBuilder = TiKVScanPlan.Builder.newBuilder();
     ScanSpec result = extractConditions(conditions, table, index);
 
-    // this is calcuated for downgrade if there is no statstics info we can
+    // this is calculated for downgrade if there is no statistics info we can
     // retrieve from TiKV.
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
     planBuilder.setCost(cost);
@@ -387,7 +387,7 @@ public class TiKVScanAnalyzer {
   @VisibleForTesting
   private Map<Long, List<KeyRange>> buildIndexScanKeyRangeWithIds(
       List<Long> ids, TiIndexInfo index, List<IndexRange> indexRanges) {
-    Map<Long, List<KeyRange>> idRanes = new HashMap<>();
+    Map<Long, List<KeyRange>> idRanges = new HashMap<>();
     for (long id : ids) {
       List<KeyRange> ranges = new ArrayList<>(indexRanges.size());
       for (IndexRange ir : indexRanges) {
@@ -396,9 +396,9 @@ public class TiKVScanAnalyzer {
         ranges.add(indexScanKeyRangeBuilder.compute());
       }
 
-      idRanes.put(id, ranges);
+      idRanges.put(id, ranges);
     }
-    return idRanes;
+    return idRanges;
   }
 
   @VisibleForTesting

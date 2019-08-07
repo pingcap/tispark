@@ -39,7 +39,7 @@ For independent deployment of TiKV and TiSpark, it is recommended to refer to th
  
 + Hardware configuration
  - For general purposes, please refer to the TiDB and TiKV hardware configuration [recommendations](https://github.com/pingcap/docs/blob/master/op-guide/recommendation.md#deployment-recommendations).
- - If the usage is more focused on the analysis scenarios, you can increase the memory of the TiKV nodes to at least 64G. If using  Hard Disk Drive (HDD), it is recommended to use at least 8 disks.
+ - If the usage is more focused on the analysis scenarios, you can increase the memory of the TiKV nodes to at least 64G. If using Hard Disk Drive (HDD), it is recommended to use at least 8 disks.
 
 + TiKV parameters (default)
 
@@ -77,7 +77,7 @@ Please refer to the [Spark official website](https://spark.apache.org/docs/lates
 
 The following is a short overview of the TiSpark configuration.
 
-Generally, it is  recommended to allocat 32G memory for Spark. Please reserve at least 25% of the memory for the operating system and buffer cache.
+Generally, it is recommended to allocate 32G memory for Spark. Please reserve at least 25% of the memory for the operating system and buffer cache.
 
 It is recommended to provision at least 8 to 16 cores on per machine for Spark. Initially, you can assign all the CPU cores to Spark.
 
@@ -100,7 +100,7 @@ For example, `10.16.20.1:2379,10.16.20.2:2379,10.16.20.3:2379` when you have mul
 
 #### Hybrid deployment configuration for the TiSpark and TiKV cluster
 
-For the  hybrid deployment of TiSpark and TiKV, add the TiSpark required resources to the TiKV reserved resources, and allocate 25% of the memory for the system.
+For the hybrid deployment of TiSpark and TiKV, add the TiSpark required resources to the TiKV reserved resources, and allocate 25% of the memory for the system.
  
 
 ## Deploy TiSpark
@@ -121,7 +121,7 @@ If you want to deploy TiSpark as a default component, simply place the TiSpark j
 cp $your_path_to/tispark-${name_with_version}.jar $SPARK_HOME/jars
 ```
 
-In this way,  you can use either `Spark-Submit` or `Spark-Shell` to use TiSpark directly.
+In this way, you can use either `Spark-Submit` or `Spark-Shell` to use TiSpark directly.
 
 
 ### Deploy TiSpark without the Spark cluster
@@ -152,7 +152,7 @@ cd $SPARKPATH
 ./sbin/start-master.sh  
 ```
 
-After the above step is completed, a log file will be printed on the screen. Check the log file to confirm whether the Spark-Master is started successfully. You can open the [http://spark-master-hostname:8080](http://spark-master-hostname:8080) to view the cluster information (if you does not change the Spark-Master default port number). When you start Spark-Slave, you can also use this panel to confirm whether the Slave is  joined to the cluster.
+After the above step is completed, a log file will be printed on the screen. Check the log file to confirm whether the Spark-Master is started successfully. You can open the [http://spark-master-hostname:8080](http://spark-master-hostname:8080) to view the cluster information (if you does not change the Spark-Master default port number). When you start Spark-Slave, you can also use this panel to confirm whether the Slave is joined to the cluster.
 
 #### Starting a Slave node
 
@@ -212,7 +212,7 @@ spark-sql> select count(*) from lineitem;
 Time taken: 0.673 seconds, Fetched 1 row(s)
 ```
 
-For JDBC connection with Thrift Server, you can try it with various JDBC supported tools including SQuirreLSQL and hive-beeline.
+For JDBC connection with Thrift Server, you can try it with various JDBC supported tools including SQuirreL SQL and hive-beeline.
 For example, to use it with beeline:
 ```
 ./beeline
@@ -252,8 +252,8 @@ tisparkDF.write.saveAsTable("hive_table") // save table to hive
 spark.sql("select * from hive_table a, tispark_table b where a.col1 = b.col1").show // join table across Hive and Tispark
 ```
 
-## Load Spark Dataframe into TiDB using JDBC
-TiSpark does not provide a direct way to load data into yout TiDB cluster, but you can still load using jdbc like this:
+## Load Spark DataFrame into TiDB using JDBC
+TiSpark does not provide a direct way to load data into your TiDB cluster, but you can still load using jdbc like this:
 ```scala
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 
@@ -299,7 +299,7 @@ Currently, only range partition table is limited supported. If partition express
 rather than `year` then partition pruning will not be applied. Such scan can be considered full table scan if there is no index in the schema. 
 
 ## Common Port numbers used by Spark Cluster
-|Port Name| Default Value Port Number   | Configuration Property   | Nots|
+|Port Name| Default Value Port Number   | Configuration Property   | Notes|
 |---------------| ------------- |-----|-----|
 |Master web UI		  | 8080  | spark.master.ui.port  or SPARK_MASTER_WEBUI_PORT| The value set by the spark.master.ui.port property takes precedence.  |
 |Worker web UI  |   8081| spark.worker.ui.port or SPARK_WORKER_WEBUI_PORT  | The value set by the spark.worker.ui.port takes precedence.|

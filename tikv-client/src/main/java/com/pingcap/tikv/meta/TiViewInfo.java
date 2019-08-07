@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class TiViewInfo implements Serializable {
-  // ViewAlgorithm is VIEW's SQL AlGORITHM characteristic.
+  // ViewAlgorithm is VIEW's SQL ALGORITHM characteristic.
   // See https://dev.mysql.com/doc/refman/5.7/en/view-algorithms.html
   private final long viewAlgorithm;
   private final TiUserIdentity userIdentity;

@@ -33,7 +33,7 @@ If `replace` is true, then
 * if no same primary key or unique index exists, data will be inserted.
 
 If `replace` is false, then
-* if primary key or unique index exists in db, data having conflicts expects an expection.
+* if primary key or unique index exists in db, data having conflicts expects an exception.
 * if no same primary key or unique index exists, data will be inserted.
 
 ## Using the Spark Connector With Extensions Enabled

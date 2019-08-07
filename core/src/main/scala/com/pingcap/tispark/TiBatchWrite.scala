@@ -748,7 +748,7 @@ class TiBatchWrite(@transient val df: DataFrame,
           estimateRegionSplitNumForIndex(wrappedRowRdd, index)
         }
       }
-      val sampledDataRdds =
+      val sampledDataRDDs =
         regionSplitNums.map { num =>
           wrappedRowRdd.takeSample(withReplacement = false, num = num.toInt)
         }.toList
@@ -758,7 +758,7 @@ class TiBatchWrite(@transient val df: DataFrame,
         val idx = indexWithIdx._2
         val indexCols = index.getIndexColumns
 
-        val splitIndicesList = sampledDataRdds(idx)
+        val splitIndicesList = sampledDataRDDs(idx)
           .map { value =>
             val colBuffer = mutable.ListBuffer.empty[String]
             for (i <- 0 until indexCols.size()) {
