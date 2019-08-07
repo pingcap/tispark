@@ -216,6 +216,54 @@ df.write
   .save()
 ```
 
+## Use Data Source API in SparkSQL
+Config tidb/pd address and enable write through SparkSQL in `conf/spark-defaults.conf` as follows:
+
+```
+spark.tispark.pd.addresses pd0:2379
+spark.tispark.tidb.addr tidb
+spark.tispark.tidb.port 4000
+spark.tispark.tidb.user root
+spark.tispark.tidb.password pwd
+spark.tispark.write.allow_spark_sql true
+```
+
+create a new table using mysql-client:
+```
+CREATE TABLE tpch_test.TARGET_TABLE_CUSTOMER (
+  `C_CUSTKEY` int(11) NOT NULL,
+  `C_NAME` varchar(25) NOT NULL,
+  `C_ADDRESS` varchar(40) NOT NULL,
+  `C_NATIONKEY` int(11) NOT NULL,
+  `C_PHONE` char(15) NOT NULL,
+  `C_ACCTBAL` decimal(15,2) NOT NULL,
+  `C_MKTSEGMENT` char(10) NOT NULL,
+  `C_COMMENT` varchar(117) NOT NULL
+)
+```
+
+register a tidb table `tpch_test.CUSTOMER` to spark catalog:
+```
+CREATE TABLE CUSTOMER_SRC USING tidb OPTIONS (database 'tpch_test', table 'CUSTOMER')
+```
+
+select data from `tpch_test.CUSTOMER`:
+```
+SELECT * FROM CUSTOMER_SRC limit 10
+```
+
+register another tidb table `tpch_test.TARGET_TABLE_CUSTOMER` to spark catalog:
+```
+CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (database 'tpch_test', table 'TARGET_TABLE_CUSTOMER')
+```
+
+write data to `tpch_test.TARGET_TABLE_CUSTOMER`:
+```
+INSERT INTO CUSTOMER_DST VALUES(1000, 'Customer#000001000', 'AnJ5lxtLjioClr2khl9pb8NLxG2', 9, '19-407-425-2584', 2209.81, 'AUTOMOBILE', '. even, express theodolites upo')
+
+INSERT INTO CUSTOMER_DST SELECT * FROM CUSTOMER_SRC
+```
+
 ## TiDB Options
 The following is TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
