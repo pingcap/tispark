@@ -360,7 +360,6 @@ public class TiDAGRequest implements Serializable {
             if (col.getColumnInfo().equals(columnInfo)) {
               dagRequestBuilder.addOutputOffsets(pos);
               colOffsetInFieldMap.put(col, pos);
-              addRequiredIndexDataType(col.getType());
             }
             // TODO: primary key may also be considered if pkIsHandle
           }
