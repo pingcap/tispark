@@ -358,7 +358,6 @@ public class TiDAGRequest implements Serializable {
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
             if (col.getColumnInfo().equals(columnInfo)) {
-              dagRequestBuilder.addOutputOffsets(pos);
               colOffsetInFieldMap.put(col, pos);
             }
             // TODO: primary key may also be considered if pkIsHandle
