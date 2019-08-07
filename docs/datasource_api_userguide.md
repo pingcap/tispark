@@ -220,11 +220,11 @@ df.write
 Config tidb/pd address and enable write through SparkSQL in `conf/spark-defaults.conf` as follows:
 
 ```
-spark.tispark.pd.addresses pd0:2379
-spark.tispark.tidb.addr tidb
+spark.tispark.pd.addresses 127.0.0.1:2379
+spark.tispark.tidb.addr 127.0.0.1
 spark.tispark.tidb.port 4000
 spark.tispark.tidb.user root
-spark.tispark.tidb.password pwd
+spark.tispark.tidb.password password
 spark.tispark.write.allow_spark_sql true
 ```
 
