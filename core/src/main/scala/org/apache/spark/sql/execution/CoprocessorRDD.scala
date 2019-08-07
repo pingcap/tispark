@@ -36,7 +36,7 @@ import org.apache.spark.sql.catalyst.expressions.{Attribute, GenericInternalRow,
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
-import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
+import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD, TiRowRDD}
 import org.apache.spark.sql.types.{ArrayType, DataType, LongType, Metadata}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.tikv.kvproto.Coprocessor.KeyRange
@@ -44,21 +44,15 @@ import org.tikv.kvproto.Coprocessor.KeyRange
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends LeafExecNode {
-
-  override lazy val metrics: Map[String, SQLMetric] = Map(
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
-  )
-
-  override val nodeName: String = "CoprocessorRDD"
+trait LeafExecRDD extends LeafExecNode {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
-  override val outputOrdering: Seq[SortOrder] = Nil
+  private[execution] val tiRDDs: List[TiRDD]
 
-  private val internalRDDs: List[RDD[InternalRow]] =
-    tiRdds.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
-  private lazy val project = UnsafeProjection.create(schema)
+  private[execution] val internalRDDs: List[RDD[InternalRow]] =
+    tiRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
+  private[execution] lazy val project = UnsafeProjection.create(schema)
 
-  private def internalRowToUnsafeRowWithIndex(
+  private[execution] def internalRowToUnsafeRowWithIndex(
     numOutputRows: SQLMetric
   ): (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] =
     (index, iter) => {
@@ -69,7 +63,34 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
       }
     }
 
-  protected override def doExecute(): RDD[InternalRow] = {
+  def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
+
+  override def verboseString: String =
+    if (tiRDDs.size > 1) {
+      val b = new mutable.StringBuilder()
+      b.append(s"TiSpark $nodeName on partition table:\n")
+      tiRDDs.zipWithIndex.map {
+        case (_, i) => b.append(s"partition p$i")
+      }
+      b.append(s"with dag request: $dagRequest")
+      b.toString()
+    } else {
+      s"TiDB $nodeName{$dagRequest}" +
+        s"${TiUtil.getReqEstCountStr(dagRequest)}"
+    }
+
+  override def simpleString: String = verboseString
+}
+
+case class CoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRowRDD]) extends LeafExecRDD {
+
+  override lazy val metrics: Map[String, SQLMetric] = Map(
+    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
+  )
+
+  override val nodeName: String = "CoprocessorRDD"
+
+  override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
 
     internalRDDs
@@ -81,25 +102,7 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
           ).invoke()
       )
       .reduce(_ union _)
-
   }
-
-  def dagRequest: TiDAGRequest = tiRdds.head.dagRequest
-
-  override def verboseString: String =
-    if (tiRdds.size > 1) {
-      val b = new StringBuilder
-      b.append(s"TiSpark $nodeName on partition table:\n")
-      tiRdds.zipWithIndex.map {
-        case (_, i) => b.append(s"partition p$i")
-      }
-      b.append(s"with dag request: $dagRequest")
-      b.toString()
-    } else {
-      s"TiSpark $nodeName{$dagRequest}" +
-        s"${TiUtil.getReqEstCountStr(dagRequest)}"
-
-    }
 
   override def simpleString: String = verboseString
 }
@@ -108,31 +111,14 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
  * HandleRDDExec is used for scanning handles from TiKV as a LeafExecNode in index plan.
  * Providing handle scan via a TiHandleRDD.
  *
- * @param tiHandleRDDs handle source
+ * @param tiRDDs handle source
  */
-case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
+case class HandleRDDExec(tiRDDs: List[TiHandleRDD]) extends LeafExecRDD {
   override val nodeName: String = "HandleRDD"
 
   override lazy val metrics: Map[String, SQLMetric] = Map(
     "numOutputRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions")
   )
-
-  override val outputPartitioning: Partitioning = UnknownPartitioning(0)
-
-  private val internalRDDs: List[RDD[InternalRow]] =
-    tiHandleRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
-  private lazy val project = UnsafeProjection.create(schema)
-
-  private def internalRowToUnsafeRowWithIndex(
-    numOutputRegions: SQLMetric
-  ): (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] =
-    (index, iter) => {
-      project.initialize(index)
-      iter.map { r =>
-        numOutputRegions += 1
-        project(r)
-      }
-    }
 
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRegions = longMetric("numOutputRegions")
@@ -159,24 +145,6 @@ case class HandleRDDExec(tiHandleRDDs: List[TiHandleRDD]) extends LeafExecNode {
   )
 
   override def output: Seq[Attribute] = attributeRef
-
-  def dagRequest: TiDAGRequest = tiHandleRDDs.head.dagRequest
-
-  override def verboseString: String =
-    if (tiHandleRDDs.size > 1) {
-      val b = new mutable.StringBuilder()
-      b.append(s"TiSpark $nodeName on partition table:\n")
-      tiHandleRDDs.zipWithIndex.map {
-        case (_, i) => b.append(s"partition p$i")
-      }
-      b.append(s"with dag request: $dagRequest")
-      b.toString()
-    } else {
-      s"TiDB $nodeName{$dagRequest}" +
-        s"${TiUtil.getReqEstCountStr(dagRequest)}"
-    }
-
-  override def simpleString: String = verboseString
 }
 
 /**

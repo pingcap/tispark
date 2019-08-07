@@ -212,38 +212,36 @@ object StatisticsHelper {
     }
   }
 
-  private[statistics] def buildHistogramsRequest(histTable: TiTableInfo,
-                                                 targetTblId: Long,
-                                                 startTs: TiTimestamp): TiDAGRequest =
+  private def checkColExists(table: TiTableInfo, column: String): Boolean =
+    table.getColumns.exists { _.matchName(column) }
+
+  private def buildRequest(tableInfo: TiTableInfo,
+                           requiredCols: Seq[String],
+                           targetTblId: Long,
+                           startTs: TiTimestamp): TiDAGRequest = {
     TiDAGRequest.Builder
       .newBuilder()
-      .setFullTableScan(histTable)
+      .setFullTableScan(tableInfo)
       .addFilter(
         ComparisonBinaryExpression
           .equal(ColumnRef.create("table_id"), Constant.create(targetTblId))
       )
       .addRequiredCols(
-        histRequiredCols.filter(checkColExists(histTable, _))
+        requiredCols.filter(checkColExists(tableInfo, _))
       )
       .setStartTs(startTs)
       .build(PushDownType.NORMAL)
+  }
 
-  private def checkColExists(table: TiTableInfo, column: String): Boolean =
-    table.getColumns.exists { _.matchName(column) }
+  private[statistics] def buildHistogramsRequest(histTable: TiTableInfo,
+                                                 targetTblId: Long,
+                                                 startTs: TiTimestamp): TiDAGRequest =
+    buildRequest(histTable, histRequiredCols, targetTblId, startTs)
 
   private[statistics] def buildMetaRequest(metaTable: TiTableInfo,
                                            targetTblId: Long,
                                            startTs: TiTimestamp): TiDAGRequest =
-    TiDAGRequest.Builder
-      .newBuilder()
-      .setFullTableScan(metaTable)
-      .addFilter(
-        ComparisonBinaryExpression
-          .equal(ColumnRef.create("table_id"), Constant.create(targetTblId))
-      )
-      .addRequiredCols(metaRequiredCols.filter(checkColExists(metaTable, _)))
-      .setStartTs(startTs)
-      .build(PushDownType.NORMAL)
+    buildRequest(metaTable, metaRequiredCols, targetTblId, startTs)
 
   private[statistics] def buildBucketRequest(bucketTable: TiTableInfo,
                                              targetTblId: Long,

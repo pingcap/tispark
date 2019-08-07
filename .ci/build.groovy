@@ -7,7 +7,6 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
     
     catchError {
         node ('build') {
-            def ws = pwd()
             deleteDir()
             container("java") {
                 stage('Checkout') {
