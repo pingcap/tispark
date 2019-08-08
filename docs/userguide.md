@@ -300,16 +300,15 @@ TiSpark can read range and hash partition table from TiDB.
 TiSpark decides whether to apply partition pruning according to the type of partition
 and the partition expression associated with the table.
 
-If partition pruning cannot be applied, it is equivalent to doing a table scan over all partitions. 
-
 Currently, TiSpark can partially apply partition pruning on range partition. 
 
-If the partition expression of the range partition 
+The partition pruning can be applied when the partition expression of the range partition 
 is one of the following:
 * column expression
 * year(expr) where expr is a column and its type is date or timestamp.
 
-then partition pruning still can be applied.
+If partition pruning cannot be applied, it is equivalent to doing a table scan over all partitions. 
+
 
 ## Common Port numbers used by Spark Cluster
 |Port Name| Default Value Port Number   | Configuration Property   | Notes|
