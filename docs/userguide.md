@@ -305,7 +305,7 @@ Currently, TiSpark can partially apply partition pruning on range partition.
 The partition pruning can be applied when the partition expression of the range partition 
 is one of the following:
 * column expression
-* year(expr) where expr is a column and its type is date or timestamp.
+* year(expr) where expr is a column and its type is datetime or datetime in string.
 
 If partition pruning cannot be applied, it is equivalent to doing a table scan over all partitions. 
 
