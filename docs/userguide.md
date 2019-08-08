@@ -297,7 +297,8 @@ Currently you could adjust these configs in your spark.conf file.
 ## Reading partition table from TiDB
 TiSpark can read range and hash partition table from TiDB. 
 
-When TiSpark builds a plan, it decides whether applying partition pruning.
+TiSpark decides whether to apply partition pruning according to the type of partition
+and the partition expression associated with the table.
 
 If partition pruning cannot be applied, it is equivalent to doing a table scan over all partitions. 
 
