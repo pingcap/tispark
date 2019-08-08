@@ -80,11 +80,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
         dagRequest.getPushDownType()) {
       @Override
       public Row next() {
-        if (hasNext()) {
-          return rowReader.readRow(schemaInfer.getTypes().toArray(new DataType[0]));
-        } else {
-          throw new NoSuchElementException();
-        }
+      	return rowReader.readRow(schemaInfer.getTypes().toArray(new DataType[0]));
       }
     };
   }
@@ -109,11 +105,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
         req.getPushDownType()) {
       @Override
       public Long next() {
-        if (hasNext()) {
-          return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
-        } else {
-          throw new NoSuchElementException();
-        }
+      	return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
       }
     };
   }
