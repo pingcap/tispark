@@ -295,8 +295,18 @@ Currently you could adjust these configs in your spark.conf file.
 | spark.tispark.statistics.auto_load | true | Whether to load statistics info automatically during database mapping. |
 
 ## Reading partition table from TiDB
-Currently, only range partition table is limited supported. If partition expression having function expression 
-rather than `year` then partition pruning will not be applied. Such scan can be considered full table scan if there is no index in the schema. 
+TiSpark can read all partition table from TiDB. The question is whether applying partition pruning when builds a plan.
+
+If partition pruning cannot be applied, it is equivalent doing a table scan over all partitions. 
+
+Currently, TiSpark can partially apply partition pruning on range partition. 
+If the partition expression of the range partition 
+
+is not one of the following:
+* column 
+* year(expr) where expr is a column and its type is date or timestamp.
+
+then partition pruning still cannot be applied.
 
 ## Common Port numbers used by Spark Cluster
 |Port Name| Default Value Port Number   | Configuration Property   | Notes|
