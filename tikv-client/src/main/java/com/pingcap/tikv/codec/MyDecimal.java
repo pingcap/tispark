@@ -240,7 +240,7 @@ public class MyDecimal implements Serializable {
   }
 
   /**
-   * Counts the number of digits of prefix zeors. For 00.001, it reutrns two.
+   * Counts the number of digits of prefix zeroes. For 00.001, it returns two.
    *
    * @param i i is index for getting powers10.
    * @param word word is a integer.
@@ -598,10 +598,10 @@ public class MyDecimal implements Serializable {
    *
    * <p>This binary format is as follows: 1. First the number is converted to have a requested
    * precision and frac. 2. Every full digitsPerWord digits of digitsInt part are stored in 4 bytes
-   * as is 3. The first digitsInt % digitesPerWord digits are stored in the reduced number of bytes
+   * as is 3. The first digitsInt % digitsPerWord digits are stored in the reduced number of bytes
    * (enough bytes to store this number of digits - see dig2bytes) 4. same for frac - full word are
    * stored as is, the last frac % digitsPerWord digits - in the reduced number of bytes. 5. If the
-   * number is negative - every byte is inversed. 5. The very first bit of the resulting byte array
+   * number is negative - every byte is inverted. 5. The very first bit of the resulting byte array
    * is inverted (because memcmp compares unsigned bytes, see property 2 above)
    *
    * <p>Example:

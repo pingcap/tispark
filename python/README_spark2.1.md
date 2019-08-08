@@ -17,7 +17,7 @@ This is the simplest way, just a decent Spark environment should be enough.
 from py4j.java_gateway import java_import
 from pyspark.context import SparkContext
 
-# We get a referenct to py4j Java Gateway
+# We get a reference to py4j Java Gateway
 gw = SparkContext._gateway
 
 java_import(gw.jvm, "org.apache.spark.sql.TiContext")

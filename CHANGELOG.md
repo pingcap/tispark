@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
 ## [TiSpark 2.1.2] 2019-07-29
 ### Fixes
 * Fix improper response with region error [#922](https://github.com/pingcap/tispark/pull/922)
-* Fix view parseing problem [#953](https://github.com/pingcap/tispark/pull/953)
+* Fix view parsing problem [#953](https://github.com/pingcap/tispark/pull/953)
 
 ## [TiSpark 1.2.1]
 ### Fixes

@@ -18,7 +18,7 @@
 package org.apache.spark.sql.test
 
 import java.io.File
-import java.sql.{Connection, Statement}
+import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
@@ -33,6 +33,8 @@ import org.joda.time.DateTimeZone
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
@@ -290,20 +292,60 @@ object SharedSQLContext extends Logging {
     _statement = _tidbConnection.createStatement()
   }
 
+  private def queryTiDBViaJDBC(query: String): List[List[Any]] = {
+    val resultSet = tidbStmt.executeQuery(query)
+    val rsMetaData = resultSet.getMetaData
+    val retSet = ArrayBuffer.empty[List[Any]]
+    val retSchema = ArrayBuffer.empty[String]
+    for (i <- 1 to rsMetaData.getColumnCount) {
+      retSchema += rsMetaData.getColumnTypeName(i)
+    }
+    while (resultSet.next()) {
+      val row = ArrayBuffer.empty[Any]
+
+      for (i <- 1 to rsMetaData.getColumnCount) {
+        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
+      }
+      retSet += row.toList
+    }
+    retSet.toList
+  }
+
+  private def toOutput(value: Any, colType: String): Any = value match {
+    case _: BigDecimal =>
+      value.asInstanceOf[BigDecimal].setScale(2, BigDecimal.RoundingMode.HALF_UP)
+    case _: Date if colType.equalsIgnoreCase("YEAR") =>
+      value.toString.split("-")(0)
+    case default =>
+      default
+  }
+
+  private def shouldLoadData(loadData: String): Boolean = {
+    if ("true".equals(loadData)) {
+      true
+    } else if ("auto".equals(loadData)) {
+      val databases = queryTiDBViaJDBC("show databases").map(a => a.head)
+      if (databases.contains("tispark_test") && databases.contains("tpch_test") && databases
+            .contains("resolveLock_test")) {
+        false
+      } else {
+        true
+      }
+    } else {
+      false
+    }
+  }
+
   private def initializeTiDBConnection(forceNotLoad: Boolean = false): Unit =
     if (_tidbConnection == null) {
 
       initializeJDBCUrl()
 
-      val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toLowerCase.toBoolean
+      val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "auto").toLowerCase
 
-      if (loadData) {
-        logger.info("load data is enabled")
-      } else {
-        logger.info("load data is disabled")
-      }
+      logger.info(s"load data is mode: $loadData")
 
-      if (loadData && !forceNotLoad) {
+      if (shouldLoadData(loadData) && !forceNotLoad) {
         logger.info("Loading TiSparkTestData")
         // Load index test data
         loadSQLFile("tispark-test", "IndexTest")

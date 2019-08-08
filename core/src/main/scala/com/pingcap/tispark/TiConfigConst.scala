@@ -25,7 +25,6 @@ object TiConfigConst {
   val INDEX_SCAN_CONCURRENCY: String = "spark.tispark.index.scan_concurrency"
   val TABLE_SCAN_CONCURRENCY: String = "spark.tispark.table.scan_concurrency"
   val ALLOW_AGG_PUSHDOWN: String = "spark.tispark.plan.allow_agg_pushdown"
-  val PD_CLUSTER_ID: String = "spark.tispark.pd.clusterid"
   val REQUEST_COMMAND_PRIORITY: String = "spark.tispark.request.command.priority"
   val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
   val ALLOW_INDEX_READ: String = "spark.tispark.plan.allow_index_read"

@@ -44,7 +44,7 @@ import org.tikv.kvproto.Coprocessor.KeyRange
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends LeafExecNode {
+case class CoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD]) extends LeafExecNode {
 
   override lazy val metrics: Map[String, SQLMetric] = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
@@ -55,7 +55,7 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
   override val outputOrdering: Seq[SortOrder] = Nil
 
   private val internalRDDs: List[RDD[InternalRow]] =
-    tiRdds.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
+    tiRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
   private lazy val project = UnsafeProjection.create(schema)
 
   private def internalRowToUnsafeRowWithIndex(
@@ -84,13 +84,13 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRdds: List[TiRDD]) extends L
 
   }
 
-  def dagRequest: TiDAGRequest = tiRdds.head.dagRequest
+  def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
 
   override def verboseString: String =
-    if (tiRdds.size > 1) {
+    if (tiRDDs.size > 1) {
       val b = new StringBuilder
       b.append(s"TiSpark $nodeName on partition table:\n")
-      tiRdds.zipWithIndex.map {
+      tiRDDs.zipWithIndex.map {
         case (_, i) => b.append(s"partition p$i")
       }
       b.append(s"with dag request: $dagRequest")
@@ -395,7 +395,7 @@ case class RegionTaskExec(child: SparkPlan,
         }
       }
 
-      val schemaInferer: SchemaInfer = if (satisfyDowngradeThreshold) {
+      val schemaInferrer: SchemaInfer = if (satisfyDowngradeThreshold) {
         // Should downgrade to full table scan for one region
         logger.info(
           s"Index scan task range size = ${indexTaskRanges.size}, " +
@@ -410,7 +410,7 @@ case class RegionTaskExec(child: SparkPlan,
         SchemaInfer.create(dagRequest)
       }
 
-      val rowTransformer: RowTransformer = schemaInferer.getRowTransformer
+      val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
       val outputTypes = output.map(_.dataType)
       val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
 
