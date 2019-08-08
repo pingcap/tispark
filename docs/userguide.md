@@ -295,15 +295,17 @@ Currently you could adjust these configs in your spark.conf file.
 | spark.tispark.statistics.auto_load | true | Whether to load statistics info automatically during database mapping. |
 
 ## Reading partition table from TiDB
-TiSpark can read all partition table from TiDB. The question is whether applying partition pruning when builds a plan.
+TiSpark can read range and hash partition table from TiDB. 
 
-If partition pruning cannot be applied, it is equivalent doing a table scan over all partitions. 
+When TiSpark builds a plan, it decides whether applying partition pruning.
+
+If partition pruning cannot be applied, it is equivalent to doing a table scan over all partitions. 
 
 Currently, TiSpark can partially apply partition pruning on range partition. 
 If the partition expression of the range partition 
 
 is not one of the following:
-* column 
+* column expression
 * year(expr) where expr is a column and its type is date or timestamp.
 
 then partition pruning still cannot be applied.
