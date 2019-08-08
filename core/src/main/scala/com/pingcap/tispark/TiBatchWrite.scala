@@ -263,12 +263,11 @@ class TiBatchWrite(@transient val df: DataFrame,
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
 
-      val wrappedEncodedRowRdd = generateKV(distinctWrappedRowRdd, remove = false)
-      val mergedRDD = wrappedEncodedRowRdd ++ generateKV(deletion, remove = true)
+      val wrappedEncodedRdd = generateKV(distinctWrappedRowRdd, remove = false)
+      splitTableRegion(wrappedEncodedRdd.filter(r => !r.isIndex))
+      splitIndexRegion(wrappedEncodedRdd.filter(r => r.isIndex))
 
-      splitTableRegion(wrappedEncodedRowRdd)
-      splitIndexRegion(distinctWrappedRowRdd)
-
+      val mergedRDD = wrappedEncodedRdd ++ generateKV(deletion, remove = true)
       mergedRDD
         .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
         .groupByKey()
@@ -284,6 +283,8 @@ class TiBatchWrite(@transient val df: DataFrame,
                   wrappedEncodedRow.handle,
                   wrappedEncodedRow.encodedKey,
                   wrappedEncodedRow.encodedValue,
+                  isIndex = wrappedEncodedRow.isIndex,
+                  wrappedEncodedRow.indexId,
                   remove = false
                 )
               case None =>
@@ -292,6 +293,8 @@ class TiBatchWrite(@transient val df: DataFrame,
                   iterable.head.handle,
                   key,
                   new Array[Byte](0),
+                  isIndex = iterable.head.isIndex,
+                  iterable.head.indexId,
                   remove = true
                 )
             }
@@ -304,7 +307,9 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
 
       val wrappedEncodedRdd = generateKV(wrappedRowRdd, remove = false)
-      splitTableRegion(wrappedEncodedRdd)
+      splitTableRegion(wrappedEncodedRdd.filter(r => !r.isIndex))
+      splitIndexRegion(wrappedEncodedRdd.filter(r => r.isIndex))
+
       wrappedEncodedRdd
     }
 
@@ -723,16 +728,40 @@ class TiBatchWrite(@transient val df: DataFrame,
         {
           val kvBuf = mutable.ListBuffer.empty[WrappedEncodedRow]
           val (encodedKey, encodedValue) = generateRowKey(row.row, row.handle, remove)
-          kvBuf += WrappedEncodedRow(row.row, row.handle, encodedKey, encodedValue, remove)
+          kvBuf += WrappedEncodedRow(
+            row.row,
+            row.handle,
+            encodedKey,
+            encodedValue,
+            isIndex = false,
+            -1,
+            remove
+          )
           tiTableInfo.getIndices.asScala.foreach { index =>
             if (index.isUnique) {
               val (encodedKey, encodedValue) =
                 generateUniqueIndexKey(row.row, row.handle, index, remove)
-              kvBuf += WrappedEncodedRow(row.row, row.handle, encodedKey, encodedValue, remove)
+              kvBuf += WrappedEncodedRow(
+                row.row,
+                row.handle,
+                encodedKey,
+                encodedValue,
+                isIndex = true,
+                index.getId,
+                remove
+              )
             } else {
               val (encodedKey, encodedValue) =
                 generateSecondaryIndexKey(row.row, row.handle, index, remove)
-              kvBuf += WrappedEncodedRow(row.row, row.handle, encodedKey, encodedValue, remove)
+              kvBuf += WrappedEncodedRow(
+                row.row,
+                row.handle,
+                encodedKey,
+                encodedValue,
+                isIndex = true,
+                index.getId,
+                remove
+              )
             }
           }
           kvBuf
@@ -747,60 +776,57 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiTableInfo.getId
   }
 
-  private def estimateRegionSplitNumForIndex(wrappedRowRdd: RDD[WrappedRow],
+  private def estimateRegionSplitNumForIndex(wrappedEncodedRdd: RDD[WrappedEncodedRow],
                                              tiIndexInfo: TiIndexInfo): Long = {
     //TODO refine this https://github.com/pingcap/tispark/issues/891
     val rowSize = tiIndexInfo.getIndexColumnSize
     //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
-    (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
+    (wrappedEncodedRdd.count() * rowSize) / (96 * 1024 * 1024)
   }
 
-  private def estimateRegionSplitNum(wrappedRowRdd: RDD[WrappedEncodedRow]): Long = {
-    val totalSize = wrappedRowRdd.map(r => r.encodedKey.bytes.length + r.encodedValue.length).sum()
+  private def estimateRegionSplitNum(wrappedEncodedRdd: RDD[WrappedEncodedRow]): Long = {
+    val totalSize =
+      wrappedEncodedRdd.map(r => r.encodedKey.bytes.length + r.encodedValue.length).sum()
 
     //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
     Math.ceil(totalSize / (96 * 1024 * 1024)).toLong
   }
 
-  private def splitIndexRegion(wrappedRowRdd: RDD[WrappedRow]): Unit = {
+  private def splitIndexRegion(wrappedEncodedRdd: RDD[WrappedEncodedRow]): Unit = {
     if (options.enableRegionSplit && isEnableSplitRegion) {
       val indices = tiTableInfo.getIndices.asScala
-      val regionSplitNums = indices.map { index =>
-        if (options.regionSplitNum != 0) {
+
+      indices.foreach { index =>
+        val rdd = wrappedEncodedRdd.filter(_.indexId == index.getId)
+
+        val regionSplitNum = if (options.regionSplitNum != 0) {
           options.regionSplitNum
         } else {
-          estimateRegionSplitNumForIndex(wrappedRowRdd, index)
+          estimateRegionSplitNumForIndex(rdd, index)
         }
-      }
-      val sampledDataRDDs =
-        regionSplitNums.map { num =>
-          wrappedRowRdd.takeSample(withReplacement = false, num = num.toInt)
-        }.toList
 
-      indices.zipWithIndex.foreach { indexWithIdx =>
-        val index = indexWithIdx._1
-        val idx = indexWithIdx._2
-        val indexCols = index.getIndexColumns
-
-        val splitIndicesList = sampledDataRDDs(idx)
-          .map { value =>
-            val colBuffer = mutable.ListBuffer.empty[String]
-            for (i <- 0 until indexCols.size()) {
-              val col = indexCols.get(i)
-              colBuffer += value.row.get(col.getOffset, null).toString
-            }
-            colBuffer.toList.asJava
+        // region split
+        if (regionSplitNum > 1) {
+          val minHandle = rdd.min().handle
+          val maxHandle = rdd.max().handle
+          val isValidSplit = maxHandle - minHandle > regionSplitNum * 1000
+          if (isValidSplit) {
+            logger.info("region split num=" + regionSplitNum + " index name=" + index.getName)
+            tiDBJDBCClient
+              .splitIndexRegion(
+                options.database,
+                options.table,
+                index.getName,
+                minHandle,
+                maxHandle,
+                regionSplitNum
+              )
+          } else {
+            logger.warn("region split is skipped")
+            // TODO: to remove
+            throw new TiBatchWriteException("cannot be here")
           }
-          .toList
-          .asJava
-
-        tiDBJDBCClient
-          .splitIndexRegion(
-            options.database,
-            options.table,
-            index.getName,
-            splitIndicesList
-          )
+        }
       }
     }
   }
@@ -864,14 +890,14 @@ class TiRegionPartitioner(regions: List[TiRegion], writeConcurrency: Int) extend
   }
 }
 
-case class WrappedRow(row: TiRow, handle: Long) extends Ordered[WrappedRow] {
-  override def compare(that: WrappedRow): Int = this.handle.toInt - that.handle.toInt
-}
+case class WrappedRow(row: TiRow, handle: Long)
 
 case class WrappedEncodedRow(row: TiRow,
                              handle: Long,
                              encodedKey: SerializableKey,
                              encodedValue: Array[Byte],
+                             isIndex: Boolean,
+                             indexId: Long,
                              remove: Boolean)
     extends Ordered[WrappedEncodedRow] {
   override def compare(that: WrappedEncodedRow): Int = this.handle.toInt - that.handle.toInt
