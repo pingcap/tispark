@@ -297,13 +297,11 @@ Currently you could adjust these configs in your spark.conf file.
 ## Reading partition table from TiDB
 TiSpark can read range and hash partition table from TiDB. 
 
-TiSpark decides whether to apply partition pruning according to the type of partition
-and the partition expression associated with the table.
+TiSpark decides whether to apply partition pruning according to the type of partition and the partition expression associated with the table.
 
 Currently, TiSpark can partially apply partition pruning on range partition. 
 
-The partition pruning can be applied when the partition expression of the range partition 
-is one of the following:
+The partition pruning can be applied when the partition expression of the range partition is one of the following:
 * column expression
 * year(expr) where expr is a column and its type is datetime or string literal 
 but can be parsed as datetime.
