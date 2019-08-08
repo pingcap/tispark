@@ -163,7 +163,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return responseObserver.getFuture();
   }
 
-  private Supplier<GetStoreRequest> buildGetStroeReq(long storeId) {
+  private Supplier<GetStoreRequest> buildGetStoreReq(long storeId) {
     return () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
   }
 
@@ -175,7 +175,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   @Override
   public Store getStore(BackOffer backOffer, long storeId) {
     return callWithRetry(
-            backOffer, PDGrpc.METHOD_GET_STORE, buildGetStroeReq(storeId), buildPDErrorHandler())
+            backOffer, PDGrpc.METHOD_GET_STORE, buildGetStoreReq(storeId), buildPDErrorHandler())
         .getStore();
   }
 
@@ -187,7 +187,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     callAsyncWithRetry(
         backOffer,
         PDGrpc.METHOD_GET_STORE,
-        buildGetStroeReq(storeId),
+        buildGetStoreReq(storeId),
         responseObserver,
         buildPDErrorHandler());
     return responseObserver.getFuture();

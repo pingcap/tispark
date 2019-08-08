@@ -136,10 +136,7 @@ public final class RowIDAllocator {
   private boolean isDBExisted(long dbId, Snapshot snapshot) {
     ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
     ByteString json = MetaCodec.hashGet(MetaCodec.KEY_DBs, dbKey, snapshot);
-    if (json == null || json.isEmpty()) {
-      return false;
-    }
-    return true;
+    return json != null && !json.isEmpty();
   }
 
   private boolean isTableExisted(long dbId, long tableId, Snapshot snapshot) {

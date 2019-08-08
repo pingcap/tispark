@@ -5,7 +5,7 @@ It is supposed to:
 + Communicate via [gRPC](http://www.grpc.io/)
 + Talk to Placement Driver searching for a region
 + Talk to TiKV for reading/writing data and the resulted data is encoded/decoded just like what we do in TiDB.
-+ Talk to Coprocessor for calculation pushdown
++ Talk to Coprocessor for calculation push down
 
 ## How to build
 
