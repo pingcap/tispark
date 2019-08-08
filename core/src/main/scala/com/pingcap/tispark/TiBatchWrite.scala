@@ -258,17 +258,16 @@ class TiBatchWrite(@transient val df: DataFrame,
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
-      splitTableRegion(distinctWrappedRowRdd)
-      splitIndexRegion(distinctWrappedRowRdd)
-
       val deletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
       if (!options.replace && !deletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
-      val mergedRDD = generateKV(distinctWrappedRowRdd, remove = false) ++ generateKV(
-        deletion,
-        remove = true
-      )
+
+      val wrappedEncodedRowRdd = generateKV(distinctWrappedRowRdd, remove = false)
+      val mergedRDD = wrappedEncodedRowRdd ++ generateKV(deletion, remove = true)
+
+      splitTableRegion(wrappedEncodedRowRdd)
+      splitIndexRegion(distinctWrappedRowRdd)
 
       mergedRDD
         .map(wrappedEncodedRow => (wrappedEncodedRow.encodedKey, wrappedEncodedRow))
@@ -304,8 +303,9 @@ class TiBatchWrite(@transient val df: DataFrame,
         WrappedRow(row._1, row._2 + start)
       }
 
-      splitTableRegion(wrappedRowRdd)
-      generateKV(wrappedRowRdd, remove = false)
+      val wrappedEncodedRdd = generateKV(wrappedRowRdd, remove = false)
+      splitTableRegion(wrappedEncodedRdd)
+      wrappedEncodedRdd
     }
 
     // shuffle data in same task which belong to same region
@@ -755,11 +755,11 @@ class TiBatchWrite(@transient val df: DataFrame,
     (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
   }
 
-  private def estimateRegionSplitNum(wrappedRowRdd: RDD[WrappedRow]) = {
-    //TODO refine this https://github.com/pingcap/tispark/issues/891
-    val rowSize = tiTableInfo.getEstimatedRowSizeInByte
+  private def estimateRegionSplitNum(wrappedRowRdd: RDD[WrappedEncodedRow]): Long = {
+    val totalSize = wrappedRowRdd.map(r => r.encodedKey.bytes.length + r.encodedValue.length).sum()
+
     //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
-    (wrappedRowRdd.count() * rowSize) / (96 * 1024 * 1024)
+    Math.ceil(totalSize / (96 * 1024 * 1024)).toLong
   }
 
   private def splitIndexRegion(wrappedRowRdd: RDD[WrappedRow]): Unit = {
@@ -808,7 +808,7 @@ class TiBatchWrite(@transient val df: DataFrame,
   // when data to be inserted is too small to do region split, we check is user set region split num.
   // If so, we do region split as user's intention. This is also useful for writing test case.
   // We assume the data to be inserted is ruled by normal distribution.
-  private def splitTableRegion(wrappedRowRdd: RDD[WrappedRow]): Unit = {
+  private def splitTableRegion(wrappedRowRdd: RDD[WrappedEncodedRow]): Unit = {
     if (options.enableRegionSplit && isEnableSplitRegion) {
       if (options.regionSplitNum != 0) {
         tiDBJDBCClient
@@ -872,7 +872,10 @@ case class WrappedEncodedRow(row: TiRow,
                              handle: Long,
                              encodedKey: SerializableKey,
                              encodedValue: Array[Byte],
-                             remove: Boolean) {}
+                             remove: Boolean)
+    extends Ordered[WrappedEncodedRow] {
+  override def compare(that: WrappedEncodedRow): Int = this.handle.toInt - that.handle.toInt
+}
 
 class SerializableKey(val bytes: Array[Byte]) extends Serializable {
   override def toString: String = KeyUtils.formatBytes(bytes)
