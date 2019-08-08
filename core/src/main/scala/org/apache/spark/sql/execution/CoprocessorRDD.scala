@@ -363,7 +363,7 @@ case class RegionTaskExec(child: SparkPlan,
         }
       }
 
-      val schemaInferer: SchemaInfer = if (satisfyDowngradeThreshold) {
+      val schemaInferrer: SchemaInfer = if (satisfyDowngradeThreshold) {
         // Should downgrade to full table scan for one region
         logger.info(
           s"Index scan task range size = ${indexTaskRanges.size}, " +
@@ -378,7 +378,7 @@ case class RegionTaskExec(child: SparkPlan,
         SchemaInfer.create(dagRequest)
       }
 
-      val rowTransformer: RowTransformer = schemaInferer.getRowTransformer
+      val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
       val outputTypes = output.map(_.dataType)
       val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
 

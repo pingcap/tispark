@@ -21,7 +21,7 @@ public class ExpressionBlacklist extends Blacklist {
     super(exprsString);
   }
 
-  public boolean isUnsupportedPushdownExpr(Class<?> cls) {
+  public boolean isUnsupportedPushDownExpr(Class<?> cls) {
     return isUnsupported(cls);
   }
 }
