@@ -30,7 +30,6 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 public abstract class CoprocessIterator<T> implements Iterator<T> {
   protected final TiSession session;
@@ -80,7 +79,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
         dagRequest.getPushDownType()) {
       @Override
       public Row next() {
-      	return rowReader.readRow(schemaInfer.getTypes().toArray(new DataType[0]));
+        return rowReader.readRow(schemaInfer.getTypes().toArray(new DataType[0]));
       }
     };
   }
@@ -105,7 +104,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
         req.getPushDownType()) {
       @Override
       public Long next() {
-      	return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
+        return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
       }
     };
   }
