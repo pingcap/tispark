@@ -25,7 +25,9 @@ object TiDBWriter {
             )
         }
       } else {
-        throw new TiBatchWriteException(s"table ${options.dbtable} does not exists!")
+        throw new TiBatchWriteException(
+          s"table `${options.database}`.`${options.table}` does not exists!"
+        )
         // TiDBUtils.createTable(conn, df, options, tiContext)
         // TiDBUtils.saveTable(tiContext, df, Some(df.schema), options)
       }

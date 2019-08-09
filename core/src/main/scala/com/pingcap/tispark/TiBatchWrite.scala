@@ -781,7 +781,8 @@ class TiBatchWrite(@transient val df: DataFrame,
     //TODO refine this https://github.com/pingcap/tispark/issues/891
     val rowSize = tiIndexInfo.getIndexColumnSize
     //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
-    (wrappedEncodedRdd.count() * rowSize) / (96 * 1024 * 1024)
+    (wrappedEncodedRdd
+      .count() * rowSize) / (tiContext.tiConf.getTikvRegionSplitSizeInMB * 1024 * 1024)
   }
 
   private def estimateRegionSplitNum(wrappedEncodedRdd: RDD[WrappedEncodedRow]): Long = {
@@ -789,7 +790,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       wrappedEncodedRdd.map(r => r.encodedKey.bytes.length + r.encodedValue.length).sum()
 
     //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
-    Math.ceil(totalSize / (96 * 1024 * 1024)).toLong
+    Math.ceil(totalSize / (tiContext.tiConf.getTikvRegionSplitSizeInMB * 1024 * 1024)).toLong
   }
 
   private def splitIndexRegion(wrappedEncodedRdd: RDD[WrappedEncodedRow]): Unit = {
@@ -823,8 +824,6 @@ class TiBatchWrite(@transient val df: DataFrame,
               )
           } else {
             logger.warn("region split is skipped")
-            // TODO: to remove
-            throw new TiBatchWriteException("cannot be here")
           }
         }
       }

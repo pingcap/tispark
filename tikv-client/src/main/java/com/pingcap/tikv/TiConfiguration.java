@@ -48,6 +48,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_ENABLE = true;
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
+  private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -69,6 +70,7 @@ public class TiConfiguration implements Serializable {
   private boolean writeAllowSparkSQL = DEF_WRITE_ALLOW_SPARK_SQL;
   private boolean writeEnable = DEF_WRITE_ENABLE;
   private boolean writeWithoutLockTable = DEF_WRITE_WITHOUT_LOCK_TABLE;
+  private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -261,5 +263,13 @@ public class TiConfiguration implements Serializable {
 
   public void setWriteAllowSparkSQL(boolean writeAllowSparkSQL) {
     this.writeAllowSparkSQL = writeAllowSparkSQL;
+  }
+
+  public void setTikvRegionSplitSizeInMB(int tikvRegionSplitSizeInMB) {
+    this.tikvRegionSplitSizeInMB = tikvRegionSplitSizeInMB;
+  }
+
+  public int getTikvRegionSplitSizeInMB() {
+    return tikvRegionSplitSizeInMB;
   }
 }
