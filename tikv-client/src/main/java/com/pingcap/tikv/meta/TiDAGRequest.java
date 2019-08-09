@@ -464,79 +464,76 @@ public class TiDAGRequest implements Serializable {
 
     if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
       if (!isIndexDoubleScan || (isGroupByCoveredByIndex() && isAggregateCoveredByIndex())) {
-		  pushDownAggAndGroupBy(dagRequestBuilder, executorBuilder,
-			  colOffsetInFieldMap);
-	  } else {
+        pushDownAggAndGroupBy(dagRequestBuilder, executorBuilder, colOffsetInFieldMap);
+      } else {
         return dagRequestBuilder;
       }
     }
 
     if (!getOrderByItems().isEmpty()) {
       if (!isIndexDoubleScan || isOrderByCoveredByIndex()) {
-		  pushDownOrderBy(dagRequestBuilder, executorBuilder,
-			  colOffsetInFieldMap);
-	  }
+        pushDownOrderBy(dagRequestBuilder, executorBuilder, colOffsetInFieldMap);
+      }
     } else if (getLimit() != 0) {
       if (!isIndexDoubleScan) {
-		  pushDownLimit(dagRequestBuilder, executorBuilder);
-	  }
+        pushDownLimit(dagRequestBuilder, executorBuilder);
+      }
     }
 
     return dagRequestBuilder;
   }
 
-	private void pushDownLimit(DAGRequest.Builder dagRequestBuilder,
-		Executor.Builder executorBuilder) {
-		Limit.Builder limitBuilder = Limit.newBuilder();
-		limitBuilder.setLimit(getLimit());
-		executorBuilder.setTp(ExecType.TypeLimit);
-		dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
-		executorBuilder.clear();
-		addPushDownLimits();
-	}
+  private void pushDownLimit(
+      DAGRequest.Builder dagRequestBuilder, Executor.Builder executorBuilder) {
+    Limit.Builder limitBuilder = Limit.newBuilder();
+    limitBuilder.setLimit(getLimit());
+    executorBuilder.setTp(ExecType.TypeLimit);
+    dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
+    executorBuilder.clear();
+    addPushDownLimits();
+  }
 
-	private void pushDownOrderBy(DAGRequest.Builder dagRequestBuilder,
-		Executor.Builder executorBuilder,
-		Map<ColumnRef, Integer> colOffsetInFieldMap) {
-		TopN.Builder topNBuilder = TopN.newBuilder();
-		getOrderByItems()
-			.forEach(
-				tiByItem ->
-					topNBuilder.addOrderBy(
-						com.pingcap.tidb.tipb.ByItem.newBuilder()
-							.setExpr(
-								ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
-							.setDesc(tiByItem.isDesc())));
-		executorBuilder.setTp(ExecType.TypeTopN);
-		topNBuilder.setLimit(getLimit());
-		dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
-		executorBuilder.clear();
-		addPushDownOrderBys();
-	}
+  private void pushDownOrderBy(
+      DAGRequest.Builder dagRequestBuilder,
+      Executor.Builder executorBuilder,
+      Map<ColumnRef, Integer> colOffsetInFieldMap) {
+    TopN.Builder topNBuilder = TopN.newBuilder();
+    getOrderByItems()
+        .forEach(
+            tiByItem ->
+                topNBuilder.addOrderBy(
+                    com.pingcap.tidb.tipb.ByItem.newBuilder()
+                        .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
+                        .setDesc(tiByItem.isDesc())));
+    executorBuilder.setTp(ExecType.TypeTopN);
+    topNBuilder.setLimit(getLimit());
+    dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
+    executorBuilder.clear();
+    addPushDownOrderBys();
+  }
 
-	private void pushDownAggAndGroupBy(DAGRequest.Builder dagRequestBuilder,
-		Executor.Builder executorBuilder,
-		Map<ColumnRef, Integer> colOffsetInFieldMap) {
-		Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
-		getGroupByItems()
-			.forEach(
-				tiByItem ->
-					aggregationBuilder.addGroupBy(
-						ProtoConverter
-							.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
-		getAggregates()
-			.forEach(
-				tiExpr ->
-					aggregationBuilder.addAggFunc(
-						ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
-		executorBuilder.setTp(ExecType.TypeAggregation);
-		dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
-		executorBuilder.clear();
-		addPushDownGroupBys();
-		addPushDownAggregates();
-	}
+  private void pushDownAggAndGroupBy(
+      DAGRequest.Builder dagRequestBuilder,
+      Executor.Builder executorBuilder,
+      Map<ColumnRef, Integer> colOffsetInFieldMap) {
+    Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
+    getGroupByItems()
+        .forEach(
+            tiByItem ->
+                aggregationBuilder.addGroupBy(
+                    ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
+    getAggregates()
+        .forEach(
+            tiExpr ->
+                aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
+    executorBuilder.setTp(ExecType.TypeAggregation);
+    dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
+    executorBuilder.clear();
+    addPushDownGroupBys();
+    addPushDownAggregates();
+  }
 
-	private boolean isExpressionCoveredByIndex(Expression expr) {
+  private boolean isExpressionCoveredByIndex(Expression expr) {
     Set<String> indexColumnRefSet =
         indexInfo
             .getIndexColumns()
@@ -544,10 +541,11 @@ public class TiDAGRequest implements Serializable {
             .filter(x -> !x.isPrefixIndex())
             .map(TiIndexColumn::getName)
             .collect(Collectors.toSet());
-    return !isDoubleRead() && PredicateUtils.extractColumnRefFromExpression(expr)
-        .stream()
-        .map(ColumnRef::getName)
-        .allMatch(indexColumnRefSet::contains);
+    return !isDoubleRead()
+        && PredicateUtils.extractColumnRefFromExpression(expr)
+            .stream()
+            .map(ColumnRef::getName)
+            .allMatch(indexColumnRefSet::contains);
   }
 
   private boolean isGroupByCoveredByIndex() {
