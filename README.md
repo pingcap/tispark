@@ -177,9 +177,7 @@ TiSpark currently **does not support** `view`. Users will not be able to observe
 
 TiSpark currently **supports** `Range Partition` and `Hash Partition`. Users can select data from `Range Partition` table and `Hash Partition` table through TiSpark. 
 
-In most cases TiSpark will use full table scan. Only in the following cases TiSpark will apply partition pruning:
-- table is `Range Partition`
-- partition expression is a `column` expression or `year` expression whose child is a column expression
+In most cases TiSpark will use full table scan. Only in some cases TiSpark will apply partition pruning (read more [here](./docs/userguide.md).
 
 ## How to test
 We use [docker-compose](https://docs.docker.com/compose/) to provide tidb cluster service which allows you to run test across different platforms. It is recommended to install docker in order to test locally, or you can set up your own TiDB cluster locally as you wish.
