@@ -168,18 +168,18 @@ If you want to know how TiSpark could benefit from TiDB's statistic information,
 
 ## Compatibility with tidb-3.0
 ### View
-TiDB start to support `view` from `tidb-3.0`. 
+TiDB starts to support `view` from `tidb-3.0`. 
 
-TiSpark currently does not support `view` and will filter all views from catalog. Users cannot select data from views through TiSpark.
+TiSpark currently **does not support** `view`. Users will not be able to observe or access data through views with TiSpark.
 
 ### Table Partition
 `tidb-3.0` supports both `Range Partition` and `Hash Partition`. 
 
-TiSpark currently does support `Range Partition` and `Hash Partition`. Users can select data from `Range Partition` table and `Hash Partition` table through TiSpark. 
+TiSpark currently **supports** `Range Partition` and `Hash Partition`. Users can select data from `Range Partition` table and `Hash Partition` table through TiSpark. 
 
-In most cases TiSpark will use full table scan. Only in such cases TiSpark will apply partition pruning:
+In most cases TiSpark will use full table scan. Only in the following cases TiSpark will apply partition pruning:
 - table is `Range Partition`
-- partition expression only contains function `year`.
+- partition expression is a `column` expression or `year` expression whose child is a column expression
 
 ## How to test
 We use [docker-compose](https://docs.docker.com/compose/) to provide tidb cluster service which allows you to run test across different platforms. It is recommended to install docker in order to test locally, or you can set up your own TiDB cluster locally as you wish.
