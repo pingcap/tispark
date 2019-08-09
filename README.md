@@ -160,6 +160,14 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
 | spark.tispark.request.isolation.level |  "SI" | Isolation level means whether do the resolve lock for the underlying tidb clusters. When you use the "RC", you will get the newest version of record smaller than your tso and ignore the locks. And if you use "SI", you will resolve the locks and get the records according whether resolved lock is committed or aborted  |
 
+## Log4j Configuration
+Please copy `${SPARK_HOME}/conf/log4j.properties.template` to `${SPARK_HOME}/conf/log4j.properties` and append the following text to `${SPARK_HOME}/conf/log4j.properties`.
+
+```
+# tispark disable "WARN ObjectStore:568 - Failed to get database"
+log4j.logger.org.apache.hadoop.hive.metastore.ObjectStore=ERROR
+```
+
 ## Time Zone
 Time Zone can be set by using `-Duser.timezone` system property, e.g. `-Duser.timezone=GMT-7`, which will affect `Timestamp` type.  Please do not use `spark.sql.session.timeZone`.
 
