@@ -428,7 +428,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
     } else {
       if (tiContext.tiConf.isWriteWithoutLockTable) {
-        logger.warn("write without lock table is enabled! only for test!")
+        logger.warn("write without lock table enabled! only for test!")
       } else {
         throw new TiBatchWriteException("current tidb does not support LockTable or is disabled!")
       }
@@ -446,7 +446,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
     } else {
       if (tiContext.tiConf.isWriteWithoutLockTable) {
-        logger.warn("write without lock table is enabled! only for test!")
+        logger.warn("write without lock table enabled! only for test!")
       } else {
         throw new TiBatchWriteException("current tidb does not support LockTable or is disabled!")
       }
@@ -578,14 +578,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   @throws(classOf[NoSuchTableException])
   private def shuffleKeyToSameRegion(rdd: RDD[WrappedEncodedRow]): RDD[WrappedEncodedRow] = {
-    val tableId = tiTableInfo.getId
-
     val regions = getRegions
     val tiRegionPartitioner = new TiRegionPartitioner(regions, options.writeConcurrency)
-
-    logger.info(
-      s"find ${regions.size} regions in $tiTableRef tableId: $tableId"
-    )
 
     rdd
       .map(obj => (obj.encodedKey, obj))
@@ -599,7 +593,21 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private def getRegions: List[TiRegion] = {
     import scala.collection.JavaConversions._
-    TiBatchWriteUtils.getRegionsByTable(tiSession, tiTableInfo).toList
+
+    val tableRegion = TiBatchWriteUtils.getRegionsByTable(tiSession, tiTableInfo).toList
+    logger.info(
+      s"find ${tableRegion.size} regions in $tiTableRef tableId: ${tiTableInfo.getId}"
+    )
+
+    val indexRegion = tiTableInfo.getIndices.toList.flatMap { index =>
+      val regions = TiBatchWriteUtils.getRegionByIndex(tiSession, tiTableInfo, index)
+      logger.info(
+        s"find ${regions.size} regions in $tiTableRef tableId: ${tiTableInfo.getId} index: ${index.getName}"
+      )
+      regions
+    }
+
+    tableRegion ++ indexRegion
   }
 
   private def extractHandleId(row: TiRow): Long =
@@ -776,21 +784,18 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiTableInfo.getId
   }
 
-  private def estimateRegionSplitNumForIndex(wrappedEncodedRdd: RDD[WrappedEncodedRow],
-                                             tiIndexInfo: TiIndexInfo): Long = {
-    //TODO refine this https://github.com/pingcap/tispark/issues/891
-    val rowSize = tiIndexInfo.getIndexColumnSize
-    //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
-    (wrappedEncodedRdd
-      .count() * rowSize) / (tiContext.tiConf.getTikvRegionSplitSizeInMB * 1024 * 1024)
-  }
-
   private def estimateRegionSplitNum(wrappedEncodedRdd: RDD[WrappedEncodedRow]): Long = {
     val totalSize =
       wrappedEncodedRdd.map(r => r.encodedKey.bytes.length + r.encodedValue.length).sum()
 
     //TODO: replace 96 with actual value read from pd https://github.com/pingcap/tispark/issues/890
     Math.ceil(totalSize / (tiContext.tiConf.getTikvRegionSplitSizeInMB * 1024 * 1024)).toLong
+  }
+
+  private def checkTidbRegionSplitContidion(minHandle: Long,
+                                            maxHandle: Long,
+                                            regionSplitNum: Long): Boolean = {
+    maxHandle - minHandle > regionSplitNum * 1000
   }
 
   private def splitIndexRegion(wrappedEncodedRdd: RDD[WrappedEncodedRow]): Unit = {
@@ -803,15 +808,14 @@ class TiBatchWrite(@transient val df: DataFrame,
         val regionSplitNum = if (options.regionSplitNum != 0) {
           options.regionSplitNum
         } else {
-          estimateRegionSplitNumForIndex(rdd, index)
+          estimateRegionSplitNum(rdd)
         }
 
         // region split
         if (regionSplitNum > 1) {
           val minHandle = rdd.min().handle
           val maxHandle = rdd.max().handle
-          val isValidSplit = maxHandle - minHandle > regionSplitNum * 1000
-          if (isValidSplit) {
+          if (checkTidbRegionSplitContidion(minHandle, maxHandle, regionSplitNum) || options.regionSplitNum != 0) {
             logger.info("region split num=" + regionSplitNum + " index name=" + index.getName)
             tiDBJDBCClient
               .splitIndexRegion(
@@ -845,13 +849,16 @@ class TiBatchWrite(@transient val df: DataFrame,
             options.regionSplitNum
           )
       } else {
-        val regionSplitNum = estimateRegionSplitNum(wrappedRowRdd)
+        val regionSplitNum = if (options.regionSplitNum != 0) {
+          options.regionSplitNum
+        } else {
+          estimateRegionSplitNum(wrappedRowRdd)
+        }
         // region split
         if (regionSplitNum > 1) {
           val minHandle = wrappedRowRdd.min().handle
           val maxHandle = wrappedRowRdd.max().handle
-          val isValidSplit = maxHandle - minHandle > regionSplitNum * 1000
-          if (isValidSplit) {
+          if (checkTidbRegionSplitContidion(minHandle, maxHandle, regionSplitNum)) {
             logger.info("region split is enabled.")
             logger.info("region split num is " + regionSplitNum)
             tiDBJDBCClient

@@ -109,6 +109,7 @@ public class TiDBJDBCClient implements AutoCloseable {
           String.format(
               "split table `%s`.`%s` between (%d) and (%d) regions %d",
               dbName, tblName, minVal, maxVal, regionNum);
+      logger.info("split table region: " + sql);
       tidbStmt.execute(sql);
     } catch (Exception ignored) {
       logger.warn("failed to split table region");
@@ -133,6 +134,7 @@ public class TiDBJDBCClient implements AutoCloseable {
           String.format(
               "split table `%s`.`%s` index %s between (%d) and (%d) regions %d",
               dbName, tblName, idxName, minVal, maxVal, regionNum);
+      logger.info("split index region: " + sql);
       tidbStmt.execute(sql);
     } catch (Exception ignored) {
       logger.warn("failed to split index region");
