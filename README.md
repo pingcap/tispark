@@ -166,6 +166,19 @@ Time Zone can be set by using `-Duser.timezone` system property, e.g. `-Duser.ti
 ## Statistics information
 If you want to know how TiSpark could benefit from TiDB's statistic information, read more [here](./docs/userguide.md).
 
+## Compatibility with tidb-3.0
+### View
+TiDB starts to support `view` from `tidb-3.0`. 
+
+TiSpark currently **does not support** `view`. Users will not be able to observe or access data through views with TiSpark.
+
+### Table Partition
+`tidb-3.0` supports both `Range Partition` and `Hash Partition`. 
+
+TiSpark currently **supports** `Range Partition` and `Hash Partition`. Users can select data from `Range Partition` table and `Hash Partition` table through TiSpark. 
+
+In most cases TiSpark will use full table scan. Only in some cases TiSpark will apply partition pruning (read more [here](./docs/userguide.md).
+
 ## How to test
 We use [docker-compose](https://docs.docker.com/compose/) to provide tidb cluster service which allows you to run test across different platforms. It is recommended to install docker in order to test locally, or you can set up your own TiDB cluster locally as you wish.
 
