@@ -463,6 +463,7 @@ public class TiDAGRequest implements Serializable {
     }
 
     if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
+      // only allow table scan or covering index scan push down groupby and agg
       if (!isIndexDoubleScan || (isGroupByCoveredByIndex() && isAggregateCoveredByIndex())) {
         pushDownAggAndGroupBy(dagRequestBuilder, executorBuilder, colOffsetInFieldMap);
       } else {
@@ -472,6 +473,7 @@ public class TiDAGRequest implements Serializable {
 
     if (!getOrderByItems().isEmpty()) {
       if (!isIndexDoubleScan || isOrderByCoveredByIndex()) {
+        // only allow table scan or covering index scan push down orderby
         pushDownOrderBy(dagRequestBuilder, executorBuilder, colOffsetInFieldMap);
       }
     } else if (getLimit() != 0) {
@@ -667,7 +669,7 @@ public class TiDAGRequest implements Serializable {
    * @param mode truncate mode
    * @return a TiDAGRequest
    */
-  public TiDAGRequest setTruncateMode(TiDAGRequest.TruncateMode mode) {
+  TiDAGRequest setTruncateMode(TiDAGRequest.TruncateMode mode) {
     flags = requireNonNull(mode, "mode is null").mask(flags);
     return this;
   }
@@ -719,7 +721,7 @@ public class TiDAGRequest implements Serializable {
     return this;
   }
 
-  public List<Expression> getAggregates() {
+  List<Expression> getAggregates() {
     return aggregates.stream().map(p -> p.first).collect(Collectors.toList());
   }
 
@@ -928,7 +930,7 @@ public class TiDAGRequest implements Serializable {
    *
    * @return boolean
    */
-  public boolean isCoveringIndexScan() {
+  private boolean isCoveringIndexScan() {
     return hasIndex() && !isDoubleRead();
   }
 
