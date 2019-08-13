@@ -56,7 +56,6 @@ public class Bucket implements Comparable<Bucket> {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public int compareTo(Bucket b) {
     return upperBound.compareTo(b.upperBound);
   }

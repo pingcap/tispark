@@ -15,7 +15,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     if (m1) {
         TIDB_BRANCH = "${m1[0][1]}"
     }
-    m1 = null
     println "TIDB_BRANCH=${TIDB_BRANCH}"
 
     // parse pd branch
@@ -23,7 +22,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     if (m2) {
         PD_BRANCH = "${m2[0][1]}"
     }
-    m2 = null
     println "PD_BRANCH=${PD_BRANCH}"
 
     // parse tikv branch
@@ -31,7 +29,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     if (m3) {
         TIKV_BRANCH = "${m3[0][1]}"
     }
-    m3 = null
     println "TIKV_BRANCH=${TIKV_BRANCH}"
 
     // parse mvn profile
@@ -49,10 +46,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def readfile = { filename ->
         def file = readFile filename
         return file.split("\n") as List
-    }
-    
-    def remove_last_str = { str ->
-        return str.substring(0, str.length() - 1)
     }
     
     def get_mvn_str = { total_chunks ->
@@ -75,8 +68,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                 println "${NODE_NAME}"
                 container("golang") {
                     deleteDir()
-                    def ws = pwd()
-    
+
                     // tidb
                     def tidb_sha1 = sh(returnStdout: true, script: "curl ${FILE_SERVER_URL}/download/refs/pingcap/tidb/${TIDB_BRANCH}/sha1").trim()
                     sh "curl ${FILE_SERVER_URL}/download/builds/pingcap/tidb/${tidb_sha1}/centos7/tidb-server.tar.gz | tar xz"
@@ -184,7 +176,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                 node("test_java") {
                     println "${NODE_NAME}"
                     container("java") {
-                        def ws = pwd()
                         deleteDir()
                         unstash 'binaries'
                         unstash 'tispark'
