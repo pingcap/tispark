@@ -33,56 +33,13 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class TiRDD(val dagRequest: TiDAGRequest,
-            val physicalId: Long,
-            val tiConf: TiConfiguration,
-            val tableRef: TiTableReference,
-            @transient private val session: TiSession,
-            @transient private val sparkSession: SparkSession)
+abstract class TiRDD(val dagRequest: TiDAGRequest,
+                     val physicalId: Long,
+                     val tiConf: TiConfiguration,
+                     val tableRef: TiTableReference,
+                     @transient private val session: TiSession,
+                     @transient private val sparkSession: SparkSession)
     extends RDD[Row](sparkSession.sparkContext, Nil) {
-
-  type TiRow = com.pingcap.tikv.row.Row
-
-  @transient lazy val (_: List[DataType], rowTransformer: RowTransformer) =
-    initializeSchema()
-
-  def initializeSchema(): (List[DataType], RowTransformer) = {
-    val schemaInferrer: SchemaInfer = SchemaInfer.create(dagRequest)
-    val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
-    (schemaInferrer.getTypes.toList, rowTransformer)
-  }
-
-  // cache invalidation call back function
-  // used for driver to update PD cache
-  private val callBackFunc = CacheInvalidateListener.getInstance()
-
-  override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    dagRequest.resolve()
-
-    // bypass, sum return a long type
-    private val tiPartition = split.asInstanceOf[TiPartition]
-    private val session = TiSession.getInstance(tiConf)
-    session.injectCallBackFunc(callBackFunc)
-    private val snapshot = session.createSnapshot(dagRequest.getStartTs)
-    private[this] val tasks = tiPartition.tasks
-
-    private val iterator = snapshot.tableRead(dagRequest, tasks)
-
-    override def hasNext: Boolean = {
-      // Kill the task in case it has been marked as killed. This logic is from
-      // Interrupted Iterator, but we inline it here instead of wrapping the iterator in order
-      // to avoid performance overhead.
-      if (context.isInterrupted()) {
-        throw new TaskKilledException
-      }
-      iterator.hasNext
-    }
-
-    override def next(): Row = TiConverter.toSparkRow(iterator.next, rowTransformer)
-  }
-
-  override protected def getPreferredLocations(split: Partition): Seq[String] =
-    split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
 
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter
