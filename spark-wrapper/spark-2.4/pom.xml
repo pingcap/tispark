@@ -101,7 +101,7 @@
             <!-- Scala Format Plug-in -->
             <plugin>
                 <groupId>org.antipathy</groupId>
-                <artifactId>mvn-scalafmt_${scala.version}</artifactId>
+                <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
                 <version>0.10_1.5.1</version>
                 <configuration>
                     <sourceDirectories> <!-- (Optional) Paths to source-directories. Overrides ${project.build.sourceDirectory} -->
