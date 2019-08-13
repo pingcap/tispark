@@ -6,7 +6,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
 import scala.collection.mutable.ArrayBuffer
 
-class InsertSuite extends BaseDataSourceTest("test_datasource_insert") {
+class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   private val row1 = Row(null, "Hello")
   private val row5 = Row(5, "Duplicate")
 
