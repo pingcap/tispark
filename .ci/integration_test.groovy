@@ -188,7 +188,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             sleep 60
                             """
     
-                            timeout(60) {
+                            timeout(120) {
                                 run_test(chunk_suffix)
                             }
                         } catch (err) {
