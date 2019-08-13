@@ -85,6 +85,9 @@ While TiSpark provides downward compatibility for TiDB, it guarantees **restrict
 ## How to migrate from Spark 2.1 to Spark 2.3/2.4
 For users using Spark 2.1 who wish to migrate to latest TiSpark on Spark 2.3/2.4, please download or install Spark 2.3+/2.4+ following instructions on [Apache Spark Site](http://spark.apache.org/downloads.html) and overwrite the old spark version in `$SPARK_HOME`.
 
+## Scala Version
+TiSpark currently only supports `scala-2.11`.
+
 ## TiSpark Architecture
 
 ![architecture](./docs/architecture.png)
