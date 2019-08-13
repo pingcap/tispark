@@ -67,7 +67,7 @@
         <spark.version>2.3.3</spark.version>
         <spark.scope>provided</spark.scope>
         <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11</scala.version>
+        <scala.version>2.11.12</scala.version>
         <scalatest.version>3.0.4</scalatest.version>
         <profile.source.directory>spark-2.3</profile.source.directory>
         <gpg.skip>true</gpg.skip>
