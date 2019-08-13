@@ -43,7 +43,7 @@ public class TiSession implements AutoCloseable {
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
 
-  private static Map<String, TiSession> sessionCachedMap = new HashMap<>();
+  private static final Map<String, TiSession> sessionCachedMap = new HashMap<>();
 
   // Since we create session as singleton now, configuration change will not
   // reflect change
@@ -192,9 +192,13 @@ public class TiSession implements AutoCloseable {
 
   @Override
   public synchronized void close() throws Exception {
-    sessionCachedMap.remove(getConf().getPdAddrsString());
-    getThreadPoolForTableScan().shutdownNow();
-    getThreadPoolForIndexScan().shutdownNow();
+    sessionCachedMap.remove(conf.getPdAddrsString());
+    if (tableScanThreadPool != null) {
+      tableScanThreadPool.shutdownNow();
+    }
+    if (indexScanThreadPool != null) {
+      indexScanThreadPool.shutdownNow();
+    }
     if (client != null) {
       getPDClient().close();
     }
