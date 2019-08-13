@@ -49,9 +49,9 @@ public final class RowIDAllocator {
       long dbId, long tableId, TiConfiguration conf, boolean unsigned, long step) {
     RowIDAllocator allocator = new RowIDAllocator(dbId, step, conf);
     if (unsigned) {
-      allocator.initUnsigned(TiSession.create(conf).createSnapshot(), tableId);
+      allocator.initUnsigned(TiSession.getInstance(conf).createSnapshot(), tableId);
     } else {
-      allocator.initSigned(TiSession.create(conf).createSnapshot(), tableId);
+      allocator.initSigned(TiSession.getInstance(conf).createSnapshot(), tableId);
     }
     return allocator;
   }
