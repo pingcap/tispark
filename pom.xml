@@ -67,7 +67,7 @@
         <spark.version.compile>2.3.3</spark.version.compile>
         <spark.version.test>2.4.3</spark.version.test>
         <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.0</scala.version>
+        <scala.version>2.11.12</scala.version>
         <scalatest.version>3.0.4</scalatest.version>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
         <mysql.connector.version>5.1.44</mysql.connector.version>
