@@ -120,12 +120,12 @@ public class TiDBJDBCClient implements AutoCloseable {
    * split index region by calling tidb jdbc command `SPLIT TABLE`, e.g. SPLIT TABLE t INDEX idx
    * BETWEEN (-9223372036854775808) AND (9223372036854775807) REGIONS 16;
    *
-   * @param dbName
-   * @param tblName
-   * @param idxName
-   * @param minVal
-   * @param maxVal
-   * @param regionNum
+   * @param dbName database name in tidb
+   * @param tblName table name in tidb
+   * @param idxName index name in table
+   * @param minVal min value
+   * @param maxVal max value
+   * @param regionNum number of regions to split
    */
   public void splitIndexRegion(
       String dbName, String tblName, String idxName, long minVal, long maxVal, long regionNum) {

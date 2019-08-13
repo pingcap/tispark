@@ -40,17 +40,18 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
     database = tpchDBName
     setCurrentDatabase(database)
     for (table <- tables) {
-      tidbStmt.execute(s"drop table if exists `${batchWriteTablePrefix}_$table`")
-      tidbStmt.execute(s"create table if not exists `${batchWriteTablePrefix}_$table` like $table ")
+      val tableToWrite = s"${batchWriteTablePrefix}_$table"
+      tidbStmt.execute(s"drop table if exists `$tableToWrite`")
+      tidbStmt.execute(s"create table if not exists `$tableToWrite` like $table ")
     }
   }
 
   test("ti batch write") {
     for (table <- tables) {
-      println(table)
+      val tableToWrite = s"${batchWriteTablePrefix}_$table"
 
       // select
-      refreshConnections(TestTables(database, s"${batchWriteTablePrefix}_$table"))
+      refreshConnections(TestTables(database, tableToWrite))
       val df = sql(s"select * from $table")
 
       // batch write
@@ -58,21 +59,21 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         df,
         ti,
         new TiDBOptions(
-          tidbOptions + ("database" -> s"$database", "table" -> s"${batchWriteTablePrefix}_$table")
+          tidbOptions + ("database" -> s"$database", "table" -> tableToWrite)
         )
       )
 
       // refresh
-      refreshConnections(TestTables(database, s"${batchWriteTablePrefix}_$table"))
+      refreshConnections(TestTables(database, tableToWrite))
       setCurrentDatabase(database)
 
       // select
-      queryTiDBViaJDBC(s"select * from `${batchWriteTablePrefix}_$table`")
+      queryTiDBViaJDBC(s"select * from `$tableToWrite`")
 
       // assert
       val originCount = queryViaTiSpark(s"select count(*) from $table").head.head.asInstanceOf[Long]
       // cannot use count since batch write is not support index writing yet.
-      val count = queryViaTiSpark(s"select * from `${batchWriteTablePrefix}_$table`").length
+      val count = queryViaTiSpark(s"select * from `$tableToWrite`").length
         .asInstanceOf[Long]
       assert(count == originCount)
     }
@@ -98,7 +99,8 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
     try {
       setCurrentDatabase(database)
       for (table <- tables) {
-        tidbStmt.execute(s"drop table if exists `${batchWriteTablePrefix}_$table`")
+        val tableToWrite = s"${batchWriteTablePrefix}_$table"
+        tidbStmt.execute(s"drop table if exists `$tableToWrite`")
       }
     } finally {
       super.afterAll()
