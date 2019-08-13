@@ -23,7 +23,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
-import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD}
+import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD, TiRowRDD}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 
@@ -45,13 +45,13 @@ case class TiDBRelation(session: TiSession,
 
   override def sizeInBytes: Long = tableRef.sizeInBytes
 
-  def logicalPlanToRDD(dagRequest: TiDAGRequest): List[TiRDD] = {
+  def logicalPlanToRDD(dagRequest: TiDAGRequest): List[TiRowRDD] = {
     import scala.collection.JavaConverters._
     val ids = dagRequest.getIds.asScala
-    var tiRDDs = new ListBuffer[TiRDD]
+    var tiRDDs = new ListBuffer[TiRowRDD]
     ids.foreach(
       id => {
-        tiRDDs += new TiRDD(
+        tiRDDs += new TiRowRDD(
           dagRequest,
           id,
           session.getConf,
@@ -65,7 +65,6 @@ case class TiDBRelation(session: TiSession,
   }
 
   def dagRequestToRegionTaskExec(dagRequest: TiDAGRequest, output: Seq[Attribute]): SparkPlan = {
-    val timestamp = dagRequest.getStartTs
     import scala.collection.JavaConverters._
     val ids = dagRequest.getIds.asScala
     var tiHandleRDDs = new ListBuffer[TiHandleRDD]()
@@ -77,7 +76,6 @@ case class TiDBRelation(session: TiSession,
             id,
             session.getConf,
             tableRef,
-            timestamp,
             session,
             sqlContext.sparkSession
           )

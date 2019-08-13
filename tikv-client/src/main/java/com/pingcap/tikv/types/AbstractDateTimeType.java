@@ -7,6 +7,7 @@ import com.pingcap.tikv.codec.Codec.DateCodec;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import org.joda.time.DateTimeZone;
@@ -78,5 +79,19 @@ public abstract class AbstractDateTimeType extends DataType {
   @Override
   public ExprType getProtoExprType() {
     return ExprType.MysqlTime;
+  }
+
+  java.sql.Timestamp convertToMysqlDateTime(Object value) throws ConvertNotSupportException {
+    java.sql.Timestamp result;
+    if (value instanceof String) {
+      result = java.sql.Timestamp.valueOf((String) value);
+    } else if (value instanceof java.sql.Date) {
+      result = new java.sql.Timestamp(((java.sql.Date) value).getTime());
+    } else if (value instanceof java.sql.Timestamp) {
+      result = (java.sql.Timestamp) value;
+    } else {
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    }
+    return result;
   }
 }

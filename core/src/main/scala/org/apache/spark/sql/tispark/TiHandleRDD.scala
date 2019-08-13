@@ -39,21 +39,20 @@ import scala.collection.mutable.ListBuffer
  * is a list of primitive long which represents the handles lie in that region.
  *
  */
-class TiHandleRDD(val dagRequest: TiDAGRequest,
-                  val physicalId: Long,
-                  val tiConf: TiConfiguration,
-                  val tableRef: TiTableReference,
-                  val ts: TiTimestamp,
+class TiHandleRDD(override val dagRequest: TiDAGRequest,
+                  override val physicalId: Long,
+                  override val tiConf: TiConfiguration,
+                  override val tableRef: TiTableReference,
                   @transient private val session: TiSession,
                   @transient private val sparkSession: SparkSession)
-    extends RDD[Row](sparkSession.sparkContext, Nil) {
+    extends TiRDD(dagRequest, physicalId, tiConf, tableRef, session, sparkSession) {
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] =
     new Iterator[Row] {
       dagRequest.resolve()
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSession.getInstance(tiConf)
-      private val snapshot = session.createSnapshot(ts)
+      private val snapshot = session.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 
       private val handleIterator = snapshot.indexHandleRead(dagRequest, tasks)
@@ -96,29 +95,4 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
         Row.apply(regionId, handleList.toArray())
       }
     }
-
-  override protected def getPartitions: Array[Partition] = {
-    val keyWithRegionTasks = RangeSplitter
-      .newSplitter(session.getRegionManager)
-      .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId))
-
-    val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
-    with mutable.MultiMap[String, RegionTask]
-
-    var index = 0
-    val result = new ListBuffer[TiPartition]
-    for (task <- keyWithRegionTasks) {
-      hostTasksMap.addBinding(task.getHost, task)
-      val tasks = hostTasksMap(task.getHost)
-      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
-      index += 1
-      hostTasksMap.remove(task.getHost)
-    }
-    // add rest
-    for (tasks <- hostTasksMap.values) {
-      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
-      index += 1
-    }
-    result.toArray
-  }
 }
