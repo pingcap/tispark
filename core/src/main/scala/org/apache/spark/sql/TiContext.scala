@@ -43,7 +43,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
   val conf: SparkConf = mergeWithDataSourceConfig(sparkSession.sparkContext.conf, options)
   val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
-  val tiSession: TiSession = TiSession.create(tiConf)
+  val tiSession: TiSession = TiSession.getInstance(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
   StatisticsManager.initStatisticsManager(tiSession)
