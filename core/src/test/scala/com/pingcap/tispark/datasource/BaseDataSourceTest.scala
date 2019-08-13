@@ -21,7 +21,7 @@ class BaseDataSourceTest(val table: String,
                          val database: String = "tispark_test",
                          val _enableTidbConfigPropertiesInjectedToSpark: Boolean = true)
     extends BaseTiSparkTest {
-  protected def dbtable = s"$database.$table"
+  protected def dbtable = s"`$database`.`$table`"
 
   override def beforeAll(): Unit = {
     enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark

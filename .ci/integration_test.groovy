@@ -7,6 +7,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
     def MVN_PROFILE = "-Pjenkins"
+    def TEST_MODE = "simple"
     def PARALLEL_NUMBER = 18
     
     // parse tidb branch
@@ -16,6 +17,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     }
     m1 = null
     println "TIDB_BRANCH=${TIDB_BRANCH}"
+
     // parse pd branch
     def m2 = ghprbCommentBody =~ /pd\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m2) {
@@ -23,6 +25,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     }
     m2 = null
     println "PD_BRANCH=${PD_BRANCH}"
+
     // parse tikv branch
     def m3 = ghprbCommentBody =~ /tikv\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m3) {
@@ -30,10 +33,17 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     }
     m3 = null
     println "TIKV_BRANCH=${TIKV_BRANCH}"
+
     // parse mvn profile
     def m4 = ghprbCommentBody =~ /profile\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m4) {
         MVN_PROFILE = MVN_PROFILE + " -P${m4[0][1]}"
+    }
+
+    // parse test mode
+    def m5 = ghprbCommentBody =~ /mode\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m5) {
+        TEST_MODE = "${m5[0][1]}"
     }
     
     def readfile = { filename ->
@@ -93,7 +103,15 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         find core/src -name '*Suite*' | grep -v 'MultiColumnPKDataTypeSuite' > test
                         shuf test -o  test2
                         mv test2 test
-                        find core/src -name '*MultiColumnPKDataTypeSuite*' >> test
+                        """
+
+                        if(TEST_MODE != "simple") {
+                            sh """
+                            find core/src -name '*MultiColumnPKDataTypeSuite*' >> test
+                            """
+                        }
+
+                        sh """
                         sed -i 's/core\\/src\\/test\\/scala\\///g' test
                         sed -i 's/\\//\\./g' test
                         sed -i 's/\\.scala//g' test
@@ -188,7 +206,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             sleep 60
                             """
     
-                            timeout(60) {
+                            timeout(120) {
                                 run_test(chunk_suffix)
                             }
                         } catch (err) {
