@@ -191,7 +191,8 @@ public class TiSession implements AutoCloseable {
   }
 
   @Override
-  public void close() throws Exception {
+  public synchronized void close() throws Exception {
+    sessionCachedMap.remove(getConf().getPdAddrsString());
     getThreadPoolForTableScan().shutdownNow();
     getThreadPoolForIndexScan().shutdownNow();
     if (client != null) {
