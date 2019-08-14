@@ -37,6 +37,7 @@ class BaseDataSourceTest(val table: String,
   protected def tidbWrite(rows: List[Row],
                           schema: StructType,
                           param: Option[Map[String, String]] = None): Unit = {
+    refreshConnections()
     val data: RDD[Row] = sc.makeRDD(rows)
     val df = sqlContext.createDataFrame(data, schema)
     df.write

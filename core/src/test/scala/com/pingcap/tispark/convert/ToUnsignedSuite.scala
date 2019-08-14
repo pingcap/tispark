@@ -1,5 +1,6 @@
 package com.pingcap.tispark.convert
 
+import com.pingcap.tikv.TiSession
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -13,7 +14,10 @@ import org.apache.spark.sql.types._
  * 5. BIGINT UNSIGNED
  */
 class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsigned") {
-
+  override def beforeAll() = {
+    super.beforeAll()
+    TiSession.clearCache()
+  }
   private val readSchema = StructType(
     List(
       StructField("i", IntegerType),
@@ -418,10 +422,10 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
+  override def afterAll(): Unit = {
+    super.afterAll()
+    dropTable()
+  }
+
+
 }
