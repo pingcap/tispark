@@ -655,46 +655,4 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
         new LockResolverClient(
             conf, region, this.blockingStub, this.asyncStub, channelFactory, regionManager);
   }
-
-  /**
-   * Send SplitRegion request to tikv split a region at splitKey. splitKey must between current
-   * region's start key and end key.
-   *
-   * @param splitKey is the split point for a specific region.
-   * @return a split region info.
-   */
-  public TiRegion splitRegion(ByteString splitKey) {
-    Supplier<SplitRegionRequest> request =
-        () ->
-            SplitRegionRequest.newBuilder()
-                .setContext(
-                    Context.newBuilder()
-                        .setRegionId(region.getId())
-                        .setRegionEpoch(region.getRegionEpoch())
-                        .setPeer(region.getLeader())
-                        .build())
-                .setSplitKey(splitKey)
-                .build();
-
-    KVErrorHandler<SplitRegionResponse> handler =
-        new KVErrorHandler<>(
-            regionManager,
-            this,
-            lockResolverClient,
-            region,
-            resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-            resp -> null);
-
-    SplitRegionResponse resp =
-        callWithRetry(
-            ConcreteBackOffer.newGetBackOff(), TikvGrpc.METHOD_SPLIT_REGION, request, handler);
-    if (resp.hasRegionError()) {
-      throw new TiClientInternalException(
-          String.format(
-              "failed to split region %d at key %s because %s",
-              region.getId(), splitKey.toString(), resp.getRegionError().toString()));
-    }
-
-    return new TiRegion(resp.getLeft(), null, conf.getIsolationLevel(), conf.getCommandPriority());
-  }
 }

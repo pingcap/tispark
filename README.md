@@ -85,6 +85,9 @@ While TiSpark provides downward compatibility for TiDB, it guarantees **restrict
 ## How to migrate from Spark 2.1 to Spark 2.3/2.4
 For users using Spark 2.1 who wish to migrate to latest TiSpark on Spark 2.3/2.4, please download or install Spark 2.3+/2.4+ following instructions on [Apache Spark Site](http://spark.apache.org/downloads.html) and overwrite the old spark version in `$SPARK_HOME`.
 
+## Scala Version
+TiSpark currently only supports `scala-2.11`.
+
 ## TiSpark Architecture
 
 ![architecture](./docs/architecture.png)
@@ -160,11 +163,37 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.db_prefix |  "" | A string indicating the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
 | spark.tispark.request.isolation.level |  "SI" | Isolation level means whether do the resolve lock for the underlying tidb clusters. When you use the "RC", you will get the newest version of record smaller than your tso and ignore the locks. And if you use "SI", you will resolve the locks and get the records according whether resolved lock is committed or aborted  |
 
+## Log4j Configuration
+When you start `spark-shell` or `spark-sql` and run `show databases`, you might see the following warnings:
+```
+Failed to get database default, returning NoSuchObjectException
+Failed to get database global_temp, returning NoSuchObjectException
+```
+
+This is due to spark trying to load two nonexistent databases (`default` and `global_temp`) in its catalog. In order to mute these warnings, please append the following text to `${SPARK_HOME}/conf/log4j.properties`.
+```
+# tispark disable "WARN ObjectStore:568 - Failed to get database"
+log4j.logger.org.apache.hadoop.hive.metastore.ObjectStore=ERROR
+```
+
 ## Time Zone
 Time Zone can be set by using `-Duser.timezone` system property, e.g. `-Duser.timezone=GMT-7`, which will affect `Timestamp` type.  Please do not use `spark.sql.session.timeZone`.
 
 ## Statistics information
 If you want to know how TiSpark could benefit from TiDB's statistic information, read more [here](./docs/userguide.md).
+
+## Compatibility with tidb-3.0
+### View
+TiDB starts to support `view` from `tidb-3.0`. 
+
+TiSpark currently **does not support** `view`. Users will not be able to observe or access data through views with TiSpark.
+
+### Table Partition
+`tidb-3.0` supports both `Range Partition` and `Hash Partition`. 
+
+TiSpark currently **supports** `Range Partition` and `Hash Partition`. Users can select data from `Range Partition` table and `Hash Partition` table through TiSpark. 
+
+In most cases TiSpark will use full table scan. Only in some cases TiSpark will apply partition pruning (read more [here](./docs/userguide.md).
 
 ## How to test
 We use [docker-compose](https://docs.docker.com/compose/) to provide tidb cluster service which allows you to run test across different platforms. It is recommended to install docker in order to test locally, or you can set up your own TiDB cluster locally as you wish.
