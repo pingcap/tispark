@@ -18,6 +18,7 @@
 package com.pingcap.tikv;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -36,7 +37,7 @@ import org.tikv.kvproto.Kvrpcpb.KvPair;
 public class KVClient implements AutoCloseable {
   private final RegionStoreClientBuilder clientBuilder;
   private final TiConfiguration conf;
-  private final ExecutorCompletionService<List<KvPair>> completionService;
+  private final ExecutorService executorService;
   private static final Logger logger = Logger.getLogger(KVClient.class);
 
   private static final int BATCH_GET_SIZE = 16 * 1024;
@@ -46,13 +47,17 @@ public class KVClient implements AutoCloseable {
     Objects.requireNonNull(clientBuilder, "clientBuilder is null");
     this.conf = conf;
     this.clientBuilder = clientBuilder;
-    //    ExecutorService executors = Executors.newFixedThreadPool(conf.getKVClientConcurrency());
-    ExecutorService executors = Executors.newFixedThreadPool(20);
-    this.completionService = new ExecutorCompletionService<>(executors);
+    // TODO: ExecutorService executors =
+    // Executors.newFixedThreadPool(conf.getKVClientConcurrency());
+    executorService = Executors.newFixedThreadPool(20);
   }
 
   @Override
-  public void close() {}
+  public void close() {
+    if (executorService != null) {
+      executorService.shutdownNow();
+    }
+  }
 
   /**
    * Get a raw key-value pair from TiKV if key exists
@@ -60,7 +65,7 @@ public class KVClient implements AutoCloseable {
    * @param key raw key
    * @return a ByteString value if key exists, ByteString.EMPTY if key does not exist
    */
-  public ByteString get(ByteString key, long version) {
+  public ByteString get(ByteString key, long version) throws GrpcException {
     BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
     while (true) {
       RegionStoreClient client = clientBuilder.build(key);
@@ -125,7 +130,7 @@ public class KVClient implements AutoCloseable {
     return result;
   }
 
-  /** A Batch containing the region, a list of keys to send */
+  /** A Batch containing the region and a list of keys to send */
   private static final class Batch {
     private final TiRegion region;
     private final List<ByteString> keys;
@@ -177,6 +182,8 @@ public class KVClient implements AutoCloseable {
    * @param batches list of batch to send
    */
   private List<KvPair> sendBatchGet(BackOffer backOffer, List<Batch> batches, long version) {
+    ExecutorCompletionService<List<KvPair>> completionService =
+        new ExecutorCompletionService<>(executorService);
     for (Batch batch : batches) {
       completionService.submit(
           () -> {
