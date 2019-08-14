@@ -45,30 +45,57 @@ object ReflectionUtil {
   // Hereby we use reflection to support different Spark versions.
   private val mapPartitionsWithIndexInternal: Method = spark_version match {
     case "2.3.0" | "2.3.1" =>
-      classOf[RDD[InternalRow]].getDeclaredMethod(
+      tryLoadMethod(
         "mapPartitionsWithIndexInternal",
-        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
-        classOf[Boolean],
-        classOf[ClassTag[UnsafeRow]]
+        mapPartitionsWithIndexInternalV1,
+        mapPartitionsWithIndexInternalV2
       )
     case _ =>
       // Spark version >= 2.3.2
-      try {
-        classOf[RDD[InternalRow]].getDeclaredMethod(
-          "mapPartitionsWithIndexInternal",
-          classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
-          classOf[Boolean],
-          classOf[Boolean],
-          classOf[ClassTag[UnsafeRow]]
-        )
-      } catch {
-        case _: Throwable =>
-          throw ScalaReflectionException(
-            "Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
-              .format(spark_version)
-          )
-      }
+      tryLoadMethod(
+        "mapPartitionsWithIndexInternal",
+        mapPartitionsWithIndexInternalV2,
+        mapPartitionsWithIndexInternalV1
+      )
   }
+
+  // Spark HDP Release may not compatible with official Release
+  // see https://github.com/pingcap/tispark/issues/1006
+  private def tryLoadMethod(name: String, f1: () => Method, f2: () => Method): Method = {
+    try {
+      f1.apply()
+    } catch {
+      case _: Throwable =>
+        try {
+          f2.apply()
+        } catch {
+          case _: Throwable =>
+            throw ScalaReflectionException(
+              s"Cannot find reflection of Method $name, current Spark version is %s"
+                .format(spark_version)
+            )
+        }
+    }
+  }
+
+  // Spark-2.3.0 & Spark-2.3.1
+  private def mapPartitionsWithIndexInternalV1(): Method =
+    classOf[RDD[InternalRow]].getDeclaredMethod(
+      "mapPartitionsWithIndexInternal",
+      classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+      classOf[Boolean],
+      classOf[ClassTag[UnsafeRow]]
+    )
+
+  // >= Spark-2.3.2
+  private def mapPartitionsWithIndexInternalV2(): Method =
+    classOf[RDD[InternalRow]].getDeclaredMethod(
+      "mapPartitionsWithIndexInternal",
+      classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+      classOf[Boolean],
+      classOf[Boolean],
+      classOf[ClassTag[UnsafeRow]]
+    )
 
   case class ReflectionMapPartitionWithIndexInternal(
     rdd: RDD[InternalRow],
