@@ -170,11 +170,15 @@ public final class RowIDAllocator {
 
   /** read current row id from TiKV according to database id and table id. */
   public long getAutoTableId(long dbId, long tableId, Snapshot snapshot) {
-    ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
-    ByteString tblKey = MetaCodec.autoTableIDKey(tableId);
-    ByteString val = MetaCodec.hashGet(dbKey, tblKey, snapshot);
-    if (val.isEmpty()) return 0L;
-    return Long.parseLong(val.toStringUtf8());
+    if (isDBExisted(dbId, snapshot) && isTableExisted(dbId, tableId, snapshot)) {
+      ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
+      ByteString tblKey = MetaCodec.autoTableIDKey(tableId);
+      ByteString val = MetaCodec.hashGet(dbKey, tblKey, snapshot);
+      if (val.isEmpty()) return 0L;
+      return Long.parseLong(val.toStringUtf8());
+    }
+
+    throw new IllegalArgumentException("table or database is not existed");
   }
 
   private void initSigned(Snapshot snapshot, long tableId) {
