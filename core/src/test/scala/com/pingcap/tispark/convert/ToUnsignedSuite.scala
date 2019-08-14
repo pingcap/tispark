@@ -427,5 +427,4 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
     dropTable()
   }
 
-
 }
