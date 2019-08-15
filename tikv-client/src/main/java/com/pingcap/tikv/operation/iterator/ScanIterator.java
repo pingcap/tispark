@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
@@ -57,7 +58,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     this.builder = builder;
   }
 
-  abstract TiRegion loadCurrentRegionToCache() throws Exception;
+  abstract TiRegion loadCurrentRegionToCache() throws GrpcException;
 
   // return true if current cache is not loaded or empty
   boolean cacheLoadFails() {

@@ -82,7 +82,7 @@ public class KVClient implements AutoCloseable {
    *
    * @param keys keys
    */
-  public List<KvPair> batchGet(List<ByteString> keys, long version) {
+  public List<KvPair> batchGet(List<ByteString> keys, long version) throws GrpcException {
     return batchGet(ConcreteBackOffer.newBatchGetMaxBackOff(), keys, version);
   }
 
@@ -108,7 +108,8 @@ public class KVClient implements AutoCloseable {
    * @param endKey raw end key, exclusive
    * @return list of key-value pairs in range
    */
-  public List<Kvrpcpb.KvPair> scan(ByteString startKey, ByteString endKey, long version) {
+  public List<Kvrpcpb.KvPair> scan(ByteString startKey, ByteString endKey, long version)
+      throws GrpcException {
     Iterator<Kvrpcpb.KvPair> iterator =
         scanIterator(conf, clientBuilder, startKey, endKey, version);
     List<Kvrpcpb.KvPair> result = new ArrayList<>();
@@ -123,7 +124,7 @@ public class KVClient implements AutoCloseable {
    * @param limit limit of key-value pairs
    * @return list of key-value pairs in range
    */
-  public List<Kvrpcpb.KvPair> scan(ByteString startKey, int limit) {
+  public List<Kvrpcpb.KvPair> scan(ByteString startKey, int limit) throws GrpcException {
     Iterator<Kvrpcpb.KvPair> iterator = scanIterator(conf, clientBuilder, startKey, limit);
     List<Kvrpcpb.KvPair> result = new ArrayList<>();
     iterator.forEachRemaining(result::add);

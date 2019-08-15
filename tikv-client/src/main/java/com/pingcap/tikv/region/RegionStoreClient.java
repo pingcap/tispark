@@ -611,7 +611,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       this.regionManager = regionManager;
     }
 
-    public RegionStoreClient build(TiRegion region, Store store) {
+    public RegionStoreClient build(TiRegion region, Store store) throws GrpcException {
       Objects.requireNonNull(region, "region is null");
       Objects.requireNonNull(store, "store is null");
 
@@ -628,12 +628,12 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
           conf, region, channelFactory, blockingStub, asyncStub, regionManager);
     }
 
-    public RegionStoreClient build(ByteString key) {
+    public RegionStoreClient build(ByteString key) throws GrpcException {
       Pair<TiRegion, Store> pair = regionManager.getRegionStorePairByKey(key);
       return build(pair.first, pair.second);
     }
 
-    public RegionStoreClient build(TiRegion region) {
+    public RegionStoreClient build(TiRegion region) throws GrpcException {
       Store store = regionManager.getStoreById(region.getLeader().getStoreId());
       return build(region, store);
     }

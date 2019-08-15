@@ -22,6 +22,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.pingcap.tikv.AbstractGRPCClient;
 import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.util.ChannelFactory;
 import io.grpc.ManagedChannel;
 import org.tikv.kvproto.Metapb;
@@ -64,7 +65,7 @@ public abstract class AbstractRegionStoreClient
   }
 
   @Override
-  public void close() throws Exception {}
+  public void close() throws GrpcException {}
 
   /**
    * onNotLeader deals with NotLeaderError and returns whether re-splitting key range is needed

@@ -19,6 +19,7 @@ package com.pingcap.tikv.operation.iterator;
 
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
@@ -52,7 +53,7 @@ public class ConcreteScanIterator extends ScanIterator {
     this.version = version;
   }
 
-  TiRegion loadCurrentRegionToCache() throws Exception {
+  TiRegion loadCurrentRegionToCache() throws GrpcException {
     TiRegion region;
     try (RegionStoreClient client = builder.build(startKey)) {
       region = client.getRegion();
