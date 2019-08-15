@@ -347,7 +347,7 @@ Tested on 4 machines as follows:
 
 ```
 Intel(R) Xeon(R) CPU E5-2630 v4 @ 2.20GHz * 2 = 40Vu
-12 * 16G == 188G
+12 * 16G = 188G
 ```
 
 `FIO` test result:
@@ -372,17 +372,17 @@ CREATE TABLE ORDERS  (O_ORDERKEY       INTEGER NOT NULL,
 
 ### TiSpark Write Benchmark
 
-| data line number | data size | parallel number | prepare(s) | prewrite (s) | commit (s) | total (s) |
-| ---------------- | --------- | --------------- | ---------- | ------------ | ---------- | --------- |
-| 1,500,000        | 165M      | 2               | 17         | 68           | 62         | 148       |
-| 15,000,000       | 1.7G      | 24              | 49         | 157          | 119        | 326       |
-| 150,000,000      | 17G       | 120             | 630        | 1236         | 1098       | 2964      |
+| count(*)    | data size | parallel number | prepare(s) | prewrite (s) | commit (s) | total (s) |
+| ----------- | --------- | --------------- | ---------- | ------------ | ---------- | --------- |
+| 1,500,000   | 165M      | 2               | 17         | 68           | 62         | 148       |
+| 15,000,000  | 1.7G      | 24              | 49         | 157          | 119        | 326       |
+| 150,000,000 | 17G       | 120             | 630        | 1236         | 1098       | 2964      |
 
 
 ## Spark with JDBC Benchmark
 
-| data line number | data size | parallel number | spark jdbc write (s) | comments                            |
-| ---------------- | --------- | --------------- | -------------------- | ----------------------------------- |
-| 1,500,000        | 165M      | 24              | 22                   |                                     |
-| 15,000,000       | 1.7G      | 24              | 411                  | use 120 parallel will cause KV Busy |
-| 150,000,000      | 17G       | 24              | 2936                 | use 120 parallel will cause KV Busy |
+| count(*)    | data size | parallel number | spark jdbc write (s) | comments                            |
+| ----------- | --------- | --------------- | -------------------- | ----------------------------------- |
+| 1,500,000   | 165M      | 24              | 22                   |                                     |
+| 15,000,000  | 1.7G      | 24              | 411                  | use 120 parallel will cause KV Busy |
+| 150,000,000 | 17G       | 24              | 2936                 | use 120 parallel will cause KV Busy |
