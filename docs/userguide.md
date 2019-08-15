@@ -5,7 +5,7 @@
 TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It takes advantages of both the Spark platform and the distributed TiKV cluster, at the same time, seamlessly glues to TiDB, the distributed OLTP database, to provide a Hybrid Transactional/Analytical Processing (HTAP) solution to serve as a one-stop solution for online transactions and analysis.
 
 
-TiSpark depends on the TiKV cluster and the PD cluster. It also needs to set up a Spark cluster. This document provides a brief introduction to how to setup and use TiSpark. It requires some basic knowledge of Apache Spark. For more information, please refer to [Spark website](https://spark.apache.org/docs/latest/index.html).
+TiSpark depends on the TiKV cluster and the PD cluster. It also needs to set up a Spark cluster. This document provides a brief introduction to how to set up and use TiSpark. It requires some basic knowledge of Apache Spark. For more information, please refer to [Spark website](https://spark.apache.org/docs/latest/index.html).
 
 
 ## Overview
@@ -17,10 +17,10 @@ TiSpark is an OLAP solution that runs Spark SQL directly on TiKV, the distribute
 
 TiSpark Architecture
 
-+ TiSpark integrates with Spark Catalyst Engine deeply. It provides precise control of the computing, which allows Spark read data from TiKV efficiently. It also supports index seek, which improves the performance of the point query execution significantly.
++ TiSpark integrates with Spark Catalyst Engine deeply. It provides precise control of computing, which allows Spark to read data from TiKV efficiently. It also supports index seek, which improves the performance of the point query execution significantly.
 + It utilizes several strategies to push down the computing to reduce the size of dataset handling by Spark SQL, which accelerates the query execution. It also uses the TiDB built-in statistical information for the query plan optimization.
 + From the data integration point of view, TiSpark + TiDB provides a solution runs both transaction and analysis directly on the same platform without building and maintaining any ETLs. It simplifies the system architecture and reduces the cost of maintenance.
-+ In addition, you can deploy and utilize tools from the Spark ecosystem for further data processing and manipulation on TiDB. For example, using TiSpark for data analysis and ETL; retrieving data from TiKV as a machine learning data source; generating reports from the scheduling system and so on.
++ Also, you can deploy and utilize tools from the Spark ecosystem for further data processing and manipulation on TiDB. For example, using TiSpark for data analysis and ETL; retrieving data from TiKV as a machine learning data source; generating reports from the scheduling system and so on.
 
 ## Environment Setup
 
@@ -36,7 +36,7 @@ TiSpark Architecture
 #### Configuration of the TiKV cluster
 
 For independent deployment of TiKV and TiSpark, it is recommended to refer to the following recommendations
- 
+
 + Hardware configuration
  - For general purposes, please refer to the TiDB and TiKV hardware configuration [recommendations](https://github.com/pingcap/docs/blob/master/op-guide/recommendation.md#deployment-recommendations).
  - If the usage is more focused on the analysis scenarios, you can increase the memory of the TiKV nodes to at least 64G. If using Hard Disk Drive (HDD), it is recommended to use at least 8 disks.
@@ -70,9 +70,9 @@ Block-cache-size = "1GB"
 Scheduler-worker-pool-size = 4
 ```
 
-#### Configuration of the independent deployment of the Spark cluster and the TiSpark cluster 
+#### Configuration of the independent deployment of the Spark cluster and the TiSpark cluster
 
- 
+
 Please refer to the [Spark official website](https://spark.apache.org/docs/latest/hardware-provisioning.html) for the detail hardware recommendations.
 
 The following is a short overview of the TiSpark configuration.
@@ -101,7 +101,7 @@ For example, `10.16.20.1:2379,10.16.20.2:2379,10.16.20.3:2379` when you have mul
 #### Hybrid deployment configuration for the TiSpark and TiKV cluster
 
 For the hybrid deployment of TiSpark and TiKV, add the TiSpark required resources to the TiKV reserved resources, and allocate 25% of the memory for the system.
- 
+
 
 ## Deploy TiSpark
 
@@ -115,7 +115,7 @@ Running TiSpark on an existing Spark cluster does not require a reboot of the cl
 spark-shell --jars $your_path_to/tispark-${name_with_version}.jar
 ```
 
-If you want to deploy TiSpark as a default component, simply place the TiSpark jar package into the jars path for each node of the Spark cluster and restart the Spark cluster:
+If you want to deploy TiSpark as a default component, simply place the TiSpark jar package into the path of the jar for each node of the Spark cluster and restart the Spark cluster:
 
 ```
 cp $your_path_to/tispark-${name_with_version}.jar $SPARK_HOME/jars
@@ -140,12 +140,12 @@ If you need to use the Hadoop cluster, please choose the corresponding Hadoop ve
 
 **Please confirm the Spark version your TiSpark version supports.**
 
-Suppose you already have a Spark binaries, and the current PATH is `SPARKPATH`, please copy the TiSpark jar package to the `$SPARKPATH/jars` directory.
+Suppose you already have a Spark binary, and the current PATH is `SPARKPATH`, please copy the TiSpark jar package to the `$SPARKPATH/jars` directory.
 
 #### Starting a Master node
 
 Execute the following command on the selected Spark Master node:
- 
+
 ```
 cd $SPARKPATH
 
@@ -163,7 +163,7 @@ Similarly, you can start a Spark-Slave node with the following command:
 ./sbin/start-slave.sh spark://spark-master-hostname:7077
 ```
 
-After the command returns, you can see if the Slave node is joined to the Spark cluster correctly from the panel as well. Repeat the above command at all Slave nodes. After all Slaves are connected to the master, you have a Standalone mode Spark cluster.
+After the command returns, you can see if the Slave node is joined to the Spark cluster correctly from the panel as well. Repeat the above command at all Slave nodes. After all the slaves are connected to the master, you have a Standalone mode Spark cluster.
 
 #### Spark SQL shell and JDBC Server
 
@@ -174,7 +174,7 @@ Now that TiSpark supports Spark 2.3/2.4, you can use Spark's ThriftServer and Sp
 
 Assuming you have successfully started the TiSpark cluster as described above, here's a quick introduction to how to use Spark SQL for OLAP analysis. Here we use a table named `lineitem` in the `tpch` database as an example.
 
-Add 
+Add
 ```
 spark.tispark.pd.addresses 192.168.1.100:2379
 spark.sql.extensions org.apache.spark.sql.TiExtensions
@@ -200,7 +200,7 @@ The result is:
 | 600000000 |
 +-------------+
 ```
- 
+
 TiSpark's SQL Interactive shell is almost the same as spark-sql shell.
 
 ```
@@ -240,11 +240,11 @@ TiSparkR is a thin layer built for supporting R language with TiSpark
 Refer to [this document](../R/README.md) for usage.
 
 ## TiSpark on PySpark
-TiSpark on PySpark is a Python package build to support the Python language with TiSpark. 
+TiSpark on PySpark is a Python package build to support the Python language with TiSpark.
 Refer to [this document](../python/README.md) for usage.
 
 ## Use TiSpark together with Hive
-TiSpark should be ok to use together with Hive. 
+TiSpark should be ok to use together with Hive.
 You need to set environment variable HADOOP_CONF_DIR to your Hadoop's configuration folder and copy hive-site.xml to spark/conf folder before starting Spark.
 ```
 val tisparkDF = spark.sql("select * from tispark_table").toDF
@@ -274,39 +274,39 @@ df.write
 .option("isolationLevel", "NONE") // recommended to set isolationLevel to NONE if you have a large DF to load.
 .option("user", "root") // TiDB user here
 .save()
-``` 
+```
 It is recommended to set `isolationLevel` to `NONE` to avoid large single transactions which may potentially lead to TiDB OOM.
 
 ## Statistics information
-TiSpark could use TiDB's statistic information for 
+TiSpark could use TiDB's statistic information for
 
 1. Determining which index to ues in your query plan with the estimated lowest cost.
 2. Small table broadcasting, which enables efficient broadcast join.
 
 If you would like TiSpark to use statistic information, first you need to make sure that concerning tables have already been analyzed. Read more about how to analyze tables [here](https://github.com/pingcap/docs/blob/master/sql/statistics.md).
 
-Since TiSpark 2.0, statistics information will be default to auto load.
+Since TiSpark 2.0, statistics information will be default to autoload.
 
 Note that table statistics will be cached in your spark driver node's memory, so you need to make sure that your memory should be enough for your statistics information.
-Currently you could adjust these configs in your spark.conf file.
-  
+Currently, you could adjust these configs in your spark.conf file.
+
 | Property Name | Default | Description
 | --------   | -----:   | :----: |
 | spark.tispark.statistics.auto_load | true | Whether to load statistics info automatically during database mapping. |
 
 ## Reading partition table from TiDB
-TiSpark can read range and hash partition table from TiDB. 
+TiSpark can read range and hash partition table from TiDB.
 
 TiSpark decides whether to apply partition pruning according to the type of partition and the partition expression associated with the table.
 
-Currently, TiSpark can partially apply partition pruning on range partition. 
+Currently, TiSpark can partially apply partition pruning on range partition.
 
 The partition pruning can be applied when the partition expression of the range partition is one of the following:
 * column expression
-* year(expr) where expr is a column and its type is datetime or string literal 
+* year(expr) where expr is a column and its type is datetime or string literal
 but can be parsed as datetime.
 
-If partition pruning cannot be applied, it is equivalent to doing a table scan over all partitions. 
+If partition pruning cannot be applied, it is equivalent to doing a table scan over all partitions.
 
 
 ## Common Port numbers used by Spark Cluster
@@ -326,7 +326,7 @@ If partition pruning cannot be applied, it is equivalent to doing a table scan o
 
 Q: What are the pros/cons of independent deployment as opposed to a shared resource with an existing Spark / Hadoop cluster?
 
-A: You can use the existing Spark cluster without a separate deployment, but if the existing cluster is busy, TiSpark will not be able to achieve the desired speed. 
+A: You can use the existing Spark cluster without a separate deployment, but if the existing cluster is busy, TiSpark will not be able to achieve the desired speed.
 
 Q: Can I mix Spark with TiKV?
 
