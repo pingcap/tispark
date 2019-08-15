@@ -47,7 +47,7 @@ mvn clean install -Dmaven.test.skip=true -P spark-2.3
 or
 mvn clean install -Dmaven.test.skip=true -P spark-2.4
 ```
-**Please note that after you need to specify the major version of Spark according to the Spark version you are using.**
+**Please note that you need to specify the major version of Spark according to the Spark version you are using.**
 
 Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need to run them.
 
