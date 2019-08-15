@@ -18,28 +18,28 @@ Query pushdown leverages these performance efficiencies by enabling large and co
 Pushdown is not possible in all situations. For example, Spark UDFs cannot be pushed down to TiKV.
 
 ## Transaction support for Write
-Since TiDB is a database that supports transaction, TiDB Spark Connector also support transaction, which means:
-1. all data in DataFrame will be written to TiDB successfully, if no conflicts exist
-2. no data in DataFrame will be written to TiDB successfully, if conflicts exist
-3. no partial changes is visible to other session until commit.
+Since TiDB is a database that supports `transaction`, TiDB Spark Connector also supports `transaction`, which means:
+1. all data in DataFrame will be written to TiDB successfully if no conflicts exist
+2. no data in DataFrame will be written to TiDB successfully if conflicts exist
+3. no partial changes are visible to other sessions until commit.
 
 ## Replace and insert semantics
 TiSpark only supports `Append` SaveMode. The behavior is controlled by
 `replace` option. The default value is false. In addition, if `replace` is true,
-data to be inserted will be deduplicate before insertion.
+data to be inserted will be deduplicated before insertion.
 
 If `replace` is true, then
-* if primary key or unique index exists in db, data will be updated
+* if the primary key or unique index exists in DB, data will be updated
 * if no same primary key or unique index exists, data will be inserted.
 
 If `replace` is false, then
-* if primary key or unique index exists in db, data having conflicts expects an exception.
+* if the primary key or unique index exists in DB, data having conflicts expects an exception.
 * if no same primary key or unique index exists, data will be inserted.
 
 ## Using the Spark Connector With Extensions Enabled
 The connector adheres to the standard Spark API, but with the addition of TiDB-specific options.
 
-The connector can be used both with or without extensions enabled. Here's examples about how to use it with extensions.
+The connector can be used both with or without extensions enabled. Here are examples about how to use it with extensions.
 
 See [code examples with extensions](https://github.com/pingcap/tispark-test/blob/master/tispark-examples/src/main/scala/com/pingcap/tispark/examples/TiDataSourceExampleWithExtensions.scala).
 
