@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file.
 ### Fixes
 - Fix cost model in table scan [#1023](https://github.com/pingcap/tispark/pull/1023)
 - Fix index scan bug [#1024](https://github.com/pingcap/tispark/pull/1024)
-- Fix reflection bug for hdp release [#1017](https://github.com/pingcap/tispark/pull/1017)
+- Prohibit aggregate or group by pushdown on double read [#1027](https://github.com/pingcap/tispark/pull/1027)
+- Fix reflection bug for HDP release [#1017](https://github.com/pingcap/tispark/pull/1017)
 - Fix scala compiler version [#1019](https://github.com/pingcap/tispark/pull/1019)
 
 ## [TiSpark 2.2.0]
