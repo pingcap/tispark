@@ -37,6 +37,7 @@ class BaseDataSourceTest(val table: String,
   protected def tidbWrite(rows: List[Row],
                           schema: StructType,
                           param: Option[Map[String, String]] = None): Unit = {
+    // If we reuse tiSession, cache in catalog will be outdated after dropping and creating table.
     refreshConnections()
     val data: RDD[Row] = sc.makeRDD(rows)
     val df = sqlContext.createDataFrame(data, schema)
