@@ -188,7 +188,6 @@ class StatisticsTestSuite extends BasePlanTest {
       }
   }
 
-
   test("baseline test") {
     val tableName = "full_data_type_table_idx"
     val df = spark.sql(

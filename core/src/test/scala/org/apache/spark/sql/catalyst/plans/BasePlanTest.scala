@@ -159,5 +159,4 @@ class BasePlanTest extends BaseTiSparkTest {
     assert(estimatedRowCount === answer)
   }
 
-
 }
