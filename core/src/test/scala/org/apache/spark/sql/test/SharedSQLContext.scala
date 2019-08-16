@@ -386,6 +386,8 @@ object SharedSQLContext extends Logging {
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
       tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "")
 
+      val enableTiFlashTest = getOrElse(prop, ENABLE_TIFLASH_TEST, "false")
+
       runTPCH = tpchDBName != ""
       runTPCDS = tpcdsDBName != ""
 
@@ -414,6 +416,7 @@ object SharedSQLContext extends Logging {
         sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
         sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
         sparkConf.set(DB_PREFIX, dbPrefix)
+        sparkConf.set(ENABLE_TIFLASH_TEST, enableTiFlashTest)
       }
 
       sparkConf.set("spark.tispark.write.allow_spark_sql", "true")
