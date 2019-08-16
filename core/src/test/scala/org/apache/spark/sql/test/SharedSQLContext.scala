@@ -415,6 +415,7 @@ object SharedSQLContext extends Logging {
 
       sparkConf.set("spark.tispark.write.allow_spark_sql", "true")
       sparkConf.set("spark.tispark.write.without_lock_table", "true")
+      sparkConf.set("spark.tispark.tikv.region_split_size_in_mb", "1")
 
       if (isHiveEnabled) {
         // delete meta store directory to avoid multiple derby instances SPARK-10872
