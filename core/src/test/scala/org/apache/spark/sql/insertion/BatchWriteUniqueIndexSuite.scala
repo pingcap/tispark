@@ -18,6 +18,12 @@ class BatchWriteUniqueIndexSuite
   override val database = "batch_write_test_index"
   override val testDesc = "Test for single PK column and multiple unique index type"
 
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    tidbStmt.execute(s"drop database if exists $database")
+    tidbStmt.execute(s"create database $database")
+  }
+
   private def tiRowToSparkRow(row: TiRow, tiColsInfos: java.util.List[TiColumnInfo]) = {
     val sparkRow = new Array[Any](row.fieldCount())
     for (i <- 0 until row.fieldCount()) {
@@ -62,11 +68,12 @@ class BatchWriteUniqueIndexSuite
     }
   }
 
+  // this is only for
   override def test(): Unit = {}
 
   override def afterAll(): Unit =
     try {
-//      dropTable()
+      dropTable()
     } finally {
       super.afterAll()
     }

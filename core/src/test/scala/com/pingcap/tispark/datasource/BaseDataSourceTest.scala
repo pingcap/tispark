@@ -27,10 +27,6 @@ class BaseDataSourceTest(val table: String,
   override def beforeAll(): Unit = {
     enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark
     super.beforeAllWithoutLoadData()
-    if (!database.equals("tispark_test")) {
-      tidbStmt.execute(s"drop database if exists $database")
-      tidbStmt.execute(s"create database $database")
-    }
     initializeTimeZone()
   }
 
