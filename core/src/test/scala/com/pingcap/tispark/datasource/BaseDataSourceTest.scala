@@ -44,7 +44,7 @@ class BaseDataSourceTest(val table: String,
   }
 
   protected def dropTable(tblName: String): Unit = {
-    jdbcUpdate(s"drop table if exists $database.$tblName")
+    jdbcUpdate(s"drop table if exists `$database`.`$tblName`")
   }
 
   protected def tidbWriteWithTable(rows: List[Row],
