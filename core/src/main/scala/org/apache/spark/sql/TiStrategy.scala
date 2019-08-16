@@ -80,6 +80,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def allowIndexRead(): Boolean =
     sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "true").toLowerCase.toBoolean
 
+  private def allowTiFlashRead(): Boolean = {
+    sqlConf.getConfString(TiConfigConst.USE_TIFLASH, "false").toLowerCase.toBoolean
+  }
+
   private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
@@ -254,6 +258,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     scanBuilder.buildTiDAGReq(
       allowIndexRead(),
+      allowTiFlashRead(),
       tiColumns.map { _.getColumnInfo }.asJava,
       tiFilters.asJava,
       source.table,

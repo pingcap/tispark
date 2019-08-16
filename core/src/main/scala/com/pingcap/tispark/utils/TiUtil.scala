@@ -192,6 +192,10 @@ object TiUtil {
       tiConf.setTikvRegionSplitSizeInMB(conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
     }
 
+    if (conf.contains(TiConfigConst.ENABLE_TIFLASH_TEST)) {
+      tiConf.setUseTiFlash(conf.get(TiConfigConst.ENABLE_TIFLASH_TEST).toBoolean)
+    }
+
     tiConf
   }
 
