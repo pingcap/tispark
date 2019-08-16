@@ -2,6 +2,7 @@ package com.pingcap.tispark.datasource
 
 import java.util.Objects
 
+import com.pingcap.tikv.TiSession
 import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
@@ -32,7 +33,11 @@ class BaseDataSourceTest(val table: String,
   protected def jdbcUpdate(query: String): Unit =
     tidbStmt.execute(query)
 
-  protected def dropTable(): Unit = jdbcUpdate(s"drop table if exists $dbtable")
+  protected def dropTable(): Unit = {
+    jdbcUpdate(s"drop table if exists $dbtable")
+    // If we reuse tiSession, cache in catalog will be outdated after dropping and creating table.
+    TiSession.clearCache()
+  }
 
   protected def tidbWrite(rows: List[Row],
                           schema: StructType,

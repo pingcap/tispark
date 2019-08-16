@@ -29,11 +29,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TiSession implements AutoCloseable {
-  private final Logger logger = LoggerFactory.getLogger(TiSession.class);
   private final TiConfiguration conf;
   private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
@@ -46,7 +43,7 @@ public class TiSession implements AutoCloseable {
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
 
-  private static Map<String, TiSession> sessionCachedMap = new HashMap<>();
+  private static final Map<String, TiSession> sessionCachedMap = new HashMap<>();
 
   // Since we create session as singleton now, configuration change will not
   // reflect change
@@ -180,10 +177,6 @@ public class TiSession implements AutoCloseable {
     return res;
   }
 
-  public static TiSession create(TiConfiguration conf) {
-    return new TiSession(conf);
-  }
-
   /**
    * This is used for setting call back function to invalidate cache information
    *
@@ -193,10 +186,19 @@ public class TiSession implements AutoCloseable {
     this.cacheInvalidateCallback = callBackFunc;
   }
 
+  public static void clearCache() {
+    TiSession.sessionCachedMap.clear();
+  }
+
   @Override
-  public void close() throws Exception {
-    getThreadPoolForTableScan().shutdownNow();
-    getThreadPoolForIndexScan().shutdownNow();
+  public synchronized void close() throws Exception {
+    sessionCachedMap.remove(conf.getPdAddrsString());
+    if (tableScanThreadPool != null) {
+      tableScanThreadPool.shutdownNow();
+    }
+    if (indexScanThreadPool != null) {
+      indexScanThreadPool.shutdownNow();
+    }
     if (client != null) {
       getPDClient().close();
     }
