@@ -40,6 +40,9 @@ class TiDBDataSource
 
     val options = new TiDBOptions(parameters)
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
+    // adding this in order to resolve drop-and-create table with same name but different table id
+    // problem.
+    tiContext.tiSession.getCatalog.reloadCache(true)
     TiSparkConnectorUtils.checkVersionAndEnablePushdown(sqlContext.sparkSession, tiContext)
     val ts = tiContext.tiSession.createTxnClient().getTimestamp
     TiDBRelation(tiContext.tiSession, options.tiTableRef, tiContext.meta, ts, Some(options))(

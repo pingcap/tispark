@@ -38,7 +38,6 @@ class DataSourceWithoutExtensionsSuite
       s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
     )
 
-    refreshConnections()
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
 
