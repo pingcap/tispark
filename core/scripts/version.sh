@@ -15,7 +15,7 @@
 #
 
 cd ..
-TiSparkReleaseVersion=2.1.3-SNAPSHOT
+TiSparkReleaseVersion=2.1.4-SNAPSHOT
 TiSparkBuildTS=`date -u '+%Y-%m-%d %I:%M:%S'`
 TiSparkGitHash=`git rev-parse HEAD`
 TiSparkGitBranch=`git rev-parse --abbrev-ref HEAD`
