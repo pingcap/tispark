@@ -1,6 +1,14 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.1.3] 2019-08-15
+### Fixes
+- Fix cost model in table scan [#1023](https://github.com/pingcap/tispark/pull/1023)
+- Fix index scan bug [#1024](https://github.com/pingcap/tispark/pull/1024)
+- Prohibit aggregate or group by pushdown on double read [#1027](https://github.com/pingcap/tispark/pull/1027)
+- Fix reflection bug for HDP release [#1017](https://github.com/pingcap/tispark/pull/1017)
+- Fix scala compiler version [#1019](https://github.com/pingcap/tispark/pull/1019)
+
 ## [TiSpark 2.2.0]
 ### New Features
 * Natively support writing data to TiKV using Spark Data Source API
