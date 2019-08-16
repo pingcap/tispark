@@ -47,26 +47,26 @@ class BatchWriteUniqueIndexSuite
     // insert data to tikv
     tidbWriteWithTable(rows, TiUtil.getSchemaFromTable(tiTblInfo), tblName)
     // select data from tikv and compare with tidb
-    compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_smallint")
+    compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_bigint")
   }
 
-  override def test() = {
-    test("test unique indices cases") {
-      val schemas = genSchema(dataTypes, table)
+  test("test unique indices cases") {
+    val schemas = genSchema(dataTypes, table)
 
-      schemas.foreach { schema =>
-        dropAndCreateTbl(schema)
-      }
+    schemas.foreach { schema =>
+      dropAndCreateTbl(schema)
+    }
 
-      schemas.foreach { schema =>
-        insertAndSelect(schema)
-      }
+    schemas.foreach { schema =>
+      insertAndSelect(schema)
     }
   }
 
+  override def test(): Unit = {}
+
   override def afterAll(): Unit =
     try {
-      dropTable()
+//      dropTable()
     } finally {
       super.afterAll()
     }

@@ -43,8 +43,10 @@ class BaseDataSourceTest(val table: String,
     TiSession.clearCache()
   }
 
-  protected def dropTable(tblName: String): Unit =
+  protected def dropTable(tblName: String): Unit = {
     jdbcUpdate(s"drop table if exists $database.$tblName")
+  }
+
   protected def tidbWriteWithTable(rows: List[Row],
                                    schema: StructType,
                                    tblName: String,
@@ -197,16 +199,20 @@ class BaseDataSourceTest(val table: String,
 
   protected def compareTiDBSelectWithJDBCWithTable_V2(tblName: String,
                                                       sortCol: String = "i"): Unit = {
-    val sql = s"select * from $database.$tblName order by $sortCol"
+    val sql = s"select * from `$database`.`$tblName` order by $sortCol"
 
     // check jdbc result & data source result
     val jdbcResult = queryTiDBViaJDBC(sql)
     val df = queryDatasourceTiDBWithTable(sortCol, tableName = tblName)
     val tidbResult = seqRowToList(df.collect(), df.schema)
 
-    assert(
-      compResult(jdbcResult, tidbResult)
-    )
+    if (compResult(jdbcResult, tidbResult)) {
+      assert(true)
+    } else {
+      println(s"failed on $tblName")
+      println(tidbResult)
+      assert(false)
+    }
   }
 
   protected def compareTiDBSelectWithJDBC_V2(sortCol: String = "i"): Unit = {

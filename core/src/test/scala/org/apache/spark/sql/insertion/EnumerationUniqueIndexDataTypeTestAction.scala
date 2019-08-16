@@ -3,7 +3,7 @@ package org.apache.spark.sql.insertion
 import org.apache.commons.math3.util.Combinations
 import org.apache.spark.sql.BaseTestGenerationSpec
 import org.apache.spark.sql.test.generator.DataType.{getBaseType, DECIMAL, ReflectedDataType}
-import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isDecimals, isStringType, isVarString, schemaGenerator}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isNumeric, isStringType, isVarString, schemaGenerator}
 import org.apache.spark.sql.test.generator._
 import org.apache.spark.sql.types.MultiColumnDataTypeTestSpec
 
@@ -57,7 +57,11 @@ trait EnumerationUniqueIndexDataTypeTestAction
 
     val dataTypesWithDescription = dataTypes.map { dataType =>
       val len = genLen(dataType)
-      (dataType, len, "")
+      if (isNumeric(dataType)) {
+        (dataType, len, "not null")
+      } else {
+        (dataType, len, "")
+      }
     }
 
     indices.zipWithIndex.map { index =>
@@ -73,7 +77,8 @@ trait EnumerationUniqueIndexDataTypeTestAction
 
   private def toString(dataTypes: Seq[String]): String = dataTypes.hashCode().toString
 
-  override val rowCount = 50
+  override val rowCount = 10
+
   override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
 
   override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
