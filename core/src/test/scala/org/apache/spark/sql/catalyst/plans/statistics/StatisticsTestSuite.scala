@@ -23,6 +23,7 @@ import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
 import com.pingcap.tikv.predicates.TiKVScanAnalyzer
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
+import org.scalatest.exceptions.TestFailedException
 
 import scala.collection.JavaConverters._
 
@@ -185,6 +186,27 @@ class StatisticsTestSuite extends BasePlanTest {
         checkIsCoveringIndexScan(df, tableName)
         checkIndex(df, idxName)
       }
+  }
+
+  test("baseline test") {
+    val tableName = "full_data_type_table_idx"
+    val df = spark.sql(
+      s"select tp_bigint from $tableName where tp_tinyint = 0 and tp_int < 0"
+    )
+
+    checkIndex(df, "idx_tp_tinyint_tp_int")
+
+    assertThrows[TestFailedException] {
+      checkIsTableScan(df, tableName)
+    }
+
+    checkIsIndexScan(df, tableName)
+
+    assertThrows[TestFailedException] {
+      checkIsCoveringIndexScan(df, tableName)
+    }
+
+    checkEstimatedRowCount(df, tableName, 2)
   }
 
   override def afterAll(): Unit =

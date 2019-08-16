@@ -34,13 +34,20 @@ class RowIDAllocatorSuite extends BaseTiSparkTest {
     val tiDBInfo = ti.tiSession.getCatalog.getDatabase(dbName)
     val tiTableInfo =
       ti.tiSession.getCatalog.getTable(dbName, tableName)
+    // first
     var allocator =
       RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getConf, false, 1000)
     assert(allocator.getEnd - allocator.getStart == 1000)
 
+    // second
     allocator = RowIDAllocator
       .create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getConf, false, 10000)
     assert(allocator.getEnd - allocator.getStart == 10000)
+
+    // third
+    allocator =
+      RowIDAllocator.create(tiDBInfo.getId, tiTableInfo.getId, ti.tiSession.getConf, false, 1000)
+    assert(allocator.getEnd - allocator.getStart == 1000)
   }
 
   override def afterAll(): Unit =

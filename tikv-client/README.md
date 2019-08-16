@@ -29,7 +29,7 @@ It is not recommended to use tikv java client directly; it is better to use toge
 ```java
 // Init tidb cluster configuration
 TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:2379");
-TiSession session = TiSession.create(conf);
+TiSession session = TiSession.getInstance(conf);
 Catalog cat = session.getCatalog();
 TiDBInfo db = cat.getDatabase("tpch_test");
 TiTableInfo table = cat.getTable(db, "customer");
