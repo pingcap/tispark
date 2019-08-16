@@ -192,6 +192,18 @@ object TiUtil {
       tiConf.setTikvRegionSplitSizeInMB(conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
     }
 
+    if (conf.contains(TiConfigConst.USE_TIFLASH)) {
+      tiConf.setUseTiFlash(conf.get(TiConfigConst.USE_TIFLASH).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIFLASH_LABEL_KEY)) {
+      tiConf.setTiFlashLabelKey(conf.get(TiConfigConst.TIFLASH_LABEL_KEY))
+    }
+
+    if (conf.contains(TiConfigConst.TIFLASH_LABEL_VALUE)) {
+      tiConf.setTiFlashLabelValue(conf.get(TiConfigConst.TIFLASH_LABEL_VALUE))
+    }
+
     tiConf
   }
 

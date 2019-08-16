@@ -40,6 +40,9 @@ object TiConfigConst {
   val WRITE_ENABLE: String = "spark.tispark.write.enable"
   val WRITE_WITHOUT_LOCK_TABLE: String = "spark.tispark.write.without_lock_table"
   val TIKV_REGION_SPLIT_SIZE_IN_MB: String = "spark.tispark.tikv.region_split_size_in_mb"
+  val USE_TIFLASH: String = "spark.tispark.use.tiflash"
+  val TIFLASH_LABEL_KEY: String = "spark.tispark.tiflash.label.key"
+  val TIFLASH_LABEL_VALUE: String = "spark.tispark.tiflash.label.value"
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"
