@@ -36,9 +36,7 @@ class BaseDataSourceTest(val table: String,
   protected def dropTable(): Unit = {
     jdbcUpdate(s"drop table if exists $dbtable")
     // If we reuse tiSession, cache in catalog will be outdated after dropping and creating table.
-    if (enableTidbConfigPropertiesInjectedToSpark) {
-      ti.tiSession.getCatalog.reloadCache(true)
-    }
+    TiSession.clearCache()
   }
 
   protected def tidbWrite(rows: List[Row],

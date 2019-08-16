@@ -10,9 +10,6 @@ object TiDBWriter {
             saveMode: SaveMode,
             options: TiDBOptions): Unit = {
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
-    // adding this in order to resolve drop-and-create table with same name but different table id
-    // problem.
-    tiContext.tiSession.getCatalog.reloadCache(true)
     val conn = TiDBUtils.createConnectionFactory(options.url)()
 
     try {
