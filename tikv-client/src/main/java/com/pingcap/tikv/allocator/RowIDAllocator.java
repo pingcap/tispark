@@ -53,6 +53,7 @@ public final class RowIDAllocator {
     } else {
       allocator.initSigned(TiSession.getInstance(conf).createSnapshot(), tableId);
     }
+
     return allocator;
   }
 
