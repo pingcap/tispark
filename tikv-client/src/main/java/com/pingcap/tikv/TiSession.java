@@ -47,15 +47,17 @@ public class TiSession implements AutoCloseable {
 
   // Since we create session as singleton now, configuration change will not
   // reflect change
-  public static synchronized TiSession getInstance(TiConfiguration conf) {
-    String key = conf.getPdAddrsString();
-    if (sessionCachedMap.containsKey(key)) {
-      return sessionCachedMap.get(key);
-    }
+  public static TiSession getInstance(TiConfiguration conf) {
+    synchronized (sessionCachedMap) {
+      String key = conf.getPdAddrsString();
+      if (sessionCachedMap.containsKey(key)) {
+        return sessionCachedMap.get(key);
+      }
 
-    TiSession newSession = new TiSession(conf);
-    sessionCachedMap.put(key, newSession);
-    return newSession;
+      TiSession newSession = new TiSession(conf);
+      sessionCachedMap.put(key, newSession);
+      return newSession;
+    }
   }
 
   private TiSession(TiConfiguration conf) {
@@ -187,12 +189,17 @@ public class TiSession implements AutoCloseable {
   }
 
   public static void clearCache() {
-    TiSession.sessionCachedMap.clear();
+    synchronized (sessionCachedMap) {
+      TiSession.sessionCachedMap.clear();
+    }
   }
 
   @Override
-  public synchronized void close() throws Exception {
-    sessionCachedMap.remove(conf.getPdAddrsString());
+  public void close() throws Exception {
+    synchronized (sessionCachedMap) {
+      sessionCachedMap.remove(conf.getPdAddrsString());
+    }
+
     if (tableScanThreadPool != null) {
       tableScanThreadPool.shutdownNow();
     }
