@@ -23,7 +23,6 @@ import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 trait MultiColumnDataTypeTestSpec extends TiSparkTestSpec {
   val dataTypes: List[ReflectedDataType]
   val unsignedDataTypes: List[ReflectedDataType]
-  val dataTypeTestDir: String
 
   val extraDesc = "unsigned"
 }

@@ -14,9 +14,8 @@ class BatchWritePkSuite
   // TODO: support binary insertion.
   override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: charCharset
   override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override val dataTypeTestDir = "batch-write-test-index"
-  override val database = "batch_write_test_index"
-  override val testDesc = "Test for single PK column and multiple unique index type"
+  override val database = "batch_write_test_pk"
+  override val testDesc = "Test for single PK column in batch-write insertion"
 
   override def beforeAll(): Unit = {
     super.beforeAll()
