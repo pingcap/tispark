@@ -103,7 +103,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def generateData: Boolean = SharedSQLContext.generateData
 
-  protected def generateDataSeed: Long = SharedSQLContext.generateDataSeed
+  protected def generateDataSeed: Long = SharedSQLContext.generateDataSeed.get
 
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
@@ -403,7 +403,7 @@ object SharedSQLContext extends Logging {
       }
 
       if (generateData) {
-        logger.info(s"generate data is enabled and seed is $generateDataSeed")
+        logger.info(s"generate data is enabled and seed is ${generateDataSeed.get}")
       }
 
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
