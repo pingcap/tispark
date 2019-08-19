@@ -15,6 +15,8 @@
 
 package com.pingcap.tispark.utils
 
+import java.lang.reflect.Method
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.UnsafeRow
@@ -47,15 +49,15 @@ object ReflectionUtil {
   ) {
     // Spark HDP Release may not compatible with official Release
     // see https://github.com/pingcap/tispark/issues/1006
-    def invoke(): RDD[InternalRow] =
-      spark_version match {
+    def invoke(): RDD[InternalRow] = {
+      val (version, method) = spark_version match {
         case "2.3.0" | "2.3.1" =>
           try {
-            mapPartitionsWithIndexInternalV1(rdd, internalRowToUnsafeRowWithIndex)
+            reflectMapPartitionsWithIndexInternalV1(rdd, internalRowToUnsafeRowWithIndex)
           } catch {
             case _: Throwable =>
               try {
-                mapPartitionsWithIndexInternalV2(rdd, internalRowToUnsafeRowWithIndex)
+                reflectMapPartitionsWithIndexInternalV2(rdd, internalRowToUnsafeRowWithIndex)
               } catch {
                 case _: Throwable =>
                   throw ScalaReflectionException(
@@ -64,13 +66,14 @@ object ReflectionUtil {
                   )
               }
           }
+
         case _ =>
           try {
-            mapPartitionsWithIndexInternalV2(rdd, internalRowToUnsafeRowWithIndex)
+            reflectMapPartitionsWithIndexInternalV2(rdd, internalRowToUnsafeRowWithIndex)
           } catch {
             case _: Throwable =>
               try {
-                mapPartitionsWithIndexInternalV1(rdd, internalRowToUnsafeRowWithIndex)
+                reflectMapPartitionsWithIndexInternalV1(rdd, internalRowToUnsafeRowWithIndex)
               } catch {
                 case _: Throwable =>
                   throw ScalaReflectionException(
@@ -80,50 +83,74 @@ object ReflectionUtil {
               }
           }
       }
+
+      invokeMapPartitionsWithIndexInternal(version, method, rdd, internalRowToUnsafeRowWithIndex)
+    }
   }
 
   // Spark-2.3.0 & Spark-2.3.1
-  private def mapPartitionsWithIndexInternalV1(
+  private def reflectMapPartitionsWithIndexInternalV1(
     rdd: RDD[InternalRow],
     internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
-  ): RDD[InternalRow] = {
-    val method = classOf[RDD[InternalRow]].getDeclaredMethod(
-      "mapPartitionsWithIndexInternal",
-      classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
-      classOf[Boolean],
-      classOf[ClassTag[UnsafeRow]]
-    )
-    method
-      .invoke(
-        rdd,
-        internalRowToUnsafeRowWithIndex,
-        Boolean.box(false),
-        ClassTag.apply(classOf[UnsafeRow])
+  ): (String, Method) = {
+    (
+      "v1",
+      classOf[RDD[InternalRow]].getDeclaredMethod(
+        "mapPartitionsWithIndexInternal",
+        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+        classOf[Boolean],
+        classOf[ClassTag[UnsafeRow]]
       )
-      .asInstanceOf[RDD[InternalRow]]
-
+    )
   }
 
   // >= Spark-2.3.2
-  private def mapPartitionsWithIndexInternalV2(
+  private def reflectMapPartitionsWithIndexInternalV2(
+    rdd: RDD[InternalRow],
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+  ): (String, Method) = {
+    (
+      "v2",
+      classOf[RDD[InternalRow]].getDeclaredMethod(
+        "mapPartitionsWithIndexInternal",
+        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+        classOf[Boolean],
+        classOf[Boolean],
+        classOf[ClassTag[UnsafeRow]]
+      )
+    )
+  }
+
+  private def invokeMapPartitionsWithIndexInternal(
+    version: String,
+    method: Method,
     rdd: RDD[InternalRow],
     internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
   ): RDD[InternalRow] = {
-    val method = classOf[RDD[InternalRow]].getDeclaredMethod(
-      "mapPartitionsWithIndexInternal",
-      classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
-      classOf[Boolean],
-      classOf[Boolean],
-      classOf[ClassTag[UnsafeRow]]
-    )
-    method
-      .invoke(
-        rdd,
-        internalRowToUnsafeRowWithIndex,
-        Boolean.box(false),
-        Boolean.box(false),
-        ClassTag.apply(classOf[UnsafeRow])
-      )
-      .asInstanceOf[RDD[InternalRow]]
+    version match {
+      case "v1" =>
+        // Spark-2.3.0 & Spark-2.3.1
+        method
+          .invoke(
+            rdd,
+            internalRowToUnsafeRowWithIndex,
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+
+      case _ =>
+        // >= Spark-2.3.2
+        method
+          .invoke(
+            rdd,
+            internalRowToUnsafeRowWithIndex,
+            Boolean.box(false),
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+    }
+
   }
 }
