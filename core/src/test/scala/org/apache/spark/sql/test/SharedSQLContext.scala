@@ -400,10 +400,10 @@ object SharedSQLContext extends Logging {
           tmpSeed = System.currentTimeMillis()
         }
         generateDataSeed = Some(tmpSeed)
-      }
 
-      if (generateData) {
-        logger.info(s"generate data is enabled and seed is ${generateDataSeed.get}")
+        if (generateData) {
+          logger.info(s"generate data is enabled and seed is ${generateDataSeed.get}")
+        }
       }
 
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
