@@ -190,12 +190,12 @@ public class TiSession implements AutoCloseable {
 
   public static void clearCache() {
     synchronized (sessionCachedMap) {
-      TiSession.sessionCachedMap.clear();
+      sessionCachedMap.clear();
     }
   }
 
   @Override
-  public void close() throws Exception {
+  public synchronized void close() throws Exception {
     synchronized (sessionCachedMap) {
       sessionCachedMap.remove(conf.getPdAddrsString());
     }
