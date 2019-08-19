@@ -165,7 +165,7 @@ object SharedSQLContext extends Logging {
   protected var tidbPort: Int = _
   protected var pdAddresses: String = _
   protected var generateData: Boolean = _
-  protected var generateDataSeed: Long = _
+  protected var generateDataSeed: Option[Long] = None
 
   protected implicit def spark: SparkSession = _spark
 
@@ -394,9 +394,12 @@ object SharedSQLContext extends Logging {
 
       generateData = getOrElse(_tidbConf, SHOULD_GENERATE_DATA, "true").toLowerCase.toBoolean
 
-      generateDataSeed = getOrElse(_tidbConf, GENERATE_DATA_SEED, "1234").toLong
-      if (generateDataSeed == 0) {
-        generateDataSeed = System.currentTimeMillis()
+      if (generateDataSeed.isEmpty) {
+        var tmpSeed = getOrElse(_tidbConf, GENERATE_DATA_SEED, "1234").toLong
+        if (tmpSeed == 0) {
+          tmpSeed = System.currentTimeMillis()
+        }
+        generateDataSeed = Some(tmpSeed)
       }
 
       if (generateData) {
