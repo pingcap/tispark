@@ -27,13 +27,11 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiTimestamp;
-import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
-import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.FutureObserver;
 import io.grpc.ManagedChannel;
 import java.net.URI;
@@ -59,23 +57,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
   private List<URI> pdAddrs;
-
-  /**
-   * get operator associated with the specific region.
-   *
-   * @param regionId is used to locate specific region.
-   * @return
-   */
-  private GetOperatorResponse getOperator(long regionId) {
-    Supplier<GetOperatorRequest> request =
-        () -> GetOperatorRequest.newBuilder().setHeader(header).setRegionId(regionId).build();
-    // get operator no need to handle error and no need back offer.
-    return callWithRetry(
-        ConcreteBackOffer.newCustomBackOff(0),
-        PDGrpc.METHOD_GET_OPERATOR,
-        request,
-        new NoopHandler<>());
-  }
 
   @Override
   public TiTimestamp getTimestamp(BackOffer backOffer) {

@@ -17,13 +17,15 @@
 
 package org.apache.spark.sql
 
+import org.apache.spark.sql.test.SharedSQLContext
+
 import scala.util.Random
 
-trait TiSparkTestSpec {
+trait TiSparkTestSpec extends SharedSQLContext {
   val database: String
   val testDesc: String
   // Randomizer for tests
-  val r: Random = new Random(1234)
+  lazy val r: Random = new Random(generateDataSeed)
 
   def test(): Unit
 }

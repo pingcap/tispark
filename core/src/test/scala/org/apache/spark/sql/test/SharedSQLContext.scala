@@ -103,6 +103,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def generateData: Boolean = SharedSQLContext.generateData
 
+  protected def generateDataSeed: Long = SharedSQLContext.generateDataSeed.get
+
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
    */
@@ -163,6 +165,7 @@ object SharedSQLContext extends Logging {
   protected var tidbPort: Int = _
   protected var pdAddresses: String = _
   protected var generateData: Boolean = _
+  protected var generateDataSeed: Option[Long] = None
 
   protected implicit def spark: SparkSession = _spark
 
@@ -391,8 +394,16 @@ object SharedSQLContext extends Logging {
 
       generateData = getOrElse(_tidbConf, SHOULD_GENERATE_DATA, "true").toLowerCase.toBoolean
 
-      if (generateData) {
-        logger.info("generate data is enabled")
+      if (generateDataSeed.isEmpty) {
+        var tmpSeed = getOrElse(_tidbConf, GENERATE_DATA_SEED, "1234").toLong
+        if (tmpSeed == 0) {
+          tmpSeed = System.currentTimeMillis()
+        }
+        generateDataSeed = Some(tmpSeed)
+
+        if (generateData) {
+          logger.info(s"generate data is enabled and seed is ${generateDataSeed.get}")
+        }
       }
 
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
@@ -407,6 +418,7 @@ object SharedSQLContext extends Logging {
 
       sparkConf.set("spark.tispark.write.allow_spark_sql", "true")
       sparkConf.set("spark.tispark.write.without_lock_table", "true")
+      sparkConf.set("spark.tispark.tikv.region_split_size_in_mb", "1")
 
       if (isHiveEnabled) {
         // delete meta store directory to avoid multiple derby instances SPARK-10872

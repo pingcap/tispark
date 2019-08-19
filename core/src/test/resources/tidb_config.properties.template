@@ -21,5 +21,7 @@
 # test.data.load=auto
 # Whether to generate test data. Enabling test data generation may change data of all tests.
 # test.data.generate=true
+# The seed used to generate test data (0 means random).
+# test.data.generate.seed=1234
 # DB prefix for tidb databases in case it conflicts with hive database
 # spark.tispark.db_prefix=tidb_ 
