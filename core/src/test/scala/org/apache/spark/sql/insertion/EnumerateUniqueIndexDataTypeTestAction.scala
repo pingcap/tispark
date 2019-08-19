@@ -10,10 +10,10 @@ import org.apache.spark.sql.types.MultiColumnDataTypeTestSpec
 import scala.util.Random
 
 trait EnumerateUniqueIndexDataTypeTestAction extends BaseEnumerateDataTypesTestSpec {
-  override def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[Index] = {
+  override def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]] = {
     val size = dataTypes.length
     // the first step is generate all possible keys
-    val keyList = scala.collection.mutable.ListBuffer.empty[Key]
+    val keyList = scala.collection.mutable.ListBuffer.empty[List[Key]]
     for (i <- 1 until 3) {
       val combination = new Combinations(size, i)
       //(i, size)
@@ -31,7 +31,7 @@ trait EnumerateUniqueIndexDataTypeTestAction extends BaseEnumerateDataTypesTestS
           }
         }
 
-        keyList += Key(indexColumnList.toList)
+        keyList += Key(indexColumnList.toList) :: Nil
       }
     }
 
