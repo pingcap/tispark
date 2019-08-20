@@ -20,11 +20,13 @@ package org.apache.spark.sql.test.generator
 import com.pingcap.tikv.row.ObjectRowImpl
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.test.generator.DataType._
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.util.Random
 
 object TestDataGenerator {
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   type TiRow = com.pingcap.tikv.row.Row
 
@@ -284,6 +286,7 @@ object TestDataGenerator {
 
   def hash(value: Any): String = value match {
     case null                  => "null"
+    case b: Array[boolean]     => b.mkString("[", ",", "]")
     case b: Array[Byte]        => b.mkString("[", ",", "]")
     case t: java.sql.Timestamp =>
       // timestamp was indexed as Integer when treated as unique key
@@ -303,6 +306,7 @@ object TestDataGenerator {
   def checkUnique(value: Any, set: mutable.Set[Any]): Boolean = {
     val hashedValue = hash(value)
     if (!set.apply(hashedValue)) {
+      logger.info(s"hashedValue is $hashedValue")
       set += hashedValue
       true
     } else {

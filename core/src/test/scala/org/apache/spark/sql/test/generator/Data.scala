@@ -60,7 +60,8 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
       val zonedDateTime = ts.toLocalDateTime.atZone(java.util.TimeZone.getDefault.toZoneId)
       val milliseconds = zonedDateTime.toEpochSecond * 1000L + zonedDateTime.getNano / 1000000
       s"\'${new java.sql.Timestamp(milliseconds)}\'"
-    case _ => s"\'$value\'"
+    case _ =>
+      s"\'$value\'"
   }
 
   private val sql = s"CREATE DATABASE IF NOT EXISTS `$database`;\n" +
