@@ -26,8 +26,6 @@ import scala.collection.mutable
 import scala.util.Random
 
 object TestDataGenerator {
-  private final val logger = LoggerFactory.getLogger(getClass.getName)
-
   type TiRow = com.pingcap.tikv.row.Row
 
   val bits = List(BIT)
@@ -306,7 +304,6 @@ object TestDataGenerator {
   def checkUnique(value: Any, set: mutable.Set[Any]): Boolean = {
     val hashedValue = hash(value)
     if (!set.apply(hashedValue)) {
-      logger.info(s"hashedValue is $hashedValue")
       set += hashedValue
       true
     } else {
