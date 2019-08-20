@@ -22,7 +22,6 @@ import org.apache.spark.sql.test.generator.TestDataGenerator.{checkUnique, getLe
 
 import scala.collection.mutable
 import scala.util.Random
-import scala.collection.JavaConverters._
 
 case class ColumnValueGenerator(dataType: ReflectedDataType,
                                 M: Long = -1,
