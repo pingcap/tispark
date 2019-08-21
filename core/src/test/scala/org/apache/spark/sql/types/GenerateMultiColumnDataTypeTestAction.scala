@@ -24,7 +24,8 @@ import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLen
 
 trait GenerateMultiColumnDataTypeTestAction
     extends MultiColumnDataTypeTestSpec
-    with BaseTestGenerationSpec {
+    with BaseTestGenerationSpec
+    with DataTypeTestDir {
 
   override val rowCount = 50
 

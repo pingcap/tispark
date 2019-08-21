@@ -8,14 +8,17 @@ import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 import org.apache.spark.sql.test.generator.Schema
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
-class BatchWritePkSuite
-    extends BaseDataSourceTest("batch_write_insertion_pk", "batch_write_test_pk")
-    with EnumeratePKDataTypeTestAction {
+class BatchWritePKAndUniqueIndexSuite
+    extends BaseDataSourceTest(
+      "batch_write_insertion_pk_and_one_unique_index",
+      "batch_write_test_index"
+    )
+    with EnumerateUniqueIndexDataTypeTestAction {
   // TODO: support binary insertion.
   override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: charCharset
   override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
-  override val database = "batch_write_test_pk"
-  override val testDesc = "Test for single PK column in batch-write insertion"
+  override val database = "batch_write_test_pk_and_index"
+  override val testDesc = "Test for pk and unique index type in batch-write insertion"
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -55,7 +58,7 @@ class BatchWritePkSuite
     compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_bigint")
   }
 
-  test("test pk cases") {
+  test("test pk and unique indices cases") {
     val schemas = genSchema(dataTypes, table)
 
     schemas.foreach { schema =>

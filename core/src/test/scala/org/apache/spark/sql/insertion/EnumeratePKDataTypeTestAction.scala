@@ -7,9 +7,9 @@ import org.apache.spark.sql.test.generator.{DefaultColumn, Index, PrefixColumn, 
 import scala.util.Random
 
 trait EnumeratePKDataTypeTestAction extends BaseEnumerateDataTypesTestSpec {
-  override def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[Index] = {
+  override def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]] = {
     val size = dataTypes.length
-    val keyList = scala.collection.mutable.ListBuffer.empty[PrimaryKey]
+    val keyList = scala.collection.mutable.ListBuffer.empty[List[PrimaryKey]]
     for (i <- 0 until size) {
       // we add extra one to the column id since 1 is reserved to primary key
       val pkCol = if (isStringType(dataTypes(i))) {
@@ -17,7 +17,7 @@ trait EnumeratePKDataTypeTestAction extends BaseEnumerateDataTypesTestSpec {
       } else {
         DefaultColumn(i + 1) :: Nil
       }
-      keyList += PrimaryKey(pkCol)
+      keyList += PrimaryKey(pkCol) :: Nil
     }
     keyList.toList
   }
