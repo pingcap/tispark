@@ -210,7 +210,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
     runTest(str, skipped = skipped, skipJDBC = true, checkLimit = checkLimit)
 
-  private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
+  protected def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
     compSqlResult(sql, queryViaTiSpark(sql), queryTiDBViaJDBC(sql), checkLimit)
 
   protected def checkSparkResult(sql: String,
@@ -418,10 +418,13 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           result.toString
       }
 
-  protected def explainTestAndCollect(sql: String): Unit = {
+  protected def explainTestAndCollect(sql: String, extended: Boolean = false): Unit = {
     val df = spark.sql(sql)
-    df.explain
+    df.explain(extended)
     df.show
+    df.limit(20).explain
+    df.limit(20).collect.foreach(println)
+    println
     df.collect.foreach(println)
   }
 

@@ -424,6 +424,12 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     }
 
     tiColumns foreach { dagReq.addRequiredColumn }
+    resultExpressions
+      .flatMap(BasicExpression.convertToTiExpr(_))
+      .filter(_.isInstanceOf[Constant])
+      .foreach { x =>
+        dagReq.addConstant(x.asInstanceOf[Constant])
+      }
 
     aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
 
@@ -451,11 +457,18 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     }
 
     aggregate.AggUtils.planAggregateWithoutDistinct(
-      groupAttributes,
+      groupingExpressions,
       residualAggregateExpressions,
       rewrittenResultExpressions,
       toCoprocessorRDD(source, output, dagReq)
     )
+
+//    aggregate.AggUtils.planAggregateWithoutDistinct(
+//      groupAttributes,
+//      residualAggregateExpressions,
+//      rewrittenResultExpressions,
+//      toCoprocessorRDD(source, output, dagReq)
+//    )
   }
 
   private def isValidAggregates(

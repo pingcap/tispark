@@ -31,6 +31,7 @@ import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.Constant;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.MetaResolver;
@@ -202,6 +203,7 @@ public class TiDAGRequest implements Serializable {
   private final List<ColumnRef> fields = new ArrayList<>();
   private final List<DataType> indexDataTypes = new ArrayList<>();
   private final List<Expression> filters = new ArrayList<>();
+  private final List<Constant> constants = new ArrayList<>();
   private final List<ByItem> groupByItems = new ArrayList<>();
   private final List<ByItem> orderByItems = new ArrayList<>();
   // System like Spark has different type promotion rules
@@ -245,6 +247,7 @@ public class TiDAGRequest implements Serializable {
     builder.addAll(getFilters());
     builder.addAll(getPushDownFilters());
     builder.addAll(getAggregates());
+    builder.addAll(getConstants());
     getGroupByItems().forEach(item -> builder.add(item.getExpr()));
     getOrderByItems().forEach(item -> builder.add(item.getExpr()));
     if (having != null) {
@@ -255,7 +258,14 @@ public class TiDAGRequest implements Serializable {
 
   public DataType getExpressionType(Expression expression) {
     requireNonNull(typeMap, "request is not resolved");
-    return typeMap.get(expression);
+    // return typeMap.get(expression);
+    DataType t = typeMap.get(expression);
+    if (t == null) {
+      requireNonNull(t, "t should not be null");
+      return ((Constant) expression).getType();
+    } else {
+      return t;
+    }
   }
 
   public void resolve() {
@@ -805,6 +815,14 @@ public class TiDAGRequest implements Serializable {
   public void resetFilters(List<Expression> filters) {
     this.filters.clear();
     this.filters.addAll(filters);
+  }
+
+  public void addConstant(Constant constants) {
+    this.constants.add(constants);
+  }
+
+  public List<Constant> getConstants() {
+    return this.constants;
   }
 
   public List<Coprocessor.KeyRange> getRangesByPhysicalId(long physicalId) {
