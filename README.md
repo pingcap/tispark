@@ -171,7 +171,7 @@ Failed to get database ****, returning NoSuchObjectException
 ```
 where `****` is the name of database.
 
-This is due to spark cannot find `****` in its own catalog. The two warning message are benign, you can just ignore them.
+This is due to spark cannot find `****` in its own catalog. The two warning messages are benign, you can just ignore them.
 
 If you want to get rid of them, you can append the following text to `${SPARK_HOME}/conf/log4j.properties`.
 ```
