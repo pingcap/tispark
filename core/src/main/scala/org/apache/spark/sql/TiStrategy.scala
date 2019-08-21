@@ -468,7 +468,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) &&
       groupingExpressions.forall(TiUtil.isSupportedGroupingExpr(_, source, blacklist)) &&
       aggregateExpressions.forall(TiUtil.isSupportedAggregate(_, source, blacklist)) &&
-      !aggregateExpressions.exists(_.isDistinct)
+      !aggregateExpressions.exists(_.isDistinct) &&
+      !groupingExpressions.exists(_.isInstanceOf[Alias])
 
   // We do through similar logic with original Spark as in SparkStrategies.scala
   // Difference is we need to test if a sub-plan can be consumed all together by TiKV

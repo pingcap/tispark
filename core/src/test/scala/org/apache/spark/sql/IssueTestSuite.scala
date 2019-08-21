@@ -19,6 +19,25 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
+
+  // https://github.com/pingcap/tispark/issues/1039
+  test("Distinct without alias throws NullPointerException") {
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute("create table t(c1 bigint);")
+    tidbStmt.execute("insert into t values (2), (3), (2);")
+
+    val sqls = "select distinct(c1) as d, 1 as w from t" ::
+      "select c1 as d, 1 as w from t group by c1" ::
+      "select c1, 1 as w from t group by c1" ::
+      "select distinct(c1), 1 as w from t" ::
+      Nil
+
+    for (sql <- sqls) {
+      explainTestAndCollect(sql)
+      compSparkWithTiDB(sql)
+    }
+  }
+
   test("cannot resolve column name when specifying table.column") {
     spark.sql("select full_data_type_table.id_dt from full_data_type_table").explain(true)
     judge("select full_data_type_table.id_dt from full_data_type_table")
