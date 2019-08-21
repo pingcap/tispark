@@ -67,7 +67,7 @@ class BatchWritePkSuite
     }
   }
 
-  // this is only for
+  // this is only for mute the warning
   override def test(): Unit = {}
 
   override def afterAll(): Unit =
