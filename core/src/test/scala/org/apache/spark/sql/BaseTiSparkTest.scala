@@ -420,12 +420,12 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected def explainTestAndCollect(sql: String, extended: Boolean = false): Unit = {
     val df = spark.sql(sql)
-    df.explain(extended)
-    df.show
-    df.limit(20).explain
+    //df.explain(extended)
+    //df.show
+    //df.limit(20).explain
     df.limit(20).collect.foreach(println)
     println
-    df.collect.foreach(println)
+    //df.collect.foreach(println)
   }
 
   protected def time[A](f: => A): A = {

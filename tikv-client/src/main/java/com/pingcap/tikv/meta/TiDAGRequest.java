@@ -258,14 +258,7 @@ public class TiDAGRequest implements Serializable {
 
   public DataType getExpressionType(Expression expression) {
     requireNonNull(typeMap, "request is not resolved");
-    // return typeMap.get(expression);
-    DataType t = typeMap.get(expression);
-    if (t == null) {
-      requireNonNull(t, "t should not be null");
-      return ((Constant) expression).getType();
-    } else {
-      return t;
-    }
+    return typeMap.get(expression);
   }
 
   public void resolve() {

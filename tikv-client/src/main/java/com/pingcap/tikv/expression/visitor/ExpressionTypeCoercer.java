@@ -61,6 +61,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
 
   public void infer(List<? extends Expression> expressions) {
     requireNonNull(expressions, "expressions is null");
+    // ???
     expressions.forEach(expr -> expr.accept(this, null));
   }
 
@@ -152,6 +153,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   @Override
   protected Pair<DataType, Double> visit(Constant node, DataType targetType) {
     if (targetType == null) {
+      typeMap.put(node, node.getType());
       return Pair.create(node.getType(), CONSTANT_CRED);
     } else {
       node.setType(targetType);

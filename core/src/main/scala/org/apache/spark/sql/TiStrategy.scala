@@ -456,19 +456,21 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }.asInstanceOf[NamedExpression]
     }
 
-    aggregate.AggUtils.planAggregateWithoutDistinct(
+    val r1 = aggregate.AggUtils.planAggregateWithoutDistinct(
       groupingExpressions,
       residualAggregateExpressions,
       rewrittenResultExpressions,
       toCoprocessorRDD(source, output, dagReq)
     )
 
-//    aggregate.AggUtils.planAggregateWithoutDistinct(
-//      groupAttributes,
-//      residualAggregateExpressions,
-//      rewrittenResultExpressions,
-//      toCoprocessorRDD(source, output, dagReq)
-//    )
+    val r2 = aggregate.AggUtils.planAggregateWithoutDistinct(
+      groupAttributes,
+      residualAggregateExpressions,
+      rewrittenResultExpressions,
+      toCoprocessorRDD(source, output, dagReq)
+    )
+
+    r2
   }
 
   private def isValidAggregates(
