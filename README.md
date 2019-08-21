@@ -164,13 +164,16 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 | spark.tispark.request.isolation.level |  "SI" | Isolation level means whether do the resolve lock for the underlying tidb clusters. When you use the "RC", you will get the newest version of record smaller than your tso and ignore the locks. And if you use "SI", you will resolve the locks and get the records according to whether the resolved lock is committed or aborted  |
 
 ## Log4j Configuration
-When you start `spark-shell` or `spark-sql` and run `show databases`, you might see the following warnings:
+When you start `spark-shell` or `spark-sql` and run query, you might see the following warnings:
 ```
-Failed to get database default, returning NoSuchObjectException
-Failed to get database global_temp, returning NoSuchObjectException
+Failed to get database ****, returning NoSuchObjectException
+Failed to get database ****, returning NoSuchObjectException
 ```
+where `****` is the name of database.
 
-This is due to spark trying to load two nonexistent databases (`default` and `global_temp`) in its catalog. In order to mute these warnings, please append the following text to `${SPARK_HOME}/conf/log4j.properties`.
+This is due to spark cannot find `****` in its own catalog. The two warning message are benign, you can just ignore them.
+
+If you want to get rid of them, you can append the following text to `${SPARK_HOME}/conf/log4j.properties`.
 ```
 # tispark disable "WARN ObjectStore:568 - Failed to get database"
 log4j.logger.org.apache.hadoop.hive.metastore.ObjectStore=ERROR
