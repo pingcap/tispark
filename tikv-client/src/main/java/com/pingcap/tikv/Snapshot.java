@@ -19,6 +19,7 @@ import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getHandleIte
 import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getRowIterator;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
@@ -107,9 +108,35 @@ public class Snapshot {
     return getHandleIterator(dagRequest, tasks, session);
   }
 
+  /**
+   * scan all keys after startKey, inclusive
+   *
+   * @param startKey start of keys
+   * @return iterator of kvPair
+   */
   public Iterator<KvPair> scan(ByteString startKey) {
     return new ConcreteScanIterator(
-        session.getConf(), session.getRegionStoreClientBuilder(), startKey, timestamp.getVersion());
+        session.getConf(),
+        session.getRegionStoreClientBuilder(),
+        startKey,
+        timestamp.getVersion(),
+        Integer.MAX_VALUE);
+  }
+
+  /**
+   * scan all keys with prefix
+   *
+   * @param prefix prefix of keys
+   * @return iterator of kvPair
+   */
+  public Iterator<KvPair> scanPrefix(ByteString prefix) {
+    ByteString nextPrefix = Key.toRawKey(prefix).nextPrefix().toByteString();
+    return new ConcreteScanIterator(
+        session.getConf(),
+        session.getRegionStoreClientBuilder(),
+        prefix,
+        nextPrefix,
+        timestamp.getVersion());
   }
 
   public TiConfiguration getConf() {

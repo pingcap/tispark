@@ -124,6 +124,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
     try {
+      ti.meta.reloadAllMeta()
       tableNames = Seq.empty[String]
       for (dbName <- databases) {
         setCurrentDatabase(dbName)

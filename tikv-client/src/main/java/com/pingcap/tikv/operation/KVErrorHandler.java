@@ -17,6 +17,7 @@
 
 package com.pingcap.tikv.operation;
 
+import static com.pingcap.tikv.txn.LockResolverClient.extractLockFromKeyErr;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.protobuf.ByteString;
@@ -132,23 +133,17 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     }
   }
 
-  private boolean checkLockError(BackOffer backOffer, Kvrpcpb.KeyError error) {
-    if (error.hasLocked()) {
-      Lock lock = new Lock(error.getLocked());
-      boolean ok =
-          lockResolverClient.resolveLocks(
-              backOffer, new ArrayList<>(Collections.singletonList(lock)));
-      if (!ok) {
-        // if not resolve all locks, we wait and retry
-        backOffer.doBackOff(BoTxnLockFast, new KeyException((error.getLocked().toString())));
-        return true;
-      }
-      return false;
-    } else {
-      // retry or abort
-      // this should trigger Spark to retry the txn
-      throw new KeyException(error);
+  private boolean checkLockError(BackOffer backOffer, Lock lock) {
+    logger.warn("resolving lock");
+    boolean ok =
+        lockResolverClient.resolveLocks(
+            backOffer, new ArrayList<>(Collections.singletonList(lock)));
+    if (!ok) {
+      // if not resolve all locks, we wait and retry
+      backOffer.doBackOff(BoTxnLockFast, new KeyException(lock.toString()));
+      return true;
     }
+    return false;
   }
 
   // Referenced from TiDB
@@ -267,10 +262,15 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       invalidateRegionStoreCache(ctxRegion);
     }
 
-    // Region error handling logic
+    // Key error handling logic
     Kvrpcpb.KeyError keyError = getKeyError.apply(resp);
     if (keyError != null) {
-      return checkLockError(backOffer, keyError);
+      try {
+        Lock lock = extractLockFromKeyErr(keyError);
+        checkLockError(backOffer, lock);
+      } catch (KeyException e) {
+        logger.warn("Unable to handle KeyExceptions other than LockException", e);
+      }
     }
     return false;
   }

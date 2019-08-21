@@ -18,6 +18,7 @@
 package com.pingcap.tikv.region;
 
 import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
+import static com.pingcap.tikv.txn.LockResolverClient.extractLockFromKeyErr;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.*;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -253,33 +254,6 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     return Collections.unmodifiableList(newKvPairs);
   }
 
-  private Lock extractLockFromKeyErr(KeyError keyError) {
-    if (keyError.hasLocked()) {
-      return new Lock(keyError.getLocked());
-    }
-
-    if (keyError.hasConflict()) {
-      WriteConflict conflict = keyError.getConflict();
-      throw new KeyException(
-          String.format(
-              "scan meet key conflict on primary key %s at commit ts %s",
-              conflict.getPrimary(), conflict.getConflictTs()));
-    }
-
-    if (!keyError.getRetryable().isEmpty()) {
-      throw new KeyException(
-          String.format("tikv restart txn %s", keyError.getRetryableBytes().toStringUtf8()));
-    }
-
-    if (!keyError.getAbort().isEmpty()) {
-      throw new KeyException(
-          String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
-    }
-
-    throw new KeyException(
-        String.format("unexpected key error meets and it is %s", keyError.toString()));
-  }
-
   public List<KvPair> scan(BackOffer backOffer, ByteString startKey, long version) {
     return scan(backOffer, startKey, version, false);
   }
@@ -417,7 +391,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             lockResolverClient,
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-            resp -> null);
+            resp -> resp.hasError() ? resp.getError() : null);
     CommitResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
     handleCommitResponse(backOffer, resp);
   }

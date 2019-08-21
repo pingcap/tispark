@@ -36,6 +36,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 import org.apache.log4j.Logger;
+import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.CleanupRequest;
 import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
 import org.tikv.kvproto.Kvrpcpb.ResolveLockRequest;
@@ -132,7 +133,7 @@ public class LockResolverClient extends AbstractRegionStoreClient {
               this,
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-              resp -> null);
+              resp -> resp.hasError() ? resp.getError() : null);
       CleanupResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_CLEANUP, factory, handler);
 
       status = 0L;
@@ -153,6 +154,33 @@ public class LockResolverClient extends AbstractRegionStoreClient {
       saveResolved(txnID, status);
       return status;
     }
+  }
+
+  public static Lock extractLockFromKeyErr(Kvrpcpb.KeyError keyError) {
+    if (keyError.hasLocked()) {
+      return new Lock(keyError.getLocked());
+    }
+
+    if (keyError.hasConflict()) {
+      Kvrpcpb.WriteConflict conflict = keyError.getConflict();
+      throw new KeyException(
+          String.format(
+              "scan meet key conflict on primary key %s at commit ts %s",
+              conflict.getPrimary(), conflict.getConflictTs()));
+    }
+
+    if (!keyError.getRetryable().isEmpty()) {
+      throw new KeyException(
+          String.format("tikv restart txn %s", keyError.getRetryableBytes().toStringUtf8()));
+    }
+
+    if (!keyError.getAbort().isEmpty()) {
+      throw new KeyException(
+          String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
+    }
+
+    throw new KeyException(
+        String.format("unexpected key error meets and it is %s", keyError.toString()));
   }
 
   // ResolveLocks tries to resolve Locks. The resolving process is in 3 steps:
@@ -230,7 +258,7 @@ public class LockResolverClient extends AbstractRegionStoreClient {
               this,
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-              resp -> null);
+              resp -> resp.hasError() ? resp.getError() : null);
       ResolveLockResponse resp =
           callWithRetry(bo, TikvGrpc.METHOD_KV_RESOLVE_LOCK, factory, handler);
 

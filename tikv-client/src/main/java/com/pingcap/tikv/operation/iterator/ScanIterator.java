@@ -39,7 +39,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
 
   protected Key endKey;
   protected boolean hasEndKey;
-  protected boolean lastBatch = false;
+  protected boolean processingLastBatch = false;
 
   ScanIterator(
       TiConfiguration conf,
@@ -58,14 +58,20 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
     this.builder = builder;
   }
 
+  /**
+   * Load current region to cache, returns the region if loaded.
+   *
+   * @return TiRegion of current data loaded to cache
+   * @throws GrpcException if scan still fails after backoff
+   */
   abstract TiRegion loadCurrentRegionToCache() throws GrpcException;
 
   // return true if current cache is not loaded or empty
   boolean cacheLoadFails() {
-    if (endOfScan || lastBatch) {
+    if (endOfScan || processingLastBatch) {
       return true;
     }
-    if (startKey.isEmpty()) {
+    if (startKey == null || startKey.isEmpty()) {
       return true;
     }
     try {
@@ -85,6 +91,12 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       // of a transaction. Otherwise below code might lose data
       if (currentCache.size() < conf.getScanBatchSize()) {
         startKey = curRegionEndKey;
+      } else if (currentCache.size() > conf.getScanBatchSize()) {
+        throw new IndexOutOfBoundsException(
+            "current cache size = "
+                + currentCache.size()
+                + ", larger than "
+                + conf.getScanBatchSize());
       } else {
         // Start new scan from exact next key in current region
         lastKey = Key.toRawKey(currentCache.get(currentCache.size() - 1).getKey());
@@ -92,48 +104,12 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       }
       // notify last batch if lastKey is greater than or equal to endKey
       if (hasEndKey && lastKey.compareTo(endKey) >= 0) {
-        lastBatch = true;
+        processingLastBatch = true;
         startKey = null;
       }
     } catch (Exception e) {
       throw new TiClientInternalException("Error scanning data from region.", e);
     }
     return false;
-  }
-
-  boolean isCacheDrained() {
-    return currentCache == null || limit <= 0 || index >= currentCache.size() || index == -1;
-  }
-
-  @Override
-  public boolean hasNext() {
-    if (isCacheDrained() && cacheLoadFails()) {
-      endOfScan = true;
-      return false;
-    }
-    return true;
-  }
-
-  Kvrpcpb.KvPair getCurrent() {
-    if (isCacheDrained()) {
-      return null;
-    }
-    if (index < currentCache.size()) {
-      --limit;
-      return currentCache.get(index++);
-    }
-    return null;
-  }
-
-  @Override
-  public Kvrpcpb.KvPair next() {
-    Kvrpcpb.KvPair current;
-    // continue when cache is empty but not null
-    for (current = getCurrent(); currentCache != null && current == null; current = getCurrent()) {
-      if (cacheLoadFails()) {
-        return null;
-      }
-    }
-    return current;
   }
 }

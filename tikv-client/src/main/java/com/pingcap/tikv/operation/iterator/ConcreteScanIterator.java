@@ -17,17 +17,19 @@
 
 package com.pingcap.tikv.operation.iterator;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.protobuf.ByteString;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import java.util.Objects;
 import org.apache.log4j.Logger;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
@@ -38,9 +40,13 @@ public class ConcreteScanIterator extends ScanIterator {
   private final Logger logger = Logger.getLogger(ConcreteScanIterator.class);
 
   public ConcreteScanIterator(
-      TiConfiguration conf, RegionStoreClientBuilder builder, ByteString startKey, long version) {
+      TiConfiguration conf,
+      RegionStoreClientBuilder builder,
+      ByteString startKey,
+      long version,
+      int limit) {
     // Passing endKey as ByteString.EMPTY means that endKey is +INF by default,
-    this(conf, builder, startKey, ByteString.EMPTY, version);
+    this(conf, builder, startKey, ByteString.EMPTY, version, limit);
   }
 
   public ConcreteScanIterator(
@@ -49,7 +55,18 @@ public class ConcreteScanIterator extends ScanIterator {
       ByteString startKey,
       ByteString endKey,
       long version) {
-    super(conf, builder, startKey, endKey, Integer.MAX_VALUE);
+    // Passing endKey as ByteString.EMPTY means that endKey is +INF by default,
+    this(conf, builder, startKey, endKey, version, Integer.MAX_VALUE);
+  }
+
+  private ConcreteScanIterator(
+      TiConfiguration conf,
+      RegionStoreClientBuilder builder,
+      ByteString startKey,
+      ByteString endKey,
+      long version,
+      int limit) {
+    super(conf, builder, startKey, endKey, limit);
     this.version = version;
   }
 
@@ -78,21 +95,50 @@ public class ConcreteScanIterator extends ScanIterator {
   }
 
   @Override
-  public KvPair next() {
-    KvPair current;
+  public boolean hasNext() {
+    Kvrpcpb.KvPair current;
     // continue when cache is empty but not null
-    for (current = getCurrent(); currentCache != null && current == null; current = getCurrent()) {
-      if (cacheLoadFails()) {
-        return null;
+    do {
+      current = getCurrent();
+      if (isCacheDrained() && cacheLoadFails()) {
+        endOfScan = true;
+        return false;
       }
-    }
+    } while (currentCache != null && current == null);
+    // for last batch to be processed, we have to check if
+    return !processingLastBatch
+        || current == null
+        || (hasEndKey && Key.toRawKey(current.getKey()).compareTo(endKey) < 0);
+  }
 
-    Objects.requireNonNull(current, "current kv pair cannot be null");
+  @Override
+  public KvPair next() {
+    --limit;
+    KvPair current = currentCache.get(index++);
+
+    requireNonNull(current, "current kv pair cannot be null");
     if (current.hasError()) {
       ByteString val = resolveCurrentLock(current);
       current = KvPair.newBuilder().setKey(current.getKey()).setValue(val).build();
     }
 
     return current;
+  }
+
+  /**
+   * Cache is drained when - no data extracted - scan limit was not defined - have read the last
+   * index of cache - index not initialized
+   *
+   * @return whether cache is drained
+   */
+  private boolean isCacheDrained() {
+    return currentCache == null || limit <= 0 || index >= currentCache.size() || index == -1;
+  }
+
+  private Kvrpcpb.KvPair getCurrent() {
+    if (isCacheDrained()) {
+      return null;
+    }
+    return currentCache.get(index);
   }
 }

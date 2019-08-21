@@ -60,9 +60,9 @@ public class KVClient implements AutoCloseable {
   }
 
   /**
-   * Get a raw key-value pair from TiKV if key exists
+   * Get a key-value pair from TiKV if key exists
    *
-   * @param key raw key
+   * @param key key
    * @return a ByteString value if key exists, ByteString.EMPTY if key does not exist
    */
   public ByteString get(ByteString key, long version) throws GrpcException {
@@ -102,10 +102,10 @@ public class KVClient implements AutoCloseable {
   }
 
   /**
-   * Scan raw key-value pairs from TiKV in range [startKey, endKey)
+   * Scan key-value pairs from TiKV in range [startKey, endKey)
    *
-   * @param startKey raw start key, inclusive
-   * @param endKey raw end key, exclusive
+   * @param startKey start key, inclusive
+   * @param endKey end key, exclusive
    * @return list of key-value pairs in range
    */
   public List<Kvrpcpb.KvPair> scan(ByteString startKey, ByteString endKey, long version)
@@ -118,17 +118,22 @@ public class KVClient implements AutoCloseable {
   }
 
   /**
-   * Scan raw key-value pairs from TiKV in range [startKey, endKey)
+   * Scan key-value pairs from TiKV in range [startKey, ♾), maximum to `limit` pairs
    *
-   * @param startKey raw start key, inclusive
-   * @param limit limit of key-value pairs
+   * @param startKey start key, inclusive
+   * @param limit limit of kv pairs
    * @return list of key-value pairs in range
    */
-  public List<Kvrpcpb.KvPair> scan(ByteString startKey, int limit) throws GrpcException {
-    Iterator<Kvrpcpb.KvPair> iterator = scanIterator(conf, clientBuilder, startKey, limit);
+  public List<Kvrpcpb.KvPair> scan(ByteString startKey, long version, int limit)
+      throws GrpcException {
+    Iterator<Kvrpcpb.KvPair> iterator = scanIterator(conf, clientBuilder, startKey, version, limit);
     List<Kvrpcpb.KvPair> result = new ArrayList<>();
     iterator.forEachRemaining(result::add);
     return result;
+  }
+
+  public List<Kvrpcpb.KvPair> scan(ByteString startKey, long version) throws GrpcException {
+    return scan(startKey, version, Integer.MAX_VALUE);
   }
 
   /** A Batch containing the region and a list of keys to send */
@@ -229,7 +234,11 @@ public class KVClient implements AutoCloseable {
   }
 
   private Iterator<Kvrpcpb.KvPair> scanIterator(
-      TiConfiguration conf, RegionStoreClientBuilder builder, ByteString startKey, int limit) {
-    return new ConcreteScanIterator(conf, builder, startKey, limit);
+      TiConfiguration conf,
+      RegionStoreClientBuilder builder,
+      ByteString startKey,
+      long version,
+      int limit) {
+    return new ConcreteScanIterator(conf, builder, startKey, version, limit);
   }
 }
