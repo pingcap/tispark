@@ -469,6 +469,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       groupingExpressions.forall(TiUtil.isSupportedGroupingExpr(_, source, blacklist)) &&
       aggregateExpressions.forall(TiUtil.isSupportedAggregate(_, source, blacklist)) &&
       !aggregateExpressions.exists(_.isDistinct) &&
+      // TODO: This is a temporary fix for the issue: https://github.com/pingcap/tispark/issues/1039
       !groupingExpressions.exists(_.isInstanceOf[Alias])
 
   // We do through similar logic with original Spark as in SparkStrategies.scala

@@ -22,14 +22,14 @@ class IssueTestSuite extends BaseTiSparkTest {
 
   // https://github.com/pingcap/tispark/issues/1039
   test("Distinct without alias throws NullPointerException") {
-    tidbStmt.execute("drop table if exists t")
-    tidbStmt.execute("create table t(c1 bigint);")
-    tidbStmt.execute("insert into t values (2), (3), (2);")
+    tidbStmt.execute("drop table if exists t_distinct_alias")
+    tidbStmt.execute("create table t_distinct_alias(c1 bigint);")
+    tidbStmt.execute("insert into t_distinct_alias values (2), (3), (2);")
 
-    val sqls = "select distinct(c1) as d, 1 as w from t" ::
-      "select c1 as d, 1 as w from t group by c1" ::
-      "select c1, 1 as w from t group by c1" ::
-      "select distinct(c1), 1 as w from t" ::
+    val sqls = "select distinct(c1) as d, 1 as w from t_distinct_alias" ::
+      "select c1 as d, 1 as w from t_distinct_alias group by c1" ::
+      "select c1, 1 as w from t_distinct_alias group by c1" ::
+      "select distinct(c1), 1 as w from t_distinct_alias" ::
       Nil
 
     for (sql <- sqls) {
