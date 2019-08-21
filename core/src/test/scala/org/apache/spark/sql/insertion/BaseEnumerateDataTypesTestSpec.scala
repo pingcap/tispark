@@ -11,7 +11,7 @@ import scala.util.Random
 trait BaseEnumerateDataTypesTestSpec
     extends MultiColumnDataTypeTestSpec
     with BaseTestGenerationSpec {
-  def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[Index]
+  def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]]
 
   def genLen(dataType: ReflectedDataType): String = {
     val baseType = getBaseType(dataType)
@@ -40,22 +40,24 @@ trait BaseEnumerateDataTypesTestSpec
     indices.zipWithIndex.map { index =>
       schemaGenerator(
         database,
+        // table name
         tablePrefix + index._2,
         r,
         dataTypesWithDescription,
-        List(index._1)
+        // constraint
+        index._1
       )
     }
   }
 
   private def toString(dataTypes: Seq[String]): String = dataTypes.hashCode().toString
 
-  override val rowCount = 10
+  override val rowCount = 50
 
-  override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
+  // we are not using below function, we probably need decouple the logic.
+  override def getTableName(dataTypes: String*): String = ???
 
-  override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
-    s"test_${desc}_${toString(dataTypes)}"
+  override def getTableNameWithDesc(desc: String, dataTypes: String*): String = ???
 
-  override def getIndexName(dataTypes: String*): String = s"idx_${toString(dataTypes)}"
+  override def getIndexName(dataTypes: String*): String = ???
 }
