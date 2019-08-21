@@ -55,7 +55,7 @@ class BatchWritePkSuite
     compareTiDBSelectWithJDBCWithTable_V2(tblName = tblName, "col_bigint")
   }
 
-  test("test unique indices cases") {
+  test("test pk cases") {
     val schemas = genSchema(dataTypes, table)
 
     schemas.foreach { schema =>
