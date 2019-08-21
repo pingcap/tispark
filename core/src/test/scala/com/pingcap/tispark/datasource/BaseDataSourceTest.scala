@@ -202,6 +202,7 @@ class BaseDataSourceTest(val table: String,
     val df = queryDatasourceTiDBWithTable(sortCol, tableName = tblName)
     val tidbResult = seqRowToList(df.collect(), df.schema)
 
+    println(s"running test on table $tblName")
     if (compResult(jdbcResult, tidbResult)) {
       assert(true)
     } else {

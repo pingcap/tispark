@@ -106,7 +106,7 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
 
   private val specialBound: List[Any] = {
     val list: List[Any] = dataType match {
-      case BIT                                                                     => List(Array[Byte]())
+      case BIT                                                                     => List.empty[Array[Byte]]
       case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT if !tiDataType.isUnsigned => List(-1L)
       case TIMESTAMP                                                               => List(new java.sql.Timestamp(1000))
       case _ if isCharCharset(dataType)                                            => List("")

@@ -8,9 +8,9 @@ import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 import org.apache.spark.sql.test.generator.Schema
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
-class BatchWriteUniqueIndexSuite
-    extends BaseDataSourceTest("batch_write_insertion_one_unique_index", "batch_write_test_index")
-    with EnumerateUniqueIndexDataTypeTestAction {
+class BatchWritePkSuite
+    extends BaseDataSourceTest("batch_write_insertion_pk", "batch_write_test_pk")
+    with EnumeratePKDataTypeTestAction {
   // TODO: support binary insertion.
   override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: charCharset
   override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
