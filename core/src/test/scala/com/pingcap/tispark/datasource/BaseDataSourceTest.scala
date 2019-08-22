@@ -180,6 +180,7 @@ class BaseDataSourceTest(val table: String,
       case e: NoSuchTableException =>
         logger.warn("query via datasource api fails", e)
         spark.sql("show tables").show
+        queryTiDBViaJDBC("show tables").foreach(println)
         throw e
     }
     val tidbResult = seqRowToList(df.collect(), df.schema)
