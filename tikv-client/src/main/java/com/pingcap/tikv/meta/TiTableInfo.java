@@ -94,10 +94,6 @@ public class TiTableInfo implements Serializable {
     primaryKeyColumn = primaryKey;
   }
 
-  public boolean isNotView() {
-    return this.viewInfo == null;
-  }
-
   public boolean isView() {
     return this.viewInfo != null;
   }
