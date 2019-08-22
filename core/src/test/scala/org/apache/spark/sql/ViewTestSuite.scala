@@ -20,5 +20,7 @@ class ViewTestSuite extends BaseTiSparkTest {
 
     judge(s"select * from $table")
     intercept[AnalysisException](spark.sql("select * from v"))
+
+    spark.sql("show tables").show(false)
   }
 }
