@@ -35,7 +35,7 @@ trait BaseDataTypeTest extends BaseTiSparkTest {
     setCurrentDatabase(dbName)
     val tblName = generator.getTableNameWithDesc(desc, dataType)
     val query = s"select ${generator.getColumnName(dataType)} from $tblName"
-    println(query)
+    logger.info(query)
     runTest(query)
   }
 
