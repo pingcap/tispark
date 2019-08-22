@@ -6,6 +6,7 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{BaseTiSparkTest, DataFrame, Row}
 
@@ -82,7 +83,7 @@ class BaseDataSourceTest(val table: String,
     sortCol: String = "i",
     selectCol: String = null,
     tableName: String
-  ) = {
+  ): Unit = {
     // check data source result & expected answer
     var df = queryDatasourceTiDBWithTable(sortCol, tableName)
     if (selectCol != null) {
@@ -173,7 +174,14 @@ class BaseDataSourceTest(val table: String,
     val answer = seqRowToList(expectedAnswer, schema)
 
     val jdbcResult = queryTiDBViaJDBC(sql)
-    val df = queryDatasourceTiDB(sortCol)
+    val df = try {
+      queryDatasourceTiDB(sortCol)
+    } catch {
+      case e: NoSuchTableException =>
+        logger.warn("query via datasource api fails", e)
+        spark.sql("show tables").show
+        throw e
+    }
     val tidbResult = seqRowToList(df.collect(), df.schema)
 
     // check tidb result & expected answer
@@ -202,13 +210,11 @@ class BaseDataSourceTest(val table: String,
     val df = queryDatasourceTiDBWithTable(sortCol, tableName = tblName)
     val tidbResult = seqRowToList(df.collect(), df.schema)
 
-    println(s"running test on table $tblName")
-    if (compResult(jdbcResult, tidbResult)) {
-      assert(true)
-    } else {
-      println(s"failed on $tblName")
-      println(tidbResult)
-      assert(false)
+    if (!compResult(jdbcResult, tidbResult)) {
+      logger.error(s"""Failed on $tblName\n
+                      |DataSourceAPI result: ${listToString(jdbcResult)}\n
+                      |TiDB via JDBC result: ${listToString(tidbResult)}""".stripMargin)
+      fail()
     }
   }
 
