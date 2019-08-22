@@ -26,6 +26,8 @@ class IssueTestSuite extends BaseTiSparkSuite {
     tidbStmt.execute("create table t_distinct_alias(c1 bigint);")
     tidbStmt.execute("insert into t_distinct_alias values (2), (3), (2);")
 
+    refreshConnections()
+
     val sqls = "select distinct(c1) as d, 1 as w from t_distinct_alias" ::
       "select c1 as d, 1 as w from t_distinct_alias group by c1" ::
       "select c1, 1 as w from t_distinct_alias group by c1" ::

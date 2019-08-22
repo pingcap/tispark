@@ -222,7 +222,9 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
       explainSpark(str)
       judge(str, skipped)
     } catch {
-      case e: Throwable => fail(e)
+      case e: Throwable =>
+        e.printStackTrace()
+        fail(e)
     }
 
   protected def explainAndRunTest(qSpark: String,
