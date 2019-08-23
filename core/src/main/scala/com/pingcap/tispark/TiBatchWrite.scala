@@ -134,7 +134,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     // load tble and db info from TiKV
     getTblAndDBInfo()
 
-    if(tiTableInfo == null) {
+    if (tiTableInfo == null) {
       tiSession.getCatalog.reloadCache(true)
       getTblAndDBInfo()
     }
