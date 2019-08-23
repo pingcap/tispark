@@ -69,18 +69,6 @@ public abstract class LockResolverTest {
   boolean prewrite(List<Mutation> mutations, long startTS, Mutation primary) {
     if (mutations.size() == 0) return true;
 
-    /*for (Mutation m : mutations) {
-      while (true) {
-        try {
-          TiRegion region = session.getRegionManager().getRegionByKey(m.getKey());
-          RegionStoreClient client = builder.build(region);
-          client.prewrite(backOffer, primary.getKey(), mutations, startTS, DefaultTTL);
-          break;
-        } catch (Exception e) {
-          logger.warn(e.getMessage());
-        }
-      }
-    }*/
     for (Mutation m : mutations) {
       TiRegion region = session.getRegionManager().getRegionByKey(m.getKey());
       RegionStoreClient client = builder.build(region);
