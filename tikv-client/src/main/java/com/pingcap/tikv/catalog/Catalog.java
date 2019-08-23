@@ -94,11 +94,7 @@ public class Catalog implements AutoCloseable {
       if (tableMap == null) {
         tableMap = loadTables(db);
       }
-      TiTableInfo tbl = tableMap.get(tableName.toLowerCase());
-      // https://github.com/pingcap/tispark/issues/961
-      // TODO: support reading from view table in the future.
-      if (tbl != null && tbl.isView()) return null;
-      return tbl;
+      return tableMap.get(tableName.toLowerCase());
     }
 
     private Map<String, TiTableInfo> loadTables(TiDBInfo db) {
@@ -156,6 +152,7 @@ public class Catalog implements AutoCloseable {
   }
 
   public synchronized void reloadCache(boolean loadTables) {
+    logger.info("reloading cache");
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     long latestVersion = newTrx.getLatestSchemaVersion();
@@ -208,6 +205,7 @@ public class Catalog implements AutoCloseable {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
     TiTableInfo table = metaCache.getTable(database, tableName);
+
     if (table == null) {
       // reload cache if table does not exist
       reloadCache(true);
@@ -215,8 +213,12 @@ public class Catalog implements AutoCloseable {
     }
     if (showRowId && table != null) {
       return table.copyTableWithRowId();
-    } else {
+    } else if (table != null && !table.isView()) {
+      // https://github.com/pingcap/tispark/issues/961
+      // TODO: support reading from view table in the future.
       return table;
+    } else {
+      return null;
     }
   }
 

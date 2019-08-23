@@ -131,7 +131,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiSession = tiContext.tiSession
     tiTableRef = options.tiTableRef
 
-    // load tble and db info from TiKV
+    // load table and db info from TiKV
     getTblAndDBInfo()
 
     if (tiTableInfo == null) {
@@ -143,6 +143,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
     }
+
     colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
     colsInDf = df.columns.toList.map(_.toLowerCase())
     uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
