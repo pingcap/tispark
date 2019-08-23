@@ -48,13 +48,13 @@ import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
 
-/**
- * Note that RegionStoreClient itself is not thread-safe TODO: 1. RegionStoreClient will be
- * inaccessible directly. 2. All apis of RegionStoreClient would not provide retry aside from
- * callWithRetry, if a request needs to be retried because of an un-retryable cause, e.g., keys need
- * to be re-split across regions/stores, region info outdated, e.t.c., you should retry it in an
- * upper client logic (KVClient, TxnClient, e.t.c.)
- */
+// TODO:
+//  1. RegionStoreClient will be inaccessible directly.
+//  2. All apis of RegionStoreClient would not provide retry aside from callWithRetry,
+//  if a request needs to be retried because of an un-retryable cause, e.g., keys
+//  need to be re-split across regions/stores, region info outdated, e.t.c., you
+//  should retry it in an upper client logic (KVClient, TxnClient, e.t.c.)
+/** Note that RegionStoreClient itself is not thread-safe */
 public class RegionStoreClient extends AbstractRegionStoreClient {
   public enum RequestTypes {
     REQ_TYPE_SELECT(101),
