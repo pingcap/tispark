@@ -152,7 +152,7 @@ public class Catalog implements AutoCloseable {
   }
 
   public synchronized void reloadCache(boolean loadTables) {
-    logger.info("reloading cache");
+    logger.debug("reloading cache");
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     long latestVersion = newTrx.getLatestSchemaVersion();

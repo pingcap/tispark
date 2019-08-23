@@ -134,11 +134,6 @@ class TiBatchWrite(@transient val df: DataFrame,
     // load table and db info from TiKV
     getTblAndDBInfo()
 
-    if (tiTableInfo == null) {
-      tiSession.getCatalog.reloadCache(true)
-      getTblAndDBInfo()
-    }
-
     // check table info is null
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
