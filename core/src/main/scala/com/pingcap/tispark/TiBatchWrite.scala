@@ -66,7 +66,6 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private var tiConf: TiConfiguration = _
   @transient private var tiSession: TiSession = _
-  @transient private var catalog: Catalog = _
 
   private var tiTableRef: TiTableReference = _
   private var tiDBInfo: TiDBInfo = _
@@ -112,6 +111,11 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
   }
 
+  private def getTblAndDBInfo() = {
+    tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
+    tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
+  }
+
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def doWrite(): Unit = {
@@ -126,14 +130,19 @@ class TiBatchWrite(@transient val df: DataFrame,
     tiConf = tiContext.tiConf
     tiSession = tiContext.tiSession
     tiTableRef = options.tiTableRef
-    tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
-    tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
-    catalog = TiSession.getInstance(tiConf).getCatalog
 
+    // load tble and db info from TiKV
+    getTblAndDBInfo()
+
+    if(tiTableInfo == null) {
+      tiSession.getCatalog.reloadCache(true)
+      getTblAndDBInfo()
+    }
+
+    // check table info is null
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
     }
-
     colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
     colsInDf = df.columns.toList.map(_.toLowerCase())
     uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
