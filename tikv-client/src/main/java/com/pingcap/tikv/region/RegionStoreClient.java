@@ -48,13 +48,13 @@ import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
 
-// Note that RegionStoreClient itself is not thread-safe
 // TODO:
-//   1. RegionStoreClient will be inaccessible directly.
-//   2. All apis of RegionStoreClient would not provide retry aside from callWithRetry,
-//      if a request needs to be retried because of an un-retryable cause, e.g., keys
-//      need to be re-split across regions/stores, region info outdated, e.t.c., you should
-//      retry it in an upper client logic (KVClient, TxnClient, e.t.c.)
+//  1. RegionStoreClient will be inaccessible directly.
+//  2. All apis of RegionStoreClient would not provide retry aside from callWithRetry,
+//  if a request needs to be retried because of an un-retryable cause, e.g., keys
+//  need to be re-split across regions/stores, region info outdated, e.t.c., you
+//  should retry it in an upper client logic (KVClient, TxnClient, e.t.c.)
+/** Note that RegionStoreClient itself is not thread-safe */
 public class RegionStoreClient extends AbstractRegionStoreClient {
   public enum RequestTypes {
     REQ_TYPE_SELECT(101),
@@ -85,8 +85,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
    * @param key key to fetch
    * @param version key version
    * @return value
-   * @throws TiClientInternalException
-   * @throws KeyException
+   * @throws TiClientInternalException TiSpark Client exception, unexpected
+   * @throws KeyException Key may be locked
    */
   public ByteString get(BackOffer backOffer, ByteString key, long version)
       throws TiClientInternalException, KeyException {
@@ -109,21 +109,16 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
     GetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
 
-    handleGetResponse(backOffer, resp);
+    handleGetResponse(resp);
     return resp.getValue();
   }
 
   /**
-   * @param backOffer
-   * @param resp
-   * @return Return true means the rpc call success. Return false means the rpc call fail,
-   *     RegionStoreClient should retry. Throw an Exception means the rpc call fail,
-   *     RegionStoreClient cannot handle this kind of error.
-   * @throws TiClientInternalException
-   * @throws KeyException
+   * @param resp GetResponse
+   * @throws TiClientInternalException TiSpark Client exception, unexpected
+   * @throws KeyException Key may be locked
    */
-  private void handleGetResponse(BackOffer backOffer, GetResponse resp)
-      throws TiClientInternalException, KeyException {
+  private void handleGetResponse(GetResponse resp) throws TiClientInternalException, KeyException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("GetResponse failed without a cause");
@@ -157,7 +152,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     return handleBatchGetResponse(backOffer, resp);
   }
 
-  private List<KvPair> handleBatchGetResponse(BackOffer bo, BatchGetResponse resp) {
+  private List<KvPair> handleBatchGetResponse(BackOffer backOffer, BatchGetResponse resp) {
     if (resp == null) {
       this.regionManager.onRequestFail(region);
       throw new TiClientInternalException("BatchGetResponse failed without a cause");
@@ -179,7 +174,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
 
     if (!locks.isEmpty()) {
-      boolean ok = lockResolverClient.resolveLocks(bo, locks);
+      boolean ok = lockResolverClient.resolveLocks(backOffer, locks);
       if (!ok) {
         // resolveLocks already retried, just throw error to upper logic.
         throw new TiKVException("locks not resolved, retry");
@@ -261,14 +256,14 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   /**
    * Prewrite batch keys
    *
-   * @param backOffer
-   * @param primary
-   * @param mutations
-   * @param startTs
-   * @param lockTTL
-   * @throws TiClientInternalException
-   * @throws KeyException
-   * @throws RegionException
+   * @param backOffer backOffer
+   * @param primary primary lock of keys
+   * @param mutations batch key-values as mutations
+   * @param startTs startTs of prewrite
+   * @param lockTTL lock ttl
+   * @throws TiClientInternalException TiSpark Client exception, unexpected
+   * @throws KeyException Key may be locked
+   * @throws RegionException region error occurs
    */
   public void prewrite(
       BackOffer backOffer,
@@ -283,21 +278,13 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   /**
    * Prewrite batch keys
    *
-   * @param bo
-   * @param primaryLock
-   * @param mutations
-   * @param startVersion
-   * @param ttl
-   * @param skipConstraintCheck
-   * @throws TiClientInternalException
-   * @throws KeyException
-   * @throws RegionException
+   * @param skipConstraintCheck whether to skip constraint check
    */
   public void prewrite(
       BackOffer bo,
       ByteString primaryLock,
       Iterable<Mutation> mutations,
-      long startVersion,
+      long startTs,
       long ttl,
       boolean skipConstraintCheck)
       throws TiClientInternalException, KeyException, RegionException {
@@ -306,7 +293,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
           () ->
               PrewriteRequest.newBuilder()
                   .setContext(region.getContext())
-                  .setStartVersion(startVersion)
+                  .setStartVersion(startTs)
                   .setPrimaryLock(primaryLock)
                   .addAllMutations(mutations)
                   .setLockTtl(ttl)
@@ -328,8 +315,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   }
 
   /**
-   * @param backOffer
-   * @param resp
+   * @param backOffer backOffer
+   * @param resp response
    * @return Return true means the rpc call success. Return false means the rpc call fail,
    *     RegionStoreClient should retry. Throw an Exception means the rpc call fail,
    *     RegionStoreClient cannot handle this kind of error
@@ -347,40 +334,42 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       throw new RegionException(resp.getRegionError());
     }
 
-    boolean result = true;
+    boolean isSuccess = true;
     List<Lock> locks = new ArrayList<>();
     for (KeyError err : resp.getErrorsList()) {
       if (err.hasLocked()) {
-        result = false;
+        isSuccess = false;
         Lock lock = new Lock(err.getLocked());
         locks.add(lock);
       } else {
         throw new KeyException(err.toString());
       }
     }
+    if (isSuccess) {
+      return true;
+    }
 
     if (!lockResolverClient.resolveLocks(backOffer, locks)) {
       backOffer.doBackOff(BoTxnLock, new KeyException(resp.getErrorsList().get(0)));
     }
-    return result;
+    return false;
   }
 
   /**
    * Commit batch keys
    *
-   * @param backOffer
-   * @param keys
-   * @param startVersion
-   * @param commitVersion
+   * @param backOffer backOffer
+   * @param keys keys to commit
+   * @param startTs start version
+   * @param commitTs commit version
    */
-  public void commit(
-      BackOffer backOffer, Iterable<ByteString> keys, long startVersion, long commitVersion)
+  public void commit(BackOffer backOffer, Iterable<ByteString> keys, long startTs, long commitTs)
       throws KeyException {
     Supplier<CommitRequest> factory =
         () ->
             CommitRequest.newBuilder()
-                .setStartVersion(startVersion)
-                .setCommitVersion(commitVersion)
+                .setStartVersion(startTs)
+                .setCommitVersion(commitTs)
                 .addAllKeys(keys)
                 .setContext(region.getContext())
                 .build();
@@ -393,20 +382,16 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             resp -> resp.hasRegionError() ? resp.getRegionError() : null,
             resp -> resp.hasError() ? resp.getError() : null);
     CommitResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
-    handleCommitResponse(backOffer, resp);
+    handleCommitResponse(resp);
   }
 
   /**
-   * @param backOffer
-   * @param resp
-   * @return Return true means the rpc call success. Return false means the rpc call fail,
-   *     RegionStoreClient should retry. Throw an Exception means the rpc call fail,
-   *     RegionStoreClient cannot handle this kind of error
+   * @param resp CommitResponse
    * @throws TiClientInternalException
    * @throws RegionException
    * @throws KeyException
    */
-  private void handleCommitResponse(BackOffer backOffer, CommitResponse resp)
+  private void handleCommitResponse(CommitResponse resp)
       throws TiClientInternalException, RegionException, KeyException {
     if (resp == null) {
       this.regionManager.onRequestFail(region);

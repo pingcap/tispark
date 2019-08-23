@@ -15,37 +15,30 @@
 
 package com.pingcap.tikv.txn;
 
-import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
 import static junit.framework.TestCase.*;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.ReadOnlyPDClient;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.meta.TiTimestamp;
-import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
 import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.tikv.kvproto.Kvrpcpb.*;
-import org.tikv.kvproto.TikvGrpc;
 
 public abstract class LockResolverTest {
   private final Logger logger = Logger.getLogger(this.getClass());
   TiSession session;
   private static final int DefaultTTL = 10;
-  BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
-  ReadOnlyPDClient pdClient;
   RegionStoreClient.RegionStoreClientBuilder builder;
   boolean init;
 
@@ -62,87 +55,46 @@ public abstract class LockResolverTest {
 
     boolean res = prewrite(Collections.singletonList(m), startTS, m);
     assertTrue(res);
-    res = commit(startTS, commitTS, Collections.singletonList(ByteString.copyFromUtf8(key)));
+    res = commit(Collections.singletonList(ByteString.copyFromUtf8(key)), startTS, commitTS);
     assertTrue(res);
   }
 
   boolean prewrite(List<Mutation> mutations, long startTS, Mutation primary) {
     if (mutations.size() == 0) return true;
+    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
 
-    /*for (Mutation m : mutations) {
+    for (Mutation m : mutations) {
       while (true) {
         try {
           TiRegion region = session.getRegionManager().getRegionByKey(m.getKey());
           RegionStoreClient client = builder.build(region);
-          client.prewrite(backOffer, primary.getKey(), mutations, startTS, DefaultTTL);
+          client.prewrite(
+              backOffer, primary.getKey(), Collections.singletonList(m), startTS, DefaultTTL);
           break;
-        } catch (Exception e) {
-          logger.warn(e.getMessage());
+        } catch (RegionException e) {
+          backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
         }
       }
-    }*/
-    for (Mutation m : mutations) {
-      TiRegion region = session.getRegionManager().getRegionByKey(m.getKey());
-      RegionStoreClient client = builder.build(region);
-
-      Supplier<PrewriteRequest> factory =
-          () ->
-              PrewriteRequest.newBuilder()
-                  .addAllMutations(Collections.singletonList(m))
-                  .setPrimaryLock(primary.getKey())
-                  .setStartVersion(startTS)
-                  .setLockTtl(DefaultTTL)
-                  .setContext(region.getContext())
-                  .build();
-
-      KVErrorHandler<PrewriteResponse> handler =
-          new KVErrorHandler<>(
-              session.getRegionManager(),
-              client,
-              client.lockResolverClient,
-              region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-              resp -> null);
-      PrewriteResponse resp =
-          client.callWithRetry(backOffer, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
-
-      if (resp.hasRegionError()) {
-        throw new RegionException(resp.getRegionError());
-      }
-
-      if (resp.getErrorsCount() == 0) {
-        continue;
-      }
-
-      List<Lock> locks = new ArrayList<>();
-      for (KeyError err : resp.getErrorsList()) {
-        if (err.hasLocked()) {
-          Lock lock = new Lock(err.getLocked());
-          locks.add(lock);
-        } else {
-          throw new KeyException(err);
-        }
-      }
-
-      LockResolverClient resolver = null;
-      try {
-        Field field = RegionStoreClient.class.getDeclaredField("lockResolverClient");
-        assert (field != null);
-        field.setAccessible(true);
-        resolver = (LockResolverClient) (field.get(client));
-      } catch (Exception e) {
-        fail();
-      }
-
-      assertNotNull(resolver);
-
-      if (!resolver.resolveLocks(backOffer, locks)) {
-        backOffer.doBackOff(BoTxnLock, new KeyException(resp.getErrorsList().get(0)));
-      }
-
-      prewrite(Collections.singletonList(m), startTS, primary);
     }
+    return true;
+  }
 
+  boolean commit(List<ByteString> keys, long startTS, long commitTS) {
+    if (keys.size() == 0) return true;
+    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
+
+    for (ByteString k : keys) {
+      while (true) {
+        try {
+          TiRegion tiRegion = session.getRegionManager().getRegionByKey(k);
+          RegionStoreClient client = builder.build(tiRegion);
+          client.commit(backOffer, Collections.singletonList(k), startTS, commitTS);
+          break;
+        } catch (RegionException e) {
+          backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
+        }
+      }
+    }
     return true;
   }
 
@@ -174,62 +126,24 @@ public abstract class LockResolverTest {
     if (commitPrimary) {
       if (!key.equals(primaryKey)) {
         return commit(
+            Arrays.asList(ByteString.copyFromUtf8(primaryKey), ByteString.copyFromUtf8(key)),
             startTs,
-            commitTS,
-            Arrays.asList(ByteString.copyFromUtf8(primaryKey), ByteString.copyFromUtf8(key)));
+            commitTS);
       } else {
         return commit(
-            startTs, commitTS, Collections.singletonList(ByteString.copyFromUtf8(primaryKey)));
+            Collections.singletonList(ByteString.copyFromUtf8(primaryKey)), startTs, commitTS);
       }
     }
 
-    return true;
-  }
-
-  boolean commit(long startTS, long commitTS, List<ByteString> keys) {
-    if (keys.size() == 0) return true;
-
-    for (ByteString k : keys) {
-      TiRegion tiRegion = session.getRegionManager().getRegionByKey(k);
-
-      RegionStoreClient client = builder.build(tiRegion);
-      Supplier<CommitRequest> factory =
-          () ->
-              CommitRequest.newBuilder()
-                  .setStartVersion(startTS)
-                  .setCommitVersion(commitTS)
-                  .addAllKeys(Collections.singletonList(k))
-                  .setContext(tiRegion.getContext())
-                  .build();
-
-      KVErrorHandler<CommitResponse> handler =
-          new KVErrorHandler<>(
-              session.getRegionManager(),
-              client,
-              client.lockResolverClient,
-              tiRegion,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-              resp -> resp.hasError() ? resp.getError() : null);
-      CommitResponse resp =
-          client.callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
-
-      if (resp.hasRegionError()) {
-        throw new RegionException(resp.getRegionError());
-      }
-
-      if (resp.hasError()) {
-        throw new KeyException(resp.getError());
-      }
-    }
     return true;
   }
 
   void putAlphabet() {
     for (int i = 0; i < 26; i++) {
-      long startTs = pdClient.getTimestamp(backOffer).getVersion();
-      long endTs = pdClient.getTimestamp(backOffer).getVersion();
+      long startTs = session.getTimestamp().getVersion();
+      long endTs = session.getTimestamp().getVersion();
       while (startTs == endTs) {
-        endTs = pdClient.getTimestamp(backOffer).getVersion();
+        endTs = session.getTimestamp().getVersion();
       }
       putKV(String.valueOf((char) ('a' + i)), String.valueOf((char) ('a' + i)), startTs, endTs);
     }
@@ -237,23 +151,23 @@ public abstract class LockResolverTest {
   }
 
   void prepareAlphabetLocks() {
-    TiTimestamp startTs = pdClient.getTimestamp(backOffer);
-    TiTimestamp endTs = pdClient.getTimestamp(backOffer);
+    TiTimestamp startTs = session.getTimestamp();
+    TiTimestamp endTs = session.getTimestamp();
     while (startTs == endTs) {
-      endTs = pdClient.getTimestamp(backOffer);
+      endTs = session.getTimestamp();
     }
     putKV("c", "cc", startTs.getVersion(), endTs.getVersion());
-    startTs = pdClient.getTimestamp(backOffer);
-    endTs = pdClient.getTimestamp(backOffer);
+    startTs = session.getTimestamp();
+    endTs = session.getTimestamp();
     while (startTs == endTs) {
-      endTs = pdClient.getTimestamp(backOffer);
+      endTs = session.getTimestamp();
     }
 
     assertTrue(lockKey("c", "c", "z1", "z1", true, startTs.getVersion(), endTs.getVersion()));
-    startTs = pdClient.getTimestamp(backOffer);
-    endTs = pdClient.getTimestamp(backOffer);
+    startTs = session.getTimestamp();
+    endTs = session.getTimestamp();
     while (startTs == endTs) {
-      endTs = pdClient.getTimestamp(backOffer);
+      endTs = session.getTimestamp();
     }
     assertTrue(lockKey("d", "dd", "z2", "z2", false, startTs.getVersion(), endTs.getVersion()));
   }
@@ -271,8 +185,9 @@ public abstract class LockResolverTest {
       ByteString key = ByteString.copyFromUtf8(String.valueOf((char) ('a' + i)));
       TiRegion tiRegion = session.getRegionManager().getRegionByKey(key);
       RegionStoreClient client = builder.build(tiRegion);
+      BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
       try {
-        ByteString v = client.get(backOffer, key, pdClient.getTimestamp(backOffer).getVersion());
+        ByteString v = client.get(backOffer, key, session.getTimestamp().getVersion());
         if (hasLock && i == 3) {
           // key "d" should be locked
           fail();
