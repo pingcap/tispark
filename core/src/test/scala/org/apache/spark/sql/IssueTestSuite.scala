@@ -245,7 +245,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("insert into t values(1)")
     tidbStmt.execute("insert into t values(2)")
     tidbStmt.execute("insert into t values(4)")
-    ti.meta.reloadAllMeta()
+    loadTestData()
     runTest("select count(c1) from t")
     runTest("select count(c1 + 1) from t")
     runTest("select count(1 + c1) from t")
@@ -253,7 +253,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("create table t(c1 int not null, c2 int not null)")
     tidbStmt.execute("insert into t values(1, 4)")
     tidbStmt.execute("insert into t values(2, 2)")
-    ti.meta.reloadAllMeta()
+    loadTestData()
     runTest("select count(c1 + c2) from t")
   }
 

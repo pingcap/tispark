@@ -69,6 +69,18 @@ public abstract class LockResolverTest {
   boolean prewrite(List<Mutation> mutations, long startTS, Mutation primary) {
     if (mutations.size() == 0) return true;
 
+    /*for (Mutation m : mutations) {
+      while (true) {
+        try {
+          TiRegion region = session.getRegionManager().getRegionByKey(m.getKey());
+          RegionStoreClient client = builder.build(region);
+          client.prewrite(backOffer, primary.getKey(), mutations, startTS, DefaultTTL);
+          break;
+        } catch (Exception e) {
+          logger.warn(e.getMessage());
+        }
+      }
+    }*/
     for (Mutation m : mutations) {
       TiRegion region = session.getRegionManager().getRegionByKey(m.getKey());
       RegionStoreClient client = builder.build(region);
@@ -87,9 +99,10 @@ public abstract class LockResolverTest {
           new KVErrorHandler<>(
               session.getRegionManager(),
               client,
+              client.lockResolverClient,
               region,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-
+              resp -> resp.hasRegionError() ? resp.getRegionError() : null,
+              resp -> null);
       PrewriteResponse resp =
           client.callWithRetry(backOffer, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
 
@@ -193,9 +206,10 @@ public abstract class LockResolverTest {
           new KVErrorHandler<>(
               session.getRegionManager(),
               client,
+              client.lockResolverClient,
               tiRegion,
-              resp -> resp.hasRegionError() ? resp.getRegionError() : null);
-
+              resp -> resp.hasRegionError() ? resp.getRegionError() : null,
+              resp -> resp.hasError() ? resp.getError() : null);
       CommitResponse resp =
           client.callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
 
@@ -249,18 +263,28 @@ public abstract class LockResolverTest {
   }
 
   void versionTest() {
+    versionTest(false);
+  }
+
+  void versionTest(boolean hasLock) {
     for (int i = 0; i < 26; i++) {
-      TiRegion tiRegion =
-          session
-              .getRegionManager()
-              .getRegionByKey(ByteString.copyFromUtf8(String.valueOf((char) ('a' + i))));
+      ByteString key = ByteString.copyFromUtf8(String.valueOf((char) ('a' + i)));
+      TiRegion tiRegion = session.getRegionManager().getRegionByKey(key);
       RegionStoreClient client = builder.build(tiRegion);
-      ByteString v =
-          client.get(
-              backOffer,
-              ByteString.copyFromUtf8(String.valueOf((char) ('a' + i))),
-              pdClient.getTimestamp(backOffer).getVersion());
-      assertEquals(v.toStringUtf8(), String.valueOf((char) ('a' + i)));
+      try {
+        ByteString v = client.get(backOffer, key, pdClient.getTimestamp(backOffer).getVersion());
+        if (hasLock && i == 3) {
+          // key "d" should be locked
+          fail();
+        } else {
+          assertEquals(String.valueOf((char) ('a' + i)), v.toStringUtf8());
+        }
+      } catch (KeyException e) {
+        assertEquals(ByteString.copyFromUtf8("d"), key);
+        LockInfo lock = e.getKeyError().getLocked();
+        assertEquals(key, lock.getKey());
+        assertEquals(ByteString.copyFromUtf8("z2"), lock.getPrimaryLock());
+      }
     }
   }
 }
