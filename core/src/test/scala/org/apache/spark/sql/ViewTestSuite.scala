@@ -31,6 +31,7 @@ class ViewTestSuite extends BaseTiSparkTest {
       case _: Exception => cancel
     }
   }
+
   override def afterAll() = {
     dropTbl()
   }
