@@ -19,6 +19,8 @@ class ViewTestSuite extends BaseTiSparkSuite {
 
     judge(s"select * from $table")
     intercept[AnalysisException](spark.sql("select * from v"))
+
+    spark.sql("show tables").show(false)
   }
 
   private def dropTbl() = {
