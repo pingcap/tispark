@@ -135,7 +135,7 @@ class TimezoneTestSuite extends BaseTiSparkTest {
     val testData = "2019-11-11 11:11:11.0"
     val rowData = Row(testData)
     val schema = StructType(List(StructField("c1", StringType)))
-    tidbWrite(List(rowData), schema)
+    tidbWriteWithTable(List(rowData), schema)
 
     val resultData = queryTiDBViaJDBC(s"select * from $table").head.head
 
@@ -153,16 +153,16 @@ class TimezoneTestSuite extends BaseTiSparkTest {
     val testData = "2019-11-11 11:11:11.0"
     val rowData = Row(testData)
     val schema = StructType(List(StructField("c1", StringType)))
-    tidbWrite(List(rowData), schema)
+    tidbWriteWithTable(List(rowData), schema)
 
     val resultData = queryTiDBViaJDBC(s"select * from $table").head.head
 
     assert(testData.equals(resultData.toString))
   }
 
-  protected def tidbWrite(rows: List[Row],
-                          schema: StructType,
-                          param: Option[Map[String, String]] = None): Unit = {
+  protected def tidbWriteWithTable(rows: List[Row],
+                                   schema: StructType,
+                                   param: Option[Map[String, String]] = None): Unit = {
     val data: RDD[Row] = sc.makeRDD(rows)
     val df = sqlContext.createDataFrame(data, schema)
     df.write

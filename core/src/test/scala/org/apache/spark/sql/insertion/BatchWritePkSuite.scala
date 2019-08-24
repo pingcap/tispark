@@ -9,7 +9,7 @@ import org.apache.spark.sql.test.generator.Schema
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
 class BatchWritePkSuite
-    extends BaseDataSourceTest("batch_write_insertion_pk", "batch_write_test_pk")
+    extends BaseDataSourceTest("batch_write_test_pk")
     with EnumeratePKDataTypeTestAction {
   // TODO: support binary insertion.
   override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: charCharset
@@ -56,7 +56,8 @@ class BatchWritePkSuite
   }
 
   test("test pk cases") {
-    val schemas = genSchema(dataTypes, table)
+    val tablePrefix = "pk_batch_write_insertion"
+    val schemas = genSchema(dataTypes, tablePrefix)
 
     schemas.foreach { schema =>
       dropAndCreateTbl(schema)
@@ -69,11 +70,4 @@ class BatchWritePkSuite
 
   // this is only for mute the warning
   override def test(): Unit = {}
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

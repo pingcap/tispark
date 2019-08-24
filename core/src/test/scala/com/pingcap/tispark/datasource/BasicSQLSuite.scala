@@ -5,19 +5,21 @@ import org.apache.spark.sql.Row
 
 import scala.util.Random
 
-class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
+class BasicSQLSuite extends BaseDataSourceTest {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
   private val row4 = Row(4, null)
 
+  val table = "test_datasource_sql"
   override def beforeAll(): Unit = {
     super.beforeAll()
 
-    dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    dropTable(table)
+    createTable(s"create table `%s`.`%s`(i int, s varchar(128))", table)
     jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
+      s"insert into `%s`.`%s` values(null, 'Hello'), (2, 'TiDB')",
+      table
     )
   }
 
@@ -97,7 +99,7 @@ class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
 
   override def afterAll(): Unit =
     try {
-      dropTable()
+      dropTable(table)
     } finally {
       super.afterAll()
     }

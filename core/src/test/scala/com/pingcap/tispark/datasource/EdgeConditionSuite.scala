@@ -3,8 +3,7 @@ package com.pingcap.tispark.datasource
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
-class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condition") {
-
+class EdgeConditionSuite extends BaseDataSourceTest {
   private val TEST_LARGE_DATA_SIZE = 102400
 
   private val TEST_LARGE_COLUMN_SIZE = 512
@@ -13,6 +12,7 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     super.beforeAll()
 
   test("Write to table with one column (primary key long type)") {
+    val table = "table_with_on_col_pk_is_long"
     val row1 = Row(1L)
     val row2 = Row(2L)
     val row3 = Row(3L)
@@ -24,19 +24,22 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
       )
     )
 
-    dropTable()
+    dropTable(table)
 
-    jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
+    createTable(
+      "create table `%s`.`%s`(i int, primary key (i))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1)"
+      "insert into `%s`.`%s` values(1)",
+      table
     )
-    tidbWrite(List(row2, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4))
+    tidbWriteWithTable(List(row2, row3, row4), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), tableName = table)
   }
 
   test("Write to table with one column (primary key int type)") {
+    val table = "table_with_on_col_pk_is_int"
     val row1 = Row(1)
     val row2 = Row(2)
     val row3 = Row(3)
@@ -48,19 +51,22 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
       )
     )
 
-    dropTable()
+    dropTable(table)
 
-    jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
+    createTable(
+      "create table `%s`.`%s`(i int, primary key (i))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1)"
+      "insert into `%s`.`%s` values(1)",
+      table
     )
-    tidbWrite(List(row2, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4))
+    tidbWriteWithTable(List(row2, row3, row4), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), tableName = table)
   }
 
   test("Write to table with one column (primary key + auto increase)") {
+    val table = "table_with_on_col_pk_and_auto"
     val row1 = Row(1L)
     val row2 = Row(2L)
     val row3 = Row(3L)
@@ -72,19 +78,22 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
       )
     )
 
-    dropTable()
+    dropTable(table)
 
-    jdbcUpdate(
-      s"create table $dbtable(i int NOT NULL AUTO_INCREMENT, primary key (i))"
+    createTable(
+      "create table `%s`.`%s`(i int NOT NULL AUTO_INCREMENT, primary key (i))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1)"
+      "insert into `%s`.`%s` values(1)",
+      table
     )
-    tidbWrite(List(row2, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4))
+    tidbWriteWithTable(List(row2, row3, row4), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), tableName = table)
   }
 
   test("Write to table with one column (no primary key)") {
+    val table = "table_with_on_col_no_pk"
     val row1 = Row(null)
     val row2 = Row("Hello")
     val row3 = Row("Spark")
@@ -96,19 +105,22 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
       )
     )
 
-    dropTable()
+    dropTable(table)
 
-    jdbcUpdate(
-      s"create table $dbtable(i varchar(128))"
+    createTable(
+      "create table `%s`.`%s`(i varchar(128))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values('Hello')"
+      "insert into `%s`.`%s` values('Hello')",
+      table
     )
-    tidbWrite(List(row1, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4))
+    tidbWriteWithTable(List(row1, row3, row4), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), tableName = table)
   }
 
   test("Write to table with many columns") {
+    val table = "table_with_many_cols"
     val types = ("int", LongType) :: ("varchar(128)", StringType) :: Nil
     val data1 = 1L :: "TiDB" :: Nil
     val data2 = 2L :: "Spark" :: Nil
@@ -138,17 +150,19 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
       }
       .mkString(", ")
 
-    dropTable()
+    dropTable(table)
 
-    jdbcUpdate(
-      s"create table $dbtable($createTableSchemaStr)"
+    createTable(
+      s"create table `%s`.`%s`($createTableSchemaStr)",
+      table
     )
 
-    tidbWrite(List(row1, row2), schema)
-    testTiDBSelect(Seq(row1, row2), "c0")
+    tidbWriteWithTable(List(row1, row2), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2), "c0", tableName = table)
   }
 
   test("Write Empty data") {
+    val table = "write_empty_data"
     val row1 = Row(1L)
 
     val schema = StructType(
@@ -157,19 +171,22 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
       )
     )
 
-    dropTable()
+    dropTable(table)
 
-    jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
+    createTable(
+      "create table `%s`.`%s`(i int, primary key (i))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1)"
+      "insert into `%s`.`%s` values(1)",
+      table
     )
-    tidbWrite(List(), schema)
-    testTiDBSelect(Seq(row1))
+    tidbWriteWithTable(List(), schema, table)
+    testTiDBSelectWithTable(Seq(row1), tableName = table)
   }
 
   test("Write large amount of data") {
+    val table = "write_large_amount_data"
     var list: List[Row] = Nil
     for (i <- 0 until TEST_LARGE_DATA_SIZE) {
       list = Row(i.toLong) :: list
@@ -182,13 +199,14 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
       )
     )
 
-    dropTable()
+    dropTable(table)
 
-    jdbcUpdate(
-      s"create table $dbtable(i int, primary key (i))"
+    createTable(
+      "create table `%s`.`%s`(i int, primary key (i))",
+      table
     )
-    tidbWrite(list, schema)
-    testTiDBSelect(list)
+    tidbWriteWithTable(list, schema, table)
+    testTiDBSelectWithTable(list, tableName = table)
 
     var list2: List[Row] = Nil
     for (i <- TEST_LARGE_DATA_SIZE until TEST_LARGE_DATA_SIZE * 2) {
@@ -196,14 +214,7 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     }
     list2 = list2.reverse
 
-    tidbWrite(list2, schema)
-    testTiDBSelect(list ::: list2)
+    tidbWriteWithTable(list2, schema, table)
+    testTiDBSelectWithTable(list ::: list2, tableName = table)
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

@@ -4,8 +4,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StructField, StructType}
 
-class UpperCaseColumnNameSuite
-    extends BaseDataSourceTest("test_datasource_uppser_case_column_name") {
+class UpperCaseColumnNameSuite extends BaseDataSourceTest {
 
   private val row1 = Row(1, 2)
 
@@ -16,17 +15,16 @@ class UpperCaseColumnNameSuite
     )
   )
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-
-    dropTable()
-    jdbcUpdate(s"""
-                  |CREATE TABLE $dbtable (O_ORDERKEY INTEGER NOT NULL,
-                  |                       O_CUSTKEY INTEGER NOT NULL);
-       """.stripMargin)
-  }
-
   test("Test insert upper case column name") {
+    val table = "upper_case_col_name"
+    dropTable(table)
+    createTable(
+      """
+        |CREATE TABLE `%s`.`%s` (O_ORDERKEY INTEGER NOT NULL,
+        |                       O_CUSTKEY INTEGER NOT NULL);
+       """.stripMargin,
+      table
+    )
     val data: RDD[Row] = sc.makeRDD(List(row1))
     val df = sqlContext.createDataFrame(data, schema)
     df.write
@@ -37,11 +35,4 @@ class UpperCaseColumnNameSuite
       .mode("append")
       .save()
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

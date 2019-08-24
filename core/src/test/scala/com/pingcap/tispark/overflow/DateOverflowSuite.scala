@@ -8,25 +8,27 @@ import org.apache.spark.sql.types._
  * DATE type include:
  * 1. DATE
  */
-class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow") {
+class DateOverflowSuite extends BaseDataSourceTest {
 
   test("Test DATE YEAR Upper bound Overflow") {
-    testYearOverflow(false)
+    testYearOverflow(testKey = false, "date_year_upper_bound_overflow")
   }
 
   test("Test DATE as key YEAR Upper bound Overflow") {
-    testYearOverflow(true)
+    testYearOverflow(testKey = true, "key_date_year_upper_bound_overflow")
   }
 
-  private def testYearOverflow(testKey: Boolean): Unit = {
-    dropTable()
+  private def testYearOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 DATE primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 DATE primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 DATE)"
+      createTable(
+        "create table `%s`.`%s`(c1 DATE)",
+        table
       )
     }
 
@@ -44,6 +46,7 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -52,22 +55,24 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
   }
 
   test("Test DATE Month Upper bound Overflow") {
-    testMonthOverflow(false)
+    testMonthOverflow(testKey = false, "date_month_upper_bound_overflow")
   }
 
   test("Test DATE as key Month Upper bound Overflow") {
-    testMonthOverflow(true)
+    testMonthOverflow(testKey = true, "key_date_month_upper_bound_overflow")
   }
 
-  private def testMonthOverflow(testKey: Boolean): Unit = {
-    dropTable()
+  private def testMonthOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 DATE primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 DATE primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 DATE)"
+      createTable(
+        "create table `%s`.`%s`(c1 DATE)",
+        table
       )
     }
 
@@ -85,6 +90,7 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsgStart,
       tidbErrorClass,
@@ -92,11 +98,4 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
       msgStartWith = true
     )
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

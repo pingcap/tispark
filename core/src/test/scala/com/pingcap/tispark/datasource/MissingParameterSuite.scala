@@ -4,7 +4,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class MissingParameterSuite extends BaseDataSourceTest("test_datasource_missing_parameter") {
+class MissingParameterSuite extends BaseDataSourceTest {
   private val row1 = Row(null, "Hello")
 
   private val schema = StructType(
@@ -15,8 +15,9 @@ class MissingParameterSuite extends BaseDataSourceTest("test_datasource_missing_
   )
 
   test("Missing parameter: database") {
-    dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    val table = "tbl_missing_db"
+    dropTable(table)
+    createTable(s"create table `%s`.`%s`(i int, s varchar(128))", table)
 
     val caught = intercept[IllegalArgumentException] {
       val rows = row1 :: Nil
@@ -36,11 +37,4 @@ class MissingParameterSuite extends BaseDataSourceTest("test_datasource_missing_
         )
     )
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

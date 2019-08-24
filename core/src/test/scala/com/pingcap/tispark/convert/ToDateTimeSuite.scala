@@ -8,7 +8,7 @@ import org.apache.spark.sql.types._
  * DATETIME type include:
  * 1. DATETIME
  */
-class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_datetime") {
+class ToDateTimeSuite extends BaseDataSourceTest {
 
   private var readRow1: Row = _
   private var readRow2: Row = _
@@ -22,8 +22,9 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
     )
   )
 
-  private def createTable(): Unit =
-    jdbcUpdate(s"create table $dbtable(i INT, c1 DATETIME(0), c2 DATETIME(3), c3 DATETIME(6))")
+  val queryTemplate: String =
+    "create table `%s`.`%s`(i INT, c1 DATETIME(0), c2 DATETIME(3), c3 DATETIME(6))"
+  val tableTemplate: String = "test_%s_to_datetime"
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -39,6 +40,7 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
   test("Test Convert from String to DATETIME") {
     // success
     // String -> DATETIME
+    val table = tableTemplate.format("str")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null, null)
@@ -54,18 +56,19 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, table)
     }
   }
 
   test("Test Convert from java.sql.Date to DATETIME") {
     // success
     // java.sql.Date -> DATETIME
+    val table = tableTemplate.format("date")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.sql.Date = java.sql.Date.valueOf("2019-11-11")
@@ -84,18 +87,19 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2), schema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2), schema, table)
     }
   }
 
   test("Test Convert from java.sql.Timestamp to DATETIME") {
     // success
     // java.sql.Timestamp -> DATETIME
+    val table = tableTemplate.format("ts")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 11:11:11")
@@ -114,12 +118,12 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2), schema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2), schema, table)
     }
   }
 
@@ -138,11 +142,4 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
   // scala.collection.Seq
   // scala.collection.Map
   // org.apache.spark.sql.Row
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

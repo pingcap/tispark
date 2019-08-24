@@ -124,7 +124,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // initialize
     tiConf = tiContext.tiConf
-    tiSession = tiContext.tiSession
+    TiSession.clearCache()
+    tiSession = TiSession.getInstance(tiConf)
     tiTableRef = options.tiTableRef
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
     tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)

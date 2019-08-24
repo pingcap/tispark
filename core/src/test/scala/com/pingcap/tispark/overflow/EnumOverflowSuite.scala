@@ -8,23 +8,25 @@ import org.apache.spark.sql.types._
  * ENUM type include:
  * 1. ENUM
  */
-class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow") {
+class EnumOverflowSuite extends BaseDataSourceTest {
 
   test("Test ENUM Value Overflow") {
-    testEnumValueOverflow(false)
+    testEnumValueOverflow(testKey = false, "enum_val_overflow")
   }
 
   test("Test ENUM as key Value Overflow") {
-    testEnumValueOverflow(true)
+    testEnumValueOverflow(testKey = true, "key_enum_val_overflow")
   }
 
-  private def testEnumValueOverflow(testKey: Boolean): Unit = {
-
-    dropTable()
+  private def testEnumValueOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
+      createTable(
+        "create table `%s`.`%s`(c1 ENUM('male', 'female', 'both', 'unknown') primary key)",
+        table
+      )
     } else {
-      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+      createTable("create table `%s`.`%s`(c1 ENUM('male', 'female', 'both', 'unknown'))", table)
     }
 
     val row = Row("abc")
@@ -41,6 +43,7 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -49,20 +52,22 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
   }
 
   test("Test ENUM Number Overflow") {
-    testEnumNumberOverflow(false)
+    testEnumNumberOverflow(testKey = false, "enum_number_overflow")
   }
 
   test("Test ENUM as key Number Overflow") {
-    testEnumNumberOverflow(true)
+    testEnumNumberOverflow(testKey = true, "key_enum_number_overflow")
   }
 
-  private def testEnumNumberOverflow(testKey: Boolean): Unit = {
-
-    dropTable()
+  private def testEnumNumberOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown') primary key)")
+      createTable(
+        s"create table `%s`.`%s`(c1 ENUM('male', 'female', 'both', 'unknown') primary key)",
+        table
+      )
     } else {
-      jdbcUpdate(s"create table $dbtable(c1 ENUM('male', 'female', 'both', 'unknown'))")
+      createTable(s"create table `%s`.`%s`(c1 ENUM('male', 'female', 'both', 'unknown'))", table)
     }
 
     val row = Row("5")
@@ -79,17 +84,11 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

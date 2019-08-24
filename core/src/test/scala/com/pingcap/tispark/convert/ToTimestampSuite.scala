@@ -8,7 +8,7 @@ import org.apache.spark.sql.types._
  * TIMESTAMP type include:
  * 1. TIMESTAMP
  */
-class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_timestamp") {
+class ToTimestampSuite extends BaseDataSourceTest {
 
   private val readSchema = StructType(
     List(
@@ -18,12 +18,13 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
     )
   )
 
-  private def createTable(): Unit =
-    jdbcUpdate(s"create table $dbtable(i INT, c1 TIMESTAMP, c2 TIMESTAMP(6))")
+  val queryTemplate = "create table `%s`.`%s`(i INT, c1 TIMESTAMP, c2 TIMESTAMP(6))"
+  val tableTemplate = "test_%s_to_ts"
 
   ignore("Test Convert from java.lang.Long to TIMESTAMP") {
     // success
     // java.lang.Long -> TIMESTAMP
+    val table = tableTemplate.format("long")
     compareTiDBWriteWithJDBC {
       case (writeFunc, "tidbWrite") =>
         val a: java.lang.Long = java.sql.Timestamp.valueOf("2019-11-11 11:11:11").getTime
@@ -46,12 +47,12 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, readA, readB)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, table)
       case (writeFunc, "jdbcWrite") =>
       // TODO: ignored, because of this error
       //java.sql.BatchUpdateException: Data truncation: invalid time format: '34'
@@ -61,6 +62,7 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
   test("Test Convert from String to TIMESTAMP") {
     // success
     // String -> TIMESTAMP
+    val table = tableTemplate.format("str")
     compareTiDBWriteWithJDBC {
       case (writeFunc, "tidbWrite") =>
         val row1 = Row(1, null, null)
@@ -80,12 +82,12 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, readA, readB)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, table)
       case (writeFunc, "jdbcWrite") =>
       // ignored because spark jdbc write does not use local time zone
     }
@@ -94,6 +96,7 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
   test("Test Convert from java.sql.Date to TIMESTAMP") {
     // success
     // java.sql.Date -> TIMESTAMP
+    val table = tableTemplate.format("date")
     compareTiDBWriteWithJDBC {
       case (writeFunc, "tidbWrite") =>
         val a: java.sql.Date = java.sql.Date.valueOf("2019-11-11")
@@ -116,12 +119,12 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
         val readRow1 = Row(1, null, null)
         val readRow2 = Row(2, readA, readB)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, table)
 
       case (writeFunc, "jdbcWrite") =>
       // ignored because spark jdbc write does not use local time zone
@@ -131,6 +134,7 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
   test("Test Convert from java.sql.Timestamp to TIMESTAMP") {
     // success
     // java.sql.Timestamp -> TIMESTAMP
+    val table = tableTemplate.format("ts")
     compareTiDBWriteWithJDBC {
       case (writeFunc, "tidbWrite") =>
         val a: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-11-11 11:11:11")
@@ -147,12 +151,12 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2), readSchema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2), readSchema, table)
 
       case (writeFunc, "jdbcWrite") =>
       // ignored because spark jdbc write does not use local time zone
@@ -171,11 +175,4 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
   // scala.collection.Seq
   // scala.collection.Map
   // org.apache.spark.sql.Row
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

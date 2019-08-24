@@ -12,25 +12,27 @@ import org.apache.spark.sql.types._
  * 4. INT UNSIGNED
  * 5. BIGINT UNSIGNED
  */
-class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_overflow") {
+class UnsignedOverflowSuite extends BaseDataSourceTest {
 
   test("Test TINYINT UNSIGNED Upper bound Overflow") {
-    testTinyIntUnsignedUpperBound(false)
+    testTinyIntUnsignedUpperBound(testKey = false, "tiny_int_unsigned_upper_bound_overflow")
   }
 
   test("Test TINYINT UNSIGNED as key Upper bound Overflow") {
-    testTinyIntUnsignedUpperBound(true)
+    testTinyIntUnsignedUpperBound(testKey = true, "key_tiny_int_unsigned_upper_bound_overflow")
   }
 
-  private def testTinyIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testTinyIntUnsignedUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYINT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYINT UNSIGNED)",
+        table
       )
     }
 
@@ -48,6 +50,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -56,22 +59,24 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test TINYINT UNSIGNED Lower bound Overflow") {
-    testTinyIntUnsignedLowerBound(false)
+    testTinyIntUnsignedLowerBound(testKey = false, "tiny_int_unsigned_lower_bound_overflow")
   }
 
   test("Test TINYINT UNSIGNED as key Lower bound Overflow") {
-    testTinyIntUnsignedLowerBound(false)
+    testTinyIntUnsignedLowerBound(testKey = true, "key_tiny_int_unsigned_lower_bound_overflow")
   }
 
-  private def testTinyIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testTinyIntUnsignedLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYINT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYINT UNSIGNED)",
+        table
       )
     }
 
@@ -89,6 +94,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -97,22 +103,24 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test SMALLINT UNSIGNED Upper bound Overflow") {
-    testSmallIntUnsignedUpperBound(false)
+    testSmallIntUnsignedUpperBound(testKey = false, "small_int_unsigned_upper_bound_overflow")
   }
 
   test("Test SMALLINT UNSIGNED as key Upper bound Overflow") {
-    testSmallIntUnsignedUpperBound(true)
+    testSmallIntUnsignedUpperBound(testKey = true, "key_small_int_unsigned_upper_bound_overflow")
   }
 
-  private def testSmallIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testSmallIntUnsignedUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 SMALLINT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 SMALLINT UNSIGNED)",
+        table
       )
     }
 
@@ -130,6 +138,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -138,22 +147,24 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test SMALLINT UNSIGNED Lower bound Overflow") {
-    testSmallIntUnsignedLowerBound(false)
+    testSmallIntUnsignedLowerBound(testKey = false, "small_int_unsigned_lower_bound_overflow")
   }
 
   test("Test SMALLINT UNSIGNED as key Lower bound Overflow") {
-    testSmallIntUnsignedLowerBound(true)
+    testSmallIntUnsignedLowerBound(testKey = true, "key_small_int_unsigned_lower_bound_overflow")
   }
 
-  private def testSmallIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testSmallIntUnsignedLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 SMALLINT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 SMALLINT UNSIGNED)",
+        table
       )
     }
 
@@ -171,6 +182,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -179,22 +191,24 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test MEDIUMINT UNSIGNED Upper bound Overflow") {
-    testMediumIntUnsignedUpperBound(false)
+    testMediumIntUnsignedUpperBound(testKey = false, "medium_int_unsigned_upper_bound_overflow")
   }
 
   test("Test MEDIUMINT UNSIGNED as key Upper bound Overflow") {
-    testMediumIntUnsignedUpperBound(true)
+    testMediumIntUnsignedUpperBound(testKey = true, "key_medium_int_unsigned_upper_bound_overflow")
   }
 
-  private def testMediumIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testMediumIntUnsignedUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 MEDIUMINT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 MEDIUMINT UNSIGNED)",
+        table
       )
     }
 
@@ -212,6 +226,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -220,22 +235,24 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test MEDIUMINT UNSIGNED Lower bound Overflow") {
-    testMediumIntUnsignedLowerBound(false)
+    testMediumIntUnsignedLowerBound(testKey = false, "medium_int_unsigned_lower_bound_overflow")
   }
 
   test("Test MEDIUMINT UNSIGNED as key Lower bound Overflow") {
-    testMediumIntUnsignedLowerBound(true)
+    testMediumIntUnsignedLowerBound(testKey = true, "key_medium_int_unsigned_lower_bound_overflow")
   }
 
-  private def testMediumIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testMediumIntUnsignedLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 MEDIUMINT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 MEDIUMINT UNSIGNED)",
+        table
       )
     }
 
@@ -253,6 +270,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -261,22 +279,24 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test INT UNSIGNED Upper bound Overflow") {
-    testIntUnsignedUpperBound(false)
+    testIntUnsignedUpperBound(testKey = false, "int_unsigned_upper_bound_overflow")
   }
 
   test("Test INT UNSIGNED as key Upper bound Overflow") {
-    testIntUnsignedUpperBound(true)
+    testIntUnsignedUpperBound(testKey = true, "key_int_unsigned_upper_bound_overflow")
   }
 
-  private def testIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testIntUnsignedUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 INT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 INT UNSIGNED)",
+        table
       )
     }
 
@@ -294,6 +314,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -302,22 +323,24 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test INT UNSIGNED Lower bound Overflow") {
-    testIntUnsignedLowerBound(false)
+    testIntUnsignedLowerBound(testKey = false, "unsigned_lower_bound_overflow")
   }
 
   test("Test INT UNSIGNED as key Lower bound Overflow") {
-    testIntUnsignedLowerBound(true)
+    testIntUnsignedLowerBound(testKey = true, "key_unsigned_lower_bound_overflow")
   }
 
-  private def testIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testIntUnsignedLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 INT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 INT UNSIGNED)",
+        table
       )
     }
 
@@ -337,6 +360,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsgStartWith,
       tidbErrorClass,
@@ -346,22 +370,24 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test BIGINT UNSIGNED Upper bound Overflow") {
-    testBigIntUnsignedUpperBound(false)
+    testBigIntUnsignedUpperBound(testKey = false, "big_int_unsigned_upper_bound_overflow")
   }
 
   test("Test BIGINT UNSIGNED as key Upper bound Overflow") {
-    testBigIntUnsignedUpperBound(true)
+    testBigIntUnsignedUpperBound(testKey = true, "key_big_int_unsigned_upper_bound_overflow")
   }
 
-  private def testBigIntUnsignedUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBigIntUnsignedUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIGINT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIGINT UNSIGNED)",
+        table
       )
     }
 
@@ -379,6 +405,7 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -387,22 +414,24 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test BIGINT UNSIGNED Lower bound Overflow") {
-    testBigIntUnsignedLowerBound(false)
+    testBigIntUnsignedLowerBound(false, "big_int_unsigned_lower_bound_overflow")
   }
 
   test("Test BIGINT UNSIGNED as key Lower bound Overflow") {
-    testBigIntUnsignedLowerBound(true)
+    testBigIntUnsignedLowerBound(true, "big_int_unsigned_lower_bound_overflow")
   }
 
-  private def testBigIntUnsignedLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBigIntUnsignedLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIGINT UNSIGNED primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT UNSIGNED)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIGINT UNSIGNED)",
+        table
       )
     }
 
@@ -420,17 +449,11 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

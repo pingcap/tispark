@@ -3,7 +3,7 @@ package com.pingcap.tispark.datasource
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace") {
+class AddingIndexReplaceSuite extends BaseDataSourceTest {
   private val row1 = Row(1, 1, 1, "Hello")
   private val row2 = Row(2, 2, 2, "TiDB")
   private val row3 = Row(3, 3, 3, "Spark")
@@ -23,103 +23,124 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   )
 
   test("test unique index replace with primary key is handle and index") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2), index(s))"
+    val table = "pk_is_handle_and_idx"
+    dropTable(table)
+    createTable(
+      "create table `%s`.`%s`(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2), index(s))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      "insert into `%s`.`%s` values(1, 1, 1, 'Hello')",
+      table
     )
     // insert row2 row3
-    tidbWrite(List(row2, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
+    tidbWriteWithTable(List(row2, row3, row4), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), "c1", tableName = table)
 
     val options = Some(Map("replace" -> "true"))
 
-    tidbWrite(List(row5, row5, conflcitWithOneIndex), schema, options)
-    testTiDBSelect(Seq(row1, row2, row3, conflcitWithOneIndex, row5), "c1")
+    tidbWriteWithTable(List(row5, row5, conflcitWithOneIndex), schema, table, options)
+    testTiDBSelectWithTable(
+      Seq(row1, row2, row3, conflcitWithOneIndex, row5),
+      "c1",
+      tableName = table
+    )
 
-    tidbWrite(List(conflcitWithTwoIndices), schema, options)
-    testTiDBSelect(Seq(row2, row3, conflcitWithTwoIndices), "c1")
+    tidbWriteWithTable(List(conflcitWithTwoIndices), schema, table, options)
+    testTiDBSelectWithTable(Seq(row2, row3, conflcitWithTwoIndices), "c1", tableName = table)
   }
 
   test("test same key in one rdd") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
+    val table = "same_key_in_one_rdd"
+    dropTable(table)
+    createTable(
+      "create table `%s`.`%s`(pk int, c1 int, c2 int, s varchar(128), primary key(pk))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      "insert into `%s`.`%s` values(1, 1, 1, 'Hello')",
+      table
     )
 
     // insert row2 row3
-    tidbWrite(List(row2, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
+    tidbWriteWithTable(List(row2, row3, row4), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), "c1", tableName = table)
 
     val options = Some(Map("replace" -> "true"))
-    tidbWrite(List(row2), schema, options)
-    testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
+    tidbWriteWithTable(List(row2), schema, table, options)
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), "c1", tableName = table)
   }
 
   test("test unique index replace with primary key is handle") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2))"
+    val table = "replace_pk_is_handle"
+    dropTable(table)
+    createTable(
+      "create table `%s`.`%s`(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      "insert into `%s`.`%s` values(1, 1, 1, 'Hello')",
+      table
     )
     // insert row2 row3
-    tidbWrite(List(row2, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
+    tidbWriteWithTable(List(row2, row3, row4), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), "c1", tableName = table)
 
     val options = Some(Map("replace" -> "true"))
 
-    tidbWrite(List(row5, row5, conflcitWithOneIndex), schema, options)
-    testTiDBSelect(Seq(row1, row2, row3, conflcitWithOneIndex, row5), "c1")
+    tidbWriteWithTable(List(row5, row5, conflcitWithOneIndex), schema, table, options)
+    testTiDBSelectWithTable(
+      Seq(row1, row2, row3, conflcitWithOneIndex, row5),
+      "c1",
+      tableName = table
+    )
 
-    tidbWrite(List(conflcitWithTwoIndices), schema, options)
-    testTiDBSelect(Seq(row2, row3, conflcitWithTwoIndices), "c1")
+    tidbWriteWithTable(List(conflcitWithTwoIndices), schema, table, options)
+    testTiDBSelectWithTable(Seq(row2, row3, conflcitWithTwoIndices), "c1", tableName = table)
   }
 
   test("test unique index replace without primary key") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), unique index(c1), unique index(c2))"
+    val table = "no_pk"
+    dropTable(table)
+    createTable(
+      "create table `%s`.`%s`(pk int, c1 int, c2 int, s varchar(128), unique index(c1), unique index(c2))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      "insert into `%s`.`%s` values(1, 1, 1, 'Hello')",
+      table
     )
     // insert row2 row3
-    tidbWrite(List(row2, row4, row5), schema)
-    testTiDBSelect(Seq(row1, row2, row4, row5), "c1")
+    tidbWriteWithTable(List(row2, row4, row5), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2, row4, row5), "c1", tableName = table)
 
     val options = Some(Map("replace" -> "true"))
-    tidbWrite(
+    tidbWriteWithTable(
       List(row3, row3, conflcitWithOneIndex, conflcitWithTwoIndices),
       schema,
+      table,
       options
     )
-    testTiDBSelect(Seq(row2, row3, conflcitWithOneIndex, conflcitWithTwoIndices), "c1")
+    testTiDBSelectWithTable(
+      Seq(row2, row3, conflcitWithOneIndex, conflcitWithTwoIndices),
+      "c1",
+      tableName = table
+    )
   }
 
   test("test pk is handle") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
+    val table = "pk_is_handle"
+    dropTable(table)
+    createTable(
+      "create table `%s`.`%s`(pk int, c1 int, c2 int, s varchar(128), primary key(pk))",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(1, 1, 1, 'Hello')"
+      "insert into `%s`.`%s` values(1, 1, 1, 'Hello')",
+      table
     )
     // insert row2 row3
-    tidbWrite(List(row2, row3, row4), schema)
-    testTiDBSelect(Seq(row1, row2, row3, row4), "c1")
+    tidbWriteWithTable(List(row2, row3, row4), schema, table)
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), "c1", tableName = table)
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

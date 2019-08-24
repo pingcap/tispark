@@ -13,16 +13,15 @@ import org.apache.spark.sql.types.{StructField, _}
  * 5. MEDIUMBLOB
  * 6. LONGBLOB
  */
-class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes") {
-
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"create table $dbtable(i INT, c1 BINARY(5), c2 VARBINARY(255), c3 TINYBLOB, c4 BLOB, c5 MEDIUMBLOB, c6 LONGBLOB)"
-    )
+class ToBytesSuite extends BaseDataSourceTest {
+  private val tableTemplate = "test_%s_to_bytes"
+  val queryTemplate: String =
+    "create table `%s`.`%s`(i INT, c1 BINARY(5), c2 VARBINARY(255), c3 TINYBLOB, c4 BLOB, c5 MEDIUMBLOB, c6 LONGBLOB)"
 
   test("Test Convert from java.lang.Boolean to BYTES") {
     // success
     // java.lang.Boolean -> BYTES
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Boolean = true
@@ -70,15 +69,16 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
+          table,
           skipTiDBAndExpectedAnswerCheck = true
         )
     }
@@ -87,6 +87,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   test("Test Convert from java.lang.Byte to BYTES") {
     // success
     // java.lang.Byte -> BYTES
+    val table = tableTemplate.format("byte")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Byte = java.lang.Byte.valueOf("11")
@@ -134,15 +135,16 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
+          table,
           skipTiDBAndExpectedAnswerCheck = true
         )
     }
@@ -151,6 +153,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   test("Test Convert from java.lang.Short to BYTES") {
     // success
     // java.lang.Short -> BYTES
+    val table = tableTemplate.format("short")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Short = java.lang.Short.valueOf("11")
@@ -198,15 +201,16 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
+          table,
           skipTiDBAndExpectedAnswerCheck = true
         )
     }
@@ -215,6 +219,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   test("Test Convert from java.lang.Integer to BYTES") {
     // success
     // java.lang.Integer -> BYTES
+    val table = tableTemplate.format("int")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Integer = java.lang.Integer.valueOf("11")
@@ -262,15 +267,16 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
+          table,
           skipTiDBAndExpectedAnswerCheck = true
         )
     }
@@ -279,6 +285,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   test("Test Convert from java.lang.Long to BYTES") {
     // success
     // java.lang.Long -> BYTES
+    val table = tableTemplate.format("long")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Long = java.lang.Long.valueOf("11")
@@ -326,15 +333,16 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
+          table,
           skipTiDBAndExpectedAnswerCheck = true
         )
     }
@@ -343,6 +351,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   test("Test Convert from String to BYTES") {
     // success
     // java.lang.String -> BYTES
+    val table = tableTemplate.format("str")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.String = new java.lang.String("11")
@@ -390,15 +399,16 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
+          table,
           skipTiDBAndExpectedAnswerCheck = true
         )
     }
@@ -414,11 +424,4 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
   // scala.collection.Seq
   // scala.collection.Map
   // org.apache.spark.sql.Row
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

@@ -8,25 +8,23 @@ import org.apache.spark.sql.types._
  * BIT type include:
  * 1. BIT
  */
-class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow") {
+class BitOverflowSuite extends BaseDataSourceTest {
 
   test("Test BIT(1) Upper bound Overflow") {
-    testBit1UpperBound(false)
+    testBit1UpperBound(testKey = false, "bit1_upper_bound_overflow")
   }
   test("Test BIT(1) as key Upper bound Overflow") {
-    testBit1UpperBound(true)
+    testBit1UpperBound(testKey = true, "key_bit1_upper_bound_overflow")
   }
 
-  private def testBit1UpperBound(testKey: Boolean): Unit = {
-
-    dropTable()
+  private def testBit1UpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(1) primary key)"
-      )
+      createTable("create table `%s`.`%s`(c1 BIT(1) primary key)", table)
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(1))"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(1))",
+        table
       )
     }
 
@@ -44,6 +42,7 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -53,23 +52,24 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(1) Lower bound Overflow") {
-    testBit1LowerBound(false)
+    testBit1LowerBound(testKey = false, "bit1_lower_bound_overflow")
   }
 
   test("Test BIT(1) as key Lower bound Overflow") {
-    testBit1LowerBound(true)
+    testBit1LowerBound(testKey = true, "key_bit1_lower_bound_overflow")
   }
 
-  private def testBit1LowerBound(testKey: Boolean): Unit = {
-
-    dropTable()
+  private def testBit1LowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(1) primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(1) primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(1))"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(1))",
+        table
       )
     }
 
@@ -87,6 +87,7 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -96,22 +97,24 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(4) Upper bound Overflow") {
-    testBit4UpperBound(false)
+    testBit4UpperBound(testKey = false, "bit4_upper_bound_overflow")
   }
 
   test("Test BIT(4) as key Upper bound Overflow") {
-    testBit4UpperBound(true)
+    testBit4UpperBound(testKey = true, "key_bit4_upper_bound_overflow")
   }
 
-  private def testBit4UpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBit4UpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(4) primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(4) primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(4))"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(4))",
+        table
       )
     }
 
@@ -129,6 +132,7 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -138,22 +142,24 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(4) Lower bound Overflow") {
-    testBit4LowerBound(false)
+    testBit4LowerBound(testKey = false, "bit4_lower_bound_overflow")
   }
 
   test("Test BIT(4) as key Lower bound Overflow") {
-    testBit4LowerBound(true)
+    testBit4LowerBound(testKey = true, "key_bit4_lower_bound_overflow")
   }
 
-  private def testBit4LowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBit4LowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(4) primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(4) primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(4))"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(4))",
+        table
       )
     }
 
@@ -171,6 +177,7 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -180,23 +187,24 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(8) Upper bound Overflow") {
-    testBit8UpperBound(false)
+    testBit8UpperBound(testKey = false, "bit8_upper_bound_overflow")
   }
 
   test("Test BIT(8) as key Upper bound Overflow") {
-    testBit8UpperBound(true)
+    testBit8UpperBound(testKey = true, "bit8_upper_bound_overflow")
   }
 
-  private def testBit8UpperBound(testKey: Boolean): Unit = {
-
-    dropTable()
+  private def testBit8UpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(8) primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(8) primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(8))"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(8))",
+        table
       )
     }
 
@@ -214,6 +222,7 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -223,22 +232,24 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(8) Lower bound Overflow") {
-    testBit8LowerBound(false)
+    testBit8LowerBound(testKey = false, "bit8_lower_bound_overflow")
   }
 
   test("Test BIT(8) as key Lower bound Overflow") {
-    testBit8LowerBound(true)
+    testBit8LowerBound(testKey = true, "key_bit8_lower_bound_overflow")
   }
 
-  private def testBit8LowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBit8LowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(8) primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(8) primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIT(8))"
+      createTable(
+        "create table `%s`.`%s`(c1 BIT(8))",
+        table
       )
     }
 
@@ -256,6 +267,7 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -263,11 +275,4 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       msgStartWith = true
     )
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

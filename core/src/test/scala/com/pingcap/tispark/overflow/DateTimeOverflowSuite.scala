@@ -8,26 +8,27 @@ import org.apache.spark.sql.types._
  * DATETIME type include:
  * 1. DATETIME
  */
-class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_overflow") {
+class DateTimeOverflowSuite extends BaseDataSourceTest {
 
   test("Test DATETIME YEAR Overflow") {
-    testDateTimeOverflow(false)
+    testDateTimeOverflow(testKey = false, "datetime_year_overflow")
   }
 
   test("Test DATETIME as key YEAR Overflow") {
-    testDateTimeOverflow(true)
+    testDateTimeOverflow(testKey = true, "key_datetime_year_overflow")
   }
 
-  private def testDateTimeOverflow(testKey: Boolean): Unit = {
-
-    dropTable()
+  private def testDateTimeOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 DATETIME(6) primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 DATETIME(6) primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 DATETIME(6))"
+      createTable(
+        "create table `%s`.`%s`(c1 DATETIME(6))",
+        table
       )
     }
 
@@ -45,17 +46,11 @@ class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

@@ -13,25 +13,27 @@ import org.apache.spark.sql.types._
  * 5. BIGINT SINGED
  * 6. BOOLEAN
  */
-class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_overflow") {
+class SignedOverflowSuite extends BaseDataSourceTest {
 
   test("Test TINYINT Upper bound Overflow") {
-    testTinyIntUpperBound(false)
+    testTinyIntUpperBound(testKey = false, "tinyint_upper_bound_overflow")
   }
 
   test("Test TINYINT as key Upper bound Overflow") {
-    testTinyIntUpperBound(true)
+    testTinyIntUpperBound(testKey = true, "key_tinyint_upper_bound_overflow")
   }
 
-  private def testTinyIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testTinyIntUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYINT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT)"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYINT)",
+        table
       )
     }
 
@@ -49,6 +51,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -57,22 +60,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test TINYINT Lower bound Overflow") {
-    testTinyIntLowerBound(false)
+    testTinyIntLowerBound(testKey = false, "tinyint_lower_bound_overflow")
   }
 
   test("Test TINYINT as key Lower bound Overflow") {
-    testTinyIntLowerBound(true)
+    testTinyIntLowerBound(testKey = true, "key_tinyint_lower_bound_overflow")
   }
 
-  private def testTinyIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testTinyIntLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYINT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYINT)"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYINT)",
+        table
       )
     }
 
@@ -90,6 +95,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -98,22 +104,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test SMALLINT Upper bound Overflow") {
-    testSmallIntUpperBound(false)
+    testSmallIntUpperBound(testKey = false, "smallint_upper_bound_overflow")
   }
 
   test("Test SMALLINT as key Upper bound Overflow") {
-    testSmallIntUpperBound(true)
+    testSmallIntUpperBound(testKey = true, "key_smallint_upper_bound_overflow")
   }
 
-  private def testSmallIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testSmallIntUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 SMALLINT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT)"
+      createTable(
+        "create table `%s`.`%s`(c1 SMALLINT)",
+        table
       )
     }
 
@@ -131,6 +139,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -139,22 +148,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test SMALLINT Lower bound Overflow") {
-    testSmallIntLowerBound(false)
+    testSmallIntLowerBound(testKey = false, "small_int_lower_bound_overflow")
   }
 
   test("Test SMALLINT as key Lower bound Overflow") {
-    testSmallIntLowerBound(true)
+    testSmallIntLowerBound(testKey = true, "key_small_int_lower_bound_overflow")
   }
 
-  private def testSmallIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testSmallIntLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 SMALLINT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 SMALLINT)"
+      createTable(
+        "create table `%s`.`%s`(c1 SMALLINT)",
+        table
       )
     }
 
@@ -172,6 +183,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -180,22 +192,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test MEDIUMINT Upper bound Overflow") {
-    testMediumIntUpperBound(false)
+    testMediumIntUpperBound(testKey = false, "mediumint_upper_bound_overflow")
   }
 
   test("Test MEDIUMINT as key Upper bound Overflow") {
-    testMediumIntUpperBound(true)
+    testMediumIntUpperBound(testKey = true, "key_mediumint_upper_bound_overflow")
   }
 
-  private def testMediumIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testMediumIntUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 MEDIUMINT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT)"
+      createTable(
+        "create table `%s`.`%s`(c1 MEDIUMINT)",
+        table
       )
     }
 
@@ -213,6 +227,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -221,22 +236,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test MEDIUMINT Lower bound Overflow") {
-    testMediumIntLowerBound(false)
+    testMediumIntLowerBound(testKey = false, "mediumint_lower_bound_overflow")
   }
 
   test("Test MEDIUMINT as key Lower bound Overflow") {
-    testMediumIntLowerBound(true)
+    testMediumIntLowerBound(testKey = true, "key_mediumint_lower_bound_overflow")
   }
 
-  private def testMediumIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testMediumIntLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 MEDIUMINT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 MEDIUMINT)"
+      createTable(
+        "create table `%s`.`%s`(c1 MEDIUMINT)",
+        table
       )
     }
 
@@ -254,6 +271,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -262,22 +280,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test INT Upper bound Overflow") {
-    testIntUpperBound(false)
+    testIntUpperBound(testKey = false, "int_upper_bound_overflow")
   }
 
   test("Test INT as key Upper bound Overflow") {
-    testIntUpperBound(true)
+    testIntUpperBound(testKey = true, "key_int_upper_bound_overflow")
   }
 
-  private def testIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testIntUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 INT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT)"
+      createTable(
+        "create table `%s`.`%s`(c1 INT)",
+        table
       )
     }
 
@@ -295,6 +315,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -303,22 +324,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test INT Lower bound Overflow") {
-    testIntLowerBound(false)
+    testIntLowerBound(testKey = false, "int_lower_bound_overflow")
   }
 
   test("Test INT as key Lower bound Overflow") {
-    testIntLowerBound(true)
+    testIntLowerBound(testKey = true, "key_int_lower_bound_overflow")
   }
 
-  private def testIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testIntLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 INT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 INT)"
+      createTable(
+        "create table `%s`.`%s`(c1 INT)",
+        table
       )
     }
 
@@ -336,6 +359,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -344,22 +368,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BIGINT Upper bound Overflow") {
-    testBigIntUpperBound(false)
+    testBigIntUpperBound(testKey = false, "big_int_upper_bound_overflow")
   }
 
   test("Test BIGINT as key Upper bound Overflow") {
-    testBigIntUpperBound(true)
+    testBigIntUpperBound(testKey = true, "key_big_int_upper_bound_overflow")
   }
 
-  private def testBigIntUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBigIntUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIGINT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIGINT)",
+        table
       )
     }
 
@@ -377,6 +403,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -385,22 +412,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BIGINT Lower bound Overflow") {
-    testBigIntLowerBound(false)
+    testBigIntLowerBound(testKey = false, "big_int_lower_bound_overflow")
   }
 
   test("Test BIGINT as key Lower bound Overflow") {
-    testBigIntLowerBound(true)
+    testBigIntLowerBound(testKey = true, "key_big_int_lower_bound_overflow")
   }
 
-  private def testBigIntLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBigIntLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIGINT primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BIGINT)"
+      createTable(
+        "create table `%s`.`%s`(c1 BIGINT)",
+        table
       )
     }
 
@@ -418,6 +447,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -426,22 +456,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BOOLEAN Upper bound Overflow") {
-    testBooleanUpperBound(false)
+    testBooleanUpperBound(testKey = false, "boolean_upper_bound_overflow")
   }
 
   test("Test BOOLEAN as key Upper bound Overflow") {
-    testBooleanUpperBound(true)
+    testBooleanUpperBound(testKey = true, "key_boolean_upper_bound_overflow")
   }
 
-  private def testBooleanUpperBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBooleanUpperBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BOOLEAN primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BOOLEAN primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BOOLEAN)"
+      createTable(
+        "create table `%s`.`%s`(c1 BOOLEAN)",
+        table
       )
     }
 
@@ -459,6 +491,7 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -467,22 +500,24 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BOOLEAN Lower bound Overflow") {
-    testBooleanLowerBound(false)
+    testBooleanLowerBound(testKey = false, "boolean_lower_bound_overflow")
   }
 
   test("Test BOOLEAN as key Lower bound Overflow") {
-    testBooleanLowerBound(true)
+    testBooleanLowerBound(testKey = true, "key_boolean_lower_bound_overflow")
   }
 
-  private def testBooleanLowerBound(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBooleanLowerBound(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BOOLEAN primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 BOOLEAN primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 BOOLEAN)"
+      createTable(
+        "create table `%s`.`%s`(c1 BOOLEAN)",
+        table
       )
     }
 
@@ -500,17 +535,11 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

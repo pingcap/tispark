@@ -13,7 +13,7 @@ import org.apache.spark.sql.types.{StructField, _}
  * 5. MEDIUMTEXT
  * 6. LONGTEXT
  */
-class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string") {
+class ToStringSuite extends BaseDataSourceTest {
 
   private val readSchema = StructType(
     List(
@@ -27,14 +27,14 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
     )
   )
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"create table $dbtable(i INT, c1 CHAR(255), c2 VARCHAR(255), c3 TINYTEXT, c4 TEXT, c5 MEDIUMTEXT, c6 LONGTEXT)"
-    )
+  val queryTemplate =
+    "create table `%s`.`%s`(i INT, c1 CHAR(255), c2 VARCHAR(255), c3 TINYTEXT, c4 TEXT, c5 MEDIUMTEXT, c6 LONGTEXT)"
+  val tableTemplate = "test_%s_to_str"
 
   test("Test Convert from java.lang.Boolean to STRING") {
     // success
     // java.lang.Boolean -> STRING
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Boolean = true
@@ -67,18 +67,22 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readRow4 = Row(4, readA, readA, readA, readA, readA, readA)
         val readRow5 = Row(5, readB, readB, readB, readB, readB, readB)
 
-        dropTable()
-        createTable()
-
+        dropTable(table)
+        createTable(queryTemplate, table)
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Byte to STRING") {
     // success
     // java.lang.Byte -> STRING
+    val table = tableTemplate.format("byte")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Byte = java.lang.Byte.valueOf("11")
@@ -115,18 +119,23 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
         val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Short to STRING") {
     // success
     // java.lang.Short -> STRING
+    val table = tableTemplate.format("short")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Short = java.lang.Short.valueOf("11")
@@ -163,18 +172,23 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
         val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Integer to STRING") {
     // success
     // java.lang.Integer -> STRING
+    val table = tableTemplate.format("int")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Integer = java.lang.Integer.valueOf("11")
@@ -211,18 +225,23 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
         val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Long to STRING") {
     // success
     // java.lang.Long -> STRING
+    val table = tableTemplate.format("long")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Long = java.lang.Long.valueOf("11")
@@ -259,12 +278,15 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
         val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
 
-        dropTable()
-        createTable()
-
+        dropTable(table)
+        createTable(queryTemplate, table)
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
@@ -273,6 +295,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   ignore("Test Convert from java.lang.Float to STRING") {
     // success
     // java.lang.Float -> STRING
+    val table = tableTemplate.format("float")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Float = java.lang.Float.valueOf("1.1")
@@ -309,16 +332,17 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
         val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
         // TODO: TiSpark transforms FLOAT to Double, which will cause precision problem,
         //  so we just set skipTiDBAndExpectedAnswerCheck = true
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
           readSchema,
+          table,
           skipTiDBAndExpectedAnswerCheck = true
         )
     }
@@ -328,6 +352,7 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   ignore("Test Convert from java.lang.Double to STRING") {
     // success
     // java.lang.Double -> STRING
+    val table = tableTemplate.format("double")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Double = java.lang.Double.valueOf("1.1")
@@ -353,18 +378,19 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from String to STRING") {
     // success
     // java.lang.String -> STRING
+    val table = tableTemplate.format("str")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.String = new java.lang.String("1.1")
@@ -390,18 +416,19 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from java.math.BigDecimal to STRING") {
     // failure
     // java.math.BigDecimal -> STRING
+    val table = tableTemplate.format("bigdecimal")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.math.BigDecimal = java.math.BigDecimal.ONE
@@ -438,18 +465,23 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
         val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.sql.Date to STRING") {
     // failure
     // java.sql.Date -> STRING
+    val table = tableTemplate.format("date")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.sql.Date = java.sql.Date.valueOf("2019-01-01")
@@ -486,18 +518,23 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
         val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.sql.Timestamp to STRING") {
     // success
     // java.sql.Timestamp -> STRING
+    val table = tableTemplate.format("ts")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.sql.Timestamp = java.sql.Timestamp.valueOf("2019-01-01 01:01:01")
@@ -534,12 +571,16 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
         val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
         val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
@@ -548,11 +589,4 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   // scala.collection.Seq
   // scala.collection.Map
   // org.apache.spark.sql.Row
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

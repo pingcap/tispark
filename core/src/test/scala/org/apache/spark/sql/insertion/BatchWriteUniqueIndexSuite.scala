@@ -9,7 +9,7 @@ import org.apache.spark.sql.test.generator.Schema
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
 class BatchWriteUniqueIndexSuite
-    extends BaseDataSourceTest("batch_write_insertion_one_unique_index", "batch_write_test_index")
+    extends BaseDataSourceTest("batch_write_test_index")
     with EnumerateUniqueIndexDataTypeTestAction {
   // TODO: support binary insertion.
   override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: charCharset
@@ -56,7 +56,8 @@ class BatchWriteUniqueIndexSuite
   }
 
   test("test unique indices cases") {
-    val schemas = genSchema(dataTypes, table)
+    val tablePrefx = "unique_indices_batch_write_insertion"
+    val schemas = genSchema(dataTypes, tablePrefx)
 
     schemas.foreach { schema =>
       dropAndCreateTbl(schema)
@@ -69,11 +70,4 @@ class BatchWriteUniqueIndexSuite
 
   // this is only for mute the warning
   override def test(): Unit = {}
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

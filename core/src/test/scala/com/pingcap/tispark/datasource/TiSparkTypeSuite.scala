@@ -3,7 +3,7 @@ package com.pingcap.tispark.datasource
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 
-class TiSparkTypeSuite extends BaseDataSourceTest("type_test") {
+class TiSparkTypeSuite extends BaseDataSourceTest {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2L, "TiDB")
   private val row3 = Row(3L, "Spark")
@@ -16,13 +16,15 @@ class TiSparkTypeSuite extends BaseDataSourceTest("type_test") {
     )
   )
   test("bigint test") {
-    dropTable()
-    jdbcUpdate(s"create table $dbtable(i bigint, s varchar(128))")
+    val table = "big_int_test"
+    dropTable(table)
+    createTable(s"create table `%s`.`%s`(i bigint, s varchar(128))", table)
     jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
+      "insert into `%s`.`%s` values(null, 'Hello'), (2, 'TiDB')",
+      table
     )
 
-    tidbWrite(List(row3, row5), schema)
-    testTiDBSelect(List(row1, row2, row3, row5))
+    tidbWriteWithTable(List(row3, row5), schema, table)
+    testTiDBSelectWithTable(List(row1, row2, row3, row5), tableName = table)
   }
 }

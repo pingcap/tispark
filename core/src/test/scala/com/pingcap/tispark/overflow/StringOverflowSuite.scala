@@ -13,25 +13,27 @@ import org.apache.spark.sql.types.{StructField, _}
  * 5. MEDIUMTEXT
  * 6. LONGTEXT
  */
-class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_overflow") {
+class StringOverflowSuite extends BaseDataSourceTest {
 
   test("Test CHAR Overflow") {
-    testCharOverflow(false)
+    testCharOverflow(testKey = false, "char_overflow")
   }
 
   test("Test CHAR as key Overflow") {
-    testCharOverflow(true)
+    testCharOverflow(testKey = true, "key_char_overflow")
   }
 
-  private def testCharOverflow(testKey: Boolean): Unit = {
-    dropTable()
+  private def testCharOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 CHAR(8) primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 CHAR(8) primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 CHAR(8))"
+      createTable(
+        "create table `%s`.`%s`(c1 CHAR(8))",
+        table
       )
     }
 
@@ -49,6 +51,7 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -57,22 +60,24 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test VARCHAR Overflow") {
-    testVarcharOverflow(false)
+    testVarcharOverflow(testKey = false, "varchar_overflow")
   }
 
   test("Test VARCHAR as key Overflow") {
-    testVarcharOverflow(true)
+    testVarcharOverflow(testKey = true, "key_varchar_overflow")
   }
 
-  private def testVarcharOverflow(testKey: Boolean): Unit = {
-    dropTable()
+  private def testVarcharOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 VARCHAR(8) primary key)"
+      createTable(
+        "create table `%s`.`%s`(c1 VARCHAR(8) primary key)",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 VARCHAR(8))"
+      createTable(
+        "create table `%s`.`%s`(c1 VARCHAR(8))",
+        table
       )
     }
 
@@ -90,6 +95,7 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -98,22 +104,24 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test TINYTEXT Overflow") {
-    testTinyTextOverflow(false)
+    testTinyTextOverflow(testKey = false, "tiny_text_overflow")
   }
 
   test("Test TINYTEXT as key Overflow") {
-    testTinyTextOverflow(true)
+    testTinyTextOverflow(testKey = true, "key_tiny_text_overflow")
   }
 
-  private def testTinyTextOverflow(testKey: Boolean): Unit = {
-    dropTable()
+  private def testTinyTextOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYTEXT, primary key (c1(4)))"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYTEXT, primary key (c1(4)))",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TINYTEXT)"
+      createTable(
+        "create table `%s`.`%s`(c1 TINYTEXT)",
+        table
       )
     }
 
@@ -136,6 +144,7 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -144,22 +153,24 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test TEXT Overflow") {
-    testTextOverflow(false)
+    testTextOverflow(testKey = false, "text_overflow")
   }
 
   test("Test TEXT as key Overflow") {
-    testTextOverflow(true)
+    testTextOverflow(testKey = true, "key_text_overflow")
   }
 
-  private def testTextOverflow(testKey: Boolean): Unit = {
-    dropTable()
+  private def testTextOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TEXT(8), primary key (c1(4)))"
+      createTable(
+        "create table `%s`.`%s`(c1 TEXT(8), primary key (c1(4)))",
+        table
       )
     } else {
-      jdbcUpdate(
-        s"create table $dbtable(c1 TEXT(8))"
+      createTable(
+        "create table `%s`.`%s`(c1 TEXT(8))",
+        table
       )
     }
 
@@ -177,17 +188,11 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

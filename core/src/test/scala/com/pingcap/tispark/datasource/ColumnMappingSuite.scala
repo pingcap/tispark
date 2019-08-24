@@ -5,9 +5,9 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
 import scala.collection.mutable.ArrayBuffer
 
-class ColumnMappingSuite
-    extends BaseDataSourceTest("test_datasource_insert_with_different_column_order") {
+class ColumnMappingSuite extends BaseDataSourceTest {
 
+  val table = "test_datasource_insert_with_different_column_order"
   private val schema = StructType(
     List(
       StructField("i", IntegerType),
@@ -39,9 +39,10 @@ class ColumnMappingSuite
   }
 
   test("Test different column order with full schema") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(i int primary key auto_increment, s varchar(128), c varchar(128))"
+    dropTable(table)
+    createTable(
+      s"create table `%s`.`%s`(i int primary key auto_increment, s varchar(128), c varchar(128))",
+      table
     )
 
     var posMap = List(1, 2, 0)
@@ -55,8 +56,8 @@ class ColumnMappingSuite
         schema.toList(posMap(2))
       )
     )
-    tidbWrite(data._2, writeSchema)
-    testTiDBSelect(ans)
+    tidbWriteWithTable(data._2, writeSchema, table)
+    testTiDBSelectWithTable(ans, tableName = table)
 
     posMap = List(0, 2, 1)
     data = generateData(10, 10, posMap)
@@ -68,8 +69,8 @@ class ColumnMappingSuite
         schema.toList(posMap(2))
       )
     )
-    tidbWrite(data._2, writeSchema)
-    testTiDBSelect(ans)
+    tidbWriteWithTable(data._2, writeSchema, table)
+    testTiDBSelectWithTable(ans, tableName = table)
 
     posMap = List(1, 2, 0)
     data = generateData(20, 10, posMap)
@@ -81,8 +82,8 @@ class ColumnMappingSuite
         schema.toList(posMap(2))
       )
     )
-    tidbWrite(data._2, writeSchema)
-    testTiDBSelect(ans)
+    tidbWriteWithTable(data._2, writeSchema, table)
+    testTiDBSelectWithTable(ans, tableName = table)
 
     posMap = List(2, 1, 0)
     data = generateData(30, 10, posMap)
@@ -94,20 +95,21 @@ class ColumnMappingSuite
         schema.toList(posMap(2))
       )
     )
-    tidbWrite(data._2, writeSchema)
-    testTiDBSelect(ans)
+    tidbWriteWithTable(data._2, writeSchema, table)
+    testTiDBSelectWithTable(ans, tableName = table)
   }
 
   test("Test different column order without auto increment column") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(i int primary key auto_increment, s varchar(128), c varchar(128))"
+    dropTable(table)
+    createTable(
+      s"create table `%s`.`%s`(i int primary key auto_increment, s varchar(128), c varchar(128))",
+      table
     )
 
     // insert 2 rows
     //val (ref, insert) = generateData(1,10, List(2,0,1))
     var posMap = List(1, 0)
-    var data = generateData(0, 10, posMap, true)
+    var data = generateData(0, 10, posMap, skipFirstCol = true)
     var ans = data._1
 
     var writeSchema = StructType(
@@ -116,11 +118,11 @@ class ColumnMappingSuite
         schema.toList(posMap(1) + 1)
       )
     )
-    tidbWrite(data._2, writeSchema)
-    testTiDBSelect(ans)
+    tidbWriteWithTable(data._2, writeSchema, table)
+    testTiDBSelectWithTable(ans, tableName = table)
 
     posMap = List(0, 1)
-    data = generateData(10, 10, posMap, true)
+    data = generateData(10, 10, posMap, skipFirstCol = true)
     ans = ans ::: data._1
     writeSchema = StructType(
       List(
@@ -128,13 +130,13 @@ class ColumnMappingSuite
         schema.toList(posMap(1) + 1)
       )
     )
-    tidbWrite(data._2, writeSchema)
-    testTiDBSelect(ans)
+    tidbWriteWithTable(data._2, writeSchema, table)
+    testTiDBSelectWithTable(ans, tableName = table)
   }
 
   override def afterAll(): Unit =
     try {
-      dropTable()
+      dropTable(table)
     } finally {
       super.afterAll()
     }

@@ -13,7 +13,7 @@ import org.apache.spark.sql.types._
  * 5. BIGINT SINGED
  * 6. BOOLEAN
  */
-class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed") {
+class ToSignedSuite extends BaseDataSourceTest {
 
   private val readSchema = StructType(
     List(
@@ -27,14 +27,14 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
     )
   )
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"create table $dbtable(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT, c6 BOOLEAN)"
-    )
+  val queryTemplate =
+    "create table `%s`.`%s`(i INT, c1 TINYINT, c2 SMALLINT, c3 MEDIUMINT, c4 INT, c5 BIGINT, c6 BOOLEAN)"
+  val tableTemplate = "test_%s_to_signed"
 
   test("Test Convert from java.lang.Boolean to SINGED") {
     // success
     // java.lang.Boolean -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null, null, null, null, null)
@@ -63,14 +63,15 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         val readRow5 = Row(5, 1L, 0L, 0L, null, 1L, 0L)
         val readRow6 = Row(6, 1L, 0L, 1L, 0L, null, null)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
-          readSchema
+          readSchema,
+          table
         )
     }
   }
@@ -78,6 +79,7 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   test("Test Convert from java.lang.Byte to SIGNED") {
     // success
     // java.lang.Byte -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
+    val table = tableTemplate.format("byte")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val zero: java.lang.Byte = java.lang.Byte.valueOf("0")
@@ -106,18 +108,19 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Short to SIGNED") {
     // success
     // java.lang.Short -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
+    val table = tableTemplate.format("short")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Short = java.lang.Short.valueOf("1")
@@ -149,18 +152,19 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Integer to SIGNED") {
     // success
     // java.lang.Integer -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
+    val table = tableTemplate.format("int")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Integer = java.lang.Integer.valueOf("1")
@@ -194,18 +198,19 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Long to SIGNED") {
     // success
     // java.lang.Long -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
+    val table = tableTemplate.format("long")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Long = java.lang.Long.valueOf("1")
@@ -241,18 +246,19 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Float to SIGNED") {
     // success
     // java.lang.Float -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
+    val table = tableTemplate.format("float")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Float = java.lang.Float.valueOf("1")
@@ -289,18 +295,19 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Double to SIGNED") {
     // success
     // java.lang.Double -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
+    val table = tableTemplate.format("double")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Double = java.lang.Double.valueOf("1")
@@ -334,18 +341,19 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from String to SIGNED") {
     // success
     // String -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
+    val table = tableTemplate.format("str")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.String = "11"
@@ -396,14 +404,15 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         val readRow5 = Row(5, bRead, bRead, bRead, aRead, aRead, 0L)
         val readRow6 = Row(6, bRead, bRead, null, aRead, null, null)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
-          readSchema
+          readSchema,
+          table
         )
     }
   }
@@ -416,11 +425,4 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   // scala.collection.Seq
   // scala.collection.Map
   // org.apache.spark.sql.Row
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

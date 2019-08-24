@@ -10,7 +10,6 @@ import org.apache.spark.sql.test.generator.TestDataGenerator._
 
 class BatchWritePKAndUniqueIndexSuite
     extends BaseDataSourceTest(
-      "batch_write_insertion_pk_and_one_unique_index",
       "batch_write_test_index"
     )
     with EnumerateUniqueIndexDataTypeTestAction {
@@ -59,7 +58,8 @@ class BatchWritePKAndUniqueIndexSuite
   }
 
   test("test pk and unique indices cases") {
-    val schemas = genSchema(dataTypes, table)
+    val tablePrefix = "pk_and_unique_indices"
+    val schemas = genSchema(dataTypes, tablePrefix)
 
     schemas.foreach { schema =>
       dropAndCreateTbl(schema)
@@ -72,11 +72,4 @@ class BatchWritePKAndUniqueIndexSuite
 
   // this is only for mute the warning
   override def test(): Unit = {}
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

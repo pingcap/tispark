@@ -8,7 +8,7 @@ import org.apache.spark.sql.types.{StructField, _}
  * ENUM type include:
  * 1. ENUM
  */
-class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
+class ToEnumSuite extends BaseDataSourceTest {
 
   private val readOne: java.lang.String = java.lang.String.valueOf("male")
   private val readTwo: java.lang.String = java.lang.String.valueOf("female")
@@ -35,19 +35,22 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
     )
   )
 
-  private def createTable(): Unit =
-    jdbcUpdate(s"""create table $dbtable(i INT,
-                  |c1 ENUM('male', 'female', 'both', 'unknown'),
-                  |c2 ENUM('male', 'female', 'both', 'unknown'),
-                  |c3 ENUM('male', 'female', 'both', 'unknown'),
-                  |c4 ENUM('male', 'female', 'both', 'unknown'),
-                  |c5 ENUM('male', 'female', 'both', 'unknown'),
-                  |c6 ENUM('male', 'female', 'both', 'unknown')
-                  |)""".stripMargin)
+  val queryTemplate =
+    s"""create table `%s`.`%s`(i INT,
+       |c1 ENUM('male', 'female', 'both', 'unknown'),
+       |c2 ENUM('male', 'female', 'both', 'unknown'),
+       |c3 ENUM('male', 'female', 'both', 'unknown'),
+       |c4 ENUM('male', 'female', 'both', 'unknown'),
+       |c5 ENUM('male', 'female', 'both', 'unknown'),
+       |c6 ENUM('male', 'female', 'both', 'unknown')
+       |)""".stripMargin
+
+  val tableTemplate = "test_%s_to_enum"
 
   test("Test Convert from java.lang.Boolean to ENUM") {
     // success
     // java.lang.Boolean -> ENUM
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null, null, null, null, null)
@@ -74,18 +77,23 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
         val readRow4 = Row(4, "male", "male", "male", "male", "male", "male")
         val readRow5 = Row(5, "male", "male", "male", "male", "male", "male")
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Byte to ENUM") {
     // success
     // java.lang.Byte -> ENUM
+    val table = tableTemplate.format("byte")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Byte = java.lang.Byte.valueOf("1")
@@ -113,18 +121,23 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Short to ENUM") {
     // success
     // java.lang.Short -> ENUM
+    val table = tableTemplate.format("short")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Short = java.lang.Short.valueOf("1")
@@ -152,18 +165,23 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Integer to ENUM") {
     // success
     // java.lang.Integer -> ENUM
+    val table = tableTemplate.format("int")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Integer = java.lang.Integer.valueOf("1")
@@ -191,18 +209,23 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Long to ENUM") {
     // success
     // java.lang.Long -> ENUM
+    val table = tableTemplate.format("long")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Long = java.lang.Long.valueOf("1")
@@ -230,18 +253,23 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Float to ENUM") {
     // success
     // java.lang.Float -> ENUM
+    val table = tableTemplate.format("float")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Float = new java.lang.Float("1")
@@ -269,18 +297,23 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Double to ENUM") {
     // success
     // java.lang.Double -> ENUM
+    val table = tableTemplate.format("double")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.Double = new java.lang.Double("1")
@@ -308,18 +341,23 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from String to ENUM") {
     // success
     // java.lang.String -> ENUM
+    val table = tableTemplate.format("str")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val one: java.lang.String = new java.lang.String("1")
@@ -347,12 +385,16 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
@@ -364,11 +406,4 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   // scala.collection.Seq
   // scala.collection.Map
   // org.apache.spark.sql.Row
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

@@ -5,7 +5,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
+class BasicDataSourceSuite extends BaseDataSourceTest {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -18,21 +18,25 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
     )
   )
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-
-    dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
-    jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
-    )
-  }
-
   test("Test Select") {
-    testTiDBSelect(Seq(row1, row2))
+    val table = "test_select"
+    dropTable(table)
+    createTable("create table `%s`.`%s`(i int, s varchar(128))", table)
+    jdbcUpdate(
+      "insert into `%s`.`%s` values(null, 'Hello'), (2, 'TiDB')",
+      table
+    )
+    testTiDBSelectWithTable(Seq(row1, row2), tableName = table)
   }
 
   test("Test Write Append") {
+    val table = "test_append"
+    dropTable(table)
+    createTable("create table `%s`.`%s`(i int, s varchar(128))", table)
+    jdbcUpdate(
+      "insert into `%s`.`%s` values(null, 'Hello'), (2, 'TiDB')",
+      table
+    )
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
 
@@ -44,13 +48,19 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
       .mode("append")
       .save()
 
-    testTiDBSelect(Seq(row1, row2, row3, row4))
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), tableName = table)
   }
 
   test("Test Write Overwrite") {
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
-
+    val table = "test_write_overwrite"
+    dropTable(table)
+    createTable("create table `%s`.`%s`(i int, s varchar(128))", table)
+    jdbcUpdate(
+      "insert into `%s`.`%s` values(null, 'Hello'), (2, 'TiDB')",
+      table
+    )
     val caught = intercept[TiBatchWriteException] {
       df.write
         .format("tidb")
@@ -67,10 +77,4 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
     )
   }
 
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

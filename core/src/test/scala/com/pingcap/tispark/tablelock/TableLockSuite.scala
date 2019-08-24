@@ -4,18 +4,11 @@ import com.pingcap.tikv.TiDBJDBCClient
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 
-class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
+class TableLockSuite extends BaseDataSourceTest {
 
   private var tiDBJDBCClient: TiDBJDBCClient = _
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"create table $dbtable(i INT)"
-    )
-
-  override protected def dropTable(): Unit = {
-    tiDBJDBCClient.dropTable(database, table)
-  }
+  val queryTemplate = "create table `%s`.`%s`(i INT)"
 
   test("Test TiDBJDBCClient Close") {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
@@ -29,11 +22,12 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
       cancel
     }
 
+    val table = "lock_and_unlock_tbl"
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     tiDBJDBCClient = new TiDBJDBCClient(conn)
-    dropTable()
-    createTable()
+    dropTable(table)
+    createTable(queryTemplate, table)
 
     // lock table
     assert(tiDBJDBCClient.lockTableWriteLocal(database, table))
@@ -42,7 +36,7 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
     assert(tiDBJDBCClient.unlockTables())
 
     // drop table
-    dropTable()
+    dropTable(table)
 
     // close
     tiDBJDBCClient.close()
@@ -54,11 +48,12 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
       cancel
     }
 
+    val table = "lock_tbl_write_conflict"
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     tiDBJDBCClient = new TiDBJDBCClient(conn)
-    dropTable()
-    createTable()
+    dropTable(table)
+    createTable(queryTemplate, table)
 
     // lock table
     assert(tiDBJDBCClient.lockTableWriteLocal(database, table))
@@ -66,7 +61,7 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
     // fail write in another jdbc session
     val caught = intercept[java.sql.SQLException] {
       tidbStmt.execute(
-        s"insert into $dbtable values(1),(2),(3),(4),(null)"
+        s"insert into `%s`.`%s` values(1),(2),(3),(4),(null)"
       )
     }
     assert(
@@ -78,11 +73,11 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
 
     // insert data
     tidbStmt.execute(
-      s"insert into $dbtable values(1),(2),(3),(4),(null)"
+      s"insert into `%s`.`%s` values(1),(2),(3),(4),(null)"
     )
 
     // drop table
-    dropTable()
+    dropTable(table)
 
     // close
     tiDBJDBCClient.close()
@@ -94,23 +89,24 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
       cancel
     }
 
+    val table = "lock_tbl_parallel_read"
     // init
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     tiDBJDBCClient = new TiDBJDBCClient(conn)
-    dropTable()
-    createTable()
+    dropTable(table)
+    createTable(queryTemplate, table)
 
     // lock table
     assert(tiDBJDBCClient.lockTableWriteLocal(database, table))
 
     // read data
-    tidbStmt.executeQuery(s"select * from $dbtable")
+    tidbStmt.executeQuery(s"select * from `%s`.`%s`")
 
     // unlock tables
     assert(tiDBJDBCClient.unlockTables())
 
     // drop table
-    dropTable()
+    dropTable(table)
 
     // close
     tiDBJDBCClient.close()
@@ -124,20 +120,6 @@ class TableLockSuite extends BaseDataSourceTest("test_table_lock") {
       }
     } catch {
       case _: Throwable =>
-    }
-
-    try {
-      if (!tiDBJDBCClient.isClosed) {
-        dropTable()
-      }
-    } catch {
-      case _: Throwable =>
-    }
-
-    try {
-      super.dropTable()
-    } finally {
-      super.afterAll()
     }
   }
 }

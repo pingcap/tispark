@@ -1,8 +1,5 @@
 package com.pingcap.tispark.convert
 
-import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -15,7 +12,8 @@ import org.apache.spark.sql.types._
  * 4. INT UNSIGNED
  * 5. BIGINT UNSIGNED
  */
-class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsigned") {
+class ToUnsignedSuite extends BaseDataSourceTest {
+  private val tableTemplate = "test_%s_to_unsigned"
   private val readSchema = StructType(
     List(
       StructField("i", IntegerType),
@@ -27,19 +25,17 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
     )
   )
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"""create table $dbtable(i INT,
-         | c1 TINYINT UNSIGNED,
-         | c2 SMALLINT UNSIGNED,
-         | c3 MEDIUMINT UNSIGNED,
-         | c4 INT UNSIGNED,
-         | c5 BIGINT UNSIGNED)""".stripMargin
-    )
+  val queryTemplate: String = s"""create table `%s`.`%s`(i INT,
+                                 | c1 TINYINT UNSIGNED,
+                                 | c2 SMALLINT UNSIGNED,
+                                 | c3 MEDIUMINT UNSIGNED,
+                                 | c4 INT UNSIGNED,
+                                 | c5 BIGINT UNSIGNED)""".stripMargin
 
   test("Test Convert from java.lang.Boolean to UNSIGNED") {
     // success
     // java.lang.Boolean -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val row1 = Row(1, null, null, null, null, null)
@@ -67,14 +63,15 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
         val readRow5 = Row(5, 1L, 0L, 0L, null, 1L)
         val readRow6 = Row(6, 1L, 0L, 1L, 0L, null)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
-          readSchema
+          readSchema,
+          table
         )
     }
   }
@@ -82,6 +79,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   test("Test Convert from java.lang.Byte to UNSIGNED") {
     // success
     // java.lang.Byte -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
+    val table = tableTemplate.format("byte")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Byte = java.lang.Byte.valueOf("11")
@@ -107,18 +105,20 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Short to UNSIGNED") {
     // success
     // java.lang.Short -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
+
+    val table = tableTemplate.format("short")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Short = java.lang.Short.valueOf("11")
@@ -146,18 +146,19 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Integer to UNSIGNED") {
     // success
     // java.lang.Integer -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
+    val table = tableTemplate.format("int")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Integer = java.lang.Integer.valueOf("11")
@@ -186,18 +187,19 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Long to UNSIGNED") {
     // success
     // java.lang.Long -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
+    val table = tableTemplate.format("long")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Long = java.lang.Long.valueOf("11")
@@ -227,18 +229,18 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
           )
         )
 
-        dropTable()
-        createTable()
-
+        dropTable(table)
+        createTable(queryTemplate, table)
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Float to UNSIGNED") {
     // success
     // java.lang.Float -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
+    val table = tableTemplate.format("float")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Float = java.lang.Float.valueOf("11.1")
@@ -283,14 +285,15 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
         val readRow5 = Row(5, readB, readB, readB, readA, readA)
         val readRow6 = Row(6, readB, readB, null, readA, null)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
-          readSchema
+          readSchema,
+          table
         )
     }
   }
@@ -298,6 +301,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   test("Test Convert from java.lang.Double to UNSIGNED") {
     // success
     // java.lang.Double -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
+    val table = tableTemplate.format("double")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Double = java.lang.Double.valueOf("11.1")
@@ -341,14 +345,15 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
         val readRow5 = Row(5, readB, readB, readB, readA, readA)
         val readRow6 = Row(6, readB, readB, null, readA, null)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
-          readSchema
+          readSchema,
+          table
         )
     }
   }
@@ -356,6 +361,7 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   test("Test Convert from String to UNSIGNED") {
     // success
     // String -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} UNSIGNED
+    val table = tableTemplate.format("str")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: String = "11"
@@ -399,14 +405,15 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
         val readRow5 = Row(5, readB, readB, readB, readA, readA)
         val readRow6 = Row(6, readB, readB, null, readA, null)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5, row6), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
-          readSchema
+          readSchema,
+          table
         )
     }
   }
@@ -419,11 +426,4 @@ class ToUnsignedSuite extends BaseDataSourceTest("test_data_type_convert_to_unsi
   // scala.collection.Seq
   // scala.collection.Map
   // org.apache.spark.sql.Row
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

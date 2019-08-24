@@ -8,7 +8,7 @@ import org.apache.spark.sql.types.{StructField, _}
  * DECIMAL type include:
  * 1. DECIMAL
  */
-class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decimal") {
+class ToDecimalSuite extends BaseDataSourceTest {
 
   private val readSchema = StructType(
     List(
@@ -22,20 +22,21 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
     )
   )
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"""create table $dbtable(i INT,
-         |c1 DECIMAL(38, 1),
-         |c2 DECIMAL(38, 2),
-         |c3 DECIMAL(38, 3),
-         |c4 DECIMAL(38, 4),
-         |c5 DECIMAL(38, 5),
-         |c6 DECIMAL(38, 6))""".stripMargin
-    )
+  val queryTemplate: String =
+    """create table `%s`.`%s`(i INT,
+      |c1 DECIMAL(38, 1),
+      |c2 DECIMAL(38, 2),
+      |c3 DECIMAL(38, 3),
+      |c4 DECIMAL(38, 4),
+      |c5 DECIMAL(38, 5),
+      |c6 DECIMAL(38, 6))""".stripMargin
+
+  val tableTemplate: String = "test_%s_to_decimal"
 
   test("Test Convert from java.lang.Boolean to DECIMAL") {
     // success
     // java.lang.Boolean -> DECIMAL
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Boolean = true
@@ -78,18 +79,23 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
         val readRow4 = Row(4, readA1, readA2, readA3, readA4, readA5, readA6)
         val readRow5 = Row(5, readB1, readB2, readB3, readB4, readB5, readB6)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Byte to DECIMAL") {
     // success
     // java.lang.Byte -> DECIMAL
+    val table = tableTemplate.format("byte")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Byte = java.lang.Byte.valueOf("11")
@@ -115,18 +121,19 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Short to DECIMAL") {
     // success
     // java.lang.Short -> DECIMAL
+    val table = tableTemplate.format("short")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Short = java.lang.Short.valueOf("11")
@@ -152,18 +159,19 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Integer to DECIMAL") {
     // success
     // java.lang.Integer -> DECIMAL
+    val table = tableTemplate.format("int")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Integer = java.lang.Integer.valueOf("11")
@@ -189,18 +197,19 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Long to DECIMAL") {
     // success
     // java.lang.Long -> DECIMAL
+    val table = tableTemplate.format("long")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Long = java.lang.Long.valueOf("11")
@@ -226,18 +235,19 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Float to DECIMAL") {
     // success
     // java.lang.Float -> DECIMAL
+    val table = tableTemplate.format("float")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a1: java.lang.Float = 1.1f
@@ -272,18 +282,19 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
         val readRow1 = Row(1, null, null, null, null, null, null)
         val readRow2 = Row(2, readA1, readA2, readA3, readA4, readA5, readA6)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, table)
     }
   }
 
   test("Test Convert from java.lang.Double to DECIMAL") {
     // success
     // java.lang.Double -> DECIMAL
+    val table = tableTemplate.format("double")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a1: java.lang.Double = 1.1d
@@ -317,18 +328,19 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
 
         val readRow1 = Row(1, null, null, null, null, null, null)
         val readRow2 = Row(2, readA1, readA2, readA3, readA4, readA5, readA6)
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, table)
     }
   }
 
   test("Test Convert from String to DECIMAL") {
     // success
     // java.lang.String -> DECIMAL
+    val table = tableTemplate.format("str")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.String = new java.lang.String("1.1")
@@ -359,18 +371,19 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
         val readRow1 = Row(1, null, null, null, null, null, null)
         val readRow2 = Row(2, readA1, readB2, readA3, readB4, readA5, readB6)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema)
+        writeFunc(List(row1, row2), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2), readSchema, table)
     }
   }
 
   test("Test Convert from java.math.BigDecimal to DECIMAL") {
     // failure
     // java.math.BigDecimal -> DECIMAL
+    val table = tableTemplate.format("bigdecimal")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.math.BigDecimal = java.math.BigDecimal.ONE
@@ -396,12 +409,12 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
@@ -412,11 +425,4 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   // scala.collection.Seq
   // scala.collection.Map
   // org.apache.spark.sql.Row
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

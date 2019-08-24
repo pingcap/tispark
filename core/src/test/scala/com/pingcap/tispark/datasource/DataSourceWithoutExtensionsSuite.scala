@@ -5,8 +5,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class DataSourceWithoutExtensionsSuite
-    extends BaseDataSourceTest("test_datasource_without_extensions", "tispark_test", false) {
+class DataSourceWithoutExtensionsSuite extends BaseDataSourceTest("tispark_test", false) {
   private val row1 = Row(null, "Hello")
   private val row2 = Row(2, "TiDB")
   private val row3 = Row(3, "Spark")
@@ -23,19 +22,23 @@ class DataSourceWithoutExtensionsSuite
     super.beforeAll()
 
   test("Test Select without extensions") {
-    dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    val table = "test_datasource_without_extensions_select"
+    dropTable(table)
+    createTable("create table `%s`.`%s`(i int, s varchar(128))", table)
     jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
+      s"insert into `%s`.`%s` values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)",
+      table
     )
-    testTiDBSelect(Seq(row1, row2, row3, row4))
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), tableName = table)
   }
 
   test("Test Write Append without extensions") {
-    dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    val table = "test_datasource_without_extensions_append"
+    dropTable(table)
+    createTable(s"create table `%s`.`%s`(i int, s varchar(128))", table)
     jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB')"
+      s"insert into `%s`.`%s` values(null, 'Hello'), (2, 'TiDB')",
+      table
     )
 
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
@@ -49,12 +52,13 @@ class DataSourceWithoutExtensionsSuite
       .mode("append")
       .save()
 
-    testTiDBSelect(Seq(row1, row2, row3, row4))
+    testTiDBSelectWithTable(Seq(row1, row2, row3, row4), tableName = table)
   }
 
   test("Test Write Overwrite without extensions") {
-    dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    val table = "test_datasource_without_extensions_overwrite"
+    dropTable(table)
+    createTable(s"create table `%s`.`%s`(i int, s varchar(128))", table)
 
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
@@ -76,20 +80,15 @@ class DataSourceWithoutExtensionsSuite
   }
 
   test("Test Simple Comparisons without extensions") {
-    dropTable()
-    jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
+    val table = "test_datasource_without_extensions_simple_comparsions"
+    dropTable(table)
+    createTable(s"create table `%s`.`%s`(i int, s varchar(128))", table)
     jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)"
+      s"insert into `%s`.`%s` values(null, 'Hello'), (2, 'TiDB'), (3, 'Spark'), (4, null)",
+      table
     )
-    testTiDBSelectFilter("s = 'Hello'", Seq(row1))
-    testTiDBSelectFilter("i > 2", Seq(row3, row4))
-    testTiDBSelectFilter("i < 3", Seq(row2))
+    testTiDBSelectFilter(table, "s = 'Hello'", Seq(row1))
+    testTiDBSelectFilter(table, "i > 2", Seq(row3, row4))
+    testTiDBSelectFilter(table, "i < 3", Seq(row2))
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

@@ -4,21 +4,24 @@ import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_unsupported") {
+class CheckUnsupportedSuite extends BaseDataSourceTest {
 
   override def beforeAll(): Unit =
     super.beforeAll()
 
   test("Test write to partition table") {
-    dropTable()
+    val table = "check_unsupported_write_to_part_tbl"
+    dropTable(table)
 
     tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 
-    jdbcUpdate(
-      s"create table $dbtable(i int, s varchar(128)) partition by range(i) (partition p0 values less than maxvalue)"
+    createTable(
+      s"create table `%s`.`%s`(i int, s varchar(128)) partition by range(i) (partition p0 values less than maxvalue)",
+      table
     )
     jdbcUpdate(
-      s"insert into $dbtable values(null, 'Hello')"
+      s"insert into `%s`.`%s` values(null, 'Hello')",
+      table
     )
 
     val row1 = Row(null, "Hello")
@@ -34,7 +37,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
 
     {
       val caught = intercept[TiBatchWriteException] {
-        tidbWrite(List(row2, row3), schema)
+        tidbWriteWithTable(List(row2, row3), schema, table)
       }
       assert(
         caught.getMessage
@@ -42,13 +45,15 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     }
 
-    testTiDBSelect(Seq(row1))
+    testTiDBSelectWithTable(Seq(row1), tableName = table)
   }
 
   test("Check Virtual Generated Column") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2))"
+    val table = "check_unsupported_write_virtual_generated_col"
+    dropTable(table)
+    createTable(
+      s"create table `%s`.`%s`(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2))",
+      table
     )
 
     val row1 = Row(1, 2, 3)
@@ -61,7 +66,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
     )
 
     val caught = intercept[TiBatchWriteException] {
-      tidbWrite(List(row1), schema)
+      tidbWriteWithTable(List(row1), schema, table)
     }
     assert(
       caught.getMessage
@@ -71,9 +76,10 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
   }
 
   test("Check Stored Generated Column") {
-    dropTable()
-    jdbcUpdate(
-      s"create table $dbtable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2) STORED)"
+    val table = "check_unsupported_write_to_stored_generated_col"
+    createTable(
+      s"create table `%s`.`%s`(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2) STORED)",
+      table
     )
 
     val row1 = Row(1, 2, 3)
@@ -85,7 +91,7 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
       )
     )
     val caught = intercept[TiBatchWriteException] {
-      tidbWrite(List(row1), schema)
+      tidbWriteWithTable(List(row1), schema, table)
     }
     assert(
       caught.getMessage
@@ -93,11 +99,4 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
     )
 
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

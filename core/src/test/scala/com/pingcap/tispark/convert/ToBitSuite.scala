@@ -8,7 +8,7 @@ import org.apache.spark.sql.types.{StructField, _}
  * BIT type include:
  * 1. BIT
  */
-class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
+class ToBitSuite extends BaseDataSourceTest {
 
   private val readZero: java.lang.Long = 0L
   private val readOne: java.lang.Long = 1L
@@ -32,14 +32,13 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
     )
   )
 
-  private def createTable(): Unit =
-    jdbcUpdate(
-      s"create table $dbtable(i INT, c1 BIT(1), c2 BIT(8),  c3 BIT(64))"
-    )
+  val tableTemplate = "test_%s_to_bit"
+  val queryTemplate = "create table `%s`.`%s`(i INT, c1 BIT(1), c2 BIT(8),  c3 BIT(64))"
 
   test("Test Convert from java.lang.Boolean to BIT") {
     // success
     // java.lang.Boolean -> BIT
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val a: java.lang.Boolean = true
@@ -66,14 +65,15 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
         val readRow4 = Row(4, readOne, readOne, readOne)
         val readRow5 = Row(5, readZero, readZero, readZero)
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
         compareTiDBSelectWithJDBC(
           Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
-          readSchema
+          readSchema,
+          table
         )
     }
   }
@@ -81,6 +81,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   test("Test Convert from java.lang.Byte to BIT") {
     // success
     // java.lang.Byte -> BIT
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val zero: java.lang.Byte = java.lang.Byte.valueOf("0")
@@ -105,18 +106,19 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Short to BIT") {
     // success
     // java.lang.Short -> BIT
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val zero: java.lang.Short = java.lang.Short.valueOf("0")
@@ -141,18 +143,19 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Integer to BIT") {
     // success
     // java.lang.Integer -> BIT
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val zero: java.lang.Integer = java.lang.Integer.valueOf("0")
@@ -177,18 +180,19 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Long to BIT") {
     // success
     // java.lang.Long -> BIT
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val zero: java.lang.Long = java.lang.Long.valueOf("0")
@@ -213,18 +217,19 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema, table)
     }
   }
 
   test("Test Convert from java.lang.Float to BIT") {
     // success
     // java.lang.Float -> BIT
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val zero: java.lang.Float = 0f
@@ -249,18 +254,23 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
   test("Test Convert from java.lang.Double to BIT") {
     // success
     // java.lang.Double -> BIT
+    val table = tableTemplate.format("boolean")
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
         val zero: java.lang.Double = 0d
@@ -307,12 +317,16 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
           )
         )
 
-        dropTable()
-        createTable()
+        dropTable(table)
+        createTable(queryTemplate, table)
 
         // insert rows
-        writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
+        writeFunc(List(row1, row2, row3, row4, row5), schema, table, None)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
+          readSchema,
+          table
+        )
     }
   }
 
@@ -325,11 +339,4 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   // scala.collection.Seq
   // scala.collection.Map
   // org.apache.spark.sql.Row
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

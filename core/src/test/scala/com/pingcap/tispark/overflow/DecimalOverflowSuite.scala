@@ -8,11 +8,12 @@ import org.apache.spark.sql.types.{StructField, _}
  * DECIMAL type include:
  * 1. DECIMAL
  */
-class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_overflow") {
+class DecimalOverflowSuite extends BaseDataSourceTest {
 
   case class TestData(length: Int, precision: Int, writeData: Double, readData: Long) {}
 
   test("Test DECIMAL Not Overflow") {
+    val table = "decimal_not_overflow"
     val testDataList =
       TestData(38, 0, 1.5d, 2L) ::
         TestData(38, 0, 1.4d, 1L) ::
@@ -35,11 +36,12 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
 
     testDataList.foreach { testData =>
       compareTiDBWriteWithJDBC {
-        case (writeFunc, _) =>
-          dropTable()
+        case (writeFunc, fnName) =>
+          dropTable(table)
 
-          jdbcUpdate(
-            s"create table $dbtable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))"
+          createTable(
+            s"create table `%s`.`%s`(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))",
+            table
           )
 
           val row1 = Row(1, testData.writeData)
@@ -58,8 +60,8 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
             )
           )
 
-          writeFunc(List(row1), schema, None)
-          compareTiDBSelectWithJDBC(Seq(readRow1), readSchema)
+          writeFunc(List(row1), schema, table, None)
+          compareTiDBSelectWithJDBC(Seq(readRow1), readSchema, table)
       }
     }
   }
@@ -67,6 +69,7 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
   case class OverflowTestData(length: Int, precision: Int, writeData: Double) {}
 
   test("Test DECIMAL Overflow") {
+    val table = "test_decimal_overflow"
     val testDataList =
       OverflowTestData(10, 4, 1000000d) ::
         OverflowTestData(2, 0, 100d) ::
@@ -74,10 +77,11 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
         Nil
 
     testDataList.foreach { testData =>
-      dropTable()
+      dropTable(table)
 
-      jdbcUpdate(
-        s"create table $dbtable(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))"
+      createTable(
+        s"create table `%s`.`%s`(i INT, c1 DECIMAL(${testData.length}, ${testData.precision}))",
+        table
       )
 
       val row1 = Row(1, testData.writeData)
@@ -96,19 +100,12 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
       compareTiDBWriteFailureWithJDBC(
         List(row1),
         schema,
+        table,
         jdbcErrorClass,
         jdbcErrorMsg,
         tidbErrorClass,
         tidbErrorMsg
       )
-
     }
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }

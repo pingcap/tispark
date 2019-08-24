@@ -13,25 +13,25 @@ import org.apache.spark.sql.types._
  * 5. MEDIUMBLOB
  * 6. LONGBLOB
  */
-class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overflow") {
+class BytesOverflowSuite extends BaseDataSourceTest {
 
   test("Test BINARY Overflow") {
-    testBinaryOverflow(false)
+    testBinaryOverflow(testKey = false, "binary_overflow")
   }
 
   test("Test BINARY as key Overflow") {
-    testBinaryOverflow(true)
+    testBinaryOverflow(testKey = true, "key_binary_overflow")
   }
 
-  private def testBinaryOverflow(testKey: Boolean): Unit = {
-    dropTable()
+  private def testBinaryOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 BINARY(8), primary key (c1(4)))"
+        s"create table `$database`.`$table`(c1 BINARY(8), primary key (c1(4)))"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 BINARY(8))"
+        s"create table `$database`.`$table`(c1 BINARY(8))"
       )
     }
 
@@ -49,6 +49,7 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -57,22 +58,22 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
   }
 
   test("Test VARBINARY Overflow") {
-    testVarbinaryOverflow(false)
+    testVarbinaryOverflow(testKey = false, "var_overflow")
   }
 
   test("Test VARBINARY as key Overflow") {
-    testVarbinaryOverflow(true)
+    testVarbinaryOverflow(testKey = true, "key_var_overflow")
   }
 
-  private def testVarbinaryOverflow(testKey: Boolean): Unit = {
-    dropTable()
+  private def testVarbinaryOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 VARBINARY(8), primary key (c1(4)))"
+        s"create table `$database`.`$table`(c1 VARBINARY(8), primary key (c1(4)))"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 VARBINARY(8))"
+        s"create table `$database`.`$table`(c1 VARBINARY(8))"
       )
     }
 
@@ -90,6 +91,7 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
@@ -98,22 +100,22 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
   }
 
   test("Test TINYBLOB Overflow") {
-    testTinyBlobOverflow(false)
+    testTinyBlobOverflow(testKey = false, "tinyblob_overflow")
   }
 
   test("Test TINYBLOB as key Overflow") {
-    testTinyBlobOverflow(true)
+    testTinyBlobOverflow(testKey = true, "key_tingblob_overflow")
   }
 
-  private def testTinyBlobOverflow(testKey: Boolean): Unit = {
-    dropTable()
+  private def testTinyBlobOverflow(testKey: Boolean, table: String): Unit = {
+    dropTable(table)
     if (testKey) {
       jdbcUpdate(
-        s"create table $dbtable(c1 TINYBLOB, primary key (c1(4)))"
+        s"create table `$database`.`$table`(c1 TINYBLOB, primary key (c1(4)))"
       )
     } else {
       jdbcUpdate(
-        s"create table $dbtable(c1 TINYBLOB)"
+        s"create table `$database`.`$table`(c1 TINYBLOB)"
       )
     }
 
@@ -137,17 +139,11 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
     compareTiDBWriteFailureWithJDBC(
       List(row),
       schema,
+      table,
       jdbcErrorClass,
       jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
   }
-
-  override def afterAll(): Unit =
-    try {
-      dropTable()
-    } finally {
-      super.afterAll()
-    }
 }
