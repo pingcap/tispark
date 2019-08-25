@@ -18,7 +18,6 @@ package com.pingcap.tispark
 import java.util
 
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
@@ -66,7 +65,6 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private var tiConf: TiConfiguration = _
   @transient private var tiSession: TiSession = _
-  @transient private var catalog: Catalog = _
 
   private var tiTableRef: TiTableReference = _
   private var tiDBInfo: TiDBInfo = _
@@ -124,12 +122,10 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // initialize
     tiConf = tiContext.tiConf
-    TiSession.clearCache()
-    tiSession = TiSession.getInstance(tiConf)
+    tiSession = tiContext.tiSession
     tiTableRef = options.tiTableRef
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
     tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
-    catalog = TiSession.getInstance(tiConf).getCatalog
 
     if (tiTableInfo == null) {
       throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
