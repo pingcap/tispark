@@ -361,12 +361,15 @@ class DataTypeSuite extends BaseDataSourceTest("test") {
     // char pk
     val table = "char_pk_tbl"
     dropTable(table)
-    createTable(s"""
-                  |create table `%s`.`%s`(
-                  |i char(4) primary key,
-                  |c1 varchar(64)
-                  |)
-      """.stripMargin, table)
+    createTable(
+      s"""
+         |create table `%s`.`%s`(
+         |i char(4) primary key,
+         |c1 varchar(64)
+         |)
+      """.stripMargin,
+      table
+    )
     val schema = StructType(
       List(
         StructField("i", StringType),

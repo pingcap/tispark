@@ -18,8 +18,7 @@ package com.pingcap.tispark
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
-class     TiSession.clearCache()
-tiSession = TiSession.getInstance(tiConf)TiBatchWriteSuite extends BaseTiSparkTest {
+class TiBatchWriteSuite extends BaseTiSparkTest {
 
   private var database: String = _
 
