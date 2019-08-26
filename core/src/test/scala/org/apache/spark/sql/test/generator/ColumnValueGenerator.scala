@@ -245,8 +245,15 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
           randomValue(r)
         }.toList ++ specialBound
       }
+
+      val expectedGeneratedRandomValuesLen = if (generateUnique) {
+        generatedRandomValues.toSet.size
+      } else {
+        generatedRandomValues.size
+      }
+
       assert(
-        generatedRandomValues.toSet.size >= n,
+        expectedGeneratedRandomValuesLen >= n,
         s"Generate values size=$generatedRandomValues less than n=$n on datatype $dataType"
       )
       curPos = 0
