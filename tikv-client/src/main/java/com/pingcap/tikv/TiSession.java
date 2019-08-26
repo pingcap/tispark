@@ -61,7 +61,7 @@ public class TiSession implements AutoCloseable {
   // Since we create session as singleton now, configuration change will not
   // reflect change
   public static TiSession getInstance(TiConfiguration conf) {
-  	return getInstance(conf, false);
+    return getInstance(conf, false);
   }
 
   private TiSession(TiConfiguration conf) {
