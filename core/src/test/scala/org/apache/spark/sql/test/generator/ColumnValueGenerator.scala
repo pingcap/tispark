@@ -247,7 +247,7 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
       }
       assert(
         generatedRandomValues.toSet.size >= n,
-        s"Generate values size=$generatedRandomValues less than n=$n"
+        s"Generate values size=$generatedRandomValues less than n=$n on datatype $dataType"
       )
       curPos = 0
     }
