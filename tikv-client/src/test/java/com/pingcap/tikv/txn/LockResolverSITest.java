@@ -41,7 +41,6 @@ public class LockResolverSITest extends LockResolverTest {
   public void setUp() {
     TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:2379");
     conf.setIsolationLevel(IsolationLevel.SI);
-    TiSession.clearCache();
     try {
       session = TiSession.getInstance(conf);
       this.builder = session.getRegionStoreClientBuilder();
