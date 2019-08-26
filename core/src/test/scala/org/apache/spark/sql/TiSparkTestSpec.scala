@@ -25,7 +25,7 @@ trait TiSparkTestSpec extends SharedSQLContext {
   val database: String
   val testDesc: String
   // Randomizer for tests
-  lazy val r: Random = new Random(generateDataSeed)
+  lazy val r: Random = new Random(1566243556784L)
 
   def test(): Unit
 }

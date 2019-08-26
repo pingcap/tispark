@@ -236,7 +236,7 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
       generatedRandomValues = if (generateUnique) {
         assert(n <= rangeSize, "random generator cannot generate unique value less than available")
         val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
-        set += specialBound.map(TestDataGenerator.hash)
+        set ++= specialBound.map(TestDataGenerator.hash)
         (0L until n - specialBound.size).map { _ =>
           randomUniqueValue(r, set)
         }.toList ++ specialBound
@@ -246,7 +246,7 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
         }.toList ++ specialBound
       }
       assert(
-        generatedRandomValues.size >= n,
+        generatedRandomValues.toSet.size >= n,
         s"Generate values size=$generatedRandomValues less than n=$n"
       )
       curPos = 0
