@@ -1,6 +1,11 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.1.4] 2019-08-27
+### Fixes
+- Fix distinct without alias bug: disable pushdown aggregate with alias [#1055](https://github.com/pingcap/tispark/pull/1055)
+- Fix reflection bug: pass in different arguments for different version of same function [#1037](https://github.com/pingcap/tispark/pull/1037)
+
 ## [TiSpark 2.1.3] 2019-08-15
 ### Fixes
 - Fix cost model in table scan [#1023](https://github.com/pingcap/tispark/pull/1023)
