@@ -17,9 +17,9 @@ The latest stable version compatible with **Spark 2.1.0+** is **TiSpark 1.2.1**
 
 **When using TiSpark 1.2.1, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
-**When using TiSpark 2.1.2 with Spark 2.3.0+, please use version `2.1.2-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1.4 Spark 2.3.0+, please use version `2.1.4-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
-**When using TiSpark 2.1.2 with Spark 2.4.0+, please use version `2.1.2-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1.4 with Spark 2.4.0+, please use version `2.1.4-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
 You may also [build from sources](#how-to-build-from-sources) to try the new features on TiSpark master branch.
 
@@ -29,7 +29,7 @@ If you are using maven(recommended), add the following to your pom.xml:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-core</artifactId>
-      <version>2.1.2-spark_${spark.version}</version>
+      <version>2.1.4-spark_${spark.version}</version>
     </dependency>
 </dependencies>
 ```
@@ -55,8 +55,8 @@ Remember to add `-Dmaven.test.skip=true` to skip all the tests if you don't need
 
 | Spark Version | Stable TiSpark Version |
 | ------------- | ---------------------- |
-| Spark-2.4.x | TiSpark-2.1.2 |
-| Spark-2.3.x | TiSpark-2.1.2 |
+| Spark-2.4.x | TiSpark-2.1.4 |
+| Spark-2.3.x | TiSpark-2.1.4 |
 | Spark-2.2.x | TiSpark-1.2.1 |
 | Spark-2.1.x | TiSpark-1.2.1 |
 
