@@ -17,7 +17,7 @@ The latest stable version compatible with **Spark 2.1.0+** is **TiSpark 1.2.1**
 
 **When using TiSpark 1.2.1, please follow the [document for Spark 2.1](./docs/userguide_spark2.1.md)**
 
-**When using TiSpark 2.1.4th Spark 2.3.0+, please use version `2.1.4-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
+**When using TiSpark 2.1.4 Spark 2.3.0+, please use version `2.1.4-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
 **When using TiSpark 2.1.4 with Spark 2.4.0+, please use version `2.1.4-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md)**
 
