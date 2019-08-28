@@ -96,11 +96,13 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
             <version>${jackson.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>joda-time</groupId>
@@ -327,10 +329,6 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
                             <relocations>
-                                <relocation>
-                                    <pattern>com.fasterxml</pattern>
-                                    <shadedPattern>shade.com.fasterxml.jackson</shadedPattern>
-                                </relocation>
                                 <relocation>
                                     <pattern>io.grpc</pattern>
                                     <shadedPattern>shade.io.grpc</shadedPattern>
