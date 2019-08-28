@@ -24,6 +24,8 @@ import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.Collections;
 import org.apache.log4j.Logger;
 import org.junit.Before;
@@ -39,7 +41,6 @@ public class LockResolverRCTest extends LockResolverTest {
     conf.setIsolationLevel(IsolationLevel.RC);
     try {
       session = TiSession.getInstance(conf);
-      pdClient = session.getPDClient();
       this.builder = session.getRegionStoreClientBuilder();
       init = true;
     } catch (Exception e) {
@@ -54,6 +55,7 @@ public class LockResolverRCTest extends LockResolverTest {
       skipTest();
       return;
     }
+    session.getConf().setIsolationLevel(IsolationLevel.RC);
     putAlphabet();
     prepareAlphabetLocks();
 
@@ -66,31 +68,40 @@ public class LockResolverRCTest extends LockResolverTest {
       skipTest();
       return;
     }
-    TiTimestamp startTs = pdClient.getTimestamp(backOffer);
-    TiTimestamp endTs = pdClient.getTimestamp(backOffer);
+    TiTimestamp startTs = session.getTimestamp();
+    TiTimestamp endTs = session.getTimestamp();
 
+    // Put <a, a> into kv
     putKV("a", "a", startTs.getVersion(), endTs.getVersion());
 
-    startTs = pdClient.getTimestamp(backOffer);
-    endTs = pdClient.getTimestamp(backOffer);
+    startTs = session.getTimestamp();
+    endTs = session.getTimestamp();
 
-    lockKey("a", "aa", "a", "aa", false, startTs.getVersion(), endTs.getVersion());
+    // Prewrite <a, aa> as primary without committing it
+    assertTrue(lockKey("a", "aa", "a", "aa", false, startTs.getVersion(), endTs.getVersion()));
 
-    TiRegion tiRegion =
-        session.getRegionManager().getRegionByKey(ByteString.copyFromUtf8(String.valueOf('a')));
+    TiRegion tiRegion = session.getRegionManager().getRegionByKey(ByteString.copyFromUtf8("a"));
     RegionStoreClient client = builder.build(tiRegion);
-    ByteString v =
-        client.get(
-            backOffer,
-            ByteString.copyFromUtf8(String.valueOf('a')),
-            pdClient.getTimestamp(backOffer).getVersion());
-    assertEquals(v.toStringUtf8(), String.valueOf('a'));
+
+    {
+      BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+      // In RC mode, lock will not be read. <a, a> is retrieved.
+      ByteString v =
+          client.get(backOffer, ByteString.copyFromUtf8("a"), session.getTimestamp().getVersion());
+      assertEquals(v.toStringUtf8(), "a");
+    }
 
     try {
-      commit(
-          startTs.getVersion(),
-          endTs.getVersion(),
-          Collections.singletonList(ByteString.copyFromUtf8("a")));
+      // After committing <a, aa>, we can read it.
+      assertTrue(
+          commit(
+              Collections.singletonList(ByteString.copyFromUtf8("a")),
+              startTs.getVersion(),
+              endTs.getVersion()));
+      BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+      ByteString v =
+          client.get(backOffer, ByteString.copyFromUtf8("a"), session.getTimestamp().getVersion());
+      assertEquals(v.toStringUtf8(), "aa");
     } catch (KeyException e) {
       fail();
     }

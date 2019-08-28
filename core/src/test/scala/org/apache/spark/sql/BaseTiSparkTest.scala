@@ -124,6 +124,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
     try {
+      ti.meta.reloadAllMeta()
       tableNames = Seq.empty[String]
       for (dbName <- databases) {
         setCurrentDatabase(dbName)
@@ -210,7 +211,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
     runTest(str, skipped = skipped, skipJDBC = true, checkLimit = checkLimit)
 
-  private def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
+  protected def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
     compSqlResult(sql, queryViaTiSpark(sql), queryTiDBViaJDBC(sql), checkLimit)
 
   protected def checkSparkResult(sql: String,
@@ -394,29 +395,6 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       }
     }
   }
-
-  private def listToString(result: List[List[Any]]): String =
-    if (result == null) s"[len: null] = null"
-    else if (result.isEmpty) s"[len: 0] = Empty"
-    else s"[len: ${result.length}] = ${result.map(mapStringList).mkString(",")}"
-
-  private def mapStringList(result: List[Any]): String =
-    if (result == null) "null" else "List(" + result.map(mapString).mkString(",") + ")"
-
-  private def mapString(result: Any): String =
-    if (result == null) "null"
-    else
-      result match {
-        case _: Array[Byte] =>
-          var str = "["
-          for (s <- result.asInstanceOf[Array[Byte]]) {
-            str += " " + s.toString
-          }
-          str += " ]"
-          str
-        case _ =>
-          result.toString
-      }
 
   protected def explainTestAndCollect(sql: String): Unit = {
     val df = spark.sql(sql)

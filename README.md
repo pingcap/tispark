@@ -14,8 +14,8 @@ Read the [Quick Start](./docs/userguide.md).
 ## Getting TiSpark
 
 + Currently, TiSpark 2.1.1 is the stable version. It is compatible with Spark 2.3.0+ and Spark 2.4.0+.
-  - When using TiSpark 2.1.2 with Spark 2.3.0+, use version `2.1.2-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md).
-  - When using TiSpark 2.1.2 with Spark 2.4.0+, use version `2.1.2-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md).
+  - When using TiSpark 2.1.4 with Spark 2.3.0+, use version `2.1.4-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md).
+  - When using TiSpark 2.1.4 with Spark 2.4.0+, use version `2.1.4-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md).
 
 + TiSpark 1.2.1 is the latest stable version compatible with Spark 2.1.0+.
   - When using TiSpark 1.2.1, follow the [document for Spark 2.1](./docs/userguide_spark2.1.md).
@@ -29,7 +29,7 @@ If you are using maven (recommended), add the following code to your `pom.xml`:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-core</artifactId>
-      <version>2.1.2-spark_${spark.version}</version>
+      <version>2.1.4-spark_${spark.version}</version>
     </dependency>
 </dependencies>
 ```
@@ -66,8 +66,8 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 | Spark Version | Stable TiSpark Version |
 | ------------- | ---------------------- |
-| Spark-2.4.x | TiSpark-2.1.2 |
-| Spark-2.3.x | TiSpark-2.1.2 |
+| Spark-2.4.x | TiSpark-2.1.4 |
+| Spark-2.3.x | TiSpark-2.1.4 |
 | Spark-2.2.x | TiSpark-1.2.1 |
 | Spark-2.1.x | TiSpark-1.2.1 |
 
@@ -171,13 +171,13 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.grpc.timeout_in_sec` |  `10` | The gRPC timeout time in seconds |
 | `spark.tispark.meta.reload_period_in_sec` |  `60` | The reloading period of metastore in seconds |
 | `spark.tispark.plan.allow_agg_pushdown` |  `true` | If allow aggregation pushdown (in case of busy TiKV nodes) |
-| `spark.tispark.plan.allow_index_read` |  `true` | If allow index read (which might cause heavy pressure on TiKV) |
+| `spark.tispark.plan.allow_index_read` |  `true` |  If allow index read (which might cause heavy pressure on TiKV) |
 | `spark.tispark.index.scan_batch_size` |  `20000` | The number of row key in batch for the concurrent index scan |
 | `spark.tispark.index.scan_concurrency` |  `5` | The maximal number of threads for index scan that retrieves row keys (shared among tasks inside each JVM) |
 | `spark.tispark.table.scan_concurrency` |  `512` | The maximal number of threads for table scan (shared among tasks inside each JVM) |
-| `spark.tispark.request.command.priority` |  `Low` | The value options are `Low`, `Normal`, `High`. This setting impacts the resource to get in TiKV. `Low` is recommended because the OLTP workload is disturbed. |
+| `spark.tispark.request.command.priority` |  `Low` | The value options are `Low`, `Normal`, `High`. This setting impacts the resource to get in TiKV. `Low` is recommended because the OLTP workload is not disturbed. |
 | `spark.tispark.coprocess.streaming` |  `false` | Whether to use streaming for response fetching (experimental) |
-| `spark.tispark.plan.unsupported_pushdown_exprs` |  `""` | A comma-separated list of expressions. In case you have a very old version of TiKV, you might disable some of the expression push-down if they are not supported. |
+| `spark.tispark.plan.unsupported_pushdown_exprs` |  `""` | A comma-separated list of expressions. In case you have a very old version of TiKV, you might disable some of the expression push-down if they are not supported.  |
 | `spark.tispark.plan.downgrade.index_threshold` | `1000000000` | If the index scan ranges on one Region exceeds this limit in the original request, downgrade this Region's request to table scan rather than original planned index scan, by default the downgrade is turned off |
 | `spark.tispark.show_rowid` |  `false` | Whether to show the implicit row ID if the ID exists |
 | `spark.tispark.db_prefix` |  `""` | The string that indicates the extra database prefix for all databases in TiDB to distinguish them from Hive databases with the same name |
@@ -185,14 +185,16 @@ The configurations in the table below can be put together with `spark-defaults.c
 
 ## `Log4j` Configuration
 
-When you start `spark-shell` or `spark-sql` and run `show databases`, you might see the following warnings:
-
+When you start `spark-shell` or `spark-sql` and run query, you might see the following warnings:
 ```
-Failed to get database default, returning NoSuchObjectException
-Failed to get database global_temp, returning NoSuchObjectException
+Failed to get database ****, returning NoSuchObjectException
+Failed to get database ****, returning NoSuchObjectException
 ```
+where `****` is the name of database.
 
-These warnings occurs because Spark tries to load two nonexistent databases (`default` and `global_temp`) in its catalog. To mute these warnings, append the following text to `${SPARK_HOME}/conf/log4j.properties`.
+The warnings are benign and occurs because Spark cannot find `****` in its own catalog. You can just ignore these warnings.
+
+To mute them, append the following text to `${SPARK_HOME}/conf/log4j.properties`.
 
 ```
 # tispark disable "WARN ObjectStore:568 - Failed to get database"

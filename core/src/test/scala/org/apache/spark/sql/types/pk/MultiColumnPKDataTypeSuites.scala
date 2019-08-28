@@ -19,7 +19,7 @@ package org.apache.spark.sql.types.pk
 
 import org.apache.spark.sql.test.generator.DataType.{getTypeName, BIGINT, INT, ReflectedDataType}
 import org.apache.spark.sql.test.generator.TestDataGenerator._
-import org.apache.spark.sql.types.{MultiColumnDataTypeTest, RunMultiColumnDataTypeTestAction}
+import org.apache.spark.sql.types.{DataTypeTestDir, MultiColumnDataTypeTest, RunMultiColumnDataTypeTestAction}
 
 trait MultiColumnPKDataTypeSuites
     extends MultiColumnDataTypeTest

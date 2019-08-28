@@ -98,15 +98,12 @@ public class MetaCodec {
     MetaCodec.encodeHashDataKeyPrefix(cdo, key.toByteArray());
     ByteString encodedKey = cdo.toByteString();
 
-    Iterator<KvPair> iterator = snapshot.scan(encodedKey);
+    Iterator<KvPair> iterator = snapshot.scanPrefix(encodedKey);
     List<Pair<ByteString, ByteString>> fields = new ArrayList<>();
     while (iterator.hasNext()) {
       Kvrpcpb.KvPair kv = iterator.next();
       if (kv == null || kv.getKey() == null) {
         continue;
-      }
-      if (!KeyUtils.hasPrefix(kv.getKey(), encodedKey)) {
-        break;
       }
       fields.add(Pair.create(MetaCodec.decodeHashDataKey(kv.getKey()).second, kv.getValue()));
     }

@@ -64,11 +64,22 @@ public class ConcreteBackOffer implements BackOffer {
     return new ConcreteBackOffer(TSO_MAX_BACKOFF);
   }
 
+  public static ConcreteBackOffer create(BackOffer source) {
+    return new ConcreteBackOffer(((ConcreteBackOffer) source));
+  }
+
   private ConcreteBackOffer(int maxSleep) {
     Preconditions.checkArgument(maxSleep >= 0, "Max sleep time cannot be less than 0.");
     this.maxSleep = maxSleep;
     this.errors = new ArrayList<>();
     this.backOffFunctionMap = new HashMap<>();
+  }
+
+  private ConcreteBackOffer(ConcreteBackOffer source) {
+    this.maxSleep = source.maxSleep;
+    this.totalSleep = source.totalSleep;
+    this.errors = source.errors;
+    this.backOffFunctionMap = source.backOffFunctionMap;
   }
 
   /**

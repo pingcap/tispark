@@ -60,7 +60,4 @@ public interface ReadOnlyPDClient {
   Store getStore(BackOffer backOffer, long storeId);
 
   Future<Store> getStoreAsync(BackOffer backOffer, long storeId);
-
-  /** Close underlining resources */
-  void close() throws InterruptedException;
 }
