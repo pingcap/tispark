@@ -38,7 +38,7 @@ For other build tools, visit <https://search.maven.org/> and search with GroupId
 
 ## How to build from sources
 
-TiSpark now supports Spark 2.3.0+ or 2.4.0+. The earlier TiSpark versions for Spark 2.1.0+ only contains bug-fixes. After these versions, you can still get support for Spark 2.1 until TiSpark 1.2.1.
+TiSpark now supports Spark 2.3.0+ or 2.4.0+. The earlier TiSpark versions for Spark 2.1.0+ only contain bug-fixes. After these versions, you can still get support for Spark 2.1 until TiSpark 1.2.1.
 
 ```
 git clone https://github.com/pingcap/tispark.git
