@@ -36,7 +36,7 @@ TiSpark Architecture
 For the independent deployment of TiKV and TiSpark, it is recommended to refer to the following recommendations.
 
 + Hardware configuration
-    - For general purposes, refer to the TiDB and TiKV hardware configuration [recommendations](https://github.com/pingcap/docs/blob/master/op-guide/recommendation.md#deployment-recommendations).
+    - For general purposes, refer to the TiDB and TiKV hardware configuration [recommendations](https://github.com/pingcap/docs/blob/master/dev/how-to/deploy/hardware-recommendations.md).
     - If the user scenarios more involves data analysis, increase the memory of the TiKV nodes to at least 64G. If you use Hard Disk Drive (HDD), it is recommended to use at least 8 disks.
 + TiKV parameters (by default)
 
