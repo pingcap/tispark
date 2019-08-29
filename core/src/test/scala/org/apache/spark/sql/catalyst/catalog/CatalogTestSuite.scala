@@ -95,6 +95,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("desc extended full_data_type_table").explain()
     spark.sql("desc extended full_data_type_table").show(200, truncate = false)
     spark.sql("desc formatted full_data_type_table").show(200, truncate = false)
+    refreshConnections(true)
     setCurrentDatabase("default")
     spark.sql("drop table if exists t")
     spark.sql("create table t(a int)")

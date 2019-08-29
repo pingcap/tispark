@@ -11,28 +11,28 @@ Using the connector, you can perform the following operations:
   - Write the contents of a Spark DataFrame to a table in TiDB.
 
 ## Transaction support for Write
-Since TiDB is a database that supports transaction, TiDB Spark Connector also support transaction, which means:
-1. all data in DataFrame will be written to TiDB successfully, if no conflicts exist
-2. no data in DataFrame will be written to TiDB successfully, if conflicts exist
-3. no partial changes is visible to other session until commit.
+Since TiDB is a database that supports `transaction`, TiDB Spark Connector also supports `transaction`, which means:
+1. all data in DataFrame will be written to TiDB successfully if no conflicts exist
+2. no data in DataFrame will be written to TiDB successfully if conflicts exist
+3. no partial changes are visible to other sessions until commit.
 
 ## Replace and insert semantics
 TiSpark only supports `Append` SaveMode. The behavior is controlled by
 `replace` option. The default value is false. In addition, if `replace` is true,
-data to be inserted will be deduplicate before insertion.
+data to be inserted will be deduplicated before insertion.
 
 If `replace` is true, then
-* if primary key or unique index exists in db, data will be updated
+* if the primary key or unique index exists in DB, data will be updated
 * if no same primary key or unique index exists, data will be inserted.
 
 If `replace` is false, then
-* if primary key or unique index exists in db, data having conflicts expects an expection.
+* if the primary key or unique index exists in DB, data having conflicts expects an exception.
 * if no same primary key or unique index exists, data will be inserted.
 
 ## Using the Spark Connector With Extensions Enabled
 The connector adheres to the standard Spark API, but with the addition of TiDB-specific options.
 
-The connector can be used both with or without extensions enabled. Here's examples about how to use it with extensions.
+The connector can be used both with or without extensions enabled. Here are examples about how to use it with extensions.
 
 See [code examples with extensions](https://github.com/pingcap/tispark-test/blob/master/tispark-examples/src/main/scala/com/pingcap/tispark/examples/TiDataSourceExampleWithExtensions.scala).
 
@@ -184,6 +184,54 @@ df.write
   .save()
 ```
 
+## Use Data Source API in SparkSQL
+Config tidb/pd address and enable write through SparkSQL in `conf/spark-defaults.conf` as follows:
+
+```
+spark.tispark.pd.addresses 127.0.0.1:2379
+spark.tispark.tidb.addr 127.0.0.1
+spark.tispark.tidb.port 4000
+spark.tispark.tidb.user root
+spark.tispark.tidb.password password
+spark.tispark.write.allow_spark_sql true
+```
+
+create a new table using mysql-client:
+```
+CREATE TABLE tpch_test.TARGET_TABLE_CUSTOMER (
+  `C_CUSTKEY` int(11) NOT NULL,
+  `C_NAME` varchar(25) NOT NULL,
+  `C_ADDRESS` varchar(40) NOT NULL,
+  `C_NATIONKEY` int(11) NOT NULL,
+  `C_PHONE` char(15) NOT NULL,
+  `C_ACCTBAL` decimal(15,2) NOT NULL,
+  `C_MKTSEGMENT` char(10) NOT NULL,
+  `C_COMMENT` varchar(117) NOT NULL
+)
+```
+
+register a tidb table `tpch_test.CUSTOMER` to spark catalog:
+```
+CREATE TABLE CUSTOMER_SRC USING tidb OPTIONS (database 'tpch_test', table 'CUSTOMER')
+```
+
+select data from `tpch_test.CUSTOMER`:
+```
+SELECT * FROM CUSTOMER_SRC limit 10
+```
+
+register another tidb table `tpch_test.TARGET_TABLE_CUSTOMER` to spark catalog:
+```
+CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (database 'tpch_test', table 'TARGET_TABLE_CUSTOMER')
+```
+
+write data to `tpch_test.TARGET_TABLE_CUSTOMER`:
+```
+INSERT INTO CUSTOMER_DST VALUES(1000, 'Customer#000001000', 'AnJ5lxtLjioClr2khl9pb8NLxG2', 9, '19-407-425-2584', 2209.81, 'AUTOMOBILE', '. even, express theodolites upo')
+
+INSERT INTO CUSTOMER_DST SELECT * FROM CUSTOMER_SRC
+```
+
 ## TiDB Options
 The following is TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
@@ -263,3 +311,48 @@ The full conversion metrics is as follows.
 | LONGBLOB   | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :white_check_mark: | :x:                | :x:                | :x:                |
 | ENUM       | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:                | :x:                | :x:                |
 | SET        | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                | :x:                |
+
+## Write Benchmark
+Tested on 4 machines as follows:
+
+```
+Intel(R) Xeon(R) CPU E5-2630 v4 @ 2.20GHz * 2 = 40Vu
+12 * 16G = 188G
+```
+
+`FIO` test result:
+
+```
+WRITE: bw=705MiB/s (740MB/s), 705MiB/s-705MiB/s (740MB/s-740MB/s), io=20.0GiB (21.5GB), run=29034-29034msec
+```
+
+The table schema is:
+```
+CREATE TABLE ORDERS  (O_ORDERKEY       INTEGER NOT NULL,
+                      O_CUSTKEY        INTEGER NOT NULL,
+                      O_ORDERSTATUS    CHAR(1) NOT NULL,
+                      O_TOTALPRICE     DECIMAL(15,2) NOT NULL,
+                      O_ORDERDATE      DATE NOT NULL,
+                      O_ORDERPRIORITY  CHAR(15) NOT NULL,
+                      O_CLERK          CHAR(15) NOT NULL,
+                      O_SHIPPRIORITY   INTEGER NOT NULL,
+                      O_COMMENT        VARCHAR(79) NOT NULL);
+
+```
+
+### TiSpark Write Benchmark
+
+| count(*)    | data size | parallel number | prepare(s) | prewrite (s) | commit (s) | total (s) |
+| ----------- | --------- | --------------- | ---------- | ------------ | ---------- | --------- |
+| 1,500,000   | 165M      | 2               | 17         | 68           | 62         | 148       |
+| 15,000,000  | 1.7G      | 24              | 49         | 157          | 119        | 326       |
+| 150,000,000 | 17G       | 120             | 630        | 1236         | 1098       | 2964      |
+
+
+## Spark with JDBC Benchmark
+
+| count(*)    | data size | parallel number | spark jdbc write (s) | comments                            |
+| ----------- | --------- | --------------- | -------------------- | ----------------------------------- |
+| 1,500,000   | 165M      | 24              | 22                   |                                     |
+| 15,000,000  | 1.7G      | 24              | 411                  | use 120 parallel will cause KV Busy |
+| 150,000,000 | 17G       | 24              | 2936                 | use 120 parallel will cause KV Busy |

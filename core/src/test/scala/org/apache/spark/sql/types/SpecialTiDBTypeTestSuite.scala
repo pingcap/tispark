@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,17 +22,26 @@ import org.apache.spark.sql.BaseTiSparkTest
 
 class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
   test("adding time type index test") {
+    val query = "select * from t_t"
+
     tidbStmt.execute("drop table if exists t_t")
     tidbStmt.execute("CREATE TABLE `t_t` (`t` time(3), index `idx_t`(t))")
     // NOTE: jdbc only allows time in day range whereas mysql time has much
     // larger range.
     tidbStmt.execute("INSERT INTO t_t (t) VALUES('18:59:59'),('17:59:59'),('12:59:59')")
     refreshConnections()
-    val df = spark.sql("select * from t_t")
+    val df = spark.sql(query)
     val data = dfData(df, df.schema.fields)
-    assert(data(0)(0) === Converter.convertStrToDuration("18:59:59"))
-    assert(data(1)(0) === Converter.convertStrToDuration("17:59:59"))
-    assert(data(2)(0) === Converter.convertStrToDuration("12:59:59"))
+    runTest(
+      query,
+      rSpark = data,
+      rTiDB = List(
+        List(Converter.convertStrToDuration("18:59:59")),
+        List(Converter.convertStrToDuration("17:59:59")),
+        List(Converter.convertStrToDuration("12:59:59"))
+      ),
+      skipJDBC = true
+    )
 
     val where = spark.sql("select * from t_t where t = 46799000000000")
     val whereData = dfData(where, where.schema.fields)

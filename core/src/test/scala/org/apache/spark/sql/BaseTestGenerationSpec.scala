@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,46 @@
 
 package org.apache.spark.sql
 
+import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
+
 trait BaseTestGenerationSpec {
-  protected def getTableName(dataType: String): String = s"test_$dataType"
 
-  protected def getTableName(dataType: String, desc: String): String = s"test_${desc}_$dataType"
+  protected val rowCount: Int
 
-  protected def getColumnName(dataType: String): String = s"col_$dataType"
+  protected val preDescription: String = "Generating Data for "
 
-  protected def getIndexName(dataType: String): String = s"idx_$dataType"
+  protected var cols: List[ReflectedDataType] = List.empty[ReflectedDataType]
+
+  def getTableName(dataTypes: String*): String
+
+  def getTableNameWithDesc(desc: String, dataTypes: String*): String
+
+  def getColumnName(dataType: String): String = s"col_$dataType"
+
+  def getColumnNameByOffset(offset: Int): String = {
+    assert(
+      cols.size > offset,
+      "column length incorrect, maybe `cols` is not initialized correctly?"
+    )
+    val dataType = cols(offset)
+    val suffix = if (cols.count(_ == dataType) > 1) {
+      var cnt = 0
+      for (i <- 0 until offset) {
+        if (cols(i) == dataType) {
+          cnt += 1
+        }
+      }
+      s"$cnt"
+    } else {
+      ""
+    }
+    s"${getColumnName(dataType.toString)}$suffix"
+  }
+
+  def getIndexName(dataTypes: String*): String =
+    s"idx_${dataTypes.map(getColumnName).mkString("_")}"
+
+  def getIndexNameByOffset(offsets: Int*): String =
+    s"idx_${offsets.map(getColumnNameByOffset).mkString("_")}"
 
 }

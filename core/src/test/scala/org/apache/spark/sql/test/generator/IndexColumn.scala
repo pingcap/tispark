@@ -1,4 +1,5 @@
 /*
+ *
  * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.apache.spark.sql.test.generator
@@ -37,13 +39,15 @@ case class ColumnInfo(columnName: String,
 
   val isPrimaryKey: Boolean = desc.contains("primary key")
   val nullable: Boolean = !isPrimaryKey && !desc.contains("not null")
-  val unsigned: Boolean = desc.contains("unsigned")
-  val noDefault: Boolean = !desc.contains("default")
+
+  private val breakDown = desc.split(" ")
+  val unsigned: Boolean = breakDown.contains("unsigned")
+  val noDefault: Boolean = !breakDown.contains("default")
+  val isUnique: Boolean = breakDown.contains("unique")
   val default: String = {
     if (noDefault) {
       null
     } else {
-      val breakDown = desc.split(" ")
       val idx = breakDown.indexOf("default")
       assert(idx >= 0)
       if (idx == breakDown.length - 1) {
@@ -54,14 +58,15 @@ case class ColumnInfo(columnName: String,
     }
   }
 
-  private val baseType = getBaseType(dataType)
-
-  private val (len, decimal): (Long, Int) = if (length._1 == null) {
-    (getLength(baseType), getDecimal(baseType))
-  } else if (length._2 == null) {
-    (length._1.toLong, getDecimal(baseType))
-  } else {
-    (length._1.toLong, length._2)
+  val (len, decimal): (Long, Int) = {
+    val baseType = getBaseType(dataType)
+    if (length._1 == null) {
+      (getLength(baseType), getDecimal(baseType))
+    } else if (length._2 == null) {
+      (length._1.toLong, getDecimal(baseType))
+    } else {
+      (length._1.toLong, length._2)
+    }
   }
 
   {
@@ -72,12 +77,20 @@ case class ColumnInfo(columnName: String,
     }
   }
 
-  val generator: ValueGenerator =
-    ValueGenerator(dataType, len, decimal, nullable, unsigned, noDefault, default, isPrimaryKey)
+  val generator: ColumnValueGenerator =
+    ColumnValueGenerator(
+      dataType,
+      len,
+      decimal,
+      nullable,
+      unsigned,
+      noDefault,
+      default,
+      isPrimaryKey,
+      isUnique
+    )
 
-  override def toString: String = {
-    "`" + columnName + "` " + s"${generator.toString}"
-  }
+  override def toString: String = s"`$columnName` ${generator.toString}"
 }
 
 case class IndexColumnInfo(column: String, length: Integer) {

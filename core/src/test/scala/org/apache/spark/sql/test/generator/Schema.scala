@@ -1,4 +1,5 @@
 /*
+ *
  * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,10 +12,12 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package org.apache.spark.sql.test.generator
 
+import com.pingcap.tispark.utils.{TiConverter, TiUtil}
 import org.apache.spark.sql.test.generator.DataType._
 
 /**
@@ -37,10 +40,6 @@ case class Schema(database: String,
   assert(columnDesc.size == columnNames.size, "columnDesc size not equal to column name size")
   assert(columnNames.forall(columnDesc.contains), "column desc not present for some columns")
 
-  val columnInfo: List[ColumnInfo] = columnNames.map { col =>
-    val x = columnDesc(col)
-    ColumnInfo(col, x._1, x._2, x._3)
-  }
   val indexInfo: List[IndexInfo] = indexColumns.map { idx =>
     IndexInfo(idx._1, idx._2._1.map { x =>
       IndexColumnInfo(x._1, x._2)
@@ -48,6 +47,22 @@ case class Schema(database: String,
   }.toList
 
   assert(indexInfo.count(_.isPrimary) <= 1, "more than one primary key exist in schema")
+
+  val pkIndexInfo = indexInfo.filter(_.isPrimary)
+  val pkColumnName: String = if (pkIndexInfo.isEmpty) {
+    ""
+  } else {
+    pkIndexInfo.head.indexColumns.map(_.column).mkString(",")
+  }
+
+  val columnInfo: List[ColumnInfo] = columnNames.map { col =>
+    val x = columnDesc(col)
+    if (col == pkColumnName) {
+      ColumnInfo(col, x._1, x._2, x._3 + " primary key")
+    } else {
+      ColumnInfo(col, x._1, x._2, x._3)
+    }
+  }
 
   // column info to string
   private val columns: List[String] = columnInfo.map(_.toString)

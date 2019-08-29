@@ -23,10 +23,11 @@ import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.catalog.{ExternalCatalog, TiSessionCatalog}
+import org.apache.spark.sql.catalyst.catalog.{CatalogTable, ExternalCatalog, SessionCatalog, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.expressions.{NamedExpression, UnsafeRow}
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, UnsafeRow}
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.types.{DataType, Metadata}
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -38,6 +39,13 @@ import scala.reflect.ClassTag
  */
 object ReflectionUtil {
   private val logger = LoggerFactory.getLogger(getClass.getName)
+
+  private val SPARK_WRAPPER_CLASS = "com.pingcap.tispark.SparkWrapper"
+  private val TI_AGGREGATION_IMPL_CLASS = "org.apache.spark.sql.TiAggregationImpl"
+  private val TI_DIRECT_EXTERNAL_CATALOG_CLASS =
+    "org.apache.spark.sql.catalyst.catalog.TiDirectExternalCatalog"
+  private val TI_COMPOSITE_SESSION_CATALOG_CLASS =
+    "org.apache.spark.sql.catalyst.catalog.TiCompositeSessionCatalog"
 
   // In Spark 2.3.0 and 2.3.1 the method declaration is:
   // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
@@ -51,60 +59,114 @@ object ReflectionUtil {
   //      isOrderSensitive: Boolean = false): RDD[U]
   //
   // Hereby we use reflection to support different Spark versions.
-  private val mapPartitionsWithIndexInternal: Method =
-    TiSparkInfo.SPARK_VERSION match {
-      case "2.3.0" | "2.3.1" =>
-        classOf[RDD[InternalRow]].getDeclaredMethod(
-          "mapPartitionsWithIndexInternal",
-          classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
-          classOf[Boolean],
-          classOf[ClassTag[UnsafeRow]]
-        )
-      case _ =>
-        // Spark version >= 2.3.2
-        try {
-          classOf[RDD[InternalRow]].getDeclaredMethod(
-            "mapPartitionsWithIndexInternal",
-            classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
-            classOf[Boolean],
-            classOf[Boolean],
-            classOf[ClassTag[UnsafeRow]]
-          )
-        } catch {
-          case _: Throwable =>
-            throw ScalaReflectionException(
-              "Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
-                .format(TiSparkInfo.SPARK_VERSION)
-            )
-        }
-    }
-
   case class ReflectionMapPartitionWithIndexInternal(
     rdd: RDD[InternalRow],
     internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
   ) {
-    def invoke(): RDD[InternalRow] =
-      TiSparkInfo.SPARK_VERSION match {
+    // Spark HDP Release may not compatible with official Release
+    // see https://github.com/pingcap/tispark/issues/1006
+    def invoke(): RDD[InternalRow] = {
+      val (version, method) = TiSparkInfo.SPARK_VERSION match {
         case "2.3.0" | "2.3.1" =>
-          mapPartitionsWithIndexInternal
-            .invoke(
-              rdd,
-              internalRowToUnsafeRowWithIndex,
-              Boolean.box(false),
-              ClassTag.apply(classOf[UnsafeRow])
-            )
-            .asInstanceOf[RDD[InternalRow]]
+          try {
+            reflectMapPartitionsWithIndexInternalV1(rdd, internalRowToUnsafeRowWithIndex)
+          } catch {
+            case _: Throwable =>
+              try {
+                reflectMapPartitionsWithIndexInternalV2(rdd, internalRowToUnsafeRowWithIndex)
+              } catch {
+                case _: Throwable =>
+                  throw ScalaReflectionException(
+                    s"Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
+                      .format(TiSparkInfo.SPARK_VERSION)
+                  )
+              }
+          }
+
         case _ =>
-          mapPartitionsWithIndexInternal
-            .invoke(
-              rdd,
-              internalRowToUnsafeRowWithIndex,
-              Boolean.box(false),
-              Boolean.box(false),
-              ClassTag.apply(classOf[UnsafeRow])
-            )
-            .asInstanceOf[RDD[InternalRow]]
+          try {
+            reflectMapPartitionsWithIndexInternalV2(rdd, internalRowToUnsafeRowWithIndex)
+          } catch {
+            case _: Throwable =>
+              try {
+                reflectMapPartitionsWithIndexInternalV1(rdd, internalRowToUnsafeRowWithIndex)
+              } catch {
+                case _: Throwable =>
+                  throw ScalaReflectionException(
+                    s"Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
+                      .format(TiSparkInfo.SPARK_VERSION)
+                  )
+              }
+          }
       }
+
+      invokeMapPartitionsWithIndexInternal(version, method, rdd, internalRowToUnsafeRowWithIndex)
+    }
+  }
+
+  // Spark-2.3.0 & Spark-2.3.1
+  private def reflectMapPartitionsWithIndexInternalV1(
+    rdd: RDD[InternalRow],
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+  ): (String, Method) = {
+    (
+      "v1",
+      classOf[RDD[InternalRow]].getDeclaredMethod(
+        "mapPartitionsWithIndexInternal",
+        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+        classOf[Boolean],
+        classOf[ClassTag[UnsafeRow]]
+      )
+    )
+  }
+
+  // >= Spark-2.3.2
+  private def reflectMapPartitionsWithIndexInternalV2(
+    rdd: RDD[InternalRow],
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+  ): (String, Method) = {
+    (
+      "v2",
+      classOf[RDD[InternalRow]].getDeclaredMethod(
+        "mapPartitionsWithIndexInternal",
+        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+        classOf[Boolean],
+        classOf[Boolean],
+        classOf[ClassTag[UnsafeRow]]
+      )
+    )
+  }
+
+  private def invokeMapPartitionsWithIndexInternal(
+    version: String,
+    method: Method,
+    rdd: RDD[InternalRow],
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+  ): RDD[InternalRow] = {
+    version match {
+      case "v1" =>
+        // Spark-2.3.0 & Spark-2.3.1
+        method
+          .invoke(
+            rdd,
+            internalRowToUnsafeRowWithIndex,
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+
+      case _ =>
+        // >= Spark-2.3.2
+        method
+          .invoke(
+            rdd,
+            internalRowToUnsafeRowWithIndex,
+            Boolean.box(false),
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+    }
   }
 
   lazy val classLoader: URLClassLoader = {
@@ -133,18 +195,32 @@ object ReflectionUtil {
   }
 
   def newTiDirectExternalCatalog(tiContext: TiContext): ExternalCatalog = {
-    val clazz =
-      classLoader.loadClass("org.apache.spark.sql.catalyst.catalog.TiDirectExternalCatalog")
-    clazz
+    classLoader
+      .loadClass(TI_DIRECT_EXTERNAL_CATALOG_CLASS)
       .getDeclaredConstructor(classOf[TiContext])
       .newInstance(tiContext)
       .asInstanceOf[ExternalCatalog]
   }
 
+  def callTiDirectExternalCatalogDatabaseExists(obj: Object, db: String): Boolean = {
+    classLoader
+      .loadClass(TI_DIRECT_EXTERNAL_CATALOG_CLASS)
+      .getDeclaredMethod("databaseExists", classOf[String])
+      .invoke(obj, db)
+      .asInstanceOf[Boolean]
+  }
+
+  def callTiDirectExternalCatalogTableExists(obj: Object, db: String, table: String): Boolean = {
+    classLoader
+      .loadClass(TI_DIRECT_EXTERNAL_CATALOG_CLASS)
+      .getDeclaredMethod("tableExists", classOf[String], classOf[String])
+      .invoke(obj, db, table)
+      .asInstanceOf[Boolean]
+  }
+
   def newTiCompositeSessionCatalog(tiContext: TiContext): TiSessionCatalog = {
-    val clazz =
-      classLoader.loadClass("org.apache.spark.sql.catalyst.catalog.TiCompositeSessionCatalog")
-    clazz
+    classLoader
+      .loadClass(TI_COMPOSITE_SESSION_CATALOG_CLASS)
       .getDeclaredConstructor(classOf[TiContext])
       .newInstance(tiContext)
       .asInstanceOf[TiSessionCatalog]
@@ -153,13 +229,59 @@ object ReflectionUtil {
   def callTiAggregationImplUnapply(
     plan: LogicalPlan
   ): Option[(Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)] = {
-    val clazz =
-      classLoader.loadClass("org.apache.spark.sql.TiAggregationImpl")
-    clazz
+    classLoader
+      .loadClass(TI_AGGREGATION_IMPL_CLASS)
       .getDeclaredMethod("unapply", classOf[LogicalPlan])
       .invoke(null, plan)
       .asInstanceOf[Option[
         (Seq[NamedExpression], Seq[AggregateExpression], Seq[NamedExpression], LogicalPlan)
       ]]
+  }
+
+  def newSubqueryAlias(identifier: String, child: LogicalPlan): SubqueryAlias = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod("newSubqueryAlias", classOf[String], classOf[LogicalPlan])
+      .invoke(null, identifier, child)
+      .asInstanceOf[SubqueryAlias]
+  }
+
+  def newAlias(child: Expression, name: String): Alias = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod("newAlias", classOf[Expression], classOf[String])
+      .invoke(null, child, name)
+      .asInstanceOf[Alias]
+  }
+
+  def newAttributeReference(name: String,
+                            dataType: DataType,
+                            nullable: java.lang.Boolean = false,
+                            metadata: Metadata = Metadata.empty): AttributeReference = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod(
+        "newAttributeReference",
+        classOf[String],
+        classOf[DataType],
+        classOf[Boolean],
+        classOf[Metadata]
+      )
+      .invoke(null, name, dataType, nullable, metadata)
+      .asInstanceOf[AttributeReference]
+  }
+
+  def callSessionCatalogCreateTable(obj: SessionCatalog,
+                                    tableDefinition: CatalogTable,
+                                    ignoreIfExists: java.lang.Boolean): Unit = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod(
+        "callSessionCatalogCreateTable",
+        classOf[SessionCatalog],
+        classOf[CatalogTable],
+        classOf[Boolean]
+      )
+      .invoke(null, obj, tableDefinition, ignoreIfExists)
   }
 }

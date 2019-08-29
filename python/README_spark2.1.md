@@ -7,7 +7,7 @@ This is the simplest way, just a decent Spark environment should be enough.
 
 2. Run this command in your `SPARK_HOME` directory:
 ```
-./bin/pyspark --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar
+./bin/pyspark --jars /where-ever-it-is/tispark-${name_with_version}.jar
 ```
 
 3. To use TiSpark, run these commands:
@@ -17,7 +17,7 @@ This is the simplest way, just a decent Spark environment should be enough.
 from py4j.java_gateway import java_import
 from pyspark.context import SparkContext
 
-# We get a referenct to py4j Java Gateway
+# We get a reference to py4j Java Gateway
 gw = SparkContext._gateway
 
 java_import(gw.jvm, "org.apache.spark.sql.TiContext")
@@ -46,7 +46,7 @@ This way is generally the same as the first way, but more readable.
 
 3. Run this command in your `SPARK_HOME` directory:
 ```
-./bin/pyspark --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar
+./bin/pyspark --jars /where-ever-it-is/tispark-${name_with_version}.jar
 ```
 
 4. Use as below:
@@ -86,7 +86,7 @@ spark.sql("select count(*) from customer").show()
 
 2. Prepare your TiSpark environment as above and execute
 ```bash
-./bin/spark-submit --jars /where-ever-it-is/tispark-core-${version}-jar-with-dependencies.jar test.py
+./bin/spark-submit --jars /where-ever-it-is/tispark-${name_with_version}.jar test.py
 ```
 
 3. Result:

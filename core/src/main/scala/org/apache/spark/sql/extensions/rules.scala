@@ -15,11 +15,12 @@
 package org.apache.spark.sql.extensions
 
 import com.pingcap.tispark.statistics.StatisticsManager
+import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
-import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoTable, LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoTable, LogicalPlan}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
@@ -57,7 +58,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
       )(sqlContext)
       // Use SubqueryAlias so that projects and joins can correctly resolve
       // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
-      SubqueryAlias(tableName, LogicalRelation(tiDBRelation))
+      newSubqueryAlias(tableName, LogicalRelation(tiDBRelation))
     }
 
   protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {

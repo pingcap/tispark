@@ -40,7 +40,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   private static final double CONSTANT_CRED = MIN_CREDIBILITY;
   private static final double LOGICAL_OP_CRED = MAX_CREDIBILITY;
   private static final double COMPARISON_OP_CRED = MAX_CREDIBILITY;
-  private static final double SRING_REG_OP_CRED = MAX_CREDIBILITY;
+  private static final double STRING_REG_OP_CRED = MAX_CREDIBILITY;
   private static final double FUNCTION_CRED = MAX_CREDIBILITY;
   private static final double ISNULL_CRED = MAX_CREDIBILITY;
   private static final double NOT_CRED = MAX_CREDIBILITY;
@@ -126,7 +126,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
       coerceType(null, node.getLeft(), node.getRight());
       typeMap.put(node, IntegerType.BOOLEAN);
     }
-    return Pair.create(IntegerType.BOOLEAN, SRING_REG_OP_CRED);
+    return Pair.create(IntegerType.BOOLEAN, STRING_REG_OP_CRED);
   }
 
   @Override

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,37 +17,28 @@
 
 package org.apache.spark.sql.types
 
-import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.{BaseTestGenerationSpec, BaseTiSparkTest}
 import org.apache.spark.sql.test.SharedSQLContext
-import org.apache.spark.sql.test.generator.DataType.{ReflectedDataType, TINYINT}
 
-class BaseDataTypeTest extends BaseTiSparkTest with RunUnitDataTypeTestAction {
+trait BaseDataTypeTest extends BaseTiSparkTest {
 
-  val dataTypes: List[ReflectedDataType] = List(TINYINT)
-  val unsignedDataTypes: List[ReflectedDataType] = List(TINYINT)
-  val dataTypeTestDir: String = "dataType-test"
-  val database: String = "data_type_test_example"
-  val testDesc: String = "Base test for data types"
+  protected val generator: BaseTestGenerationSpec
 
-  def startTest(typeName: String): Unit = {
-    test(s"${preDescription}Test $typeName - $testDesc") {
-      simpleSelect(database, typeName)
-    }
+  def simpleSelect(dbName: String, dataType: String): Unit = {
+    setCurrentDatabase(dbName)
+    val tblName = generator.getTableName(dataType)
+    val query = s"select ${generator.getColumnName(dataType)} from $tblName"
+    runTest(query)
   }
 
-  def startUnsignedTest(typeName: String): Unit = {
-    test(s"${preDescription}Test $extraDesc $typeName - $testDesc") {
-      simpleSelect(database, typeName, extraDesc)
-    }
+  def simpleSelect(dbName: String, dataType: String, desc: String): Unit = {
+    setCurrentDatabase(dbName)
+    val tblName = generator.getTableNameWithDesc(desc, dataType)
+    val query = s"select ${generator.getColumnName(dataType)} from $tblName"
+    logger.info(query)
+    runTest(query)
   }
 
-  def check(): Unit = {
-    SharedSQLContext.init()
-    if (generateData) {
-      BaseGenerateDataType(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc).test()
-    }
-  }
-
-  check()
-  test()
+  // initialize test framework
+  SharedSQLContext.init()
 }

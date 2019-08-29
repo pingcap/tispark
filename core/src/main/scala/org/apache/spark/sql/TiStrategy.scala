@@ -28,6 +28,7 @@ import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiConverter._
 import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
@@ -389,11 +390,11 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
     val deterministicAggAliases = aggregateExpressions.collect {
-      case e if e.deterministic => e.canonicalized -> Alias(e, e.toString())()
+      case e if e.deterministic => e.canonicalized -> newAlias(e, e.toString())
     }.toMap
 
     def aliasPushedPartialResult(e: AggregateExpression): Alias =
-      deterministicAggAliases.getOrElse(e.canonicalized, Alias(e, e.toString())())
+      deterministicAggAliases.getOrElse(e.canonicalized, newAlias(e, e.toString()))
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
       // As `aggExpr` is being pushing down to TiKV, we need to replace the original Catalyst
@@ -467,7 +468,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) &&
       groupingExpressions.forall(TiUtil.isSupportedGroupingExpr(_, source, blacklist)) &&
       aggregateExpressions.forall(TiUtil.isSupportedAggregate(_, source, blacklist)) &&
-      !aggregateExpressions.exists(_.isDistinct)
+      !aggregateExpressions.exists(_.isDistinct) &&
+      // TODO: This is a temporary fix for the issue: https://github.com/pingcap/tispark/issues/1039
+      !groupingExpressions.exists(_.isInstanceOf[Alias])
 
   // We do through similar logic with original Spark as in SparkStrategies.scala
   // Difference is we need to test if a sub-plan can be consumed all together by TiKV

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,21 @@ import org.apache.spark.sql.test.generator.{Data, Index, Schema}
 import org.apache.spark.sql.test.generator.DataType.{getBaseType, getTypeName, DECIMAL, ReflectedDataType}
 import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isVarString, randomDataGenerator, schemaGenerator}
 
-trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestAction with BaseTestGenerationSpec {
+trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestGenerationSpec {
 
-  override val preDescription: String = "Generating Data for "
+  override val rowCount = 50
+
+  private def toString(dataTypes: Seq[String]) = {
+    assert(dataTypes.size == 1, "Unit data type tests can not manage multiple columns")
+    dataTypes.mkString("_")
+  }
+
+  override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
+
+  override def getTableNameWithDesc(desc: String, dataTypes: String*): String =
+    s"test_${desc}_${toString(dataTypes)}"
+
+  override def getIndexName(dataTypes: String*): String = s"idx_${toString(dataTypes)}"
 
   def genSchema(dataType: ReflectedDataType,
                 tableName: String,
@@ -41,7 +53,7 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestAction with BaseTes
     )
   }
 
-  def genData(schema: Schema): Data = randomDataGenerator(schema, 20, dataTypeTestDir, r)
+  def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)
 
   def genLen(dataType: ReflectedDataType): String = {
     val baseType = getBaseType(dataType)
@@ -66,7 +78,7 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestAction with BaseTes
     for (dataType <- unsignedDataTypes) {
       val typeName = getTypeName(dataType)
       val len = genLen(dataType)
-      val tableName = getTableName(typeName, extraDesc)
+      val tableName = getTableNameWithDesc(extraDesc, typeName)
       val schema = genSchema(dataType, tableName, len, extraDesc)
       val data = genData(schema)
       data.save()

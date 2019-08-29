@@ -48,22 +48,22 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
+            <version>${spark.version.compile}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
+            <version>${spark.version.compile}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
+            <version>${spark.version.compile}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
+            <version>${spark.version.compile}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.hadoop</groupId>
@@ -74,12 +74,12 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
+            <version>${spark.version.compile}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-unsafe_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
+            <version>${spark.version.compile}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -169,6 +169,9 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
+                <configuration>
+                    <skip>${skipFetchTestData}</skip>
+                </configuration>
                 <executions>
                     <execution>
                         <id>version imprint</id>
