@@ -15,7 +15,7 @@ object TiDBUtils {
    * Returns true if the table already exists in the TiDB.
    */
   def tableExists(conn: Connection, options: TiDBOptions): Boolean = {
-    val sql = s"SELECT * FROM ${options.dbtable} WHERE 1=0"
+    val sql = s"SELECT * FROM `${options.database}`.`${options.table}` WHERE 1=0"
     Try {
       val statement = conn.prepareStatement(sql)
       try {

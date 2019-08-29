@@ -85,7 +85,8 @@ public class Catalog implements AutoCloseable {
       if (tableMap == null) {
         tableMap = loadTables(db);
       }
-      return ImmutableList.copyOf(tableMap.values());
+      Collection<TiTableInfo> tables = tableMap.values();
+      return tables.stream().filter(tbl -> !tbl.isView()).collect(Collectors.toList());
     }
 
     public TiTableInfo getTable(TiDBInfo db, String tableName) {
@@ -93,7 +94,11 @@ public class Catalog implements AutoCloseable {
       if (tableMap == null) {
         tableMap = loadTables(db);
       }
-      return tableMap.get(tableName.toLowerCase());
+      TiTableInfo tbl = tableMap.get(tableName.toLowerCase());
+      // https://github.com/pingcap/tispark/issues/961
+      // TODO: support reading from view table in the future.
+      if (tbl != null && tbl.isView()) return null;
+      return tbl;
     }
 
     private Map<String, TiTableInfo> loadTables(TiDBInfo db) {
@@ -148,23 +153,6 @@ public class Catalog implements AutoCloseable {
         refreshPeriod,
         refreshPeriod,
         periodUnit);
-  }
-
-  /**
-   * read current row id from TiKV and write the calculated value back to TiKV. The calculation rule
-   * is start(read from TiKV) + step.
-   */
-  public synchronized long getAutoTableId(long dbId, long tableId, long step) {
-    Snapshot snapshot = snapshotProvider.get();
-    CatalogTransaction newTrx = new CatalogTransaction(snapshot);
-    return newTrx.getAutoTableId(dbId, tableId, step);
-  }
-
-  /** read current row id from TiKV according to database id and table id. */
-  public synchronized long getAutoTableId(long dbId, long tableId) {
-    Snapshot snapshot = snapshotProvider.get();
-    CatalogTransaction newTrx = new CatalogTransaction(snapshot);
-    return newTrx.getAutoTableId(dbId, tableId);
   }
 
   public synchronized void reloadCache(boolean loadTables) {

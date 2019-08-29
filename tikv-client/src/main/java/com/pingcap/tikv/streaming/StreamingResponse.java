@@ -58,7 +58,6 @@ public class StreamingResponse implements Iterable {
         return response.getRegionError();
       }
     }
-
     return null;
   }
 

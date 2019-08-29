@@ -24,14 +24,13 @@ import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.txn.TxnKVClient;
 import com.pingcap.tikv.util.ChannelFactory;
 import com.pingcap.tikv.util.ConcreteBackOffer;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TiSession implements AutoCloseable {
-  private final Logger logger = LoggerFactory.getLogger(TiSession.class);
   private final TiConfiguration conf;
   private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
@@ -44,7 +43,28 @@ public class TiSession implements AutoCloseable {
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
 
-  public TiSession(TiConfiguration conf) {
+  private static final Map<String, TiSession> sessionCachedMap = new HashMap<>();
+
+  public static TiSession getInstance(TiConfiguration conf, boolean recreate) {
+    synchronized (sessionCachedMap) {
+      String key = conf.getPdAddrsString();
+      if (sessionCachedMap.containsKey(key) && !recreate) {
+        return sessionCachedMap.get(key);
+      }
+
+      TiSession newSession = new TiSession(conf);
+      sessionCachedMap.put(key, newSession);
+      return newSession;
+    }
+  }
+
+  // Since we create session as singleton now, configuration change will not
+  // reflect change
+  public static TiSession getInstance(TiConfiguration conf) {
+    return getInstance(conf, false);
+  }
+
+  private TiSession(TiConfiguration conf) {
     this.conf = conf;
     this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
     this.regionManager = null;
@@ -163,10 +183,6 @@ public class TiSession implements AutoCloseable {
     return res;
   }
 
-  public static TiSession create(TiConfiguration conf) {
-    return new TiSession(conf);
-  }
-
   /**
    * This is used for setting call back function to invalidate cache information
    *
@@ -177,9 +193,17 @@ public class TiSession implements AutoCloseable {
   }
 
   @Override
-  public void close() throws Exception {
-    getThreadPoolForTableScan().shutdownNow();
-    getThreadPoolForIndexScan().shutdownNow();
+  public synchronized void close() throws Exception {
+    synchronized (sessionCachedMap) {
+      sessionCachedMap.remove(conf.getPdAddrsString());
+    }
+
+    if (tableScanThreadPool != null) {
+      tableScanThreadPool.shutdownNow();
+    }
+    if (indexScanThreadPool != null) {
+      indexScanThreadPool.shutdownNow();
+    }
     if (client != null) {
       getPDClient().close();
     }

@@ -14,8 +14,34 @@
  */
 package com.pingcap.tispark
 
+import org.apache.spark.sql.catalyst.catalog.{CatalogTable, SessionCatalog}
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression}
+import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
+import org.apache.spark.sql.types.{DataType, Metadata}
+
 object SparkWrapper {
   def getVersion: String = {
     "SparkWrapper-2.4"
+  }
+
+  def newSubqueryAlias(identifier: String, child: LogicalPlan): SubqueryAlias = {
+    SubqueryAlias(identifier, child)
+  }
+
+  def newAlias(child: Expression, name: String): Alias = {
+    Alias(child, name)()
+  }
+
+  def newAttributeReference(name: String,
+                            dataType: DataType,
+                            nullable: Boolean,
+                            metadata: Metadata): AttributeReference = {
+    AttributeReference(name, dataType, nullable, metadata)()
+  }
+
+  def callSessionCatalogCreateTable(obj: SessionCatalog,
+                                    tableDefinition: CatalogTable,
+                                    ignoreIfExists: Boolean): Unit = {
+    obj.createTable(tableDefinition, ignoreIfExists)
   }
 }

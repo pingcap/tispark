@@ -18,7 +18,7 @@
 package org.apache.spark.sql.test
 
 import java.io.File
-import java.sql.{Connection, Statement}
+import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
@@ -26,7 +26,6 @@ import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants._
 import org.apache.spark.sql.test.Utils._
 import org.apache.spark.{SparkConf, SparkContext, SparkFunSuite}
@@ -34,6 +33,8 @@ import org.joda.time.DateTimeZone
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
@@ -45,6 +46,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def spark: SparkSession = SharedSQLContext.spark
 
   protected def ti: TiContext = SharedSQLContext.ti
+
+  protected def tidbStmt: Statement = SharedSQLContext.tidbStmt
 
   protected def tidbConn: Connection = SharedSQLContext.tidbConn
 
@@ -67,6 +70,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
   protected def initStatistics(): Unit = SharedSQLContext.initStatistics()
+
+  protected def initializeTimeZone(): Unit = SharedSQLContext.initializeTimeZone()
 
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
 
@@ -97,6 +102,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def pdAddresses: String = SharedSQLContext.pdAddresses
 
   protected def generateData: Boolean = SharedSQLContext.generateData
+
+  protected def generateDataSeed: Long = SharedSQLContext.generateDataSeed.get
 
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
@@ -158,6 +165,7 @@ object SharedSQLContext extends Logging {
   protected var tidbPort: Int = _
   protected var pdAddresses: String = _
   protected var generateData: Boolean = _
+  protected var generateDataSeed: Option[Long] = None
 
   protected implicit def spark: SparkSession = _spark
 
@@ -233,6 +241,12 @@ object SharedSQLContext extends Logging {
     logger.info("Analyzing table finished.")
   }
 
+  protected def initializeTimeZone(): Unit = {
+    _statement = _tidbConnection.createStatement()
+    // Set default time zone to GMT-7
+    _statement.execute(s"SET time_zone = '$timeZoneOffset'")
+  }
+
   protected def loadSQLFile(directory: String, file: String): Unit = {
     val fullFileName = s"$directory/$file.sql"
     try {
@@ -242,7 +256,7 @@ object SharedSQLContext extends Logging {
       val queryString = source.mkString
       source.close()
       _tidbConnection.setCatalog("mysql")
-      _statement = _tidbConnection.createStatement()
+      initializeTimeZone()
       _statement.execute(queryString)
       logger.info(s"Load $fullFileName successfully.")
     } catch {
@@ -274,10 +288,55 @@ object SharedSQLContext extends Logging {
     jdbcUrl =
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
         s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false" +
-        s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10"
+        s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
+        s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}"
 
     _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
     _statement = _tidbConnection.createStatement()
+  }
+
+  private def queryTiDBViaJDBC(query: String): List[List[Any]] = {
+    val resultSet = tidbStmt.executeQuery(query)
+    val rsMetaData = resultSet.getMetaData
+    val retSet = ArrayBuffer.empty[List[Any]]
+    val retSchema = ArrayBuffer.empty[String]
+    for (i <- 1 to rsMetaData.getColumnCount) {
+      retSchema += rsMetaData.getColumnTypeName(i)
+    }
+    while (resultSet.next()) {
+      val row = ArrayBuffer.empty[Any]
+
+      for (i <- 1 to rsMetaData.getColumnCount) {
+        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
+      }
+      retSet += row.toList
+    }
+    retSet.toList
+  }
+
+  private def toOutput(value: Any, colType: String): Any = value match {
+    case _: BigDecimal =>
+      value.asInstanceOf[BigDecimal].setScale(2, BigDecimal.RoundingMode.HALF_UP)
+    case _: Date if colType.equalsIgnoreCase("YEAR") =>
+      value.toString.split("-")(0)
+    case default =>
+      default
+  }
+
+  private def shouldLoadData(loadData: String): Boolean = {
+    if ("true".equals(loadData)) {
+      true
+    } else if ("auto".equals(loadData)) {
+      val databases = queryTiDBViaJDBC("show databases").map(a => a.head)
+      if (databases.contains("tispark_test") && databases.contains("tpch_test") && databases
+            .contains("resolveLock_test")) {
+        false
+      } else {
+        true
+      }
+    } else {
+      false
+    }
   }
 
   private def initializeTiDBConnection(forceNotLoad: Boolean = false): Unit =
@@ -285,15 +344,11 @@ object SharedSQLContext extends Logging {
 
       initializeJDBCUrl()
 
-      val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "true").toLowerCase.toBoolean
+      val loadData = getOrElse(_tidbConf, SHOULD_LOAD_DATA, "auto").toLowerCase
 
-      if (loadData) {
-        logger.info("load data is enabled")
-      } else {
-        logger.info("load data is disabled")
-      }
+      logger.info(s"load data is mode: $loadData")
 
-      if (loadData && !forceNotLoad) {
+      if (shouldLoadData(loadData) && !forceNotLoad) {
         logger.info("Loading TiSparkTestData")
         // Load index test data
         loadSQLFile("tispark-test", "IndexTest")
@@ -339,8 +394,16 @@ object SharedSQLContext extends Logging {
 
       generateData = getOrElse(_tidbConf, SHOULD_GENERATE_DATA, "true").toLowerCase.toBoolean
 
-      if (generateData) {
-        logger.info("generate data is enabled")
+      if (generateDataSeed.isEmpty) {
+        var tmpSeed = getOrElse(_tidbConf, GENERATE_DATA_SEED, "1234").toLong
+        if (tmpSeed == 0) {
+          tmpSeed = System.currentTimeMillis()
+        }
+        generateDataSeed = Some(tmpSeed)
+
+        if (generateData) {
+          logger.info(s"generate data is enabled and seed is ${generateDataSeed.get}")
+        }
       }
 
       if (isTidbConfigPropertiesInjectedToSparkEnabled) {
@@ -355,6 +418,7 @@ object SharedSQLContext extends Logging {
 
       sparkConf.set("spark.tispark.write.allow_spark_sql", "true")
       sparkConf.set("spark.tispark.write.without_lock_table", "true")
+      sparkConf.set("spark.tispark.tikv.region_split_size_in_mb", "1")
 
       if (isHiveEnabled) {
         // delete meta store directory to avoid multiple derby instances SPARK-10872

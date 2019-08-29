@@ -83,10 +83,14 @@ public class DAGIteratorTest extends MockServerTest {
     server.put("key1", cdo.toByteString());
     List<RegionTask> tasks = ImmutableList.of(RegionTask.newInstance(region, store, keyRanges));
     CoprocessIterator<Row> iter = CoprocessIterator.getRowIterator(req, tasks, session);
-    Row r = iter.next();
-    SchemaInfer infer = SchemaInfer.create(req);
-    assertEquals(r.get(0, infer.getType(0)), 666L);
-    assertEquals(r.get(1, infer.getType(1)), "value1");
+    if (!iter.hasNext()) {
+      assertEquals("iterator has next should be true", true, false);
+    } else {
+      Row r = iter.next();
+      SchemaInfer infer = SchemaInfer.create(req);
+      assertEquals(r.get(0, infer.getType(0)), 666L);
+      assertEquals(r.get(1, infer.getType(1)), "value1");
+    }
   }
 
   private static KeyRange createByteStringRange(ByteString sKey, ByteString eKey) {

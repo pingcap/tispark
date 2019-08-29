@@ -40,7 +40,7 @@ public class SupportedExpressionValidator extends DefaultVisitor<Boolean, Expres
 
   @Override
   protected Boolean process(Expression node, ExpressionBlacklist blacklist) {
-    if (blacklist != null && blacklist.isUnsupportedPushdownExpr(getClass())) {
+    if (blacklist != null && blacklist.isUnsupportedPushDownExpr(getClass())) {
       return false;
     }
     for (Expression expr : node.getChildren()) {

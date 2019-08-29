@@ -136,8 +136,8 @@ object BasicExpression {
         // Some(TiExpr.create().setValue(attr.name).toProto)
         Some(ColumnRef.create(attr.name))
 
-      case uattr: UnresolvedAttribute =>
-        Some(ColumnRef.create(uattr.name))
+      case uAttr: UnresolvedAttribute =>
+        Some(ColumnRef.create(uAttr.name))
 
       // TODO: Remove it and let it fail once done all translation
       case _ => Option.empty[TiExpression]
