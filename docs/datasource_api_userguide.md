@@ -27,7 +27,7 @@ Because TiDB is a database that supports `transaction`, The TiDB Connector for S
 
 1. all the data in DataFrame is written to TiDB successfully if no conflicts exist.
 2. no data in DataFrame is written to TiDB successfully if conflicts exist.
-3. no partial changes are visible to other sessions until commit.
+3. no partial changes are visible to other sessions until the transaction is committed.
 
 ## `REPLACE` and `INSERT` syntaxes
 
@@ -260,7 +260,7 @@ CREATE TABLE tpch_test.TARGET_TABLE_CUSTOMER (
 )
 ```
 
-3. Register a TiDB table `tpch_test.CUSTOMER` to the Spark catalog:
+3. Register a TiDB table `tpch_test.CUSTOMER` to the Spark Catalog:
 
 ```
 CREATE TABLE CUSTOMER_SRC USING tidb OPTIONS (database 'tpch_test', table 'CUSTOMER')
@@ -272,7 +272,7 @@ CREATE TABLE CUSTOMER_SRC USING tidb OPTIONS (database 'tpch_test', table 'CUSTO
 SELECT * FROM CUSTOMER_SRC limit 10
 ```
 
-5. Register another TiDB table `tpch_test.TARGET_TABLE_CUSTOMER` to the spark catalog:
+5. Register another TiDB table `tpch_test.TARGET_TABLE_CUSTOMER` to the Spark Catalog:
 
 ```
 CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (database 'tpch_test', table 'TARGET_TABLE_CUSTOMER')
@@ -299,11 +299,11 @@ The following table shows the TiDB-specific options, which can be passed in thro
 | spark.tispark.tidb.password | tidb.password | true     | TiDB Password                                                                                               | -       |
 | database                    | -             | true     | TiDB Database                                                                                               | -       |
 | table                       | -             | true     | TiDB Table                                                                                                  | -       |
-| skipCommitSecondaryKey      | -             | false    | To skip commit secondary key                                                                                   | false   |
+| skipCommitSecondaryKey      | -             | false    | Whether to skip the commit phase of secondary keys                                                                                   | false   |
 | enableRegionSplit           | -             | false    | To split Region to avoid hot Region during insertion                                                        | true    |
 | regionSplitNum              | -             | false    | The Region split number defined by user during insertion                                                           | 0       |
 | replace                     | -             | false    | To define the behavior of append                                                                              | false   |
-| lockTTLSeconds              | -             | false    | tikv lock ttl. The write duration must be longer than `lockTTLSeconds`, otherwise write might fail because of the Garbage Collection (GC).              | 3600    |
+| lockTTLSeconds              | -             | false    | TiKV's lock TTL. The write duration must be no longer than `lockTTLSeconds`, otherwise write might fail because of the Garbage Collection (GC).              | 3600    |
 | writeConcurrency            | -             | false    | The maximum number of threads that write data to TiKV. It is recommended that `writeConcurrency` is smaller than or equal to 8 * `number of TiKV instance`. | 0       |
 
 ## TiDB Version and Configuration for Write
@@ -324,7 +324,7 @@ delay-clean-table-lock: 60000
 split-table: true
 ```
 
-If your TiDB's version is earlier than 3.0 and you still want to have a try, set `spark.tispark.write.without_lock_table` to `true` to enable write, but ACID is **not** guaranteed.
+If your TiDB's version is earlier than 3.0, set `spark.tispark.write.without_lock_table` to `true` to enable write, but ACID is **not** guaranteed.
 
 ## Type Conversion for Write
 
@@ -335,7 +335,7 @@ The following types of SparkSQL Data are currently not supported for writing to 
 - MapType
 - StructType
 
-The complete conversion metrics is as follows.
+The complete conversion metrics are as follows.
 
 | Write      | Boolean            | Byte               | Short              | Integer            | Long               | Float              | Double             | String             | Decimal            | Date               | Timestamp          |
 | ---------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
@@ -371,7 +371,7 @@ The complete conversion metrics is as follows.
 
 ## Write Benchmark
 
-Tested on 4 machines as follows:
+The following test report is based on 4 machines.
 
 ```
 Intel(R) Xeon(R) CPU E5-2630 v4 @ 2.20GHz * 2 = 40Vu

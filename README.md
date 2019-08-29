@@ -73,8 +73,6 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 ## Latest TiDB/TiKV/PD versions supported by TiSpark
 
-Each latest TiSpark version guarantees *backward compatibility* to TiDB components. That is to say that TiSpark supports TiDB/TiKV/PD versions all the way back to an earlier release of these components. The reason varies, amongst which the most common one is that the new features and bug-fixes provided by TiDB components require an update on API, dependencies, etc.
-
 | TiSpark Version | Latest TiDB Version | Latest TiKV Version | Latest PD Version |
 | ----- | ------ | ------ | ------ |
 | < 1.2 | v2.1.4 | v2.1.4 | v2.1.4 |
@@ -170,8 +168,8 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.grpc.framesize` |  `268435456` | The maximum frame size of gRPC response |
 | `spark.tispark.grpc.timeout_in_sec` |  `10` | The gRPC timeout time in seconds |
 | `spark.tispark.meta.reload_period_in_sec` |  `60` | The reloading period of metastore in seconds |
-| `spark.tispark.plan.allow_agg_pushdown` |  `true` | If allow aggregation pushdown (in case of busy TiKV nodes) |
-| `spark.tispark.plan.allow_index_read` |  `true` |  If allow index read (which might cause heavy pressure on TiKV) |
+| `spark.tispark.plan.allow_agg_pushdown` |  `true` | Whether aggregations are allowed to push down to TiKV (in case of busy TiKV nodes) |
+| `spark.tispark.plan.allow_index_read` |  `true` |  Whether index is enabled in planning (which might cause heavy pressure on TiKV) |
 | `spark.tispark.index.scan_batch_size` |  `20000` | The number of row key in batch for the concurrent index scan |
 | `spark.tispark.index.scan_concurrency` |  `5` | The maximal number of threads for index scan that retrieves row keys (shared among tasks inside each JVM) |
 | `spark.tispark.table.scan_concurrency` |  `512` | The maximal number of threads for table scan (shared among tasks inside each JVM) |
@@ -215,7 +213,7 @@ For how TiSpark can benefit from TiDB's statistic information, see [here](./docs
 
 ### View
 
-TiDB starts to support `view` from `tidb-3.0` on.
+TiDB starts to support `view` since `tidb-3.0`.
 
 TiSpark currently **does not support** `view`. Users are not be able to observe or access data through `view` with TiSpark.
 
@@ -225,7 +223,7 @@ TiSpark currently **does not support** `view`. Users are not be able to observe 
 
 TiSpark currently supports `Range Partition` and `Hash Partition`. Users can select data from the `Range Partition` table and the `Hash Partition` table through TiSpark.
 
-In most cases, TiSpark use a full table scan. Only in certain cases, TiSpark applies partition pruning. For more details, see [here](./docs/userguide.md).
+In most cases, TiSpark use a full table scan on partition tables. Only in certain cases, TiSpark applies partition pruning. For more details, see [here](./docs/userguide.md).
 
 ## How to test
 

@@ -8,7 +8,7 @@ This document introduces how to set up and use TiSpark, which requires some basi
 
 ## Overview
 
-TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. It enjoys the merits of both the Spark platform and the distributed clusters of TiKV, at the same time, seamlessly integrated to TiDB, the distributed OLTP database, to provide one-stop Hybrid Transactional/Analytical Processing (HTAP) solutions for online transactions and analyses.
+TiSpark is a thin layer built for running Apache Spark on top of TiDB/TiKV to answer the complex OLAP queries. While enjoying the merits of both the Spark platform and the distributed clusters of TiKV, it is seamlessly integrated with TiDB, the distributed OLTP database, and thus blessed to provide one-stop Hybrid Transactional/Analytical Processing (HTAP) solutions for online transactions and analyses.
 
 It is an OLAP solution that runs Spark SQL directly on TiKV, the distributed storage engine.
 
@@ -149,7 +149,7 @@ Similarly, start a Spark-Slave node by executing the following command:
 ./sbin/start-slave.sh spark: // spark-master-hostname: 7077
 ```
 
-After the command returns, also see whether the Slave node is joined to the Spark cluster correctly from the panel.
+After the command returns, also check whether the Slave node is joined to the Spark cluster correctly from the panel.
 
 Repeat the above command on all Slave nodes. After all the Slaves are connected to the Master, you have a Standalone mode Spark cluster.
 
@@ -381,7 +381,7 @@ Q: Can I mix Spark with TiKV?
 
 A: If TiDB and TiKV are overloaded and run critical online tasks, consider deploying TiSpark separately.
 
-You also need to consider using different NICs to ensure that OLTP's network resources are not compromised and do not affect online business.
+You also need to consider using different NICs to ensure that OLTP's network resources are not compromised so that online business is not affected.
 
 If the online business requirements are not high or the loading is not large enough, you can mix TiSpark with TiKV deployment.
 
