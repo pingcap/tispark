@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ### New Features
 * Natively support writing data to TiKV (ACID) using Spark Data Source API
 
-### Improvement
+### Improvements
 * Release one TiSpark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
 * Add spark version to TiSpark's udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
 * Bump grpc to 1.17 [#982](https://github.com/pingcap/tispark/pull/982)
