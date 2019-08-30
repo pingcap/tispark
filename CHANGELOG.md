@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 * Add retry mechanism for `batchGet` [#986](https://github.com/pingcap/tispark/pull/986)
 
 ### Fixes
-* Fix range partition throw UnsupportedSyntaxException error [#960](https://github.com/pingcap/tispark/pull/960)
+* Catch UnsupportedSyntaxException when generating partition expressions [#960](https://github.com/pingcap/tispark/pull/960)
 * Fix TiSpark cannot read from a hash partition table [#966](https://github.com/pingcap/tispark/pull/966)
 * Fix index scan bug [#995](https://github.com/pingcap/tispark/pull/995)
 * Prohibit agg or groupby pushdown on double read [#1004](https://github.com/pingcap/tispark/pull/1004)
