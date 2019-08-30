@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 * Release one TiSpark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
 * Add spark version to TiSpark's udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
 * Bump grpc to 1.17 [#982](https://github.com/pingcap/tispark/pull/982)
-* Add retry for `batchGet` [#986](https://github.com/pingcap/tispark/pull/986)
+* Add retry mechanism for `batchGet` [#986](https://github.com/pingcap/tispark/pull/986)
 
 ### Fixes
 * Fix range partition throw UnsupportedSyntaxException error [#960](https://github.com/pingcap/tispark/pull/960)
