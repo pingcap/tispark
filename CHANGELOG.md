@@ -14,9 +14,8 @@ All notable changes to this project will be documented in this file.
 ### Fixes
 * Catch UnsupportedSyntaxException when generating partition expressions [#960](https://github.com/pingcap/tispark/pull/960)
 * Fix TiSpark cannot read from a hash partition table [#966](https://github.com/pingcap/tispark/pull/966)
-* Fix index scan bug [#995](https://github.com/pingcap/tispark/pull/995)
+* Fix index scan bug: remove required index data type when doing index scan to avoid incorrect offset [#995](https://github.com/pingcap/tispark/pull/995)
 * Prohibit agg or groupby pushdown on double read [#1004](https://github.com/pingcap/tispark/pull/1004)
-* Fix table not found bug in TiSession because of synchronization [#1041](https://github.com/pingcap/tispark/pull/1041)
 
 ## [TiSpark 2.1.4] 2019-08-27
 ### Fixes
