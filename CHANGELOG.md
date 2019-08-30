@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 * Release one tispark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
 * Add spark version to tispark udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
 
-## Fixes
+### Fixes
 * Remove useless `jackson-module-scala` dependencies [#1080](https://github.com/pingcap/tispark/pull/1080)
 * Fix range partition throw UnsupportedSyntaxException error [#960](https://github.com/pingcap/tispark/pull/960)
 * Let tispark be able to read from a hash partition table [#966](https://github.com/pingcap/tispark/pull/966)
