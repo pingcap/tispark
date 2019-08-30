@@ -4,14 +4,16 @@ All notable changes to this project will be documented in this file.
 ## [TiSpark 2.2.0] 2019-08-30
 ### New Features
 * Natively support writing data to TiKV (ACID) using Spark Data Source API
-* Release one tispark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
-* Add spark version to tispark's udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
+
+### Improvement
+* Release one TiSpark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
+* Add spark version to TiSpark's udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
+* Bump grpc to 1.17 [#982](https://github.com/pingcap/tispark/pull/982)
+* Add retry for `batchGet` [#986](https://github.com/pingcap/tispark/pull/986)
 
 ### Fixes
 * Fix range partition throw UnsupportedSyntaxException error [#960](https://github.com/pingcap/tispark/pull/960)
-* Let tispark be able to read from a hash partition table [#966](https://github.com/pingcap/tispark/pull/966)
-* Bump grpc to 1.17 [#982](https://github.com/pingcap/tispark/pull/982)
-* Add retry for `batchGet` [#986](https://github.com/pingcap/tispark/pull/986)
+* Fix TiSpark cannot read from a hash partition table [#966](https://github.com/pingcap/tispark/pull/966)
 * Fix index scan bug [#995](https://github.com/pingcap/tispark/pull/995)
 * Prohibit agg or groupby pushdown on double read [#1004](https://github.com/pingcap/tispark/pull/1004)
 * Fix table not found bug in TiSession because of synchronization [#1041](https://github.com/pingcap/tispark/pull/1041)
