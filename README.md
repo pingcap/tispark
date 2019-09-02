@@ -23,7 +23,17 @@ Read the [Quick Start](./docs/userguide.md).
 You might also [build from sources](#how-to-build-from-sources) to try the new features on TiSpark master branch.
 
 If you are using maven (recommended), add the following code to your `pom.xml`:
+```xml
+<dependencies>
+    <dependency>
+      <groupId>com.pingcap.tispark</groupId>
+      <artifactId>tispark-assembly</artifactId>
+      <version>2.2.0</version>
+    </dependency>
+</dependencies>
+```
 
+If you want to use TiSpark-2.1.x, please use the following configuration:
 ```xml
 <dependencies>
     <dependency>
@@ -47,27 +57,17 @@ git clone https://github.com/pingcap/tispark.git
 To build all TiSpark modules from sources, run the following command under the TiSpark root directory:
 
 ```
-mvn clean install -Dmaven.test.skip=true -P spark-2.3
+mvn clean install -Dmaven.test.skip=true
 ```
-
-or
-
-```
-mvn clean install -Dmaven.test.skip=true -P spark-2.4
-```
-
-> **Note:**
->
-> You must specify the major Spark version according to the Spark version you are using.
 
 To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 ## How to choose TiSpark Version
 
-| Spark Version | Stable TiSpark Version |
+| Spark Version | Recommended TiSpark Version |
 | ------------- | ---------------------- |
-| Spark-2.4.x | TiSpark-2.1.4 |
-| Spark-2.3.x | TiSpark-2.1.4 |
+| Spark-2.4.x | TiSpark-2.2.0、TiSpark-2.1.4 |
+| Spark-2.3.x | TiSpark-2.2.0、TiSpark-2.1.4 |
 | Spark-2.2.x | TiSpark-1.2.1 |
 | Spark-2.1.x | TiSpark-1.2.1 |
 
@@ -77,7 +77,7 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 | ----- | ------ | ------ | ------ |
 | < 1.2 | v2.1.4 | v2.1.4 | v2.1.4 |
 | 1.2.x | v2.1.x | v2.1.x | v2.1.x |
-| 2.x | v3.0.0-beta | v3.0.0-beta | v3.0.0-beta |
+| 2.x | v3.0.2 | v3.0.2 | v3.0.2 |
 | Latest (master) | Latest | Latest | Latest |
 
 ## Spark versions supported by TiSpark
@@ -89,6 +89,7 @@ Although TiSpark provides backward compatibility to TiDB, it only guarantees the
 | 1.x | Spark v2.1.0+ |
 | 2.0 | Spark v2.3.0+ |
 | 2.1.x | Spark v2.3.0+, Spark v2.4.0+ |
+| 2.2.x | Spark v2.3.0+, Spark v2.4.0+ |
 | Latest (master) | Spark v2.3.0+, Spark v2.4.0+ |
 
 ## How to upgrade from Spark 2.1 to Spark 2.3/2.4

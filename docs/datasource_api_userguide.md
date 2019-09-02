@@ -2,7 +2,7 @@
 
 The TiDB Connector for Spark enables you to use TiDB as the data source of Apache Spark, similar to other data sources (PostgreSQL, HDFS, S3, etc.).
 
-The TiDB Connector supports Spark 2.3.0+.
+The TiDB Connector supports Spark 2.3.0+ and Spark 2.4.0+.
 
 ## Interaction Between TiDB and Spark
 
@@ -12,14 +12,6 @@ Using the connector, you can perform the following two operations:
 
   - Populate a Spark DataFrame from a table in TiDB.
   - Write the contents of a Spark DataFrame to a table in TiDB.
-
-## Query Pushdown
-
-For optimal performance, you might want to avoid reading a large amount of data or transferring large intermediate results between systems.
-
-Query pushdown leverages these performance efficiencies by enabling large and complex Spark logical plans (in parts) to be processed in TiKV.
-
-Pushdown is not possible in all situations. For example, Spark UDFs cannot be pushed down to TiKV.
 
 ## Transaction support for Write
 
@@ -308,7 +300,9 @@ The following table shows the TiDB-specific options, which can be passed in thro
 
 ## TiDB Version and Configuration for Write
 
-TiDB's version must be 3.0 or later.
+TiDB's version must be 4.0 or later.
+
+**IMPORTANT: currently TiDB-4.0 is not released yet, but you can use tidb's master branch.**
 
 Make sure that the following TiDB configuration items are correctly set.
 
@@ -324,7 +318,7 @@ delay-clean-table-lock: 60000
 split-table: true
 ```
 
-If your TiDB's version is earlier than 3.0, set `spark.tispark.write.without_lock_table` to `true` to enable write, but ACID is **not** guaranteed.
+If your TiDB's version is earlier than 4.0, set `spark.tispark.write.without_lock_table` to `true` to enable write, but ACID is **not** guaranteed.
 
 ## Type Conversion for Write
 
