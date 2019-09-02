@@ -302,7 +302,7 @@ The following table shows the TiDB-specific options, which can be passed in thro
 
 TiDB's version must be 4.0 or later.
 
-**IMPORTANT: currently TiDB-4.0 is not released yet, but you can use code on tidb's master branch.**
+**IMPORTANT: currently TiDB-4.0 is not released yet, but you can use tidb's master branch.**
 
 Make sure that the following TiDB configuration items are correctly set.
 
