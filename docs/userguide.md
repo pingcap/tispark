@@ -99,7 +99,7 @@ For the hybrid deployment of TiSpark and TiKV, add the resources required by TiS
 
 ## Deploy TiSpark
 
-Download the TiSpark's jar package from [here](http://download.pingcap.org/tispark-latest-linux-amd64.tar.gz).
+Download the TiSpark's jar package from [here](https://github.com/pingcap/tispark/releases).
 
 ### Deploy TiSpark on existing Spark cluster
 
