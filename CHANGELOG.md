@@ -1,6 +1,12 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.1.5] 2019-09-02
+### Fixes
+- Remove useless scala and jackson dependencies [#1079](https://github.com/pingcap/tispark/pull/1079)
+- Fix range partition throw UnsupportedSyntaxException error [#1088](https://github.com/pingcap/tispark/pull/1088)
+- Make TiSpark reading data from a hash partition table [#1089](https://github.com/pingcap/tispark/pull/1089)
+
 ## [TiSpark 2.2.0] 2019-08-30
 ### New Features
 * Natively support writing data to TiKV (ACID) using Spark Data Source API
