@@ -49,6 +49,23 @@ class PartitionTableSuite extends BaseTiSparkSuite {
     judge("select * from pt where purchased != date'1995-10-10'")
   }
 
+  test("reading from hash partition") {
+    enablePartitionForTiDB()
+    tidbStmt.execute("drop table if exists t")
+    tidbStmt.execute(
+      """create table t (id int) partition by hash(id) PARTITIONS 4
+        |""".stripMargin
+    )
+    tidbStmt.execute("insert into `t` values(5)")
+    tidbStmt.execute("insert into `t` values(15)")
+    tidbStmt.execute("insert into `t` values(25)")
+    tidbStmt.execute("insert into `t` values(35)")
+    refreshConnections()
+
+    judge("select * from t")
+    judge("select * from t where id < 10")
+  }
+
   test("constant folding does not apply case") {
     enablePartitionForTiDB()
     tidbStmt.execute(
