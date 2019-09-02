@@ -1,6 +1,22 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.2.0] 2019-08-30
+### New Features
+* Natively support writing data to TiKV (ACID) using Spark Data Source API
+
+### Improvements
+* Release one TiSpark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
+* Add spark version to TiSpark's udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
+* Bump grpc to 1.17 [#982](https://github.com/pingcap/tispark/pull/982)
+* Add retry mechanism for `batchGet` [#986](https://github.com/pingcap/tispark/pull/986)
+
+### Fixes
+* Catch UnsupportedSyntaxException when generating partition expressions [#960](https://github.com/pingcap/tispark/pull/960)
+* Fix TiSpark cannot read from a hash partition table [#966](https://github.com/pingcap/tispark/pull/966)
+* Prohibit extra index data type pushdown when doing index scan to avoid decoding extra column [#995](https://github.com/pingcap/tispark/pull/995)
+* Prohibit agg or groupby pushdown on double read [#1004](https://github.com/pingcap/tispark/pull/1004)
+
 ## [TiSpark 2.1.4] 2019-08-27
 ### Fixes
 - Fix distinct without alias bug: disable pushdown aggregate with alias [#1055](https://github.com/pingcap/tispark/pull/1055)
@@ -13,13 +29,6 @@ All notable changes to this project will be documented in this file.
 - Prohibit aggregate or group by pushdown on double read [#1027](https://github.com/pingcap/tispark/pull/1027)
 - Fix reflection bug for HDP release [#1017](https://github.com/pingcap/tispark/pull/1017)
 - Fix scala compiler version [#1019](https://github.com/pingcap/tispark/pull/1019)
-
-## [TiSpark 2.2.0]
-### New Features
-* Natively support writing data to TiKV using Spark Data Source API
-* Support select from partition table [#916](https://github.com/pingcap/tispark/pull/916)
-* Release one tispark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
-* Add spark version to tispark udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
 
 ## [TiSpark 2.1.2] 2019-07-29
 ### Fixes
