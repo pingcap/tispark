@@ -35,8 +35,6 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected var tableNames: Seq[String] = _
 
-  private lazy val enableTiFlashRead = spark.conf.get(TiConfigConst.ENABLE_TIFLASH_TEST).toBoolean
-
   private def tiCatalog = ti.tiCatalog
 
   protected def isEnableTableLock: Boolean = {
@@ -387,7 +385,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
 
     // test tiflash's result
-    if (enableTiFlashRead) {
+    if (enableTiFlashTest) {
       // get result from TiFlash
       try {
         spark.conf.set(TiConfigConst.USE_TIFLASH, "true")
