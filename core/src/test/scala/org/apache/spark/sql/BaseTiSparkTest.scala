@@ -390,7 +390,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       try {
         spark.conf.set(TiConfigConst.USE_TIFLASH, "true")
         r4 = queryViaTiSpark(qJDBC)
-        if(!compSqlResult(qSpark, r1, r4, checkLimit)){
+        if (!compSqlResult(qSpark, r1, r4, checkLimit)) {
           fail(
             s"""Failed with
                |TiSpark:\t\t${listToString(r1)}
