@@ -35,7 +35,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected var tableNames: Seq[String] = _
 
-  private var enableTiFlashRead = spark.conf.get(TiConfigConst.ENABLE_TIFLASH_TEST).toBoolean
+  private lazy val enableTiFlashRead = spark.conf.get(TiConfigConst.ENABLE_TIFLASH_TEST).toBoolean
 
   private def tiCatalog = ti.tiCatalog
 
