@@ -75,6 +75,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
 
+  protected def enableTiFlashTest: Boolean = SharedSQLContext.enableTiFlashTest
+
   protected def refreshConnections(): Unit = SharedSQLContext.refreshConnections(false)
 
   protected def refreshConnections(isHiveEnabled: Boolean): Unit =
@@ -166,6 +168,7 @@ object SharedSQLContext extends Logging {
   protected var pdAddresses: String = _
   protected var generateData: Boolean = _
   protected var generateDataSeed: Option[Long] = None
+  protected var enableTiFlashTest: Boolean = _
 
   protected implicit def spark: SparkSession = _spark
 
@@ -385,6 +388,8 @@ object SharedSQLContext extends Logging {
       // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
       tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "")
+
+      enableTiFlashTest = getOrElse(prop, ENABLE_TIFLASH_TEST, "false").toBoolean
 
       runTPCH = tpchDBName != ""
       runTPCDS = tpcdsDBName != ""
