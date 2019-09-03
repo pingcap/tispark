@@ -46,7 +46,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
     if (!dagRequest.getUseTiFlash)
       return partitions
 
-    logger.info("testing tiflash logic")
+    logger.info("reading data from tiflash")
     val regionMgr = session.getRegionManager
     partitions.map(p => {
       val tiPartition = p.asInstanceOf[TiPartition]
