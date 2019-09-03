@@ -155,9 +155,31 @@ spark.sql("select count(*) from lineitem").show
 spark.sql("select ti_version()").show
 ```
 
-## TiDB Data Source API
+## Write Data To TiDB using TiDB Connector
+TiSpark natively supports writing data to TiKV via Spark Data Source API and guarantees ACID.
 
-When using the TiDB Data Source API, follow the document for [TiDB Data Source API User Guide](./docs/datasource_api_userguide.md).
+For example:
+
+```scala
+val tidbOptions: Map[String, String] = Map(
+  "tidb.addr" -> "127.0.0.1",
+  "tidb.password" -> "",
+  "tidb.port" -> "4000",
+  "tidb.user" -> "root",
+  "spark.tispark.pd.addresses" -> "127.0.0.1:2379"
+)
+
+val customer = spark.sql("select * from customer limit 100000")
+
+customer.write
+.format("tidb")
+.option("database", "tpch_test")
+.option("table", "cust_test_select")
+.mode("append")
+.save()
+```
+
+See [here](./datasource_api_userguide.md) for more details.
 
 ## Configuration
 
