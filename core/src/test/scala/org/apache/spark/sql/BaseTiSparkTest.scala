@@ -402,7 +402,8 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         }
       } catch {
         case e: Throwable =>
-          logger.warn(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed
+          logger.error(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed
+          fail(e)
       }
     }
 
