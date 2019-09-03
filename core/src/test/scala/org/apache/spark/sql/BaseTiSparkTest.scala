@@ -400,6 +400,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                |TiDB:\t\t\t${listToString(r3)}""".stripMargin
           )
         }
+        spark.conf.set(TiConfigConst.USE_TIFLASH, "false")
       } catch {
         case e: Throwable =>
           logger.error(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed

@@ -43,7 +43,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
   override protected def getPartitions: Array[Partition] = {
     val partitions = super.getPartitions
 
-    if (!TiUtil.allowTiFlashRead(sparkSession.sqlContext.conf))
+    if (!dagRequest.getUseTiFlash)
       return partitions
 
     logger.info("testing tiflash logic")
