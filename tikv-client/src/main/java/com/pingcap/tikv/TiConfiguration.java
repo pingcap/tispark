@@ -77,7 +77,6 @@ public class TiConfiguration implements Serializable {
 
   private boolean useTiFlash = DEF_USE_TIFLASH;
   private String tiFlashLabelKey = DEF_TIFLASH_LABEL_KEY;
-
   private String tiFlashLabelValue = DEF_TIFLASH_LABEL_VALUE;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
