@@ -232,6 +232,7 @@ public class TiKVScanAnalyzer {
     }
 
     dagRequest.addRanges(minPlan.getKeyRanges());
+    dagRequest.setUseTiFlash(allowTiFlashRead);
     dagRequest.setPrunedParts(minPlan.getPrunedParts());
     dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
     if (minPlan.isIndexScan()) {
