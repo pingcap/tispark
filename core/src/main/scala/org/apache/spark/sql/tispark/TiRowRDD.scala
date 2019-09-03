@@ -22,7 +22,7 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.TiConverter
+import com.pingcap.tispark.utils.{TiConverter, TiUtil}
 import com.pingcap.tispark.{TiConfigConst, TiPartition, TiTableReference}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
@@ -40,16 +40,10 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
 
   protected val logger: Logger = log
 
-  def allowTiFlashRead(): Boolean =
-    sparkSession.sqlContext.conf
-      .getConfString(TiConfigConst.USE_TIFLASH, "false")
-      .toLowerCase
-      .toBoolean
-
   override protected def getPartitions: Array[Partition] = {
     val partitions = super.getPartitions
 
-    if (!allowTiFlashRead())
+    if (!TiUtil.allowTiFlashRead(sparkSession.sqlContext.conf))
       return partitions
 
     logger.info("testing tiflash logic")
