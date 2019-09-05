@@ -31,41 +31,6 @@ TiSpark relies on the availability of TiKV clusters and PDs. You also need to se
 
 ## Recommended deployment configurations
 
-### For TiKV cluster
-
-For the independent deployment of TiKV and TiSpark, it is recommended to refer to the following recommendations.
-
-+ Hardware configuration
-     - For general purposes, refer to the TiDB and TiKV hardware configuration [recommendations](https://github.com/pingcap/docs/blob/master/dev/how-to/deploy/hardware-recommendations.md).
-     - If the user scenarios more involves data analysis, increase the memory of the TiKV nodes to at least 64G. If you use Hard Disk Drive (HDD), it is recommended to use at least 8 disks.
-+ TiKV parameters (by default)
-
-    ```
-    [Server]
-    End-point-concurrency = 8 # For OLAP scenarios, consider increasing this parameter
-    [Raftstore]
-    Sync-log = false
-
-    [Rocksdb]
-    Max-background-compactions = 6
-    Max-background-flushes = 2
-
-    [Rocksdb.defaultcf]
-    Block-cache-size = "10GB"
-
-    [Rocksdb.writecf]
-    Block-cache-size = "4GB"
-
-    [Rocksdb.raftcf]
-    Block-cache-size = "1GB"
-
-    [Rocksdb.lockcf]
-    Block-cache-size = "1GB"
-
-    [Storage]
-    Scheduler-worker-pool-size = 4
-    ```
-
 ### For independent deployment of Spark cluster and TiSpark cluster
 
 Refer to the [Spark official website](https://spark.apache.org/docs/latest/hardware-provisioning.html) for detailed hardware recommendations.
@@ -260,9 +225,36 @@ To use TiSpark with Hive:
     spark.sql("select * from hive_table a, tispark_table b where a.col1 = b.col1").show // join table across Hive and Tispark
     ```
 
+## Load Spark DataFrame into TiDB using TiDB Connector
+TiSpark natively supports writing data to TiKV via Spark Data Source API and guarantees ACID.
+
+For example:
+
+```scala
+// tispark will send `lock table` command to TiDB via JDBC
+val tidbOptions: Map[String, String] = Map(
+  "tidb.addr" -> "127.0.0.1",
+  "tidb.password" -> "",
+  "tidb.port" -> "4000",
+  "tidb.user" -> "root",
+  "spark.tispark.pd.addresses" -> "127.0.0.1:2379"
+)
+
+val customer = spark.sql("select * from customer limit 100000")
+
+customer.write
+.format("tidb")
+.option("database", "tpch_test")
+.option("table", "cust_test_select")
+.mode("append")
+.save()
+```
+
+See [here](./datasource_api_userguide.md) for more details.
+
 ## Load Spark DataFrame into TiDB using JDBC
 
-TiSpark does not provide a direct way to load data into your TiDB cluster, but you can still do it by using JDBC.
+While TiSpark provides a direct way to load data into your TiDB cluster, you can also do it by using JDBC.
 
 For example:
 

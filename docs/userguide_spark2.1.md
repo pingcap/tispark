@@ -31,41 +31,6 @@ TiSpark Architecture
 
 ## Recommended deployment configurations
 
-### For TiKV cluster
-
-For the independent deployment of TiKV and TiSpark, it is recommended to refer to the following recommendations.
-
-+ Hardware configuration
-    - For general purposes, refer to the TiDB and TiKV hardware configuration [recommendations](https://github.com/pingcap/docs/blob/master/dev/how-to/deploy/hardware-recommendations.md).
-    - If the user scenarios more involves data analysis, increase the memory of the TiKV nodes to at least 64G. If you use Hard Disk Drive (HDD), it is recommended to use at least 8 disks.
-+ TiKV parameters (by default)
-
-```
-[Server]
-End-point-concurrency = 8 # For OLAP scenarios, consider increasing this parameter
-[Raftstore]
-Sync-log = false
-
-[Rocksdb]
-Max-background-compactions = 6
-Max-background-flushes = 2
-
-[Rocksdb.defaultcf]
-Block-cache-size = "10GB"
-
-[Rocksdb.writecf]
-Block-cache-size = "4GB"
-
-[Rocksdb.raftcf]
-Block-cache-size = "1GB"
-
-[Rocksdb.lockcf]
-Block-cache-size = "1GB"
-
-[Storage]
-Scheduler-worker-pool-size = 4
-```
-
 ### For independent deployment of Spark cluster and TiSpark cluster
 
 Refer to the [Spark official website](https://spark.apache.org/docs/latest/hardware-provisioning.html) for detailed hardware recommendations.
