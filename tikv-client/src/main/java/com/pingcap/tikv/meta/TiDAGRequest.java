@@ -155,6 +155,14 @@ public class TiDAGRequest implements Serializable {
     this.prunedParts = prunedParts;
   }
 
+  public void setUseTiFlash(boolean allowTiflashRead) {
+    this.useTiFlash = allowTiflashRead;
+  }
+
+  public boolean getUseTiFlash() {
+    return useTiFlash;
+  }
+
   public TiDAGRequest(PushDownType pushDownType) {
     this.pushDownType = pushDownType;
   }
@@ -198,6 +206,7 @@ public class TiDAGRequest implements Serializable {
 
   private TiTableInfo tableInfo;
   private List<TiPartitionDef> prunedParts;
+  private boolean useTiFlash;
   private TiIndexInfo indexInfo;
   private final List<ColumnRef> fields = new ArrayList<>();
   private final List<DataType> indexDataTypes = new ArrayList<>();

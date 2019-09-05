@@ -20,7 +20,7 @@ package org.apache.spark.sql
 import java.sql.Statement
 
 import com.pingcap.tikv.TiDBJDBCClient
-import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import com.pingcap.tikv.meta.TiTableInfo
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
@@ -249,13 +249,14 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                                   rSpark: List[List[Any]] = null,
                                   rJDBC: List[List[Any]] = null,
                                   rTiDB: List[List[Any]] = null,
+                                  rTiFlash: List[List[Any]] = null,
                                   skipJDBC: Boolean = false,
                                   skipTiDB: Boolean = false,
                                   checkLimit: Boolean = true): Unit =
     try {
       explainSpark(qSpark)
       if (qJDBC == null) {
-        runTest(qSpark, skipped, rSpark, rJDBC, rTiDB, skipJDBC, skipTiDB, checkLimit)
+        runTest(qSpark, skipped, rSpark, rJDBC, rTiDB, rTiFlash, skipJDBC, skipTiDB, checkLimit)
       } else {
         runTestWithoutReplaceTableName(
           qSpark,
@@ -264,6 +265,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           rSpark,
           rJDBC,
           rTiDB,
+          rTiFlash,
           skipJDBC,
           skipTiDB,
           checkLimit
@@ -298,6 +300,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                         rSpark: List[List[Any]] = null,
                         rJDBC: List[List[Any]] = null,
                         rTiDB: List[List[Any]] = null,
+                        rTiFlash: List[List[Any]] = null,
                         skipJDBC: Boolean = false,
                         skipTiDB: Boolean = false,
                         checkLimit: Boolean = true): Unit =
@@ -308,6 +311,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       rSpark,
       rJDBC,
       rTiDB,
+      rTiFlash,
       skipJDBC,
       skipTiDB,
       checkLimit
@@ -327,6 +331,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
    * @param rSpark      pre-calculated TiSpark result
    * @param rJDBC       pre-calculated Spark-JDBC result
    * @param rTiDB       pre-calculated TiDB result
+   * @param rTiFlash    pre-calculated TiFlash result
    * @param skipJDBC    whether not to run test for Spark-JDBC
    * @param skipTiDB    whether not to run test for TiDB
    * @param checkLimit  whether check if sql contains limit but not order by
@@ -337,6 +342,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                                              rSpark: List[List[Any]] = null,
                                              rJDBC: List[List[Any]] = null,
                                              rTiDB: List[List[Any]] = null,
+                                             rTiFlash: List[List[Any]] = null,
                                              skipJDBC: Boolean = false,
                                              skipTiDB: Boolean = false,
                                              checkLimit: Boolean = true): Unit = {
@@ -348,6 +354,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     var r1: List[List[Any]] = rSpark
     var r2: List[List[Any]] = rJDBC
     var r3: List[List[Any]] = rTiDB
+    var r4: List[List[Any]] = rTiFlash
 
     if (r1 == null) {
       try {
@@ -377,6 +384,28 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       }
     }
 
+    // test tiflash's result
+    if (enableTiFlashTest) {
+      // get result from TiFlash
+      try {
+        spark.conf.set(TiConfigConst.USE_TIFLASH, "true")
+        r4 = queryViaTiSpark(qJDBC)
+        if (!compSqlResult(qSpark, r1, r4, checkLimit)) {
+          fail(
+            s"""Failed with
+               |TiSpark:\t\t${listToString(r1)}
+               |Spark With TiFlash:${listToString(r2)}
+               |TiDB:\t\t\t${listToString(r3)}""".stripMargin
+          )
+        }
+        spark.conf.set(TiConfigConst.USE_TIFLASH, "false")
+      } catch {
+        case e: Throwable =>
+          logger.error(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed
+          fail(e)
+      }
+    }
+
     if (skipJDBC || !compSqlResult(qSpark, r1, r2, checkLimit)) {
       if (!skipTiDB && r3 == null) {
         try {
@@ -385,6 +414,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           case e: Throwable => logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
         }
       }
+
       if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {
         fail(
           s"""Failed with
