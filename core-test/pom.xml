@@ -21,7 +21,7 @@
     <dependencies>
         <dependency>
             <groupId>com.pingcap.tispark</groupId>
-            <artifactId>tispark-core</artifactId>
+            <artifactId>tispark-core-internal</artifactId>
             <version>${project.parent.version}</version>
             <exclusions>
                 <exclusion>
