@@ -161,6 +161,7 @@ TiSpark natively supports writing data to TiKV via Spark Data Source API and gua
 For example:
 
 ```scala
+// tispark will send `lock table` command to TiDB via JDBC
 val tidbOptions: Map[String, String] = Map(
   "tidb.addr" -> "127.0.0.1",
   "tidb.password" -> "",
