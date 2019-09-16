@@ -9,9 +9,9 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>tispark-core</artifactId>
+    <artifactId>tispark-core-internal</artifactId>
     <packaging>jar</packaging>
-    <name>TiSpark Project Core</name>
+    <name>TiSpark Project Core Internal</name>
     <url>http://github.copm/pingcap/tispark</url>
 
     <properties>
