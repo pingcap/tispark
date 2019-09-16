@@ -228,7 +228,6 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     }
     Expr.Builder builder = scalarToPartialProto(node, context);
     builder.setSig(protoSig);
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
     return builder.build();
   }
 
@@ -246,7 +245,6 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     }
     Expr.Builder builder = Expr.newBuilder();
     builder.setTp(ExprType.ColumnRef);
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
     CodecDataOutput cdo = new CodecDataOutput();
     // After switching to DAG request mode, expression value
     // should be the index of table columns we provided in
@@ -269,7 +267,6 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       type.encode(cdo, EncodeType.PROTO, node.getValue());
       builder.setVal(cdo.toByteString());
     }
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
     return builder.build();
   }
 
