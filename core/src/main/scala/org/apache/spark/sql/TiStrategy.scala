@@ -38,7 +38,11 @@ import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.execution.datasources.v2.WriteToDataSourceV2
+import org.apache.spark.sql.execution.streaming.sources.{InternalRowMicroBatchWriter, MicroBatchWriter}
 import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.sources.v2.StreamWriteSupport
+import org.apache.spark.sql.sources.v2.writer.DataSourceWriter
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._
@@ -100,9 +104,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     }
 
   // apply StartTs to every logical plan in Spark Planning stage
-  protected def applyStartTs(ts: TiTimestamp): PartialFunction[LogicalPlan, Unit] = {
+  protected def applyStartTs(ts: TiTimestamp,
+                             forceUpdate: Boolean = false): PartialFunction[LogicalPlan, Unit] = {
     case LogicalRelation(r @ TiDBRelation(_, _, _, timestamp, _), _, _, _) =>
-      if (timestamp == null) {
+      if (timestamp == null || forceUpdate) {
         r.ts = ts
       }
     case logicalPlan =>
@@ -113,16 +118,50 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
   }
 
+  private def isStreamingWriter(writer: DataSourceWriter): Boolean = {
+    writer match {
+      case _: MicroBatchWriter            => true
+      case _: InternalRowMicroBatchWriter => true
+      case _: StreamWriteSupport          => true
+      case _                              => false
+    }
+  }
+
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
-    val ts = tiContext.tiSession.getTimestamp
-    plan foreachUp applyStartTs(ts)
-    plan
-      .collectFirst {
-        case LogicalRelation(relation: TiDBRelation, _, _, _) =>
-          doPlan(relation, plan)
-      }
-      .toSeq
-      .flatten
+    plan match {
+      case ReturnAnswer(WriteToDataSourceV2(writer, _)) if isStreamingWriter(writer) =>
+        val ts = tiContext.tiSession.getTimestamp
+        plan foreachUp applyStartTs(ts, forceUpdate = true)
+        plan
+          .collectFirst {
+            case LogicalRelation(relation: TiDBRelation, _, _, _) =>
+              doPlan(relation, plan)
+          }
+          .toSeq
+          .flatten
+
+      case WriteToDataSourceV2(writer, _) if isStreamingWriter(writer) =>
+        val ts = tiContext.tiSession.getTimestamp
+        plan foreachUp applyStartTs(ts, forceUpdate = true)
+        plan
+          .collectFirst {
+            case LogicalRelation(relation: TiDBRelation, _, _, _) =>
+              doPlan(relation, plan)
+          }
+          .toSeq
+          .flatten
+
+      case _ =>
+        val ts = tiContext.tiSession.getTimestamp
+        plan foreachUp applyStartTs(ts)
+        plan
+          .collectFirst {
+            case LogicalRelation(relation: TiDBRelation, _, _, _) =>
+              doPlan(relation, plan)
+          }
+          .toSeq
+          .flatten
+    }
   }
 
   private def toCoprocessorRDD(
