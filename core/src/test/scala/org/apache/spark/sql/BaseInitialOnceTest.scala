@@ -16,6 +16,16 @@
 package org.apache.spark.sql
 
 class BaseInitialOnceTest extends BaseTiSparkTest {
+  protected def loadQueryFromFile(directory: String, file: String): String = {
+    val fullFileName = s"$directory/$file.sql"
+    val path = getClass.getResource("/" + fullFileName).getPath
+    import scala.io.Source
+    val source = Source.fromFile(path)
+    val queryString = source.mkString
+    source.close()
+    queryString
+  }
+
   private var init = false
 
   override def beforeAll(): Unit =

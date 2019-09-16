@@ -35,6 +35,7 @@ import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
 
 import scala.collection.mutable.ArrayBuffer
+import scala.tools.nsc.io.Directory
 
 /**
  * This trait manages basic TiSpark, Spark JDBC, TiDB JDBC
@@ -235,7 +236,7 @@ object SharedSQLContext extends Logging {
     _tidbConnection.setCatalog("tispark_test")
     _statement = _tidbConnection.createStatement()
     logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
-    _statement.execute("analyze table tispark_test.full_data_type_table_idx")
+//    _statement.execute("analyze table tispark_test.full_data_type_table_idx")
     logger.info("Analyzing table tispark_test.full_data_type_table...")
     _statement.execute("analyze table tispark_test.full_data_type_table")
     logger.info("Analyzing table finished.")
@@ -354,11 +355,19 @@ object SharedSQLContext extends Logging {
       if (shouldLoadData(loadData) && !forceNotLoad) {
         logger.info("Loading TiSparkTestData")
         // Load index test data
-        loadSQLFile("tispark-test", "IndexTest")
+//        loadSQLFile("tispark-test", "IndexTest")
         // Load expression test data
         loadSQLFile("tispark-test", "TiSparkTest")
         // Load TPC-H test data
         loadSQLFile("tispark-test", "TPCHData")
+        loadSQLFile("tispark-test", "UdafCount")
+        loadSQLFile("tispark-test", "UdafCountUnion")
+        loadSQLFile("tispark-test", "UdafAvg")
+        loadSQLFile("tispark-test", "UdafAvgUnion")
+        loadSQLFile("tispark-test", "UdafSum")
+        loadSQLFile("tispark-test", "UdafSumUnion")
+        loadSQLFile("tispark-test", "UdafMaxMin")
+        loadSQLFile("tispark-test", "UdafMaxMinUnion")
         // Load resolveLock test data
         loadSQLFile("resolveLock-test", "ddl")
         initStatistics()

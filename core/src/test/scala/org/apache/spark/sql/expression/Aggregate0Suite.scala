@@ -52,7 +52,7 @@ class Aggregate0Suite extends BaseInitialOnceTest {
   allCases foreach { query =>
     {
       test(query) {
-        runTest(query)
+        explainAndRunTest(query)
       }
     }
   }

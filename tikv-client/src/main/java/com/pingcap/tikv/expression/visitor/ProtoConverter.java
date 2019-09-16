@@ -251,6 +251,8 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     // the first executor of a DAG request.
     IntegerCodec.writeLong(cdo, position);
     builder.setVal(cdo.toByteString());
+
+    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
     return builder.build();
   }
 
@@ -259,7 +261,6 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     Expr.Builder builder = Expr.newBuilder();
     if (node.getValue() == null) {
       builder.setTp(ExprType.Null);
-      return builder.build();
     } else {
       DataType type = node.getType();
       builder.setTp(type.getProtoExprType());
@@ -267,6 +268,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       type.encode(cdo, EncodeType.PROTO, node.getValue());
       builder.setVal(cdo.toByteString());
     }
+    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
     return builder.build();
   }
 
