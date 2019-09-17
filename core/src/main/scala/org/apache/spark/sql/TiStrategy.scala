@@ -47,11 +47,11 @@ import scala.collection.mutable
 object TiStrategy {
   private val assignedTSPlanCache = new mutable.WeakHashMap[LogicalPlan, Boolean]()
 
-  private def hasAssignedTS(plan: LogicalPlan): Boolean = {
+  private def hasTSAssigned(plan: LogicalPlan): Boolean = {
     assignedTSPlanCache.get(plan).isDefined
   }
 
-  private def markAssignedTS(plan: LogicalPlan): Unit = {
+  private def markTSAssigned(plan: LogicalPlan): Unit = {
     plan foreachUp { p =>
       assignedTSPlanCache.put(p, true)
     }
@@ -132,9 +132,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val ts = tiContext.tiSession.getTimestamp
 
     if (plan.isStreaming) {
-      if (!TiStrategy.hasAssignedTS(plan)) {
+      if (!TiStrategy.hasTSAssigned(plan)) {
         plan foreachUp applyStartTs(ts, forceUpdate = true)
-        TiStrategy.markAssignedTS(plan)
+        TiStrategy.markTSAssigned(plan)
       }
     } else {
       plan foreachUp applyStartTs(ts)
