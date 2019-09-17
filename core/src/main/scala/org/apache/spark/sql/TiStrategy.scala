@@ -38,15 +38,25 @@ import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.datasources.v2.WriteToDataSourceV2
-import org.apache.spark.sql.execution.streaming.sources.{InternalRowMicroBatchWriter, MicroBatchWriter}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.sources.v2.StreamWriteSupport
-import org.apache.spark.sql.sources.v2.writer.DataSourceWriter
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+
+object TiStrategy {
+  private val assignedTSPlanCache = new mutable.WeakHashMap[LogicalPlan, Boolean]()
+
+  private def hasAssignedTS(plan: LogicalPlan): Boolean = {
+    assignedTSPlanCache.get(plan).isDefined
+  }
+
+  private def markAssignedTS(plan: LogicalPlan): Unit = {
+    plan foreachUp { p =>
+      assignedTSPlanCache.put(p, true)
+    }
+  }
+}
 
 /**
  * CHECK Spark [[org.apache.spark.sql.Strategy]]
@@ -118,50 +128,25 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
   }
 
-  private def isStreamingWriter(writer: DataSourceWriter): Boolean = {
-    writer match {
-      case _: MicroBatchWriter            => true
-      case _: InternalRowMicroBatchWriter => true
-      case _: StreamWriteSupport          => true
-      case _                              => false
-    }
-  }
-
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
-    plan match {
-      case ReturnAnswer(WriteToDataSourceV2(writer, _)) if isStreamingWriter(writer) =>
-        val ts = tiContext.tiSession.getTimestamp
-        plan foreachUp applyStartTs(ts, forceUpdate = true)
-        plan
-          .collectFirst {
-            case LogicalRelation(relation: TiDBRelation, _, _, _) =>
-              doPlan(relation, plan)
-          }
-          .toSeq
-          .flatten
+    val ts = tiContext.tiSession.getTimestamp
 
-      case WriteToDataSourceV2(writer, _) if isStreamingWriter(writer) =>
-        val ts = tiContext.tiSession.getTimestamp
+    if (plan.isStreaming) {
+      if (!TiStrategy.hasAssignedTS(plan)) {
         plan foreachUp applyStartTs(ts, forceUpdate = true)
-        plan
-          .collectFirst {
-            case LogicalRelation(relation: TiDBRelation, _, _, _) =>
-              doPlan(relation, plan)
-          }
-          .toSeq
-          .flatten
-
-      case _ =>
-        val ts = tiContext.tiSession.getTimestamp
-        plan foreachUp applyStartTs(ts)
-        plan
-          .collectFirst {
-            case LogicalRelation(relation: TiDBRelation, _, _, _) =>
-              doPlan(relation, plan)
-          }
-          .toSeq
-          .flatten
+        TiStrategy.markAssignedTS(plan)
+      }
+    } else {
+      plan foreachUp applyStartTs(ts)
     }
+
+    plan
+      .collectFirst {
+        case LogicalRelation(relation: TiDBRelation, _, _, _) =>
+          doPlan(relation, plan)
+      }
+      .toSeq
+      .flatten
   }
 
   private def toCoprocessorRDD(
