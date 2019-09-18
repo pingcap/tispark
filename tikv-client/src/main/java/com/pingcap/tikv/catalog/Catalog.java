@@ -155,6 +155,11 @@ public class Catalog implements AutoCloseable {
         periodUnit);
   }
 
+  private CatalogCache getLatestMetaCache() {
+    reloadCache();
+    return metaCache;
+  }
+
   public synchronized void reloadCache(boolean loadTables) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
@@ -169,31 +174,25 @@ public class Catalog implements AutoCloseable {
   }
 
   public List<TiDBInfo> listDatabases() {
-    return metaCache.listDatabases();
+    return getLatestMetaCache().listDatabases();
   }
 
   public List<TiTableInfo> listTables(TiDBInfo database) {
     Objects.requireNonNull(database, "database is null");
     if (showRowId) {
-      return metaCache
+      return getLatestMetaCache()
           .listTables(database)
           .stream()
           .map(TiTableInfo::copyTableWithRowId)
           .collect(Collectors.toList());
     } else {
-      return metaCache.listTables(database);
+      return getLatestMetaCache().listTables(database);
     }
   }
 
   public TiDBInfo getDatabase(String dbName) {
     Objects.requireNonNull(dbName, "dbName is null");
-    TiDBInfo dbInfo = metaCache.getDatabase(dbName);
-    if (dbInfo == null) {
-      // reload cache if database does not exist
-      reloadCache(true);
-      dbInfo = metaCache.getDatabase(dbName);
-    }
-    return dbInfo;
+    return getLatestMetaCache().getDatabase(dbName);
   }
 
   public TiTableInfo getTable(String dbName, String tableName) {
@@ -207,12 +206,7 @@ public class Catalog implements AutoCloseable {
   public TiTableInfo getTable(TiDBInfo database, String tableName) {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
-    TiTableInfo table = metaCache.getTable(database, tableName);
-    if (table == null) {
-      // reload cache if table does not exist
-      reloadCache(true);
-      table = metaCache.getTable(database, tableName);
-    }
+    TiTableInfo table = getLatestMetaCache().getTable(database, tableName);
     if (showRowId && table != null) {
       return table.copyTableWithRowId();
     } else {
