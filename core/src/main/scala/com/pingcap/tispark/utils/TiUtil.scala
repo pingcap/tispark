@@ -137,11 +137,6 @@ object TiUtil {
       tiConf.setTimeoutUnit(TimeUnit.SECONDS)
     }
 
-    if (conf.contains(TiConfigConst.META_RELOAD_PERIOD)) {
-      tiConf.setMetaReloadPeriod(conf.get(TiConfigConst.META_RELOAD_PERIOD).toInt)
-      tiConf.setMetaReloadPeriodUnit(TimeUnit.SECONDS)
-    }
-
     if (conf.contains(TiConfigConst.INDEX_SCAN_BATCH_SIZE)) {
       tiConf.setIndexScanBatchSize(conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
     }
