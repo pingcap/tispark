@@ -256,6 +256,17 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     return builder.build();
   }
 
+  private FieldType conToPBFieldType(DataType dataType) {
+    FieldType.Builder builder = FieldType.newBuilder();
+    builder.setTp(dataType.getType().getTypeCode());
+    builder.setFlag(dataType.getFlag());
+    builder.setFlen((int) dataType.getLength());
+    builder.setDecimal(dataType.getDecimal());
+    builder.setCharset(dataType.getCharset());
+    //	  builder.setCollate(dataType.getCharset());
+    return builder.build();
+  }
+
   @Override
   protected Expr visit(Constant node, Object context) {
     Expr.Builder builder = Expr.newBuilder();
@@ -267,8 +278,9 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       CodecDataOutput cdo = new CodecDataOutput();
       type.encode(cdo, EncodeType.PROTO, node.getValue());
       builder.setVal(cdo.toByteString());
+      builder.setFieldType(conToPBFieldType(type)).build();
     }
-//    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+    //    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
     return builder.build();
   }
 
