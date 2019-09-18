@@ -18,7 +18,6 @@ package com.pingcap.tikv.catalog;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -28,27 +27,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 
 public class Catalog implements AutoCloseable {
   private Supplier<Snapshot> snapshotProvider;
-  private ScheduledExecutorService service;
   private CatalogCache metaCache;
   private final boolean showRowId;
   private final String dbPrefix;
   private final Logger logger = Logger.getLogger(this.getClass());
 
   @Override
-  public void close() throws Exception {
-    if (service != null) {
-      service.shutdownNow();
-    }
-  }
+  public void close() {}
 
   private static class CatalogCache {
 
@@ -132,31 +123,11 @@ public class Catalog implements AutoCloseable {
     }
   }
 
-  public Catalog(
-      Supplier<Snapshot> snapshotProvider,
-      int refreshPeriod,
-      TimeUnit periodUnit,
-      boolean showRowId,
-      String dbPrefix) {
+  public Catalog(Supplier<Snapshot> snapshotProvider, boolean showRowId, String dbPrefix) {
     this.snapshotProvider = Objects.requireNonNull(snapshotProvider, "Snapshot Provider is null");
     this.showRowId = showRowId;
     this.dbPrefix = dbPrefix;
     metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, false);
-    service =
-        Executors.newSingleThreadScheduledExecutor(
-            new ThreadFactoryBuilder().setDaemon(true).build());
-    service.scheduleAtFixedRate(
-        () -> {
-          // Wrap this with a try catch block in case schedule update fails
-          try {
-            reloadCache();
-          } catch (Exception e) {
-            logger.warn("Reload Cache failed", e);
-          }
-        },
-        refreshPeriod,
-        refreshPeriod,
-        periodUnit);
   }
 
   public void reloadCache(boolean loadTables) {
@@ -168,17 +139,18 @@ public class Catalog implements AutoCloseable {
     }
   }
 
-  @VisibleForTesting
-  public void reloadCache() {
+  private void reloadCache() {
     reloadCache(false);
   }
 
   public List<TiDBInfo> listDatabases() {
+    reloadCache();
     return metaCache.listDatabases();
   }
 
   public List<TiTableInfo> listTables(TiDBInfo database) {
     Objects.requireNonNull(database, "database is null");
+    reloadCache();
     if (showRowId) {
       return metaCache
           .listTables(database)
@@ -192,6 +164,7 @@ public class Catalog implements AutoCloseable {
 
   public TiDBInfo getDatabase(String dbName) {
     Objects.requireNonNull(dbName, "dbName is null");
+    reloadCache();
     return metaCache.getDatabase(dbName);
   }
 
@@ -206,6 +179,7 @@ public class Catalog implements AutoCloseable {
   public TiTableInfo getTable(TiDBInfo database, String tableName) {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
+    reloadCache();
     TiTableInfo table = metaCache.getTable(database, tableName);
     if (showRowId && table != null) {
       return table.copyTableWithRowId();

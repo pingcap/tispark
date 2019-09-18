@@ -31,8 +31,6 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_SCAN_BATCH_SIZE = 100;
   private static final boolean DEF_IGNORE_TRUNCATE = true;
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
-  private static final int DEF_META_RELOAD_PERIOD = 10;
-  private static final TimeUnit DEF_META_RELOAD_UNIT = TimeUnit.SECONDS;
   private static final int DEF_MAX_FRAME_SIZE = 268435456 * 2; // 256 * 2 MB
   private static final int DEF_INDEX_SCAN_BATCH_SIZE = 20000;
   // if keyRange size per request exceeds this limit, the request might be too large to be accepted
@@ -49,8 +47,6 @@ public class TiConfiguration implements Serializable {
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
   private boolean ignoreTruncate = DEF_IGNORE_TRUNCATE;
   private boolean truncateAsWarning = DEF_TRUNCATE_AS_WARNING;
-  private TimeUnit metaReloadUnit = DEF_META_RELOAD_UNIT;
-  private int metaReloadPeriod = DEF_META_RELOAD_PERIOD;
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
   private List<URI> pdAddrs = new ArrayList<>();
   private int indexScanBatchSize = DEF_INDEX_SCAN_BATCH_SIZE;
@@ -86,24 +82,6 @@ public class TiConfiguration implements Serializable {
 
   public TimeUnit getTimeoutUnit() {
     return timeoutUnit;
-  }
-
-  public TimeUnit getMetaReloadPeriodUnit() {
-    return metaReloadUnit;
-  }
-
-  public TiConfiguration setMetaReloadPeriodUnit(TimeUnit timeUnit) {
-    this.metaReloadUnit = timeUnit;
-    return this;
-  }
-
-  public TiConfiguration setMetaReloadPeriod(int metaReloadPeriod) {
-    this.metaReloadPeriod = metaReloadPeriod;
-    return this;
-  }
-
-  public int getMetaReloadPeriod() {
-    return metaReloadPeriod;
   }
 
   public TiConfiguration setTimeoutUnit(TimeUnit timeoutUnit) {
