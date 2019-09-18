@@ -124,7 +124,6 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
     try {
-      //ti.meta.reloadAllMeta()
       tableNames = Seq.empty[String]
       for (dbName <- databases) {
         setCurrentDatabase(dbName)
@@ -178,7 +177,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   override protected def refreshConnections(): Unit = {
-    //super.refreshConnections()
+    super.refreshConnections()
     loadTestData()
   }
 

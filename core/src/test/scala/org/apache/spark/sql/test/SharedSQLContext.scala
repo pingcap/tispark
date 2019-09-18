@@ -76,7 +76,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
 
   protected def refreshConnections(): Unit = {
-    //SharedSQLContext.refreshConnections(false)
+    SharedSQLContext.refreshConnections(false)
   }
 
   protected def refreshConnections(isHiveEnabled: Boolean): Unit =
@@ -211,7 +211,7 @@ object SharedSQLContext extends Logging {
 
   protected var _sparkSession: SparkSession = _
 
-  def refreshConnections(isHiveEnabled: Boolean): Unit = {
+  private def refreshConnections(isHiveEnabled: Boolean): Unit = {
     stop()
     init(forceNotLoad = true, isHiveEnabled = isHiveEnabled)
   }
