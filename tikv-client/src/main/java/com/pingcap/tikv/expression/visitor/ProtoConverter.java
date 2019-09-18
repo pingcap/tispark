@@ -268,7 +268,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       type.encode(cdo, EncodeType.PROTO, node.getValue());
       builder.setVal(cdo.toByteString());
     }
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+//    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
     return builder.build();
   }
 
