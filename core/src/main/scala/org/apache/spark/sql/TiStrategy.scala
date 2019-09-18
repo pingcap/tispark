@@ -132,6 +132,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val ts = tiContext.tiSession.getTimestamp
 
     if (plan.isStreaming) {
+      // We should use a new timestamp for next batch execution.
+      // Otherwise Spark Structure Streaming will not see new data in TiDB.
       if (!TiStrategy.hasTSAssigned(plan)) {
         plan foreachUp applyStartTs(ts, forceUpdate = true)
         TiStrategy.markTSAssigned(plan)
