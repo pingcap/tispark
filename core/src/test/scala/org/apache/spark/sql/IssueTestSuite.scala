@@ -20,6 +20,26 @@ import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
 
+  // https://github.com/pingcap/tispark/issues/1083
+  test("TiSpark Catalog has no delay") {
+    tidbStmt.execute("drop table if exists catalog_delay")
+    tidbStmt.execute("create table catalog_delay(c1 bigint)")
+    refreshConnections()
+    val tiTableInfo1 =
+      this.ti.tiSession.getCatalog.getTable(s"${dbPrefix}tispark_test", "catalog_delay")
+    assert("catalog_delay".equals(tiTableInfo1.getName))
+    assert("c1".equals(tiTableInfo1.getColumns.get(0).getName))
+
+    tidbStmt.execute("drop table if exists catalog_delay")
+    tidbStmt.execute("create table catalog_delay(c2 bigint)")
+    val tiTableInfo2 =
+      this.ti.tiSession.getCatalog.getTable(s"${dbPrefix}tispark_test", "catalog_delay")
+    assert("catalog_delay".equals(tiTableInfo2.getName))
+    assert("c2".equals(tiTableInfo2.getColumns.get(0).getName))
+
+    assert(tiTableInfo1.getId != tiTableInfo2.getId)
+  }
+
   // https://github.com/pingcap/tispark/issues/1039
   test("Distinct without alias throws NullPointerException") {
     tidbStmt.execute("drop table if exists t_distinct_alias")
@@ -325,6 +345,7 @@ class IssueTestSuite extends BaseTiSparkTest {
       tidbStmt.execute("drop table if exists set_t")
       tidbStmt.execute("drop table if exists enum_t")
       tidbStmt.execute("drop table if exists table_group_by_bigint")
+      tidbStmt.execute("drop table if exists catalog_delay")
     } finally {
       super.afterAll()
     }
