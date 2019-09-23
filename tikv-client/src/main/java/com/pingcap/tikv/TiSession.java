@@ -45,10 +45,10 @@ public class TiSession implements AutoCloseable {
 
   private static final Map<String, TiSession> sessionCachedMap = new HashMap<>();
 
-  public static TiSession getInstance(TiConfiguration conf, boolean recreate) {
+  public static TiSession getInstance(TiConfiguration conf) {
     synchronized (sessionCachedMap) {
       String key = conf.getPdAddrsString();
-      if (sessionCachedMap.containsKey(key) && !recreate) {
+      if (sessionCachedMap.containsKey(key)) {
         return sessionCachedMap.get(key);
       }
 
@@ -56,12 +56,6 @@ public class TiSession implements AutoCloseable {
       sessionCachedMap.put(key, newSession);
       return newSession;
     }
-  }
-
-  // Since we create session as singleton now, configuration change will not
-  // reflect change
-  public static TiSession getInstance(TiConfiguration conf) {
-    return getInstance(conf, false);
   }
 
   private TiSession(TiConfiguration conf) {
