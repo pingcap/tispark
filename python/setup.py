@@ -23,5 +23,5 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
-    install_requires=['pyspark==2.3.3', 'py4j==0.10.7']
+    install_requires=['pyspark==2.3.4', 'py4j==0.10.7']
 )
