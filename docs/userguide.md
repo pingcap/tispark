@@ -126,11 +126,7 @@ In this way, you can use either `Spark-Submit` or `Spark-Shell` to use TiSpark d
 
 ### Deploy TiSpark without the Spark cluster
 
-
-If you do not have a Spark cluster, we recommend using the Spark Standalone mode by placing a compiled version of Spark on each node on the cluster. If you encounter problems, please to refer to the [official Spark website](https://spark.apache.org/docs/latest/spark-standalone.html). You are also welcome to [file an issue](https://github.com/pingcap/tispark/issues/new) on our GitHub.
-
-
-#### Download and install
++ If you need to use the Hadoop cluster, choose the corresponding Hadoop version. You can also build Spark from the [Spark 2.3 source code](https://spark.apache.org/docs/2.3.4/building-spark.html) or [Spark 2.4 source code](https://spark.apache.org/docs/2.4.4/building-spark.html) to match the previous version of the official Hadoop 2.6.
 
 You can download [Apache Spark](https://spark.apache.org/downloads.html)
 
