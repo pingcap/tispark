@@ -26,6 +26,7 @@ import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.util._
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
 import org.apache.spark.sql.types.StructField
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -35,6 +36,8 @@ abstract class QueryTest extends SparkFunSuite {
   protected def spark: SparkSession
 
   private val eps = 1.0e-2
+
+  private val logger = LoggerFactory.getLogger(getClass.getName)
 
   protected def compSqlResult(sql: String,
                               lhs: List[List[Any]],
@@ -454,6 +457,7 @@ abstract class QueryTest extends SparkFunSuite {
                                  retryOnFailure: Int,
                                  exception: Exception = null): A = {
     if (retryOnFailure <= 0) {
+      logger.error("callWithRetry failure", exception)
       fail(exception)
     } else
       try {
