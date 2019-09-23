@@ -266,7 +266,7 @@ df.write
 // as tested, setting to `150` is a good practice
 .option(JDBCOptions.JDBC_BATCH_INSERT_SIZE, 150)
 .option("dbtable", s"cust_test_select") // database name and table name here
-.option("isolationLevel", "None") // set isolationLevel to NONE
+.option("isolationLevel", "NONE") // set isolationLevel to NONE
 .option("user", "root") // TiDB user here
 .save()
 ```
