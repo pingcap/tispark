@@ -266,12 +266,12 @@ df.write
 // as tested, setting to `150` is a good practice
 .option(JDBCOptions.JDBC_BATCH_INSERT_SIZE, 150)
 .option("dbtable", s"cust_test_select") // database name and table name here
-.option("isolationLevel", "NONE") // recommended to set isolationLevel to NONE if you have a large DF to load.
+.option("isolationLevel", "None") // set isolationLevel to NONE
 .option("user", "root") // TiDB user here
 .save()
 ```
 
-It is recommended that you set `isolationLevel` to `NONE` to avoid large single transactions which might lead to TiDB OOM.
+Please set `isolationLevel` to `NONE` to avoid large single transactions which might lead to TiDB OOM.
 
 ## Statistics information
 
