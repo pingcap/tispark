@@ -64,8 +64,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version.compile>2.3.3</spark.version.compile>
-        <spark.version.test>2.4.3</spark.version.test>
+        <spark.version.compile>2.3.4</spark.version.compile>
+        <spark.version.test>2.4.4</spark.version.test>
         <scala.binary.version>2.11</scala.binary.version>
         <scala.version>2.11.12</scala.version>
         <scalatest.version>3.0.4</scalatest.version>

@@ -92,7 +92,7 @@ Download [Apache Spark](https://spark.apache.org/downloads.html).
 
 + For the Standalone mode without Hadoop support, use Spark **2.3.x/2.4.x** and any version of pre-build with Apache Hadoop 2.x with Hadoop dependencies.
 
-+ If you need to use the Hadoop cluster, choose the corresponding Hadoop version. You can also build Spark from the [Spark 2.3 source code](https://spark.apache.org/docs/2.3.3/building-spark.html) or [Spark 2.4 source code](https://spark.apache.org/docs/2.4.1/building-spark.html) to match the previous version of the official Hadoop 2.6.
++ If you need to use the Hadoop cluster, choose the corresponding Hadoop version. You can also build Spark from the [Spark 2.3 source code](https://spark.apache.org/docs/2.3.4/building-spark.html) or [Spark 2.4 source code](https://spark.apache.org/docs/2.4.4/building-spark.html) to match the previous version of the official Hadoop 2.6.
 
 > **Note:**
 >
