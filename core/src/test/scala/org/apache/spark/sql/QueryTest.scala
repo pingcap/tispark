@@ -454,6 +454,7 @@ abstract class QueryTest extends SparkFunSuite {
                                  retryOnFailure: Int,
                                  exception: Exception = null): A = {
     if (retryOnFailure <= 0) {
+      logger.error("callWithRetry failure", exception)
       fail(exception)
     } else
       try {
