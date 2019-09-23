@@ -280,7 +280,11 @@ df.write
 .save()
 ```
 
-Please set `isolationLevel` to `NONE` to avoid large single transactions which might lead to TiDB OOM.
+Please set `isolationLevel` to `NONE` to avoid large single transactions which might lead to TiDB OOM and also avoid the following error:
+
+```
+java.sql.SQLException: variable 'tx_isolation' does not yet support value: READ-UNCOMMITTED
+```
 
 ## Statistics information
 
