@@ -166,6 +166,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
                         mvn test ${MVN_PROFILE} -am -pl tikv-client
+                        mvn test ${MVN_PROFILE} -Dtest=moo -DwildcardSuites=com.pingcap.tispark.datasource.DataSourceWithoutExtensionsSuite,org.apache.spark.sql.IssueTestSuite -DfailIfNoTests=false
                     """
                     unstash "CODECOV_TOKEN"
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'

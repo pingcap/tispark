@@ -21,6 +21,7 @@ import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
+import com.pingcap.tikv.TiSession
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
@@ -172,16 +173,29 @@ object SharedSQLContext extends Logging {
   private class TiContextCache {
     private var _ti: TiContext = _
 
-    private[test] def get: TiContext = {
+    private[test] def get(): TiContext = {
       if (_ti == null) {
-        _ti = _spark.sessionState.planner.extraPlanningStrategies.head
-          .asInstanceOf[TiStrategy]
-          .getOrCreateTiContext(_spark)
+        if (_spark.sessionState.planner.extraPlanningStrategies.nonEmpty &&
+            _spark.sessionState.planner.extraPlanningStrategies.head
+              .isInstanceOf[TiStrategy]) {
+          _ti = _spark.sessionState.planner.extraPlanningStrategies.head
+            .asInstanceOf[TiStrategy]
+            .getOrCreateTiContext(_spark)
+        } else if (_spark.experimental.extraStrategies.nonEmpty &&
+                   _spark.experimental.extraStrategies.head.isInstanceOf[TiStrategy]) {
+          _ti = _spark.experimental.extraStrategies.head
+            .asInstanceOf[TiStrategy]
+            .getOrCreateTiContext(_spark)
+        }
       }
       _ti
     }
 
-    private[test] def clear(): Unit =
+    private[test] def clear(): Unit = {
+      if (_ti == null) {
+        get()
+      }
+
       if (_ti != null) {
         _ti.sparkSession.sessionState.catalog.reset()
         _ti.meta.close()
@@ -189,12 +203,13 @@ object SharedSQLContext extends Logging {
         _ti.tiSession.close()
         _ti = null
       }
+    }
   }
 
   private val tiContextCache = new TiContextCache
 
   // get the current TiContext lazily
-  protected implicit def ti: TiContext = tiContextCache.get
+  protected implicit def ti: TiContext = tiContextCache.get()
 
   protected implicit def tidbConn: Connection = _tidbConnection
 
@@ -451,13 +466,13 @@ object SharedSQLContext extends Logging {
    * Stop the underlying resources, if any.
    */
   def stop(): Unit = {
+    tiContextCache.clear()
+
     if (_spark != null) {
       _spark.sessionState.catalog.reset()
       _spark.close()
       _spark = null
     }
-
-    tiContextCache.clear()
 
     if (_statement != null) {
       try {
