@@ -21,6 +21,7 @@ import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
+import com.pingcap.tikv.TiSession
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tispark.statistics.StatisticsManager
@@ -451,6 +452,8 @@ object SharedSQLContext extends Logging {
    * Stop the underlying resources, if any.
    */
   def stop(): Unit = {
+    TiSession.clearCache()
+
     if (_spark != null) {
       _spark.sessionState.catalog.reset()
       _spark.close()
