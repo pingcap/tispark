@@ -191,24 +191,25 @@ object SharedSQLContext extends Logging {
       _ti
     }
 
-    private[test] def clear(): Unit =
+    private[test] def clear(): Unit = {
       if (_ti == null) {
         get()
       }
 
-    if (_ti != null) {
-      _ti.sparkSession.sessionState.catalog.reset()
-      _ti.meta.close()
-      _ti.sparkSession.close()
-      _ti.tiSession.close()
-      _ti = null
+      if (_ti != null) {
+        _ti.sparkSession.sessionState.catalog.reset()
+        _ti.meta.close()
+        _ti.sparkSession.close()
+        _ti.tiSession.close()
+        _ti = null
+      }
     }
   }
 
   private val tiContextCache = new TiContextCache
 
   // get the current TiContext lazily
-  protected implicit def ti: TiContext = tiContextCache.get
+  protected implicit def ti: TiContext = tiContextCache.get()
 
   protected implicit def tidbConn: Connection = _tidbConnection
 
