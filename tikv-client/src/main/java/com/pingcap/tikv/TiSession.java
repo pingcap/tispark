@@ -58,12 +58,6 @@ public class TiSession implements AutoCloseable {
     }
   }
 
-  public static void clearCache() {
-    synchronized (sessionCachedMap) {
-      sessionCachedMap.clear();
-    }
-  }
-
   private TiSession(TiConfiguration conf) {
     this.conf = conf;
     this.channelFactory = new ChannelFactory(conf.getMaxFrameSize());
