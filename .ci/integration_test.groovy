@@ -7,6 +7,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
     def MVN_PROFILE = "-Pjenkins"
+    def TEST_MODE = "simple"
     def PARALLEL_NUMBER = 18
     
     // parse tidb branch
@@ -14,35 +15,37 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     if (m1) {
         TIDB_BRANCH = "${m1[0][1]}"
     }
-    m1 = null
     println "TIDB_BRANCH=${TIDB_BRANCH}"
+
     // parse pd branch
     def m2 = ghprbCommentBody =~ /pd\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m2) {
         PD_BRANCH = "${m2[0][1]}"
     }
-    m2 = null
     println "PD_BRANCH=${PD_BRANCH}"
+
     // parse tikv branch
     def m3 = ghprbCommentBody =~ /tikv\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m3) {
         TIKV_BRANCH = "${m3[0][1]}"
     }
-    m3 = null
     println "TIKV_BRANCH=${TIKV_BRANCH}"
+
     // parse mvn profile
     def m4 = ghprbCommentBody =~ /profile\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m4) {
         MVN_PROFILE = MVN_PROFILE + " -P${m4[0][1]}"
     }
+
+    // parse test mode
+    def m5 = ghprbCommentBody =~ /mode\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m5) {
+        TEST_MODE = "${m5[0][1]}"
+    }
     
     def readfile = { filename ->
         def file = readFile filename
         return file.split("\n") as List
-    }
-    
-    def remove_last_str = { str ->
-        return str.substring(0, str.length() - 1)
     }
     
     def get_mvn_str = { total_chunks ->
@@ -65,8 +68,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                 println "${NODE_NAME}"
                 container("golang") {
                     deleteDir()
-                    def ws = pwd()
-    
+
                     // tidb
                     def tidb_sha1 = sh(returnStdout: true, script: "curl ${FILE_SERVER_URL}/download/refs/pingcap/tidb/${TIDB_BRANCH}/sha1").trim()
                     sh "curl ${FILE_SERVER_URL}/download/builds/pingcap/tidb/${tidb_sha1}/centos7/tidb-server.tar.gz | tar xz"
@@ -90,12 +92,21 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         sh """
                         cp -R /home/jenkins/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
-                        find core/src -name '*Suite*' > test
+                        find core/src -name '*Suite*' | grep -v 'MultiColumnPKDataTypeSuite' > test
+                        shuf test -o  test2
+                        mv test2 test
+                        """
+
+                        if(TEST_MODE != "simple") {
+                            sh """
+                            find core/src -name '*MultiColumnPKDataTypeSuite*' >> test
+                            """
+                        }
+
+                        sh """
                         sed -i 's/core\\/src\\/test\\/scala\\///g' test
                         sed -i 's/\\//\\./g' test
                         sed -i 's/\\.scala//g' test
-                        shuf test -o  test2
-                        mv test2 test
                         split test -n r/$PARALLEL_NUMBER test_unit_ -a 2 --numeric-suffixes=1
                         """
 
@@ -135,7 +146,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     print run_chunks
                     def mvnStr = get_mvn_str(run_chunks)
                     sh """
-                        archive_url=http://172.16.30.25/download/builds/pingcap/tiflash/cache/tiflash-m2-cache_latest.tar.gz
+                        archive_url=http://fileserver.pingcap.net/download/builds/pingcap/tispark/cache/tispark-m2-cache-latest.tar.gz
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
@@ -149,12 +160,13 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
             def run_tikvclient_test = { chunk_suffix ->
                 dir("go/src/github.com/pingcap/tispark") {
                     sh """
-                        archive_url=http://172.16.30.25/download/builds/pingcap/tiflash/cache/tiflash-m2-cache_latest.tar.gz
+                        archive_url=http://fileserver.pingcap.net/download/builds/pingcap/tispark/cache/tispark-m2-cache-latest.tar.gz
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
                         mvn test ${MVN_PROFILE} -am -pl tikv-client
+                        mvn test ${MVN_PROFILE} -Dtest=moo -DwildcardSuites=com.pingcap.tispark.datasource.DataSourceWithoutExtensionsSuite,org.apache.spark.sql.IssueTestSuite -DfailIfNoTests=false
                     """
                     unstash "CODECOV_TOKEN"
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'
@@ -165,7 +177,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                 node("test_java") {
                     println "${NODE_NAME}"
                     container("java") {
-                        def ws = pwd()
                         deleteDir()
                         unstash 'binaries'
                         unstash 'tispark'
@@ -177,9 +188,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             killall -9 tikv-server || true
                             killall -9 pd-server || true
                             sleep 10
-                            bin/pd-server --name=pd --data-dir=pd &>pd.log &
+                            bin/pd-server --name=pd --data-dir=pd --config=go/src/github.com/pingcap/tispark/config/pd.toml &>pd.log &
                             sleep 10
-                            bin/tikv-server --pd=127.0.0.1:2379 -s tikv --addr=0.0.0.0:20160 --advertise-addr=127.0.0.1:20160 &>tikv.log &
+                            bin/tikv-server --pd=127.0.0.1:2379 -s tikv --addr=0.0.0.0:20160 --advertise-addr=127.0.0.1:20160 --config=go/src/github.com/pingcap/tispark/config/tikv.toml &>tikv.log &
                             sleep 10
                             ps aux | grep '-server' || true
                             curl -s 127.0.0.1:2379/pd/api/v1/status || true
@@ -187,7 +198,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             sleep 60
                             """
     
-                            timeout(60) {
+                            timeout(120) {
                                 run_test(chunk_suffix)
                             }
                         } catch (err) {

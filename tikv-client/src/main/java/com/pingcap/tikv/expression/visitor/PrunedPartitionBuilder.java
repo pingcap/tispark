@@ -35,7 +35,7 @@ import java.util.Set;
 /**
  * Apply partition pruning rule on filter condition. Partition pruning is based on a simple idea and
  * can be described as "Do not scan partitions where there can be no matching values". Currently
- * only range partition pruning is supported(range column on mutiple columns is not supported at
+ * only range partition pruning is supported(range column on multiple columns is not supported at
  * TiDB side, so we can't optimize this yet).
  */
 public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {

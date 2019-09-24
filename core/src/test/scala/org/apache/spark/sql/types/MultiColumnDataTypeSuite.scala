@@ -37,8 +37,20 @@ class MultiColumnDataTypeSuite
     testDesc
   )
 
-  def startTest(dataTypes: List[ReflectedDataType]): Unit = {
-    simpleSelect(database, dataTypes: _*)
+  override def startTest(dataTypes: List[ReflectedDataType]): Unit = {
+    val typeNames = dataTypes.map(getTypeName)
+    val tblName = generator.getTableName(typeNames: _*)
+    val columnNames = typeNames.zipWithIndex.map { x =>
+      generator.getColumnNameByOffset(x._2)
+    }
+    for (i <- columnNames.indices) {
+      val col1 = columnNames(i)
+      for (j <- i + 1 until columnNames.size) {
+        val col2 = columnNames(j)
+        val dataType2 = dataTypes(j)
+        simpleSelect(database, tblName, col1, col2, dataType2)
+      }
+    }
   }
 
   def check(): Unit = {

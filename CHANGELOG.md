@@ -1,17 +1,45 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
-## [TiSpark 2.2.0]
+## [TiSpark 2.1.5] 2019-09-02
+### Fixes
+- Remove useless scala and jackson dependencies [#1079](https://github.com/pingcap/tispark/pull/1079)
+- Fix range partition throw UnsupportedSyntaxException error [#1088](https://github.com/pingcap/tispark/pull/1088)
+- Make TiSpark reading data from a hash partition table [#1089](https://github.com/pingcap/tispark/pull/1089)
+
+## [TiSpark 2.2.0] 2019-08-30
 ### New Features
-* Natively support writing data to TiKV using Spark Data Source API
-* Support select from partition table [#916](https://github.com/pingcap/tispark/pull/916)
-* Release one tispark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
-* Add spark version to tispark udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
+* Natively support writing data to TiKV (ACID) using Spark Data Source API
+
+### Improvements
+* Release one TiSpark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
+* Add spark version to TiSpark's udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
+* Bump grpc to 1.17 [#982](https://github.com/pingcap/tispark/pull/982)
+* Add retry mechanism for `batchGet` [#986](https://github.com/pingcap/tispark/pull/986)
+
+### Fixes
+* Catch UnsupportedSyntaxException when generating partition expressions [#960](https://github.com/pingcap/tispark/pull/960)
+* Fix TiSpark cannot read from a hash partition table [#966](https://github.com/pingcap/tispark/pull/966)
+* Prohibit extra index data type pushdown when doing index scan to avoid decoding extra column [#995](https://github.com/pingcap/tispark/pull/995)
+* Prohibit agg or groupby pushdown on double read [#1004](https://github.com/pingcap/tispark/pull/1004)
+
+## [TiSpark 2.1.4] 2019-08-27
+### Fixes
+- Fix distinct without alias bug: disable pushdown aggregate with alias [#1055](https://github.com/pingcap/tispark/pull/1055)
+- Fix reflection bug: pass in different arguments for different version of same function [#1037](https://github.com/pingcap/tispark/pull/1037)
+
+## [TiSpark 2.1.3] 2019-08-15
+### Fixes
+- Fix cost model in table scan [#1023](https://github.com/pingcap/tispark/pull/1023)
+- Fix index scan bug [#1024](https://github.com/pingcap/tispark/pull/1024)
+- Prohibit aggregate or group by pushdown on double read [#1027](https://github.com/pingcap/tispark/pull/1027)
+- Fix reflection bug for HDP release [#1017](https://github.com/pingcap/tispark/pull/1017)
+- Fix scala compiler version [#1019](https://github.com/pingcap/tispark/pull/1019)
 
 ## [TiSpark 2.1.2] 2019-07-29
 ### Fixes
 * Fix improper response with region error [#922](https://github.com/pingcap/tispark/pull/922)
-* Fix view parseing problem [#953](https://github.com/pingcap/tispark/pull/953)
+* Fix view parsing problem [#953](https://github.com/pingcap/tispark/pull/953)
 
 ## [TiSpark 1.2.1]
 ### Fixes

@@ -20,12 +20,12 @@ package org.apache.spark.sql.test.generator
 import com.pingcap.tikv.row.ObjectRowImpl
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.test.generator.DataType._
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.util.Random
 
 object TestDataGenerator {
-
   type TiRow = com.pingcap.tikv.row.Row
 
   val bits = List(BIT)
@@ -61,9 +61,11 @@ object TestDataGenerator {
   val dateAndDateTime: List[ReflectedDataType] = timestamps ::: dates ::: durations ::: years
 
   val stringAndBinaries: List[ReflectedDataType] = strings ::: binaries
+  val charCharset: List[ReflectedDataType] = strings ::: texts
+  val binaryCharset: List[ReflectedDataType] = binaries ::: bytes
   // TODO: support enum and set https://github.com/pingcap/tispark/issues/946
   // val stringType: List[DataType] = texts ::: strings ::: binaries ::: enums ::: sets
-  val stringType: List[ReflectedDataType] = texts ::: strings ::: binaries ::: bytes
+  val stringType: List[ReflectedDataType] = charCharset ::: binaryCharset
   val varString: List[ReflectedDataType] = List(VARCHAR, VARBINARY)
 
   val unsignedType: List[ReflectedDataType] = numeric
@@ -84,8 +86,8 @@ object TestDataGenerator {
   //  def isBits(dataType: DataType): Boolean = bits.contains(dataType)
   //  def isBooleans(dataType: DataType): Boolean = booleans.contains(dataType)
   //  def isIntegers(dataType: DataType): Boolean = integers.contains(dataType)
-  //  def isDecimals(dataType: DataType): Boolean = decimals.contains(dataType)
-  //  def isDoubles(dataType: DataType): Boolean = doubles.contains(dataType)
+  def isDecimals(dataType: ReflectedDataType): Boolean = decimals.contains(dataType)
+  def isDoubles(dataType: ReflectedDataType): Boolean = doubles.contains(dataType)
   //  def isTimestamps(dataType: DataType): Boolean = timestamps.contains(dataType)
   //  def isDates(dataType: DataType): Boolean = dates.contains(dataType)
   //  def isDurations(dataType: DataType): Boolean = durations.contains(dataType)
@@ -100,6 +102,8 @@ object TestDataGenerator {
   def isNumeric(dataType: ReflectedDataType): Boolean = numeric.contains(dataType)
   def isStringType(dataType: ReflectedDataType): Boolean = stringType.contains(dataType)
   def isVarString(dataType: ReflectedDataType): Boolean = varString.contains(dataType)
+  def isCharCharset(dataType: ReflectedDataType): Boolean = charCharset.contains(dataType)
+  def isBinaryCharset(dataType: ReflectedDataType): Boolean = binaryCharset.contains(dataType)
   def isCharOrBinary(dataType: ReflectedDataType): Boolean = stringAndBinaries.contains(dataType)
 
   def getLength(dataType: TiDataType): Long =
@@ -266,21 +270,25 @@ object TestDataGenerator {
     Schema(database, table, columnNames, columnDesc.toMap, idxColumns)
   }
 
-  private def generateRandomValue(row: TiRow,
-                                  offset: Int,
-                                  r: Random,
-                                  valueGenerator: ValueGenerator): Unit = {
-    val value = valueGenerator.next(r)
+  private def generateRandomColValue(row: TiRow,
+                                     offset: Int,
+                                     r: Random,
+                                     colValueGenerator: ColumnValueGenerator): Unit = {
+    val value = colValueGenerator.next(r)
     if (value == null) {
       row.setNull(offset)
     } else {
-      row.set(offset, valueGenerator.tiDataType, value)
+      row.set(offset, colValueGenerator.tiDataType, value)
     }
   }
 
   def hash(value: Any): String = value match {
-    case null           => "null"
-    case b: Array[Byte] => b.mkString("[", ",", "]")
+    case null                  => "null"
+    case b: Array[boolean]     => b.mkString("[", ",", "]")
+    case b: Array[Byte]        => b.mkString("[", ",", "]")
+    case t: java.sql.Timestamp =>
+      // timestamp was indexed as Integer when treated as unique key
+      s"${t.getTime / 1000}"
     case list: List[Any] =>
       val ret = StringBuilder.newBuilder
       ret ++= "("
@@ -312,7 +320,7 @@ object TestDataGenerator {
     while (true) {
       for (i <- schema.columnInfo.indices) {
         val columnInfo = schema.columnInfo(i)
-        generateRandomValue(row, i, r, columnInfo.generator)
+        generateRandomColValue(row, i, r, columnInfo.generator)
       }
       if (pkOffset.nonEmpty) {
         val value = pkOffset.map { i =>
@@ -328,7 +336,7 @@ object TestDataGenerator {
     throw new RuntimeException("Inaccessible")
   }
 
-  private def generateRandomRows(schema: Schema, n: Long, r: Random): List[TiRow] = {
+  def generateRandomRows(schema: Schema, n: Long, r: Random): List[TiRow] = {
     val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
     // offset of pk columns
     val pkOffset: List[Int] = {

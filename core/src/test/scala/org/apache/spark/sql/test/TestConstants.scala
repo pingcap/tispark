@@ -26,5 +26,6 @@ object TestConstants {
   val TPCDS_DB_NAME = "tpcds.db"
   val SHOULD_LOAD_DATA = "test.data.load"
   val SHOULD_GENERATE_DATA = "test.data.generate"
+  val GENERATE_DATA_SEED = "test.data.generate.seed"
   val SHOULD_SKIP_TEST = "test.skip"
 }

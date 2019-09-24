@@ -19,7 +19,6 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
-import com.pingcap.tikv.TiSessionCache;
 import com.pingcap.tikv.TwoPhaseCommitter;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -50,10 +49,11 @@ public final class RowIDAllocator {
       long dbId, long tableId, TiConfiguration conf, boolean unsigned, long step) {
     RowIDAllocator allocator = new RowIDAllocator(dbId, step, conf);
     if (unsigned) {
-      allocator.initUnsigned(TiSession.create(conf).createSnapshot(), tableId);
+      allocator.initUnsigned(TiSession.getInstance(conf).createSnapshot(), tableId);
     } else {
-      allocator.initSigned(TiSession.create(conf).createSnapshot(), tableId);
+      allocator.initSigned(TiSession.getInstance(conf).createSnapshot(), tableId);
     }
+
     return allocator;
   }
 
@@ -67,7 +67,7 @@ public final class RowIDAllocator {
 
   // set key value pair to tikv via two phase committer protocol.
   private void set(ByteString key, byte[] value) {
-    TiSession session = TiSessionCache.getSession(conf);
+    TiSession session = TiSession.getInstance(conf);
     TwoPhaseCommitter twoPhaseCommitter =
         new TwoPhaseCommitter(conf, session.getTimestamp().getVersion());
 
@@ -137,10 +137,7 @@ public final class RowIDAllocator {
   private boolean isDBExisted(long dbId, Snapshot snapshot) {
     ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
     ByteString json = MetaCodec.hashGet(MetaCodec.KEY_DBs, dbKey, snapshot);
-    if (json == null || json.isEmpty()) {
-      return false;
-    }
-    return true;
+    return json != null && !json.isEmpty();
   }
 
   private boolean isTableExisted(long dbId, long tableId, Snapshot snapshot) {
@@ -174,11 +171,15 @@ public final class RowIDAllocator {
 
   /** read current row id from TiKV according to database id and table id. */
   public long getAutoTableId(long dbId, long tableId, Snapshot snapshot) {
-    ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
-    ByteString tblKey = MetaCodec.autoTableIDKey(tableId);
-    ByteString val = MetaCodec.hashGet(dbKey, tblKey, snapshot);
-    if (val.isEmpty()) return 0L;
-    return Long.parseLong(val.toStringUtf8());
+    if (isDBExisted(dbId, snapshot) && isTableExisted(dbId, tableId, snapshot)) {
+      ByteString dbKey = MetaCodec.encodeDatabaseID(dbId);
+      ByteString tblKey = MetaCodec.autoTableIDKey(tableId);
+      ByteString val = MetaCodec.hashGet(dbKey, tblKey, snapshot);
+      if (val.isEmpty()) return 0L;
+      return Long.parseLong(val.toStringUtf8());
+    }
+
+    throw new IllegalArgumentException("table or database is not existed");
   }
 
   private void initSigned(Snapshot snapshot, long tableId) {

@@ -24,11 +24,12 @@ import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLen
 
 trait GenerateMultiColumnDataTypeTestAction
     extends MultiColumnDataTypeTestSpec
-    with BaseTestGenerationSpec {
+    with BaseTestGenerationSpec
+    with DataTypeTestDir {
 
   override val rowCount = 50
 
-  private def toString(dataTypes: Seq[String]): String = dataTypes.hashCode().toString
+  private def toString(dataTypes: Seq[String]): String = Math.abs(dataTypes.hashCode()).toString
 
   override def getTableName(dataTypes: String*): String = s"test_${toString(dataTypes)}"
 
@@ -59,8 +60,7 @@ trait GenerateMultiColumnDataTypeTestAction
     }
   }
 
-  def init(): Unit = {
-    val tableName = getTableName(dataTypes.map(getTypeName): _*)
+  def init(tableName: String): Unit = {
     val dataTypesWithDescription = dataTypes.map { dataType =>
       val len = genLen(dataType)
       (dataType, len, "")
@@ -70,10 +70,12 @@ trait GenerateMultiColumnDataTypeTestAction
     data.save()
   }
 
-  def loadTestData(dataTypes: List[ReflectedDataType]): Unit
+  def loadTestData(tableName: String): Unit
 
   def test(): Unit = {
-    init()
-    loadTestData(dataTypes)
+    cols = dataTypes
+    val tableName = getTableName(dataTypes.map(getTypeName): _*)
+    init(tableName)
+    loadTestData(tableName)
   }
 }

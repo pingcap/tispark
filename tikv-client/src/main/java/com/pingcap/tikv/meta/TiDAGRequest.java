@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.*;
+import com.pingcap.tidb.tipb.DAGRequest.Builder;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -358,9 +359,7 @@ public class TiDAGRequest implements Serializable {
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
             if (col.getColumnInfo().equals(columnInfo)) {
-              dagRequestBuilder.addOutputOffsets(pos);
               colOffsetInFieldMap.put(col, pos);
-              addRequiredIndexDataType(col.getType());
             }
             // TODO: primary key may also be considered if pkIsHandle
           }
@@ -464,23 +463,9 @@ public class TiDAGRequest implements Serializable {
     }
 
     if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
+      // only allow table scan or covering index scan push down groupby and agg
       if (!isIndexDoubleScan || (isGroupByCoveredByIndex() && isAggregateCoveredByIndex())) {
-        Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
-        getGroupByItems()
-            .forEach(
-                tiByItem ->
-                    aggregationBuilder.addGroupBy(
-                        ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
-        getAggregates()
-            .forEach(
-                tiExpr ->
-                    aggregationBuilder.addAggFunc(
-                        ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
-        executorBuilder.setTp(ExecType.TypeAggregation);
-        dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
-        executorBuilder.clear();
-        addPushDownGroupBys();
-        addPushDownAggregates();
+        pushDownAggAndGroupBy(dagRequestBuilder, executorBuilder, colOffsetInFieldMap);
       } else {
         return dagRequestBuilder;
       }
@@ -488,33 +473,66 @@ public class TiDAGRequest implements Serializable {
 
     if (!getOrderByItems().isEmpty()) {
       if (!isIndexDoubleScan || isOrderByCoveredByIndex()) {
-        TopN.Builder topNBuilder = TopN.newBuilder();
-        getOrderByItems()
-            .forEach(
-                tiByItem ->
-                    topNBuilder.addOrderBy(
-                        com.pingcap.tidb.tipb.ByItem.newBuilder()
-                            .setExpr(
-                                ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
-                            .setDesc(tiByItem.isDesc())));
-        executorBuilder.setTp(ExecType.TypeTopN);
-        topNBuilder.setLimit(getLimit());
-        dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
-        executorBuilder.clear();
-        addPushDownOrderBys();
+        // only allow table scan or covering index scan push down orderby
+        pushDownOrderBy(dagRequestBuilder, executorBuilder, colOffsetInFieldMap);
       }
     } else if (getLimit() != 0) {
       if (!isIndexDoubleScan) {
-        Limit.Builder limitBuilder = Limit.newBuilder();
-        limitBuilder.setLimit(getLimit());
-        executorBuilder.setTp(ExecType.TypeLimit);
-        dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
-        executorBuilder.clear();
-        addPushDownLimits();
+        pushDownLimit(dagRequestBuilder, executorBuilder);
       }
     }
 
     return dagRequestBuilder;
+  }
+
+  private void pushDownLimit(
+      DAGRequest.Builder dagRequestBuilder, Executor.Builder executorBuilder) {
+    Limit.Builder limitBuilder = Limit.newBuilder();
+    limitBuilder.setLimit(getLimit());
+    executorBuilder.setTp(ExecType.TypeLimit);
+    dagRequestBuilder.addExecutors(executorBuilder.setLimit(limitBuilder));
+    executorBuilder.clear();
+    addPushDownLimits();
+  }
+
+  private void pushDownOrderBy(
+      DAGRequest.Builder dagRequestBuilder,
+      Executor.Builder executorBuilder,
+      Map<ColumnRef, Integer> colOffsetInFieldMap) {
+    TopN.Builder topNBuilder = TopN.newBuilder();
+    getOrderByItems()
+        .forEach(
+            tiByItem ->
+                topNBuilder.addOrderBy(
+                    com.pingcap.tidb.tipb.ByItem.newBuilder()
+                        .setExpr(ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap))
+                        .setDesc(tiByItem.isDesc())));
+    executorBuilder.setTp(ExecType.TypeTopN);
+    topNBuilder.setLimit(getLimit());
+    dagRequestBuilder.addExecutors(executorBuilder.setTopN(topNBuilder));
+    executorBuilder.clear();
+    addPushDownOrderBys();
+  }
+
+  private void pushDownAggAndGroupBy(
+      DAGRequest.Builder dagRequestBuilder,
+      Executor.Builder executorBuilder,
+      Map<ColumnRef, Integer> colOffsetInFieldMap) {
+    Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
+    getGroupByItems()
+        .forEach(
+            tiByItem ->
+                aggregationBuilder.addGroupBy(
+                    ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
+    getAggregates()
+        .forEach(
+            tiExpr ->
+                aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
+    executorBuilder.setTp(ExecType.TypeAggregation);
+    dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
+    executorBuilder.clear();
+    addPushDownGroupBys();
+    addPushDownAggregates();
   }
 
   private boolean isExpressionCoveredByIndex(Expression expr) {
@@ -525,10 +543,11 @@ public class TiDAGRequest implements Serializable {
             .filter(x -> !x.isPrefixIndex())
             .map(TiIndexColumn::getName)
             .collect(Collectors.toSet());
-    return PredicateUtils.extractColumnRefFromExpression(expr)
-        .stream()
-        .map(ColumnRef::getName)
-        .allMatch(indexColumnRefSet::contains);
+    return !isDoubleRead()
+        && PredicateUtils.extractColumnRefFromExpression(expr)
+            .stream()
+            .map(ColumnRef::getName)
+            .allMatch(indexColumnRefSet::contains);
   }
 
   private boolean isGroupByCoveredByIndex() {
@@ -650,7 +669,7 @@ public class TiDAGRequest implements Serializable {
    * @param mode truncate mode
    * @return a TiDAGRequest
    */
-  public TiDAGRequest setTruncateMode(TiDAGRequest.TruncateMode mode) {
+  TiDAGRequest setTruncateMode(TiDAGRequest.TruncateMode mode) {
     flags = requireNonNull(mode, "mode is null").mask(flags);
     return this;
   }
@@ -702,7 +721,7 @@ public class TiDAGRequest implements Serializable {
     return this;
   }
 
-  public List<Expression> getAggregates() {
+  List<Expression> getAggregates() {
     return aggregates.stream().map(p -> p.first).collect(Collectors.toList());
   }
 
@@ -911,7 +930,7 @@ public class TiDAGRequest implements Serializable {
    *
    * @return boolean
    */
-  public boolean isCoveringIndexScan() {
+  private boolean isCoveringIndexScan() {
     return hasIndex() && !isDoubleRead();
   }
 

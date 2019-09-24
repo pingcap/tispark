@@ -32,8 +32,6 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_SCAN_BATCH_SIZE = 100;
   private static final boolean DEF_IGNORE_TRUNCATE = true;
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
-  private static final int DEF_META_RELOAD_PERIOD = 10;
-  private static final TimeUnit DEF_META_RELOAD_UNIT = TimeUnit.SECONDS;
   private static final int DEF_MAX_FRAME_SIZE = 268435456 * 2; // 256 * 2 MB
   private static final int DEF_INDEX_SCAN_BATCH_SIZE = 20000;
   // if keyRange size per request exceeds this limit, the request might be too large to be accepted
@@ -48,13 +46,12 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_ENABLE = true;
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
+  private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
   private boolean ignoreTruncate = DEF_IGNORE_TRUNCATE;
   private boolean truncateAsWarning = DEF_TRUNCATE_AS_WARNING;
-  private TimeUnit metaReloadUnit = DEF_META_RELOAD_UNIT;
-  private int metaReloadPeriod = DEF_META_RELOAD_PERIOD;
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
   private List<URI> pdAddrs = new ArrayList<>();
   private int indexScanBatchSize = DEF_INDEX_SCAN_BATCH_SIZE;
@@ -69,6 +66,7 @@ public class TiConfiguration implements Serializable {
   private boolean writeAllowSparkSQL = DEF_WRITE_ALLOW_SPARK_SQL;
   private boolean writeEnable = DEF_WRITE_ENABLE;
   private boolean writeWithoutLockTable = DEF_WRITE_WITHOUT_LOCK_TABLE;
+  private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -97,24 +95,6 @@ public class TiConfiguration implements Serializable {
     return timeoutUnit;
   }
 
-  public TimeUnit getMetaReloadPeriodUnit() {
-    return metaReloadUnit;
-  }
-
-  public TiConfiguration setMetaReloadPeriodUnit(TimeUnit timeUnit) {
-    this.metaReloadUnit = timeUnit;
-    return this;
-  }
-
-  public TiConfiguration setMetaReloadPeriod(int metaReloadPeriod) {
-    this.metaReloadPeriod = metaReloadPeriod;
-    return this;
-  }
-
-  public int getMetaReloadPeriod() {
-    return metaReloadPeriod;
-  }
-
   public TiConfiguration setTimeoutUnit(TimeUnit timeoutUnit) {
     this.timeoutUnit = timeoutUnit;
     return this;
@@ -125,7 +105,20 @@ public class TiConfiguration implements Serializable {
   }
 
   public String getPdAddrsString() {
-    return pdAddrs.toString();
+    return listToString(pdAddrs);
+  }
+
+  public static <E> String listToString(List<E> list) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("[");
+    for (int i = 0; i < list.size(); i++) {
+      sb.append(list.get(i).toString());
+      if (i != list.size() - 1) {
+        sb.append(",");
+      }
+    }
+    sb.append("]");
+    return sb.toString();
   }
 
   public int getScanBatchSize() {
@@ -248,5 +241,13 @@ public class TiConfiguration implements Serializable {
 
   public void setWriteAllowSparkSQL(boolean writeAllowSparkSQL) {
     this.writeAllowSparkSQL = writeAllowSparkSQL;
+  }
+
+  public void setTikvRegionSplitSizeInMB(int tikvRegionSplitSizeInMB) {
+    this.tikvRegionSplitSizeInMB = tikvRegionSplitSizeInMB;
+  }
+
+  public int getTikvRegionSplitSizeInMB() {
+    return tikvRegionSplitSizeInMB;
   }
 }

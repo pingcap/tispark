@@ -14,26 +14,30 @@
     <name>TiSpark Project Spark Wrapper Spark-2.4</name>
     <url>http://github.copm/pingcap/tispark</url>
 
+    <properties>
+        <spark.version.wrapper>2.4.4</spark.version.wrapper>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.pingcap.tispark</groupId>
-            <artifactId>tispark-core</artifactId>
+            <artifactId>tispark-core-internal</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
-            <version>2.4.3</version>
+            <version>${spark.version.wrapper}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
-            <version>2.4.3</version>
+            <version>${spark.version.wrapper}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
-            <version>2.4.3</version>
+            <version>${spark.version.wrapper}</version>
         </dependency>
     </dependencies>
 
@@ -101,7 +105,7 @@
             <!-- Scala Format Plug-in -->
             <plugin>
                 <groupId>org.antipathy</groupId>
-                <artifactId>mvn-scalafmt_${scala.version}</artifactId>
+                <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
                 <version>0.10_1.5.1</version>
                 <configuration>
                     <sourceDirectories> <!-- (Optional) Paths to source-directories. Overrides ${project.build.sourceDirectory} -->
