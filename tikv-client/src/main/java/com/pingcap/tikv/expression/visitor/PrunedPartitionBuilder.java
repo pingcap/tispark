@@ -18,6 +18,7 @@ package com.pingcap.tikv.expression.visitor;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import com.pingcap.tikv.exception.UnsupportedPartitionExprException;
+import com.pingcap.tikv.exception.UnsupportedSyntaxException;
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.meta.TiPartitionDef;
@@ -34,7 +35,7 @@ import java.util.Set;
 /**
  * Apply partition pruning rule on filter condition. Partition pruning is based on a simple idea and
  * can be described as "Do not scan partitions where there can be no matching values". Currently
- * only range partition pruning is supported(range column on mutiple columns is not supported at
+ * only range partition pruning is supported(range column on multiple columns is not supported at
  * TiDB side, so we can't optimize this yet).
  */
 public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
@@ -71,7 +72,7 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
 
     try {
       partExprs = generateRangePartExprs(tblInfo);
-    } catch (UnsupportedPartitionExprException e) {
+    } catch (UnsupportedSyntaxException | UnsupportedPartitionExprException e) {
       return false;
     }
 

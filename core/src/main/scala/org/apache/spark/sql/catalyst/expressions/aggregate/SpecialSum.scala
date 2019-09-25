@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql.catalyst.expressions.aggregate
 
+import com.pingcap.tispark.utils.ReflectionUtil._
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult
 import org.apache.spark.sql.catalyst.expressions.{Add, AttributeReference, Cast, Coalesce, Expression, ExpressionDescription, Literal}
 import org.apache.spark.sql.catalyst.util.TypeUtils
@@ -76,7 +77,7 @@ case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
 
   private lazy val sumDataType = resultType
 
-  private lazy val sum = AttributeReference("rewriteSum", sumDataType)()
+  private lazy val sum = newAttributeReference("rewriteSum", sumDataType)
 
   private lazy val zero = Cast(Literal(0), sumDataType)
 

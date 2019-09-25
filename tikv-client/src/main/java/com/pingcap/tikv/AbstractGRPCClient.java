@@ -37,10 +37,23 @@ public abstract class AbstractGRPCClient<
   protected final Logger logger = Logger.getLogger(this.getClass());
   protected TiConfiguration conf;
   protected final ChannelFactory channelFactory;
+  protected BlockingStubT blockingStub;
+  protected StubT asyncStub;
 
   protected AbstractGRPCClient(TiConfiguration conf, ChannelFactory channelFactory) {
     this.conf = conf;
     this.channelFactory = channelFactory;
+  }
+
+  protected AbstractGRPCClient(
+      TiConfiguration conf,
+      ChannelFactory channelFactory,
+      BlockingStubT blockingStub,
+      StubT asyncStub) {
+    this.conf = conf;
+    this.channelFactory = channelFactory;
+    this.blockingStub = blockingStub;
+    this.asyncStub = asyncStub;
   }
 
   public TiConfiguration getConf() {

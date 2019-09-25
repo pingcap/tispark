@@ -27,13 +27,11 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.meta.TiTimestamp;
-import com.pingcap.tikv.operation.NoopHandler;
 import com.pingcap.tikv.operation.PDErrorHandler;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
-import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.FutureObserver;
 import io.grpc.ManagedChannel;
 import java.net.URI;
@@ -59,23 +57,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   private volatile LeaderWrapper leaderWrapper;
   private ScheduledExecutorService service;
   private List<URI> pdAddrs;
-
-  /**
-   * get operator associated with the specific region.
-   *
-   * @param regionId is used to locate specific region.
-   * @return
-   */
-  private GetOperatorResponse getOperator(long regionId) {
-    Supplier<GetOperatorRequest> request =
-        () -> GetOperatorRequest.newBuilder().setHeader(header).setRegionId(regionId).build();
-    // get operator no need to handle error and no need back offer.
-    return callWithRetry(
-        ConcreteBackOffer.newCustomBackOff(0),
-        PDGrpc.METHOD_GET_OPERATOR,
-        request,
-        new NoopHandler<>());
-  }
 
   @Override
   public TiTimestamp getTimestamp(BackOffer backOffer) {
@@ -163,7 +144,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return responseObserver.getFuture();
   }
 
-  private Supplier<GetStoreRequest> buildGetStroeReq(long storeId) {
+  private Supplier<GetStoreRequest> buildGetStoreReq(long storeId) {
     return () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
   }
 
@@ -175,7 +156,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   @Override
   public Store getStore(BackOffer backOffer, long storeId) {
     return callWithRetry(
-            backOffer, PDGrpc.METHOD_GET_STORE, buildGetStroeReq(storeId), buildPDErrorHandler())
+            backOffer, PDGrpc.METHOD_GET_STORE, buildGetStoreReq(storeId), buildPDErrorHandler())
         .getStore();
   }
 
@@ -187,7 +168,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     callAsyncWithRetry(
         backOffer,
         PDGrpc.METHOD_GET_STORE,
-        buildGetStroeReq(storeId),
+        buildGetStoreReq(storeId),
         responseObserver,
         buildPDErrorHandler());
     return responseObserver.getFuture();
@@ -197,7 +178,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   public void close() throws InterruptedException {
     if (service != null) {
       service.shutdownNow();
-      service.awaitTermination(1, TimeUnit.SECONDS);
     }
     if (channelFactory != null) {
       channelFactory.close();
@@ -218,7 +198,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return leaderWrapper;
   }
 
-  class LeaderWrapper {
+  static class LeaderWrapper {
     private final String leaderInfo;
     private final PDBlockingStub blockingStub;
     private final PDStub asyncStub;
@@ -348,6 +328,9 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
   private PDClient(TiConfiguration conf, ChannelFactory channelFactory) {
     super(conf, channelFactory);
+    initCluster();
+    this.blockingStub = getBlockingStub();
+    this.asyncStub = getAsyncStub();
   }
 
   private void initCluster() {
@@ -383,19 +366,6 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   }
 
   static PDClient createRaw(TiConfiguration conf, ChannelFactory channelFactory) {
-    PDClient client = null;
-    try {
-      client = new PDClient(conf, channelFactory);
-      client.initCluster();
-    } catch (Exception e) {
-      if (client != null) {
-        try {
-          client.close();
-        } catch (InterruptedException ignore) {
-        }
-      }
-      throw e;
-    }
-    return client;
+    return new PDClient(conf, channelFactory);
   }
 }

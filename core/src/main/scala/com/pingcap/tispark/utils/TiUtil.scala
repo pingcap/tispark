@@ -137,11 +137,6 @@ object TiUtil {
       tiConf.setTimeoutUnit(TimeUnit.SECONDS)
     }
 
-    if (conf.contains(TiConfigConst.META_RELOAD_PERIOD)) {
-      tiConf.setMetaReloadPeriod(conf.get(TiConfigConst.META_RELOAD_PERIOD).toInt)
-      tiConf.setMetaReloadPeriodUnit(TimeUnit.SECONDS)
-    }
-
     if (conf.contains(TiConfigConst.INDEX_SCAN_BATCH_SIZE)) {
       tiConf.setIndexScanBatchSize(conf.get(TiConfigConst.INDEX_SCAN_BATCH_SIZE).toInt)
     }
@@ -186,6 +181,10 @@ object TiUtil {
 
     if (conf.contains(TiConfigConst.WRITE_ALLOW_SPARK_SQL)) {
       tiConf.setWriteAllowSparkSQL(conf.get(TiConfigConst.WRITE_ALLOW_SPARK_SQL).toBoolean)
+    }
+
+    if (conf.contains(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB)) {
+      tiConf.setTikvRegionSplitSizeInMB(conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
     }
 
     tiConf

@@ -113,14 +113,14 @@ public class TwoPhaseCommitter {
   private final long lockTTL;
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime) {
-    this.kvClient = TiSessionCache.getSession(conf).createTxnClient();
+    this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = DEFAULT_BATCH_WRITE_LOCK_TTL;
   }
 
   public TwoPhaseCommitter(TiConfiguration conf, long startTime, long lockTTL) {
-    this.kvClient = TiSessionCache.getSession(conf).createTxnClient();
+    this.kvClient = TiSession.getInstance(conf).createTxnClient();
     this.regionManager = kvClient.getRegionManager();
     this.startTs = startTime;
     this.lockTTL = lockTTL;
@@ -329,7 +329,7 @@ public class TwoPhaseCommitter {
         }
         LOG.debug(
             String.format(
-                "oldRegion=%s != currentRegion=%s, will refetch region info and retry",
+                "oldRegion=%s != currentRegion=%s, will re-fetch region info and retry",
                 oldRegion, currentRegion));
         retryPrewriteBatch(backOffer, primaryKey, batchKeys, mutations, level <= 0 ? 1 : level + 1);
       }

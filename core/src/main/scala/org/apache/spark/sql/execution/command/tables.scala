@@ -14,10 +14,11 @@
  */
 package org.apache.spark.sql.execution.command
 
+import com.pingcap.tispark.utils.ReflectionUtil._
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
+import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructType}
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
 
@@ -62,30 +63,30 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
     extends TiCommand(delegate) {
   override val output: Seq[Attribute] = Seq(
     // Column names are based on Hive.
-    AttributeReference(
+    newAttributeReference(
       "col_name",
       StringType,
       nullable = false,
       new MetadataBuilder().putString("comment", "name of the column").build()
-    )(),
-    AttributeReference(
+    ),
+    newAttributeReference(
       "data_type",
       StringType,
       nullable = false,
       new MetadataBuilder().putString("comment", "data type of the column").build()
-    )(),
-    AttributeReference(
+    ),
+    newAttributeReference(
       "nullable",
       StringType,
       nullable = false,
       new MetadataBuilder().putString("comment", "whether the column is nullable").build()
-    )(),
-    AttributeReference(
+    ),
+    newAttributeReference(
       "comment",
       StringType,
       nullable = true,
       new MetadataBuilder().putString("comment", "comment of the column").build()
-    )()
+    )
   )
 
   override def run(sparkSession: SparkSession): Seq[Row] =
@@ -219,7 +220,7 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
         partitionColumnNames = sourceTableDesc.partitionColumnNames,
         bucketSpec = sourceTableDesc.bucketSpec
       )
-    catalog.createTable(newTableDesc, delegate.ifNotExists)
+    callSessionCatalogCreateTable(catalog, newTableDesc, delegate.ifNotExists)
     Seq.empty[Row]
   }
 }

@@ -20,6 +20,7 @@ import org.tikv.kvproto.Kvrpcpb;
 public class KeyException extends TiKVException {
 
   private static final long serialVersionUID = 6649195220216182286L;
+  private Kvrpcpb.KeyError keyError;
 
   public KeyException(String errMsg) {
     super(errMsg);
@@ -27,5 +28,10 @@ public class KeyException extends TiKVException {
 
   public KeyException(Kvrpcpb.KeyError keyErr) {
     super(String.format("Key exception occurred and the reason is %s", keyErr.toString()));
+    this.keyError = keyErr;
+  }
+
+  public Kvrpcpb.KeyError getKeyError() {
+    return keyError;
   }
 }

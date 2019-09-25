@@ -28,6 +28,7 @@ import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiConverter._
 import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
@@ -42,6 +43,20 @@ import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+
+object TiStrategy {
+  private val assignedTSPlanCache = new mutable.WeakHashMap[LogicalPlan, Boolean]()
+
+  private def hasTSAssigned(plan: LogicalPlan): Boolean = {
+    assignedTSPlanCache.get(plan).isDefined
+  }
+
+  private def markTSAssigned(plan: LogicalPlan): Unit = {
+    plan foreachUp { p =>
+      assignedTSPlanCache.put(p, true)
+    }
+  }
+}
 
 /**
  * CHECK Spark [[org.apache.spark.sql.Strategy]]
@@ -99,9 +114,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     }
 
   // apply StartTs to every logical plan in Spark Planning stage
-  protected def applyStartTs(ts: TiTimestamp): PartialFunction[LogicalPlan, Unit] = {
+  protected def applyStartTs(ts: TiTimestamp,
+                             forceUpdate: Boolean = false): PartialFunction[LogicalPlan, Unit] = {
     case LogicalRelation(r @ TiDBRelation(_, _, _, timestamp, _), _, _, _) =>
-      if (timestamp == null) {
+      if (timestamp == null || forceUpdate) {
         r.ts = ts
       }
     case logicalPlan =>
@@ -114,7 +130,18 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     val ts = tiContext.tiSession.getTimestamp
-    plan foreachUp applyStartTs(ts)
+
+    if (plan.isStreaming) {
+      // We should use a new timestamp for next batch execution.
+      // Otherwise Spark Structure Streaming will not see new data in TiDB.
+      if (!TiStrategy.hasTSAssigned(plan)) {
+        plan foreachUp applyStartTs(ts, forceUpdate = true)
+        TiStrategy.markTSAssigned(plan)
+      }
+    } else {
+      plan foreachUp applyStartTs(ts)
+    }
+
     plan
       .collectFirst {
         case LogicalRelation(relation: TiDBRelation, _, _, _) =>
@@ -389,11 +416,11 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagReq: TiDAGRequest
   ): Seq[SparkPlan] = {
     val deterministicAggAliases = aggregateExpressions.collect {
-      case e if e.deterministic => e.canonicalized -> Alias(e, e.toString())()
+      case e if e.deterministic => e.canonicalized -> newAlias(e, e.toString())
     }.toMap
 
     def aliasPushedPartialResult(e: AggregateExpression): Alias =
-      deterministicAggAliases.getOrElse(e.canonicalized, Alias(e, e.toString())())
+      deterministicAggAliases.getOrElse(e.canonicalized, newAlias(e, e.toString()))
 
     val residualAggregateExpressions = aggregateExpressions.map { aggExpr =>
       // As `aggExpr` is being pushing down to TiKV, we need to replace the original Catalyst
@@ -467,7 +494,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) &&
       groupingExpressions.forall(TiUtil.isSupportedGroupingExpr(_, source, blacklist)) &&
       aggregateExpressions.forall(TiUtil.isSupportedAggregate(_, source, blacklist)) &&
-      !aggregateExpressions.exists(_.isDistinct)
+      !aggregateExpressions.exists(_.isDistinct) &&
+      // TODO: This is a temporary fix for the issue: https://github.com/pingcap/tispark/issues/1039
+      !groupingExpressions.exists(_.isInstanceOf[Alias])
 
   // We do through similar logic with original Spark as in SparkStrategies.scala
   // Difference is we need to test if a sub-plan can be consumed all together by TiKV

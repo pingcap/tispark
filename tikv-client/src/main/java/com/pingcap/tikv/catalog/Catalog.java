@@ -18,34 +18,24 @@ package com.pingcap.tikv.catalog;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.pingcap.tikv.Snapshot;
 import com.pingcap.tikv.meta.TiDBInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 
 public class Catalog implements AutoCloseable {
   private Supplier<Snapshot> snapshotProvider;
-  private ScheduledExecutorService service;
   private CatalogCache metaCache;
   private final boolean showRowId;
   private final String dbPrefix;
   private final Logger logger = Logger.getLogger(this.getClass());
 
   @Override
-  public void close() throws Exception {
-    if (service != null) {
-      service.shutdownNow();
-      service.awaitTermination(1, TimeUnit.SECONDS);
-    }
-  }
+  public void close() {}
 
   private static class CatalogCache {
 
@@ -85,7 +75,8 @@ public class Catalog implements AutoCloseable {
       if (tableMap == null) {
         tableMap = loadTables(db);
       }
-      return ImmutableList.copyOf(tableMap.values());
+      Collection<TiTableInfo> tables = tableMap.values();
+      return tables.stream().filter(tbl -> !tbl.isView()).collect(Collectors.toList());
     }
 
     public TiTableInfo getTable(TiDBInfo db, String tableName) {
@@ -93,7 +84,11 @@ public class Catalog implements AutoCloseable {
       if (tableMap == null) {
         tableMap = loadTables(db);
       }
-      return tableMap.get(tableName.toLowerCase());
+      TiTableInfo tbl = tableMap.get(tableName.toLowerCase());
+      // https://github.com/pingcap/tispark/issues/961
+      // TODO: support reading from view table in the future.
+      if (tbl != null && tbl.isView()) return null;
+      return tbl;
     }
 
     private Map<String, TiTableInfo> loadTables(TiDBInfo db) {
@@ -123,51 +118,14 @@ public class Catalog implements AutoCloseable {
     }
   }
 
-  public Catalog(
-      Supplier<Snapshot> snapshotProvider,
-      int refreshPeriod,
-      TimeUnit periodUnit,
-      boolean showRowId,
-      String dbPrefix) {
+  public Catalog(Supplier<Snapshot> snapshotProvider, boolean showRowId, String dbPrefix) {
     this.snapshotProvider = Objects.requireNonNull(snapshotProvider, "Snapshot Provider is null");
     this.showRowId = showRowId;
     this.dbPrefix = dbPrefix;
     metaCache = new CatalogCache(new CatalogTransaction(snapshotProvider.get()), dbPrefix, false);
-    service =
-        Executors.newSingleThreadScheduledExecutor(
-            new ThreadFactoryBuilder().setDaemon(true).build());
-    service.scheduleAtFixedRate(
-        () -> {
-          // Wrap this with a try catch block in case schedule update fails
-          try {
-            reloadCache(true);
-          } catch (Exception e) {
-            logger.warn("Reload Cache failed", e);
-          }
-        },
-        refreshPeriod,
-        refreshPeriod,
-        periodUnit);
   }
 
-  /**
-   * read current row id from TiKV and write the calculated value back to TiKV. The calculation rule
-   * is start(read from TiKV) + step.
-   */
-  public synchronized long getAutoTableId(long dbId, long tableId, long step) {
-    Snapshot snapshot = snapshotProvider.get();
-    CatalogTransaction newTrx = new CatalogTransaction(snapshot);
-    return newTrx.getAutoTableId(dbId, tableId, step);
-  }
-
-  /** read current row id from TiKV according to database id and table id. */
-  public synchronized long getAutoTableId(long dbId, long tableId) {
-    Snapshot snapshot = snapshotProvider.get();
-    CatalogTransaction newTrx = new CatalogTransaction(snapshot);
-    return newTrx.getAutoTableId(dbId, tableId);
-  }
-
-  public synchronized void reloadCache(boolean loadTables) {
+  private synchronized void reloadCache(boolean loadTables) {
     Snapshot snapshot = snapshotProvider.get();
     CatalogTransaction newTrx = new CatalogTransaction(snapshot);
     long latestVersion = newTrx.getLatestSchemaVersion();
@@ -176,16 +134,18 @@ public class Catalog implements AutoCloseable {
     }
   }
 
-  public void reloadCache() {
+  private void reloadCache() {
     reloadCache(false);
   }
 
   public List<TiDBInfo> listDatabases() {
+    reloadCache();
     return metaCache.listDatabases();
   }
 
   public List<TiTableInfo> listTables(TiDBInfo database) {
     Objects.requireNonNull(database, "database is null");
+    reloadCache();
     if (showRowId) {
       return metaCache
           .listTables(database)
@@ -199,13 +159,8 @@ public class Catalog implements AutoCloseable {
 
   public TiDBInfo getDatabase(String dbName) {
     Objects.requireNonNull(dbName, "dbName is null");
-    TiDBInfo dbInfo = metaCache.getDatabase(dbName);
-    if (dbInfo == null) {
-      // reload cache if database does not exist
-      reloadCache(true);
-      dbInfo = metaCache.getDatabase(dbName);
-    }
-    return dbInfo;
+    reloadCache();
+    return metaCache.getDatabase(dbName);
   }
 
   public TiTableInfo getTable(String dbName, String tableName) {
@@ -219,12 +174,8 @@ public class Catalog implements AutoCloseable {
   public TiTableInfo getTable(TiDBInfo database, String tableName) {
     Objects.requireNonNull(database, "database is null");
     Objects.requireNonNull(tableName, "tableName is null");
+    reloadCache();
     TiTableInfo table = metaCache.getTable(database, tableName);
-    if (table == null) {
-      // reload cache if table does not exist
-      reloadCache(true);
-      table = metaCache.getTable(database, tableName);
-    }
     if (showRowId && table != null) {
       return table.copyTableWithRowId();
     } else {

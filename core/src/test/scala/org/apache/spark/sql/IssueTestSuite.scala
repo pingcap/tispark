@@ -19,6 +19,45 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
+
+  // https://github.com/pingcap/tispark/issues/1083
+  test("TiSpark Catalog has no delay") {
+    tidbStmt.execute("drop table if exists catalog_delay")
+    tidbStmt.execute("create table catalog_delay(c1 bigint)")
+    refreshConnections()
+    val tiTableInfo1 =
+      this.ti.tiSession.getCatalog.getTable(s"${dbPrefix}tispark_test", "catalog_delay")
+    assert("catalog_delay".equals(tiTableInfo1.getName))
+    assert("c1".equals(tiTableInfo1.getColumns.get(0).getName))
+
+    tidbStmt.execute("drop table if exists catalog_delay")
+    tidbStmt.execute("create table catalog_delay(c2 bigint)")
+    val tiTableInfo2 =
+      this.ti.tiSession.getCatalog.getTable(s"${dbPrefix}tispark_test", "catalog_delay")
+    assert("catalog_delay".equals(tiTableInfo2.getName))
+    assert("c2".equals(tiTableInfo2.getColumns.get(0).getName))
+
+    assert(tiTableInfo1.getId != tiTableInfo2.getId)
+  }
+
+  // https://github.com/pingcap/tispark/issues/1039
+  test("Distinct without alias throws NullPointerException") {
+    tidbStmt.execute("drop table if exists t_distinct_alias")
+    tidbStmt.execute("create table t_distinct_alias(c1 bigint);")
+    tidbStmt.execute("insert into t_distinct_alias values (2), (3), (2);")
+
+    val sqls = "select distinct(c1) as d, 1 as w from t_distinct_alias" ::
+      "select c1 as d, 1 as w from t_distinct_alias group by c1" ::
+      "select c1, 1 as w from t_distinct_alias group by c1" ::
+      "select distinct(c1), 1 as w from t_distinct_alias" ::
+      Nil
+
+    for (sql <- sqls) {
+      explainTestAndCollect(sql)
+      compSparkWithTiDB(sql)
+    }
+  }
+
   test("cannot resolve column name when specifying table.column") {
     spark.sql("select full_data_type_table.id_dt from full_data_type_table").explain(true)
     judge("select full_data_type_table.id_dt from full_data_type_table")
@@ -226,7 +265,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("insert into t values(1)")
     tidbStmt.execute("insert into t values(2)")
     tidbStmt.execute("insert into t values(4)")
-    ti.meta.reloadAllMeta()
+    loadTestData()
     runTest("select count(c1) from t")
     runTest("select count(c1 + 1) from t")
     runTest("select count(1 + c1) from t")
@@ -234,7 +273,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("create table t(c1 int not null, c2 int not null)")
     tidbStmt.execute("insert into t values(1, 4)")
     tidbStmt.execute("insert into t values(2, 2)")
-    ti.meta.reloadAllMeta()
+    loadTestData()
     runTest("select count(c1 + c2) from t")
   }
 
@@ -306,6 +345,7 @@ class IssueTestSuite extends BaseTiSparkTest {
       tidbStmt.execute("drop table if exists set_t")
       tidbStmt.execute("drop table if exists enum_t")
       tidbStmt.execute("drop table if exists table_group_by_bigint")
+      tidbStmt.execute("drop table if exists catalog_delay")
     } finally {
       super.afterAll()
     }

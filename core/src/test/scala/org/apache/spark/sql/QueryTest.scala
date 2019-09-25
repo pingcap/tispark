@@ -196,6 +196,29 @@ abstract class QueryTest extends SparkFunSuite {
     }
   }
 
+  def listToString(result: List[List[Any]]): String =
+    if (result == null) s"[len: null] = null"
+    else if (result.isEmpty) s"[len: 0] = Empty"
+    else s"[len: ${result.length}] = ${result.map(mapStringList).mkString(",")}"
+
+  private def mapStringList(result: List[Any]): String =
+    if (result == null) "null" else "List(" + result.map(mapString).mkString(",") + ")"
+
+  private def mapString(result: Any): String =
+    if (result == null) "null"
+    else
+      result match {
+        case _: Array[Byte] =>
+          var str = "["
+          for (s <- result.asInstanceOf[Array[Byte]]) {
+            str += " " + s.toString
+          }
+          str += " ]"
+          str
+        case _ =>
+          result.toString
+      }
+
   protected def toOutput(value: Any, colType: String): Any = value match {
     case _: BigDecimal =>
       value.asInstanceOf[BigDecimal].setScale(2, BigDecimal.RoundingMode.HALF_UP)
@@ -431,6 +454,7 @@ abstract class QueryTest extends SparkFunSuite {
                                  retryOnFailure: Int,
                                  exception: Exception = null): A = {
     if (retryOnFailure <= 0) {
+      logger.error("callWithRetry failure", exception)
       fail(exception)
     } else
       try {

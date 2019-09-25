@@ -53,21 +53,6 @@ public class DateTimeType extends AbstractDateTimeType {
     return convertToMysqlDateTime(value);
   }
 
-  private java.sql.Timestamp convertToMysqlDateTime(Object value)
-      throws ConvertNotSupportException {
-    java.sql.Timestamp result;
-    if (value instanceof String) {
-      result = java.sql.Timestamp.valueOf((String) value);
-    } else if (value instanceof java.sql.Date) {
-      result = new java.sql.Timestamp(((java.sql.Date) value).getTime());
-    } else if (value instanceof java.sql.Timestamp) {
-      result = (java.sql.Timestamp) value;
-    } else {
-      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
-    }
-    return result;
-  }
-
   /**
    * Decode timestamp from packed long value In TiDB / MySQL, timestamp type is converted to UTC and
    * stored
