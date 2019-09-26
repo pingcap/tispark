@@ -118,6 +118,16 @@ public class ConcreteBackOffer implements BackOffer {
   public void doBackOff(BackOffFunction.BackOffFuncType funcType, Exception err) {
     BackOffFunction backOffFunction =
         backOffFunctionMap.computeIfAbsent(funcType, this::createBackOffFunc);
+    //    if (err.getMessage().contains("UNKNOWN")) {
+    //      try {
+    //        Method method = PlatformDependent.class.getMethod("usedDirectMemory");
+    //        method.setAccessible(true);
+    //        AtomicLong c = ((AtomicLong) method.invoke(PlatformDependent.class));
+    //        System.out.println("direct memory: " + c.get());
+    //      } catch (Exception e) {;
+    //      }
+    //      err.printStackTrace();
+    //    }
 
     // Back off will be done here
     totalSleep += backOffFunction.doBackOff();

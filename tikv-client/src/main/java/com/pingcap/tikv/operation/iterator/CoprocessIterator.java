@@ -54,8 +54,6 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
     this.handleTypes = infer.getTypes().toArray(new DataType[] {});
   }
 
-  abstract void submitTasks();
-
   /**
    * Build a DAGIterator from TiDAGRequest and region tasks to get rows
    *

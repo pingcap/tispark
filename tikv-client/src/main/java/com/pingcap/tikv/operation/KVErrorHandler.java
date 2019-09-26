@@ -160,6 +160,13 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     // Region error handling logic
     Errorpb.Error error = getRegionError(resp);
     if (error != null) {
+      //      try {
+      //        Method method = PlatformDependent.class.getMethod("usedDirectMemory");
+      //        method.setAccessible(true);
+      //        AtomicLong c = ((AtomicLong) method.invoke(PlatformDependent.class));
+      //        System.out.println("direct memory: " + c.get());
+      //      } catch (Exception e) {;
+      //      }
       if (error.hasNotLeader()) {
         // this error is reported from raftstore:
         // peer of current request is not leader, the following might be its causes:
