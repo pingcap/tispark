@@ -48,6 +48,8 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
 
   test("ti batch write") {
     for (table <- tables) {
+      logDebug(s"start test table [$table]")
+
       val tableToWrite = s"${batchWriteTablePrefix}_$table"
 
       // select
