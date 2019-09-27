@@ -13,7 +13,7 @@ Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
 
-+ Currently, TiSpark 2.1.1 is the stable version. It is compatible with Spark 2.3.0+ and Spark 2.4.0+.
++ Currently, TiSpark 2.1.5 is the latest stable version, which is highly recommended. It is compatible with Spark 2.3.0+ and Spark 2.4.0+. It is also compatible with TiDB-2.x and TiDB-3.x.
   - When using TiSpark 2.1.5 with Spark 2.3.0+, use version `2.1.5-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md).
   - When using TiSpark 2.1.5 with Spark 2.4.0+, use version `2.1.5-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md).
 
@@ -247,6 +247,11 @@ TiSpark currently **does not support** `view`. Users are not be able to observe 
 TiSpark currently supports `Range Partition` and `Hash Partition`. Users can select data from the `Range Partition` table and the `Hash Partition` table through TiSpark.
 
 In most cases, TiSpark use a full table scan on partition tables. Only in certain cases, TiSpark applies partition pruning. For more details, see [here](./docs/userguide.md).
+
+## Upgrade from TiDB-2.x to TiDB-3.x
+When upgrading from TiDB-2.x to TiDB-3.x,
+1. make sure that you are using at least TiSpark-2.1.2 (TiSpark-2.1.5 is highly recommended).
+2. `tidbMapDatabase` is deprecated after TiSpark-2.x, make sure that you are not using it.
 
 ## How to test
 
