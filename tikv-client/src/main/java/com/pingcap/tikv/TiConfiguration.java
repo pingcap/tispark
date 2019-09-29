@@ -47,7 +47,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
-  private static final boolean DEF_DISABLE_CONCURRENT_READ_IN_ITERATOR = true;
+  private static final boolean DEF_DISABLE_CONCURRENT_READ_IN_ITERATOR = false;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
