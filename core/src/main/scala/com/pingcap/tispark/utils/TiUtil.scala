@@ -187,6 +187,12 @@ object TiUtil {
       tiConf.setTikvRegionSplitSizeInMB(conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
     }
 
+    if (conf.contains(TiConfigConst.DISABLE_CONCURRENT_READ_IN_ITERATOR)) {
+      tiConf.setDisableConcurrentReadInIterator(
+        conf.get(TiConfigConst.DISABLE_CONCURRENT_READ_IN_ITERATOR).toBoolean
+      )
+    }
+
     tiConf
   }
 

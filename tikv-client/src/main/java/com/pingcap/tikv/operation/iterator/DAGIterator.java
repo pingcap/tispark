@@ -31,6 +31,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
   private Iterator<SelectResponse> responseIterator;
 
   private final PushDownType pushDownType;
+  private final boolean serialized;
 
   DAGIterator(
       DAGRequest req,
@@ -40,6 +41,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       PushDownType pushDownType) {
     super(req, regionTasks, session, infer);
     this.pushDownType = pushDownType;
+    this.serialized = session.getConf().getDisableConcurrentReadInIterator();
     switch (pushDownType) {
       case NORMAL:
         dagService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
@@ -48,10 +50,14 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
         streamingService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
         break;
     }
+    if (!serialized) {
+      for (RangeSplitter.RegionTask regionTask : regionTasks) {
+        submitTask(regionTask);
+      }
+    }
   }
 
-  private void submitTask(int offset) {
-    RangeSplitter.RegionTask task = regionTasks.get(offset);
+  private void submitTask(RangeSplitter.RegionTask task) {
     switch (pushDownType) {
       case STREAMING:
         streamingService.submit(() -> processByStreaming(task));
@@ -142,7 +148,9 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
 
   private boolean doReadNextRegionChunks() {
     try {
-      submitTask(taskIndex);
+      if (serialized) {
+        submitTask(regionTasks.get(taskIndex));
+      }
       switch (pushDownType) {
         case STREAMING:
           responseIterator = streamingService.take().get();
@@ -153,7 +161,7 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
       }
 
     } catch (Exception e) {
-      throw new TiClientInternalException("Error reading region:", e);
+      throw new TiClientInternalException(String.format("Error reading region[%d]:"), e);
     }
 
     taskIndex++;
@@ -168,15 +176,6 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
     while (!remainTasks.isEmpty()) {
-
-      //      try {
-      //        Method method = PlatformDependent.class.getMethod("usedDirectMemory");
-      //        method.setAccessible(true);
-      //        AtomicLong c = ((AtomicLong) method.invoke(PlatformDependent.class));
-      //        System.out.println("direct memory: " + c.get() + " queue size:" +
-      // remainTasks.size());
-      //      } catch (Exception e) {;
-      //      }
 
       RangeSplitter.RegionTask task = remainTasks.poll();
       if (task == null) {
@@ -202,7 +201,8 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
             e);
         // Rethrow to upper levels
         eof = true;
-        throw new RegionTaskException("Handle region task failed:", e);
+        throw new RegionTaskException(
+            String.format("Handle RegionTask on Region[%d] failed:", region.getId()), e);
       }
     }
 
