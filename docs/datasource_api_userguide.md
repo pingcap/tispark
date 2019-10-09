@@ -55,7 +55,8 @@ Fow how to use it with extensions enabled, see [code examples with extensions](h
       setIfMissing("spark.tispark.pd.addresses", "pd0:2379").
       setIfMissing("spark.tispark.tidb.addr", "tidb").
       setIfMissing("spark.tispark.tidb.port", "4000")
-      //.setIfMissing("spark.tispark.write.without_lock_table", "true")
+      // if tidb <= 3.x, please set the spark.tispark.write.without_lock_table=true
+      // .setIfMissing("spark.tispark.write.without_lock_table", "true")
 
     val spark = SparkSession.builder.config(sparkConf).getOrCreate()
     ```
@@ -162,6 +163,8 @@ import org.apache.spark.sql.{DataFrame, SQLContext, SparkSession}
 val sparkConf = new SparkConf()
   .setIfMissing("spark.master", "local[*]")
   .setIfMissing("spark.app.name", getClass.getName)
+  // if tidb <= 3.x, please set the spark.tispark.write.without_lock_table=true
+  // .setIfMissing("spark.tispark.write.without_lock_table", "true")
 
 val spark = SparkSession.builder.config(sparkConf).getOrCreate()
 ```
@@ -240,6 +243,8 @@ spark.tispark.pd.addresses 127.0.0.1:2379
 spark.tispark.tidb.addr 127.0.0.1
 spark.tispark.tidb.port 4000
 spark.tispark.write.allow_spark_sql true
+# if tidb <= 3.x, please set the spark.tispark.write.without_lock_table=true
+# spark.tispark.write.without_lock_table true
 ```
 
 2. Create a new table using mysql-client:
