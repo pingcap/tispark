@@ -17,6 +17,7 @@ package com.pingcap.tispark
 
 import java.util.Locale
 
+import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 
@@ -98,9 +99,22 @@ object TiDBOptions {
     val sparkConf = SparkContext.getOrCreate().getConf
     if (sparkConf.get("spark.sql.extensions", "").equals("org.apache.spark.sql.TiExtensions")) {
       // priority: data source config > spark config
-      sparkConf.getAll.toMap ++ parameters
+      val confMap = sparkConf.getAll.toMap
+      checkTiDBPassword(confMap)
+      confMap ++ parameters
     } else {
       parameters
+    }
+  }
+
+  private def checkTiDBPassword(conf: Map[String, String]): Unit = {
+    conf.foreach {
+      case (k, _) =>
+        if ("tidb.password".equals(k) || "spark.tispark.tidb.password".equals(k)) {
+          throw new TiBatchWriteException(
+            "!Security! Please DO NOT add TiDB password to SparkConf which will be shown on Spark WebUI!"
+          )
+        }
     }
   }
 
