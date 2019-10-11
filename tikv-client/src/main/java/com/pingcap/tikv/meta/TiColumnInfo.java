@@ -28,6 +28,7 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataType.EncodeType;
 import com.pingcap.tikv.types.DataTypeFactory;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.MySQLType;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
@@ -188,9 +189,19 @@ public class TiColumnInfo implements Serializable {
   }
 
   private ByteString getOriginDefaultValueAsByteString() {
-    CodecDataOutput cdo = new CodecDataOutput();
-    type.encode(cdo, EncodeType.VALUE, type.getOriginDefaultValue(originDefaultValue, version));
-    return cdo.toByteString();
+    if (this.getType().getType() == MySQLType.TypeBit) {
+      CodecDataOutput cdo = new CodecDataOutput();
+      try {
+        type.encode(cdo, EncodeType.VALUE, type.getOriginDefaultValue(originDefaultValue, version));
+      } catch (Exception e) {
+        type.encode(cdo, EncodeType.VALUE, null);
+      }
+      return cdo.toByteString();
+    } else {
+      CodecDataOutput cdo = new CodecDataOutput();
+      type.encode(cdo, EncodeType.VALUE, type.getOriginDefaultValue(originDefaultValue, version));
+      return cdo.toByteString();
+    }
   }
 
   public long getVersion() {
