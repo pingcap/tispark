@@ -48,6 +48,8 @@ public class TiTableInfo implements Serializable {
   private final TiPartitionInfo partitionInfo;
   private final TiViewInfo viewInfo;
 
+  public String json = "";
+
   @JsonCreator
   @JsonIgnoreProperties(ignoreUnknown = true)
   public TiTableInfo(

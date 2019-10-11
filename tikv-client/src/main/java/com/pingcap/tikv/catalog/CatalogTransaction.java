@@ -160,7 +160,9 @@ public class CatalogTransaction {
     ImmutableList.Builder<TiTableInfo> builder = ImmutableList.builder();
     for (Pair<ByteString, ByteString> pair : fields) {
       if (KeyUtils.hasPrefix(pair.first, KEY_TABLE)) {
-        builder.add(parseFromJson(pair.second, TiTableInfo.class));
+        TiTableInfo table = parseFromJson(pair.second, TiTableInfo.class);
+        table.json = pair.second.toStringUtf8();
+        builder.add(table);
       }
     }
     return builder.build();

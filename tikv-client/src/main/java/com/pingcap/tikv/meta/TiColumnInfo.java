@@ -290,7 +290,14 @@ public class TiColumnInfo implements Serializable {
   }
 
   ColumnInfo toProto(TiTableInfo table) {
-    return toProtoBuilder(table).build();
+    try {
+      return toProtoBuilder(table).build();
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.out.println(table.json);
+    }
+
+    return null;
   }
 
   ColumnInfo.Builder toProtoBuilder(TiTableInfo table) {

@@ -19,6 +19,11 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+
+  test("tongdun") {
+    spark.sql(s"select * from ${dbPrefix}test.rule_field limit 10").collect().foreach(println)
+  }
+
   test("cannot resolve column name when specifying table.column") {
     spark.sql("select full_data_type_table.id_dt from full_data_type_table").explain(true)
     judge("select full_data_type_table.id_dt from full_data_type_table")
