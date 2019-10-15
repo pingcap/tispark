@@ -72,8 +72,9 @@ abstract class QueryTest extends PlanTest {
     }
 
     def toInteger(x: Any): Long = x match {
-      case d: BigInt => d.bigInteger.longValue()
-      case d: Number => d.longValue()
+      case d: BigInt  => d.bigInteger.longValue()
+      case d: Number  => d.longValue()
+      case d: Boolean => if (d) 1L else 0L
     }
 
     def toString(value: Any): String =
