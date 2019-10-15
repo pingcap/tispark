@@ -20,10 +20,12 @@ package com.pingcap.tikv.types;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.exception.CastingException;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.util.Base64;
 
 public class BitType extends IntegerType {
   private static final long MAX_BIT_LENGTH = 64L;
@@ -77,5 +79,19 @@ public class BitType extends IntegerType {
   @Override
   public boolean isUnsigned() {
     return true;
+  }
+
+  @Override
+  public Object getOriginDefaultValueNonNull(String value, long version) {
+    Long result = 0L;
+    byte[] bytes = Base64.getDecoder().decode(value);
+    if (bytes.length <= 0 || bytes.length > 8) {
+      throw new CastingException("byte[] to Long Overflow");
+    }
+    int size = bytes.length;
+    for (int i = 0; i < bytes.length; i++) {
+      result += ((long) (bytes[size - i - 1] & 0xff)) << ((size - i - 1) * 8);
+    }
+    return result;
   }
 }
