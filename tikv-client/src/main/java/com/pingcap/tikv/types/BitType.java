@@ -20,8 +20,10 @@ package com.pingcap.tikv.types;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.exception.CastingException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.util.Base64;
 
 public class BitType extends IntegerType {
   public static final BitType BIT = new BitType(MySQLType.TypeBit);
@@ -61,5 +63,22 @@ public class BitType extends IntegerType {
   @Override
   public boolean isUnsigned() {
     return true;
+  }
+
+  @Override
+  public Object getOriginDefaultValueNonNull(String value, long version) {
+    // Default value use to stored in DefaultValue field, but now, bit type default value will store
+    // in DefaultValueBit for fix bit default value decode/encode bug.
+    // DefaultValueBit is encoded using Base64.
+    Long result = 0L;
+    byte[] bytes = Base64.getDecoder().decode(value);
+    if (bytes.length <= 0 || bytes.length > 8) {
+      throw new CastingException("Base64 format Bit Type to Long Overflow");
+    }
+    int size = bytes.length;
+    for (int i = 0; i < bytes.length; i++) {
+      result += ((long) (bytes[size - i - 1] & 0xff)) << ((size - i - 1) * 8);
+    }
+    return result;
   }
 }

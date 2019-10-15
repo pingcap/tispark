@@ -28,6 +28,7 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataType.EncodeType;
 import com.pingcap.tikv.types.DataTypeFactory;
 import com.pingcap.tikv.types.IntegerType;
+import com.pingcap.tikv.types.MySQLType;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
@@ -43,6 +44,8 @@ public class TiColumnInfo implements Serializable {
   private final boolean isPrimaryKey;
   private final String defaultValue;
   private final String originDefaultValue;
+  private final String defaultValueBit;
+
   // this version is from ColumnInfo which is used to address compatible issue.
   // If version is 0 then timestamp's default value will be read and decoded as local timezone.
   // if version is 1 then timestamp's default value will be read and decoded as utc.
@@ -63,6 +66,7 @@ public class TiColumnInfo implements Serializable {
       @JsonProperty("state") int schemaState,
       @JsonProperty("origin_default") String originalDefaultValue,
       @JsonProperty("default") String defaultValue,
+      @JsonProperty("default_bit") String defaultValueBit,
       @JsonProperty("comment") String comment,
       @JsonProperty("version") long version) {
     this.id = id;
@@ -73,6 +77,7 @@ public class TiColumnInfo implements Serializable {
     this.comment = comment;
     this.defaultValue = defaultValue;
     this.originDefaultValue = originalDefaultValue;
+    this.defaultValueBit = defaultValueBit;
     // I don't think pk flag should be set on type
     // Refactor against original tidb code
     this.isPrimaryKey = (type.getFlag() & PK_MASK) > 0;
@@ -87,6 +92,7 @@ public class TiColumnInfo implements Serializable {
       SchemaState schemaState,
       String originalDefaultValue,
       String defaultValue,
+      String defaultValueBit,
       String comment,
       long version) {
     this.id = id;
@@ -97,6 +103,7 @@ public class TiColumnInfo implements Serializable {
     this.comment = comment;
     this.defaultValue = defaultValue;
     this.originDefaultValue = originalDefaultValue;
+    this.defaultValueBit = defaultValueBit;
     this.isPrimaryKey = (type.getFlag() & PK_MASK) > 0;
     this.version = version;
   }
@@ -113,6 +120,7 @@ public class TiColumnInfo implements Serializable {
         this.schemaState,
         this.originDefaultValue,
         this.defaultValue,
+        this.defaultValueBit,
         this.comment,
         this.version);
   }
@@ -128,6 +136,7 @@ public class TiColumnInfo implements Serializable {
     this.isPrimaryKey = isPrimaryKey;
     this.originDefaultValue = "1";
     this.defaultValue = "";
+    this.defaultValueBit = null;
     this.version = DataType.COLUMN_VERSION_FLAG;
   }
 
@@ -176,13 +185,26 @@ public class TiColumnInfo implements Serializable {
     return defaultValue;
   }
 
+  public String getDefaultValueBit() {
+    return defaultValueBit;
+  }
+
+  // Default value use to stored in DefaultValue field, but now, bit type default value will store
+  // in DefaultValueBit for fix bit default value decode/encode bug.
   String getOriginDefaultValue() {
-    return originDefaultValue;
+    if (this.getType().getType() == MySQLType.TypeBit
+        && originDefaultValue != null
+        && defaultValueBit != null) {
+      return defaultValueBit;
+    } else {
+      return originDefaultValue;
+    }
   }
 
   private ByteString getOriginDefaultValueAsByteString() {
     CodecDataOutput cdo = new CodecDataOutput();
-    type.encode(cdo, EncodeType.VALUE, type.getOriginDefaultValue(originDefaultValue, version));
+    type.encode(
+        cdo, EncodeType.VALUE, type.getOriginDefaultValue(getOriginDefaultValue(), version));
     return cdo.toByteString();
   }
 

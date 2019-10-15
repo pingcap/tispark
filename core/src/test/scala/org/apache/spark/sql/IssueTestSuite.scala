@@ -19,6 +19,49 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+  // https://github.com/pingcap/tispark/issues/1147
+  test("Fix Bit Type default value bug") {
+    def runBitTest(bitNumber: Int, bitString: String): Unit = {
+      tidbStmt.execute("DROP TABLE IF EXISTS t_origin_default_value")
+      tidbStmt.execute(
+        s"CREATE TABLE t_origin_default_value (id bigint(20) NOT NULL, approved bit($bitNumber) NOT NULL DEFAULT b'$bitString')"
+      )
+      tidbStmt.execute("insert into t_origin_default_value(id) values (1), (2), (3)")
+      judge("select * from t_origin_default_value")
+
+      tidbStmt.execute("DROP TABLE IF EXISTS t_origin_default_value")
+      tidbStmt.execute("CREATE TABLE t_origin_default_value (id bigint(20) NOT NULL)")
+      tidbStmt.execute("insert into t_origin_default_value(id) values (1), (2), (3)")
+      tidbStmt.execute(
+        s"alter table t_origin_default_value add approved bit($bitNumber) NOT NULL DEFAULT b'$bitString'"
+      )
+      judge("select * from t_origin_default_value")
+    }
+
+    "0" :: "1" :: Nil foreach { bitString =>
+      runBitTest(1, bitString)
+    }
+
+    "000" :: "001" :: "010" :: "011" :: "100" :: "101" :: "110" :: "111" :: Nil foreach {
+      bitString =>
+        runBitTest(3, bitString)
+    }
+
+    "00000000" ::
+      //"11111111" :: error because of https://github.com/pingcap/tidb/issues/12703
+      //"10101010" :: error
+      "01010101" ::
+      Nil foreach { bitString =>
+      runBitTest(8, bitString)
+    }
+
+    "0000000000000000000000000000000000000000000000000000000000000000" ::
+      "1111111111111111111111111111111111111111111111111111111111111111" ::
+      //"1010101010101010101010101010101001010101010101010101010101010101" :: error
+      Nil foreach { bitString =>
+      runBitTest(64, bitString)
+    }
+  }
 
   // https://github.com/pingcap/tispark/issues/1083
   test("TiSpark Catalog has no delay") {
@@ -366,6 +409,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists enum_t")
       tidbStmt.execute("drop table if exists table_group_by_bigint")
       tidbStmt.execute("drop table if exists catalog_delay")
+      tidbStmt.execute("drop table if exists t_origin_default_value")
     } finally {
       super.afterAll()
     }
