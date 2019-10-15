@@ -107,10 +107,6 @@ abstract class QueryTest extends SparkFunSuite {
     }
 
     def compValue(lhs: Any, rhs: Any): Boolean = {
-      doCompValue(lhs, rhs) || doCompValue(rhs, lhs)
-    }
-
-    def doCompValue(lhs: Any, rhs: Any): Boolean = {
       if (lhs == rhs || compNull(lhs, rhs) || lhs.toString == rhs.toString) {
         true
       } else
@@ -148,7 +144,7 @@ abstract class QueryTest extends SparkFunSuite {
             val l = toDouble(lhs)
             val r = toDouble(rhs)
             Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
-          case _: Number | _: BigInt | _: java.math.BigInteger =>
+          case _: Number | _: BigInt | _: java.math.BigInteger | _: Boolean =>
             toInteger(lhs) == toInteger(rhs)
           case _: Timestamp =>
             toString(lhs) == toString(rhs)
