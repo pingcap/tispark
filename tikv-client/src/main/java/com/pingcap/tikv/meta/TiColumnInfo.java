@@ -196,6 +196,8 @@ public class TiColumnInfo implements Serializable {
     return defaultValueBit;
   }
 
+  // Default value use to stored in DefaultValue field, but now, bit type default value will store
+  // in DefaultValueBit for fix bit default value decode/encode bug.
   String getOriginDefaultValue() {
     if (this.getType().getType() == MySQLType.TypeBit
         && originDefaultValue != null

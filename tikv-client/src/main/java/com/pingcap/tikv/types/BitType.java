@@ -83,10 +83,13 @@ public class BitType extends IntegerType {
 
   @Override
   public Object getOriginDefaultValueNonNull(String value, long version) {
+    // Default value use to stored in DefaultValue field, but now, bit type default value will store
+    // in DefaultValueBit for fix bit default value decode/encode bug.
+    // DefaultValueBit is encoded using Base64.
     Long result = 0L;
     byte[] bytes = Base64.getDecoder().decode(value);
     if (bytes.length <= 0 || bytes.length > 8) {
-      throw new CastingException("byte[] to Long Overflow");
+      throw new CastingException("Base64 format Bit Type to Long Overflow");
     }
     int size = bytes.length;
     for (int i = 0; i < bytes.length; i++) {
