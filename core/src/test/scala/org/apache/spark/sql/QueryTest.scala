@@ -106,12 +106,12 @@ abstract class QueryTest extends SparkFunSuite {
       false
     }
 
-    def compValue(lhs: Any, rhs: Any): Boolean =
+    def compValue(lhs: Any, rhs: Any): Boolean = {
       if (lhs == rhs || compNull(lhs, rhs) || lhs.toString == rhs.toString) {
         true
       } else
         lhs match {
-          case _: Array[Byte] =>
+          case _: Array[Byte] if rhs.isInstanceOf[Array[Byte]] =>
             val l = lhs.asInstanceOf[Array[Byte]]
             val r = rhs.asInstanceOf[Array[Byte]]
             if (l.length != r.length) {
@@ -124,17 +124,34 @@ abstract class QueryTest extends SparkFunSuite {
               }
               true
             }
+          case _: Array[Byte] if rhs.isInstanceOf[Long] =>
+            val l = lhs.asInstanceOf[Array[Byte]].toList.reverse
+            val r = rhs.asInstanceOf[Long]
+            if (l.length > 8) {
+              false
+            } else {
+              var eq = true
+              for (i <- l.indices) {
+                val a = (((255L << (i * 8)) & r) >> (i * 8)).toByte
+                if (!l(i).equals(a)) {
+                  eq = false
+                }
+              }
+              eq
+            }
+
           case _: Double | _: Float | _: BigDecimal | _: java.math.BigDecimal =>
             val l = toDouble(lhs)
             val r = toDouble(rhs)
             Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
-          case _: Number | _: BigInt | _: java.math.BigInteger =>
+          case _: Number | _: BigInt | _: java.math.BigInteger | _: Boolean =>
             toInteger(lhs) == toInteger(rhs)
           case _: Timestamp =>
             toString(lhs) == toString(rhs)
           case _ =>
             false
         }
+    }
 
     def compRow(lhs: List[Any], rhs: List[Any]): Boolean =
       if (lhs == null && rhs == null) {
