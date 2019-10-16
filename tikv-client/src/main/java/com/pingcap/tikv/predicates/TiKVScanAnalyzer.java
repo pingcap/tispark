@@ -106,7 +106,7 @@ public class TiKVScanAnalyzer {
 
       // TODO: Fine-grained statistics usage
       Builder calculateCostAndEstimateCount(long tableColSize) {
-      	cost = 100.0;
+        cost = 100.0;
         cost *= tableColSize * TABLE_SCAN_COST_FACTOR;
         return this;
       }
