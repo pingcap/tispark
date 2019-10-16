@@ -68,7 +68,17 @@ public class TimeType extends DataType {
   @Override
   protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {
-    throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    return convertToMysqlTime(value);
+  }
+
+  private Long convertToMysqlTime(Object value) throws ConvertNotSupportException {
+    Long result;
+    if (value instanceof Long) {
+      result = (Long) value;
+    } else {
+      throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
+    }
+    return result;
   }
 
   @Override

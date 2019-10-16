@@ -46,6 +46,65 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
     }
   }
 
+  test("test") {
+    tidbStmt.execute("DROP TABLE IF EXISTS test.ISHBZH")
+    tidbStmt.execute("DROP TABLE IF EXISTS test.ISHBZH2")
+    tidbStmt.execute(
+      """
+        |create table test.ISHBZH
+        |(
+        |ZQZH char(20) default '' not null,
+        |MAIN char(20) default '' not null,
+        |ZHBZ char default '' not null,
+        |GDLB char default '' not null,
+        |CLRQ date default '2001-01-01 00:00:00' not null,
+        |CLSJ time default '00:00:00' not null,
+        |GLSL decimal(5) default '0' not null,
+        |BYZD char(20) default '' not null,
+        |constraint ZQZH unique (ZQZH),
+        |constraint ZHBZ unique (ZHBZ, MAIN, ZQZH)
+        |)
+      """.stripMargin
+    )
+
+    tidbStmt.execute(
+      """
+        |create table test.ISHBZH2
+        |(
+        |ZQZH char(20) default '' not null,
+        |MAIN char(20) default '' not null,
+        |ZHBZ char default '' not null,
+        |GDLB char default '' not null,
+        |CLRQ date default '2001-01-01 00:00:00' not null,
+        |CLSJ time default '00:00:00' not null,
+        |GLSL decimal(5) default '0' not null,
+        |BYZD char(20) default '' not null,
+        |constraint ZQZH unique (ZQZH),
+        |constraint ZHBZ unique (ZHBZ, MAIN, ZQZH)
+        |)
+      """.stripMargin
+    )
+
+    //second * 1000000000 + minnute * 60000000000 + hour * 3600000000000
+    tidbStmt.execute("""insert into test.ISHBZH(ZQZH, CLSJ) values
+                       |('1', '00:00:01'), ('2', '00:01:00'), ('3', '01:00:00'),
+                       |('4', '00:00:02'), ('5', '00:02:00'), ('6', '02:00:00')
+                       |"""".stripMargin)
+
+    val df = spark.sql("select * from tidb_test.ISHBZH")
+
+    df.printSchema()
+    df.show(false)
+
+    TiBatchWrite.writeToTiDB(
+      df,
+      ti,
+      new TiDBOptions(
+        tidbOptions + ("database" -> "test", "table" -> "ISHBZH2", "replace" -> "true")
+      )
+    )
+  }
+
   test("ti batch write") {
     for (table <- tables) {
       val tableToWrite = s"${batchWriteTablePrefix}_$table"

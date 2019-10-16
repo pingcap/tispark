@@ -19,6 +19,7 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
+
   // https://github.com/pingcap/tispark/issues/1147
   test("Fix Bit Type default value bug") {
     def runBitTest(bitNumber: Int, bitString: String): Unit = {
