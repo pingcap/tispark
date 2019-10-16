@@ -221,6 +221,7 @@ public class TiTableInfo implements Serializable {
             col.getSchemaState(),
             col.getOriginDefaultValue(),
             col.getDefaultValue(),
+            col.getDefaultValueBit(),
             col.getComment(),
             col.getVersion(),
             col.getGeneratedExprString())
