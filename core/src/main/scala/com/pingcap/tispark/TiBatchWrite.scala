@@ -141,7 +141,8 @@ class TiBatchWrite(@transient val df: DataFrame,
     checkUnsupported()
 
     // check empty
-    if (df.count() == 0) {
+    df.rdd.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+    if (df.rdd.count() == 0) {
       logger.warn("data is empty!")
       return
     }
@@ -204,7 +205,7 @@ class TiBatchWrite(@transient val df: DataFrame,
         // if auto increment column is not provided, we need allocate id for it.
         // adding an auto increment column to df
         val newDf = df.withColumn(autoIncrementColName, lit(null).cast("long"))
-        val start = getAutoTableIdStart(df.count)
+        val start = getAutoTableIdStart(df.rdd.count)
 
         // update colsInDF since we just add one column in df
         colsInDf = newDf.columns.toList

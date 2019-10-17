@@ -46,7 +46,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
     }
   }
 
-  test("test") {
+  /*test("test") {
     tidbStmt.execute("DROP TABLE IF EXISTS test.ISHBZH")
     tidbStmt.execute("DROP TABLE IF EXISTS test.ISHBZH2")
     tidbStmt.execute(
@@ -103,7 +103,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         tidbOptions + ("database" -> "test", "table" -> "ISHBZH2", "replace" -> "true")
       )
     )
-  }
+  }*/
 
   test("ti batch write") {
     for (table <- tables) {
