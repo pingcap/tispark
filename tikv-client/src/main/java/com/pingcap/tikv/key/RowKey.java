@@ -56,8 +56,10 @@ public class RowKey extends Key implements Serializable {
     Object obj = handle.getValue();
     if (obj instanceof Long) {
       return new RowKey(tableId, (long) obj);
+    } else if (obj instanceof Integer) {
+      return new RowKey(tableId, ((Integer) obj).longValue());
     }
-    throw new TiExpressionException("Cannot encode row key with non-long type");
+    throw new TiExpressionException("Cannot encode row key with non-long or non-integer type");
   }
 
   public static RowKey createMin(long tableId) {

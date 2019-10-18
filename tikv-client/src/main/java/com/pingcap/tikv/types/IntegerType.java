@@ -86,6 +86,83 @@ public class IntegerType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
+    int typeSystemVersion = TypeSystem.getVersion();
+    if (typeSystemVersion == 0) {
+      return decodeNotNullV0(flag, cdi);
+    } else if (typeSystemVersion == 1) {
+      return decodeNotNullV1(flag, cdi);
+    } else {
+      throw new RuntimeException("unsupported type system version: " + typeSystemVersion);
+    }
+  }
+
+  public String getV1ReturnJavaType() {
+    if (isUnsignedLong()) {
+      return "BigDecimal";
+    } else if (isUnsignedInt()) {
+      return "Long";
+    } else if (this.getType() == MySQLType.TypeTiny) {
+      if (this.getLength() == 1) {
+        return "Boolean";
+      } else {
+        return "Integer";
+      }
+    } else if (this.getType() == MySQLType.TypeShort
+        || this.getType() == MySQLType.TypeInt24
+        || this.getType() == MySQLType.TypeLong) {
+      return "Integer";
+    } else if (this.getType() == MySQLType.TypeLonglong) {
+      return "Long";
+    } else if (this.getType() == MySQLType.TypeYear) {
+      return "Date";
+    } else {
+      throw new TypeException("Invalid IntegerType");
+    }
+  }
+
+  private Object decodeNotNullV1(int flag, CodecDataInput cdi) {
+    long ret;
+    switch (flag) {
+      case Codec.UVARINT_FLAG:
+        ret = IntegerCodec.readUVarLong(cdi);
+        break;
+      case Codec.UINT_FLAG:
+        ret = IntegerCodec.readULong(cdi);
+        break;
+      case Codec.VARINT_FLAG:
+        ret = IntegerCodec.readVarLong(cdi);
+        break;
+      case Codec.INT_FLAG:
+        ret = IntegerCodec.readLong(cdi);
+        break;
+      default:
+        throw new TypeException("Invalid IntegerType flag: " + flag);
+    }
+
+    if (isUnsignedLong()) {
+      return unsignedValueOf(ret);
+    } else if (isUnsignedInt()) {
+      return ret;
+    } else if (this.getType() == MySQLType.TypeTiny) {
+      if (this.getLength() == 1) {
+        return ret != 0;
+      } else {
+        return (int) ret;
+      }
+    } else if (this.getType() == MySQLType.TypeShort
+        || this.getType() == MySQLType.TypeInt24
+        || this.getType() == MySQLType.TypeLong) {
+      return (int) ret;
+    } else if (this.getType() == MySQLType.TypeLonglong) {
+      return ret;
+    } else if (this.getType() == MySQLType.TypeYear) {
+      return java.sql.Date.valueOf("" + ret + "-01-01");
+    } else {
+      throw new TypeException("Invalid IntegerType");
+    }
+  }
+
+  private Object decodeNotNullV0(int flag, CodecDataInput cdi) {
     long ret;
     switch (flag) {
       case Codec.UVARINT_FLAG:
@@ -149,6 +226,10 @@ public class IntegerType extends DataType {
 
   public boolean isUnsignedLong() {
     return tp == MySQLType.TypeLonglong && isUnsigned();
+  }
+
+  public boolean isUnsignedInt() {
+    return tp == MySQLType.TypeLong && isUnsigned();
   }
 
   /** {@inheritDoc} */

@@ -76,6 +76,7 @@
         <javadoc.skip>true</javadoc.skip>
         <skipFetchTestData>false</skipFetchTestData>
         <skipCloneProtoFiles>false</skipCloneProtoFiles>
+        <maven.test.jvmargs></maven.test.jvmargs>
     </properties>
 
     <distributionManagement>

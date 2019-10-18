@@ -3,7 +3,7 @@ package com.pingcap.tispark.utils
 import java.util.logging.Logger
 
 import com.google.common.primitives.UnsignedLong
-import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.exception.{TiBatchWriteException, TypeException}
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types._
 import com.pingcap.tispark.TiBatchWrite.TiRow
@@ -44,7 +44,50 @@ object TiConverter {
   }
 
   // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp: TiDataType): SparkSQLDataType =
+  def toSparkDataType(tp: TiDataType): SparkSQLDataType = {
+    if (TypeSystem.getVersion == 1) {
+      toSparkDataTypeV1(tp)
+    } else {
+      toSparkDataTypeV0(tp)
+    }
+  }
+
+  private def toSparkDataTypeV1(tp: TiDataType): SparkSQLDataType = {
+    tp match {
+      case t: IntegerType =>
+        if (t.isUnsignedLong) {
+          DataTypes.createDecimalType(20, 0)
+        } else if (t.isUnsignedInt) {
+          sql.types.LongType
+        } else
+          tp.getType match {
+            case MySQLType.TypeTiny =>
+              if (tp.getLength == 1) {
+                sql.types.BooleanType
+              } else {
+                sql.types.IntegerType
+              }
+            case MySQLType.TypeShort    => sql.types.IntegerType
+            case MySQLType.TypeInt24    => sql.types.IntegerType
+            case MySQLType.TypeLong     => sql.types.IntegerType
+            case MySQLType.TypeLonglong => sql.types.LongType
+            case MySQLType.TypeYear     => sql.types.DateType
+            case MySQLType.TypeBit =>
+              if (tp.getLength == 1) {
+                sql.types.BooleanType
+              } else {
+                sql.types.BinaryType
+              }
+            case _ => throw new TypeException("Invalid IntegerType")
+          }
+
+      case _: TimeType if tp.getType == MySQLType.TypeDuration => sql.types.TimestampType
+
+      case _ => toSparkDataTypeV0(tp)
+    }
+  }
+
+  private def toSparkDataTypeV0(tp: TiDataType): SparkSQLDataType =
     tp match {
       case _: StringType => sql.types.StringType
       case _: BytesType  => sql.types.BinaryType

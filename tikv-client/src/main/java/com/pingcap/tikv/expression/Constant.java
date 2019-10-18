@@ -73,6 +73,8 @@ public class Constant implements Expression {
       return TimestampType.TIMESTAMP;
     } else if (value instanceof byte[]) {
       return BytesType.TEXT;
+    } else if (value instanceof Boolean) {
+      return IntegerType.BOOLEAN;
     } else {
       throw new TiExpressionException(
           "Constant type not supported:" + value.getClass().getSimpleName());

@@ -1,8 +1,9 @@
 package com.pingcap.tispark.convert
 
+import com.pingcap.tikv.types.TypeSystem
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{StructField, _}
+import org.apache.spark.sql.types._
 
 /**
  * BIT type include:
@@ -10,25 +11,12 @@ import org.apache.spark.sql.types.{StructField, _}
  */
 class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
 
-  private val readZero: java.lang.Long = 0L
-  private val readOne: java.lang.Long = 1L
-  private val readA: java.lang.Long = 1L
-  private val readB: java.lang.Long = 2L
-  private val readC: java.lang.Long = 3400L
-  private val readD: java.lang.Long = 0L
-
-  private val readRow1 = Row(1, null, null, null)
-  private val readRow2 = Row(2, readZero, readB, readC)
-  private val readRow3 = Row(3, readOne, readA, readD)
-  private val readRow4 = Row(4, readZero, readA, readA)
-  private val readRow5 = Row(5, readOne, readB, readB)
-
   private val readSchema = StructType(
     List(
       StructField("i", IntegerType),
-      StructField("c1", LongType),
-      StructField("c2", LongType),
-      StructField("c3", LongType)
+      StructField("c1", BooleanType),
+      StructField("c2", BinaryType),
+      StructField("c3", BinaryType)
     )
   )
 
@@ -37,19 +25,21 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
       s"create table $dbtable(i INT, c1 BIT(1), c2 BIT(8),  c3 BIT(64))"
     )
 
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    TypeSystem.setVersion(1)
+  }
+
   test("Test Convert from java.lang.Boolean to BIT") {
     // success
     // java.lang.Boolean -> BIT
     compareTiDBWriteWithJDBC {
       case (writeFunc, _) =>
-        val a: java.lang.Boolean = true
-        val b: java.lang.Boolean = false
-
         val row1 = Row(1, null, null, null)
-        val row2 = Row(2, a, b, a)
-        val row3 = Row(3, b, a, b)
-        val row4 = Row(4, a, a, a)
-        val row5 = Row(5, b, b, b)
+        val row2 = Row(2, false, true, false)
+        val row3 = Row(3, true, false, true)
+        val row4 = Row(4, false, false, false)
+        val row5 = Row(5, true, true, true)
 
         val schema = StructType(
           List(
@@ -61,20 +51,17 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
         )
 
         val readRow1 = Row(1, null, null, null)
-        val readRow2 = Row(2, readOne, readZero, readOne)
-        val readRow3 = Row(3, readZero, readOne, readZero)
-        val readRow4 = Row(4, readOne, readOne, readOne)
-        val readRow5 = Row(5, readZero, readZero, readZero)
+        val readRow2 = Row(2, false, toByteArray(1), toByteArray(0, 0, 0, 0, 0, 0, 0, 0))
+        val readRow3 = Row(3, true, toByteArray(0), toByteArray(0, 0, 0, 0, 0, 0, 0, 1))
+        val readRow4 = Row(4, false, toByteArray(0), toByteArray(0, 0, 0, 0, 0, 0, 0, 0))
+        val readRow5 = Row(5, true, toByteArray(1), toByteArray(0, 0, 0, 0, 0, 0, 0, 1))
 
         dropTable()
         createTable()
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
-          readSchema
-        )
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
     }
   }
 
@@ -96,6 +83,12 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
         val row4 = Row(4, zero, a, c)
         val row5 = Row(5, one, b, d)
 
+        val readRow1 = Row(1, null, null, null)
+        val readRow2 = Row(2, false, toByteArray(22), toByteArray(0, 0, 0, 0, 0, 0, 0, 11))
+        val readRow3 = Row(3, true, toByteArray(11), toByteArray(0, 0, 0, 0, 0, 0, 0, 22))
+        val readRow4 = Row(4, false, toByteArray(11), toByteArray(0, 0, 0, 0, 0, 0, 0, 127))
+        val readRow5 = Row(5, true, toByteArray(22), toByteArray(0, 0, 0, 0, 0, 0, 0, 102))
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -110,7 +103,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
     }
   }
 
@@ -132,6 +125,12 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
         val row4 = Row(4, zero, a, c)
         val row5 = Row(5, one, b, d)
 
+        val readRow1 = Row(1, null, null, null)
+        val readRow2 = Row(2, false, toByteArray(22), toByteArray(0, 0, 0, 0, 0, 0, 0, 11))
+        val readRow3 = Row(3, true, toByteArray(11), toByteArray(0, 0, 0, 0, 0, 0, 0, 22))
+        val readRow4 = Row(4, false, toByteArray(11), toByteArray(0, 0, 0, 0, 0, 0, 127, 255))
+        val readRow5 = Row(5, true, toByteArray(22), toByteArray(0, 0, 0, 0, 0, 0, 0, 102))
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -146,7 +145,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
     }
   }
 
@@ -168,6 +167,12 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
         val row4 = Row(4, zero, a, c)
         val row5 = Row(5, one, b, d)
 
+        val readRow1 = Row(1, null, null, null)
+        val readRow2 = Row(2, false, toByteArray(22), toByteArray(0, 0, 0, 0, 0, 0, 0, 11))
+        val readRow3 = Row(3, true, toByteArray(11), toByteArray(0, 0, 0, 0, 0, 0, 0, 22))
+        val readRow4 = Row(4, false, toByteArray(11), toByteArray(0, 0, 0, 0, 127, 255, 255, 255))
+        val readRow5 = Row(5, true, toByteArray(22), toByteArray(0, 0, 0, 0, 0, 0, 0, 102))
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -182,7 +187,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
     }
   }
 
@@ -204,6 +209,13 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
         val row4 = Row(4, zero, a, c)
         val row5 = Row(5, one, b, d)
 
+        val readRow1 = Row(1, null, null, null)
+        val readRow2 = Row(2, false, toByteArray(22), toByteArray(0, 0, 0, 0, 0, 0, 0, 11))
+        val readRow3 = Row(3, true, toByteArray(11), toByteArray(0, 0, 0, 0, 0, 0, 0, 22))
+        val readRow4 =
+          Row(4, false, toByteArray(11), toByteArray(127, 255, 255, 255, 255, 255, 255, 255))
+        val readRow5 = Row(5, true, toByteArray(22), toByteArray(0, 0, 0, 0, 0, 0, 0, 102))
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -218,7 +230,7 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
     }
   }
 
@@ -239,6 +251,12 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
         val row3 = Row(3, one, a, d)
         val row4 = Row(4, zero, a, a)
         val row5 = Row(5, one, b, b)
+
+        val readRow1 = Row(1, null, null, null)
+        val readRow2 = Row(2, false, toByteArray(2), toByteArray(0, 0, 0, 0, 0, 0, 13, 72))
+        val readRow3 = Row(3, true, toByteArray(1), toByteArray(0, 0, 0, 0, 0, 0, 0, 0))
+        val readRow4 = Row(4, false, toByteArray(1), toByteArray(0, 0, 0, 0, 0, 0, 0, 1))
+        val readRow5 = Row(5, true, toByteArray(2), toByteArray(0, 0, 0, 0, 0, 0, 0, 2))
 
         val schema = StructType(
           List(
@@ -285,27 +303,11 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
           )
         )
 
-        val readZero: java.lang.Long = 0L
-        val readOne: java.lang.Long = 1L
-        val readA: java.lang.Long = 1L
-        val readB: java.lang.Long = 2L
-        val readC: java.lang.Long = 1798L
-        val readD: java.lang.Long = 0L
-
         val readRow1 = Row(1, null, null, null)
-        val readRow2 = Row(2, readZero, readB, readC)
-        val readRow3 = Row(3, readOne, readA, readD)
-        val readRow4 = Row(4, readZero, readA, readA)
-        val readRow5 = Row(5, readOne, readB, readB)
-
-        val readSchema = StructType(
-          List(
-            StructField("i", IntegerType),
-            StructField("c1", LongType),
-            StructField("c2", LongType),
-            StructField("c3", LongType)
-          )
-        )
+        val readRow2 = Row(2, false, toByteArray(2), toByteArray(0, 0, 0, 0, 0, 0, 7, 6))
+        val readRow3 = Row(3, true, toByteArray(1), toByteArray(0, 0, 0, 0, 0, 0, 0, 0))
+        val readRow4 = Row(4, false, toByteArray(1), toByteArray(0, 0, 0, 0, 0, 0, 0, 1))
+        val readRow5 = Row(5, true, toByteArray(2), toByteArray(0, 0, 0, 0, 0, 0, 0, 2))
 
         dropTable()
         createTable()
@@ -326,10 +328,12 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
+  override def afterAll(): Unit = {
+    TypeSystem.resetVersion()
     try {
       dropTable()
     } finally {
       super.afterAll()
     }
+  }
 }

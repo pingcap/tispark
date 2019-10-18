@@ -33,24 +33,37 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
     def cross[Y](ys: Traversable[Y]): Traversable[(X, Y)] = for { x <- xs; y <- ys } yield (x, y)
   }
 
-  def getOperations(dataType: ReflectedDataType): List[(String, String)] =
-    List(("is", "null")) ++ {
-      (cmps ++ eqs) cross {
-        dataType match {
-          case TINYINT                     => List("1", "0")
-          case _ if isNumeric(dataType)    => List("1", "2333")
-          case _ if isStringType(dataType) => List("\'PingCAP\'", "\'\'")
-          case _                           => List.empty[String]
+  def getOperations(dataType: ReflectedDataType): List[(String, String)] = {
+    dataType match {
+      case BOOLEAN | BIT =>
+        List(("is", "null")) ++ {
+          eqs cross {
+            dataType match {
+              case BOOLEAN => List("false", "true")
+              case _       => List.empty[String]
+            }
+          }
         }
-      }
-    } ++ {
-      eqs cross {
-        dataType match {
-          case BOOLEAN => List("false", "true")
-          case _       => List.empty[String]
+      case _ =>
+        List(("is", "null")) ++ {
+          (cmps ++ eqs) cross {
+            dataType match {
+              case TINYINT                     => List("1", "0")
+              case _ if isNumeric(dataType)    => List("1", "2333")
+              case _ if isStringType(dataType) => List("\'PingCAP\'", "\'\'")
+              case _                           => List.empty[String]
+            }
+          }
+        } ++ {
+          eqs cross {
+            dataType match {
+              case BOOLEAN => List("false", "true")
+              case _       => List.empty[String]
+            }
+          }
         }
-      }
     }
+  }
 
   def simpleSelect(dbName: String,
                    tableName: String,

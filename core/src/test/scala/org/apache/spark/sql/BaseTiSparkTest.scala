@@ -22,6 +22,7 @@ import java.sql.Statement
 import com.pingcap.tikv.TiDBJDBCClient
 import com.pingcap.tispark.TiDBUtils
 import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.types.TypeSystem
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
@@ -68,7 +69,11 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       val row = ArrayBuffer.empty[Any]
 
       for (i <- 1 to rsMetaData.getColumnCount) {
-        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
+        if (TypeSystem.getVersion == 1) {
+          row += resultSet.getObject(i)
+        } else {
+          row += toOutput(resultSet.getObject(i), retSchema(i - 1))
+        }
       }
       retSet += row.toList
     }

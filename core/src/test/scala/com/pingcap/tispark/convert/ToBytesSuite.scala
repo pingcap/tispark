@@ -1,5 +1,6 @@
 package com.pingcap.tispark.convert
 
+import com.pingcap.tikv.types.TypeSystem
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{StructField, _}
@@ -46,17 +47,30 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
           )
         )
 
-        val readA: java.lang.Long = 49L
-        val readB: java.lang.Long = 48L
+        val binaryReadA: Array[Byte] = toByteArray(49, 0, 0, 0, 0)
+        val binaryReadB: Array[Byte] = Array(48, 0, 0, 0, 0)
 
-        val binaryReadA: Array[Byte] = Array(49.toByte, 0.toByte, 0.toByte, 0.toByte, 0.toByte)
-        val binaryReadB: Array[Byte] = Array(48.toByte, 0.toByte, 0.toByte, 0.toByte, 0.toByte)
-
-        val readRow1 = Row(1, null, null, null, null, null, null)
-        val readRow2 = Row(2, binaryReadA, readB, readA, readB, readA, readB)
-        val readRow3 = Row(3, binaryReadA, readA, readB, readA, readB, readA)
-        val readRow4 = Row(4, binaryReadB, readA, readA, readA, readA, readA)
-        val readRow5 = Row(5, binaryReadB, readB, readB, readB, readB, readB)
+        val readRows = if (TypeSystem.getVersion == 1) {
+          val readA = toByteArray(49)
+          val readB = toByteArray(48)
+          Seq(
+            Row(1, null, null, null, null, null, null),
+            Row(2, binaryReadA, readB, readA, readB, readA, readB),
+            Row(3, binaryReadA, readA, readB, readA, readB, readA),
+            Row(4, binaryReadB, readA, readA, readA, readA, readA),
+            Row(5, binaryReadB, readB, readB, readB, readB, readB)
+          )
+        } else {
+          val readA: java.lang.Long = 49L
+          val readB: java.lang.Long = 48L
+          Seq(
+            Row(1, null, null, null, null, null, null),
+            Row(2, binaryReadA, readB, readA, readB, readA, readB),
+            Row(3, binaryReadA, readA, readB, readA, readB, readA),
+            Row(4, binaryReadB, readA, readA, readA, readA, readA),
+            Row(5, binaryReadB, readB, readB, readB, readB, readB)
+          )
+        }
 
         val readSchema = StructType(
           List(
@@ -76,11 +90,7 @@ class ToBytesSuite extends BaseDataSourceTest("test_data_type_convert_to_bytes")
         // insert rows
         // TODO: skipTiDBAndExpectedAnswerCheck because spark returns WrappedArray Type
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(
-          Seq(readRow1, readRow2, readRow3, readRow4, readRow5),
-          readSchema,
-          skipTiDBAndExpectedAnswerCheck = true
-        )
+        compareTiDBSelectWithJDBC(readRows, readSchema, skipTiDBAndExpectedAnswerCheck = true)
     }
   }
 

@@ -7,6 +7,7 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
+import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{BaseTiSparkTest, DataFrame, Row}
 
@@ -280,4 +281,38 @@ class BaseDataSourceTest(val table: String,
     } else {
       database
     }
+
+  protected def queryViaJDBC(query: String): (List[String], List[List[Any]]) = {
+    val resultSet = callWithRetry(tidbStmt.executeQuery(query))
+    val rsMetaData = resultSet.getMetaData
+    val retSet = ArrayBuffer.empty[List[Any]]
+    val retSchema = ArrayBuffer.empty[String]
+    for (i <- 1 to rsMetaData.getColumnCount) {
+      retSchema += rsMetaData.getColumnTypeName(i)
+    }
+    while (resultSet.next()) {
+      val row = ArrayBuffer.empty[Any]
+      for (i <- 1 to rsMetaData.getColumnCount) {
+        row += resultSet.getObject(i)
+      }
+      retSet += row.toList
+    }
+
+    (retSchema.toList, retSet.toList)
+  }
+
+  protected def queryViaSparkTiDB(query: String): DataFrame = {
+    spark.sql(query)
+  }
+
+  protected def queryViaSparkJDBC(dbTable: String): DataFrame = {
+    spark.read
+      .format("jdbc")
+      .option(JDBCOptions.JDBC_URL, jdbcUrl)
+      .option(JDBCOptions.JDBC_TABLE_NAME, dbTable)
+      .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
+      .load()
+  }
+
+  protected def toByteArray(xs: Int*) = xs.map(_.toByte).toArray
 }

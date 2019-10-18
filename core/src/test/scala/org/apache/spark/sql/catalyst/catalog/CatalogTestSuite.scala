@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
+import com.pingcap.tikv.types.TypeSystem
 import org.apache.spark.sql.BaseTiSparkTest
 
 class CatalogTestSuite extends BaseTiSparkTest {
@@ -59,7 +60,37 @@ class CatalogTestSuite extends BaseTiSparkTest {
   }
 
   test("support desc table") {
-    val tidbDescTable =
+    val tidbDescTable = if (TypeSystem.getVersion == 1) {
+      List(
+        List("id_dt", "int", "false", null),
+        List("tp_varchar", "string", "true", null),
+        List("tp_datetime", "timestamp", "true", null),
+        List("tp_blob", "binary", "true", null),
+        List("tp_binary", "binary", "true", null),
+        List("tp_date", "date", "true", null),
+        List("tp_timestamp", "timestamp", "false", null),
+        List("tp_year", "date", "true", null),
+        List("tp_bigint", "bigint", "true", null),
+        List("tp_decimal", "decimal(11,0)", "true", null),
+        List("tp_double", "double", "true", null),
+        List("tp_float", "double", "true", null),
+        List("tp_int", "int", "true", null),
+        List("tp_mediumint", "int", "true", null),
+        List("tp_real", "double", "true", null),
+        List("tp_smallint", "int", "true", null),
+        List("tp_tinyint", "int", "true", null),
+        List("tp_char", "string", "true", null),
+        List("tp_nvarchar", "string", "true", null),
+        List("tp_longtext", "string", "true", null),
+        List("tp_mediumtext", "string", "true", null),
+        List("tp_text", "string", "true", null),
+        List("tp_tinytext", "string", "true", null),
+        List("tp_bit", "boolean", "true", null),
+        List("tp_time", "timestamp", "true", null),
+        List("tp_enum", "string", "true", null),
+        List("tp_set", "string", "true", null)
+      )
+    } else {
       List(
         List("id_dt", "bigint", "false", null),
         List("tp_varchar", "string", "true", null),
@@ -89,6 +120,8 @@ class CatalogTestSuite extends BaseTiSparkTest {
         List("tp_enum", "string", "true", null),
         List("tp_set", "string", "true", null)
       )
+    }
+
     setCurrentDatabase("tispark_test")
     spark.sql("desc full_data_type_table").explain(true)
     explainAndRunTest("desc full_data_type_table", skipJDBC = true, rTiDB = tidbDescTable)

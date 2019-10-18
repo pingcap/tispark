@@ -17,10 +17,12 @@
 
 package org.apache.spark.sql
 
+import java.math.BigInteger
 import java.sql.{Date, Timestamp}
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 
+import com.pingcap.tikv.types.TypeSystem
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.catalyst.plans._
 import org.apache.spark.sql.catalyst.util._
@@ -107,6 +109,58 @@ abstract class QueryTest extends SparkFunSuite {
     }
 
     def compValue(lhs: Any, rhs: Any): Boolean = {
+      if (TypeSystem.getVersion == 1) {
+        compValueV1(lhs, rhs)
+      } else {
+        compValueV0(lhs, rhs)
+      }
+    }
+
+    def compValueV1(lhs: Any, rhs: Any): Boolean = {
+      if (lhs == rhs || compNull(lhs, rhs) || lhs.toString == rhs.toString) {
+        true
+      } else {
+        lhs match {
+          case l: Array[Byte] if rhs.isInstanceOf[Array[Byte]] =>
+            val r = rhs.asInstanceOf[Array[Byte]]
+            if (l.length != r.length) {
+              false
+            } else {
+              for (pos <- l.indices) {
+                if (l(pos) != r(pos)) {
+                  return false
+                }
+              }
+              true
+            }
+          case l: Double if rhs.isInstanceOf[Double] =>
+            val r = rhs.asInstanceOf[Double]
+            Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
+          case l: Float if rhs.isInstanceOf[Double] =>
+            val r = rhs.asInstanceOf[Double]
+            Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
+          case l: Double if rhs.isInstanceOf[Float] =>
+            val r = rhs.asInstanceOf[Float]
+            Math.abs(l - r) < eps || Math.abs(r) > eps && Math.abs((l - r) / r) < eps
+          case l: java.math.BigDecimal if rhs.isInstanceOf[BigInteger] =>
+            val r = rhs.asInstanceOf[BigInteger]
+            l.toBigInteger.equals(r)
+          case l: BigInteger if rhs.isInstanceOf[java.math.BigDecimal] =>
+            val r = rhs.asInstanceOf[java.math.BigDecimal]
+            l.equals(r.toBigInteger)
+          case l: java.sql.Timestamp if rhs.isInstanceOf[java.sql.Time] =>
+            val r = rhs.asInstanceOf[java.sql.Time]
+            r.equals(l)
+          case l: java.math.BigDecimal if rhs.isInstanceOf[java.math.BigDecimal] =>
+            val r = rhs.asInstanceOf[java.math.BigDecimal]
+            l.compareTo(r) == 0
+          case _ =>
+            lhs.equals(rhs)
+        }
+      }
+    }
+
+    def compValueV0(lhs: Any, rhs: Any): Boolean = {
       if (lhs == rhs || compNull(lhs, rhs) || lhs.toString == rhs.toString) {
         true
       } else

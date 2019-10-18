@@ -103,6 +103,17 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
         val row4 = Row(4, c, d, c, d, c, d)
         val row5 = Row(5, d, c, d, c, d, c)
 
+        val readA: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 0)
+        val readB: java.math.BigDecimal = java.math.BigDecimal.valueOf(22, 0)
+        val readC: java.math.BigDecimal = java.math.BigDecimal.valueOf(127, 0)
+        val readD: java.math.BigDecimal = java.math.BigDecimal.valueOf(-128, 0)
+
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, readA, readB, readA, readB, readA, readB)
+        val readRow3 = Row(3, readB, readA, readB, readA, readB, readA)
+        val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
+        val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -120,7 +131,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
     }
   }
 
@@ -140,6 +151,17 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
         val row4 = Row(4, c, d, c, d, c, d)
         val row5 = Row(5, d, c, d, c, d, c)
 
+        val readA: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 0)
+        val readB: java.math.BigDecimal = java.math.BigDecimal.valueOf(22, 0)
+        val readC: java.math.BigDecimal = java.math.BigDecimal.valueOf(32767, 0)
+        val readD: java.math.BigDecimal = java.math.BigDecimal.valueOf(-32768, 0)
+
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, readA, readB, readA, readB, readA, readB)
+        val readRow3 = Row(3, readB, readA, readB, readA, readB, readA)
+        val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
+        val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -157,7 +179,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
     }
   }
 
@@ -177,6 +199,17 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
         val row4 = Row(4, c, d, c, d, c, d)
         val row5 = Row(5, d, c, d, c, d, c)
 
+        val readA: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 0)
+        val readB: java.math.BigDecimal = java.math.BigDecimal.valueOf(22, 0)
+        val readC: java.math.BigDecimal = java.math.BigDecimal.valueOf(c.longValue(), 0)
+        val readD: java.math.BigDecimal = java.math.BigDecimal.valueOf(d.longValue(), 0)
+
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, readA, readB, readA, readB, readA, readB)
+        val readRow3 = Row(3, readB, readA, readB, readA, readB, readA)
+        val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
+        val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -194,7 +227,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
     }
   }
 
@@ -214,6 +247,17 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
         val row4 = Row(4, c, d, c, d, c, d)
         val row5 = Row(5, d, c, d, c, d, c)
 
+        val readA: java.math.BigDecimal = java.math.BigDecimal.valueOf(11, 0)
+        val readB: java.math.BigDecimal = java.math.BigDecimal.valueOf(22, 0)
+        val readC: java.math.BigDecimal = java.math.BigDecimal.valueOf(c.longValue(), 0)
+        val readD: java.math.BigDecimal = java.math.BigDecimal.valueOf(d.longValue(), 0)
+
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, readA, readB, readA, readB, readA, readB)
+        val readRow3 = Row(3, readB, readA, readB, readA, readB, readA)
+        val readRow4 = Row(4, readC, readD, readC, readD, readC, readD)
+        val readRow5 = Row(5, readD, readC, readD, readC, readD, readC)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -231,7 +275,7 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5), schema)
+        compareTiDBSelectWithJDBC(Seq(readRow1, readRow2, readRow3, readRow4, readRow5), readSchema)
     }
   }
 

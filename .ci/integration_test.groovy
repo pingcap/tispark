@@ -9,6 +9,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def MVN_PROFILE = "-Pjenkins"
     def TEST_MODE = "simple"
     def PARALLEL_NUMBER = 18
+    def MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+    def JVM_ARGS = "-Dcom.pingcap.tikv.type_system_version=1"
     
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
@@ -41,6 +43,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def m5 = ghprbCommentBody =~ /mode\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m5) {
         TEST_MODE = "${m5[0][1]}"
+    }
+
+    // parse JVM arguments
+    def m6 = ghprbCommentBody =~ /JVM_ARGS\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m6) {
+        JVM_ARGS = "${m6[0][1]}"
     }
     
     def readfile = { filename ->
@@ -150,9 +158,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
-                        mvn compile ${MVN_PROFILE}
-                        mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
+                        export MAVEN_OPTS="${MAVEN_OPTS}"
+                        mvn compile -Dmaven.test.jvmargs=${JVM_ARGS} ${MVN_PROFILE}
+                        mvn test -Dmaven.test.jvmargs=${JVM_ARGS} ${MVN_PROFILE} -Dtest=moo ${mvnStr}
                     """
                 }
             }
@@ -164,9 +172,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
+                        export MAVEN_OPTS="${MAVEN_OPTS}"
                         mvn test ${MVN_PROFILE} -am -pl tikv-client
-                        mvn test ${MVN_PROFILE} -Dtest=moo -DwildcardSuites=com.pingcap.tispark.datasource.DataSourceWithoutExtensionsSuite,org.apache.spark.sql.IssueTestSuite -DfailIfNoTests=false
+                        mvn test -Dmaven.test.jvmargs=${JVM_ARGS} ${MVN_PROFILE} -Dtest=moo -DwildcardSuites=com.pingcap.tispark.datasource.DataSourceWithoutExtensionsSuite,org.apache.spark.sql.IssueTestSuite -DfailIfNoTests=false
                     """
                     unstash "CODECOV_TOKEN"
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'

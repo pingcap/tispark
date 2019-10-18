@@ -35,8 +35,11 @@ import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.types.TypeSystem;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.List;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Metapb;
@@ -49,6 +52,16 @@ public class DAGIteratorTest extends MockServerTest {
         .addColumn("c1", IntegerType.INT, true)
         .addColumn("c2", StringType.VARCHAR)
         .build();
+  }
+
+  @Before
+  public void setup() {
+    TypeSystem.setVersion(1);
+  }
+
+  @After
+  public void clean() {
+    TypeSystem.resetVersion();
   }
 
   @Test
@@ -88,7 +101,13 @@ public class DAGIteratorTest extends MockServerTest {
     } else {
       Row r = iter.next();
       SchemaInfer infer = SchemaInfer.create(req);
-      assertEquals(r.get(0, infer.getType(0)), 666L);
+
+      if (TypeSystem.getVersion() == 1) {
+        assertEquals(r.get(0, infer.getType(0)), 666);
+      } else {
+        assertEquals(r.get(0, infer.getType(0)), 666L);
+      }
+
       assertEquals(r.get(1, infer.getType(1)), "value1");
     }
   }

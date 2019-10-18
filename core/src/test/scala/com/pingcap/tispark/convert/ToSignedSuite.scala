@@ -1,5 +1,6 @@
 package com.pingcap.tispark.convert
 
+import com.pingcap.tikv.types.TypeSystem
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -15,15 +16,20 @@ import org.apache.spark.sql.types._
  */
 class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed") {
 
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    TypeSystem.setVersion(1)
+  }
+
   private val readSchema = StructType(
     List(
       StructField("i", IntegerType),
-      StructField("c1", LongType),
-      StructField("c2", LongType),
-      StructField("c3", LongType),
-      StructField("c4", LongType),
+      StructField("c1", IntegerType),
+      StructField("c2", IntegerType),
+      StructField("c3", IntegerType),
+      StructField("c4", IntegerType),
       StructField("c5", LongType),
-      StructField("c6", LongType)
+      StructField("c6", BooleanType)
     )
   )
 
@@ -57,11 +63,11 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         )
 
         val readRow1 = Row(1, null, null, null, null, null, null)
-        val readRow2 = Row(2, null, 1L, 1L, 1L, 1L, 1L)
-        val readRow3 = Row(3, 0L, null, 0L, 0L, 0L, 0L)
-        val readRow4 = Row(4, 1L, 0L, null, 0L, 1L, 1L)
-        val readRow5 = Row(5, 1L, 0L, 0L, null, 1L, 0L)
-        val readRow6 = Row(6, 1L, 0L, 1L, 0L, null, null)
+        val readRow2 = Row(2, null, 1, 1, 1, 1L, true)
+        val readRow3 = Row(3, 0, null, 0, 0, 0L, false)
+        val readRow4 = Row(4, 1, 0, null, 0, 1L, true)
+        val readRow5 = Row(5, 1, 0, 0, null, 1L, false)
+        val readRow6 = Row(6, 1, 0, 1, 0, null, null)
 
         dropTable()
         createTable()
@@ -94,6 +100,13 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, null, a, one)
         val row6 = Row(6, c, c, a, d, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, null, 11, 127, -11, -128L, false)
+        val readRow3 = Row(3, 127, null, -128, 11, 11L, true)
+        val readRow4 = Row(4, -11, -11, null, 11, -128L, false)
+        val readRow5 = Row(5, 127, 127, 127, null, 11L, true)
+        val readRow6 = Row(6, -11, -11, 11, -128, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -111,7 +124,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -137,6 +153,13 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, 127, 32767, 32767, 32767, 32767L, true)
+        val readRow3 = Row(3, -128, -32768, -32768, -32768, -32768L, false)
+        val readRow4 = Row(4, null, -11, null, 11, 11L, true)
+        val readRow5 = Row(5, -11, -11, -11, 11, 11L, false)
+        val readRow6 = Row(6, -11, -11, null, 11, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -154,7 +177,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -182,6 +208,13 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, one)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, 127, 32767, 32767, 2147483647, 2147483647L, true)
+        val readRow3 = Row(3, -128, -32768, -32768, -2147483648, -2147483648L, false)
+        val readRow4 = Row(4, null, -11, null, 11, 11L, true)
+        val readRow5 = Row(5, -11, -11, -11, 11, 11L, false)
+        val readRow6 = Row(6, -11, -11, null, 11, null, true)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -199,7 +232,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -229,6 +265,13 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, 127, 32767, 32767, 2147483647, 9223372036854775807L, true)
+        val readRow3 = Row(3, -128, -32768, -32768, -2147483648, -9223372036854775808L, false)
+        val readRow4 = Row(4, null, -11, null, 11, 11L, true)
+        val readRow5 = Row(5, -11, -11, -11, 11, 11L, false)
+        val readRow6 = Row(6, -11, -11, null, 11, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -246,7 +289,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -277,6 +323,13 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, 127, 32767, 32767, 2147483520, 2147483520L, true)
+        val readRow3 = Row(3, -128, -32768, -32768, -2147483520, -2147483520L, false)
+        val readRow4 = Row(4, null, -11, null, 11, 11L, true)
+        val readRow5 = Row(5, -11, -11, -11, 11, 11L, false)
+        val readRow6 = Row(6, -11, -11, null, 11, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -294,7 +347,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -322,6 +378,13 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, zero)
         val row6 = Row(6, b, b, null, a, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, 127, 32767, 32767, 2147483647, 2147483647L, true)
+        val readRow3 = Row(3, -128, -32768, -32768, -2147483648, -2147483648L, false)
+        val readRow4 = Row(4, null, -11, null, 11, 11L, true)
+        val readRow5 = Row(5, -11, -11, -11, 11, 11L, false)
+        val readRow6 = Row(6, -11, -11, null, 11, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -339,7 +402,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
 
         // insert rows
         writeFunc(List(row1, row2, row3, row4, row5, row6), schema, None)
-        compareTiDBSelectWithJDBC(Seq(row1, row2, row3, row4, row5, row6), schema)
+        compareTiDBSelectWithJDBC(
+          Seq(readRow1, readRow2, readRow3, readRow4, readRow5, readRow6),
+          readSchema
+        )
     }
   }
 
@@ -365,6 +431,13 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
         val row5 = Row(5, b, b, b, a, a, "0")
         val row6 = Row(6, b, b, null, a, null, null)
 
+        val readRow1 = Row(1, null, null, null, null, null, null)
+        val readRow2 = Row(2, 127, 32767, 32767, 2147483647, 2147483647L, true)
+        val readRow3 = Row(3, -128, -32768, -32768, -2147483648, -2147483648L, false)
+        val readRow4 = Row(4, null, -11, null, 11, 11L, true)
+        val readRow5 = Row(5, -11, -11, -11, 11, 11L, false)
+        val readRow6 = Row(6, -11, -11, null, 11, null, null)
+
         val schema = StructType(
           List(
             StructField("i", IntegerType),
@@ -376,25 +449,6 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
             StructField("c6", StringType)
           )
         )
-
-        val aRead: java.lang.Long = 11L
-        val bRead: java.lang.Long = -11L
-
-        val maxByteRead: java.lang.Long = java.lang.Byte.MAX_VALUE.toLong
-        val minByteRead: java.lang.Long = java.lang.Byte.MIN_VALUE.toLong
-        val maxShortRead: java.lang.Long = java.lang.Short.MAX_VALUE.toLong
-        val minShortRead: java.lang.Long = java.lang.Short.MIN_VALUE.toLong
-        val maxIntegerRead: java.lang.Long = java.lang.Integer.MAX_VALUE.toLong
-        val minIntegerRead: java.lang.Long = java.lang.Integer.MIN_VALUE.toLong
-
-        val readRow1 = Row(1, null, null, null, null, null, null)
-        val readRow2 =
-          Row(2, maxByteRead, maxShortRead, maxShortRead, maxIntegerRead, maxIntegerRead, 1L)
-        val readRow3 =
-          Row(3, minByteRead, minShortRead, minShortRead, minIntegerRead, minIntegerRead, 0L)
-        val readRow4 = Row(4, null, bRead, null, aRead, aRead, 1L)
-        val readRow5 = Row(5, bRead, bRead, bRead, aRead, aRead, 0L)
-        val readRow6 = Row(6, bRead, bRead, null, aRead, null, null)
 
         dropTable()
         createTable()
@@ -417,10 +471,12 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   // scala.collection.Map
   // org.apache.spark.sql.Row
 
-  override def afterAll(): Unit =
+  override def afterAll(): Unit = {
+    TypeSystem.resetVersion()
     try {
       dropTable()
     } finally {
       super.afterAll()
     }
+  }
 }

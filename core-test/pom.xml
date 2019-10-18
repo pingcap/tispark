@@ -224,7 +224,7 @@
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                     <junitxml>.</junitxml>
                     <filereports>WDF TestSuite.txt</filereports>
-                    <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8 -Dio.netty.leakDetection.level=paranoid</argLine>
+                    <argLine>${maven.test.jvmargs} -Dfile.encoding=UTF-8 -Duser.timezone=GMT+8 -Dio.netty.leakDetection.level=paranoid</argLine>
                 </configuration>
                 <executions>
                     <execution>
