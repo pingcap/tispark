@@ -22,7 +22,7 @@ import com.pingcap.tikv.catalog.Catalog
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiIndexInfo, TiTableInfo}
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
-import com.pingcap.tikv.types.DataType
+import com.pingcap.tikv.types.{DataType, TypeSystem}
 import com.pingcap.tikv.{Snapshot, TiSession}
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
 import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
@@ -224,7 +224,9 @@ object StatisticsManager {
         val histId = t._1
         val rowsById = t._2
         // split bucket rows into index rows / non-index rows
-        val (idxRows, colRows) = rowsById.partition { _.getLong(1) > 0 }
+        val (idxRows, colRows) = rowsById.partition { row =>
+          TypeSystem.getFromIntType(row, 1) > 0
+        }
         val (idxReq, colReq) = requests.partition { _.isIndex > 0 }
         Array(
           StatisticsHelper.extractStatisticResult(histId, idxRows.iterator, idxReq),

@@ -70,10 +70,11 @@ class BatchWriteUniqueIndexSuite
   // this is only for mute the warning
   override def test(): Unit = {}
 
-  override def afterAll(): Unit =
+  override def afterAll(): Unit = {
     try {
       dropTable()
     } finally {
       super.afterAll()
     }
+  }
 }

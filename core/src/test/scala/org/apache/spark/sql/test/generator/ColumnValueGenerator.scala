@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.test.generator
 
+import com.pingcap.tikv.types.TypeSystem
 import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator.{checkUnique, getLength, isBinaryCharset, isCharCharset, isNumeric}
 
@@ -138,6 +139,39 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
   }
 
   def randomUnsignedValue(r: Random): Any = {
+    if (TypeSystem.getVersion == 1) {
+      randomUnsignedValueV1(r)
+    } else {
+      randomUnsignedValueV0(r)
+    }
+  }
+
+  def randomUnsignedValueV1(r: Random): Any = {
+    if (!isNumeric(dataType)) {
+      throw new IllegalArgumentException("unsigned type is not numeric")
+    }
+    dataType match {
+      case BIT =>
+        val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
+        bit.map(_ => r.nextBoolean)
+      case BOOLEAN   => r.nextInt(1 << 1)
+      case TINYINT   => r.nextInt(1 << 8).intValue()
+      case SMALLINT  => r.nextInt(1 << 16).intValue()
+      case MEDIUMINT => r.nextInt(1 << 24).intValue()
+      case INT       => r.nextInt + (1L << 31).longValue()
+      case BIGINT    => toUnsignedBigInt(r.nextLong)
+      case FLOAT     => Math.abs(r.nextFloat)
+      case DOUBLE    => Math.abs(r.nextDouble)
+      case DECIMAL =>
+        val len = getLength(tiDataType)
+        val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
+        (BigDecimal.apply(Math.abs(r.nextLong()) % Math.pow(10, len)) / BigDecimal.apply(
+          Math.pow(10, decimal)
+        )).bigDecimal
+    }
+  }
+
+  def randomUnsignedValueV0(r: Random): Any = {
     if (!isNumeric(dataType)) {
       throw new IllegalArgumentException("unsigned type is not numeric")
     }
@@ -163,6 +197,51 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
   }
 
   def randomSignedValue(r: Random): Any = {
+    if (TypeSystem.getVersion == 1) {
+      randomSignedValueV1(r)
+    } else {
+      randomSignedValueV0(r)
+    }
+  }
+
+  def randomSignedValueV1(r: Random): Any = {
+    dataType match {
+      case BIT =>
+        val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
+        bit.map(_ => r.nextBoolean)
+      case BOOLEAN   => r.nextInt(1 << 1)
+      case TINYINT   => (r.nextInt(1 << 8) - (1 << 7)).intValue()
+      case SMALLINT  => (r.nextInt(1 << 16) - (1 << 15)).intValue()
+      case MEDIUMINT => (r.nextInt(1 << 24) - (1 << 23)).intValue()
+      case INT       => r.nextInt().intValue()
+      case BIGINT    => r.nextLong()
+      case FLOAT     => r.nextFloat.doubleValue
+      case DOUBLE    => r.nextDouble
+      case DECIMAL =>
+        val len = getLength(tiDataType)
+        val decimal = if (tiDataType.isDecimalUnSpecified) 0 else tiDataType.getDecimal
+        (BigDecimal.apply(r.nextLong % Math.pow(10, len)) / BigDecimal.apply(
+          Math.pow(10, decimal)
+        )).bigDecimal
+      case VARCHAR   => generateRandomString(r, tiDataType.getLength)
+      case VARBINARY => generateRandomBinary(r, tiDataType.getLength)
+      case CHAR | TEXT | TINYTEXT | MEDIUMTEXT | LONGTEXT =>
+        generateRandomString(r, getRandomLength(dataType, r))
+      case BINARY | BLOB | TINYBLOB | MEDIUMBLOB | LONGBLOB =>
+        generateRandomBinary(r, getRandomLength(dataType, r))
+      case DATE =>
+        // start from 1000-01-01 to 9999-01-01
+        val milliseconds = -30610253143000L + (Math.abs(r.nextLong) % (9000L * 365 * 24 * 60 * 60 * 1000))
+        new java.sql.Date(milliseconds)
+      case TIMESTAMP =>
+        // start from 1970-01-01 00:00:01 to 2038-01-19 03:14:07
+        val milliseconds = Math.abs(r.nextInt * 1000L + 1000L) + Math.abs(r.nextInt(1000))
+        new java.sql.Timestamp(milliseconds)
+      case _ => throw new RuntimeException(s"random $dataType generator not supported yet")
+    }
+  }
+
+  def randomSignedValueV0(r: Random): Any = {
     dataType match {
       case BIT =>
         val bit: Array[Boolean] = new Array[Boolean](tiDataType.getLength.toInt)
@@ -236,14 +315,14 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
       generatedRandomValues = if (generateUnique) {
         assert(n <= rangeSize, "random generator cannot generate unique value less than available")
         val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
-        set ++= specialBound.map(TestDataGenerator.hash)
-        (0L until n - specialBound.size).map { _ =>
+        //set ++= specialBound.map(TestDataGenerator.hash)
+        (0L until n /*- specialBound.size*/ ).map { _ =>
           randomUniqueValue(r, set)
-        }.toList ++ specialBound
+        }.toList //++ specialBound
       } else {
-        (0L until n - specialBound.size).map { _ =>
+        (0L until n /*- specialBound.size*/ ).map { _ =>
           randomValue(r)
-        }.toList ++ specialBound
+        }.toList //++ specialBound
       }
 
       val expectedGeneratedRandomValuesLen = if (generateUnique) {

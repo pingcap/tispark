@@ -17,10 +17,16 @@
 
 package org.apache.spark.sql.types
 
-import com.pingcap.tikv.types.Converter
+import java.sql.Timestamp
+
+import com.pingcap.tikv.types.{Converter, TypeSystem}
 import org.apache.spark.sql.BaseTiSparkTest
 
 class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+  }
+
   test("adding time type index test") {
     val query = "select * from t_t"
 
@@ -32,20 +38,36 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
     refreshConnections()
     val df = spark.sql(query)
     val data = dfData(df, df.schema.fields)
-    runTest(
-      query,
-      rSpark = data,
-      rTiDB = List(
+    val rTiDB = if (TypeSystem.getVersion == 1) {
+      List(
+        List(Timestamp.valueOf("1970-01-01 18:59:59")),
+        List(Timestamp.valueOf("1970-01-01 17:59:59")),
+        List(Timestamp.valueOf("1970-01-01 12:59:59"))
+      )
+    } else {
+      List(
         List(Converter.convertStrToDuration("18:59:59")),
         List(Converter.convertStrToDuration("17:59:59")),
         List(Converter.convertStrToDuration("12:59:59"))
-      ),
+      )
+    }
+
+    runTest(
+      query,
+      rSpark = data,
+      rTiDB = rTiDB,
       skipJDBC = true
     )
 
-    val where = spark.sql("select * from t_t where t = 46799000000000")
-    val whereData = dfData(where, where.schema.fields)
-    assert(whereData(0)(0) === Converter.convertStrToDuration("12:59:59"))
+    if (TypeSystem.getVersion == 1) {
+      val where = spark.sql("select * from t_t where t = '1970-01-01 12:59:59'")
+      val whereData = dfData(where, where.schema.fields)
+      assert(whereData(0)(0) === Timestamp.valueOf("1970-01-01 12:59:59"))
+    } else {
+      val where = spark.sql("select * from t_t where t = 46799000000000")
+      val whereData = dfData(where, where.schema.fields)
+      assert(whereData(0)(0) === Converter.convertStrToDuration("12:59:59"))
+    }
   }
 
   test("adding time type") {
@@ -57,13 +79,24 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
     refreshConnections()
     val df = spark.sql("select * from t_t")
     val data = dfData(df, df.schema.fields)
-    assert(data(0)(0) === Converter.convertStrToDuration("18:59:59"))
-    assert(data(1)(0) === Converter.convertStrToDuration("17:59:59"))
-    assert(data(2)(0) === Converter.convertStrToDuration("12:59:59"))
 
-    val where = spark.sql("select * from t_t where t = 46799000000000")
-    val whereData = dfData(where, where.schema.fields)
-    assert(whereData(0)(0) === Converter.convertStrToDuration("12:59:59"))
+    if (TypeSystem.getVersion == 1) {
+      assert(data(0)(0) === Timestamp.valueOf("1970-01-01 18:59:59"))
+      assert(data(1)(0) === Timestamp.valueOf("1970-01-01 17:59:59"))
+      assert(data(2)(0) === Timestamp.valueOf("1970-01-01 12:59:59"))
+
+      val where = spark.sql("select * from t_t where t = '1970-01-01 12:59:59'")
+      val whereData = dfData(where, where.schema.fields)
+      assert(whereData(0)(0) === Timestamp.valueOf("1970-01-01 12:59:59"))
+    } else {
+      assert(data(0)(0) === Converter.convertStrToDuration("18:59:59"))
+      assert(data(1)(0) === Converter.convertStrToDuration("17:59:59"))
+      assert(data(2)(0) === Converter.convertStrToDuration("12:59:59"))
+
+      val where = spark.sql("select * from t_t where t = 46799000000000")
+      val whereData = dfData(where, where.schema.fields)
+      assert(whereData(0)(0) === Converter.convertStrToDuration("12:59:59"))
+    }
   }
 
   test("adding year type") {
@@ -72,7 +105,11 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
     tidbStmt.execute("INSERT INTO y_t (y4) VALUES(1912),(2012),(2112)")
     refreshConnections()
     judge("select * from y_t")
-    judge("select * from y_t where y4 = 2112")
+    if (TypeSystem.getVersion == 1) {
+      judge("select * from y_t where y4 = '2112-01-01'")
+    } else {
+      judge("select * from y_t where y4 = 2112")
+    }
   }
 
   test("adding set and enum") {
@@ -164,7 +201,7 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
     )
   }
 
-  override def afterAll(): Unit =
+  override def afterAll(): Unit = {
     try {
       tidbStmt.execute("drop table if exists set_t")
       tidbStmt.execute("drop table if exists enum_t")
@@ -174,4 +211,5 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
     } finally {
       super.afterAll()
     }
+  }
 }

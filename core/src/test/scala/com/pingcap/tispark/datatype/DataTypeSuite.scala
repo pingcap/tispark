@@ -4,6 +4,7 @@ import java.sql.{Date, Timestamp}
 import java.util.Calendar
 
 import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.types.TypeSystem
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -221,7 +222,7 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
     )
     val data = List(row1, row2)
     tidbWrite(data, schema)
-    val row3 = Row(
+    val row3V0 = Row(
       1,
       0.toByte,
       18.toByte,
@@ -250,7 +251,38 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
       "Tidb longtext",
       "male"
     )
-    val row4 = Row(
+
+    val row3V1 = Row(
+      1,
+      false,
+      toBytes(18),
+      29,
+      true,
+      28,
+      128,
+      256,
+      11111111111L,
+      12.23f,
+      23.456,
+      BigDecimal(1.23),
+      Date.valueOf("2019-06-10"),
+      timestamp,
+      timestamp,
+      "PingCap",
+      "TiSpark",
+      "Tidb varbinary".toArray.map(_.toByte),
+      "Tidb tinyblob".toArray.map(_.toByte),
+      "Tidb tinytext",
+      "Tidb blob".toArray.map(_.toByte),
+      "Tidb text",
+      "Tidb mediumblob".toArray.map(_.toByte),
+      "Tidb mediumtext",
+      "Tidb longblob".toArray.map(_.toByte),
+      "Tidb longtext",
+      "male"
+    )
+
+    val row4V0 = Row(
       2,
       1.toByte,
       18.toByte,
@@ -279,7 +311,37 @@ class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
       "Tidb longtext",
       "female"
     )
-    val ref = List(row3, row4)
+
+    val row4V1 = Row(
+      2,
+      true,
+      toBytes(18),
+      29,
+      true,
+      28,
+      128,
+      256,
+      21111111111L,
+      12.33f,
+      23.457,
+      BigDecimal(1.24),
+      Date.valueOf("2019-06-10"),
+      timestamp,
+      timestamp,
+      "PingCap",
+      "TiSpark",
+      "Tidb varbinary".toArray.map(_.toByte),
+      "Tidb tinyblob".toArray.map(_.toByte),
+      "Tidb tinytext",
+      "Tidb blob".toArray.map(_.toByte),
+      "Tidb text",
+      "Tidb mediumblob".toArray.map(_.toByte),
+      "Tidb mediumtext",
+      "Tidb longblob".toArray.map(_.toByte),
+      "Tidb longtext",
+      "female"
+    )
+    val ref = if (TypeSystem.getVersion == 1) List(row3V1, row4V1) else List(row3V0, row4V0)
     testTiDBSelect(ref)
   }
 

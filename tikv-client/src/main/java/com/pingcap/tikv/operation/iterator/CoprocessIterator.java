@@ -27,6 +27,7 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.TypeSystem;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.Iterator;
 import java.util.List;
@@ -104,7 +105,12 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
         req.getPushDownType()) {
       @Override
       public Long next() {
-        return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
+        Row row = rowReader.readRow(handleTypes);
+        if (TypeSystem.getVersion() == 1) {
+          return (long) row.getInteger(handleTypes.length - 1);
+        } else {
+          return row.getLong(handleTypes.length - 1);
+        }
       }
     };
   }

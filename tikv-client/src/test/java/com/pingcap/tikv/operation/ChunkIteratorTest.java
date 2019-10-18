@@ -29,6 +29,7 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
+import com.pingcap.tikv.types.TypeSystem;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Before;
@@ -76,11 +77,11 @@ public class ChunkIteratorTest {
     cdi = new CodecDataInput(chunkIterator.next());
     setValueToRow(cdi, ints, 4, row);
     setValueToRow(cdi, bytes, 5, row);
-    assertEquals(row.getLong(0), 1);
+    assertEquals(TypeSystem.getFromIntType(row, 0), 1);
     assertEquals(row.getString(1), "a");
-    assertEquals(row.getLong(2), 2);
+    assertEquals(TypeSystem.getFromIntType(row, 2), 2);
     assertEquals(row.getString(3), "b");
-    assertEquals(row.getLong(4), 3);
+    assertEquals(TypeSystem.getFromIntType(row, 4), 3);
     assertEquals(row.getString(5), "c");
   }
 }

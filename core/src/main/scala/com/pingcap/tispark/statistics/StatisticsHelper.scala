@@ -24,7 +24,7 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
-import com.pingcap.tikv.types.BytesType
+import com.pingcap.tikv.types.{BytesType, TypeSystem}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -74,7 +74,8 @@ object StatisticsHelper {
       logger.warn(s"table id not match ${row.getLong(0)}!=${table.getId}")
       return null
     }
-    val isIndex = row.getLong(1) > 0
+
+    val isIndex = TypeSystem.getFromIntType(row, 1) > 0
     val histID = row.getLong(2)
     val distinct = row.getLong(3)
     val nullCount = row.getLong(4)
@@ -163,7 +164,7 @@ object StatisticsHelper {
       val buckets = mutable.ArrayBuffer[Bucket]()
       while (rows.hasNext) {
         val row = rows.next()
-        val isRowIndex = if (row.getLong(1) > 0) true else false
+        val isRowIndex = if (TypeSystem.getFromIntType(row, 1) > 0) true else false
         val isRequestIndex = matched.isIndex > 0
         // if required DTO type(index/non index) is the same with the row
         if (isRequestIndex == isRowIndex) {

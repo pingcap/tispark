@@ -32,7 +32,12 @@ public class IntegerTypeTest {
     long originalVal = 666;
     byte[] encodedKey = encode(originalVal, EncodeType.KEY, type);
     Object val = decode(encodedKey, type);
-    assertEquals(originalVal, (long) val);
+
+    if (TypeSystem.getVersion() == 1) {
+      assertEquals(originalVal, (int) val);
+    } else {
+      assertEquals(originalVal, (long) val);
+    }
 
     encodedKey = encode(null, EncodeType.KEY, type);
     val = decode(encodedKey, type);

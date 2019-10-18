@@ -25,6 +25,8 @@ import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Base64;
 
 public class BitType extends IntegerType {
@@ -66,6 +68,29 @@ public class BitType extends IntegerType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
+    int typeSystemVersion = TypeSystem.getVersion();
+    if (typeSystemVersion == 0) {
+      return decodeNotNullV0(flag, cdi);
+    } else if (typeSystemVersion == 1) {
+      return decodeNotNullV1(flag, cdi);
+    } else {
+      throw new RuntimeException("unsupported type system version: " + typeSystemVersion);
+    }
+  }
+
+  private Object decodeNotNullV1(int flag, CodecDataInput cdi) {
+    Long result = decodeNotNullV0(flag, cdi);
+    if (this.getLength() == 1) {
+      return result == 1;
+    } else {
+      int length = (int) Math.ceil((double) this.getLength() / 8);
+      ByteBuffer buffer = ByteBuffer.allocate(8);
+      buffer.putLong(0, result);
+      return Arrays.copyOfRange(buffer.array(), 8 - length, 8);
+    }
+  }
+
+  private Long decodeNotNullV0(int flag, CodecDataInput cdi) {
     switch (flag) {
       case Codec.UVARINT_FLAG:
         return IntegerCodec.readUVarLong(cdi);

@@ -57,6 +57,30 @@ public class TimeType extends DataType {
 
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
+    int typeSystemVersion = TypeSystem.getVersion();
+    if (typeSystemVersion == 0) {
+      return decodeNotNullV0(flag, cdi);
+    } else if (typeSystemVersion == 1) {
+      return decodeNotNullV1(flag, cdi);
+    } else {
+      throw new RuntimeException("unsupported type system version:" + typeSystemVersion);
+    }
+  }
+
+  private Object decodeNotNullV1(int flag, CodecDataInput cdi) {
+    long result;
+    if (flag == Codec.VARINT_FLAG) {
+      result = IntegerCodec.readVarLong(cdi);
+    } else if (flag == Codec.DURATION_FLAG) {
+      result = IntegerCodec.readLong(cdi);
+    } else {
+      throw new TypeException("Invalid TimeType flag: " + flag);
+    }
+    int offset = new java.sql.Timestamp(result / 1000000).getTimezoneOffset();
+    return new java.sql.Timestamp(result / 1000000 + offset * 60 * 1000);
+  }
+
+  private Object decodeNotNullV0(int flag, CodecDataInput cdi) {
     if (flag == Codec.VARINT_FLAG) {
       return IntegerCodec.readVarLong(cdi);
     } else if (flag == Codec.DURATION_FLAG) {
