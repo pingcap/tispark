@@ -32,7 +32,7 @@ import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Expression, IntegerLiteral, NamedExpression, SortOrder, SubqueryExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, Expression, IntegerLiteral, NamedExpression, SortOrder, SubqueryExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -306,8 +306,21 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   ): SparkPlan = {
     val request = new TiDAGRequest(pushDownType(), timeZoneOffset())
     request.setLimit(limit)
-    addSortOrder(request, sortOrder)
+    if (shouldAddSortOrder(projectList, sortOrder)) {
+      addSortOrder(request, sortOrder)
+    }
     pruneFilterProject(projectList, filterPredicates, source, request)
+  }
+
+  private def shouldAddSortOrder(expressions: Seq[NamedExpression],
+                                 orders: Seq[SortOrder]): Boolean = {
+    val exprList = expressions.map(_.toAttribute)
+    !orders.exists { order =>
+      exprList.exists { l =>
+        val r = order.child.asInstanceOf[AttributeReference].toAttribute
+        r.semanticEquals(l)
+      }
+    }
   }
 
   private def collectLimit(limit: Int, child: LogicalPlan): SparkPlan = child match {
