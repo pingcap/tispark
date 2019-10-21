@@ -39,6 +39,9 @@ class IssueTestSuite extends BaseTiSparkSuite {
                 |    SELECT get_json_object(t.json,  '$.id') as id from t_no_match_column t
                 |) as temp44 order by temp44.id desc limit 1
       """.stripMargin).explain(true)
+
+    judge("select tp_int from full_data_type_table order by tp_int limit 20")
+    judge("select tp_int g from full_data_type_table order by g limit 20")
   }
 
   // https://github.com/pingcap/tispark/issues/1147

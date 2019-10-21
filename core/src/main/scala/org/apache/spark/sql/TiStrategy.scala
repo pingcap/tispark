@@ -306,9 +306,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   ): SparkPlan = {
     val request = new TiDAGRequest(pushDownType(), timeZoneOffset())
     request.setLimit(limit)
-    if (shouldAddSortOrder(projectList, sortOrder)) {
-      addSortOrder(request, sortOrder)
-    }
+    //if (shouldAddSortOrder(projectList, sortOrder)) {
+    addSortOrder(request, sortOrder)
+    //}
     pruneFilterProject(projectList, filterPredicates, source, request)
   }
 
@@ -517,24 +517,24 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     plan match {
       case logical.ReturnAnswer(rootPlan) =>
         rootPlan match {
-          case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
-            takeOrderedAndProject(limit, order, child, child.output) :: Nil
-          case logical.Limit(
+          /*case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+            takeOrderedAndProject(limit, order, child, child.output) :: Nil*/
+          /*case logical.Limit(
               IntegerLiteral(limit),
               logical.Project(projectList, logical.Sort(order, true, child))
               ) =>
-            takeOrderedAndProject(limit, order, child, projectList) :: Nil
+            takeOrderedAndProject(limit, order, child, projectList) :: Nil*/
           case logical.Limit(IntegerLiteral(limit), child) =>
             execution.CollectLimitExec(limit, collectLimit(limit, child)) :: Nil
           case other => planLater(other) :: Nil
         }
-      case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
-        takeOrderedAndProject(limit, order, child, child.output) :: Nil
-      case logical.Limit(
+      /*case logical.Limit(IntegerLiteral(limit), logical.Sort(order, true, child)) =>
+        takeOrderedAndProject(limit, order, child, child.output) :: Nil*/
+      /* case logical.Limit(
           IntegerLiteral(limit),
           logical.Project(projectList, logical.Sort(order, true, child))
           ) =>
-        takeOrderedAndProject(limit, order, child, projectList) :: Nil
+        takeOrderedAndProject(limit, order, child, projectList) :: Nil*/
       // Collapse filters and projections and push plan directly
       case PhysicalOperation(
           projectList,
