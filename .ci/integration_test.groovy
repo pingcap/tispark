@@ -77,7 +77,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     sh "curl ${FILE_SERVER_URL}/download/builds/pingcap/pd/${pd_sha1}/centos7/pd-server.tar.gz | tar xz"
                     stash includes: "bin/**", name: "binaries"
                     
-                    dir("/home/jenkins/git/tispark") {
+                    dir("/home/jenkins/agent/git") {
                         if (sh(returnStatus: true, script: '[ -d .git ] && [ -f Makefile ] && git rev-parse --git-dir > /dev/null 2>&1') != 0) {
                             deleteDir()
                         }
@@ -87,7 +87,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     dir("go/src/github.com/pingcap/tispark") {
                         deleteDir()
                         sh """
-                        cp -R /home/jenkins/git/tispark/. ./
+                        cp -R /home/jenkins/agent/git/. ./
                         git checkout -f ${ghprbActualCommit}
                         find core/src -name '*Suite*' > test
                         sed -i 's/core\\/src\\/test\\/scala\\///g' test
