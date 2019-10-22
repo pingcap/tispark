@@ -10,7 +10,7 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
             deleteDir()
             container("java") {
                 stage('Checkout') {
-                    dir("/home/jenkins/git/tispark") {
+                    dir("/home/jenkins/agent/git/tispark") {
                         sh """
                         archive_url=http://fileserver.pingcap.net/download/builds/pingcap/tispark/cache/tispark-m2-cache-latest.tar.gz
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
@@ -25,7 +25,7 @@ def call(ghprbActualCommit, ghprbPullId, ghprbPullTitle, ghprbPullLink, ghprbPul
                 stage('Build') {
                     dir("go/src/github.com/pingcap/tispark") {
                         sh """
-                        cp -R /home/jenkins/git/tispark/. ./
+                        cp -R /home/jenkins/agent/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
                         mvn clean install -Dmaven.test.skip=true
                         git diff --quiet
