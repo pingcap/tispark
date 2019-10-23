@@ -19,6 +19,31 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+  // https://github.com/pingcap/tispark/issues/1161
+  test("No Match Column") {
+    tidbStmt.execute("DROP TABLE IF EXISTS t_no_match_column")
+    tidbStmt.execute("""
+                       |CREATE TABLE `t_no_match_column` (
+                       |  `json` text DEFAULT NULL
+                       |)
+      """.stripMargin)
+
+    spark.sql("""
+                |select temp44.id from (
+                |    SELECT get_json_object(t.json,  '$.id') as id from t_no_match_column t
+                |) as temp44 order by temp44.id desc
+      """.stripMargin).explain(true)
+
+    spark.sql("""
+                |select temp44.id from (
+                |    SELECT get_json_object(t.json,  '$.id') as id from t_no_match_column t
+                |) as temp44 order by temp44.id desc limit 1
+      """.stripMargin).explain(true)
+
+    judge("select tp_int from full_data_type_table order by tp_int limit 20")
+    judge("select tp_int g from full_data_type_table order by g limit 20")
+  }
+
   // https://github.com/pingcap/tispark/issues/1147
   test("Fix Bit Type default value bug") {
     def runBitTest(bitNumber: Int, bitString: String): Unit = {
@@ -410,6 +435,7 @@ class IssueTestSuite extends BaseTiSparkSuite {
       tidbStmt.execute("drop table if exists table_group_by_bigint")
       tidbStmt.execute("drop table if exists catalog_delay")
       tidbStmt.execute("drop table if exists t_origin_default_value")
+      tidbStmt.execute("drop table if exists t_no_match_column")
     } finally {
       super.afterAll()
     }
