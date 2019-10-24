@@ -39,6 +39,8 @@ object TiConfigConst {
   val WRITE_ENABLE: String = "spark.tispark.write.enable"
   val WRITE_WITHOUT_LOCK_TABLE: String = "spark.tispark.write.without_lock_table"
   val TIKV_REGION_SPLIT_SIZE_IN_MB: String = "spark.tispark.tikv.region_split_size_in_mb"
+  val ALLOW_ORDER_PROJECT_LIMIT_PUSHDOWN: String =
+    "spark.tispark.plan.allow_order_project_limit_pushdown"
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"
