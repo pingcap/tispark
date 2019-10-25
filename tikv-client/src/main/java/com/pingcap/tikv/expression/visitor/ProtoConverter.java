@@ -31,6 +31,7 @@ import com.pingcap.tikv.types.*;
 import com.pingcap.tikv.types.DataType.EncodeType;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class ProtoConverter extends Visitor<Expr, Object> {
   // All concrete data type should be hooked to a type name
@@ -331,7 +332,27 @@ public class ProtoConverter extends Visitor<Expr, Object> {
 
   @Override
   protected Expr visit(Not node, Object context) {
-    ScalarFuncSig protoSig = ScalarFuncSig.UnaryNot;
+    ScalarFuncSig protoSig = null;
+    DataType dataType = getType(node);
+    switch (dataType.getType()) {
+      case TypeDecimal:
+        protoSig = ScalarFuncSig.UnaryNotDecimal;
+        break;
+      case TypeDouble:
+      case TypeFloat:
+        protoSig = ScalarFuncSig.UnaryNotReal;
+        break;
+      case TypeInt24:
+      case TypeLong:
+      case TypeShort:
+      case TypeLonglong:
+      case TypeTiny:
+        protoSig = ScalarFuncSig.UnaryNotInt;
+        break;
+      default:
+    }
+
+    Objects.requireNonNull(protoSig, "unary not can not find proper proto signature.");
     Expr.Builder builder = scalarToPartialProto(node, context);
     builder.setSig(protoSig);
     builder.setFieldType(toPBFieldType(getType(node)));
