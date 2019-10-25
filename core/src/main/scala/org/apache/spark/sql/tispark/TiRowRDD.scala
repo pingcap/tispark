@@ -28,6 +28,7 @@ import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.slf4j.Logger
 import org.tikv.kvproto.Coprocessor.KeyRange
+import org.tikv.kvproto.Metapb
 
 import scala.collection.JavaConversions._
 
@@ -47,6 +48,8 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
     if (!dagRequest.getUseTiFlash)
       return partitions
 
+    //TODO: the region cache logic need rewrite.
+    //https://github.com/pingcap/tispark/issues/1170
     val regionMgr = session.getRegionManager
     partitions.map(p => {
       val tiPartition = p.asInstanceOf[TiPartition]
@@ -62,14 +65,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
                         label =>
                           label.getKey == tiConf.getTiFlashLabelKey && label.getValue == tiConf.getTiFlashLabelValue
                       )) {
-                  val builder = store.toBuilder
-                  val address = builder.getAddress
-                  val parts = address.split(":")
-                  if (parts.size != 2)
-                    throw new Exception("Invalid learner peer address: " + address)
-                  // Convention: learner port + 1 is the coprocessor port of TiFlash.
-                  builder.setAddress(parts(0) + ":" + (Integer.valueOf(parts(1)) - 3002))
-                  builder.build()
+                  store
                 } else {
                   null
                 }

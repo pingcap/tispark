@@ -48,8 +48,8 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
   private static final boolean DEF_USE_TIFLASH = false;
-  private static final String DEF_TIFLASH_LABEL_KEY = "zone";
-  private static final String DEF_TIFLASH_LABEL_VALUE = "engine";
+  private static final String DEF_TIFLASH_LABEL_KEY = "engine";
+  private static final String DEF_TIFLASH_LABEL_VALUE = "tiflash";
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
