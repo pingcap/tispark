@@ -75,8 +75,13 @@ trait LeafExecRDD extends LeafExecNode {
       b.append(s"with dag request: $dagRequest")
       b.toString()
     } else {
-      s"TiDB $nodeName{$dagRequest}" +
-        s"${TiUtil.getReqEstCountStr(dagRequest)}"
+      if (dagRequest.getUseTiFlash) {
+        s"TiFlash $nodeName{$dagRequest}" +
+          s"${TiUtil.getReqEstCountStr(dagRequest)}"
+      } else {
+        s"TiKV $nodeName{$dagRequest}" +
+          s"${TiUtil.getReqEstCountStr(dagRequest)}"
+      }
     }
 
   override def simpleString: String = verboseString

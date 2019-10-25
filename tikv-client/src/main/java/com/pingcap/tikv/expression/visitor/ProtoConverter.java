@@ -97,6 +97,17 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     return expression.accept(converter, context);
   }
 
+  private FieldType toPBFieldType(DataType fieldType) {
+    return FieldType.newBuilder()
+        .setTp(fieldType.getTypeCode())
+        .setFlag(fieldType.getFlag())
+        .setFlen((int) fieldType.getLength())
+        .setDecimal(fieldType.getDecimal())
+        .setCharset(fieldType.getCharset())
+        .setCollate(fieldType.getCollationCode())
+        .build();
+  }
+
   // Generate protobuf builder with partial data encoded.
   // Scalar Signature is left alone
   private Expr.Builder scalarToPartialProto(Expression node, Object context) {
@@ -105,7 +116,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     builder.setTp(ExprType.ScalarFunc);
 
     // Return type
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+    builder.setFieldType(toPBFieldType(getType(node)));
 
     for (Expression child : node.getChildren()) {
       Expr exprProto = child.accept(this, context);
@@ -134,7 +145,8 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     }
     Expr.Builder builder = scalarToPartialProto(node, context);
     builder.setSig(protoSig);
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
@@ -173,7 +185,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     }
     Expr.Builder builder = scalarToPartialProto(node, context);
     builder.setSig(protoSig);
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
@@ -208,7 +220,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     }
     Expr.Builder builder = scalarToPartialProto(node, context);
     builder.setSig(protoSig);
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
@@ -251,22 +263,27 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     // the first executor of a DAG request.
     IntegerCodec.writeLong(cdo, position);
     builder.setVal(cdo.toByteString());
+
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
   @Override
   protected Expr visit(Constant node, Object context) {
     Expr.Builder builder = Expr.newBuilder();
+    DataType type = node.getType();
     if (node.getValue() == null) {
       builder.setTp(ExprType.Null);
-      return builder.build();
     } else {
-      DataType type = node.getType();
       builder.setTp(type.getProtoExprType());
       CodecDataOutput cdo = new CodecDataOutput();
       type.encode(cdo, EncodeType.PROTO, node.getValue());
       builder.setVal(cdo.toByteString());
     }
+    if (type.getType() == MySQLType.TypeTimestamp) {
+      type = DataTypeFactory.of(MySQLType.TypeDatetime);
+    }
+    builder.setFieldType(toPBFieldType(type));
     return builder.build();
   }
 
@@ -298,7 +315,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       builder.addChildren(exprProto);
     }
 
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
@@ -308,7 +325,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     ScalarFuncSig protoSig = ScalarFuncSig.valueOf(typeSignature + "IsNull");
     Expr.Builder builder = scalarToPartialProto(node, context);
     builder.setSig(protoSig);
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
@@ -317,7 +334,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     ScalarFuncSig protoSig = ScalarFuncSig.UnaryNot;
     Expr.Builder builder = scalarToPartialProto(node, context);
     builder.setSig(protoSig);
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
@@ -326,7 +343,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     ScalarFuncSig protoSig = ScalarFuncSig.Year;
     Expr.Builder builder = scalarToPartialProto(node, context);
     builder.setSig(protoSig);
-    builder.setFieldType(FieldType.newBuilder().setTp(getType(node).getTypeCode()).build());
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 }

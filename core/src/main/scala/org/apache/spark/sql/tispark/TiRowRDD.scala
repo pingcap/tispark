@@ -20,18 +20,16 @@ import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
-import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.TiConverter
-import com.pingcap.tispark.{TiPartition, TiTableReference}
-import org.apache.spark.rdd.RDD
+import com.pingcap.tispark.utils.{TiConverter, TiUtil}
+import com.pingcap.tispark.{TiConfigConst, TiPartition, TiTableReference}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
+import org.slf4j.Logger
+import org.tikv.kvproto.Coprocessor.KeyRange
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 class TiRowRDD(override val dagRequest: TiDAGRequest,
                override val physicalId: Long,
@@ -40,6 +38,52 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
                @transient private val session: TiSession,
                @transient private val sparkSession: SparkSession)
     extends TiRDD(dagRequest, physicalId, tiConf, tableRef, session, sparkSession) {
+
+  protected val logger: Logger = log
+
+  override protected def getPartitions: Array[Partition] = {
+    val partitions = super.getPartitions
+
+    if (!dagRequest.getUseTiFlash)
+      return partitions
+
+    val regionMgr = session.getRegionManager
+    partitions.map(p => {
+      val tiPartition = p.asInstanceOf[TiPartition]
+      val tasks = tiPartition.tasks
+        .map(task => {
+          val learnerList = task.getRegion.getLearnerList
+          val learnerStore = learnerList
+            .collectFirst {
+              case peer =>
+                val store = regionMgr.getStoreById(peer.getStoreId)
+                if (store.getLabelsList
+                      .exists(
+                        label =>
+                          label.getKey == tiConf.getTiFlashLabelKey && label.getValue == tiConf.getTiFlashLabelValue
+                      )) {
+                  val builder = store.toBuilder
+                  val address = builder.getAddress
+                  val parts = address.split(":")
+                  if (parts.size != 2)
+                    throw new Exception("Invalid learner peer address: " + address)
+                  // Convention: learner port + 1 is the coprocessor port of TiFlash.
+                  builder.setAddress(parts(0) + ":" + (Integer.valueOf(parts(1)) - 3002))
+                  builder.build()
+                } else {
+                  null
+                }
+            }
+            .getOrElse(
+              throw new Exception(
+                "No TiFlash store [" + tiConf.getTiFlashLabelKey + ":" + tiConf.getTiFlashLabelValue + "] found for region " + task.getRegion.getId
+              )
+            )
+          RegionTask.newInstance(task.getRegion, learnerStore, List.empty[KeyRange])
+        })
+      new TiPartition(tiPartition.idx, tasks, tiPartition.appId)
+    })
+  }
 
   type TiRow = com.pingcap.tikv.row.Row
 
