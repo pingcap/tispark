@@ -281,9 +281,6 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       type.encode(cdo, EncodeType.PROTO, node.getValue());
       builder.setVal(cdo.toByteString());
     }
-    if (type.getType() == MySQLType.TypeTimestamp) {
-      type = DataTypeFactory.of(MySQLType.TypeDatetime);
-    }
     return builder.build();
   }
 
@@ -315,7 +312,6 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       builder.addChildren(exprProto);
     }
 
-    // we should use agg fn's return type.
     builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
