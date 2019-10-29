@@ -3,6 +3,7 @@ package com.pingcap.tikv.meta;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +34,10 @@ public class TiViewInfo implements Serializable {
     this.viewSecurity = viewSecurity;
     this.viewSelect = viewSelect;
     this.viewCheckOpt = viewCheckOpt;
-    this.viewCols = viewCols.stream().map(CIStr::getO).collect(Collectors.toList());
+    if (viewCols != null) {
+      this.viewCols = viewCols.stream().map(CIStr::getO).collect(Collectors.toList());
+    } else {
+      this.viewCols = new ArrayList<>();
+    }
   }
 }
