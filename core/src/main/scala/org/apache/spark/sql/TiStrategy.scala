@@ -286,7 +286,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     scanBuilder.buildTiDAGReq(
       allowIndexRead(),
-      TiUtil.allowTiFlashRead(sqlConf),
+      TiUtil.allowTiFlashRead(tiContext.tiConf),
       tiColumns.map { _.getColumnInfo }.asJava,
       tiFilters.asJava,
       source.table,

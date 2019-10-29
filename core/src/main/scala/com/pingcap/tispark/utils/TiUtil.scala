@@ -97,8 +97,7 @@ object TiUtil {
     true
   }
 
-  def allowTiFlashRead(sqlConf: SQLConf) =
-    sqlConf.getConfString(TiConfigConst.USE_TIFLASH, "false").toLowerCase.toBoolean
+  def allowTiFlashRead(tiConf: TiConfiguration) = tiConf.isUseTiFlash
 
   def isSupportedFilter(expr: Expression,
                         source: TiDBRelation,
