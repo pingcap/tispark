@@ -19,14 +19,6 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
-  test("tiflash") {
-    spark.conf.set(TiConfigConst.USE_TIFLASH, "true")
-//    tidbStmt.execute("create table t(c1 int)")
-//    tidbStmt.execute("ALTER TABLE tispark_test.t SET TIFLASH REPLICA 1 LOCATION LABELS \"rack\", \"host\", \"abc\";" )
-    spark.sql("select * from t_t").show
-//    tidbStmt.execute("drop table t(c1 int)")
-  }
-
   // https://github.com/pingcap/tispark/issues/1161
   test("No Match Column") {
     tidbStmt.execute("DROP TABLE IF EXISTS t_no_match_column")
