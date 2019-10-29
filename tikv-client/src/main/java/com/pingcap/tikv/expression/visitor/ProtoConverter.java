@@ -265,7 +265,6 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     IntegerCodec.writeLong(cdo, position);
     builder.setVal(cdo.toByteString());
 
-    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
