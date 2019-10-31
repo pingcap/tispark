@@ -4,6 +4,8 @@ class ViewTestSuite extends BaseTiSparkTest {
   private val table = "test_view"
 
   test("Test View") {
+    dropTbl()
+
     tidbStmt.execute(s"create table $table(qty INT, price INT);")
     tidbStmt.execute(s"INSERT INTO $table VALUES(3, 50);")
 
@@ -21,12 +23,15 @@ class ViewTestSuite extends BaseTiSparkTest {
     spark.sql("show tables").show(false)
   }
 
-  override def afterAll() = {
+  private def dropTbl() = {
     tidbStmt.execute(s"drop table if exists $table")
     try {
       tidbStmt.execute("drop view if exists v")
     } catch {
       case _: Exception => cancel
     }
+  }
+  override def afterAll() = {
+    dropTbl()
   }
 }
