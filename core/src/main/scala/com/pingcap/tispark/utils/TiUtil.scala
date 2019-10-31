@@ -29,6 +29,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
@@ -185,6 +186,10 @@ object TiUtil {
 
     if (conf.contains(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB)) {
       tiConf.setTikvRegionSplitSizeInMB(conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.USE_TIFLASH)) {
+      tiConf.setUseTiFlash(conf.get(TiConfigConst.USE_TIFLASH).toBoolean)
     }
 
     tiConf

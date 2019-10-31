@@ -106,6 +106,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def generateDataSeed: Long = SharedSQLContext.generateDataSeed.get
 
+  protected def enableTiFlashTest: Boolean = SharedSQLContext.enableTiFlashTest
+
   /**
    * The [[TestSparkSession]] to use for all tests in this suite.
    */
@@ -167,6 +169,7 @@ object SharedSQLContext extends Logging {
   protected var pdAddresses: String = _
   protected var generateData: Boolean = _
   protected var generateDataSeed: Option[Long] = None
+  protected var enableTiFlashTest: Boolean = _
 
   protected implicit def spark: SparkSession = _spark
 
@@ -400,6 +403,8 @@ object SharedSQLContext extends Logging {
       // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
       tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "")
+
+      enableTiFlashTest = getOrElse(prop, ENABLE_TIFLASH_TEST, "false").toBoolean
 
       runTPCH = tpchDBName != ""
       runTPCDS = tpcdsDBName != ""

@@ -75,7 +75,12 @@ trait LeafExecRDD extends LeafExecNode {
       b.append(s"with dag request: $dagRequest")
       b.toString()
     } else {
-      s"TiDB $nodeName{$dagRequest}" +
+      val engine = if (dagRequest.getUseTiFlash) {
+        "TiFlash"
+      } else {
+        "TiKV"
+      }
+      s"$engine $nodeName{$dagRequest}" +
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
     }
 
