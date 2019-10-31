@@ -155,8 +155,8 @@ public class TiDAGRequest implements Serializable {
     this.prunedParts = prunedParts;
   }
 
-  public void setUseTiFlash(boolean allowTiflashRead) {
-    this.useTiFlash = allowTiflashRead;
+  public void setUseTiFlash(boolean useTiFlash) {
+    this.useTiFlash = useTiFlash;
   }
 
   public boolean getUseTiFlash() {

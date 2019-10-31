@@ -212,7 +212,7 @@ public class TiKVScanAnalyzer {
   // Build scan plan picking access path with lowest cost by estimation
   public TiDAGRequest buildTiDAGReq(
       boolean allowIndexScan,
-      boolean allowTiFlashRead,
+      boolean isUseTiFlash,
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiTableInfo table,
@@ -220,7 +220,7 @@ public class TiKVScanAnalyzer {
       TiTimestamp ts,
       TiDAGRequest dagRequest) {
     TiKVScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
-    if (allowIndexScan && !allowTiFlashRead) {
+    if (allowIndexScan && !isUseTiFlash) {
       minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
       double minCost = minPlan.getCost();
       for (TiIndexInfo index : table.getIndices()) {
@@ -233,7 +233,7 @@ public class TiKVScanAnalyzer {
     }
 
     dagRequest.addRanges(minPlan.getKeyRanges());
-    dagRequest.setUseTiFlash(allowTiFlashRead);
+    dagRequest.setUseTiFlash(isUseTiFlash);
     dagRequest.setPrunedParts(minPlan.getPrunedParts());
     dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
     if (minPlan.isIndexScan()) {

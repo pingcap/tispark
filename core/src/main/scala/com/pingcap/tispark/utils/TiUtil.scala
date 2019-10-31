@@ -97,8 +97,6 @@ object TiUtil {
     true
   }
 
-  def allowTiFlashRead(tiConf: TiConfiguration) = tiConf.isUseTiFlash
-
   def isSupportedFilter(expr: Expression,
                         source: TiDBRelation,
                         blacklist: ExpressionBlacklist): Boolean =
@@ -188,6 +186,10 @@ object TiUtil {
 
     if (conf.contains(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB)) {
       tiConf.setTikvRegionSplitSizeInMB(conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
+    }
+
+    if (conf.contains(TiConfigConst.USE_TIFLASH)) {
+      tiConf.setUseTiFlash(conf.get(TiConfigConst.USE_TIFLASH).toBoolean)
     }
 
     tiConf
