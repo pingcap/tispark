@@ -335,6 +335,9 @@ split-table: true
 
 If your TiDB's version is earlier than 4.0, set `spark.tispark.write.without_lock_table` to `true` to enable write, but ACID is **not** guaranteed.
 
+### WARNING
+**DO NOT set `spark.tispark.write.without_lock_table` to `true` on production environment (you may lost data).**
+
 ## Type Conversion for Write
 
 The following types of SparkSQL Data are currently not supported for writing to TiDB:
