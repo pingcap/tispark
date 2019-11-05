@@ -31,8 +31,9 @@ import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.catalyst.analysis.CleanupAliases
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeSet, Expression, IntegerLiteral, NamedExpression, SortOrder, SubqueryExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeMap, AttributeSet, Expression, IntegerLiteral, NamedExpression, SortOrder, SubqueryExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -334,13 +335,48 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     child match {
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
           if filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) =>
-        execution.TakeOrderedAndProjectExec(
-          limit,
-          sortOrder,
-          project,
-          pruneTopNFilterProject(limit, projectList, filters, source, sortOrder)
-        )
+        val refinedOrders = refineSortOrder(projectList, sortOrder, source)
+        if (refinedOrders.isEmpty) {
+          execution.TakeOrderedAndProjectExec(limit, sortOrder, project, planLater(child))
+        } else {
+          execution.TakeOrderedAndProjectExec(
+            limit,
+            sortOrder,
+            project,
+            pruneTopNFilterProject(limit, projectList, filters, source, refinedOrders.get)
+          )
+        }
       case _ => execution.TakeOrderedAndProjectExec(limit, sortOrder, project, planLater(child))
+    }
+  }
+
+  // refine sort order
+  // 1. sort order expressions are all valid to be pushed
+  // 2. if any reference to projections are valid to be pushed
+  private def refineSortOrder(projectList: Seq[NamedExpression],
+                              sortOrders: Seq[SortOrder],
+                              source: TiDBRelation): Option[Seq[SortOrder]] = {
+    val aliases = AttributeMap(projectList.collect {
+      case a: Alias => a.toAttribute -> a
+    })
+    val refinedSortOrder = sortOrders.map { sortOrder =>
+      val newSortExpr = sortOrder.child.transformUp {
+        case a: Attribute => aliases.getOrElse(a, a)
+      }
+      val trimedExpr = CleanupAliases.trimNonTopLevelAliases(newSortExpr)
+      SortOrder(
+        trimedExpr,
+        sortOrder.direction,
+        sortOrder.nullOrdering,
+        sortOrder.sameOrderExpressions
+      )
+    }
+    if (refinedSortOrder.exists(
+          order => !TiUtil.isSupportedBasicExpression(order.child, source, blacklist)
+        )) {
+      Option.empty
+    } else {
+      Some(refinedSortOrder)
     }
   }
 
