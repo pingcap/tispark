@@ -170,9 +170,8 @@ class IssueTestSuite extends BaseTiSparkTest {
   }
 
   test("test date") {
-    judge("select tp_date from full_data_type_table where tp_date >= date '2065-04-19'")
     judge(
-      "select tp_date, tp_datetime from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt"
+      "select tp_date, tp_datetime, id_dt from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt limit 10"
     )
     judge(
       "select tp_date, tp_datetime, tp_timestamp from full_data_type_table_idx where tp_date < date '2017-11-02' order by id_dt"
@@ -304,10 +303,11 @@ class IssueTestSuite extends BaseTiSparkTest {
     val t1_df = spark.sql("select * from t1")
     val t1_group_df = t1_df.groupBy("k1", "k2").agg(sum("c1").alias("c1"))
     val t2_df = spark.sql("select * from t2")
-    t2_df.printSchema()
-    t2_df.show
+//    t2_df.printSchema()
+//    t2_df.show
     val join_df = t1_group_df.join(t2_df, Seq("k1", "k2"), "left_outer")
     join_df.printSchema()
+    join_df.queryExecution.debug.codegen
     join_df.show
     val filter_df = join_df.filter(col("c2").isNotNull)
     filter_df.show
@@ -324,6 +324,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute(
       "INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')"
     )
+    spark.sql("select * from tmp_debug").queryExecution.debug.codegen
     spark.sql("select * from tmp_debug").collect()
   }
 

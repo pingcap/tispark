@@ -34,6 +34,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
   private static final int DEF_MAX_FRAME_SIZE = 268435456 * 2; // 256 * 2 MB
   private static final int DEF_INDEX_SCAN_BATCH_SIZE = 20000;
+  private static final int DEF_REGION_SCAN_DOWNGRADE_THRESHOLD = 10000000;
   // if keyRange size per request exceeds this limit, the request might be too large to be accepted
   // by TiKV(maximum request size accepted by TiKV is around 1MB)
   private static final int MAX_REQUEST_KEY_RANGE_SIZE = 20000;
@@ -48,6 +49,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
   private static final boolean DEF_USE_TIFLASH = false;
+  private static final boolean DEF_USE_COLUMNAR = true;
   private static final String DEF_TIFLASH_LABEL_KEY = "engine";
   private static final String DEF_TIFLASH_LABEL_VALUE = "tiflash";
 
@@ -58,6 +60,7 @@ public class TiConfiguration implements Serializable {
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
   private List<URI> pdAddrs = new ArrayList<>();
   private int indexScanBatchSize = DEF_INDEX_SCAN_BATCH_SIZE;
+  private int downgradeThreshold = DEF_REGION_SCAN_DOWNGRADE_THRESHOLD;
   private int indexScanConcurrency = DEF_INDEX_SCAN_CONCURRENCY;
   private int tableScanConcurrency = DEF_TABLE_SCAN_CONCURRENCY;
   private CommandPri commandPriority = DEF_COMMAND_PRIORITY;
@@ -74,6 +77,8 @@ public class TiConfiguration implements Serializable {
   private boolean useTiFlash = DEF_USE_TIFLASH;
   private String tiFlashLabelKey = DEF_TIFLASH_LABEL_KEY;
   private String tiFlashLabelValue = DEF_TIFLASH_LABEL_VALUE;
+
+  private boolean useColumnar = DEF_USE_COLUMNAR;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -280,5 +285,21 @@ public class TiConfiguration implements Serializable {
 
   public void setTiFlashLabelValue(String tiFlashLabelValue) {
     this.tiFlashLabelValue = tiFlashLabelValue;
+  }
+
+  public boolean isUseColumnar() {
+    return useColumnar;
+  }
+
+  public void setUseColumnar(boolean useColumnar) {
+    this.useColumnar = useColumnar;
+  }
+
+  public int getDowngradeThreshold() {
+    return downgradeThreshold;
+  }
+
+  public void setDowngradeThreshold(int downgradeThreshold) {
+    this.downgradeThreshold = downgradeThreshold;
   }
 }

@@ -31,6 +31,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.io.Serializable;
 import java.util.List;
+import org.joda.time.DateTimeZone;
 
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {
@@ -68,6 +69,16 @@ public abstract class DataType implements Serializable {
   public static final int OnUpdateNowFlag = 8192; /* Field is set to NOW on UPDATE */
   public static final int NumFlag = 32768; /* Field is a num (for clients) */
   public static final long COLUMN_VERSION_FLAG = 1;
+
+  public DataType(MySQLType tp, int prec, int scale) {
+    this.tp = tp;
+    this.flag = 0;
+    this.elems = ImmutableList.of();
+    this.length = scale;
+    this.decimal = prec;
+    this.charset = "";
+    this.collation = Collation.DEF_COLLATION_CODE;
+  }
 
   public enum EncodeType {
     KEY,
@@ -451,6 +462,11 @@ public abstract class DataType implements Serializable {
 
   public static boolean isLengthUnSpecified(long length) {
     return length == UNSPECIFIED_LEN;
+  }
+
+  /** Return timezone used for encoding and decoding */
+  public DateTimeZone getTimezone() {
+    return DateTimeZone.UTC;
   }
 
   @Override

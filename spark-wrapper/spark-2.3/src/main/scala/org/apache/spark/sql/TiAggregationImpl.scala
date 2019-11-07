@@ -17,10 +17,10 @@ package org.apache.spark.sql
 
 import org.apache.spark.sql.catalyst.expressions.NamedExpression.newExprId
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{Alias, Cast, Divide, Expression, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, Cast, Divide, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.types.{DoubleType, LongType}
+import org.apache.spark.sql.types.{DecimalType, DoubleType, LongType}
 
 object TiAggregationImpl {
   type ReturnType =
@@ -30,14 +30,25 @@ object TiAggregationImpl {
     case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
       // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
       // converted `Sum`s and `Count`s down to TiKV.
-      val (averages, averagesEliminated) = aggregateExpressions.partition {
+      val (averages, _) = aggregateExpressions.partition {
         case AggregateExpression(_: Average, _, _, _) => true
         case _                                        => false
       }
 
+      val (sums, _) = aggregateExpressions.partition {
+        case AggregateExpression(_: Sum, _, _, _) => true
+        case _                                    => false
+      }
+
+      val (sumAndAvgEliminated, _) = aggregateExpressions.partition {
+        case AggregateExpression(_: Sum, _, _, _)     => false
+        case AggregateExpression(_: Average, _, _, _) => false
+        case _                                        => true
+      }
+
       // An auxiliary map that maps result attribute IDs of all detected `Average`s to corresponding
       // converted `Sum`s and `Count`s.
-      val rewriteMap = averages.map {
+      val avgRewriteMap: Map[Attribute, Seq[AggregateExpression]] = averages.map {
         case a @ AggregateExpression(Average(ref), _, _, _) =>
           // We need to do a type promotion on Sum(Long) to avoid LongType overflow in Average rewrite
           // scenarios to stay consistent with original spark's Average behaviour
@@ -49,7 +60,16 @@ object TiAggregationImpl {
           )
       }.toMap
 
-      val rewrite: PartialFunction[Expression, Expression] = rewriteMap.map {
+      val sumRewriteMap = sums.map {
+        case s @ AggregateExpression(Sum(ref), _, _, _) =>
+          val sum =
+            if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
+          s.resultAttribute -> Seq(
+            s.copy(aggregateFunction = sum, resultId = newExprId)
+          )
+      }.toMap
+
+      val avgRewrite: PartialFunction[Expression, Expression] = avgRewriteMap.map {
         case (ref, Seq(sum, count)) =>
           val castedSum = Cast(sum.resultAttribute, DoubleType)
           val castedCount = Cast(count.resultAttribute, DoubleType)
@@ -57,14 +77,23 @@ object TiAggregationImpl {
           (ref: Expression) -> Alias(division, ref.name)(exprId = ref.exprId)
       }
 
+      val sumRewrite = sumRewriteMap.map {
+        case (ref, Seq(sum)) =>
+          val castedSum = Cast(sum.resultAttribute, DoubleType)
+          (ref: Expression) -> Alias(castedSum, ref.name)(exprId = ref.exprId)
+      }
+
       val rewrittenResultExpressions = resultExpressions
-        .map { _ transform rewrite }
+        .map { _ transform avgRewrite }
+        .map { _ transform sumRewrite }
         .map { case e: NamedExpression => e }
 
       val rewrittenAggregateExpressions = {
-        val extraSumsAndCounts = rewriteMap.values
+        val extraSumsAndCounts = avgRewriteMap.values
           .reduceOption { _ ++ _ } getOrElse Nil
-        (averagesEliminated ++ extraSumsAndCounts).distinct
+        val rewrittenSums = sumRewriteMap.values
+          .reduceOption { _ ++ _ } getOrElse Nil
+        (sumAndAvgEliminated ++ extraSumsAndCounts ++ rewrittenSums).distinct
       }
 
       Some(groupingExpressions, rewrittenAggregateExpressions, rewrittenResultExpressions, child)

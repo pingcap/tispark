@@ -1,4 +1,4 @@
-package com.pingcap.tispark.utils
+package org.apache.spark.sql.execution
 
 import java.util.logging.Logger
 
@@ -82,12 +82,13 @@ object TiConverter {
     // TODO: review type system
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-99
     tp match {
-      case _: sql.types.BinaryType    => BytesType.BLOB
-      case _: sql.types.StringType    => StringType.VARCHAR
-      case _: sql.types.LongType      => IntegerType.BIGINT
-      case _: sql.types.IntegerType   => IntegerType.INT
-      case _: sql.types.DoubleType    => RealType.DOUBLE
-      case _: sql.types.DecimalType   => DecimalType.DECIMAL
+      case _: sql.types.BinaryType  => BytesType.BLOB
+      case _: sql.types.StringType  => StringType.VARCHAR
+      case _: sql.types.LongType    => IntegerType.BIGINT
+      case _: sql.types.IntegerType => IntegerType.INT
+      case _: sql.types.DoubleType  => RealType.DOUBLE
+      case sql.types.DecimalType.Fixed(prec, scale) =>
+        new DecimalType(MySQLType.TypeNewDecimal, prec, scale)
       case _: sql.types.TimestampType => TimestampType.TIMESTAMP
       case _: sql.types.DateType      => DateType.DATE
     }

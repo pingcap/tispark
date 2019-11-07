@@ -41,6 +41,7 @@ object TiConfigConst {
   val TIKV_REGION_SPLIT_SIZE_IN_MB: String = "spark.tispark.tikv.region_split_size_in_mb"
   val USE_TIFLASH: String = "spark.tispark.use.tiflash"
   val ENABLE_TIFLASH_TEST: String = "spark.tispark.enable.tiflash_test"
+  val USE_COLUMNAR: String = "spark.tispark.use.columnar"
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"

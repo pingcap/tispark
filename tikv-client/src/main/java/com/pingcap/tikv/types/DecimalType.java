@@ -38,6 +38,10 @@ public class DecimalType extends DataType {
     super(tp);
   }
 
+  public DecimalType(MySQLType tp, int prec, int scale) {
+    super(tp, prec, scale);
+  }
+
   DecimalType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }
@@ -86,9 +90,9 @@ public class DecimalType extends DataType {
       throw new ConvertNotSupportException(value.getClass().getName(), this.getClass().getName());
     }
 
-    int length = (int) this.getLength();
-    int decimal = this.getDecimal();
-    return toGivenPrecisionAndFrac(result, length, decimal);
+    int precision = (int) this.getLength(); // -> scale
+    int frac = this.getDecimal(); // -> precision
+    return toGivenPrecisionAndFrac(result, precision, frac);
   }
 
   /**
