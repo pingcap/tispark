@@ -193,8 +193,17 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
     runTest(str, skipped = skipped, skipJDBC = true, checkLimit = checkLimit)
 
-  protected def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
-    compSqlResult(sql, querySpark(sql), queryTiDB(sql), checkLimit)
+  protected def compSparkWithTiDB(qSpark: String,
+                                  qTiDB: String = null,
+                                  checkLimit: Boolean = true): Unit =
+    if (qTiDB == null) {
+      compSparkWithTiDB(qSpark, checkLimit)
+    } else {
+      runTest(qSpark, rTiDB = queryTiDBViaJDBC(qTiDB), skipJDBC = true, checkLimit = checkLimit)
+    }
+
+  private def compSparkWithTiDB(sql: String, checkLimit: Boolean): Unit =
+    runTest(sql, skipJDBC = true, checkLimit = checkLimit)
 
   protected def checkSparkResult(sql: String,
                                  result: List[List[Any]],

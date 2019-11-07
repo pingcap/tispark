@@ -32,7 +32,7 @@ import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.analysis.CleanupAliases
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeMap, AttributeSet, Expression, IntegerLiteral, NamedExpression, SortOrder, SubqueryExpression}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Ascending, Attribute, AttributeMap, AttributeSet, Descending, Expression, IntegerLiteral, IsNull, NamedExpression, NullsFirst, NullsLast, SortOrder, SubqueryExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
@@ -355,17 +355,28 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val aliases = AttributeMap(projectList.collect {
       case a: Alias => a.toAttribute -> a
     })
-    val refinedSortOrder = sortOrders.map { sortOrder =>
+    // Order by desc/asc + nulls first/last
+    //
+    // 1. Order by asc + nulls first:
+    //	  order by col asc nulls first = order by col asc
+    //  2. Order by desc + nulls first:
+    // 	  order by col desc nulls first = order by col is null desc, col desc
+    //  3. Order by asc + nulls last:
+    //	  order by col asc nulls last = order by col is null asc, col asc
+    //  4. Order by desc + nulls last:
+    //	  order by col desc nulls last = order by col desc
+    val refinedSortOrder = sortOrders.flatMap { sortOrder: SortOrder =>
       val newSortExpr = sortOrder.child.transformUp {
         case a: Attribute => aliases.getOrElse(a, a)
       }
-      val trimedExpr = CleanupAliases.trimNonTopLevelAliases(newSortExpr)
-      SortOrder(
-        trimedExpr,
-        sortOrder.direction,
-        sortOrder.nullOrdering,
-        sortOrder.sameOrderExpressions
-      )
+      val trimmedExpr = CleanupAliases.trimNonTopLevelAliases(newSortExpr)
+      val trimmedSortOrder = sortOrder.copy(child = trimmedExpr)
+      (sortOrder.direction, sortOrder.nullOrdering) match {
+        case (_ @Ascending, _ @NullsLast) | (_ @Descending, _ @NullsFirst) =>
+          sortOrder.copy(child = IsNull(trimmedExpr)) :: trimmedSortOrder :: Nil
+        case _ =>
+          trimmedSortOrder :: Nil
+      }
     }
     if (refinedSortOrder.exists(
           order => !TiUtil.isSupportedBasicExpression(order.child, source, blacklist)
