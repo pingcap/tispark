@@ -21,6 +21,50 @@ import org.apache.spark.sql.execution.{CoprocessorRDD, RegionTaskExec}
 class PartitionTableSuite extends BaseTiSparkSuite {
   def enablePartitionForTiDB() = tidbStmt.execute("set @@tidb_enable_table_partition = 1")
 
+  test("read from partition table stack overflow") {
+    val partSQL = (1 to 1023).map(i => s"PARTITION p$i VALUES LESS THAN ($i)").mkString(",")
+
+    {
+      // index scan
+      tidbStmt.execute("DROP TABLE IF EXISTS `pt`")
+      tidbStmt.execute(s"""
+                          |CREATE TABLE `pt` (
+                          |  `id` int(11) DEFAULT NULL,
+                          |  `name` varchar(50) DEFAULT NULL,
+                          |  `purchased` date DEFAULT NULL,
+                          |  index `idx_id`(`id`)
+                          |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                          |PARTITION BY RANGE (mod(year(purchased), 1023)) (
+                          |$partSQL,
+                          |PARTITION p1024 VALUES LESS THAN (MAXVALUE)
+                          |)
+                     """.stripMargin)
+
+      tidbStmt.execute("insert into `pt` values(1, 'name', '1995-10-10')")
+      refreshConnections()
+      judge("select * from pt")
+    }
+
+    {
+      // no index scan
+      tidbStmt.execute("DROP TABLE IF EXISTS `pt`")
+      tidbStmt.execute(s"""
+                          |CREATE TABLE `pt` (
+                          |  `id` int(11) DEFAULT NULL,
+                          |  `name` varchar(50) DEFAULT NULL,
+                          |  `purchased` date DEFAULT NULL
+                          |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                          |PARTITION BY RANGE (mod(year(purchased), 1023)) (
+                          |$partSQL,
+                          |PARTITION p1024 VALUES LESS THAN (MAXVALUE)
+                          |)
+                     """.stripMargin)
+      tidbStmt.execute("insert into `pt` values(1, 'name', '1995-10-10')")
+      refreshConnections()
+      judge("select * from pt")
+    }
+  }
+
   test("test read from range partition and partition function (mod) is not supported by tispark") {
     enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `pt`")
