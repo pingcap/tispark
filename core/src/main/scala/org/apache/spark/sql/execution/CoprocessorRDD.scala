@@ -93,7 +93,7 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRowRDD]) extend
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
 
-    internalRDDs
+    val rddList = internalRDDs
       .map(
         rdd =>
           ReflectionMapPartitionWithIndexInternal(
@@ -101,7 +101,7 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRowRDD]) extend
             internalRowToUnsafeRowWithIndex(numOutputRows)
           ).invoke()
       )
-      .reduce(_ union _)
+    sparkContext.union(rddList)
   }
 
   override def simpleString: String = verboseString
@@ -123,7 +123,7 @@ case class HandleRDDExec(tiRDDs: List[TiHandleRDD]) extends LeafExecRDD {
   override protected def doExecute(): RDD[InternalRow] = {
     val numOutputRegions = longMetric("numOutputRegions")
 
-    internalRDDs
+    val rddList = internalRDDs
       .map(
         rdd =>
           ReflectionMapPartitionWithIndexInternal(
@@ -131,7 +131,7 @@ case class HandleRDDExec(tiRDDs: List[TiHandleRDD]) extends LeafExecRDD {
             internalRowToUnsafeRowWithIndex(numOutputRegions)
           ).invoke()
       )
-      .reduce(_ union _)
+    sparkContext.union(rddList)
   }
 
   final lazy val attributeRef = Seq(
