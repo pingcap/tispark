@@ -23,7 +23,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
-import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD, TiRowRDD}
+import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 
@@ -93,9 +93,9 @@ case class TiDBRelation(session: TiSession,
       NamedExpression.newExprId
     )
 
-    val sortAgg = TiUtil
+    val agg = TiUtil
       .planAggregateWithoutPartial(
-        Seq(handlePlan.attributeRef.head), // group by region id
+        Seq(handlePlan.output.head), // group by region id
         Seq(aggExpr),
         Seq(handlePlan.output.head, aggExpr.resultAttribute), // output <region, handleList>
         handlePlan
@@ -104,7 +104,7 @@ case class TiDBRelation(session: TiSession,
       .head
 
     RegionTaskExec(
-      sortAgg,
+      agg,
       output,
       dagRequest,
       session.getConf,

@@ -17,8 +17,6 @@
 
 package org.apache.spark.sql
 
-import java.sql.Statement
-
 import com.pingcap.tikv.TiDBJDBCClient
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import com.pingcap.tikv.meta.TiTableInfo
@@ -363,14 +361,33 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     var r2: List[List[Any]] = rJDBC
     var r3: List[List[Any]] = rTiDB
     var r4: List[List[Any]] = rTiFlash
+    val getSparkPlan: String => String = sql =>
+      try {
+        val dataFrame = spark.sql(sql)
+        import org.apache.spark.sql.execution.command.ExplainCommand
+        spark.sessionState
+          .executePlan(ExplainCommand(dataFrame.queryExecution.logical))
+          .executedPlan
+          .executeCollect()
+          .map(_.getString(0))
+          .mkString("\n")
+      } catch {
+        case _: Throwable => ""
+    }
+    var sparkPlan: String = "null"
 
     if (r1 == null) {
       try {
         r1 = queryViaTiSpark(qSpark)
+        sparkPlan = getSparkPlan(qSpark)
       } catch {
         case e: Throwable =>
-          logger.error(s"TiSpark failed when executing: $qSpark")
-          fail(e)
+          try {
+            logger.error(s"TiSpark failed when executing: $qSpark")
+            logger.warn("failure detected: \n", sparkPlan)
+          } finally {
+            fail(e)
+          }
       }
     }
 
@@ -401,9 +418,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         if (!compSqlResult(qSpark, r1, r4, checkLimit)) {
           fail(
             s"""Failed with
-               |TiSpark:\t\t${listToString(r1)}
+               |TiFlash:\t\t${listToString(r4)}
                |Spark With TiFlash:${listToString(r2)}
-               |TiDB:\t\t\t${listToString(r3)}""".stripMargin
+               |TiDB:\t\t\t${listToString(r3)}
+               |TiFlash Plan:\n$sparkPlan""".stripMargin
           )
         }
         spark.conf.set(TiConfigConst.USE_TIFLASH, "false")
@@ -428,7 +446,8 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           s"""Failed with
              |TiSpark:\t\t${listToString(r1)}
              |Spark With JDBC:${listToString(r2)}
-             |TiDB:\t\t\t${listToString(r3)}""".stripMargin
+             |TiDB:\t\t\t${listToString(r3)}
+             |TiSpark Plan:\n$sparkPlan""".stripMargin
         )
       }
     }
