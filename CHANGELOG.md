@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 - Fix Bit Type default value bug [#1148](https://github.com/pingcap/tispark/pull/1148)
 - Fix fastxml security alert [#1127](https://github.com/pingcap/tispark/pull/1127)
 - Fix bug: TiSpark Catalog has 10-20s delay [#1108](https://github.com/pingcap/tispark/pull/1108)
-- Support reading data from TiDB in Spark Structured Streaming [#1104](https://github.com/pingcap/tispark/pull/1104)
+- Fix reading data from TiDB in Spark Structured Streaming [#1104](https://github.com/pingcap/tispark/pull/1104)
 
 ## [TiSpark 2.1.5] 2019-09-02
 ### Fixes
