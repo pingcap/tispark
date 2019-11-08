@@ -36,15 +36,15 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
   private def tiCatalog = ti.tiCatalog
 
-  protected def querySpark(query: String): List[List[Any]] = {
+  protected def queryViaTiSpark(query: String): List[List[Any]] = {
     val df = sql(query)
     val schema = df.schema.fields
 
     dfData(df, schema)
   }
 
-  protected def queryTiDB(query: String): List[List[Any]] = {
-    val resultSet = tidbStmt.executeQuery(query)
+  protected def queryTiDBViaJDBC(query: String): List[List[Any]] = {
+    val resultSet = callWithRetry(tidbStmt.executeQuery(query))
     val rsMetaData = resultSet.getMetaData
     val retSet = ArrayBuffer.empty[List[Any]]
     val retSchema = ArrayBuffer.empty[String]
@@ -135,9 +135,13 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     }
   }
 
-  override def beforeAll(): Unit = {
+  def beforeAllWithoutLoadData(): Unit = {
     super.beforeAll()
     setLogLevel("WARN")
+  }
+
+  override def beforeAll(): Unit = {
+    beforeAllWithoutLoadData()
     loadTestData()
   }
 
@@ -193,18 +197,27 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
   protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
     runTest(str, skipped = skipped, skipJDBC = true, checkLimit = checkLimit)
 
-  protected def compSparkWithTiDB(sql: String, checkLimit: Boolean = true): Boolean =
-    compSqlResult(sql, querySpark(sql), queryTiDB(sql), checkLimit)
+  protected def compSparkWithTiDB(qSpark: String,
+                                  qTiDB: String = null,
+                                  checkLimit: Boolean = true): Unit =
+    if (qTiDB == null) {
+      compSparkWithTiDB(qSpark, checkLimit)
+    } else {
+      runTest(qSpark, rTiDB = queryTiDBViaJDBC(qTiDB), skipJDBC = true, checkLimit = checkLimit)
+    }
+
+  private def compSparkWithTiDB(sql: String, checkLimit: Boolean): Unit =
+    runTest(sql, skipJDBC = true, checkLimit = checkLimit)
 
   protected def checkSparkResult(sql: String,
                                  result: List[List[Any]],
                                  checkLimit: Boolean = true): Unit =
-    assert(compSqlResult(sql, querySpark(sql), result, checkLimit))
+    assert(compSqlResult(sql, queryViaTiSpark(sql), result, checkLimit))
 
   protected def checkSparkResultContains(sql: String,
                                          result: List[Any],
                                          checkLimit: Boolean = true): Unit =
-    assert(querySpark(sql).exists(x => compSqlResult(sql, List(x), List(result), checkLimit)))
+    assert(queryViaTiSpark(sql).exists(x => compSqlResult(sql, List(x), List(result), checkLimit)))
 
   protected def explainSpark(str: String, skipped: Boolean = false): Unit =
     try {
@@ -335,7 +348,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
     if (r1 == null) {
       try {
-        r1 = querySpark(qSpark)
+        r1 = queryViaTiSpark(qSpark)
       } catch {
         case e: Throwable => fail(e)
       }
@@ -352,7 +365,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
     if (!skipJDBC && r2 == null) {
       try {
-        r2 = querySpark(qJDBC)
+        r2 = queryViaTiSpark(qJDBC)
       } catch {
         case e: Throwable =>
           logger.warn(s"Spark with JDBC failed when executing:$qJDBC", e) // JDBC failed
@@ -362,7 +375,7 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     if (skipJDBC || !compSqlResult(qSpark, r1, r2, checkLimit)) {
       if (!skipTiDB && r3 == null) {
         try {
-          r3 = queryTiDB(qSpark)
+          r3 = queryTiDBViaJDBC(qSpark)
         } catch {
           case e: Throwable => logger.warn(s"TiDB failed when executing:$qSpark", e) // TiDB failed
         }
