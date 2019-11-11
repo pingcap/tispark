@@ -1,6 +1,19 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.1.6] 2019-11-08
+### Fixes
+- Fix TopN push down bug [#1185](https://github.com/pingcap/tispark/pull/1185)
+- Consider nulls order in TopN pushdown [#1187](https://github.com/pingcap/tispark/pull/1187)
+- Fix Stack Overflow Error when reading from partition table [#1179](https://github.com/pingcap/tispark/pull/1179)
+- Fix parsing view table's json bug [#1174](https://github.com/pingcap/tispark/pull/1174)
+- Fix No Matching column bug [#1162](https://github.com/pingcap/tispark/pull/1162)
+- Fix behavior of estimateTableSize [#845](https://github.com/pingcap/tispark/pull/845)
+- Fix Bit Type default value bug [#1148](https://github.com/pingcap/tispark/pull/1148)
+- Fix fastxml security alert [#1127](https://github.com/pingcap/tispark/pull/1127)
+- Fix bug: TiSpark Catalog has 10-20s delay [#1108](https://github.com/pingcap/tispark/pull/1108)
+- Fix reading data from TiDB in Spark Structured Streaming [#1104](https://github.com/pingcap/tispark/pull/1104)
+
 ## [TiSpark 2.1.5] 2019-09-02
 ### Fixes
 - Remove useless scala and jackson dependencies [#1079](https://github.com/pingcap/tispark/pull/1079)
