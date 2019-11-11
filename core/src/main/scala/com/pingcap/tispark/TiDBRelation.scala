@@ -19,11 +19,10 @@ import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalException}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
-import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD, TiRowRDD}
+import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
 
@@ -83,28 +82,11 @@ case class TiDBRelation(session: TiSession,
     )
 
     val handlePlan = HandleRDDExec(tiHandleRDDs.toList)
-    // collect handles as a list
-    val aggFunc = CollectHandles(handlePlan.attributeRef.last)
-
-    val aggExpr = AggregateExpression(
-      aggFunc,
-      Complete,
-      isDistinct = true,
-      NamedExpression.newExprId
-    )
-
-    val sortAgg = TiUtil
-      .planAggregateWithoutPartial(
-        Seq(handlePlan.attributeRef.head), // group by region id
-        Seq(aggExpr),
-        Seq(handlePlan.output.head, aggExpr.resultAttribute), // output <region, handleList>
-        handlePlan
-      )
-      .children
-      .head
+    // TODO: we may optimize by partitioning the result by region.
+    // https://github.com/pingcap/tispark/issues/1200
 
     RegionTaskExec(
-      sortAgg,
+      handlePlan,
       output,
       dagRequest,
       session.getConf,

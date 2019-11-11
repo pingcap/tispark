@@ -154,8 +154,7 @@ case class HandleRDDExec(tiRDDs: List[TiHandleRDD]) extends LeafExecRDD {
 
 /**
  * RegionTaskExec is used for issuing requests which are generated based
- * on handles retrieved from [[HandleRDDExec]] aggregated by a SortAggregateExec with
- * [[org.apache.spark.sql.catalyst.expressions.aggregate.CollectHandles]] as aggregate function.
+ * on handles retrieved from [[HandleRDDExec]].
  *
  * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
  * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
