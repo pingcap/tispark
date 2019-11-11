@@ -82,7 +82,7 @@ case class TiDBRelation(session: TiSession,
     )
 
     val handlePlan = HandleRDDExec(tiHandleRDDs.toList)
-    // TODO: we may optimize by partitioning the result by region.
+    // TODO: we may optimize by partitioning the result by region. #1200
 
     RegionTaskExec(
       handlePlan,
