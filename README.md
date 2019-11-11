@@ -180,7 +180,7 @@ customer.write
 .save()
 ```
 
-See [here](./datasource_api_userguide.md) for more details.
+See [here](./docs/datasource_api_userguide.md) for more details.
 
 ## Configuration
 
