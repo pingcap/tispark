@@ -248,6 +248,8 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         BackOffFunction.BackOffFuncType.BoTiKVRPC,
         new GrpcException(
             "send tikv request error: " + e.getMessage() + ", try next peer later", e));
-    return true;
+    // TiKV maybe down, so do not retry in `callWithRetry`
+    // should refetch the new leader from PD and send request to it
+    return false;
   }
 }
