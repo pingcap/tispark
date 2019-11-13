@@ -557,6 +557,18 @@ public class RegionStoreClient extends AbstractGRPCClient<TikvBlockingStub, Tikv
       Coprocessor.Response response,
       List<KeyRange> ranges,
       Queue<SelectResponse> responseQueue) {
+    if (response == null) {
+      // Send request failed, reasons may:
+      // 1. TiKV down
+      // 2. Network partition
+      backOffer.doBackOff(
+          BackOffFunction.BackOffFuncType.BoRegionMiss,
+          new GrpcException("TiKV down or Network partition"));
+      logger.warn("Re-splitting region task due to region error: TiKV down or Network partition");
+      // Split ranges
+      return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);
+    }
+
     if (response.hasRegionError()) {
       Errorpb.Error regionError = response.getRegionError();
       backOffer.doBackOff(

@@ -248,6 +248,6 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
         BackOffFunction.BackOffFuncType.BoTiKVRPC,
         new GrpcException(
             "send tikv request error: " + e.getMessage() + ", try next peer later", e));
-    return true;
+    return false;
   }
 }
