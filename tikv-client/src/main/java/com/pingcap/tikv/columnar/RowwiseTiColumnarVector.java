@@ -5,12 +5,11 @@ import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
 
 public class RowwiseTiColumnarVector extends TiColumnVector {
-
   private Row[] rows;
   private int colIdx;
   /** Sets up the data type of this column vector. */
-  public RowwiseTiColumnarVector(DataType type, int colIdx, Row[] rows) {
-    super(type);
+  public RowwiseTiColumnarVector(DataType type, int colIdx, Row[] rows, int numOfRows) {
+    super(type, numOfRows);
     this.rows = rows;
     this.colIdx = colIdx;
   }

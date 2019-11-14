@@ -24,7 +24,7 @@ import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.columnar.TiChunkColumn;
+import com.pingcap.tikv.columnar.ColumnarChunkColumn;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
@@ -208,12 +208,14 @@ public abstract class DataType implements Serializable {
       case TypeDate:
       case TypeDatetime:
         return 16;
+      case TypeNewDecimal:
+        return 40;
       default:
         return -1;
     }
   }
 
-  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
+  public ColumnarChunkColumn decodeColumn(CodecDataInput cdi) {
     int numRows = Integer.reverseBytes(cdi.readInt());
     int numNulls = Integer.reverseBytes(cdi.readInt());
     int numNullBitmapBytes = (numRows + 7) / 8;
@@ -237,7 +239,7 @@ public abstract class DataType implements Serializable {
     cdi.readFully(dataBuffer);
     ByteBuffer buffer = ByteBuffer.wrap(dataBuffer);
     buffer.order(LITTLE_ENDIAN);
-    return new TiChunkColumn(this, numRows, numNulls, nullBitMaps, buffer);
+    return new ColumnarChunkColumn(this, numRows, numNulls, nullBitMaps, buffer);
   }
   /**
    * decode value from row which is nothing.

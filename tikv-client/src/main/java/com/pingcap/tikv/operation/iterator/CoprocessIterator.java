@@ -22,9 +22,9 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.columnar.ColumnarChunkColumn;
 import com.pingcap.tikv.columnar.RowwiseTiColumnarVector;
-import com.pingcap.tikv.columnar.TiChunkColumn;
-import com.pingcap.tikv.columnar.TiColumnarBatch;
+import com.pingcap.tikv.columnar.TiColumnVector;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
@@ -100,17 +100,17 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
    * @param session TiSession
    * @return a DAGIterator to be processed
    */
-  public static CoprocessIterator<TiColumnarBatch> getColumnarBatchIterator(
+  public static CoprocessIterator<TiColumnVector[]> getColumnarBatchIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     TiDAGRequest dagRequest = req.copy();
-    return new DAGIterator<TiColumnarBatch>(
+    return new DAGIterator<TiColumnVector[]>(
         dagRequest.buildTableScan(),
         regionTasks,
         session,
         SchemaInfer.create(dagRequest),
         dagRequest.getPushDownType()) {
       @Override
-      public TiColumnarBatch next() {
+      public TiColumnVector[] next() {
         DataType[] dataTypes = this.schemaInfer.getTypes().toArray(new DataType[0]);
         // TODO tiColumnarBatch is meant to be reused in the entire data loading process.
         if (dagRequest.getEncodeType() == EncodeType.TypeDefault) {
@@ -122,19 +122,15 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
           }
           RowwiseTiColumnarVector[] columnarVectors = new RowwiseTiColumnarVector[dataTypes.length];
           for (int i = 0; i < dataTypes.length; i++) {
-            columnarVectors[i] = new RowwiseTiColumnarVector(dataTypes[i], i, rows);
+            columnarVectors[i] = new RowwiseTiColumnarVector(dataTypes[i], i, rows, count);
           }
-          TiColumnarBatch batch = new TiColumnarBatch(columnarVectors);
-          batch.setNumRows(count);
-          return batch;
+          return columnarVectors;
         } else {
-          TiChunkColumn[] tiChunkColumns = new TiChunkColumn[dataTypes.length];
+          ColumnarChunkColumn[] columnarChunkColumns = new ColumnarChunkColumn[dataTypes.length];
           for (int i = 0; i < dataTypes.length; i++) {
-            tiChunkColumns[i] = dataTypes[i].decodeColumn(dataInput);
+            columnarChunkColumns[i] = dataTypes[i].decodeColumn(dataInput);
           }
-          TiColumnarBatch batch = new TiColumnarBatch(tiChunkColumns);
-          batch.setNumRows(tiChunkColumns[0].numOfRows());
-          return batch;
+          return columnarChunkColumns;
         }
       }
     };

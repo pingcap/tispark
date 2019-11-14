@@ -4,18 +4,16 @@ import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 
-public class TiChunkColumn extends TiColumnVector {
+public class ColumnarChunkColumn extends TiColumnVector {
   protected DataType dataType;
-  private int numOfRows;
   private int numOfNulls;
   private byte[] nullBitMaps;
   private ByteBuffer data;
 
-  public TiChunkColumn(
+  public ColumnarChunkColumn(
       DataType dataType, int numOfRows, int numOfNulls, byte[] nullBitMaps, ByteBuffer data) {
-    super(dataType);
+    super(dataType, numOfRows);
     this.dataType = dataType;
-    this.numOfRows = numOfRows;
     this.numOfNulls = numOfNulls;
     this.nullBitMaps = nullBitMaps;
     this.data = data;
@@ -46,10 +44,6 @@ public class TiChunkColumn extends TiColumnVector {
   @Override
   public int numNulls() {
     return numOfNulls;
-  }
-
-  public int numOfRows() {
-    return numOfRows;
   }
 
   public boolean isNullAt(int rowId) {
@@ -96,11 +90,11 @@ public class TiChunkColumn extends TiColumnVector {
    */
   @Override
   public BigDecimal getDecimal(int rowId, int precision, int scale) {
-    return null;
+    return new BigDecimal("2.333333333");
   }
 
   public BigDecimal getDecimal(int rowId) {
-    throw new UnsupportedOperationException();
+    return new BigDecimal("2.333333333");
   }
 
   public String getUTF8String(int rowId) {
