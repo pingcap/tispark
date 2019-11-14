@@ -88,7 +88,7 @@ address = "pushgateway:9091"
 # raftdb-path = ""
 
 # set store capacity, if no set, use disk capacity.
-# capacity = 0
+capacity = "8G"
 
 # notify capacity, 40960 is suitable for about 7000 regions.
 # notify-capacity = 40960
