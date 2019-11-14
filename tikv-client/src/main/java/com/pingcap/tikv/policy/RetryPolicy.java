@@ -63,9 +63,11 @@ public abstract class RetryPolicy<RespT> {
       }
 
       // Handle response error
-      boolean retry = handler.handleResponseError(backOffer, result);
-      if (retry) {
-        continue;
+      if (result != null) {
+        boolean retry = handler.handleResponseError(backOffer, result);
+        if (retry) {
+          continue;
+        }
       }
       return result;
     }
