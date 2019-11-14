@@ -1,39 +1,69 @@
 package com.pingcap.tikv.columnar;
 
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.util.MemoryUtil;
+import com.pingcap.tikv.util.TypeMapping;
+import java.nio.ByteBuffer;
 import org.apache.spark.sql.types.Decimal;
 import org.apache.spark.unsafe.types.UTF8String;
 
-public abstract class TiChunkColumn {
+public class TiChunkColumn extends TiColumnVector {
   protected DataType dataType;
-  protected int size;
+  private int numOfRows;
+  private int numOfNulls;
+  private byte[] nullBitMaps;
+  private ByteBuffer data;
+  private long dataAddr;
 
-  public TiChunkColumn(DataType dataType, int size) {
+  public TiChunkColumn(
+      DataType dataType, int numOfRows, int numOfNulls, byte[] nullBitMaps, ByteBuffer data) {
+    super(TypeMapping.toSparkType(dataType));
     this.dataType = dataType;
-    this.size = size;
-  }
-
-  public final DataType dataType() {
-    return dataType;
+    this.numOfRows = numOfRows;
+    this.numOfNulls = numOfNulls;
+    this.nullBitMaps = nullBitMaps;
+    this.data = data;
+    this.dataAddr = MemoryUtil.getAddress(data);
   }
 
   public final String typeName() {
-    return dataType().getType().name();
+    return dataType().typeName();
   }
 
-  public int size() {
-    return size;
+  public void free() {}
+
+  /**
+   * Cleans up memory for this column vector. The column vector is not usable after this.
+   *
+   * <p>This overwrites `AutoCloseable.close` to remove the `throws` clause, as column vector is
+   * in-memory and we don't expect any exception to happen during closing.
+   */
+  @Override
+  public void close() {}
+
+  /** Returns true if this column vector contains any null values. */
+  @Override
+  public boolean hasNull() {
+    return numOfNulls > 0;
   }
 
-  public abstract long byteCount();
-
-  public abstract void free();
-
-  public boolean empty() {
-    return size() == 0;
+  /** Returns the number of nulls in this column vector. */
+  @Override
+  public int numNulls() {
+    return numOfNulls;
   }
 
   public boolean isNullAt(int rowId) {
+    int nullByte = this.nullBitMaps[rowId / 8] & 0xff;
+    return (nullByte & (1 << (rowId) & 7)) == 0;
+  }
+
+  /**
+   * Returns the boolean type value for rowId. The return value is undefined and can be anything, if
+   * the slot for rowId is null.
+   */
+  @Override
+  public boolean getBoolean(int rowId) {
     return false;
   }
 
@@ -50,7 +80,7 @@ public abstract class TiChunkColumn {
   }
 
   public long getLong(int rowId) {
-    throw new UnsupportedOperationException();
+    return MemoryUtil.getLong(dataAddr);
   }
 
   public float getFloat(int rowId) {
@@ -61,6 +91,48 @@ public abstract class TiChunkColumn {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Returns the array type value for rowId. If the slot for rowId is null, it should return null.
+   *
+   * <p>To support array type, implementations must construct an {@link TiColumnarArray} and return
+   * it in this method. {@link TiColumnarArray} requires a {@link TiColumnVector} that stores the
+   * data of all the elements of all the arrays in this vector, and an offset and length which
+   * points to a range in that {@link TiColumnVector}, and the range represents the array for rowId.
+   * Implementations are free to decide where to put the data vector and offsets and lengths. For
+   * example, we can use the first child vector as the data vector, and store offsets and lengths in
+   * 2 int arrays in this vector.
+   */
+  @Override
+  public TiColumnarArray getArray(int rowId) {
+    return null;
+  }
+
+  /**
+   * Returns the map type value for rowId. If the slot for rowId is null, it should return null.
+   *
+   * <p>In Spark, map type value is basically a key data array and a value data array. A key from
+   * the key array with a index and a value from the value array with the same index contribute to
+   * an entry of this map type value.
+   *
+   * <p>To support map type, implementations must construct a {@link TiColumnarMap} and return it in
+   * this method. {@link TiColumnarMap} requires a {@link TiColumnVector} that stores the data of
+   * all the keys of all the maps in this vector, and another {@link TiColumnVector} that stores the
+   * data of all the values of all the maps in this vector, and a pair of offset and length which
+   * specify the range of the key/value array that belongs to the map type value at rowId.
+   */
+  @Override
+  public TiColumnarMap getMap(int ordinal) {
+    return null;
+  }
+
+  /**
+   * Returns the decimal type value for rowId. If the slot for rowId is null, it should return null.
+   */
+  @Override
+  public Decimal getDecimal(int rowId, int precision, int scale) {
+    return null;
+  }
+
   public Decimal getDecimal(int rowId) {
     throw new UnsupportedOperationException();
   }
@@ -69,49 +141,22 @@ public abstract class TiChunkColumn {
     throw new UnsupportedOperationException();
   }
 
-  public void insertDefault() {
-    size++;
+  /**
+   * Returns the binary type value for rowId. If the slot for rowId is null, it should return null.
+   */
+  @Override
+  public byte[] getBinary(int rowId) {
+    return new byte[0];
   }
 
-  public void insertNull() {
-    throw new UnsupportedOperationException();
-  }
-
-  public void insertByte(byte v) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void insertShort(short v) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void insertInt(int v) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void insertLong(long v) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void insertFloat(float v) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void insertDouble(double v) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void insertDecimal(Decimal v) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void insertUTF8String(UTF8String v) {
-    throw new UnsupportedOperationException();
+  /** @return child [[TiColumnVector]] at the given ordinal. */
+  @Override
+  protected TiColumnVector getChild(int ordinal) {
+    return null;
   }
 
   /**
    * After done with insertion, you should call this method to make the inserted data readable.
    * Mainly used to avoid frequently reallocating memory.
    */
-  public abstract TiChunkColumn seal();
 }

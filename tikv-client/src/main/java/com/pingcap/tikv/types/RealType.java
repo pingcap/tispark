@@ -23,6 +23,7 @@ import com.pingcap.tikv.codec.Codec.DecimalCodec;
 import com.pingcap.tikv.codec.Codec.RealCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.columnar.TiChunkColumn;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
@@ -54,6 +55,11 @@ public class RealType extends DataType {
       return RealCodec.readDouble(cdi);
     }
     throw new InvalidCodecFormatException("Invalid Flag type for float type: " + flag);
+  }
+
+  @Override
+  public TiChunkColumn decodeColumn(byte[] buffer) {
+    return null;
   }
 
   @Override

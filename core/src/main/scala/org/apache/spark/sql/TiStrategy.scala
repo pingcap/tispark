@@ -17,6 +17,7 @@ package org.apache.spark.sql
 
 import java.util.concurrent.TimeUnit
 
+import com.pingcap.tidb.tipb.EncodeType
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
@@ -98,6 +99,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
+  private def useArrowEncode(): Boolean =
+    sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
+
   private def timeZoneOffsetInSeconds(): Int = {
     val tz = DateTimeZone.getDefault
     val instant = DateTime.now.getMillis
@@ -105,6 +109,17 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val hours = TimeUnit.MILLISECONDS.toHours(offsetInMilliseconds).toInt
     val seconds = hours * 3600
     seconds
+  }
+
+  private def encodeType(): EncodeType = {
+    //TODO check enable arrow from config
+    if (useStreamingProcess()) {
+      EncodeType.TypeDefault
+    } else if (!useArrowEncode()) {
+      EncodeType.TypeDefault
+    } else {
+      EncodeType.TypeArrow
+    }
   }
 
   private def pushDownType(): PushDownType =
@@ -184,7 +199,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     groupByList: Seq[NamedExpression],
     aggregates: Seq[AggregateExpression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
+    dagRequest: TiDAGRequest =
+      new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
     aggregates.map { _.aggregateFunction }.foreach {
       case _: Average =>
@@ -275,7 +291,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     tiColumns: Seq[TiColumnRef],
     filters: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
+    dagRequest: TiDAGRequest =
+      new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
@@ -312,7 +329,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     source: TiDBRelation,
     sortOrder: Seq[SortOrder]
   ): SparkPlan = {
-    val request = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
+    val request = new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
     request.setLimit(limit)
     addSortOrder(request, sortOrder)
     pruneFilterProject(projectList, filterPredicates, source, request)
@@ -399,7 +416,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
+    dagRequest: TiDAGRequest =
+      new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
   ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))

@@ -20,6 +20,7 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.columnar.TiChunkColumn;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
@@ -85,6 +86,11 @@ public class SetType extends DataType {
     }
 
     return items.stream().collect(Collectors.joining(","));
+  }
+
+  @Override
+  public TiChunkColumn decodeColumn(byte[] buffer) {
+    return null;
   }
 
   @Override
