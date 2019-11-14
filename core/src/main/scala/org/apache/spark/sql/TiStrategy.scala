@@ -100,7 +100,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
   private def useArrowEncode(): Boolean =
-    sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
+    sqlConf.getConfString(TiConfigConst.ENABLE_ARROW, "false").toLowerCase.toBoolean
 
   private def timeZoneOffsetInSeconds(): Int = {
     val tz = DateTimeZone.getDefault

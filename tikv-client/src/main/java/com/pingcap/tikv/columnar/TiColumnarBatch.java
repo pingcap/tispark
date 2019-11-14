@@ -1,5 +1,7 @@
 package com.pingcap.tikv.columnar;
 
+import org.apache.spark.sql.vectorized.ColumnarBatch;
+
 /**
  * This class wraps multiple ColumnVectors as a row-wise table. It provides a row view of this batch
  * so that Spark can access the data row by row. Instance of it is meant to be reused during the
