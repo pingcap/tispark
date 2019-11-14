@@ -17,11 +17,8 @@
 
 package com.pingcap.tikv.columnar;
 
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.Decimal;
-import org.apache.spark.sql.vectorized.ColumnarArray;
-import org.apache.spark.unsafe.types.CalendarInterval;
-import org.apache.spark.unsafe.types.UTF8String;
+import com.pingcap.tikv.types.DataType;
+import java.math.BigDecimal;
 
 /**
  * An interface representing in-memory columnar data in Spark. This interface defines the main APIs
@@ -34,11 +31,6 @@ import org.apache.spark.unsafe.types.UTF8String;
  * <p>Spark only calls specific `get` method according to the data type of this {@link
  * TiColumnVector}, e.g. if it's int type, Spark is guaranteed to only call {@link #getInt(int)} or
  * {@link #getInts(int, int)}.
- *
- * <p>ColumnVector supports all the data types including nested types. To handle nested types,
- * ColumnVector can have children and is a tree structure. Please refer to {@link #getStruct(int)},
- * {@link #getArray(int)} and {@link #getMap(int)} for the details about how to implement nested
- * types.
  *
  * <p>ColumnVector is expected to be reused during the entire data loading process, to avoid
  * allocating memory again and again.
@@ -200,83 +192,21 @@ public abstract class TiColumnVector implements AutoCloseable {
   }
 
   /**
-   * Returns the struct type value for rowId. If the slot for rowId is null, it should return null.
-   *
-   * <p>To support struct type, implementations must implement {@link #getChild(int)} and make this
-   * vector a tree structure. The number of child vectors must be same as the number of fields of
-   * the struct type, and each child vector is responsible to store the data for its corresponding
-   * struct field.
-   */
-  public final TiColumnarRow getStruct(int rowId) {
-    if (isNullAt(rowId)) return null;
-    return new TiColumnarRow(this, rowId);
-  }
-
-  /**
-   * Returns the array type value for rowId. If the slot for rowId is null, it should return null.
-   *
-   * <p>To support array type, implementations must construct an {@link ColumnarArray} and return it
-   * in this method. {@link TiColumnarArray} requires a {@link TiColumnVector} that stores the data
-   * of all the elements of all the arrays in this vector, and an offset and length which points to
-   * a range in that {@link TiColumnVector}, and the range represents the array for rowId.
-   * Implementations are free to decide where to put the data vector and offsets and lengths. For
-   * example, we can use the first child vector as the data vector, and store offsets and lengths in
-   * 2 int arrays in this vector.
-   */
-  public abstract TiColumnarArray getArray(int rowId);
-
-  /**
-   * Returns the map type value for rowId. If the slot for rowId is null, it should return null.
-   *
-   * <p>In Spark, map type value is basically a key data array and a value data array. A key from
-   * the key array with a index and a value from the value array with the same index contribute to
-   * an entry of this map type value.
-   *
-   * <p>To support map type, implementations must construct a {@link TiColumnarMap} and return it in
-   * this method. {@link TiColumnarMap} requires a {@link TiColumnVector} that stores the data of
-   * all the keys of all the maps in this vector, and another {@link TiColumnVector} that stores the
-   * data of all the values of all the maps in this vector, and a pair of offset and length which
-   * specify the range of the key/value array that belongs to the map type value at rowId.
-   */
-  public abstract TiColumnarMap getMap(int ordinal);
-
-  /**
    * Returns the decimal type value for rowId. If the slot for rowId is null, it should return null.
    */
-  public abstract Decimal getDecimal(int rowId, int precision, int scale);
+  public abstract BigDecimal getDecimal(int rowId, int precision, int scale);
 
   /**
    * Returns the string type value for rowId. If the slot for rowId is null, it should return null.
    * Note that the returned UTF8String may point to the data of this column vector, please copy it
    * if you want to keep it after this column vector is freed.
    */
-  public abstract UTF8String getUTF8String(int rowId);
+  public abstract String getUTF8String(int rowId);
 
   /**
    * Returns the binary type value for rowId. If the slot for rowId is null, it should return null.
    */
   public abstract byte[] getBinary(int rowId);
-
-  /**
-   * Returns the calendar interval type value for rowId. If the slot for rowId is null, it should
-   * return null.
-   *
-   * <p>In Spark, calendar interval type value is basically an integer value representing the number
-   * of months in this interval, and a long value representing the number of microseconds in this
-   * interval. An interval type vector is the same as a struct type vector with 2 fields: `months`
-   * and `microseconds`.
-   *
-   * <p>To support interval type, implementations must implement {@link #getChild(int)} and define 2
-   * child vectors: the first child vector is an int type vector, containing all the month values of
-   * all the interval values in this vector. The second child vector is a long type vector,
-   * containing all the microsecond values of all the interval values in this vector.
-   */
-  public final CalendarInterval getInterval(int rowId) {
-    if (isNullAt(rowId)) return null;
-    final int months = getChild(0).getInt(rowId);
-    final long microseconds = getChild(1).getLong(rowId);
-    return new CalendarInterval(months, microseconds);
-  }
 
   /** @return child [[TiColumnVector]] at the given ordinal. */
   protected abstract TiColumnVector getChild(int ordinal);

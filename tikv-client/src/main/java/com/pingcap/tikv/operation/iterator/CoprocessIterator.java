@@ -32,7 +32,6 @@ import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
-import com.pingcap.tikv.util.TypeMapping;
 import java.util.Iterator;
 import java.util.List;
 
@@ -123,8 +122,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
           }
           RowwiseTiColumnarVector[] columnarVectors = new RowwiseTiColumnarVector[dataTypes.length];
           for (int i = 0; i < dataTypes.length; i++) {
-            columnarVectors[i] =
-                new RowwiseTiColumnarVector(TypeMapping.toSparkType(dataTypes[i]), i, rows);
+            columnarVectors[i] = new RowwiseTiColumnarVector(dataTypes[i], i, rows);
           }
           TiColumnarBatch batch = new TiColumnarBatch(columnarVectors);
           batch.setNumRows(count);

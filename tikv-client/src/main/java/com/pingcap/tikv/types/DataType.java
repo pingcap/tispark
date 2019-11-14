@@ -16,6 +16,7 @@
 package com.pingcap.tikv.types;
 
 import static com.pingcap.tikv.codec.Codec.isNullFlag;
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -31,6 +32,7 @@ import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.List;
 import org.joda.time.DateTimeZone;
 
@@ -187,22 +189,55 @@ public abstract class DataType implements Serializable {
 
   protected abstract Object decodeNotNull(int flag, CodecDataInput cdi);
 
+  private int getFixLen() {
+    switch (this.getType()) {
+      case TypeFloat:
+        return 4;
+      case TypeTiny:
+      case TypeShort:
+      case TypeInt24:
+      case TypeLong:
+      case TypeDouble:
+      case TypeYear:
+      case TypeDuration:
+        return 8;
+      case TypeDecimal:
+        throw new UnsupportedOperationException(
+            "this should not get involved in calculation process ");
+      case TypeTimestamp:
+      case TypeDate:
+      case TypeDatetime:
+        return 16;
+      default:
+        return -1;
+    }
+  }
+
   public TiChunkColumn decodeColumn(CodecDataInput cdi) {
-    int numRows = 0;
-    int numNulls = 0;
+    int numRows = Integer.reverseBytes(cdi.readInt());
+    int numNulls = Integer.reverseBytes(cdi.readInt());
     int numNullBitmapBytes = (numRows + 7) / 8;
-    // first int is col's length
-    // second int is col's null count
-    // if null count is not 0
-    // int numNullBitmapBytes = (col.length + 7) / 8
-    // buffer(0, numNullBitmapBytes) ->
-    // if null count is 0, set all data is not null
-    // int numFixedBytes = getFixLen
-    // int numDataBytes =  numFixedBytes * col.length
-    // if elebuf's length is smaller than  numFixedBytes
-    // copy buffer[numNullBitmapBytes,numDataBytes] to column
-    // TODO make it work
-    return new TiChunkColumn(this, numRows, numNulls, null, null);
+    byte[] nullBitMaps = new byte[numNullBitmapBytes];
+    if (numNulls > 0) {
+      cdi.readFully(nullBitMaps);
+    } else {
+      // TODO: consider all not null later
+      // 	for i := 0; i < numNullBitmapBytes; {
+      //		numAppendBytes := mathutil.Min(numNullBitmapBytes-i, cap(allNotNullBitmap))
+      //		col.nullBitmap = append(col.nullBitmap, allNotNullBitmap[:numAppendBytes]...)
+      //		i += numAppendBytes
+      //	}
+    }
+
+    int numFixedBytes = getFixLen();
+    int numDataBytes = numFixedBytes * numRows;
+
+    // TODO this costs a lot, we need to find a way to avoid.
+    byte[] dataBuffer = new byte[numDataBytes];
+    cdi.readFully(dataBuffer);
+    ByteBuffer buffer = ByteBuffer.wrap(dataBuffer);
+    buffer.order(LITTLE_ENDIAN);
+    return new TiChunkColumn(this, numRows, numNulls, nullBitMaps, buffer);
   }
   /**
    * decode value from row which is nothing.

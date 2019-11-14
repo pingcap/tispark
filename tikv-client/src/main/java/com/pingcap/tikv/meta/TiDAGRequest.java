@@ -53,7 +53,6 @@ import org.tikv.kvproto.Coprocessor;
  * <p>Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
-
   public static class Builder {
     private List<String> requiredCols = new ArrayList<>();
     private List<Expression> filters = new ArrayList<>();
@@ -161,6 +160,11 @@ public class TiDAGRequest implements Serializable {
 
   public boolean getUseTiFlash() {
     return useTiFlash;
+  }
+
+  public TiDAGRequest(PushDownType pushDownType) {
+    this.pushDownType = pushDownType;
+    this.encodeType = EncodeType.TypeDefault;
   }
 
   public TiDAGRequest(PushDownType pushDownType, EncodeType encodeType) {

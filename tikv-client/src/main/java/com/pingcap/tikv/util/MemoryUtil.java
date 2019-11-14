@@ -11,7 +11,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import org.apache.hadoop.hdfs.BlockReader;
-import org.apache.spark.sql.types.Decimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Cleaner;
@@ -195,8 +194,8 @@ public class MemoryUtil {
     unsafe.putInt(address, l);
   }
 
-  public static void setDecimal(long address, Decimal v, int scale) {
-    BigDecimal bigDec = v.toJavaBigDecimal();
+  public static void setDecimal(long address, BigDecimal v, int scale) {
+    BigDecimal bigDec = v;
     BigInteger bigInt = bigDec.scaleByPowerOfTen(scale).toBigInteger();
     byte[] arr = bigInt.toByteArray();
     for (int i = 0; i < arr.length; i++) {
@@ -204,8 +203,8 @@ public class MemoryUtil {
     }
   }
 
-  public static void setDecimal256(long address, Decimal v, int scale) {
-    BigDecimal bigDec = v.toJavaBigDecimal();
+  public static void setDecimal256(long address, BigDecimal v, int scale) {
+    BigDecimal bigDec = v;
     BigInteger bigInt = bigDec.scaleByPowerOfTen(scale).toBigInteger();
     int sign = 0;
     if (bigInt.signum() < 0) {
@@ -252,29 +251,29 @@ public class MemoryUtil {
     return unsafe.getInt(address);
   }
 
-  public static Decimal getDecimal32(long address, int scale) {
+  public static BigDecimal getDecimal32(long address, int scale) {
     int n = getInt(address);
     BigInteger dec = BigInteger.valueOf(n);
-    return Decimal.apply(new BigDecimal(dec, scale));
+    return new BigDecimal(dec, scale);
   }
 
-  public static Decimal getDecimal64(long address, int scale) {
+  public static BigDecimal getDecimal64(long address, int scale) {
     long n = getLong(address);
     BigInteger dec = BigInteger.valueOf(n);
-    return Decimal.apply(new BigDecimal(dec, scale));
+    return new BigDecimal(dec, scale);
   }
 
-  public static Decimal getDecimal128(long address, int scale) {
+  public static BigDecimal getDecimal128(long address, int scale) {
     UnsignedLong n0 = UnsignedLong.fromLongBits(getLong(address));
     long n1 = getLong(address + 8);
 
     BigInteger dec = BigInteger.valueOf(n1);
     dec = dec.shiftLeft(64).add(n0.bigIntegerValue());
-    return Decimal.apply(new BigDecimal(dec, scale));
+    return new BigDecimal(dec, scale);
   }
 
-  public static Decimal getDecimal256(long address, int scale) {
-    int limbs = (int) getShort(address + 32);
+  public static BigDecimal getDecimal256(long address, int scale) {
+    int limbs = getShort(address + 32);
     BigInteger dec = BigInteger.ZERO;
     for (int i = limbs - 1; i >= 0; i--) {
       UnsignedLong d = UnsignedLong.fromLongBits(unsafe.getLong(address + i * 8));
@@ -283,9 +282,9 @@ public class MemoryUtil {
     int sign = unsafe.getByte(address + 34);
     BigDecimal result = new BigDecimal(dec, scale);
     if (sign > 0) {
-      return Decimal.apply(result.negate());
+      return result.negate();
     }
-    return Decimal.apply(result);
+    return result;
   }
 
   public static long getLong(long address) {
