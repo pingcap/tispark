@@ -205,10 +205,9 @@ object TiUtil {
       tiConf.setUseTiFlash(conf.get(TiConfigConst.USE_TIFLASH).toBoolean)
     }
 
-    if (conf.contains(TiConfigConst.USE_COLUMNAR)) {
-      tiConf.setUseColumnar(conf.get(TiConfigConst.USE_TIFLASH).toBoolean)
+    if (conf.contains(TiConfigConst.ENABLE_ARROW)) {
+      tiConf.setEnableArrow(conf.get(TiConfigConst.ENABLE_ARROW).toBoolean)
     }
-
     if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {
       tiConf.setDowngradeThreshold(
         conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt
