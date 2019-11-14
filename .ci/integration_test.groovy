@@ -150,14 +150,14 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             killall -9 tikv-server || true
                             killall -9 pd-server || true
                             sleep 10
-                            bin/pd-server --name=pd --data-dir=pd &>pd.log &
+                            bin/pd-server --name=pd --data-dir=pd --config=go/src/github.com/pingcap/tispark/config/pd.toml &>pd.log &
                             sleep 10
-                            bin/tikv-server --pd=127.0.0.1:2379 -s tikv --addr=0.0.0.0:20160 --advertise-addr=127.0.0.1:20160 &>tikv.log &
+                            bin/tikv-server --pd=127.0.0.1:2379 -s tikv --addr=0.0.0.0:20160 --advertise-addr=127.0.0.1:20160 --config=go/src/github.com/pingcap/tispark/config/tikv.toml &>tikv.log &
                             sleep 10
                             ps aux | grep '-server' || true
                             curl -s 127.0.0.1:2379/pd/api/v1/status || true
-                            bin/tidb-server --store=tikv --path="127.0.0.1:2379" &>tidb.log &
-                            sleep 20
+                            bin/tidb-server --store=tikv --path="127.0.0.1:2379" --config=go/src/github.com/pingcap/tispark/config/tidb.toml &>tidb.log &
+                            sleep 60
                             """
     
                             timeout(60) {
@@ -205,3 +205,4 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
 }
 
 return this
+
