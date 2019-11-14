@@ -53,6 +53,10 @@ public class TiChunkColumn extends TiColumnVector {
     return numOfNulls;
   }
 
+  public int numOfRows() {
+    return numOfRows;
+  }
+
   public boolean isNullAt(int rowId) {
     int nullByte = this.nullBitMaps[rowId / 8] & 0xff;
     return (nullByte & (1 << (rowId) & 7)) == 0;

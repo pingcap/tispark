@@ -57,7 +57,7 @@ public class DecimalType extends DataType {
   }
 
   @Override
-  public TiChunkColumn decodeColumn(byte[] buffer) {
+  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
     return null;
   }
 

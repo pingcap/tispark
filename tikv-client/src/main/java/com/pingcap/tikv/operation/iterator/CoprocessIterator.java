@@ -19,9 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
+import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.RowwiseTiColumnarVector;
+import com.pingcap.tikv.columnar.TiChunkColumn;
 import com.pingcap.tikv.columnar.TiColumnarBatch;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
@@ -111,21 +113,30 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
       @Override
       public TiColumnarBatch next() {
         DataType[] dataTypes = this.schemaInfer.getTypes().toArray(new DataType[0]);
-        Row[] rows = new Row[1024];
-        int count = 0;
-        for (int i = 0; i < rows.length && hasNext(); i++) {
-          rows[i] = rowReader.readRow(dataTypes);
-          count += 1;
+        if(dagRequest.getEncodeType() == EncodeType.TypeDefault) {
+          Row[] rows = new Row[1024];
+          int count = 0;
+          for (int i = 0; i < rows.length && hasNext(); i++) {
+            rows[i] = rowReader.readRow(dataTypes);
+            count += 1;
+          }
+          RowwiseTiColumnarVector[] columnarVectors = new RowwiseTiColumnarVector[dataTypes.length];
+          for (int i = 0; i < dataTypes.length; i++) {
+            columnarVectors[i] =
+                new RowwiseTiColumnarVector(TypeMapping.toSparkType(dataTypes[i]), i, rows);
+          }
+          TiColumnarBatch batch = new TiColumnarBatch(columnarVectors);
+          batch.setNumRows(count);
+          return batch;
+        } else {
+          TiChunkColumn[] tiChunkColumns = new TiChunkColumn[dataTypes.length];
+          for(int i = 0; i < dataTypes.length; i ++) {
+            tiChunkColumns[i] = dataTypes[i].decodeColumn(dataInput);
+          }
+          TiColumnarBatch batch = new TiColumnarBatch(tiChunkColumns);
+          batch.setNumRows(tiChunkColumns[0].numOfRows());
+          return batch;
         }
-        RowwiseTiColumnarVector[] columnarVectors = new RowwiseTiColumnarVector[dataTypes.length];
-
-        for (int i = 0; i < dataTypes.length; i++) {
-          columnarVectors[i] =
-              new RowwiseTiColumnarVector(TypeMapping.toSparkType(dataTypes[i]), i, rows);
-        }
-        TiColumnarBatch batch = new TiColumnarBatch(columnarVectors);
-        batch.setNumRows(count);
-        return batch;
       }
     };
   }

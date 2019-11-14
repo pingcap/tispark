@@ -99,7 +99,7 @@ public class DateType extends AbstractDateTimeType {
   }
 
   @Override
-  public TiChunkColumn decodeColumn(byte[] buffer) {
+  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
     return null;
   }
 }

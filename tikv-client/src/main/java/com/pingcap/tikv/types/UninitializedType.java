@@ -48,7 +48,7 @@ public class UninitializedType extends DataType {
   }
 
   @Override
-  public TiChunkColumn decodeColumn(byte[] buffer) {
+  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
     throw new UnsupportedOperationException(
         "UninitializedType cannot be applied in calculation process.");
   }

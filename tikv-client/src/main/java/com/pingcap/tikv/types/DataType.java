@@ -187,7 +187,7 @@ public abstract class DataType implements Serializable {
 
   protected abstract Object decodeNotNull(int flag, CodecDataInput cdi);
 
-  public abstract TiChunkColumn decodeColumn(byte[] buffer);
+  public abstract TiChunkColumn decodeColumn(CodecDataInput cdi);
   /**
    * decode value from row which is nothing.
    *

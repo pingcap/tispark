@@ -67,7 +67,7 @@ public class TimeType extends DataType {
   }
 
   @Override
-  public TiChunkColumn decodeColumn(byte[] buffer) {
+  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
     return null;
   }
 

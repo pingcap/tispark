@@ -111,7 +111,10 @@ public class IntegerType extends DataType {
   }
 
   @Override
-  public TiChunkColumn decodeColumn(byte[] buffer) {
+  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
+    int numRows = 0;
+    int numNulls = 0;
+    int numNullBitmapBytes = (numRows + 7) / 8;
     // first int is col's length
     // second int is col's null count
     // if null count is not 0
@@ -122,7 +125,8 @@ public class IntegerType extends DataType {
     // int numDataBytes =  numFixedBytes * col.length
     // if elebuf's length is smaller than  numFixedBytes
     // copy buffer[numNullBitmapBytes,numDataBytes] to column
-    return null;
+    // TODO make it work
+    return new TiChunkColumn(this, numRows, numNulls, null, null);
   }
 
   /** {@inheritDoc} */
