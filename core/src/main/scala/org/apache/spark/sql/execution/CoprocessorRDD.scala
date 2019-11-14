@@ -146,11 +146,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
   private val callBackFunc: CacheInvalidateListener = CacheInvalidateListener.getInstance()
 
   override protected def doExecute(): RDD[InternalRow] = {
-    if (tiConf.isUseColumnar) {
-      WholeStageCodegenExec(this)(codegenStageId = 0).execute()
-    } else {
-      inputRDD()
-    }
+    WholeStageCodegenExec(this)(codegenStageId = 0).execute()
   }
 
   def fetchTableResultsFromHandles(

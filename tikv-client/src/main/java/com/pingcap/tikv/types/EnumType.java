@@ -20,7 +20,6 @@ import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.columnar.TiChunkColumn;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
@@ -109,11 +108,6 @@ public class EnumType extends DataType {
     if (idx < 0 || idx >= this.getElems().size())
       throw new TypeException("Index is out of range, better " + "take a look at tidb side.");
     return this.getElems().get(idx);
-  }
-
-  @Override
-  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
-    return null;
   }
 
   /** {@inheritDoc} Enum is encoded as unsigned int64 with its 0-based value. */

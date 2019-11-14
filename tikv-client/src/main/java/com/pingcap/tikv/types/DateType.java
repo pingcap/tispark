@@ -20,7 +20,6 @@ package com.pingcap.tikv.types;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.columnar.TiChunkColumn;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -96,10 +95,5 @@ public class DateType extends AbstractDateTimeType {
     }
     // return how many days from EPOCH
     return date.toDate().getTime() / (24 * 60 * 60 * 1000);
-  }
-
-  @Override
-  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
-    return null;
   }
 }

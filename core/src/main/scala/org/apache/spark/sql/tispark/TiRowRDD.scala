@@ -113,11 +113,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
       private val snapshot = session.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 
-      private val iterator = if (tiConf.isUseColumnar) {
-        snapshot.tableReadChunk(dagRequest, tasks)
-      } else {
-        snapshot.tableReadRow(dagRequest, tasks)
-      }
+      private val iterator = snapshot.tableReadChunk(dagRequest, tasks)
 
       override def hasNext: Boolean = {
         // Kill the task in case it has been marked as killed. This logic is from
@@ -129,13 +125,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
         iterator.hasNext
       }
 
-      override def next(): Any =
-        if (tiConf.isUseColumnar) {
-          iterator.next
-        } else {
-          val sparkRow = TiConverter.toSparkRow(iterator.next.asInstanceOf[TiRow], rowTransformer)
-          TiUtil.rowToInternalRow(sparkRow, outputTypes, converters)
-        }
+      override def next(): Any = iterator.next
     }.asInstanceOf[Iterator[InternalRow]]
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =

@@ -23,7 +23,6 @@ import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.columnar.TiChunkColumn;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -88,11 +87,6 @@ public class TimestampType extends AbstractDateTimeType {
       return 0L;
     }
     return extendedDateTime.toTimeStamp().getTime() * 1000;
-  }
-
-  @Override
-  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
-    return null;
   }
 
   @Override

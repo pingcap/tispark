@@ -6,7 +6,6 @@ import com.google.gson.*;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.columnar.TiChunkColumn;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -63,11 +62,6 @@ public class JsonType extends DataType {
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     byte type = readByte(cdi);
     return parseValue(type, cdi).toString();
-  }
-
-  @Override
-  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
-    return null;
   }
 
   @Override

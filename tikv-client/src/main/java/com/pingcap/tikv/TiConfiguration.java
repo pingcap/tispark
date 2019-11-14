@@ -286,14 +286,6 @@ public class TiConfiguration implements Serializable {
     this.tiFlashLabelValue = tiFlashLabelValue;
   }
 
-  public boolean isUseColumnar() {
-    return useColumnar;
-  }
-
-  public void setUseColumnar(boolean useColumnar) {
-    this.useColumnar = useColumnar;
-  }
-
   public int getDowngradeThreshold() {
     return downgradeThreshold;
   }

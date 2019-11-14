@@ -187,7 +187,23 @@ public abstract class DataType implements Serializable {
 
   protected abstract Object decodeNotNull(int flag, CodecDataInput cdi);
 
-  public abstract TiChunkColumn decodeColumn(CodecDataInput cdi);
+  public TiChunkColumn decodeColumn(CodecDataInput cdi) {
+    int numRows = 0;
+    int numNulls = 0;
+    int numNullBitmapBytes = (numRows + 7) / 8;
+    // first int is col's length
+    // second int is col's null count
+    // if null count is not 0
+    // int numNullBitmapBytes = (col.length + 7) / 8
+    // buffer(0, numNullBitmapBytes) ->
+    // if null count is 0, set all data is not null
+    // int numFixedBytes = getFixLen
+    // int numDataBytes =  numFixedBytes * col.length
+    // if elebuf's length is smaller than  numFixedBytes
+    // copy buffer[numNullBitmapBytes,numDataBytes] to column
+    // TODO make it work
+    return new TiChunkColumn(this, numRows, numNulls, null, null);
+  }
   /**
    * decode value from row which is nothing.
    *

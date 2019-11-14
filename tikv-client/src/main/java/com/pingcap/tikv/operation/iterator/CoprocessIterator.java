@@ -114,7 +114,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
       public TiColumnarBatch next() {
         DataType[] dataTypes = this.schemaInfer.getTypes().toArray(new DataType[0]);
         // TODO tiColumnarBatch is meant to be reused in the entire data loading process.
-        if(dagRequest.getEncodeType() == EncodeType.TypeDefault) {
+        if (dagRequest.getEncodeType() == EncodeType.TypeDefault) {
           Row[] rows = new Row[1024];
           int count = 0;
           for (int i = 0; i < rows.length && hasNext(); i++) {
@@ -131,7 +131,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
           return batch;
         } else {
           TiChunkColumn[] tiChunkColumns = new TiChunkColumn[dataTypes.length];
-          for(int i = 0; i < dataTypes.length; i ++) {
+          for (int i = 0; i < dataTypes.length; i++) {
             tiChunkColumns[i] = dataTypes[i].decodeColumn(dataInput);
           }
           TiColumnarBatch batch = new TiColumnarBatch(tiChunkColumns);
