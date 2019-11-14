@@ -26,8 +26,8 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.utils.TiConverter._
-import com.pingcap.tispark.utils.{TiConverter, TiUtil}
+import org.apache.spark.sql.execution.TiConverter._
+import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
@@ -37,7 +37,7 @@ import org.apache.spark.sql.catalyst.expressions.{Alias, Ascending, Attribute, A
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution._
+import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, _}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.joda.time.{DateTime, DateTimeZone}
@@ -171,7 +171,11 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       if (dagRequest.isDoubleRead) {
         source.dagRequestToRegionTaskExec(dagRequest, output)
       } else {
-        CoprocessorRDD(output, source.logicalPlanToRDD(dagRequest))
+        ColumnarCoprocessorRDD(
+          output,
+          source.logicalPlanToRDD(dagRequest, output),
+          fetchHandle = false
+        )
       }
     }
   }

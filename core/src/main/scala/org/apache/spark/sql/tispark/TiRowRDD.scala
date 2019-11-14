@@ -22,19 +22,22 @@ import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.{TiConverter, TiUtil}
-import com.pingcap.tispark.{TiConfigConst, TiPartition, TiTableReference}
-import org.apache.spark.sql.{Row, SparkSession}
+import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.{TiPartition, TiTableReference}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
+import org.apache.spark.sql.execution.TiConverter
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.slf4j.Logger
 import org.tikv.kvproto.Coprocessor.KeyRange
-import org.tikv.kvproto.Metapb
 
 import scala.collection.JavaConversions._
 
 class TiRowRDD(override val dagRequest: TiDAGRequest,
                override val physicalId: Long,
                override val tiConf: TiConfiguration,
+               val output: Seq[Attribute],
                override val tableRef: TiTableReference,
                @transient private val session: TiSession,
                @transient private val sparkSession: SparkSession)
@@ -95,31 +98,45 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
   // cache invalidation call back function
   // used for driver to update PD cache
   private val callBackFunc = CacheInvalidateListener.getInstance()
+  private val outputTypes = output.map(_.dataType)
+  private val converters =
+    outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
 
-  override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
-    dagRequest.resolve()
+  override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
+    new Iterator[Any] {
+      dagRequest.resolve()
 
-    // bypass, sum return a long type
-    private val tiPartition = split.asInstanceOf[TiPartition]
-    private val session = TiSession.getInstance(tiConf)
-    session.injectCallBackFunc(callBackFunc)
-    private val snapshot = session.createSnapshot(dagRequest.getStartTs)
-    private[this] val tasks = tiPartition.tasks
+      // bypass, sum return a long type
+      private val tiPartition = split.asInstanceOf[TiPartition]
+      private val session = TiSession.getInstance(tiConf)
+      session.injectCallBackFunc(callBackFunc)
+      private val snapshot = session.createSnapshot(dagRequest.getStartTs)
+      private[this] val tasks = tiPartition.tasks
 
-    private val iterator = snapshot.tableRead(dagRequest, tasks)
-
-    override def hasNext: Boolean = {
-      // Kill the task in case it has been marked as killed. This logic is from
-      // Interrupted Iterator, but we inline it here instead of wrapping the iterator in order
-      // to avoid performance overhead.
-      if (context.isInterrupted()) {
-        throw new TaskKilledException
+      private val iterator = if (tiConf.isUseColumnar) {
+        snapshot.tableReadChunk(dagRequest, tasks)
+      } else {
+        snapshot.tableReadRow(dagRequest, tasks)
       }
-      iterator.hasNext
-    }
 
-    override def next(): Row = TiConverter.toSparkRow(iterator.next, rowTransformer)
-  }
+      override def hasNext: Boolean = {
+        // Kill the task in case it has been marked as killed. This logic is from
+        // Interrupted Iterator, but we inline it here instead of wrapping the iterator in order
+        // to avoid performance overhead.
+        if (context.isInterrupted()) {
+          throw new TaskKilledException
+        }
+        iterator.hasNext
+      }
+
+      override def next(): Any =
+        if (tiConf.isUseColumnar) {
+          iterator.next
+        } else {
+          val sparkRow = TiConverter.toSparkRow(iterator.next.asInstanceOf[TiRow], rowTransformer)
+          TiUtil.rowToInternalRow(sparkRow, outputTypes, converters)
+        }
+    }.asInstanceOf[Iterator[InternalRow]]
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =
     split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil

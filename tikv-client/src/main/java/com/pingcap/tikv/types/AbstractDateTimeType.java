@@ -10,7 +10,6 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
-import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 
 public abstract class AbstractDateTimeType extends DataType {
@@ -21,9 +20,6 @@ public abstract class AbstractDateTimeType extends DataType {
   AbstractDateTimeType(MySQLType tp) {
     super(tp);
   }
-
-  /** Return timezone used for encoding and decoding */
-  protected abstract DateTimeZone getTimezone();
 
   /**
    * Decode DateTime from packed long value In TiDB / MySQL, timestamp type is converted to UTC and
