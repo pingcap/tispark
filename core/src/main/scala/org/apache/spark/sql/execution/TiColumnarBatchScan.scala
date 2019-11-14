@@ -1,6 +1,7 @@
 package org.apache.spark.sql.execution
 
 import com.pingcap.tikv.columnar.{TiColumnVector, TiColumnarBatch}
+import com.pingcap.tikv.columnar.ColumnarChunkAdapter
 import org.apache.spark.sql.catalyst.expressions.UnsafeRow
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, ExprCode}
 import org.apache.spark.sql.execution.metric.SQLMetrics
@@ -8,7 +9,7 @@ import org.apache.spark.sql.types.DataType
 
 /**
  * Helper trait for abstracting scan functionality using
- * [[com.pingcap.tikv.columnar.TiColumnarBatch]]es.
+ * [[TiColumnarBatch]]es.
  */
 trait TiColumnarBatchScan extends CodegenSupport {
 
@@ -20,8 +21,8 @@ trait TiColumnarBatchScan extends CodegenSupport {
   )
 
   /**
-   * Generate [[com.pingcap.tikv.columnar.TiColumnVector]] expressions for our parent to consume as rows.
-   * This is called once per [[com.pingcap.tikv.columnar.TiColumnarBatch]].
+   * Generate [[TiColumnVector]] expressions for our parent to consume as rows.
+   * This is called once per [[TiColumnarBatch]].
    */
   private def genCodeColumnVector(ctx: CodegenContext,
                                   columnVar: String,
@@ -45,7 +46,7 @@ trait TiColumnarBatchScan extends CodegenSupport {
   }
 
   /**
-   * Produce code to process the input iterator as [[com.pingcap.tikv.columnar.TiColumnarBatch]]es.
+   * Produce code to process the input iterator as [[TiColumnarBatch]]es.
    * This produces an [[UnsafeRow]] for each row in each batch.
    */
   override protected def doProduce(ctx: CodegenContext): String = {
@@ -61,7 +62,7 @@ trait TiColumnarBatchScan extends CodegenSupport {
     val batch = ctx.addMutableState(chBatchClz, "batch")
 
     val idx = ctx.addMutableState(ctx.JAVA_INT, "batchIdx")
-    val columnVectorClz = classOf[TiColumnVector].getName
+    val columnVectorClz = classOf[ColumnarChunkAdapter].getName
     val (colVars, columnAssigns) = output.indices.map {
       case i =>
         val name = ctx.addMutableState(columnVectorClz, s"colInstance$i")

@@ -16,18 +16,18 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
+import com.pingcap.tikv.columnar.TiColumnarBatch
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
+import com.pingcap.tikv.columnar.ColumnarChunkAdapter
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
-import org.apache.spark.sql.execution.TiConverter
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.slf4j.Logger
 import org.tikv.kvproto.Coprocessor.KeyRange
@@ -125,7 +125,10 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
         iterator.hasNext
       }
 
-      override def next(): Any = iterator.next
+      override def next(): TiColumnarBatch = {
+        val columnVectors = iterator.next
+        new TiColumnarBatch(columnVectors.map(new ColumnarChunkAdapter(_)))
+      }
     }.asInstanceOf[Iterator[InternalRow]]
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =

@@ -18,6 +18,7 @@ package com.pingcap.tispark.utils
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService, TimeUnit}
 
+import com.pingcap.tikv.datatype.TypeMapping
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tikv.expression.ExpressionBlacklist
 import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
@@ -131,7 +132,7 @@ object TiUtil {
         .build()
       fields(i) = StructField(
         col.getName,
-        TiConverter.toSparkDataType(col.getType),
+        TypeMapping.toSparkType(col.getType),
         nullable = !notNull,
         metadata
       )
