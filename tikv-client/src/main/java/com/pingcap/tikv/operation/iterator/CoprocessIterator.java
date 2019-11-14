@@ -21,6 +21,8 @@ import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.codec.CodecDataInput;
+import com.pingcap.tikv.columnar.RowwiseTiColumnarVector;
+import com.pingcap.tikv.columnar.TiColumnarBatch;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
@@ -28,6 +30,7 @@ import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import com.pingcap.tikv.util.TypeMapping;
 import java.util.Iterator;
 import java.util.List;
 
@@ -80,6 +83,49 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
       @Override
       public Row next() {
         return rowReader.readRow(schemaInfer.getTypes().toArray(new DataType[0]));
+      }
+    };
+  }
+
+  /**
+   * Build a DAGIterator from TiDAGRequest and region tasks to get rows
+   *
+   * <p>When we are preforming a scan request using coveringIndex, {@link
+   * com.pingcap.tidb.tipb.IndexScan} should be used to read index rows. In other circumstances,
+   * {@link com.pingcap.tidb.tipb.TableScan} is used to scan table rows.
+   *
+   * @param req TiDAGRequest built
+   * @param regionTasks a list or RegionTask each contains a task on a single region
+   * @param session TiSession
+   * @return a DAGIterator to be processed
+   */
+  public static CoprocessIterator<TiColumnarBatch> getColumnarBatchIterator(
+      TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
+    TiDAGRequest dagRequest = req.copy();
+    return new DAGIterator<TiColumnarBatch>(
+        dagRequest.buildTableScan(),
+        regionTasks,
+        session,
+        SchemaInfer.create(dagRequest),
+        dagRequest.getPushDownType()) {
+      @Override
+      public TiColumnarBatch next() {
+        DataType[] dataTypes = this.schemaInfer.getTypes().toArray(new DataType[0]);
+        Row[] rows = new Row[1024];
+        int count = 0;
+        for (int i = 0; i < rows.length && hasNext(); i++) {
+          rows[i] = rowReader.readRow(dataTypes);
+          count += 1;
+        }
+        RowwiseTiColumnarVector[] columnarVectors = new RowwiseTiColumnarVector[dataTypes.length];
+
+        for (int i = 0; i < dataTypes.length; i++) {
+          columnarVectors[i] =
+              new RowwiseTiColumnarVector(TypeMapping.toSparkType(dataTypes[i]), i, rows);
+        }
+        TiColumnarBatch batch = new TiColumnarBatch(columnarVectors);
+        batch.setNumRows(count);
+        return batch;
       }
     };
   }

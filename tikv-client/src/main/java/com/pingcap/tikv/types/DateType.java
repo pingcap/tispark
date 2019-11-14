@@ -40,7 +40,7 @@ public class DateType extends AbstractDateTimeType {
   }
 
   @Override
-  protected DateTimeZone getTimezone() {
+  public DateTimeZone getTimezone() {
     return Converter.getLocalTimezone();
   }
 
@@ -87,11 +87,13 @@ public class DateType extends AbstractDateTimeType {
 
   /** {@inheritDoc} */
   @Override
-  protected Date decodeNotNull(int flag, CodecDataInput cdi) {
+  protected Long decodeNotNull(int flag, CodecDataInput cdi) {
     LocalDate date = decodeDate(flag, cdi);
+
     if (date == null) {
       return null;
     }
-    return new Date(date.toDate().getTime());
+    // return how many days from EPOCH
+    return date.toDate().getTime() / (24 * 60 * 60 * 1000);
   }
 }

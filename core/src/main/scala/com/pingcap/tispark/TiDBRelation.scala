@@ -18,13 +18,14 @@ package com.pingcap.tispark
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalException}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tispark.utils.ReflectionUtil.newAttributeReference
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
+import org.apache.spark.sql.types.{ArrayType, LongType, Metadata, StructType}
+import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, execution}
 
 import scala.collection.mutable.ListBuffer
 
@@ -44,7 +45,7 @@ case class TiDBRelation(session: TiSession,
 
   override def sizeInBytes: Long = tableRef.sizeInBytes
 
-  def logicalPlanToRDD(dagRequest: TiDAGRequest): List[TiRowRDD] = {
+  def logicalPlanToRDD(dagRequest: TiDAGRequest, output: Seq[Attribute]): List[TiRowRDD] = {
     import scala.collection.JavaConverters._
     val ids = dagRequest.getIds.asScala
     var tiRDDs = new ListBuffer[TiRowRDD]
@@ -54,6 +55,7 @@ case class TiDBRelation(session: TiSession,
           dagRequest,
           id,
           session.getConf,
+          output,
           tableRef,
           session,
           sqlContext.sparkSession
@@ -67,12 +69,23 @@ case class TiDBRelation(session: TiSession,
     import scala.collection.JavaConverters._
     val ids = dagRequest.getIds.asScala
     var tiHandleRDDs = new ListBuffer[TiHandleRDD]()
+    lazy val attributeRef = Seq(
+      newAttributeReference("RegionId", LongType, nullable = false, Metadata.empty),
+      newAttributeReference(
+        "Handles",
+        ArrayType(LongType, containsNull = false),
+        nullable = false,
+        Metadata.empty
+      )
+    )
+
     ids.foreach(
       id => {
         tiHandleRDDs +=
           new TiHandleRDD(
             dagRequest,
             id,
+            attributeRef,
             session.getConf,
             tableRef,
             session,
@@ -81,11 +94,10 @@ case class TiDBRelation(session: TiSession,
       }
     )
 
-    val handlePlan = HandleRDDExec(tiHandleRDDs.toList)
     // TODO: we may optimize by partitioning the result by region.
     // https://github.com/pingcap/tispark/issues/1200
-
-    RegionTaskExec(
+    val handlePlan = ColumnarCoprocessorRDD(attributeRef, tiHandleRDDs.toList, fetchHandle = true)
+    execution.ColumnarRegionTaskExec(
       handlePlan,
       output,
       dagRequest,
@@ -94,6 +106,7 @@ case class TiDBRelation(session: TiSession,
       session,
       sqlContext.sparkSession
     )
+
   }
 
   override def equals(obj: Any): Boolean = obj match {

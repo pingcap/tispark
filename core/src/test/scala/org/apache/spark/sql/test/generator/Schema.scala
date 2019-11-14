@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.test.generator
 
-import com.pingcap.tispark.utils.{TiConverter, TiUtil}
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.test.generator.DataType._
 
 /**

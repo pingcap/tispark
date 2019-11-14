@@ -23,9 +23,11 @@ import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.TiConverter
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.execution.TiConverter
+import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 
@@ -39,7 +41,7 @@ abstract class TiRDD(val dagRequest: TiDAGRequest,
                      val tableRef: TiTableReference,
                      @transient private val session: TiSession,
                      @transient private val sparkSession: SparkSession)
-    extends RDD[Row](sparkSession.sparkContext, Nil) {
+    extends RDD[InternalRow](sparkSession.sparkContext, Nil) {
 
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter
