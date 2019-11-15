@@ -56,6 +56,12 @@ public class MyDecimal implements Serializable {
   private boolean negative;
   private int[] wordBuf = new int[maxWordBufLen];
 
+  public MyDecimal(int digitsInt, int digitsFrac, boolean negative, int[] wordBuf) {
+    this.digitsInt = digitsInt;
+    this.digitsFrac = digitsFrac;
+    this.negative = negative;
+    this.wordBuf = wordBuf;
+  }
   /*
    * Returns total precision of this decimal. Basically, it is sum of digitsInt and digitsFrac. But there
    * are some special cases need to be token care of such as 000.001.

@@ -33,6 +33,7 @@ import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 import org.joda.time.DateTimeZone;
 
@@ -215,6 +216,27 @@ public abstract class DataType implements Serializable {
     }
   }
 
+  private byte[] setAllNotNull(int numNullBitMapBytes) {
+    byte[] nullBitMaps = new byte[numNullBitMapBytes];
+    for(int i = 0; i < numNullBitMapBytes;) {
+      // allNotNullBitNMap's actual length
+      int numAppendBytes = Math.min(numNullBitMapBytes - i, 128);
+      for(int j = 0; j < numAppendBytes; j++) {
+        nullBitMaps[i + j] = allNotNullBitMap[j];
+      }
+      i += numAppendBytes;
+    }
+    return nullBitMaps;
+  }
+
+  private byte[] allNotNullBitMap = initAllNotNullBitMap();
+
+  private byte[] initAllNotNullBitMap() {
+    byte[] allNotNullBitMap = new byte[128];
+    Arrays.fill(allNotNullBitMap, (byte) 0xFF);
+    return allNotNullBitMap;
+  }
+
   public ColumnarChunkColumn decodeColumn(CodecDataInput cdi) {
     int numRows = Integer.reverseBytes(cdi.readInt());
     int numNulls = Integer.reverseBytes(cdi.readInt());
@@ -223,23 +245,30 @@ public abstract class DataType implements Serializable {
     if (numNulls > 0) {
       cdi.readFully(nullBitMaps);
     } else {
-      // TODO: consider all not null later
-      // 	for i := 0; i < numNullBitmapBytes; {
-      //		numAppendBytes := mathutil.Min(numNullBitmapBytes-i, cap(allNotNullBitmap))
-      //		col.nullBitmap = append(col.nullBitmap, allNotNullBitmap[:numAppendBytes]...)
-      //		i += numAppendBytes
-      //	}
+      nullBitMaps = setAllNotNull(numNullBitmapBytes);
     }
 
     int numFixedBytes = getFixLen();
     int numDataBytes = numFixedBytes * numRows;
+
+    int numOffsetBytes;
+    long[] offsets = null;
+    // handle var element
+    if(numFixedBytes == -1) {
+      numOffsetBytes = (numRows + 1) * 8;
+       offsets = new long[numOffsetBytes];
+      for(int i = 0; i < numOffsetBytes; i++) {
+        offsets[i] = cdi.readLong();
+      }
+      numDataBytes = (int) offsets[offsets.length - 1];
+    }
 
     // TODO this costs a lot, we need to find a way to avoid.
     byte[] dataBuffer = new byte[numDataBytes];
     cdi.readFully(dataBuffer);
     ByteBuffer buffer = ByteBuffer.wrap(dataBuffer);
     buffer.order(LITTLE_ENDIAN);
-    return new ColumnarChunkColumn(this, numRows, numNulls, nullBitMaps, buffer);
+    return new ColumnarChunkColumn(this, numRows, numNulls, nullBitMaps, offsets, buffer);
   }
   /**
    * decode value from row which is nothing.
