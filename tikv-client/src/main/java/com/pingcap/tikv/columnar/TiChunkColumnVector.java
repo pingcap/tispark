@@ -3,8 +3,6 @@ package com.pingcap.tikv.columnar;
 import com.pingcap.tikv.codec.MyDecimal;
 import com.pingcap.tikv.types.AbstractDateTimeType;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DateTimeType;
-import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.MySQLType;
 import java.math.BigDecimal;
@@ -12,15 +10,20 @@ import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.util.Date;
 
-public class ColumnarChunkColumn extends TiColumnVector {
+public class TiChunkColumnVector extends TiColumnVector {
   protected DataType dataType;
   private int numOfNulls;
   private byte[] nullBitMaps;
   private long[] offsets;
   private ByteBuffer data;
 
-  public ColumnarChunkColumn(
-      DataType dataType, int numOfRows, int numOfNulls, byte[] nullBitMaps, long[] offsets, ByteBuffer data) {
+  public TiChunkColumnVector(
+      DataType dataType,
+      int numOfRows,
+      int numOfNulls,
+      byte[] nullBitMaps,
+      long[] offsets,
+      ByteBuffer data) {
     super(dataType, numOfRows);
     this.dataType = dataType;
     this.numOfNulls = numOfNulls;
@@ -33,6 +36,7 @@ public class ColumnarChunkColumn extends TiColumnVector {
     return dataType().getType().name();
   }
 
+  // TODO: once we switch off_heap mode, we need control memory access pattern.
   public void free() {}
 
   /**
@@ -71,15 +75,15 @@ public class ColumnarChunkColumn extends TiColumnVector {
   }
 
   public byte getByte(int rowId) {
-    throw new UnsupportedOperationException();
+    return data.get();
   }
 
   public short getShort(int rowId) {
-    throw new UnsupportedOperationException();
+    return data.getShort();
   }
 
   public int getInt(int rowId) {
-    throw new UnsupportedOperationException();
+    return (int) getLong(rowId);
   }
 
   // Time in TiDB has the following memory layout:
@@ -104,18 +108,20 @@ public class ColumnarChunkColumn extends TiColumnVector {
     int type = data.get();
     int fsp = data.get();
     // data case
-    if(type == MySQLType.TypeDate.getTypeCode()) {
+    if (type == MySQLType.TypeDate.getTypeCode()) {
       // only return day from epoch
-      return new Date(year, month, day).getTime()/(24 * 60 * 60 * 1000);
-    } else if(type == MySQLType.TypeDatetime.getTypeCode()) {
+      return new Date(year, month, day).getTime() / (24 * 60 * 60 * 1000);
+    } else if (type == MySQLType.TypeDatetime.getTypeCode()) {
       // TODO: only return microseconds from epoch
       // timezone convert is needed here
-      return new Timestamp(year, month, day,
-          (int)hour, minute, second, (int)microsecond).getTime() * 1000;
-    } else if(type == MySQLType.TypeTimestamp.getTypeCode()) {
+      return new Timestamp(year, month, day, (int) hour, minute, second, (int) microsecond)
+              .getTime()
+          * 1000;
+    } else if (type == MySQLType.TypeTimestamp.getTypeCode()) {
       // only return millisecond from epoch.
-      return new Timestamp(year, month, day,
-          (int)hour, minute, second, (int)microsecond).getTime() * 1000;
+      return new Timestamp(year, month, day, (int) hour, minute, second, (int) microsecond)
+              .getTime()
+          * 1000;
     } else {
       throw new UnsupportedOperationException("data, datetime, timestamp are already handled.");
     }
@@ -123,9 +129,9 @@ public class ColumnarChunkColumn extends TiColumnVector {
 
   public long getLong(int rowId) {
     // TODO handle date/datetime/duration/timestamp later;
-    if(type instanceof IntegerType) {
+    if (type instanceof IntegerType) {
       return data.getLong();
-    } else if(type instanceof AbstractDateTimeType) {
+    } else if (type instanceof AbstractDateTimeType) {
       return getTime(rowId);
     }
 
@@ -142,11 +148,11 @@ public class ColumnarChunkColumn extends TiColumnVector {
 
   private MyDecimal getMyDecimal(int rowId) {
     int digitsInt = data.getInt();
-    int digitsFrac  = data.getInt();
-    int resultFrac  = data.getInt();
+    int digitsFrac = data.getInt();
+    int resultFrac = data.getInt();
     boolean negative = data.get() == 1;
     int[] wordBuf = new int[9];
-    for(int i = 0; i < 9; i++) {
+    for (int i = 0; i < 9; i++) {
       wordBuf[i] = data.getInt();
     }
 
@@ -156,15 +162,9 @@ public class ColumnarChunkColumn extends TiColumnVector {
    * Returns the decimal type value for rowId. If the slot for rowId is null, it should return null.
    */
   @Override
-  /**
-   * digitsInt int8  1
-   * digitsFrac int8 1
-   * resultFrac int8 1
-   * negative bool    1
-   * wordBuf int32[9] 36
-   */
+  /** digitsInt int8 1 digitsFrac int8 1 resultFrac int8 1 negative bool 1 wordBuf int32[9] 36 */
   public BigDecimal getDecimal(int rowId, int precision, int scale) {
-    //TODO figure out how to use precision and scale
+    // TODO figure out how to use precision and scale
     MyDecimal decimal = getMyDecimal(rowId);
     BigDecimal bigDecimal = new BigDecimal(decimal.toString());
     return bigDecimal;
@@ -185,9 +185,9 @@ public class ColumnarChunkColumn extends TiColumnVector {
   @Override
   public byte[] getBinary(int rowId) {
     int start = (int) this.offsets[rowId];
-    long end = this.offsets[rowId+1];
+    long end = this.offsets[rowId + 1];
     byte[] buffer = new byte[(int) (end - start)];
-    for (int i = start; i < end ; i++) {
+    for (int i = start; i < end; i++) {
       buffer[i] = data.get();
     }
     return buffer;

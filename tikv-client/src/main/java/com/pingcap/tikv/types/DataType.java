@@ -24,7 +24,7 @@ import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.columnar.ColumnarChunkColumn;
+import com.pingcap.tikv.columnar.TiChunkColumnVector;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
@@ -218,10 +218,10 @@ public abstract class DataType implements Serializable {
 
   private byte[] setAllNotNull(int numNullBitMapBytes) {
     byte[] nullBitMaps = new byte[numNullBitMapBytes];
-    for(int i = 0; i < numNullBitMapBytes;) {
+    for (int i = 0; i < numNullBitMapBytes; ) {
       // allNotNullBitNMap's actual length
       int numAppendBytes = Math.min(numNullBitMapBytes - i, 128);
-      for(int j = 0; j < numAppendBytes; j++) {
+      for (int j = 0; j < numAppendBytes; j++) {
         nullBitMaps[i + j] = allNotNullBitMap[j];
       }
       i += numAppendBytes;
@@ -237,9 +237,19 @@ public abstract class DataType implements Serializable {
     return allNotNullBitMap;
   }
 
-  public ColumnarChunkColumn decodeColumn(CodecDataInput cdi) {
-    int numRows = Integer.reverseBytes(cdi.readInt());
-    int numNulls = Integer.reverseBytes(cdi.readInt());
+  private int readIntLittleEndian(CodecDataInput cdi) {
+    int ch1 = cdi.readUnsignedByte();
+    int ch2 = cdi.readUnsignedByte();
+    int ch3 = cdi.readUnsignedByte();
+    int ch4 = cdi.readUnsignedByte();
+    assert ((ch1 | ch2 | ch3 | ch4) < 0);
+    return ((ch1) + (ch2 << 8) + (ch3 << 16) + (ch4 << 24));
+  }
+
+  // all data should be read in little endian.
+  public TiChunkColumnVector decodeColumn(CodecDataInput cdi) {
+    int numRows = readIntLittleEndian(cdi);
+    int numNulls = readIntLittleEndian(cdi);
     int numNullBitmapBytes = (numRows + 7) / 8;
     byte[] nullBitMaps = new byte[numNullBitmapBytes];
     if (numNulls > 0) {
@@ -254,10 +264,10 @@ public abstract class DataType implements Serializable {
     int numOffsetBytes;
     long[] offsets = null;
     // handle var element
-    if(numFixedBytes == -1) {
+    if (numFixedBytes == -1) {
       numOffsetBytes = (numRows + 1) * 8;
-       offsets = new long[numOffsetBytes];
-      for(int i = 0; i < numOffsetBytes; i++) {
+      offsets = new long[numOffsetBytes];
+      for (int i = 0; i < numOffsetBytes; i++) {
         offsets[i] = cdi.readLong();
       }
       numDataBytes = (int) offsets[offsets.length - 1];
@@ -268,7 +278,7 @@ public abstract class DataType implements Serializable {
     cdi.readFully(dataBuffer);
     ByteBuffer buffer = ByteBuffer.wrap(dataBuffer);
     buffer.order(LITTLE_ENDIAN);
-    return new ColumnarChunkColumn(this, numRows, numNulls, nullBitMaps, offsets, buffer);
+    return new TiChunkColumnVector(this, numRows, numNulls, nullBitMaps, offsets, buffer);
   }
   /**
    * decode value from row which is nothing.

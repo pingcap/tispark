@@ -16,13 +16,12 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
-import com.pingcap.tikv.columnar.TiColumnarBatch
+import com.pingcap.tikv.columnar.{TiColumnVectorAdapter, TiColumnarBatch}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
-import com.pingcap.tikv.columnar.ColumnarChunkAdapter
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.SparkSession
@@ -126,8 +125,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
       }
 
       override def next(): TiColumnarBatch = {
-        val columnVectors = iterator.next
-        new TiColumnarBatch(columnVectors.map(new ColumnarChunkAdapter(_)))
+        new TiColumnarBatch(iterator.next)
       }
     }.asInstanceOf[Iterator[InternalRow]]
 

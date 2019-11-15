@@ -99,7 +99,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
-  private def useArrowEncode(): Boolean =
+  private def isEnableArrow(): Boolean =
     sqlConf.getConfString(TiConfigConst.ENABLE_ARROW, "false").toLowerCase.toBoolean ||
       tiContext.tiConf.isEnableArrow
 
@@ -116,10 +116,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     //TODO check enable arrow from config
     if (useStreamingProcess()) {
       EncodeType.TypeDefault
-    } else if (!useArrowEncode()) {
+    } else if (!isEnableArrow()) {
       EncodeType.TypeDefault
     } else {
-      EncodeType.TypeArrow
+      EncodeType.TypeChunk
     }
   }
 

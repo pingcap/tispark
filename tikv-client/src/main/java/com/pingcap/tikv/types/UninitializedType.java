@@ -20,7 +20,6 @@ package com.pingcap.tikv.types;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
-import com.pingcap.tikv.columnar.ColumnarChunkColumn;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
@@ -43,12 +42,6 @@ public class UninitializedType extends DataType {
 
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    throw new UnsupportedOperationException(
-        "UninitializedType cannot be applied in calculation process.");
-  }
-
-  @Override
-  public ColumnarChunkColumn decodeColumn(CodecDataInput cdi) {
     throw new UnsupportedOperationException(
         "UninitializedType cannot be applied in calculation process.");
   }

@@ -7,14 +7,14 @@ package com.pingcap.tikv.columnar;
  */
 public final class TiColumnarBatch {
   private int numRows;
-  private final ColumnarChunkAdapter[] columns;
+  private final TiColumnVectorAdapter[] columns;
 
   /**
    * Called to close all the columns in this batch. It is not valid to access the data after calling
    * this. This must be called at the end to clean up memory allocations.
    */
   public void close() {
-    for (ColumnarChunkAdapter c : columns) {
+    for (TiColumnVectorAdapter c : columns) {
       c.close();
     }
   }
@@ -35,12 +35,15 @@ public final class TiColumnarBatch {
   }
 
   /** Returns the column at `ordinal`. */
-  public ColumnarChunkAdapter column(int ordinal) {
+  public TiColumnVectorAdapter column(int ordinal) {
     return columns[ordinal];
   }
 
-  public TiColumnarBatch(ColumnarChunkAdapter[] columns) {
-    this.columns = columns;
+  public TiColumnarBatch(TiColumnarChunk columnarChunk) {
+    this.columns = new TiColumnVectorAdapter[columnarChunk.numOfCols()];
+    for(int i = 0; i < columnarChunk.numOfCols(); i++) {
+      this.columns[i] = new TiColumnVectorAdapter(columnarChunk.column(i));
+    }
     this.numRows = columns[0].numOfRows();
   }
 }

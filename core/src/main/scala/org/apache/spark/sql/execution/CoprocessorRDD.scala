@@ -18,16 +18,15 @@ package org.apache.spark.sql.execution
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 
-import com.pingcap.tikv.columnar.{ColumnarChunkColumn, TiColumnVector, TiColumnarBatch}
+import com.pingcap.tikv.columnar.{TiChunkColumnVector, TiColumnVector, TiColumnVectorAdapter, TiColumnarBatch, TiColumnarChunk}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.operation.SchemaInfer
-import com.pingcap.tikv.operation.iterator.CoprocessIterator
+import com.pingcap.tikv.operation.iterator.CoprocessorIterator
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.TiBatchWrite.TiRow
-import com.pingcap.tikv.columnar.ColumnarChunkAdapter
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
 import com.pingcap.tispark.utils.TiUtil
@@ -177,10 +176,10 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
       numRegions += 1
 
       val completionService =
-        new ExecutorCompletionService[util.Iterator[Array[TiColumnVector]]](
+        new ExecutorCompletionService[util.Iterator[TiColumnarChunk]](
           session.getThreadPoolForIndexScan
         )
-      var rowIterator: util.Iterator[Array[TiColumnVector]] = null
+      var rowIterator: util.Iterator[TiColumnarChunk] = null
 
       // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
       def generateIndexTasks(handles: TLongArrayList): util.List[RegionTask] = {
@@ -213,9 +212,9 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
 
       def submitTasks(tasks: List[RegionTask], dagRequest: TiDAGRequest): Unit = {
         taskCount += 1
-        val task = new Callable[util.Iterator[Array[TiColumnVector]]] {
-          override def call(): util.Iterator[Array[TiColumnVector]] = {
-            CoprocessIterator.getColumnarBatchIterator(dagRequest, tasks, session)
+        val task = new Callable[util.Iterator[TiColumnarChunk]] {
+          override def call(): util.Iterator[TiColumnarChunk] = {
+            CoprocessorIterator.getColumnarBatchIterator(dagRequest, tasks, session)
           }
 
         }
@@ -366,7 +365,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
         }
 
         override def next(): TiColumnarBatch = {
-          new TiColumnarBatch(rowIterator.next.map(new ColumnarChunkAdapter(_)))
+          new TiColumnarBatch(rowIterator.next)
         }
       }.asInstanceOf[Iterator[InternalRow]]
     }

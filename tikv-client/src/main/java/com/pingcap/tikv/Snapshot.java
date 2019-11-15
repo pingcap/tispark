@@ -15,12 +15,12 @@
 
 package com.pingcap.tikv;
 
-import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getColumnarBatchIterator;
-import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getHandleIterator;
-import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getRowIterator;
+import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getColumnarBatchIterator;
+import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getHandleIterator;
+import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getRowIterator;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.columnar.TiColumnVector;
+import com.pingcap.tikv.columnar.TiColumnarChunk;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
@@ -68,15 +68,14 @@ public class Snapshot {
         .get(key, timestamp.getVersion());
   }
 
-  public Iterator<TiColumnVector[]> tableReadChunk(TiDAGRequest dagRequest, long physicalId) {
+  public Iterator<TiColumnarChunk> tableReadChunk(TiDAGRequest dagRequest, long physicalId) {
     return tableReadChunk(
         dagRequest,
         RangeSplitter.newSplitter(session.getRegionManager())
             .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId)));
   }
 
-  public Iterator<TiColumnVector[]> tableReadChunk(
-      TiDAGRequest dagRequest, List<RegionTask> tasks) {
+  public Iterator<TiColumnarChunk> tableReadChunk(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
       Iterator<Long> iter = getHandleIterator(dagRequest, tasks, getSession());
       //      return new IndexScanIterator(this, dagRequest, iter);

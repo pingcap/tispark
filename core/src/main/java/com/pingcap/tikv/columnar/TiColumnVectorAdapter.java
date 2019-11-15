@@ -1,20 +1,19 @@
 package com.pingcap.tikv.columnar;
 
-import com.pingcap.tikv.columnar.TiColumnVector;
 import com.pingcap.tikv.datatype.TypeMapping;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.Decimal;
 import org.apache.spark.unsafe.types.UTF8String;
 
-public class ColumnarChunkAdapter {
-  DataType dataType;
-  TiColumnVector tiChunkColumn;
+public class TiColumnVectorAdapter {
+  private DataType dataType;
+  private TiColumnVector tiColumnVector;
   /**
    * Sets up the data type of this column vector.
    */
-  public ColumnarChunkAdapter(TiColumnVector tiChunkColumn) {
-    dataType = TypeMapping.toSparkType(tiChunkColumn.dataType());
-    this.tiChunkColumn = tiChunkColumn;
+  public TiColumnVectorAdapter(TiColumnVector tiColumnVector) {
+    dataType = TypeMapping.toSparkType(tiColumnVector.dataType());
+    this.tiColumnVector = tiColumnVector;
   }
 
   /**
@@ -31,21 +30,21 @@ public class ColumnarChunkAdapter {
    * Returns true if this column vector contains any null values.
    */
   public boolean hasNull() {
-    return tiChunkColumn.hasNull();
+    return tiColumnVector.hasNull();
   }
 
   /**
    * Returns the number of nulls in this column vector.
    */
   public int numNulls() {
-    return tiChunkColumn.numNulls();
+    return tiColumnVector.numNulls();
   }
 
   /**
    * Returns whether the value at rowId is NULL.
    */
   public boolean isNullAt(int rowId) {
-    return tiChunkColumn.isNullAt(rowId);
+    return tiColumnVector.isNullAt(rowId);
   }
 
   /**
@@ -53,7 +52,7 @@ public class ColumnarChunkAdapter {
    * the slot for rowId is null.
    */
   public boolean getBoolean(int rowId) {
-    return tiChunkColumn.getBoolean(rowId);
+    return tiColumnVector.getBoolean(rowId);
   }
 
   /**
@@ -61,7 +60,7 @@ public class ColumnarChunkAdapter {
    * the slot for rowId is null.
    */
   public byte getByte(int rowId) {
-    return tiChunkColumn.getByte(rowId);
+    return tiColumnVector.getByte(rowId);
   }
 
   /**
@@ -69,7 +68,7 @@ public class ColumnarChunkAdapter {
    * the slot for rowId is null.
    */
   public short getShort(int rowId) {
-    return tiChunkColumn.getShort(rowId);
+    return tiColumnVector.getShort(rowId);
   }
 
   /**
@@ -77,7 +76,7 @@ public class ColumnarChunkAdapter {
    * slot for rowId is null.
    */
   public int getInt(int rowId) {
-    return tiChunkColumn.getInt(rowId);
+    return tiColumnVector.getInt(rowId);
   }
 
   /**
@@ -85,7 +84,7 @@ public class ColumnarChunkAdapter {
    * the slot for rowId is null.
    */
   public long getLong(int rowId) {
-    return tiChunkColumn.getLong(rowId);
+    return tiColumnVector.getLong(rowId);
   }
 
   /**
@@ -93,7 +92,7 @@ public class ColumnarChunkAdapter {
    * the slot for rowId is null.
    */
   public float getFloat(int rowId) {
-    return tiChunkColumn.getFloat(rowId);
+    return tiColumnVector.getFloat(rowId);
   }
 
   /**
@@ -101,7 +100,7 @@ public class ColumnarChunkAdapter {
    * the slot for rowId is null.
    */
   public double getDouble(int rowId) {
-    return tiChunkColumn.getDouble(rowId);
+    return tiColumnVector.getDouble(rowId);
   }
 
   /**
@@ -109,7 +108,7 @@ public class ColumnarChunkAdapter {
    * null.
    */
   public Decimal getDecimal(int rowId, int precision, int scale) {
-    return  Decimal.apply(tiChunkColumn.getDecimal(rowId, precision, scale));
+    return  Decimal.apply(tiColumnVector.getDecimal(rowId, precision, scale));
   }
 
   /**
@@ -118,17 +117,17 @@ public class ColumnarChunkAdapter {
    * if you want to keep it after this column vector is freed.
    */
   public UTF8String getUTF8String(int rowId) {
-    return UTF8String.fromString(tiChunkColumn.getUTF8String(rowId));
+    return UTF8String.fromString(tiColumnVector.getUTF8String(rowId));
   }
 
   /**
    * Returns the binary type value for rowId. If the slot for rowId is null, it should return null.
    */
   public byte[] getBinary(int rowId) {
-    return tiChunkColumn.getBinary(rowId);
+    return tiColumnVector.getBinary(rowId);
   }
 
   public int numOfRows() {
-    return tiChunkColumn.numOfRows();
+    return tiColumnVector.numOfRows();
   }
 }

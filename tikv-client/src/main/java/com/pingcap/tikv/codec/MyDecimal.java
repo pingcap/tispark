@@ -56,6 +56,8 @@ public class MyDecimal implements Serializable {
   private boolean negative;
   private int[] wordBuf = new int[maxWordBufLen];
 
+  public MyDecimal() {}
+
   public MyDecimal(int digitsInt, int digitsFrac, boolean negative, int[] wordBuf) {
     this.digitsInt = digitsInt;
     this.digitsFrac = digitsFrac;
