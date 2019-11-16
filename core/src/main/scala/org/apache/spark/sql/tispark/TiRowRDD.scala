@@ -16,18 +16,17 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
+import com.pingcap.tikv.columnar.{TiColumnVectorAdapter, TiColumnarBatch}
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
-import org.apache.spark.sql.execution.TiConverter
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.slf4j.Logger
 import org.tikv.kvproto.Coprocessor.KeyRange
@@ -113,11 +112,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
       private val snapshot = session.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 
-      private val iterator = if (tiConf.isUseColumnar) {
-        snapshot.tableReadChunk(dagRequest, tasks)
-      } else {
-        snapshot.tableReadRow(dagRequest, tasks)
-      }
+      private val iterator = snapshot.tableReadChunk(dagRequest, tasks)
 
       override def hasNext: Boolean = {
         // Kill the task in case it has been marked as killed. This logic is from
@@ -129,13 +124,9 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
         iterator.hasNext
       }
 
-      override def next(): Any =
-        if (tiConf.isUseColumnar) {
-          iterator.next
-        } else {
-          val sparkRow = TiConverter.toSparkRow(iterator.next.asInstanceOf[TiRow], rowTransformer)
-          TiUtil.rowToInternalRow(sparkRow, outputTypes, converters)
-        }
+      override def next(): TiColumnarBatch = {
+        new TiColumnarBatch(iterator.next)
+      }
     }.asInstanceOf[Iterator[InternalRow]]
 
   override protected def getPreferredLocations(split: Partition): Seq[String] =

@@ -169,6 +169,7 @@ class IssueTestSuite extends BaseTiSparkTest {
   }
 
   test("test date") {
+    judge("select id_dt from full_data_type_table")
     judge(
       "select tp_date, tp_datetime, id_dt from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt limit 10"
     )

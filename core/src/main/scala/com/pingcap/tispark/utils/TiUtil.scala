@@ -18,6 +18,7 @@ package com.pingcap.tispark.utils
 import java.util.concurrent.TimeUnit
 
 import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.datatype.TypeMapping
 import com.pingcap.tikv.expression.ExpressionBlacklist
 import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
@@ -27,12 +28,11 @@ import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiSpar
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
-import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GenericInternalRow, Literal, NamedExpression}
-import org.apache.spark.sql.execution.TiConverter
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.{SparkConf, sql}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
@@ -125,7 +125,7 @@ object TiUtil {
         .build()
       fields(i) = StructField(
         col.getName,
-        TiConverter.toSparkDataType(col.getType),
+        TypeMapping.toSparkType(col.getType),
         nullable = !notNull,
         metadata
       )
@@ -203,8 +203,8 @@ object TiUtil {
       tiConf.setUseTiFlash(conf.get(TiConfigConst.USE_TIFLASH).toBoolean)
     }
 
-    if (conf.contains(TiConfigConst.USE_COLUMNAR)) {
-      tiConf.setUseColumnar(conf.get(TiConfigConst.USE_TIFLASH).toBoolean)
+    if (conf.contains(TiConfigConst.ENABLE_ARROW)) {
+      tiConf.setEnableArrow(conf.get(TiConfigConst.ENABLE_ARROW).toBoolean)
     }
 
     if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {

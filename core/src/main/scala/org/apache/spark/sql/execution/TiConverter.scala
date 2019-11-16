@@ -43,41 +43,6 @@ object TiConverter {
     Row.fromSeq(rowArray)
   }
 
-  // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp: TiDataType): SparkSQLDataType =
-    tp match {
-      case _: StringType => sql.types.StringType
-      case _: BytesType  => sql.types.BinaryType
-      case t: IntegerType =>
-        if (t.isUnsignedLong) {
-          DataTypes.createDecimalType(20, 0)
-        } else {
-          sql.types.LongType
-        }
-      case _: RealType => sql.types.DoubleType
-      // we need to make sure that tp.getLength does not result in negative number when casting.
-      // Decimal precision cannot exceed MAX_PRECISION.
-      case _: DecimalType =>
-        var len = tp.getLength
-        if (len > MAX_PRECISION) {
-          logger.warning(
-            "Decimal precision exceeding MAX_PRECISION=" + MAX_PRECISION + ", value will be truncated"
-          )
-          len = MAX_PRECISION
-        }
-        DataTypes.createDecimalType(
-          len.toInt,
-          tp.getDecimal
-        )
-      case _: DateTimeType  => sql.types.TimestampType
-      case _: TimestampType => sql.types.TimestampType
-      case _: DateType      => sql.types.DateType
-      case _: EnumType      => sql.types.StringType
-      case _: SetType       => sql.types.StringType
-      case _: JsonType      => sql.types.StringType
-      case _: TimeType      => sql.types.LongType
-    }
-
   def fromSparkType(tp: SparkSQLDataType): TiDataType =
     // TODO: review type system
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-99

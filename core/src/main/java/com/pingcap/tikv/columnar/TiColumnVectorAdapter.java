@@ -1,17 +1,19 @@
 package com.pingcap.tikv.columnar;
 
-import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.types.DataType;
-import java.math.BigDecimal;
+import com.pingcap.tikv.datatype.TypeMapping;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.Decimal;
+import org.apache.spark.unsafe.types.UTF8String;
 
-public class RowwiseTiColumnarVector extends TiColumnVector {
-  private Row[] rows;
-  private int colIdx;
-  /** Sets up the data type of this column vector. */
-  public RowwiseTiColumnarVector(DataType type, int colIdx, Row[] rows, int numOfRows) {
-    super(type, numOfRows);
-    this.rows = rows;
-    this.colIdx = colIdx;
+public class TiColumnVectorAdapter {
+  private DataType dataType;
+  private TiColumnVector tiColumnVector;
+  /**
+   * Sets up the data type of this column vector.
+   */
+  public TiColumnVectorAdapter(TiColumnVector tiColumnVector) {
+    dataType = TypeMapping.toSparkType(tiColumnVector.dataType());
+    this.tiColumnVector = tiColumnVector;
   }
 
   /**
@@ -20,100 +22,93 @@ public class RowwiseTiColumnarVector extends TiColumnVector {
    * <p>This overwrites `AutoCloseable.close` to remove the `throws` clause, as column vector is
    * in-memory and we don't expect any exception to happen during closing.
    */
-  @Override
   public void close() {
-    this.rows = null;
+
   }
 
-  /** Returns true if this column vector contains any null values. */
-  @Override
+  /**
+   * Returns true if this column vector contains any null values.
+   */
   public boolean hasNull() {
-    throw new UnsupportedOperationException(
-        "row-wise column vector does not support this operation");
+    return tiColumnVector.hasNull();
   }
 
-  /** Returns the number of nulls in this column vector. */
-  @Override
+  /**
+   * Returns the number of nulls in this column vector.
+   */
   public int numNulls() {
-    throw new UnsupportedOperationException(
-        "row-wise column vector does not support this operation");
+    return tiColumnVector.numNulls();
   }
 
-  /** Returns whether the value at rowId is NULL. */
-  @Override
+  /**
+   * Returns whether the value at rowId is NULL.
+   */
   public boolean isNullAt(int rowId) {
-    return rows[rowId].get(colIdx, null) == null;
+    return tiColumnVector.isNullAt(rowId);
   }
 
   /**
    * Returns the boolean type value for rowId. The return value is undefined and can be anything, if
    * the slot for rowId is null.
    */
-  @Override
   public boolean getBoolean(int rowId) {
-    return rows[rowId].getLong(colIdx) == 1;
+    return tiColumnVector.getBoolean(rowId);
   }
 
   /**
    * Returns the byte type value for rowId. The return value is undefined and can be anything, if
    * the slot for rowId is null.
    */
-  @Override
   public byte getByte(int rowId) {
-    return (byte) rows[rowId].getLong(colIdx);
+    return tiColumnVector.getByte(rowId);
   }
 
   /**
    * Returns the short type value for rowId. The return value is undefined and can be anything, if
    * the slot for rowId is null.
    */
-  @Override
   public short getShort(int rowId) {
-    return (short) rows[rowId].getLong(colIdx);
+    return tiColumnVector.getShort(rowId);
   }
 
   /**
    * Returns the int type value for rowId. The return value is undefined and can be anything, if the
    * slot for rowId is null.
    */
-  @Override
   public int getInt(int rowId) {
-    return (int) rows[rowId].getLong(colIdx);
+    return tiColumnVector.getInt(rowId);
   }
 
   /**
    * Returns the long type value for rowId. The return value is undefined and can be anything, if
    * the slot for rowId is null.
    */
-  @Override
   public long getLong(int rowId) {
-    return rows[rowId].getLong(colIdx);
+    return tiColumnVector.getLong(rowId);
   }
 
   /**
    * Returns the float type value for rowId. The return value is undefined and can be anything, if
    * the slot for rowId is null.
    */
-  @Override
   public float getFloat(int rowId) {
-    return 0;
+    return tiColumnVector.getFloat(rowId);
   }
 
   /**
    * Returns the double type value for rowId. The return value is undefined and can be anything, if
    * the slot for rowId is null.
    */
-  @Override
   public double getDouble(int rowId) {
-    return rows[rowId].getDouble(colIdx);
+    return tiColumnVector.getDouble(rowId);
   }
 
   /**
-   * Returns the decimal type value for rowId. If the slot for rowId is null, it should return null.
+   * Returns the decimal type value for rowId. If the slot for rowId is null, it should return
+   * null.
    */
-  @Override
-  public BigDecimal getDecimal(int rowId, int precision, int scale) {
-    return (BigDecimal) rows[rowId].get(colIdx, null);
+  public Decimal getDecimal(int rowId, int precision, int scale) {
+    return  Decimal.apply(tiColumnVector.getDecimal(rowId, precision, scale));
   }
 
   /**
@@ -121,22 +116,18 @@ public class RowwiseTiColumnarVector extends TiColumnVector {
    * Note that the returned UTF8String may point to the data of this column vector, please copy it
    * if you want to keep it after this column vector is freed.
    */
-  @Override
-  public String getUTF8String(int rowId) {
-    return rows[rowId].getString(colIdx);
+  public UTF8String getUTF8String(int rowId) {
+    return UTF8String.fromString(tiColumnVector.getUTF8String(rowId));
   }
 
   /**
    * Returns the binary type value for rowId. If the slot for rowId is null, it should return null.
    */
-  @Override
   public byte[] getBinary(int rowId) {
-    return rows[rowId].getBytes(colIdx);
+    return tiColumnVector.getBinary(rowId);
   }
 
-  /** @return child [[TiColumnVector]] at the given ordinal. */
-  @Override
-  protected TiColumnVector getChild(int ordinal) {
-    return null;
+  public int numOfRows() {
+    return tiColumnVector.numOfRows();
   }
 }

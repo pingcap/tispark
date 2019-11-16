@@ -28,6 +28,7 @@ object TiConfigConst {
   val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
   val ALLOW_INDEX_READ: String = "spark.tispark.plan.allow_index_read"
   val COPROCESS_STREAMING: String = "spark.tispark.coprocess.streaming"
+  val ENABLE_ARROW: String = "spark.tispark.coprocess.arrow"
   val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"
   val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String = "spark.tispark.plan.downgrade.index_threshold"
   val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported_mysql_types"

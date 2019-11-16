@@ -82,7 +82,7 @@ public class DAGIteratorTest extends MockServerTest {
     BytesCodec.writeBytesFully(cdo, "value1".getBytes());
     server.put("key1", cdo.toByteString());
     List<RegionTask> tasks = ImmutableList.of(RegionTask.newInstance(region, store, keyRanges));
-    CoprocessIterator<Row> iter = CoprocessIterator.getRowIterator(req, tasks, session);
+    CoprocessorIterator<Row> iter = CoprocessorIterator.getRowIterator(req, tasks, session);
     if (!iter.hasNext()) {
       assertEquals("iterator has next should be true", true, false);
     } else {

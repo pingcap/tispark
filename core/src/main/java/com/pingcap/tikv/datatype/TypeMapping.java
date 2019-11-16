@@ -1,6 +1,6 @@
-package com.pingcap.tikv.util;
+package com.pingcap.tikv.datatype;
 
-import static com.pingcap.tikv.types.MySQLType.*;
+import static com.pingcap.tikv.types.MySQLType.TypeLonglong;
 
 import com.pingcap.tikv.types.DataType;
 import org.apache.spark.sql.types.DataTypes;

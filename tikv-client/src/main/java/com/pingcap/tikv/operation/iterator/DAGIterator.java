@@ -4,6 +4,7 @@ import static com.pingcap.tikv.meta.TiDAGRequest.PushDownType.STREAMING;
 
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
+import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.RegionTaskException;
@@ -22,7 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Metapb;
 
-public abstract class DAGIterator<T> extends CoprocessIterator<T> {
+public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   private ExecutorCompletionService<Iterator<SelectResponse>> streamingService;
   private ExecutorCompletionService<SelectResponse> dagService;
   private SelectResponse response;
@@ -31,6 +32,8 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
   private Iterator<SelectResponse> responseIterator;
 
   private final PushDownType pushDownType;
+
+  protected EncodeType encodeType;
 
   DAGIterator(
       DAGRequest req,
@@ -107,10 +110,13 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
 
     switch (pushDownType) {
       case STREAMING:
-        chunkList = responseIterator.next().getChunksList();
+        SelectResponse resp = responseIterator.next();
+        chunkList = resp.getChunksList();
+        this.encodeType = resp.getEncodeType();
         break;
       case NORMAL:
         chunkList = response.getChunksList();
+        this.encodeType = this.response.getEncodeType();
         break;
     }
 
@@ -200,14 +206,16 @@ public abstract class DAGIterator<T> extends CoprocessIterator<T> {
 
     // Add all chunks to the final result
     List<Chunk> resultChunk = new ArrayList<>();
+    EncodeType encodeType = null;
     while (!responseQueue.isEmpty()) {
       SelectResponse response = responseQueue.poll();
       if (response != null) {
+        encodeType = response.getEncodeType();
         resultChunk.addAll(response.getChunksList());
       }
     }
 
-    return SelectResponse.newBuilder().addAllChunks(resultChunk).build();
+    return SelectResponse.newBuilder().addAllChunks(resultChunk).setEncodeType(encodeType).build();
   }
 
   private Iterator<SelectResponse> processByStreaming(RangeSplitter.RegionTask regionTask) {

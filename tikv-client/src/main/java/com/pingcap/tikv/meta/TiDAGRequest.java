@@ -53,7 +53,6 @@ import org.tikv.kvproto.Coprocessor;
  * <p>Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
-
   public static class Builder {
     private List<String> requiredCols = new ArrayList<>();
     private List<Expression> filters = new ArrayList<>();
@@ -127,7 +126,7 @@ public class TiDAGRequest implements Serializable {
     }
 
     public TiDAGRequest build(PushDownType pushDownType) {
-      TiDAGRequest req = new TiDAGRequest(pushDownType);
+      TiDAGRequest req = new TiDAGRequest(pushDownType, EncodeType.TypeDefault);
       req.setTableInfo(tableInfo);
       req.addRanges(ranges);
       req.addFilters(filters);
@@ -165,10 +164,21 @@ public class TiDAGRequest implements Serializable {
 
   public TiDAGRequest(PushDownType pushDownType) {
     this.pushDownType = pushDownType;
+    this.encodeType = EncodeType.TypeDefault;
+  }
+
+  public TiDAGRequest(PushDownType pushDownType, EncodeType encodeType) {
+    this.pushDownType = pushDownType;
+    this.encodeType = encodeType;
+  }
+
+  public TiDAGRequest(PushDownType pushDownType, EncodeType encodeType, int timeZoneOffset) {
+    this(pushDownType, encodeType);
+    this.timeZoneOffset = timeZoneOffset;
   }
 
   public TiDAGRequest(PushDownType pushDownType, int timeZoneOffset) {
-    this(pushDownType);
+    this(pushDownType, EncodeType.TypeDefault);
     this.timeZoneOffset = timeZoneOffset;
   }
 
@@ -236,6 +246,7 @@ public class TiDAGRequest implements Serializable {
   private boolean distinct;
   private boolean isDoubleRead;
   private final PushDownType pushDownType;
+  private final EncodeType encodeType;
   private IdentityHashMap<Expression, DataType> typeMap;
   private double estimatedCount = -1;
 
@@ -298,6 +309,7 @@ public class TiDAGRequest implements Serializable {
             .setFlags(flags)
             .setStartTs(startTs.getVersion())
             .addAllOutputOffsets(outputOffsets)
+            .setEncodeType(this.encodeType)
             .build();
 
     validateRequest(request);
@@ -609,6 +621,8 @@ public class TiDAGRequest implements Serializable {
    */
   private void validateRequest(DAGRequest dagRequest) {
     requireNonNull(dagRequest);
+    // check encode type
+    requireNonNull(dagRequest.getEncodeType());
 
     // A DAG request must contain a valid timestamp
     if (dagRequest.getStartTs() == 0) {

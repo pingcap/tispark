@@ -19,10 +19,12 @@ import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
+import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.RowwiseTiColumnarVector;
-import com.pingcap.tikv.columnar.TiColumnarBatch;
+import com.pingcap.tikv.columnar.TiChunkColumnVector;
+import com.pingcap.tikv.columnar.TiColumnarChunk;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
@@ -30,11 +32,10 @@ import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
-import com.pingcap.tikv.util.TypeMapping;
 import java.util.Iterator;
 import java.util.List;
 
-public abstract class CoprocessIterator<T> implements Iterator<T> {
+public abstract class CoprocessorIterator<T> implements Iterator<T> {
   protected final TiSession session;
   protected final List<RegionTask> regionTasks;
   protected final DAGRequest dagRequest;
@@ -48,7 +49,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
   protected List<Chunk> chunkList;
   protected SchemaInfer schemaInfer;
 
-  CoprocessIterator(
+  CoprocessorIterator(
       DAGRequest req, List<RegionTask> regionTasks, TiSession session, SchemaInfer infer) {
     this.dagRequest = req;
     this.session = session;
@@ -71,7 +72,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
    * @param session TiSession
    * @return a DAGIterator to be processed
    */
-  public static CoprocessIterator<Row> getRowIterator(
+  public static CoprocessorIterator<Row> getRowIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     TiDAGRequest dagRequest = req.copy();
     return new DAGIterator<Row>(
@@ -99,33 +100,42 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
    * @param session TiSession
    * @return a DAGIterator to be processed
    */
-  public static CoprocessIterator<TiColumnarBatch> getColumnarBatchIterator(
+  public static CoprocessorIterator<TiColumnarChunk> getColumnarBatchIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     TiDAGRequest dagRequest = req.copy();
-    return new DAGIterator<TiColumnarBatch>(
+    return new DAGIterator<TiColumnarChunk>(
         dagRequest.buildTableScan(),
         regionTasks,
         session,
         SchemaInfer.create(dagRequest),
         dagRequest.getPushDownType()) {
       @Override
-      public TiColumnarBatch next() {
+      public TiColumnarChunk next() {
+        // TODO make it configurable
+        int numOfRows = 1024;
         DataType[] dataTypes = this.schemaInfer.getTypes().toArray(new DataType[0]);
-        Row[] rows = new Row[1024];
-        int count = 0;
-        for (int i = 0; i < rows.length && hasNext(); i++) {
-          rows[i] = rowReader.readRow(dataTypes);
-          count += 1;
+        // TODO tiColumnarBatch is meant to be reused in the entire data loading process.
+        // TODO we need have some fallback solution to handle tikv's response using default encode.
+        if (this.encodeType == EncodeType.TypeDefault) {
+          Row[] rows = new Row[numOfRows];
+          int count = 0;
+          for (int i = 0; i < rows.length && hasNext(); i++) {
+            rows[i] = rowReader.readRow(dataTypes);
+            count += 1;
+          }
+          RowwiseTiColumnarVector[] columnarVectors = new RowwiseTiColumnarVector[dataTypes.length];
+          for (int i = 0; i < dataTypes.length; i++) {
+            columnarVectors[i] = new RowwiseTiColumnarVector(dataTypes[i], i, rows, count);
+          }
+          return new TiColumnarChunk(columnarVectors);
+        } else {
+          // hasNext => create dataInput, so we do not need to advance next dataInput.
+          TiChunkColumnVector[] columnarVectors = new TiChunkColumnVector[dataTypes.length];
+          for (int i = 0; i < dataTypes.length; i++) {
+            columnarVectors[i] = dataTypes[i].decodeColumn(dataInput);
+          }
+          return new TiColumnarChunk(columnarVectors);
         }
-        RowwiseTiColumnarVector[] columnarVectors = new RowwiseTiColumnarVector[dataTypes.length];
-
-        for (int i = 0; i < dataTypes.length; i++) {
-          columnarVectors[i] =
-              new RowwiseTiColumnarVector(TypeMapping.toSparkType(dataTypes[i]), i, rows);
-        }
-        TiColumnarBatch batch = new TiColumnarBatch(columnarVectors);
-        batch.setNumRows(count);
-        return batch;
       }
     };
   }
@@ -140,7 +150,7 @@ public abstract class CoprocessIterator<T> implements Iterator<T> {
    * @param session TiSession
    * @return a DAGIterator to be processed
    */
-  public static CoprocessIterator<Long> getHandleIterator(
+  public static CoprocessorIterator<Long> getHandleIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
     return new DAGIterator<Long>(
         req.buildIndexScan(),
