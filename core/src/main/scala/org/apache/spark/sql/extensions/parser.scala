@@ -37,6 +37,44 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
   private lazy val tiContext = getOrCreateTiContext(sparkSession)
   private lazy val internal = new SparkSqlParser(sparkSession.sqlContext.conf)
 
+<<<<<<< HEAD
+=======
+  private def qualifyTableIdentifierInternal(tableIdentifier: Seq[String]): Seq[String] = {
+    if (tableIdentifier.size == 1) {
+      tiContext.tiCatalog.getCurrentDatabase :: tableIdentifier.toList
+    } else {
+      tableIdentifier
+    }
+  }
+
+  private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier = {
+    TableIdentifier(
+      tableIdentifier.table,
+      Some(tableIdentifier.database.getOrElse(tiContext.tiCatalog.getCurrentDatabase))
+    )
+  }
+
+  /**
+   * Determines whether a table specified by tableIdentifier is
+   * needs to be qualified. This is used for TiSpark to transform
+   * plans and decides whether a relation should be resolved or parsed.
+   *
+   * @param tableIdentifier tableIdentifier
+   * @return whether it needs qualifying
+   */
+  private def needQualify(tableIdentifier: Seq[String]): Boolean = {
+    tableIdentifier.size == 1 && tiContext.sessionCatalog
+      .getTempView(tableIdentifier.head)
+      .isEmpty
+  }
+
+  private def needQualify(tableIdentifier: TableIdentifier): Boolean = {
+    tableIdentifier.database.isEmpty && tiContext.sessionCatalog
+      .getTempView(tableIdentifier.table)
+      .isEmpty
+  }
+
+>>>>>>> support spark-3.0
   /**
    * WAR to lead Spark to consider this relation being on local files.
    * Otherwise Spark will lookup this relation in his session catalog.
@@ -45,7 +83,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier) if needQualify(tableIdentifier) =>
       r.copy(qualifyTableIdentifierInternal(tableIdentifier))
-    case i @ InsertIntoTable(r @ UnresolvedRelation(tableIdentifier), _, _, _, _)
+    case i @ InsertIntoStatement(r @ UnresolvedRelation(tableIdentifier), _, _, _, _)
         if needQualify(tableIdentifier) =>
       // When getting temp view, we leverage legacy catalog.
       i.copy(r.copy(qualifyTableIdentifierInternal(tableIdentifier)))
@@ -54,13 +92,13 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
         .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias])))
     case cv @ CreateViewCommand(_, _, _, _, _, child, _, _, _) =>
       cv.copy(child = child transform qualifyTableIdentifier)
-    case e @ ExplainCommand(plan, _, _, _) =>
+    case e @ ExplainCommand(plan, _, _, _, _) =>
       e.copy(logicalPlan = plan transform qualifyTableIdentifier)
-    case c @ CacheTableCommand(tableIdentifier, plan, _)
+    case c @ CacheTableCommand(tableIdentifier, plan, _, _)
         if plan.isEmpty && needQualify(tableIdentifier) =>
       // Caching an unqualified catalog table.
       c.copy(qualifyTableIdentifierInternal(tableIdentifier))
-    case c @ CacheTableCommand(_, plan, _) if plan.isDefined =>
+    case c @ CacheTableCommand(_, plan, _, _) if plan.isDefined =>
       c.copy(plan = Some(plan.get transform qualifyTableIdentifier))
     case u @ UncacheTableCommand(tableIdentifier, _) if needQualify(tableIdentifier) =>
       // Uncaching an unqualified catalog table.
@@ -89,6 +127,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
   override def parseDataType(sqlText: String): DataType =
     internal.parseDataType(sqlText)
 
+<<<<<<< HEAD
   private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier =
     TableIdentifier(
       tableIdentifier.table,
@@ -106,4 +145,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
     tableIdentifier.database.isEmpty && tiContext.sessionCatalog
       .getTempView(tableIdentifier.table)
       .isEmpty
+=======
+  override def parseMultipartIdentifier(sqlText: String): Seq[String] = ???
+>>>>>>> support spark-3.0
 }

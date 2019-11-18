@@ -14,28 +14,24 @@
  */
 package org.apache.spark.sql.execution.command
 
+import org.apache.spark.sql.catalyst.plans.logical.SetCatalogAndNamespace
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
 /**
- * CHECK Spark [[org.apache.spark.sql.execution.command.SetDatabaseCommand]]
- *
- * @param tiContext tiContext which contains our catalog info
- * @param delegate original SetDatabaseCommand
+ * CHECK Spark [[org.apache.spark.sql.execution.command]]
  */
-case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetDatabaseCommand)
-    extends TiCommand(delegate) {
+case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetCatalogAndNamespace)
+    extends RunnableCommand {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    tiCatalog.setCurrentDatabase(delegate.databaseName)
+    tiContext.tiCatalog.setCurrentDatabase(delegate.namespace.get.head)
     Seq.empty[Row]
   }
 }
 
 /**
- * CHECK Spark [[org.apache.spark.sql.execution.command.ShowDatabasesCommand]]
- *
- * @param tiContext tiContext which contains our catalog info
- * @param delegate original ShowDatabasesCommand
+ * CHECK Spark [[org.apache.spark.sql.execution.command]]
  */
+/*
 case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowDatabasesCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
@@ -47,3 +43,4 @@ case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowDatabasesC
     }
   }
 }
+ */

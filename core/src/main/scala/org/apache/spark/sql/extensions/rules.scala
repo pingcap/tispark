@@ -17,13 +17,13 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
-import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
-import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoTable, LogicalPlan}
+import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.execution.datasources.v2.SetCatalogAndNamespaceExec
 import org.apache.spark.sql.{AnalysisException, _}
 
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
@@ -34,11 +34,25 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   private lazy val tiCatalog = tiContext.tiCatalog
   private lazy val tiSession = tiContext.tiSession
   private lazy val sqlContext = tiContext.sqlContext
+<<<<<<< HEAD
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   protected val resolveTiDBRelation: TableIdentifier => LogicalPlan =
+=======
+
+  private def getDatabaseFromIdentifier(tableIdentifier: Seq[String]): String = {
+    if (tableIdentifier.size == 1) {
+      tiCatalog.getCurrentDatabase
+    } else {
+      tableIdentifier.head
+    }
+  }
+
+  protected val resolveTiDBRelation: Seq[String] => LogicalPlan =
+>>>>>>> support spark-3.0
     tableIdentifier => {
       val dbName = getDatabaseFromIdentifier(tableIdentifier)
-      val tableName = tableIdentifier.table
+      val tableName =
+        if (tableIdentifier.size == 1) tableIdentifier.head else tableIdentifier.tail.head
       val table = meta.getTable(dbName, tableName)
       if (table.isEmpty) {
         throw new AnalysisException(s"Table or view '$tableName' not found in database '$dbName'")
@@ -59,14 +73,14 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     plan transformUp resolveTiDBRelations
 
   protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
-    case i @ InsertIntoTable(UnresolvedRelation(tableIdentifier), _, _, _, _)
+    case i @ InsertIntoStatement(UnresolvedRelation(tableIdentifier), _, _, _, _)
         if tiCatalog
-          .catalogOf(tableIdentifier.database)
+          .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
       i.copy(table = EliminateSubqueryAliases(resolveTiDBRelation(tableIdentifier)))
     case UnresolvedRelation(tableIdentifier)
         if tiCatalog
-          .catalogOf(tableIdentifier.database)
+          .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
       resolveTiDBRelation(tableIdentifier)
   }
@@ -79,6 +93,7 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
     extends Rule[LogicalPlan] {
   protected lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
 
+<<<<<<< HEAD
   override def apply(plan: LogicalPlan): LogicalPlan =
     plan transformUp {
       // TODO: support other commands that may concern TiSpark catalog.
@@ -97,4 +112,21 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
       case ct: CreateTableLikeCommand =>
         TiCreateTableLikeCommand(tiContext, ct)
     }
+=======
+  override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
+    // TODO: support other commands that may concern TiSpark catalog.
+    //case sd: ShowDatabasesCommand =>
+    //  TiShowDatabasesCommand(tiContext, sd)
+    case sd: SetCatalogAndNamespace =>
+      TiSetDatabaseCommand(tiContext, sd)
+    case st: ShowTablesCommand =>
+      TiShowTablesCommand(tiContext, st)
+    case st: ShowColumnsCommand =>
+      TiShowColumnsCommand(tiContext, st)
+    case dt: DescribeTableCommand =>
+      TiDescribeTablesCommand(tiContext, dt)
+    case ct: CreateTableLikeCommand =>
+      TiCreateTableLikeCommand(tiContext, ct)
+  }
+>>>>>>> support spark-3.0
 }

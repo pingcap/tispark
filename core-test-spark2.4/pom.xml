@@ -9,13 +9,15 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>tispark-core-test</artifactId>
+    <artifactId>tispark-core-test-spark2.4</artifactId>
     <packaging>jar</packaging>
-    <name>TiSpark Project Core Test</name>
+    <name>TiSpark Project Core Test - Spark-2.4</name>
     <url>http://github.copm/pingcap/tispark</url>
 
     <properties>
         <scalaj.version>2.3.0</scalaj.version>
+        <scala.binary.version>2.11</scala.binary.version>
+        <scala.version>2.11.12</scala.version>
     </properties>
 
     <dependencies>
@@ -79,22 +81,22 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
-            <version>${spark.version.test}</version>
+            <version>${spark.version.test.spark2.4}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
-            <version>${spark.version.test}</version>
+            <version>${spark.version.test.spark2.4}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
-            <version>${spark.version.test}</version>
+            <version>${spark.version.test.spark2.4}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_${scala.binary.version}</artifactId>
-            <version>${spark.version.test}</version>
+            <version>${spark.version.test.spark2.4}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.hadoop</groupId>
@@ -105,17 +107,12 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
-            <version>${spark.version.test}</version>
+            <version>${spark.version.test.spark2.4}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-unsafe_${scala.binary.version}</artifactId>
-            <version>${spark.version.test}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>26.0-android</version>
+            <version>${spark.version.test.spark2.4}</version>
         </dependency>
         <!-- For tests -->
         <dependency>
@@ -221,26 +218,15 @@
                 <artifactId>maven-clean-plugin</artifactId>
                 <version>2.4.1</version>
             </plugin>
-            <!-- Scalatest runs all Scala tests -->
             <plugin>
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
                 <version>2.0.0</version>
-                <!-- Note config is repeated in surefire config -->
                 <configuration>
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                     <junitxml>.</junitxml>
-                    <filereports>SparkTestSuite.txt</filereports>
-                    <argLine>-ea -Xmx6g -Xss4m -XX:ReservedCodeCacheSize=${CodeCacheSize} -Dfile.encoding=UTF-8 -Duser.timezone=GMT+8 -Dio.netty.tryReflectionSetAccessible=true</argLine>
-                    <stderr/>
-                    <environmentVariables>
-                        <JAVA_HOME>${test.java.home}</JAVA_HOME>
-                    </environmentVariables>
-                    <systemProperties>
-                        <log4j.configuration>file:src/test/resources/log4j.properties</log4j.configuration>
-                    </systemProperties>
-                    <tagsToExclude>${test.exclude.tags}</tagsToExclude>
-                    <tagsToInclude>${test.include.tags}</tagsToInclude>
+                    <filereports>WDF TestSuite.txt</filereports>
+                    <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8 -Dio.netty.leakDetection.level=paranoid</argLine>
                 </configuration>
                 <executions>
                     <execution>
@@ -264,35 +250,6 @@
                 <configuration>
                     <skip>true</skip>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.1</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                            </transformers>
-                            <relocations>
-                                <relocation>
-                                    <pattern>com.google.common</pattern>
-                                    <shadedPattern>com.pingcap.com.google.common</shadedPattern>
-                                </relocation>
-                            </relocations>
-                            <artifactSet>
-                                <includes>
-                                    <include>com.google.guava:*</include>
-                                </includes>
-                            </artifactSet>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

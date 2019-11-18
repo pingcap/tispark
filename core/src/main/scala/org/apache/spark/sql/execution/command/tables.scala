@@ -162,6 +162,7 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
       append(buffer, s._1, s._2, "")
     }
   }
+<<<<<<< HEAD
 
   private def append(
       buffer: ArrayBuffer[Row],
@@ -252,6 +253,8 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
     }
     header +: bins
   }
+=======
+>>>>>>> support spark-3.0
 }
 
 /**

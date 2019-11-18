@@ -9,15 +9,15 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>spark-wrapper-spark-2.3</artifactId>
+    <artifactId>spark-wrapper-spark-3.0</artifactId>
     <packaging>jar</packaging>
-    <name>TiSpark Project Spark Wrapper Spark-2.3</name>
+    <name>TiSpark Project Spark Wrapper Spark-3.0</name>
     <url>http://github.copm/pingcap/tispark</url>
 
     <properties>
-        <spark.version.wrapper>2.3.4</spark.version.wrapper>
-        <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.12</scala.version>
+        <spark.version.wrapper>3.0.0-preview</spark.version.wrapper>
+        <scala.binary.version>2.12</scala.binary.version>
+        <scala.version>2.12.10</scala.version>
     </properties>
 
     <dependencies>
@@ -55,7 +55,7 @@
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
-                <version>4.3.0</version>
+                <version>3.2.0</version>
                 <executions>
                     <execution>
                         <id>compile-scala</id>
@@ -114,17 +114,24 @@
             <plugin>
                 <groupId>org.antipathy</groupId>
                 <artifactId>mvn-scalafmt_${scala.binary.version}</artifactId>
-                <version>1.0.3</version>
+                <version>0.10_1.5.1</version>
                 <configuration>
-                    <skipSources>${scalafmt.skip}</skipSources>
-                    <skipTestSources>${scalafmt.skip}</skipTestSources>
                     <sourceDirectories> <!-- (Optional) Paths to source-directories. Overrides ${project.build.sourceDirectory} -->
                         <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
                     </sourceDirectories>
                     <testSourceDirectories> <!-- (Optional) Paths to test-source-directories. Overrides ${project.build.testSourceDirectory} -->
                         <param>${project.basedir}/src/test/scala</param>
                     </testSourceDirectories>
+                    <configLocation>${project.parent.basedir}/scalafmt.conf</configLocation>
                 </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

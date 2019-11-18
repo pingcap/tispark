@@ -30,14 +30,25 @@ import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.spark.rdd.RDD
+<<<<<<< HEAD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
+=======
+import org.apache.spark.sql.catalyst.encoders.RowEncoder
+import org.apache.spark.sql.catalyst.expressions.{Attribute, GenericInternalRow, UnsafeProjection, UnsafeRow}
+>>>>>>> support spark-3.0
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
+<<<<<<< HEAD
 import org.apache.spark.sql.tispark.TiRDD
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.slf4j.LoggerFactory
+=======
+import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD, TiRowRDD}
+import org.apache.spark.sql.types.{ArrayType, DataType, LongType, Metadata, StructType}
+import org.apache.spark.sql.{Row, SparkSession}
+>>>>>>> support spark-3.0
 import org.tikv.kvproto.Coprocessor.KeyRange
 
 import scala.collection.JavaConversions._
@@ -45,12 +56,46 @@ import scala.collection.mutable
 
 trait LeafColumnarExecRDD extends LeafExecNode {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
+<<<<<<< HEAD
   private[execution] def tiRDDs: List[TiRDD]
+=======
+  private[execution] val tiRDDs: List[TiRDD]
+
+  private[execution] val internalRDDs: List[RDD[InternalRow]] = {
+    // spark-2.3 & 2.4
+    // tiRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
+    // spark-3.0
+    tiRDDs.map { rdd =>
+      val converters = RowEncoder(StructType.fromAttributes(output))
+      rdd.mapPartitions { iterator =>
+        iterator.map(converters.toRow)
+      }
+    }
+  }
+
+  private[execution] lazy val project = UnsafeProjection.create(schema)
+
+  private[execution] def internalRowToUnsafeRowWithIndex(
+    numOutputRows: SQLMetric
+  ): (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] =
+    (index, iter) => {
+      project.initialize(index)
+      iter.map { r =>
+        numOutputRows += 1
+        project(r)
+      }
+    }
+>>>>>>> support spark-3.0
 
   override def simpleString: String = verboseString
 
+<<<<<<< HEAD
   override def verboseString: String =
     if (tiRDDs.lengthCompare(1) > 0) {
+=======
+  def verboseString: String =
+    if (tiRDDs.size > 1) {
+>>>>>>> support spark-3.0
       val b = new mutable.StringBuilder()
       b.append(s"TiSpark $nodeName on partition table:\n")
       tiRDDs.zipWithIndex.map {
@@ -63,7 +108,11 @@ trait LeafColumnarExecRDD extends LeafExecNode {
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
     }
 
+<<<<<<< HEAD
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
+=======
+  def simpleString: String = verboseString
+>>>>>>> support spark-3.0
 }
 
 case class ColumnarCoprocessorRDD(
@@ -381,4 +430,12 @@ case class ColumnarRegionTaskExec(
   override protected def doExecute(): RDD[InternalRow] = {
     WholeStageCodegenExec(this)(codegenStageId = 0).execute()
   }
+<<<<<<< HEAD
+=======
+
+  def verboseString: String =
+    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
+
+  def simpleString: String = verboseString
+>>>>>>> support spark-3.0
 }

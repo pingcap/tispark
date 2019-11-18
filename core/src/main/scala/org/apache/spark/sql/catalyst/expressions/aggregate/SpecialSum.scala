@@ -73,8 +73,22 @@ case class SpecialSum(child: Expression, retType: DataType, initVal: Any)
     extends DeclarativeAggregate {
 
   override lazy val aggBufferAttributes: Seq[AttributeReference] = sum :: Nil
+<<<<<<< HEAD
   override lazy val initialValues: Seq[Expression] = Seq(
     /* sum = */ Literal.create(initVal, sumDataType))
+=======
+
+  override lazy val initialValues: Seq[Expression] = {
+    val longVal = initVal match {
+      case i: Integer => i.toLong
+      case other      => other
+    }
+    Seq(
+      /* sum = */ Literal.create(longVal, sumDataType)
+    )
+  }
+
+>>>>>>> support spark-3.0
   override lazy val updateExpressions: Seq[Expression] = {
     if (child.nullable) {
       Seq(
