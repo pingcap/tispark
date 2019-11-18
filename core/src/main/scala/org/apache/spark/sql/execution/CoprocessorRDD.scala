@@ -48,31 +48,10 @@ trait LeafColumnarExecRDD extends LeafExecNode {
   private[execution] val tiRDDs: List[TiRDD]
 
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
-
-  override def verboseString: String =
-    if (tiRDDs.size > 1) {
-      val b = new mutable.StringBuilder()
-      b.append(s"TiSpark $nodeName on partition table:\n")
-      tiRDDs.zipWithIndex.map {
-        case (_, i) => b.append(s"partition p$i")
-      }
-      b.append(s"with dag request: $dagRequest")
-      b.toString()
-    } else {
-      val engine = if (dagRequest.getUseTiFlash) {
-        "TiFlash"
-      } else {
-        "TiKV"
-      }
-      s"$engine $nodeName{$dagRequest}" +
-        s"${TiUtil.getReqEstCountStr(dagRequest)}"
-    }
-
-  override def simpleString: String = verboseString
 }
 
 case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], fetchHandle: Boolean)
-    extends LeafColumnarExecRDD
+  extends LeafColumnarExecRDD
     with ColumnarBatchScan {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
 
@@ -98,15 +77,15 @@ case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], f
 }
 
 /**
- * RegionTaskExec is used for issuing requests which are generated based
- * on handles retrieved from [[ColumnarCoprocessorRDD]].
- *
- * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
- * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
- *
- * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[ColumnarCoprocessorRDD]] for further details.
- *
- */
+  * RegionTaskExec is used for issuing requests which are generated based
+  * on handles retrieved from [[ColumnarCoprocessorRDD]].
+  *
+  * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
+  * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
+  *
+  * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[ColumnarCoprocessorRDD]] for further details.
+  *
+  */
 case class ColumnarRegionTaskExec(child: SparkPlan,
                                   output: Seq[Attribute],
                                   dagRequest: TiDAGRequest,
@@ -114,7 +93,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
                                   ts: TiTimestamp,
                                   @transient private val session: TiSession,
                                   @transient private val sparkSession: SparkSession)
-    extends UnaryExecNode
+  extends UnaryExecNode
     with ColumnarBatchScan {
 
   override lazy val metrics: Map[String, SQLMetric] = Map(
@@ -145,15 +124,15 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
   }
 
   def fetchTableResultsFromHandles(
-    numOutputRows: SQLMetric,
-    numHandles: SQLMetric,
-    numIndexScanTasks: SQLMetric,
-    numDowngradedTasks: SQLMetric,
-    numRegions: SQLMetric,
-    numIndexRangesScanned: SQLMetric,
-    numDowngradeRangesScanned: SQLMetric,
-    downgradeDagRequest: TiDAGRequest
-  ): (Int, Iterator[InternalRow]) => Iterator[InternalRow] = { (_, iter) =>
+                                    numOutputRows: SQLMetric,
+                                    numHandles: SQLMetric,
+                                    numIndexScanTasks: SQLMetric,
+                                    numDowngradedTasks: SQLMetric,
+                                    numRegions: SQLMetric,
+                                    numIndexRangesScanned: SQLMetric,
+                                    numDowngradeRangesScanned: SQLMetric,
+                                    downgradeDagRequest: TiDAGRequest
+                                  ): (Int, Iterator[InternalRow]) => Iterator[InternalRow] = { (_, iter) =>
     // For each partition, we do some initialization work
     val logger = Logger.getLogger(getClass.getName)
     val session = TiSession.getInstance(tiConf)
@@ -241,7 +220,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
       def feedBatch(): TLongArrayList = {
         val handles = new array.TLongArrayList(512)
         while (handleIterator.hasNext &&
-               handles.size() < batchSize) {
+          handles.size() < batchSize) {
           handles.add(handleIterator.next())
         }
         handles

@@ -16,7 +16,7 @@
 package com.pingcap.tispark
 
 object TiSparkInfo {
-  val SUPPORTED_SPARK_VERSION: List[String] = "2.3" :: "2.4" :: Nil
+  val SUPPORTED_SPARK_VERSION: List[String] = "3.0" :: "2.3" :: "2.4" :: Nil
 
   val SPARK_VERSION: String = org.apache.spark.SPARK_VERSION
 

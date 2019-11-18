@@ -155,7 +155,6 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
       append(buffer, s._1, s._2, "")
     }
   }
-
 }
 
 /**
