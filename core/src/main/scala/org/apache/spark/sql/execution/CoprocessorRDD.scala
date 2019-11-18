@@ -32,12 +32,13 @@ import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.expressions.{Attribute, GenericInternalRow, SortOrder, UnsafeProjection, UnsafeRow}
+import org.apache.spark.sql.catalyst.encoders.RowEncoder
+import org.apache.spark.sql.catalyst.expressions.{Attribute, GenericInternalRow, UnsafeProjection, UnsafeRow}
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD, TiRowRDD}
-import org.apache.spark.sql.types.{ArrayType, DataType, LongType, Metadata}
+import org.apache.spark.sql.types.{ArrayType, DataType, LongType, Metadata, StructType}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.tikv.kvproto.Coprocessor.KeyRange
 
@@ -48,8 +49,18 @@ trait LeafExecRDD extends LeafExecNode {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
   private[execution] val tiRDDs: List[TiRDD]
 
-  private[execution] val internalRDDs: List[RDD[InternalRow]] =
-    tiRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
+  private[execution] val internalRDDs: List[RDD[InternalRow]] = {
+    // spark-2.3 & 2.4
+    // tiRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
+    // spark-3.0
+    tiRDDs.map { rdd =>
+      val converters = RowEncoder(StructType.fromAttributes(output))
+      rdd.mapPartitions { iterator =>
+        iterator.map(converters.toRow)
+      }
+    }
+  }
+
   private[execution] lazy val project = UnsafeProjection.create(schema)
 
   private[execution] def internalRowToUnsafeRowWithIndex(
@@ -65,7 +76,7 @@ trait LeafExecRDD extends LeafExecNode {
 
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
 
-  override def verboseString: String =
+  def verboseString: String =
     if (tiRDDs.size > 1) {
       val b = new mutable.StringBuilder()
       b.append(s"TiSpark $nodeName on partition table:\n")
@@ -84,7 +95,7 @@ trait LeafExecRDD extends LeafExecNode {
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
     }
 
-  override def simpleString: String = verboseString
+  def simpleString: String = verboseString
 }
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRowRDD]) extends LeafExecRDD {
@@ -458,8 +469,8 @@ case class RegionTaskExec(child: SparkPlan,
     ).invoke()
   }
 
-  override def verboseString: String =
+  def verboseString: String =
     s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
 
-  override def simpleString: String = verboseString
+  def simpleString: String = verboseString
 }
