@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
@@ -64,10 +65,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
-        <spark.version.compile>2.3.4</spark.version.compile>
-        <spark.version.test>2.4.4</spark.version.test>
-        <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.12</scala.version>
+        <spark.version.compile>3.0.0-preview</spark.version.compile>
+        <spark.version.test.spark2.4>2.4.4</spark.version.test.spark2.4>
+        <spark.version.test.spark3.0>3.0.0-preview</spark.version.test.spark3.0>
+        <scala.binary.version>2.12</scala.binary.version>
+        <scala.version>2.12.10</scala.version>
         <scalatest.version>3.0.4</scalatest.version>
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
         <mysql.connector.version>5.1.44</mysql.connector.version>
@@ -94,14 +96,25 @@
         <module>core</module>
         <module>spark-wrapper/spark-2.3</module>
         <module>spark-wrapper/spark-2.4</module>
+        <module>spark-wrapper/spark-3.0</module>
         <module>assembly</module>
     </modules>
 
     <profiles>
         <profile>
-            <id>jenkins</id>
+            <id>jenkins-spark2.4</id>
             <modules>
-                <module>core-test</module>
+                <module>core-test-spark2.4</module>
+            </modules>
+            <properties>
+                <skipFetchTestData>true</skipFetchTestData>
+                <skipCloneProtoFiles>true</skipCloneProtoFiles>
+            </properties>
+        </profile>
+        <profile>
+            <id>jenkins-spark3.0</id>
+            <modules>
+                <module>core-test-spark3.0</module>
             </modules>
             <properties>
                 <skipFetchTestData>true</skipFetchTestData>

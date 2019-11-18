@@ -6,7 +6,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIDB_BRANCH = "master"
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
-    def MVN_PROFILE = "-Pjenkins"
+    def MVN_PROFILE = "-Pjenkins-spark3.0"
     def TEST_MODE = "simple"
     def PARALLEL_NUMBER = 18
     
@@ -122,7 +122,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         cp .ci/log4j-ci.properties core/src/test/resources/log4j.properties
                         bash core/scripts/version.sh
                         bash core/scripts/fetch-test-data.sh
-                        mv core/src/test core-test/src/
+                        mv core/src/test core-test-spark3.0/src/
                         bash tikv-client/scripts/proto.sh
                         """
                     }
