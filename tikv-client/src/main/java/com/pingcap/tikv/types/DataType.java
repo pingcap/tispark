@@ -35,7 +35,6 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-import org.joda.time.DateTimeZone;
 
 /** Base Type for encoding and decoding TiDB row information. */
 public abstract class DataType implements Serializable {
@@ -198,17 +197,18 @@ public abstract class DataType implements Serializable {
       case TypeShort:
       case TypeInt24:
       case TypeLong:
+      case TypeLonglong:
       case TypeDouble:
       case TypeYear:
       case TypeDuration:
         return 8;
       case TypeDecimal:
         throw new UnsupportedOperationException(
-            "this should not get involved in calculation process ");
+            "this should not get involved in calculation process");
       case TypeTimestamp:
       case TypeDate:
       case TypeDatetime:
-        return 16;
+        return 20;
       case TypeNewDecimal:
         return 40;
       default:
@@ -221,9 +221,8 @@ public abstract class DataType implements Serializable {
     for (int i = 0; i < numNullBitMapBytes; ) {
       // allNotNullBitNMap's actual length
       int numAppendBytes = Math.min(numNullBitMapBytes - i, 128);
-      for (int j = 0; j < numAppendBytes; j++) {
-        nullBitMaps[i + j] = allNotNullBitMap[j];
-      }
+      if (numAppendBytes >= 0)
+        System.arraycopy(allNotNullBitMap, 0, nullBitMaps, i, numAppendBytes);
       i += numAppendBytes;
     }
     return nullBitMaps;
@@ -242,14 +241,28 @@ public abstract class DataType implements Serializable {
     int ch2 = cdi.readUnsignedByte();
     int ch3 = cdi.readUnsignedByte();
     int ch4 = cdi.readUnsignedByte();
-    assert ((ch1 | ch2 | ch3 | ch4) < 0);
     return ((ch1) + (ch2 << 8) + (ch3 << 16) + (ch4 << 24));
+  }
+
+  private byte[] readBuffer = new byte[8];
+
+  private long readLongLittleEndian(CodecDataInput cdi) {
+    cdi.readFully(readBuffer, 0, 8);
+    return ((readBuffer[0] & 255)
+        + ((readBuffer[1] & 255) << 8)
+        + ((readBuffer[2] & 255) << 16)
+        + ((readBuffer[3] & 255) << 24)
+        + ((long) (readBuffer[4] & 255) << 32)
+        + ((long) (readBuffer[5] & 255) << 40)
+        + ((long) (readBuffer[6] & 255) << 48)
+        + ((long) (readBuffer[7] & 255) << 56));
   }
 
   // all data should be read in little endian.
   public TiChunkColumnVector decodeColumn(CodecDataInput cdi) {
     int numRows = readIntLittleEndian(cdi);
     int numNulls = readIntLittleEndian(cdi);
+    assert (numRows >= 0) && (numNulls >= 0);
     int numNullBitmapBytes = (numRows + 7) / 8;
     byte[] nullBitMaps = new byte[numNullBitmapBytes];
     if (numNulls > 0) {
@@ -261,16 +274,18 @@ public abstract class DataType implements Serializable {
     int numFixedBytes = getFixLen();
     int numDataBytes = numFixedBytes * numRows;
 
-    int numOffsetBytes;
+    int numOffsets;
     long[] offsets = null;
     // handle var element
     if (numFixedBytes == -1) {
-      numOffsetBytes = (numRows + 1) * 8;
-      offsets = new long[numOffsetBytes];
-      for (int i = 0; i < numOffsetBytes; i++) {
-        offsets[i] = cdi.readLong();
+      numOffsets = numRows + 1;
+      // read numOffsets * 8 bytes array
+      // and convert bytes to int64
+      offsets = new long[numOffsets];
+      for (int i = 0; i < numOffsets; i++) {
+        offsets[i] = readLongLittleEndian(cdi);
       }
-      numDataBytes = (int) offsets[offsets.length - 1];
+      numDataBytes = (int) offsets[numRows];
     }
 
     // TODO this costs a lot, we need to find a way to avoid.
@@ -278,7 +293,8 @@ public abstract class DataType implements Serializable {
     cdi.readFully(dataBuffer);
     ByteBuffer buffer = ByteBuffer.wrap(dataBuffer);
     buffer.order(LITTLE_ENDIAN);
-    return new TiChunkColumnVector(this, numRows, numNulls, nullBitMaps, offsets, buffer);
+    return new TiChunkColumnVector(
+        this, numFixedBytes, numRows, numNulls, nullBitMaps, offsets, buffer);
   }
   /**
    * decode value from row which is nothing.
@@ -561,11 +577,6 @@ public abstract class DataType implements Serializable {
 
   public static boolean isLengthUnSpecified(long length) {
     return length == UNSPECIFIED_LEN;
-  }
-
-  /** Return timezone used for encoding and decoding */
-  public DateTimeZone getTimezone() {
-    return DateTimeZone.UTC;
   }
 
   @Override

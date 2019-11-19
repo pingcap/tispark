@@ -102,4 +102,9 @@ public class TimeType extends DataType {
   public Object getOriginDefaultValueNonNull(String value, long version) {
     return Converter.convertStrToDuration(value);
   }
+
+  @Override
+  public boolean isPushDownSupported() {
+    return true;
+  }
 }

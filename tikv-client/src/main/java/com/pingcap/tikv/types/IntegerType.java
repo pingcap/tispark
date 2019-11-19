@@ -157,6 +157,11 @@ public class IntegerType extends DataType {
     return Long.parseLong(value);
   }
 
+  @Override
+  public boolean isPushDownSupported() {
+    return true;
+  }
+
   protected IntegerType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }

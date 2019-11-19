@@ -82,11 +82,7 @@ public class TimestampType extends AbstractDateTimeType {
    */
   @Override
   protected Long decodeNotNull(int flag, CodecDataInput cdi) {
-    ExtendedDateTime extendedDateTime = decodeDateTime(flag, cdi);
-    if (extendedDateTime == null) {
-      return 0L;
-    }
-    return extendedDateTime.toTimeStamp().getTime() * 1000;
+    return decodeDateTime(flag, cdi);
   }
 
   @Override
@@ -108,6 +104,11 @@ public class TimestampType extends AbstractDateTimeType {
     DateTime utcDateTime = localExtendedDateTime.getDateTime().toDateTime(DateTimeZone.UTC);
     ExtendedDateTime utcExtendedDateTime =
         new ExtendedDateTime(utcDateTime, localExtendedDateTime.getMicrosOfMillis());
-    DateTimeCodec.writeDateTimeProto(cdo, utcExtendedDateTime, Converter.getLocalTimezone());
+    DateTimeCodec.writeDateTimeProto(cdo, utcExtendedDateTime, getTimezone());
+  }
+
+  @Override
+  public boolean isPushDownSupported() {
+    return true;
   }
 }

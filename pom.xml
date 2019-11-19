@@ -119,7 +119,8 @@
                     <configuration>
                         <parallel>suites</parallel>
                         <useUnlimitedThreads>true</useUnlimitedThreads>
-                        <forkMode>always</forkMode>
+                        <forkCount>10</forkCount>
+                        <reuseForks>true</reuseForks>
                     </configuration>
                     <version>3.0.0-M3</version>
                 </plugin>

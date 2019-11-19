@@ -60,4 +60,8 @@ public class ExtendedDateTime {
     timestamp.setNanos(dateTime.getMillisOfSecond() * 1000000 + microsOfMillis * 1000);
     return timestamp;
   }
+
+  public long toEpochMicro() {
+    return toTimeStamp().getTime() * 1000 + getMicrosOfMillis();
+  }
 }

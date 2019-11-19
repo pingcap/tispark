@@ -96,4 +96,9 @@ public class DateType extends AbstractDateTimeType {
     // return how many days from EPOCH
     return date.toDate().getTime() / (24 * 60 * 60 * 1000);
   }
+
+  @Override
+  public boolean isPushDownSupported() {
+    return true;
+  }
 }

@@ -21,10 +21,8 @@ import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import gnu.trove.list.array.TLongArrayList
+import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
-import org.apache.spark.sql.catalyst.expressions.{Attribute, UnsafeRow}
-import org.apache.spark.sql.catalyst.util.ArrayData
-import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 

@@ -161,4 +161,9 @@ public class DecimalType extends DataType {
   public Object getOriginDefaultValueNonNull(String value, long version) {
     return new BigDecimal(value);
   }
+
+  @Override
+  public boolean isPushDownSupported() {
+    return true;
+  }
 }

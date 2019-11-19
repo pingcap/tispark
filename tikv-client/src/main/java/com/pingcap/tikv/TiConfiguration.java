@@ -49,7 +49,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
   private static final boolean DEF_USE_TIFLASH = false;
-  private static final boolean DEF_ENABLE_ARROW = true;
+  private static final boolean DEF_ENABLE_CHUNK = true;
   private static final String DEF_TIFLASH_LABEL_KEY = "engine";
   private static final String DEF_TIFLASH_LABEL_VALUE = "tiflash";
 
@@ -75,7 +75,7 @@ public class TiConfiguration implements Serializable {
   private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
 
   private boolean useTiFlash = DEF_USE_TIFLASH;
-  private boolean enableArrow = DEF_ENABLE_ARROW;
+  private boolean enableChunk = DEF_ENABLE_CHUNK;
   private String tiFlashLabelKey = DEF_TIFLASH_LABEL_KEY;
   private String tiFlashLabelValue = DEF_TIFLASH_LABEL_VALUE;
 
@@ -294,11 +294,11 @@ public class TiConfiguration implements Serializable {
     this.downgradeThreshold = downgradeThreshold;
   }
 
-  public boolean isEnableArrow() {
-    return enableArrow;
+  public boolean isEnableChunk() {
+    return enableChunk;
   }
 
-  public void setEnableArrow(boolean enableArrow) {
-    this.enableArrow = enableArrow;
+  public void setEnableChunk(boolean enableChunk) {
+    this.enableChunk = enableChunk;
   }
 }

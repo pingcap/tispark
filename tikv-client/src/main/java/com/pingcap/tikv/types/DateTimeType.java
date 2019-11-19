@@ -17,7 +17,6 @@
 
 package com.pingcap.tikv.types;
 
-import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
@@ -58,17 +57,16 @@ public class DateTimeType extends AbstractDateTimeType {
    */
   @Override
   protected Long decodeNotNull(int flag, CodecDataInput cdi) {
-    ExtendedDateTime extendedDateTime = decodeDateTime(flag, cdi);
-    // Even though null is filtered out but data like 0000-00-00 exists
-    // according to MySQL JDBC behavior, it's converted to null
-    if (extendedDateTime == null) {
-      return null;
-    }
-    return extendedDateTime.toTimeStamp().getTime() * 1000;
+    return decodeDateTime(flag, cdi);
   }
 
   @Override
   public DateTime getOriginDefaultValueNonNull(String value, long version) {
     return Converter.convertToDateTime(value).getDateTime();
+  }
+
+  @Override
+  public boolean isPushDownSupported() {
+    return true;
   }
 }

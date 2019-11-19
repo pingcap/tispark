@@ -1,14 +1,28 @@
+/*
+ * Copyright 2019 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pingcap.tikv.columnar;
 
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
 
-public class RowwiseTiColumnarVector extends TiColumnVector {
+public class TiRowColumnVector extends TiColumnVector {
   private Row[] rows;
   private int colIdx;
   /** Sets up the data type of this column vector. */
-  public RowwiseTiColumnarVector(DataType type, int colIdx, Row[] rows, int numOfRows) {
+  public TiRowColumnVector(DataType type, int colIdx, Row[] rows, int numOfRows) {
     super(type, numOfRows);
     this.rows = rows;
     this.colIdx = colIdx;
@@ -96,7 +110,7 @@ public class RowwiseTiColumnarVector extends TiColumnVector {
    */
   @Override
   public float getFloat(int rowId) {
-    return 0;
+    return ((Number) rows[rowId].getDouble(colIdx)).floatValue();
   }
 
   /**

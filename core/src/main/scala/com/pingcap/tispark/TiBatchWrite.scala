@@ -888,8 +888,7 @@ class TiRegionPartitioner(regions: List[TiRegion], writeConcurrency: Int) extend
 
     regions.indices.foreach { i =>
       val region = regions(i)
-      val range = KeyRangeUtils.makeRange(region.getStartKey, region.getEndKey)
-      if (range.contains(rawKey)) {
+      if (region.contains(rawKey)) {
         return i % numPartitions
       }
     }

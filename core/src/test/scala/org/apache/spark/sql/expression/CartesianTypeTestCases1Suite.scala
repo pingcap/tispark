@@ -173,7 +173,9 @@ class CartesianTypeTestCases1Suite extends BaseInitialOnceTest {
     "select tp_tinyint,tp_int from full_data_type_table  where tp_tinyint >= tp_int order by id_dt  limit 20",
     "select tp_decimal,tp_double from full_data_type_table  where tp_decimal >= tp_double order by id_dt  limit 20",
     "select tp_decimal,id_dt from full_data_type_table  where tp_decimal >= id_dt order by id_dt  limit 20",
-    "select tp_binary,tp_binary from full_data_type_table  where tp_binary >= tp_binary order by id_dt  limit 20",
+    // this need further investigate
+    // https://github.com/pingcap/tispark/issues/1225
+    // "select tp_binary,tp_binary from full_data_type_table  where tp_binary >= tp_binary order by id_dt  limit 20",
     "select tp_tinyint,tp_mediumint from full_data_type_table  where tp_tinyint >= tp_mediumint order by id_dt  limit 20",
     "select tp_float,tp_tinyint from full_data_type_table  where tp_float >= tp_tinyint order by id_dt  limit 20",
     "select tp_real,id_dt from full_data_type_table  where tp_real >= id_dt order by id_dt  limit 20",

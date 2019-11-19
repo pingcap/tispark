@@ -1,18 +1,33 @@
+/*
+ * Copyright 2019 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.pingcap.tikv.columnar;
 
 import com.pingcap.tikv.datatype.TypeMapping;
-import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.Decimal;
+import org.apache.spark.sql.vectorized.ColumnVector;
+import org.apache.spark.sql.vectorized.ColumnarArray;
+import org.apache.spark.sql.vectorized.ColumnarMap;
 import org.apache.spark.unsafe.types.UTF8String;
 
-public class TiColumnVectorAdapter {
-  private DataType dataType;
+public class TiColumnVectorAdapter extends ColumnVector {
   private TiColumnVector tiColumnVector;
   /**
    * Sets up the data type of this column vector.
    */
   public TiColumnVectorAdapter(TiColumnVector tiColumnVector) {
-    dataType = TypeMapping.toSparkType(tiColumnVector.dataType());
+    super(TypeMapping.toSparkType(tiColumnVector.dataType()));
     this.tiColumnVector = tiColumnVector;
   }
 
@@ -104,11 +119,49 @@ public class TiColumnVectorAdapter {
   }
 
   /**
+   * Returns the array type value for rowId. If the slot for rowId is null, it should return null.
+   *
+   * To support array type, implementations must construct an {@link ColumnarArray} and return it in
+   * this method. {@link ColumnarArray} requires a {@link ColumnVector} that stores the data of all
+   * the elements of all the arrays in this vector, and an offset and length which points to a range
+   * in that {@link ColumnVector}, and the range represents the array for rowId. Implementations are
+   * free to decide where to put the data vector and offsets and lengths. For example, we can use
+   * the first child vector as the data vector, and store offsets and lengths in 2 int arrays in
+   * this vector.
+   */
+  @Override
+  public ColumnarArray getArray(int rowId) {
+    throw new UnsupportedOperationException("TiColumnVectorAdapter is not supported this method");
+  }
+
+  /**
+   * Returns the map type value for rowId. If the slot for rowId is null, it should return null.
+   *
+   * In Spark, map type value is basically a key data array and a value data array. A key from the
+   * key array with a index and a value from the value array with the same index contribute to an
+   * entry of this map type value.
+   *
+   * To support map type, implementations must construct a {@link ColumnarMap} and return it in this
+   * method. {@link ColumnarMap} requires a {@link ColumnVector} that stores the data of all the
+   * keys of all the maps in this vector, and another {@link ColumnVector} that stores the data of
+   * all the values of all the maps in this vector, and a pair of offset and length which specify
+   * the range of the key/value array that belongs to the map type value at rowId.
+   */
+  @Override
+  public ColumnarMap getMap(int ordinal) {
+    throw new UnsupportedOperationException("TiColumnVectorAdapter is not supported this method");
+  }
+
+  /**
    * Returns the decimal type value for rowId. If the slot for rowId is null, it should return
    * null.
    */
   public Decimal getDecimal(int rowId, int precision, int scale) {
     return  Decimal.apply(tiColumnVector.getDecimal(rowId, precision, scale));
+  }
+
+  public Decimal getDecimal(int rowId) {
+    return getDecimal(rowId, 0, 0);
   }
 
   /**
@@ -127,7 +180,15 @@ public class TiColumnVectorAdapter {
     return tiColumnVector.getBinary(rowId);
   }
 
-  public int numOfRows() {
+  /**
+   * @return child [[ColumnVector]] at the given ordinal.
+   */
+  @Override
+  protected ColumnVector getChild(int ordinal) {
+    throw new UnsupportedOperationException("TiColumnVectorAdapter is not supported this method");
+  }
+
+  int numOfRows() {
     return tiColumnVector.numOfRows();
   }
 }

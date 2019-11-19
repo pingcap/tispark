@@ -93,4 +93,9 @@ public class StringType extends BytesType {
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
     return new String((byte[]) super.decodeNotNull(flag, cdi), StandardCharsets.UTF_8);
   }
+
+  @Override
+  public boolean isPushDownSupported() {
+    return true;
+  }
 }

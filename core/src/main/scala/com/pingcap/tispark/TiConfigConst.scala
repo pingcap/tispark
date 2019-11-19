@@ -28,7 +28,7 @@ object TiConfigConst {
   val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
   val ALLOW_INDEX_READ: String = "spark.tispark.plan.allow_index_read"
   val COPROCESS_STREAMING: String = "spark.tispark.coprocess.streaming"
-  val ENABLE_ARROW: String = "spark.tispark.coprocess.arrow"
+  val ENABLE_CHUNK: String = "spark.tispark.coprocess.chunk"
   val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"
   val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String = "spark.tispark.plan.downgrade.index_threshold"
   val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported_mysql_types"
@@ -42,7 +42,6 @@ object TiConfigConst {
   val TIKV_REGION_SPLIT_SIZE_IN_MB: String = "spark.tispark.tikv.region_split_size_in_mb"
   val USE_TIFLASH: String = "spark.tispark.use.tiflash"
   val ENABLE_TIFLASH_TEST: String = "spark.tispark.enable.tiflash_test"
-  val USE_COLUMNAR: String = "spark.tispark.use.columnar"
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"

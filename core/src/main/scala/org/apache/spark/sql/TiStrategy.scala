@@ -99,9 +99,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
-  private def isEnableArrow(): Boolean =
-    sqlConf.getConfString(TiConfigConst.ENABLE_ARROW, "false").toLowerCase.toBoolean ||
-      tiContext.tiConf.isEnableArrow
+  private def isEnableChunk(): Boolean =
+    sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "false").toLowerCase.toBoolean ||
+      tiContext.tiConf.isEnableChunk
 
   private def timeZoneOffsetInSeconds(): Int = {
     val tz = DateTimeZone.getDefault
@@ -113,10 +113,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   }
 
   private def encodeType(): EncodeType = {
-    //TODO check enable arrow from config
     if (useStreamingProcess()) {
       EncodeType.TypeDefault
-    } else if (!isEnableArrow()) {
+    } else if (!isEnableChunk()) {
       EncodeType.TypeDefault
     } else {
       EncodeType.TypeChunk
