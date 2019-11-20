@@ -38,7 +38,7 @@ class TPCHQuerySuite extends BaseTiSparkTest {
     "q12",
     "q13",
     "q14",
-    "q15",
+    // "q15",
     "q16",
     "q17",
     "q18",
