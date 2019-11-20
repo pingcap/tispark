@@ -119,5 +119,6 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   override def parseDataType(sqlText: String): DataType =
     internal.parseDataType(sqlText)
 
-  override def parseMultipartIdentifier(sqlText: String): Seq[String] = ???
+  override def parseMultipartIdentifier(sqlText: String): Seq[String] =
+    internal.parseMultipartIdentifier(sqlText)
 }
