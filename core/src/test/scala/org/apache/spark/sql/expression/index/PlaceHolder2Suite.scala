@@ -21,7 +21,7 @@ import org.apache.spark.sql.BaseInitialOnceTest
 
 class PlaceHolder2Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
-    "select tp_decimal from full_data_type_table_idx  where tp_decimal != null",
+    //"select tp_decimal from full_data_type_table_idx  where tp_decimal != null",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal != 'PingCAP'",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal != '2017-11-02'",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal != 9223372036854775807",
@@ -190,7 +190,7 @@ class PlaceHolder2Suite extends BaseInitialOnceTest {
     "select tp_real from full_data_type_table_idx  where tp_real <> -128",
     "select tp_real from full_data_type_table_idx  where tp_real <> 0",
     "select tp_real from full_data_type_table_idx  where tp_real <> 2147868.65536",
-    "select tp_decimal from full_data_type_table_idx  where tp_decimal <> null",
+    // "select tp_decimal from full_data_type_table_idx  where tp_decimal <> null",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal <> 'PingCAP'",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal <> '2017-11-02'",
     "select tp_decimal from full_data_type_table_idx  where tp_decimal <> 9223372036854775807",

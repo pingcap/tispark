@@ -128,6 +128,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
     internal.parseDataType(sqlText)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   private def qualifyTableIdentifierInternal(tableIdentifier: TableIdentifier): TableIdentifier =
     TableIdentifier(
       tableIdentifier.table,
@@ -148,4 +149,8 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
 =======
   override def parseMultipartIdentifier(sqlText: String): Seq[String] = ???
 >>>>>>> support spark-3.0
+=======
+  override def parseMultipartIdentifier(sqlText: String): Seq[String] =
+    internal.parseMultipartIdentifier(sqlText)
+>>>>>>> Fix UT (#1226)
 }
