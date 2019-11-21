@@ -14,14 +14,14 @@
  */
 package org.apache.spark.sql.execution.command
 
-import org.apache.spark.sql.catalyst.plans.logical.SetCatalogAndNamespace
+import org.apache.spark.sql.catalyst.plans.logical.{SetCatalogAndNamespace, ShowNamespaces}
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
 /**
  * CHECK Spark [[org.apache.spark.sql.execution.command]]
  */
 case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetCatalogAndNamespace)
-    extends RunnableCommand {
+    extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     tiContext.tiCatalog.setCurrentDatabase(delegate.namespace.get.head)
     Seq.empty[Row]
@@ -31,13 +31,12 @@ case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetCatalogAndNam
 /**
  * CHECK Spark [[org.apache.spark.sql.execution.command]]
  */
-/*
-case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowDatabasesCommand)
+case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowNamespaces)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val databases =
       // Not leveraging catalog-specific db pattern, at least Hive and Spark behave different than each other.
-      delegate.databasePattern
+      delegate.pattern
         .map(tiCatalog.listDatabases)
         .getOrElse(tiCatalog.listDatabases())
     databases.map { d =>
@@ -45,4 +44,3 @@ case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowDatabasesC
     }
   }
 }
- */
