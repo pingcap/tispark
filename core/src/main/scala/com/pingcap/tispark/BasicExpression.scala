@@ -135,7 +135,7 @@ object BasicExpression {
       case CheckOverflow(BasicExpression(expr), _) =>
         Some(expr)
 
-      case PromotePrecision(Cast(BasicExpression(expr), _, _)) =>
+      case PromotePrecision(Cast(BasicExpression(expr), _: DecimalType, _)) =>
         Some(expr)
 
       // TODO: Are all AttributeReference column reference in such context?
