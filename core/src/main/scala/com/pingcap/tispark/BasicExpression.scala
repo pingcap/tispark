@@ -20,7 +20,7 @@ import java.sql.Timestamp
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, StartsWith, Subtract}
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Cast, CheckOverflow, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, PromotePrecision, StartsWith, Subtract}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
@@ -129,6 +129,14 @@ object BasicExpression {
 
       case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(StringRegExpression.like(lhs, rhs))
+
+      // Coprocessor has its own behavior of type promoting and overflow check
+      // so we simply remove it from expression and let cop handle it
+      case CheckOverflow(BasicExpression(expr), _) =>
+        Some(expr)
+
+      case PromotePrecision(Cast(BasicExpression(expr), _, _)) =>
+        Some(expr)
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>
