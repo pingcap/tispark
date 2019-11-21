@@ -76,7 +76,7 @@ trait LeafExecRDD extends LeafExecNode {
 
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
 
-  override def verboseString(maxFields: Int): String =
+  /*def verboseString(maxFields: Int): String =
     if (tiRDDs.size > 1) {
       val b = new mutable.StringBuilder()
       b.append(s"TiSpark $nodeName on partition table:\n")
@@ -95,7 +95,7 @@ trait LeafExecRDD extends LeafExecNode {
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
     }
 
-  override def simpleString(maxFields: Int): String = verboseString(maxFields)
+  def simpleString(maxFields: Int): String = verboseString(maxFields)*/
 }
 
 case class CoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRowRDD]) extends LeafExecRDD {
@@ -119,8 +119,6 @@ case class CoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRowRDD]) extend
       )
     sparkContext.union(rddList)
   }
-
-  override def simpleString(maxFields: Int): String = verboseString(maxFields)
 }
 
 /**
@@ -469,8 +467,8 @@ case class RegionTaskExec(child: SparkPlan,
     ).invoke()
   }
 
-  override def verboseString(maxFields: Int): String =
+  /*def verboseString(maxFields: Int): String =
     s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
 
-  override def simpleString(maxFields: Int): String = verboseString(maxFields)
+  def simpleString(maxFields: Int): String = verboseString(maxFields)*/
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,34 @@
  */
 package org.apache.spark.sql.extensions
 
-import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation, UnresolvedV2Relation}
+import org.apache.spark.sql.catalyst.analysis.UnresolvedV2Relation
+import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, ShowNamespaces}
+import com.pingcap.tispark.statistics.StatisticsManager
+import com.pingcap.tispark.utils.ReflectionUtil.newSubqueryAlias
+import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
-import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace, ShowNamespaces}
+import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.{AnalysisException, _}
 
+class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
+    extends (SparkSession => Rule[LogicalPlan]) {
+  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
+    TiResolutionRule(getOrCreateTiContext)(v1)
+  }
+}
+
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
 ) extends Rule[LogicalPlan] {
-  protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
+
+  private val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val autoLoad = tiContext.autoLoad
   protected lazy val meta: MetaManager = tiContext.meta
   private lazy val tiCatalog = tiContext.tiCatalog
@@ -68,7 +79,10 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
       newSubqueryAlias(tableName, LogicalRelation(tiDBRelation))
     }
 
-  protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
+  override def apply(plan: LogicalPlan): LogicalPlan =
+    plan transformUp resolveTiDBRelations
+
+  private def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
     case i @ InsertIntoStatement(UnresolvedRelation(tableIdentifier), _, _, _, _)
         if tiCatalog
           .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
@@ -80,9 +94,13 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
       resolveTiDBRelation(tableIdentifier)
   }
+}
 
-  override def apply(plan: LogicalPlan): LogicalPlan =
-    plan transformUp resolveTiDBRelations
+class TiDDLRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
+    extends (SparkSession => Rule[LogicalPlan]) {
+  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
+    TiDDLRule(getOrCreateTiContext)(v1)
+  }
 }
 
 case class NopCommand(name: String) extends Command {}

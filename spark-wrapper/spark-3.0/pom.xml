@@ -16,8 +16,6 @@
 
     <properties>
         <spark.version.wrapper>3.0.0-preview</spark.version.wrapper>
-        <scala.binary.version>2.12</scala.binary.version>
-        <scala.version>2.12.10</scala.version>
     </properties>
 
     <dependencies>
