@@ -130,6 +130,14 @@ object BasicExpression {
       case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(StringRegExpression.like(lhs, rhs))
 
+      // Coprocessor has its own behavior of type promoting and overflow check
+      // so we simply remove it from expression and let cop handle it
+      case CheckOverflow(BasicExpression(expr), _) =>
+        Some(expr)
+
+      case PromotePrecision(Cast(BasicExpression(expr), _, _)) =>
+        Some(expr)
+
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>
         // Do we need add ValToType in TiExpr?
