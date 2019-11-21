@@ -48,6 +48,30 @@ trait LeafColumnarExecRDD extends LeafExecNode {
   private[execution] val tiRDDs: List[TiRDD]
 
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
+<<<<<<< HEAD
+=======
+
+  override def verboseString(maxFields: Int): String =
+    if (tiRDDs.size > 1) {
+      val b = new mutable.StringBuilder()
+      b.append(s"TiSpark $nodeName on partition table:\n")
+      tiRDDs.zipWithIndex.map {
+        case (_, i) => b.append(s"partition p$i")
+      }
+      b.append(s"with dag request: $dagRequest")
+      b.toString()
+    } else {
+      val engine = if (dagRequest.getUseTiFlash) {
+        "TiFlash"
+      } else {
+        "TiKV"
+      }
+      s"$engine $nodeName{$dagRequest}" +
+        s"${TiUtil.getReqEstCountStr(dagRequest)}"
+    }
+
+  override def simpleString(maxFields: Int): String = verboseString(maxFields)
+>>>>>>> Fix override verboseString and simpleString (#1230)
 }
 
 case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], fetchHandle: Boolean)
@@ -65,6 +89,25 @@ case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], f
     "CoprocessorRDD"
   }
 
+<<<<<<< HEAD
+=======
+  override def simpleString(maxFields: Int): String = verboseString(maxFields)
+}
+
+/**
+ * HandleRDDExec is used for scanning handles from TiKV as a LeafExecNode in index plan.
+ * Providing handle scan via a TiHandleRDD.
+ *
+ * @param tiRDDs handle source
+ */
+case class HandleRDDExec(tiRDDs: List[TiHandleRDD]) extends LeafExecRDD {
+  override val nodeName: String = "HandleRDD"
+
+  override lazy val metrics: Map[String, SQLMetric] = Map(
+    "numOutputRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions")
+  )
+
+>>>>>>> Fix override verboseString and simpleString (#1230)
   override protected def doExecute(): RDD[InternalRow] = {
     if (!fetchHandle) {
       WholeStageCodegenExec(this)(codegenStageId = 0).execute()
@@ -365,6 +408,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
     ).invoke()
   }
 
+<<<<<<< HEAD
   override def verboseString: String =
     s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
 
@@ -372,3 +416,10 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
 
   override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(inputRDD())
 }
+=======
+  override def verboseString(maxFields: Int): String =
+    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
+
+  override def simpleString(maxFields: Int): String = verboseString(maxFields)
+}
+>>>>>>> Fix override verboseString and simpleString (#1230)
