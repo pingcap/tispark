@@ -135,6 +135,9 @@ object BasicExpression {
       case CheckOverflow(BasicExpression(expr), _) =>
         Some(expr)
 
+      case PromotePrecision(BasicExpression(expr)) =>
+        Some(expr)
+
       case PromotePrecision(Cast(BasicExpression(expr), _: DecimalType, _)) =>
         Some(expr)
 
