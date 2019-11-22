@@ -17,8 +17,10 @@ package org.apache.spark.sql.execution.command
 import com.pingcap.tispark.utils.ReflectionUtil._
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
+import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.plans.logical.Command
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructType}
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
 
@@ -53,13 +55,19 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
   }
 }
 
+class DescribeTableInfo(val tableName: TableIdentifier,
+                        val partitionSpec: TablePartitionSpec,
+                        val isExtended: Boolean) {}
+
 /**
  * CHECK Spark [[org.apache.spark.sql.execution.command.DescribeTableCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
  * @param delegate original DescribeTableCommand
  */
-case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTableCommand)
+case class TiDescribeTablesCommand(tiContext: TiContext,
+                                   delegate: Command,
+                                   tableInfo: DescribeTableInfo)
     extends TiCommand(delegate) {
   override val output: Seq[Attribute] = Seq(
     // Column names are based on Hive.
@@ -91,36 +99,50 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
 
   override def run(sparkSession: SparkSession): Seq[Row] =
     tiCatalog
-      .catalogOf(delegate.table.database)
+      .catalogOf(tableInfo.tableName.database)
       .getOrElse(
         throw new NoSuchDatabaseException(
-          delegate.table.database.getOrElse(tiCatalog.getCurrentDatabase)
+          tableInfo.tableName.database.getOrElse(tiCatalog.getCurrentDatabase)
         )
       ) match {
       case _: TiSessionCatalog =>
         val result = new ArrayBuffer[Row]
-        if (delegate.partitionSpec.nonEmpty) {
+        if (tableInfo.partitionSpec.nonEmpty) {
           throw new AnalysisException(
-            s"DESC PARTITION is not supported on TiDB table: ${delegate.table.identifier}"
+            s"DESC PARTITION is not supported on TiDB table: ${tableInfo.tableName}"
           )
         }
-        val metadata = tiCatalog.getTableMetadata(delegate.table)
+        val metadata = tiCatalog.getTableMetadata(tableInfo.tableName)
         describeSchema(metadata.schema, result, header = false)
 
-        if (delegate.isExtended) {
+        if (tableInfo.isExtended) {
           describeFormattedTableInfo(metadata, result)
         }
 
         result
       case _: SessionCatalog =>
-        val schema = tiCatalog.getTableMetadata(delegate.table).schema
-        val (delegateResult, extendedResult) =
-          delegate.run(sparkSession).zipWithIndex.splitAt(schema.length)
-        delegateResult.map(
-          (r: (Row, Int)) => Row(r._1(0), r._1(1), schema.fields(r._2).nullable.toString, r._1(2))
-        ) ++ extendedResult.map(
-          r => Row(r._1(0), r._1(1), "", r._1(2))
-        )
+        delegate match {
+          case dt: DescribeTableCommand =>
+            val schema = tiCatalog.getTableMetadata(tableInfo.tableName).schema
+            val (delegateResult, extendedResult) =
+              dt.run(sparkSession).zipWithIndex.splitAt(schema.length)
+            delegateResult.map(
+              (r: (Row, Int)) =>
+                Row(r._1(0), r._1(1), schema.fields(r._2).nullable.toString, r._1(2))
+            ) ++ extendedResult.map(
+              r => Row(r._1(0), r._1(1), "", r._1(2))
+            )
+          case _ =>
+            val result = new ArrayBuffer[Row]
+            val metadata = tiCatalog.getTableMetadata(tableInfo.tableName)
+            describeSchema(metadata.schema, result, header = false)
+
+            if (tableInfo.isExtended) {
+              describeFormattedTableInfo(metadata, result)
+            }
+
+            result
+        }
     }
 
   private def describeSchema(schema: StructType,
