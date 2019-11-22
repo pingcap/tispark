@@ -71,8 +71,13 @@ public class ProtoConverter extends Visitor<Expr, Object> {
 
   private DataType getType(Expression expression) {
     DataType type = typeMap.get(expression);
+
     if (type == null) {
       throw new TiExpressionException(String.format("Expression %s type unknown", expression));
+    }
+    // for timestamp type, coprocessor will use datetime to do calculation.
+    if (type instanceof TimestampType) {
+      return DateTimeType.DATETIME;
     }
     return type;
   }
@@ -248,6 +253,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     // the first executor of a DAG request.
     IntegerCodec.writeLong(cdo, position);
     builder.setVal(cdo.toByteString());
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
@@ -263,6 +269,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
       CodecDataOutput cdo = new CodecDataOutput();
       type.encode(cdo, EncodeType.PROTO, node.getValue());
       builder.setVal(cdo.toByteString());
+      builder.setFieldType(toPBFieldType(getType(node)));
     }
     return builder.build();
   }
