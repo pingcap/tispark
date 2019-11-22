@@ -20,7 +20,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, Cast, Divide, Expression, NamedExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalAggregation
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import org.apache.spark.sql.types.{DecimalType, DoubleType, LongType}
+import org.apache.spark.sql.types.{DecimalType, DoubleType, FloatType, IntegralType, LongType}
 
 object TiAggregationImpl {
   type ReturnType =
@@ -30,10 +30,29 @@ object TiAggregationImpl {
     case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
       // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
       // converted `Sum`s and `Count`s down to TiKV.
-      val (averages, averagesEliminated) = aggregateExpressions.partition {
+      val (averages, _) = aggregateExpressions.partition {
         case AggregateExpression(_: Average, _, _, _) => true
         case _                                        => false
       }
+
+      val (sums, _) = aggregateExpressions.partition {
+        case AggregateExpression(_: Sum, _, _, _) => true
+        case _                                    => false
+      }
+
+      val (sumAndAvgEliminated, _) = aggregateExpressions.partition {
+        case AggregateExpression(_: Sum, _, _, _)     => false
+        case AggregateExpression(_: Average, _, _, _) => false
+        case _                                        => true
+      }
+
+      val sumsRewriteMap = sums.map {
+        case s @ AggregateExpression(Sum(ref), _, _, _) =>
+          // need cast long type to decimal type
+          val sum =
+            if (ref.dataType.eq(LongType)) PromotedSum(ref) else Sum(ref)
+          s.resultAttribute -> s.copy(aggregateFunction = sum, resultId = newExprId)
+      }.toMap
 
       // An auxiliary map that maps result attribute IDs of all detected `Average`s to corresponding
       // converted `Sum`s and `Count`s.
@@ -49,6 +68,18 @@ object TiAggregationImpl {
           )
       }.toMap
 
+      val sumRewrite = sumsRewriteMap.map {
+        case (ref, sum) =>
+          val resultDataType = sum.resultAttribute.dataType
+          val castedSum = resultDataType match {
+            case LongType       => Cast(sum.resultAttribute, DecimalType.BigIntDecimal)
+            case FloatType      => Cast(sum.resultAttribute, DoubleType)
+            case DoubleType     => Cast(sum.resultAttribute, DoubleType)
+            case d: DecimalType => Cast(sum.resultAttribute, d)
+          }
+          (ref: Expression) -> Alias(castedSum, ref.name)(exprId = ref.exprId)
+      }
+
       val avgRewrite: PartialFunction[Expression, Expression] = avgRewriteMap.map {
         case (ref, Seq(sum, count)) =>
           val castedSum = Cast(sum.resultAttribute, DoubleType)
@@ -59,12 +90,14 @@ object TiAggregationImpl {
 
       val rewrittenResultExpressions = resultExpressions
         .map { _ transform avgRewrite }
+        .map { _ transform sumRewrite }
         .map { case e: NamedExpression => e }
 
       val rewrittenAggregateExpressions = {
         val extraSumsAndCounts = avgRewriteMap.values
           .reduceOption { _ ++ _ } getOrElse Nil
-        (averagesEliminated ++ extraSumsAndCounts).distinct
+        val rewriteSums = sumsRewriteMap.values
+        (sumAndAvgEliminated ++ extraSumsAndCounts ++ rewriteSums).distinct
       }
 
       Some(groupingExpressions, rewrittenAggregateExpressions, rewrittenResultExpressions, child)

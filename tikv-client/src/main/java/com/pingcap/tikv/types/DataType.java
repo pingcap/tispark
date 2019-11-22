@@ -77,8 +77,8 @@ public abstract class DataType implements Serializable {
     this.tp = tp;
     this.flag = 0;
     this.elems = ImmutableList.of();
-    this.length = scale;
-    this.decimal = prec;
+    this.length = prec;
+    this.decimal = scale;
     this.charset = "";
     this.collation = Collation.DEF_COLLATION_CODE;
   }

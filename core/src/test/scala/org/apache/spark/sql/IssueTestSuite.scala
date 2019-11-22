@@ -277,6 +277,16 @@ class IssueTestSuite extends BaseTiSparkTest {
     judge("select c3, c4 from single_read")
   }
 
+  test("test sum rewriting logic") {
+    // only test numeric types. Spark will raise analysis exception if we
+    // perform sum aggregation over non-numeric types.
+    judge("select sum(tp_decimal) from full_data_type_table")
+    judge("select sum(tp_real) from full_data_type_table")
+    judge("select sum(tp_double) from full_data_type_table")
+    judge("select sum(tp_int) from full_data_type_table")
+    judge("select sum(id_dt) from full_data_type_table")
+  }
+
   test("TISPARK-16 fix excessive dag column") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
@@ -303,8 +313,8 @@ class IssueTestSuite extends BaseTiSparkTest {
     val t1_df = spark.sql("select * from t1")
     val t1_group_df = t1_df.groupBy("k1", "k2").agg(sum("c1").alias("c1"))
     val t2_df = spark.sql("select * from t2")
-    t2_df.printSchema()
-    t2_df.show
+//    t2_df.printSchema()
+//    t2_df.show
     val join_df = t1_group_df.join(t2_df, Seq("k1", "k2"), "left_outer")
     join_df.printSchema()
     join_df.explain
