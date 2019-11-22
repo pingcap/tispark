@@ -14,6 +14,8 @@
  */
 package org.apache.spark.sql.extensions
 
+import java.util
+
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.expressions.{Expression, SubqueryExpression}
 import org.apache.spark.sql.catalyst.parser._
@@ -56,13 +58,17 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   private def needQualify(tableIdentifier: Seq[String]): Boolean = {
     tableIdentifier.size == 1 && tiContext.sessionCatalog
       .getTempView(tableIdentifier.head)
-      .isEmpty
+      .isEmpty && !cteTableNames.get().contains(tableIdentifier.head.toLowerCase())
   }
 
   private def needQualify(tableIdentifier: TableIdentifier): Boolean = {
     tableIdentifier.database.isEmpty && tiContext.sessionCatalog
       .getTempView(tableIdentifier.table)
       .isEmpty
+  }
+
+  private val cteTableNames = new ThreadLocal[java.util.Set[String]] {
+    override def initialValue(): util.Set[String] = new util.HashSet[String]()
   }
 
   /**
@@ -78,6 +84,9 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       // When getting temp view, we leverage legacy catalog.
       i.copy(r.copy(qualifyTableIdentifierInternal(tableIdentifier)))
     case w @ With(_, cteRelations) =>
+      for (x <- cteRelations) {
+        cteTableNames.get().add(x._1.toLowerCase())
+      }
       w.copy(
         cteRelations = cteRelations
           .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias]))
@@ -97,12 +106,22 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
       u.copy(qualifyTableIdentifierInternal(tableIdentifier))
     case logicalPlan =>
       logicalPlan transformExpressionsUp {
-        case s: SubqueryExpression => s.withNewPlan(s.plan transform qualifyTableIdentifier)
+        case s: SubqueryExpression =>
+          val cteNamesBeforeSubQuery = new util.HashSet[String]()
+          cteNamesBeforeSubQuery.addAll(cteTableNames.get())
+          val newPlan = s.withNewPlan(s.plan transform qualifyTableIdentifier)
+          // cte table names in the subquery should not been seen outside subquey
+          cteTableNames.get().clear()
+          cteTableNames.get().addAll(cteNamesBeforeSubQuery)
+          newPlan
       }
   }
 
-  override def parsePlan(sqlText: String): LogicalPlan =
-    internal.parsePlan(sqlText).transform(qualifyTableIdentifier)
+  override def parsePlan(sqlText: String): LogicalPlan = {
+    val plan = internal.parsePlan(sqlText)
+    cteTableNames.get().clear()
+    plan.transform(qualifyTableIdentifier)
+  }
 
   override def parseExpression(sqlText: String): Expression =
     internal.parseExpression(sqlText)
