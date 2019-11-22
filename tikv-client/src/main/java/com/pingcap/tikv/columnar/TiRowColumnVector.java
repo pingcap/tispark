@@ -128,16 +128,17 @@ public class TiRowColumnVector extends TiColumnVector {
   @Override
   public BigDecimal getDecimal(int rowId, int precision, int scale) {
     Object val = rows[rowId].get(colIdx, null);
-   if(val instanceof BigDecimal)  {
-     return (BigDecimal)val;
-   }
+    if (val instanceof BigDecimal) {
+      return (BigDecimal) val;
+    }
 
-   if(val instanceof Long) {
-     return BigDecimal.valueOf((long)val);
-   }
+    if (val instanceof Long) {
+      return BigDecimal.valueOf((long) val);
+    }
 
-   throw new UnsupportedOperationException(String.format("failed to getDecimal and the value is %s:%s",
-       val.getClass().getCanonicalName(), val));
+    throw new UnsupportedOperationException(
+        String.format(
+            "failed to getDecimal and the value is %s:%s", val.getClass().getCanonicalName(), val));
   }
 
   /**
