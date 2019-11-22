@@ -19,12 +19,6 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
-  test("abc") {
-    explainAndRunTest(
-      "select  id_dt  from full_data_type_table  where tp_timestamp = '2017-11-02 08:47:43'"
-    )
-  }
-
   // https://github.com/pingcap/tispark/issues/1186
   test("Consider nulls order when performing TopN") {
     // table `full_data_type_table` contains a single line of nulls

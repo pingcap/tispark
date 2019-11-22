@@ -109,7 +109,6 @@ public class TimestampType extends AbstractDateTimeType {
     DateTime utcDateTime = localExtendedDateTime.getDateTime().toDateTime(DateTimeZone.UTC);
     ExtendedDateTime utcExtendedDateTime =
         new ExtendedDateTime(utcDateTime, localExtendedDateTime.getMicrosOfMillis());
-    // when we encode timestamp we need use timestamp's timezone
-    DateTimeCodec.writeDateTimeProto(cdo, utcExtendedDateTime, getTimezone());
+    DateTimeCodec.writeDateTimeProto(cdo, utcExtendedDateTime, Converter.getLocalTimezone());
   }
 }

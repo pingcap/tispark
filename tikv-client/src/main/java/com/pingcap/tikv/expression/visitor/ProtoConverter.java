@@ -72,8 +72,13 @@ public class ProtoConverter extends Visitor<Expr, Object> {
 
   private DataType getType(Expression expression) {
     DataType type = typeMap.get(expression);
+
     if (type == null) {
       throw new TiExpressionException(String.format("Expression %s type unknown", expression));
+    }
+    // for timestamp type, coprocessor will use datetime to do calculation.
+    if (type instanceof TimestampType) {
+      return DateTimeType.DATETIME;
     }
     return type;
   }
