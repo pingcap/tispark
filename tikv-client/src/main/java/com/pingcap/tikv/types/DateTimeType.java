@@ -65,8 +65,5 @@ public class DateTimeType extends AbstractDateTimeType {
     return Converter.convertToDateTime(value).getDateTime();
   }
 
-  @Override
-  public boolean isPushDownSupported() {
-    return true;
-  }
+
 }

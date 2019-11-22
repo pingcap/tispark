@@ -97,8 +97,5 @@ public class DateType extends AbstractDateTimeType {
     return date.toDate().getTime() / (24 * 60 * 60 * 1000);
   }
 
-  @Override
-  public boolean isPushDownSupported() {
-    return true;
-  }
+
 }

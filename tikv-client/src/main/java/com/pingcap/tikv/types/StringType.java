@@ -94,8 +94,5 @@ public class StringType extends BytesType {
     return new String((byte[]) super.decodeNotNull(flag, cdi), StandardCharsets.UTF_8);
   }
 
-  @Override
-  public boolean isPushDownSupported() {
-    return true;
-  }
+
 }

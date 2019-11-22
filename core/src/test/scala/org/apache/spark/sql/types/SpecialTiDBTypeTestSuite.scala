@@ -101,7 +101,6 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
     judge("select * from enum_t where priority = 'High'")
   }
 
-  // TODO(Zhexuan Yang): json return binary rather than normal string.
   ignore("adding json support") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(json_doc json)")

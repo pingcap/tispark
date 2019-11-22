@@ -27,6 +27,7 @@ import com.pingcap.tikv.types._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiSparkInfo, TiSparkVersion}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import com.pingcap.tikv.types.BitType
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.aggregate._
@@ -78,9 +79,10 @@ object TiUtil {
 
     if (expr.children.isEmpty) {
       expr match {
-        // bit, duration, set, and enum type is not allowed to be pushed down
+        // bit/duration type is not allowed to be pushed down
         case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
-          return nameTypeMap.get(attr.name).head.isPushDownSupported
+          val head = nameTypeMap.get(attr.name).head
+          return !head.isInstanceOf[BitType]
         // TODO:Currently we do not support literal null type push down
         // when Constant is ready to support literal null or we have other
         // options, remove this.

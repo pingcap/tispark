@@ -107,8 +107,5 @@ public class TimestampType extends AbstractDateTimeType {
     DateTimeCodec.writeDateTimeProto(cdo, utcExtendedDateTime, getTimezone());
   }
 
-  @Override
-  public boolean isPushDownSupported() {
-    return true;
-  }
+
 }

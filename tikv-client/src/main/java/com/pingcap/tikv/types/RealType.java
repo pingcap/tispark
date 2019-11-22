@@ -129,8 +129,5 @@ public class RealType extends DataType {
     return Double.parseDouble(value);
   }
 
-  @Override
-  public boolean isPushDownSupported() {
-    return true;
-  }
+
 }

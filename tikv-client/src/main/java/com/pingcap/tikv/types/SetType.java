@@ -122,8 +122,5 @@ public class SetType extends DataType {
     return value;
   }
 
-  @Override
-  public boolean isPushDownSupported() {
-    return false;
-  }
+
 }

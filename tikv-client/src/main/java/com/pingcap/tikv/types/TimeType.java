@@ -103,8 +103,5 @@ public class TimeType extends DataType {
     return Converter.convertStrToDuration(value);
   }
 
-  @Override
-  public boolean isPushDownSupported() {
-    return true;
-  }
+
 }

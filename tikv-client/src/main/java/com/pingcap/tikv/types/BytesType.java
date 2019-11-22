@@ -157,8 +157,5 @@ public class BytesType extends DataType {
     return value;
   }
 
-  @Override
-  public boolean isPushDownSupported() {
-    return true;
-  }
+
 }
