@@ -17,13 +17,14 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
-import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation, UnresolvedV2Relation}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
-import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace}
+import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace, ShowNamespaces}
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.datasources.v2.SetCatalogAndNamespaceExec
 import org.apache.spark.sql.{AnalysisException, _}
 
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
@@ -84,22 +85,65 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     plan transformUp resolveTiDBRelations
 }
 
+case class NopCommand(name: String) extends Command {}
 case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Rule[LogicalPlan] {
   protected lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
 
+  def getDBAndTableName(ident: Identifier): (String, Option[String]) = {
+    ident.namespace() match {
+      case Array(db) =>
+        (ident.name(), Some(db))
+      case _ =>
+        (ident.name(), None)
+    }
+  }
+
+  def createDescribeTableInfo(dt: DescribeTableCommand): DescribeTableInfo = {
+    new DescribeTableInfo(
+      TableIdentifier(dt.table.table, dt.table.database),
+      dt.partitionSpec,
+      dt.isExtended
+    )
+  }
+
+  def createDescribeTableInfo(dt: DescribeTable): DescribeTableInfo = {
+    dt.table match {
+      case u: UnresolvedV2Relation =>
+        val (name, db) = getDBAndTableName(u.tableName)
+        new DescribeTableInfo(TableIdentifier(name, db), Map.empty[String, String], dt.isExtended)
+      case _ =>
+        new DescribeTableInfo(
+          TableIdentifier(dt.table.name, None),
+          Map.empty[String, String],
+          dt.isExtended
+        )
+    }
+  }
+
+  def isSupportedCatalog(sd: SetCatalogAndNamespace): Boolean = {
+    if (sd.catalogName.isEmpty)
+      false
+    else {
+      sd.catalogName.get.equals(CatalogManager.SESSION_CATALOG_NAME)
+    }
+  }
+
   override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     // TODO: support other commands that may concern TiSpark catalog.
-    //case sd: ShowDatabasesCommand =>
-    //  TiShowDatabasesCommand(tiContext, sd)
-    case sd: SetCatalogAndNamespace =>
+    case sd: ShowNamespaces =>
+      TiShowDatabasesCommand(tiContext, sd)
+    case sd: SetCatalogAndNamespace if isSupportedCatalog(sd) =>
       TiSetDatabaseCommand(tiContext, sd)
     case st: ShowTablesCommand =>
       TiShowTablesCommand(tiContext, st)
     case st: ShowColumnsCommand =>
       TiShowColumnsCommand(tiContext, st)
     case dt: DescribeTableCommand =>
-      TiDescribeTablesCommand(tiContext, dt)
+      TiDescribeTablesCommand(tiContext, dt, createDescribeTableInfo(dt))
+    case dt: DescribeTable =>
+      // use NopCommand to avoid failAnalysis
+      TiDescribeTablesCommand(tiContext, NopCommand("empty"), createDescribeTableInfo(dt))
     case ct: CreateTableLikeCommand =>
       TiCreateTableLikeCommand(tiContext, ct)
   }
