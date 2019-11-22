@@ -60,7 +60,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
         .contains("AnalysisException"))
   }
 
-  ignore("support desc table") {
+  test("support desc table") {
     val tidbDescTable =
       List(
         List("id_dt", "bigint", "false", null),

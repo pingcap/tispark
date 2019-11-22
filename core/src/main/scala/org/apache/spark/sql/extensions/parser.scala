@@ -15,6 +15,8 @@
 
 package org.apache.spark.sql.extensions
 
+import java.util
+
 import org.apache.spark.sql.catalyst.analysis.UnresolvedRelation
 import org.apache.spark.sql.catalyst.expressions.{Expression, SubqueryExpression}
 import org.apache.spark.sql.catalyst.parser._
@@ -65,7 +67,7 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
   private def needQualify(tableIdentifier: Seq[String]): Boolean = {
     tableIdentifier.size == 1 && tiContext.sessionCatalog
       .getTempView(tableIdentifier.head)
-      .isEmpty
+      .isEmpty && !cteTableNames.get().contains(tableIdentifier.head.toLowerCase())
   }
 
   private def needQualify(tableIdentifier: TableIdentifier): Boolean = {
@@ -74,7 +76,14 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
       .isEmpty
   }
 
+<<<<<<< HEAD
 >>>>>>> support spark-3.0
+=======
+  private val cteTableNames = new ThreadLocal[java.util.Set[String]] {
+    override def initialValue(): util.Set[String] = new util.HashSet[String]()
+  }
+
+>>>>>>> Enable catalog test and tpch q15 (#1234)
   /**
    * WAR to lead Spark to consider this relation being on local files.
    * Otherwise Spark will lookup this relation in his session catalog.
@@ -88,8 +97,18 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
       // When getting temp view, we leverage legacy catalog.
       i.copy(r.copy(qualifyTableIdentifierInternal(tableIdentifier)))
     case w @ With(_, cteRelations) =>
+<<<<<<< HEAD
       w.copy(cteRelations = cteRelations
         .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias])))
+=======
+      for (x <- cteRelations) {
+        cteTableNames.get().add(x._1.toLowerCase())
+      }
+      w.copy(
+        cteRelations = cteRelations
+          .map(p => (p._1, p._2.transform(qualifyTableIdentifier).asInstanceOf[SubqueryAlias]))
+      )
+>>>>>>> Enable catalog test and tpch q15 (#1234)
     case cv @ CreateViewCommand(_, _, _, _, _, child, _, _, _) =>
       cv.copy(child = child transform qualifyTableIdentifier)
     case e @ ExplainCommand(plan, _, _, _, _) =>
@@ -105,12 +124,22 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
       u.copy(qualifyTableIdentifierInternal(tableIdentifier))
     case logicalPlan =>
       logicalPlan transformExpressionsUp {
-        case s: SubqueryExpression => s.withNewPlan(s.plan transform qualifyTableIdentifier)
+        case s: SubqueryExpression =>
+          val cteNamesBeforeSubQuery = new util.HashSet[String]()
+          cteNamesBeforeSubQuery.addAll(cteTableNames.get())
+          val newPlan = s.withNewPlan(s.plan transform qualifyTableIdentifier)
+          // cte table names in the subquery should not been seen outside subquey
+          cteTableNames.get().clear()
+          cteTableNames.get().addAll(cteNamesBeforeSubQuery)
+          newPlan
       }
   }
 
-  override def parsePlan(sqlText: String): LogicalPlan =
-    internal.parsePlan(sqlText).transform(qualifyTableIdentifier)
+  override def parsePlan(sqlText: String): LogicalPlan = {
+    val plan = internal.parsePlan(sqlText)
+    cteTableNames.get().clear()
+    plan.transform(qualifyTableIdentifier)
+  }
 
   override def parseExpression(sqlText: String): Expression =
     internal.parseExpression(sqlText)
