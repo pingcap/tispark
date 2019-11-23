@@ -14,6 +14,7 @@
  */
 package org.apache.spark.sql.execution.command
 
+import com.pingcap.tispark.utils.ReflectionUtil
 import com.pingcap.tispark.utils.ReflectionUtil._
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
@@ -111,7 +112,7 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
       if (delegate.location.isEmpty) CatalogTableType.MANAGED else CatalogTableType.EXTERNAL
 
     val newTableDesc =
-      CatalogTable(
+      ReflectionUtil.newCatalogTable(
         identifier = delegate.targetTable,
         tableType = tblType,
         storage = sourceTableDesc.storage

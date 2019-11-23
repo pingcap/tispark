@@ -22,14 +22,14 @@ import java.net.{URL, URLClassLoader}
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{SparkSession, TiContext}
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.catalog.{CatalogTable, ExternalCatalog, SessionCatalog, TiSessionCatalog}
+import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
+import org.apache.spark.sql.catalyst.catalog.{BucketSpec, CatalogStorageFormat, CatalogTable, CatalogTableType, ExternalCatalog, SessionCatalog, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, UnsafeRow}
 import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.types.{DataType, Metadata}
+import org.apache.spark.sql.types.{DataType, Metadata, StructType}
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -289,6 +289,38 @@ object ReflectionUtil {
         classOf[Boolean]
       )
       .invoke(null, obj, tableDefinition, ignoreIfExists)
+  }
+
+  def newCatalogTable(identifier: TableIdentifier,
+                      tableType: CatalogTableType,
+                      storage: CatalogStorageFormat,
+                      schema: StructType,
+                      provider: Option[String] = None,
+                      partitionColumnNames: Seq[String] = Seq.empty,
+                      bucketSpec: Option[BucketSpec] = None): CatalogTable = {
+    classLoader
+      .loadClass(SPARK_WRAPPER_CLASS)
+      .getDeclaredMethod(
+        "newCatalogTable",
+        classOf[TableIdentifier],
+        classOf[CatalogTableType],
+        classOf[CatalogStorageFormat],
+        classOf[StructType],
+        classOf[Option[String]],
+        classOf[Seq[String]],
+        classOf[Option[BucketSpec]]
+      )
+      .invoke(
+        null,
+        identifier,
+        tableType,
+        storage,
+        schema,
+        provider,
+        partitionColumnNames,
+        bucketSpec
+      )
+      .asInstanceOf[CatalogTable]
   }
 
   def newTiParser(

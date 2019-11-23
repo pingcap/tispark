@@ -14,10 +14,11 @@
  */
 package com.pingcap.tispark
 
-import org.apache.spark.sql.catalyst.catalog.{CatalogTable, SessionCatalog}
+import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
-import org.apache.spark.sql.types.{DataType, Metadata}
+import org.apache.spark.sql.types.{DataType, Metadata, StructType}
 
 object SparkWrapper {
   def getVersion: String = {
@@ -43,5 +44,15 @@ object SparkWrapper {
                                     tableDefinition: CatalogTable,
                                     ignoreIfExists: Boolean): Unit = {
     obj.createTable(tableDefinition, ignoreIfExists)
+  }
+
+  def newCatalogTable(identifier: TableIdentifier,
+                      tableType: CatalogTableType,
+                      storage: CatalogStorageFormat,
+                      schema: StructType,
+                      provider: Option[String] = None,
+                      partitionColumnNames: Seq[String] = Seq.empty,
+                      bucketSpec: Option[BucketSpec] = None): CatalogTable = {
+    CatalogTable(identifier, tableType, storage, schema, provider, partitionColumnNames, bucketSpec)
   }
 }
