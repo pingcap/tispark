@@ -285,6 +285,8 @@ class IssueTestSuite extends BaseTiSparkTest {
     judge("select sum(tp_double) from full_data_type_table")
     judge("select sum(tp_int) from full_data_type_table")
     judge("select sum(id_dt) from full_data_type_table")
+    judge("select max(tp_float) from full_data_type_table")
+    judge("select min(tp_float) from full_data_type_tabl")
   }
 
   test("TISPARK-16 fix excessive dag column") {

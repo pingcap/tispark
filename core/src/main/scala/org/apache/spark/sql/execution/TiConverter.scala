@@ -27,6 +27,7 @@ object TiConverter {
       case _: sql.types.LongType    => IntegerType.BIGINT
       case _: sql.types.IntegerType => IntegerType.INT
       case _: sql.types.DoubleType  => RealType.DOUBLE
+      case _: sql.types.FloatType   => RealType.FLOAT
       case sql.types.DecimalType.Fixed(prec, scale) =>
         new DecimalType(MySQLType.TypeNewDecimal, prec, scale)
       case _: sql.types.TimestampType => TimestampType.TIMESTAMP

@@ -41,6 +41,7 @@ public abstract class LockResolverTest {
   private static final int DefaultTTL = 10;
   RegionStoreClient.RegionStoreClientBuilder builder;
   boolean init;
+  protected final String pdAddr = "127.0.0.1:2379";
 
   @Before
   public abstract void setUp();
