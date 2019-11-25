@@ -51,7 +51,7 @@ trait LeafColumnarExecRDD extends LeafExecNode {
 <<<<<<< HEAD
 =======
 
-  override def verboseString(maxFields: Int): String =
+  /*def verboseString(maxFields: Int): String =
     if (tiRDDs.size > 1) {
       val b = new mutable.StringBuilder()
       b.append(s"TiSpark $nodeName on partition table:\n")
@@ -70,8 +70,12 @@ trait LeafColumnarExecRDD extends LeafExecNode {
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
     }
 
+<<<<<<< HEAD
   override def simpleString(maxFields: Int): String = verboseString(maxFields)
 >>>>>>> Fix override verboseString and simpleString (#1230)
+=======
+  def simpleString(maxFields: Int): String = verboseString(maxFields)*/
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
 }
 
 case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], fetchHandle: Boolean)
@@ -88,10 +92,13 @@ case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], f
   } else {
     "CoprocessorRDD"
   }
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 =======
   override def simpleString(maxFields: Int): String = verboseString(maxFields)
+=======
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
 }
 
 /**
@@ -409,6 +416,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   override def verboseString: String =
     s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
 
@@ -418,8 +426,11 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
 }
 =======
   override def verboseString(maxFields: Int): String =
+=======
+  /*def verboseString(maxFields: Int): String =
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
     s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
 
-  override def simpleString(maxFields: Int): String = verboseString(maxFields)
+  def simpleString(maxFields: Int): String = verboseString(maxFields)*/
 }
 >>>>>>> Fix override verboseString and simpleString (#1230)
