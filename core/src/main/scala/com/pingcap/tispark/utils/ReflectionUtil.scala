@@ -277,52 +277,6 @@ object ReflectionUtil {
       .asInstanceOf[AttributeReference]
   }
 
-  def callSessionCatalogCreateTable(obj: SessionCatalog,
-                                    tableDefinition: CatalogTable,
-                                    ignoreIfExists: java.lang.Boolean): Unit = {
-    classLoader
-      .loadClass(SPARK_WRAPPER_CLASS)
-      .getDeclaredMethod(
-        "callSessionCatalogCreateTable",
-        classOf[SessionCatalog],
-        classOf[CatalogTable],
-        classOf[Boolean]
-      )
-      .invoke(null, obj, tableDefinition, ignoreIfExists)
-  }
-
-  def newCatalogTable(identifier: TableIdentifier,
-                      tableType: CatalogTableType,
-                      storage: CatalogStorageFormat,
-                      schema: StructType,
-                      provider: Option[String] = None,
-                      partitionColumnNames: Seq[String] = Seq.empty,
-                      bucketSpec: Option[BucketSpec] = None): CatalogTable = {
-    classLoader
-      .loadClass(SPARK_WRAPPER_CLASS)
-      .getDeclaredMethod(
-        "newCatalogTable",
-        classOf[TableIdentifier],
-        classOf[CatalogTableType],
-        classOf[CatalogStorageFormat],
-        classOf[StructType],
-        classOf[Option[String]],
-        classOf[Seq[String]],
-        classOf[Option[BucketSpec]]
-      )
-      .invoke(
-        null,
-        identifier,
-        tableType,
-        storage,
-        schema,
-        provider,
-        partitionColumnNames,
-        bucketSpec
-      )
-      .asInstanceOf[CatalogTable]
-  }
-
   def newTiParser(
     getOrCreateTiContext: SparkSession => TiContext
   ): (SparkSession, ParserInterface) => ParserInterface = {

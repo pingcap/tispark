@@ -14,18 +14,9 @@
  */
 package org.apache.spark.sql.execution.command
 
-import com.pingcap.tispark.utils.ReflectionUtil
-import com.pingcap.tispark.utils.ReflectionUtil._
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
-import org.apache.spark.sql.catalyst.catalog._
-import org.apache.spark.sql.catalyst.expressions.Attribute
-import org.apache.spark.sql.catalyst.plans.logical.Command
-import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructType}
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
-
-import scala.collection.mutable.ArrayBuffer
 
 /**
  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
@@ -85,44 +76,5 @@ case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsComma
     table.schema.map { c =>
       Row(c.name)
     }
-  }
-}
-
-case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableLikeCommand)
-    extends RunnableCommand {
-
-  override def run(sparkSession: SparkSession): Seq[Row] = {
-    val catalog = tiContext.tiCatalog
-    val sourceTableDesc = catalog.getTempViewOrPermanentTableMetadata(delegate.sourceTable)
-
-    val newProvider = if (sourceTableDesc.tableType == CatalogTableType.VIEW) {
-      Some(sparkSession.sessionState.conf.defaultDataSourceName)
-    } else if (catalog
-                 .catalogOf(sourceTableDesc.identifier.database)
-                 .exists(_.isInstanceOf[TiSessionCatalog])) {
-      // TODO: use tikv datasource
-      Some(sparkSession.sessionState.conf.defaultDataSourceName)
-    } else {
-      sourceTableDesc.provider
-    }
-
-    // If the location is specified, we create an external table internally.
-    // Otherwise create a managed table.
-    val tblType =
-      if (delegate.location.isEmpty) CatalogTableType.MANAGED else CatalogTableType.EXTERNAL
-
-    val newTableDesc =
-      ReflectionUtil.newCatalogTable(
-        identifier = delegate.targetTable,
-        tableType = tblType,
-        storage = sourceTableDesc.storage
-          .copy(locationUri = delegate.location.map(CatalogUtils.stringToURI)),
-        schema = sourceTableDesc.schema,
-        provider = newProvider,
-        partitionColumnNames = sourceTableDesc.partitionColumnNames,
-        bucketSpec = sourceTableDesc.bucketSpec
-      )
-    callSessionCatalogCreateTable(catalog, newTableDesc, delegate.ifNotExists)
-    Seq.empty[Row]
   }
 }

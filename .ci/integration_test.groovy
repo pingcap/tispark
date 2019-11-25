@@ -154,8 +154,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
                         mvn compile ${MVN_PROFILE}
-                        mvn clean test ${MVN_PROFILE} ${MVN_TEST_PROFILE1} -Dtest=moo ${mvnStr}
-                        mvn clean test ${MVN_PROFILE} ${MVN_TEST_PROFILE2} -Dtest=moo ${mvnStr}
+                        mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE1} -Dtest=moo ${mvnStr}
+                        mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE2} -Dtest=moo ${mvnStr}
                     """
                 }
             }
