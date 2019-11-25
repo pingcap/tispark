@@ -19,7 +19,6 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
-
   // https://github.com/pingcap/tispark/issues/1186
   test("Consider nulls order when performing TopN") {
     // table `full_data_type_table` contains a single line of nulls
@@ -308,6 +307,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     t2_df.show
     val join_df = t1_group_df.join(t2_df, Seq("k1", "k2"), "left_outer")
     join_df.printSchema()
+    join_df.explain
     join_df.show
     val filter_df = join_df.filter(col("c2").isNotNull)
     filter_df.show
