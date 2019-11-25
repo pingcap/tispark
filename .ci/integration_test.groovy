@@ -6,7 +6,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIDB_BRANCH = "master"
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
-    def MVN_PROFILE = "-Pjenkins-spark3.0"
+    def MVN_PROFILE = "-Pspark-2.4-scala-2.12"
+    def MVN_TEST_PROFILE1 = "-Pjenkins-test-spark-3.0"
+    def MVN_TEST_PROFILE2 = "-Pjenkins-test-spark-2.4"
     def TEST_MODE = "simple"
     def PARALLEL_NUMBER = 18
     
@@ -34,7 +36,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     // parse mvn profile
     def m4 = ghprbCommentBody =~ /profile\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m4) {
-        MVN_PROFILE = MVN_PROFILE + " -P${m4[0][1]}"
+        MVN_PROFILE = "${m4[0][1]}"
     }
 
     // parse test mode
@@ -122,7 +124,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         cp .ci/log4j-ci.properties core/src/test/resources/log4j.properties
                         bash core/scripts/version.sh
                         bash core/scripts/fetch-test-data.sh
-                        mv core/src/test core-test-spark3.0/src/
+                        mv core/src/test core-test/src/
                         bash tikv-client/scripts/proto.sh
                         """
                     }
@@ -152,7 +154,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
                         mvn compile ${MVN_PROFILE}
-                        mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
+                        mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE1} -Dtest=moo ${mvnStr}
+                        mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE2} -Dtest=moo ${mvnStr}
                     """
                 }
             }
@@ -166,7 +169,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
                         mvn test ${MVN_PROFILE} -am -pl tikv-client
-                        mvn test ${MVN_PROFILE} -Dtest=moo -DwildcardSuites=com.pingcap.tispark.datasource.DataSourceWithoutExtensionsSuite,org.apache.spark.sql.IssueTestSuite -DfailIfNoTests=false
                     """
                     unstash "CODECOV_TOKEN"
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'

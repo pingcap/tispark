@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,34 @@
  */
 package org.apache.spark.sql.execution.command
 
-import org.apache.spark.sql.catalyst.plans.logical.{SetCatalogAndNamespace, ShowNamespaces}
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
 
 /**
- * CHECK Spark [[org.apache.spark.sql.execution.command]]
+ * CHECK Spark [[org.apache.spark.sql.execution.command.SetDatabaseCommand]]
+ *
+ * @param tiContext tiContext which contains our catalog info
+ * @param delegate original SetDatabaseCommand
  */
-case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetCatalogAndNamespace)
+case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetDatabaseCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    tiContext.tiCatalog.setCurrentDatabase(delegate.namespace.get.head)
+    tiCatalog.setCurrentDatabase(delegate.databaseName)
     Seq.empty[Row]
   }
 }
 
 /**
- * CHECK Spark [[org.apache.spark.sql.execution.command]]
+ * CHECK Spark [[org.apache.spark.sql.execution.command.ShowDatabasesCommand]]
+ *
+ * @param tiContext tiContext which contains our catalog info
+ * @param delegate original ShowDatabasesCommand
  */
-case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowNamespaces)
+case class TiShowDatabasesCommand(tiContext: TiContext, delegate: ShowDatabasesCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val databases =
       // Not leveraging catalog-specific db pattern, at least Hive and Spark behave different than each other.
-      delegate.pattern
+      delegate.databasePattern
         .map(tiCatalog.listDatabases)
         .getOrElse(tiCatalog.listDatabases())
     databases.map { d =>

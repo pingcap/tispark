@@ -9,15 +9,13 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>tispark-core-test-spark2.4</artifactId>
+    <artifactId>tispark-core-test</artifactId>
     <packaging>jar</packaging>
-    <name>TiSpark Project Core Test - Spark-2.4</name>
+    <name>TiSpark Project Core Test</name>
     <url>http://github.copm/pingcap/tispark</url>
 
     <properties>
         <scalaj.version>2.3.0</scalaj.version>
-        <scala.binary.version>2.11</scala.binary.version>
-        <scala.version>2.11.12</scala.version>
     </properties>
 
     <dependencies>
@@ -81,22 +79,22 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.binary.version}</artifactId>
-            <version>${spark.version.test.spark2.4}</version>
+            <version>${spark.version.test}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-catalyst_${scala.binary.version}</artifactId>
-            <version>${spark.version.test.spark2.4}</version>
+            <version>${spark.version.test}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.binary.version}</artifactId>
-            <version>${spark.version.test.spark2.4}</version>
+            <version>${spark.version.test}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive_${scala.binary.version}</artifactId>
-            <version>${spark.version.test.spark2.4}</version>
+            <version>${spark.version.test}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.hadoop</groupId>
@@ -107,12 +105,12 @@
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
-            <version>${spark.version.test.spark2.4}</version>
+            <version>${spark.version.test}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-unsafe_${scala.binary.version}</artifactId>
-            <version>${spark.version.test.spark2.4}</version>
+            <version>${spark.version.test}</version>
         </dependency>
         <!-- For tests -->
         <dependency>
