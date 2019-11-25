@@ -24,6 +24,9 @@ All notable changes to this project will be documented in this file.
 ### New Features
 * Natively support writing data to TiKV (ACID) using Spark Data Source API
 
+### WARNING
+**DO NOT set `spark.tispark.write.without_lock_table` to `true` on production environment (you may lost data).**
+
 ### Improvements
 * Release one TiSpark jar (both support Spark-2.3.x and Spark-2.4.x) instead of two [#933](https://github.com/pingcap/tispark/pull/933)
 * Add spark version to TiSpark's udf ti_version [#943](https://github.com/pingcap/tispark/pull/943)
