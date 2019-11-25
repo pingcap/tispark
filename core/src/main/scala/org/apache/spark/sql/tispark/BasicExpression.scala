@@ -50,10 +50,10 @@ object BasicExpression {
 
   def sameCopType(lhs: DataType, rhs: DataType): Boolean = {
     (lhs, rhs) match {
-      case (_: IntegralType, _: IntegralType) => true
-      case (_: DecimalType, _: DecimalType) => true
+      case (_: IntegralType, _: IntegralType)                           => true
+      case (_: DecimalType, _: DecimalType)                             => true
       case (_: FloatType | _: DoubleType, _: FloatType | _: DoubleType) => true
-      case _ => lhs.sameType(rhs)
+      case _                                                            => lhs.sameType(rhs)
     }
   }
 
