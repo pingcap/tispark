@@ -234,7 +234,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
                 ref.getType
             )
           )
-
       case _ =>
     }
 

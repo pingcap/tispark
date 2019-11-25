@@ -25,6 +25,7 @@ import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
 import com.pingcap.tispark.{TiConfigConst, TiDBRelation}
 import org.apache.spark.SparkConf
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
@@ -124,6 +125,10 @@ object TiUtil {
       )
     }
     new StructType(fields)
+  }
+
+  def isDataFrameEmpty(df: DataFrame): Boolean = {
+    df.limit(1).count() == 0
   }
 
   def sparkConfToTiConf(conf: SparkConf): TiConfiguration = {

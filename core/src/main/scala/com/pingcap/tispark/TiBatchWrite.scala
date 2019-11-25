@@ -29,6 +29,7 @@ import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
 import com.pingcap.tikv.{TiBatchWriteUtils, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -141,7 +142,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     checkUnsupported()
 
     // check empty
-    if (df.count() == 0) {
+    if (TiUtil.isDataFrameEmpty(df)) {
       logger.warn("data is empty!")
       return
     }
