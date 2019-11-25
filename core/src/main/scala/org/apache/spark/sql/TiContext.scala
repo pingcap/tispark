@@ -58,6 +58,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
+  //sparkSession.sessionState.analyzer.catalogManager.catalog("tidb_catalog").asInstanceOf[TiCatalog].setContext(this)
 
   lazy val tiConcreteCatalog: TiSessionCatalog =
     new TiConcreteSessionCatalog(this)(newTiDirectExternalCatalog(this))

@@ -34,6 +34,7 @@ import org.joda.time.DateTimeZone
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
+import scala.collection.JavaConverters._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -167,6 +168,7 @@ object SharedSQLContext extends Logging {
   protected var tidbAddr: String = _
   protected var tidbPort: Int = _
   protected var pdAddresses: String = _
+  protected var tidb_catalog: String = _
   protected var generateData: Boolean = _
   protected var generateDataSeed: Option[Long] = None
   protected var enableTiFlashTest: Boolean = _
@@ -398,7 +400,7 @@ object SharedSQLContext extends Logging {
       import com.pingcap.tispark.TiConfigConst._
 
       pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
-      dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
+      dbPrefix = getOrElse(prop, DB_PREFIX, "")
 
       // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
@@ -434,6 +436,11 @@ object SharedSQLContext extends Logging {
         sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
         sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
         sparkConf.set(DB_PREFIX, dbPrefix)
+        prop.asScala.foreach(entry => {
+          if (entry._1.startsWith(CATALOG_PREFIX)) {
+            sparkConf.set(entry._1, entry._2)
+          }
+        })
       }
 
       sparkConf.set("spark.tispark.write.allow_spark_sql", "true")

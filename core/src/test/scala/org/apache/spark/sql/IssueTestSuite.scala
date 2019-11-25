@@ -25,27 +25,27 @@ class IssueTestSuite extends BaseTiSparkTest {
     // table `full_data_type_table` contains a single line of nulls
     compSparkWithTiDB(
       qSpark =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int asc nulls last limit 2",
+        "select id_dt, tp_int, tp_bigint from tispark_test.full_data_type_table order by tp_int asc nulls last limit 2",
       qTiDB =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int is null asc, tp_int asc limit 2"
+        "select id_dt, tp_int, tp_bigint from tispark_test.full_data_type_table order by tp_int is null asc, tp_int asc limit 2"
     )
     compSparkWithTiDB(
       qSpark =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int desc nulls first limit 2",
+        "select id_dt, tp_int, tp_bigint from tispark_test.full_data_type_table order by tp_int desc nulls first limit 2",
       qTiDB =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int is null desc, tp_int desc limit 2"
+        "select id_dt, tp_int, tp_bigint from tispark_test.full_data_type_table order by tp_int is null desc, tp_int desc limit 2"
     )
     compSparkWithTiDB(
       qSpark =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int asc nulls first limit 2",
+        "select id_dt, tp_int, tp_bigint from tispark_test.full_data_type_table order by tp_int asc nulls first limit 2",
       qTiDB =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int asc limit 2"
+        "select id_dt, tp_int, tp_bigint from tispark_test.full_data_type_table order by tp_int asc limit 2"
     )
     compSparkWithTiDB(
       qSpark =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int desc nulls last limit 2",
+        "select id_dt, tp_int, tp_bigint from tispark_test.full_data_type_table order by tp_int desc nulls last limit 2",
       qTiDB =
-        "select id_dt, tp_int, tp_bigint from full_data_type_table order by tp_int desc limit 2"
+        "select id_dt, tp_int, tp_bigint from tispark_test.full_data_type_table order by tp_int desc limit 2"
     )
   }
 
