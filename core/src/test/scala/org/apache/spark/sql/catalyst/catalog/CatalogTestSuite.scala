@@ -30,12 +30,13 @@ class CatalogTestSuite extends BaseTiSparkTest {
 
   test("test new catalog") {
     setCurrentDatabase("default")
-    runTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
+    //runTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
+    runTest(s"select count(*) from tidb_catalog.tispark_test.full_data_type_table")
     setCurrentDatabase("tispark_test")
     runTest(s"select count(*) from full_data_type_table")
   }
 
-  test("test db prefix") {
+  ignore("test db prefix") {
     setCurrentDatabase("default")
     explainAndRunTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
   }
@@ -90,26 +91,21 @@ class CatalogTestSuite extends BaseTiSparkTest {
         List("tp_set", "string", "true", null)
       )
     setCurrentDatabase("tispark_test")
-    spark
-      .sql(
-        "select id_dt, tp_int, tp_bigint from tispark_test.full_data_type_table order by tp_int asc nulls last limit 2"
-      )
-      .show()
-    //spark.sql("desc tispark_test.full_data_type_table").explain(true)
+    spark.sql("desc full_data_type_table").explain(true)
     //explainAndRunTest("desc tispark_test.full_data_type_table", skipJDBC = true, rTiDB = tidbDescTable)
-    //spark.sql("desc extended tispark_test.full_data_type_table").explain()
-    //spark.sql("desc extended tispark_test.full_data_type_table").show(200, truncate = false)
-    //spark.sql("desc formatted tispark_test.full_data_type_table").show(200, truncate = false)
-    //refreshConnections(true)
-    //setCurrentDatabase("default")
-    //spark.sql("drop table if exists t")
-    //spark.sql("create table t(a int)")
-    //spark.sql("desc t").show
-    //spark.sql("desc formatted t").show
-    //spark.sql("drop table if exists t")
+    spark.sql("desc extended tispark_test.full_data_type_table").explain()
+    spark.sql("desc extended tispark_test.full_data_type_table").show(200, truncate = false)
+    spark.sql("desc formatted tispark_test.full_data_type_table").show(200, truncate = false)
+    refreshConnections(true)
+    setCurrentDatabase("default")
+    spark.sql("drop table if exists t")
+    spark.sql("create table t(a int)")
+    spark.sql("desc t").show
+    spark.sql("desc formatted t").show
+    spark.sql("drop table if exists t")
   }
 
-  test("test support show columns") {
+  ignore("test support show columns") {
     val columnNames = List(
       List("id_dt"),
       List("tp_varchar"),
@@ -152,7 +148,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     )
   }
 
-  test("test support create table like") {
+  ignore("test support create table like") {
     setCurrentDatabase("default")
     spark.sql("drop table if exists t")
     spark.sql(s"create table t like ${dbPrefix}tpch_test.nation").show

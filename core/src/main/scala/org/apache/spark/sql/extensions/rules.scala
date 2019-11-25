@@ -20,7 +20,7 @@ import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.{TiDBTable, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
-import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace}
+import org.apache.spark.sql.catalyst.plans.logical.{DescribeTable, InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
@@ -33,17 +33,17 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val autoLoad = tiContext.autoLoad
   protected lazy val meta: MetaManager = tiContext.meta
-  private lazy val tiCatalog = tiContext.tiCatalog
+  //private lazy val tiCatalog = tiContext.tiCatalog
   private lazy val tiSession = tiContext.tiSession
   private lazy val sqlContext = tiContext.sqlContext
 
-  private def getDatabaseFromIdentifier(tableIdentifier: Seq[String]): String = {
-    if (tableIdentifier.size == 1) {
-      tiCatalog.getCurrentDatabase
-    } else {
-      tableIdentifier.head
-    }
-  }
+  //private def getDatabaseFromIdentifier(tableIdentifier: Seq[String]): String = {
+  //  if (tableIdentifier.size == 1) {
+  //    tiCatalog.getCurrentDatabase
+  //  } else {
+  //    tableIdentifier.head
+  //  }
+  //}
 
   protected val resolveTiDBRelation: (TiDBTable, Seq[AttributeReference]) => LogicalPlan =
     (tiTable, output) => {
@@ -66,6 +66,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     }
 
   protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
+    // todo can remove this branch since the target table of insert into statement should never be a tidb table
     case i @ InsertIntoStatement(DataSourceV2Relation(table, output, _), _, _, _, _)
         if table.isInstanceOf[TiDBTable] =>
       val tiTable = table.asInstanceOf[TiDBTable]
@@ -76,7 +77,13 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   }
 
   override def apply(plan: LogicalPlan): LogicalPlan =
-    plan transformUp resolveTiDBRelations
+    plan match {
+      // for some ddls, do not apply the transform
+      case d @ DescribeTable(_, _) =>
+        d
+      case _ =>
+        plan transformUp resolveTiDBRelations
+    }
 }
 
 case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)

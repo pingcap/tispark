@@ -24,6 +24,7 @@ import org.apache.spark.sql.execution.command.{CacheTableCommand, CreateViewComm
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.spark.sql.{SparkSession, TiContext}
 
+/*
 case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession,
                                                                      delegate: ParserInterface)
     extends ParserInterface {
@@ -46,13 +47,13 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   }
 
   /**
-   * Determines whether a table specified by tableIdentifier is
-   * needs to be qualified. This is used for TiSpark to transform
-   * plans and decides whether a relation should be resolved or parsed.
-   *
-   * @param tableIdentifier tableIdentifier
-   * @return whether it needs qualifying
-   */
+ * Determines whether a table specified by tableIdentifier is
+ * needs to be qualified. This is used for TiSpark to transform
+ * plans and decides whether a relation should be resolved or parsed.
+ *
+ * @param tableIdentifier tableIdentifier
+ * @return whether it needs qualifying
+ */
   private def needQualify(tableIdentifier: Seq[String]): Boolean = {
     tableIdentifier.size == 1 && tiContext.sessionCatalog
       .getTempView(tableIdentifier.head)
@@ -66,10 +67,10 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   }
 
   /**
-   * WAR to lead Spark to consider this relation being on local files.
-   * Otherwise Spark will lookup this relation in his session catalog.
-   * CHECK Spark [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations.resolveRelation]] for details.
-   */
+ * WAR to lead Spark to consider this relation being on local files.
+ * Otherwise Spark will lookup this relation in his session catalog.
+ * CHECK Spark [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveRelations.resolveRelation]] for details.
+ */
   private val qualifyTableIdentifier: PartialFunction[LogicalPlan, LogicalPlan] = {
     case r @ UnresolvedRelation(tableIdentifier) if needQualify(tableIdentifier) =>
       r.copy(qualifyTableIdentifierInternal(tableIdentifier))
@@ -122,3 +123,5 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(sparkSessio
   override def parseMultipartIdentifier(sqlText: String): Seq[String] =
     internal.parseMultipartIdentifier(sqlText)
 }
+
+ */

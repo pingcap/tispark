@@ -27,7 +27,7 @@ import org.apache.spark.sql.{Row, SparkSession, TiContext}
  */
 abstract class TiCommand(delegate: RunnableCommand) extends RunnableCommand {
   val tiContext: TiContext
-  def tiCatalog: TiSessionCatalog = tiContext.tiCatalog
+  //def tiCatalog: TiSessionCatalog = tiContext.tiCatalog
   override def output: Seq[Attribute] = delegate.output
   override def children: Seq[LogicalPlan] = delegate.children
   override def run(sparkSession: SparkSession): Seq[Row] = delegate.run(sparkSession)

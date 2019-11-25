@@ -95,6 +95,11 @@ case class TiDBTable(v1Table: CatalogTable) extends Table {
 class TiCatalog extends TableCatalog with SupportsNamespaces {
   var meta: Option[MetaManager] = None
   private var _name: Option[String] = None
+  private var _current_namespace: Option[Array[String]] = None
+
+  def setCurrentNamespace(namespace: Array[String]): Unit = synchronized {
+    _current_namespace = Some(namespace)
+  }
 
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {
     _name = Some(name)
@@ -144,13 +149,8 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     val currentNS =
       ident.namespace() match {
         case Array(_) => ident.namespace()
-        case _        =>
-          //val catalogManager = tiContext.get.sparkSession.sessionState.analyzer.catalogManager
-          //if (catalogManager.currentCatalog == this) {
-          //  catalogManager.currentNamespace
-          //} else {
-          this.defaultNamespace()
-        //}
+        case _ =>
+          _current_namespace.getOrElse(this.defaultNamespace())
       }
 
     val dbName =

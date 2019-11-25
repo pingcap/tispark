@@ -33,7 +33,7 @@ import scala.collection.mutable.ArrayBuffer
 case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    val db = delegate.databaseName.getOrElse(tiCatalog.getCurrentDatabase)
+    /*val db = delegate.databaseName.getOrElse(tiCatalog.getCurrentDatabase)
     // Show the information of tables.
     val tables =
       delegate.tableIdentifierPattern
@@ -49,7 +49,8 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
       } else {
         Row(database, tableName, isTemp)
       }
-    }
+    }*/
+    Seq.empty[Row]
   }
 }
 
@@ -90,7 +91,7 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
   )
 
   override def run(sparkSession: SparkSession): Seq[Row] =
-    tiCatalog
+    /*tiCatalog
       .catalogOf(delegate.table.database)
       .getOrElse(
         throw new NoSuchDatabaseException(
@@ -155,6 +156,9 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
       append(buffer, s._1, s._2, "")
     }
   }
+
+     */
+    Seq.empty[Row]
 }
 
 /**
@@ -166,7 +170,7 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
 case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    val databaseName = delegate.databaseName
+    /*val databaseName = delegate.databaseName
     val tableName = delegate.tableName
     val catalog = tiCatalog
     val resolver = sparkSession.sessionState.conf.resolver
@@ -182,6 +186,9 @@ case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsComma
     table.schema.map { c =>
       Row(c.name)
     }
+
+     */
+    Seq.empty[Row]
   }
 }
 
@@ -189,7 +196,7 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
     extends RunnableCommand {
 
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    val catalog = tiContext.tiCatalog
+    /*val catalog = tiContext.tiCatalog
     val sourceTableDesc = catalog.getTempViewOrPermanentTableMetadata(delegate.sourceTable)
 
     val newProvider = if (sourceTableDesc.tableType == CatalogTableType.VIEW) {
@@ -220,6 +227,7 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
         bucketSpec = sourceTableDesc.bucketSpec
       )
     callSessionCatalogCreateTable(catalog, newTableDesc, delegate.ifNotExists)
+     */
     Seq.empty[Row]
   }
 }
