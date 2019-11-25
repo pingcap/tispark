@@ -91,6 +91,7 @@ trait LeafColumnarExecRDD extends LeafExecNode {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   override def verboseString: String =
     if (tiRDDs.lengthCompare(1) > 0) {
 =======
@@ -98,6 +99,9 @@ trait LeafColumnarExecRDD extends LeafExecNode {
 =======
   override def verboseString(maxFields: Int): String =
 >>>>>>> Fix override verboseString and simpleString (#1230)
+=======
+  /*def verboseString(maxFields: Int): String =
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
     if (tiRDDs.size > 1) {
 >>>>>>> support spark-3.0
       val b = new mutable.StringBuilder()
@@ -114,6 +118,7 @@ trait LeafColumnarExecRDD extends LeafExecNode {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
 =======
   def simpleString: String = verboseString
@@ -121,6 +126,9 @@ trait LeafColumnarExecRDD extends LeafExecNode {
 =======
   override def simpleString(maxFields: Int): String = verboseString(maxFields)
 >>>>>>> Fix override verboseString and simpleString (#1230)
+=======
+  def simpleString(maxFields: Int): String = verboseString(maxFields)*/
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
 }
 
 case class ColumnarCoprocessorRDD(
@@ -135,12 +143,15 @@ case class ColumnarCoprocessorRDD(
   } else {
     "CoprocessorRDD"
   }
+<<<<<<< HEAD
   private[execution] val internalRDDs: List[RDD[InternalRow]] = tiRDDs
 
 <<<<<<< HEAD
   override def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
 =======
   override def simpleString(maxFields: Int): String = verboseString(maxFields)
+=======
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
 }
 >>>>>>> Fix override verboseString and simpleString (#1230)
 
@@ -446,13 +457,17 @@ case class ColumnarRegionTaskExec(
 <<<<<<< HEAD
 =======
 
-  override def verboseString(maxFields: Int): String =
+  /*def verboseString(maxFields: Int): String =
     s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   def simpleString: String = verboseString
 >>>>>>> support spark-3.0
 =======
   override def simpleString(maxFields: Int): String = verboseString(maxFields)
 >>>>>>> Fix override verboseString and simpleString (#1230)
+=======
+  def simpleString(maxFields: Int): String = verboseString(maxFields)*/
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
 }

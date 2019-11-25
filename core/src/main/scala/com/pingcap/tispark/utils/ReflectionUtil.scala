@@ -21,6 +21,7 @@ import java.net.{URL, URLClassLoader}
 
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
+<<<<<<< HEAD
 import org.apache.spark.sql.TiContext
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.catalog.{
@@ -37,8 +38,17 @@ import org.apache.spark.sql.catalyst.expressions.{
   NamedExpression,
   UnsafeRow
 }
+=======
+import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
+import org.apache.spark.sql.catalyst.catalog.{BucketSpec, CatalogStorageFormat, CatalogTable, CatalogTableType, ExternalCatalog, SessionCatalog, TiSessionCatalog}
+import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, UnsafeRow}
+import org.apache.spark.sql.catalyst.parser.ParserInterface
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
-import org.apache.spark.sql.types.{DataType, Metadata}
+import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.types.{DataType, Metadata, StructType}
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -49,6 +59,144 @@ import scala.reflect.ClassTag
  * reflections in future.
  */
 object ReflectionUtil {
+<<<<<<< HEAD
+=======
+  private val logger = LoggerFactory.getLogger(getClass.getName)
+
+  private val SPARK_WRAPPER_CLASS = "com.pingcap.tispark.SparkWrapper"
+  private val TI_AGGREGATION_IMPL_CLASS = "org.apache.spark.sql.TiAggregationImpl"
+  private val TI_DIRECT_EXTERNAL_CATALOG_CLASS =
+    "org.apache.spark.sql.catalyst.catalog.TiDirectExternalCatalog"
+  private val TI_COMPOSITE_SESSION_CATALOG_CLASS =
+    "org.apache.spark.sql.catalyst.catalog.TiCompositeSessionCatalog"
+  private val TI_PARSER_FACTORY_CLASS = "org.apache.spark.sql.extensions.TiParserFactory"
+  private val TI_RESOLUTION_RULE_FACTORY_CLASS =
+    "org.apache.spark.sql.extensions.TiResolutionRuleFactory"
+  private val TI_DDL_RULE_FACTORY_CLASS = "org.apache.spark.sql.extensions.TiDDLRuleFactory"
+
+  // In Spark 2.3.0 and 2.3.1 the method declaration is:
+  // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
+  //      f: (Int, Iterator[T]) => Iterator[U],
+  //      preservesPartitioning: Boolean = false): RDD[U]
+  //
+  // In other Spark 2.3.x versions, the method declaration is:
+  // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
+  //      f: (Int, Iterator[T]) => Iterator[U],
+  //      preservesPartitioning: Boolean = false,
+  //      isOrderSensitive: Boolean = false): RDD[U]
+  //
+  // Hereby we use reflection to support different Spark versions.
+  case class ReflectionMapPartitionWithIndexInternal(
+    rdd: RDD[InternalRow],
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+  ) {
+    // Spark HDP Release may not compatible with official Release
+    // see https://github.com/pingcap/tispark/issues/1006
+    def invoke(): RDD[InternalRow] = {
+      val (version, method) = TiSparkInfo.SPARK_VERSION match {
+        case "2.3.0" | "2.3.1" =>
+          try {
+            reflectMapPartitionsWithIndexInternalV1(rdd, internalRowToUnsafeRowWithIndex)
+          } catch {
+            case _: Throwable =>
+              try {
+                reflectMapPartitionsWithIndexInternalV2(rdd, internalRowToUnsafeRowWithIndex)
+              } catch {
+                case _: Throwable =>
+                  throw ScalaReflectionException(
+                    s"Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
+                      .format(TiSparkInfo.SPARK_VERSION)
+                  )
+              }
+          }
+
+        case _ =>
+          try {
+            reflectMapPartitionsWithIndexInternalV2(rdd, internalRowToUnsafeRowWithIndex)
+          } catch {
+            case _: Throwable =>
+              try {
+                reflectMapPartitionsWithIndexInternalV1(rdd, internalRowToUnsafeRowWithIndex)
+              } catch {
+                case _: Throwable =>
+                  throw ScalaReflectionException(
+                    s"Cannot find reflection of Method mapPartitionsWithIndexInternal, current Spark version is %s"
+                      .format(TiSparkInfo.SPARK_VERSION)
+                  )
+              }
+          }
+      }
+
+      invokeMapPartitionsWithIndexInternal(version, method, rdd, internalRowToUnsafeRowWithIndex)
+    }
+  }
+
+  // Spark-2.3.0 & Spark-2.3.1
+  private def reflectMapPartitionsWithIndexInternalV1(
+    rdd: RDD[InternalRow],
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+  ): (String, Method) = {
+    (
+      "v1",
+      classOf[RDD[InternalRow]].getDeclaredMethod(
+        "mapPartitionsWithIndexInternal",
+        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+        classOf[Boolean],
+        classOf[ClassTag[UnsafeRow]]
+      )
+    )
+  }
+
+  // >= Spark-2.3.2
+  private def reflectMapPartitionsWithIndexInternalV2(
+    rdd: RDD[InternalRow],
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+  ): (String, Method) = {
+    (
+      "v2",
+      classOf[RDD[InternalRow]].getDeclaredMethod(
+        "mapPartitionsWithIndexInternal",
+        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+        classOf[Boolean],
+        classOf[Boolean],
+        classOf[ClassTag[UnsafeRow]]
+      )
+    )
+  }
+
+  private def invokeMapPartitionsWithIndexInternal(
+    version: String,
+    method: Method,
+    rdd: RDD[InternalRow],
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+  ): RDD[InternalRow] = {
+    version match {
+      case "v1" =>
+        // Spark-2.3.0 & Spark-2.3.1
+        method
+          .invoke(
+            rdd,
+            internalRowToUnsafeRowWithIndex,
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+
+      case _ =>
+        // >= Spark-2.3.2
+        method
+          .invoke(
+            rdd,
+            internalRowToUnsafeRowWithIndex,
+            Boolean.box(false),
+            Boolean.box(false),
+            ClassTag.apply(classOf[UnsafeRow])
+          )
+          .asInstanceOf[RDD[InternalRow]]
+    }
+  }
+
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
   lazy val classLoader: URLClassLoader = {
     val tisparkClassUrl = this.getClass.getProtectionDomain.getCodeSource.getLocation
     val tisparkClassPath = new File(tisparkClassUrl.getFile)
@@ -153,6 +301,7 @@ object ReflectionUtil {
       .asInstanceOf[AttributeReference]
   }
 
+<<<<<<< HEAD
   def callSessionCatalogCreateTable(
       obj: SessionCatalog,
       tableDefinition: CatalogTable,
@@ -165,6 +314,36 @@ object ReflectionUtil {
         classOf[CatalogTable],
         classOf[Boolean])
       .invoke(null, obj, tableDefinition, ignoreIfExists)
+=======
+  def newTiParser(
+    getOrCreateTiContext: SparkSession => TiContext
+  ): (SparkSession, ParserInterface) => ParserInterface = {
+    classLoader
+      .loadClass(TI_PARSER_FACTORY_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext])
+      .newInstance(getOrCreateTiContext)
+      .asInstanceOf[(SparkSession, ParserInterface) => ParserInterface]
+  }
+
+  def newTiResolutionRule(
+    getOrCreateTiContext: SparkSession => TiContext
+  ): SparkSession => Rule[LogicalPlan] = {
+    classLoader
+      .loadClass(TI_RESOLUTION_RULE_FACTORY_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext])
+      .newInstance(getOrCreateTiContext)
+      .asInstanceOf[SparkSession => Rule[LogicalPlan]]
+  }
+
+  def newTiDDLRule(
+    getOrCreateTiContext: SparkSession => TiContext
+  ): SparkSession => Rule[LogicalPlan] = {
+    classLoader
+      .loadClass(TI_DDL_RULE_FACTORY_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext])
+      .newInstance(getOrCreateTiContext)
+      .asInstanceOf[SparkSession => Rule[LogicalPlan]]
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
   }
 
   // Spark-2.3.0 & Spark-2.3.1

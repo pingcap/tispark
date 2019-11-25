@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,40 @@
  */
 package org.apache.spark.sql.extensions
 
-import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation, UnresolvedV2Relation}
+import org.apache.spark.sql.catalyst.analysis.UnresolvedV2Relation
+import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, ShowNamespaces}
+import com.pingcap.tispark.statistics.StatisticsManager
+import com.pingcap.tispark.utils.ReflectionUtil.newSubqueryAlias
+import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
-import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace, ShowNamespaces}
+import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.{AnalysisException, _}
 
+class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
+    extends (SparkSession => Rule[LogicalPlan]) {
+  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
+    TiResolutionRule(getOrCreateTiContext)(v1)
+  }
+}
+
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
+<<<<<<< HEAD:core/src/main/scala/org/apache/spark/sql/extensions/rules.scala
     sparkSession: SparkSession)
     extends Rule[LogicalPlan] {
+=======
+  sparkSession: SparkSession
+) extends Rule[LogicalPlan] {
+
+  private val tiContext: TiContext = getOrCreateTiContext(sparkSession)
+  private lazy val autoLoad = tiContext.autoLoad
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233):spark-wrapper/spark-3.0/src/main/scala/org/apache/spark/sql/extensions/rules.scala
   protected lazy val meta: MetaManager = tiContext.meta
   private lazy val autoLoad = tiContext.autoLoad
   private lazy val tiCatalog = tiContext.tiCatalog
@@ -73,7 +91,11 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   override def apply(plan: LogicalPlan): LogicalPlan =
     plan transformUp resolveTiDBRelations
 
+<<<<<<< HEAD:core/src/main/scala/org/apache/spark/sql/extensions/rules.scala
   protected def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
+=======
+  private def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233):spark-wrapper/spark-3.0/src/main/scala/org/apache/spark/sql/extensions/rules.scala
     case i @ InsertIntoStatement(UnresolvedRelation(tableIdentifier), _, _, _, _)
         if tiCatalog
           .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
@@ -85,9 +107,18 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
           .exists(_.isInstanceOf[TiSessionCatalog]) =>
       resolveTiDBRelation(tableIdentifier)
   }
+}
 
+<<<<<<< HEAD:core/src/main/scala/org/apache/spark/sql/extensions/rules.scala
   private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
     tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
+=======
+class TiDDLRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
+    extends (SparkSession => Rule[LogicalPlan]) {
+  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
+    TiDDLRule(getOrCreateTiContext)(v1)
+  }
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233):spark-wrapper/spark-3.0/src/main/scala/org/apache/spark/sql/extensions/rules.scala
 }
 
 case class NopCommand(name: String) extends Command {}

@@ -7,11 +7,17 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
 <<<<<<< HEAD
+<<<<<<< HEAD
     def TIFLASH_BRANCH = "master"
     def MVN_PROFILE = "-Pjenkins"
     def TEST_MODE = "full"
 =======
     def MVN_PROFILE = "-Pjenkins-spark3.0"
+=======
+    def MVN_PROFILE = "-Pspark-2.4-scala-2.12"
+    def MVN_TEST_PROFILE1 = "-Pjenkins-test-spark-3.0"
+    def MVN_TEST_PROFILE2 = "-Pjenkins-test-spark-2.4"
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
     def TEST_MODE = "simple"
 >>>>>>> support spark-3.0
     def PARALLEL_NUMBER = 18
@@ -42,7 +48,11 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     // parse tiflash branch
     def m4 = ghprbCommentBody =~ /tiflash\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m4) {
+<<<<<<< HEAD
         TIFLASH_BRANCH = "${m4[0][1]}"
+=======
+        MVN_PROFILE = "${m4[0][1]}"
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
     }
     println "TIFLASH_BRANCH=${TIFLASH_BRANCH}"
 
@@ -188,7 +198,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         cp .ci/log4j-ci.properties core/src/test/resources/log4j.properties
                         bash core/scripts/version.sh
                         bash core/scripts/fetch-test-data.sh
-                        mv core/src/test core-test-spark3.0/src/
+                        mv core/src/test core-test/src/
                         bash tikv-client/scripts/proto.sh
                         """
                     }
@@ -219,8 +229,15 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
+<<<<<<< HEAD
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M"
                         mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
+=======
+                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+                        mvn compile ${MVN_PROFILE}
+                        mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE1} -Dtest=moo ${mvnStr}
+                        mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE2} -Dtest=moo ${mvnStr}
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
                     """
                 }
             }

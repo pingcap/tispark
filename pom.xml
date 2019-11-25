@@ -72,6 +72,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
 <<<<<<< HEAD
+<<<<<<< HEAD
         <spark.version.compile>2.3.4</spark.version.compile>
         <spark.version.test>2.4.4</spark.version.test>
         <scala.binary.version>2.11</scala.binary.version>
@@ -85,6 +86,8 @@
         <spark.version.test.spark3.0>3.0.0-preview</spark.version.test.spark3.0>
         <scala.binary.version>2.12</scala.binary.version>
         <scala.version>2.12.10</scala.version>
+=======
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
         <scalatest.version>3.0.4</scalatest.version>
 >>>>>>> support spark-3.0
         <argLine>-Dfile.encoding=UTF-8 -Duser.timezone=GMT+8</argLine>
@@ -171,29 +174,96 @@
     <modules>
         <module>tikv-client</module>
         <module>core</module>
-        <module>spark-wrapper/spark-2.3</module>
-        <module>spark-wrapper/spark-2.4</module>
-        <module>spark-wrapper/spark-3.0</module>
         <module>assembly</module>
     </modules>
 
     <profiles>
         <profile>
-            <id>jenkins-spark2.4</id>
+            <id>spark-3.0-scala-2.12</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <spark.version.compile>3.0.0-preview</spark.version.compile>
+                <scala.binary.version>2.12</scala.binary.version>
+                <scala.version>2.12.10</scala.version>
+            </properties>
             <modules>
-                <module>core-test-spark2.4</module>
+                <module>spark-wrapper/spark-2.4</module>
+                <module>spark-wrapper/spark-3.0</module>
+            </modules>
+        </profile>
+
+        <profile>
+            <id>spark-2.4-scala-2.12</id>
+            <properties>
+                <spark.version.compile>2.4.4</spark.version.compile>
+                <scala.binary.version>2.12</scala.binary.version>
+                <scala.version>2.12.10</scala.version>
+            </properties>
+            <modules>
+                <module>spark-wrapper/spark-2.4</module>
+                <module>spark-wrapper/spark-3.0</module>
+            </modules>
+        </profile>
+
+        <profile>
+            <id>spark-2.4-scala-2.11</id>
+            <properties>
+                <spark.version.compile>2.4.4</spark.version.compile>
+                <scala.binary.version>2.11</scala.binary.version>
+                <scala.version>2.11.12</scala.version>
+            </properties>
+            <modules>
+                <module>spark-wrapper/spark-2.3</module>
+                <module>spark-wrapper/spark-2.4</module>
+            </modules>
+        </profile>
+
+        <profile>
+            <id>spark-2.3-scala-2.11</id>
+            <properties>
+                <spark.version.compile>2.3.4</spark.version.compile>
+                <scala.binary.version>2.11</scala.binary.version>
+                <scala.version>2.11.12</scala.version>
+            </properties>
+            <modules>
+                <module>spark-wrapper/spark-2.3</module>
+                <module>spark-wrapper/spark-2.4</module>
+            </modules>
+        </profile>
+
+        <profile>
+            <id>jenkins-test-spark-3.0</id>
+            <modules>
+                <module>core-test</module>
             </modules>
             <properties>
+                <spark.version.test>3.0.0-preview</spark.version.test>
                 <skipFetchTestData>true</skipFetchTestData>
                 <skipCloneProtoFiles>true</skipCloneProtoFiles>
             </properties>
         </profile>
+
         <profile>
-            <id>jenkins-spark3.0</id>
+            <id>jenkins-test-spark-2.4</id>
             <modules>
-                <module>core-test-spark3.0</module>
+                <module>core-test</module>
             </modules>
             <properties>
+                <spark.version.test>2.4.4</spark.version.test>
+                <skipFetchTestData>true</skipFetchTestData>
+                <skipCloneProtoFiles>true</skipCloneProtoFiles>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>jenkins-test-spark-2.3</id>
+            <modules>
+                <module>core-test</module>
+            </modules>
+            <properties>
+                <spark.version.test>2.3.4</spark.version.test>
                 <skipFetchTestData>true</skipFetchTestData>
                 <skipCloneProtoFiles>true</skipCloneProtoFiles>
             </properties>

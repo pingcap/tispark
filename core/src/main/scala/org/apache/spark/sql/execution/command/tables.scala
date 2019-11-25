@@ -14,8 +14,8 @@
  */
 package org.apache.spark.sql.execution.command
 
-import com.pingcap.tispark.utils.ReflectionUtil._
 import org.apache.spark.sql.catalyst.TableIdentifier
+<<<<<<< HEAD
 <<<<<<< HEAD
 import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, UnresolvedAttribute}
 import org.apache.spark.sql.catalyst.catalog._
@@ -29,9 +29,10 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.logical.Command
 >>>>>>> Enable catalog test and tpch q15 (#1234)
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructType}
+=======
+import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
-
-import scala.collection.mutable.ArrayBuffer
 
 /**
  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowTablesCommand]]
@@ -81,6 +82,7 @@ class DescribeTableInfo(val tableName: TableIdentifier,
                         val isExtended: Boolean) {}
 
 /**
+<<<<<<< HEAD
  * CHECK Spark [[org.apache.spark.sql.execution.command.DescribeTableCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
@@ -325,6 +327,8 @@ case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColum
 }
 
 /**
+=======
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
  * CHECK Spark [[org.apache.spark.sql.execution.command.ShowColumnsCommand]]
  *
  * @param tiContext tiContext which contains our catalog info
@@ -350,6 +354,7 @@ case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsComma
     }
   }
 }
+<<<<<<< HEAD
 
 case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableLikeCommand)
     extends RunnableCommand {
@@ -388,3 +393,5 @@ case class TiCreateTableLikeCommand(tiContext: TiContext, delegate: CreateTableL
     Seq.empty[Row]
   }
 }
+=======
+>>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
