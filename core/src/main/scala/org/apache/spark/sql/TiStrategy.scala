@@ -308,8 +308,12 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     sortOrder: Seq[SortOrder]
   ): SparkPlan = {
     val request = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
+    val filteredSortOrder =
+      sortOrder.filter(order => TiUtil.isSupportedOrderBy(order, source, blacklist))
+
     request.setLimit(limit)
-    addSortOrder(request, sortOrder)
+    addSortOrder(request, filteredSortOrder)
+
     pruneFilterProject(projectList, filterPredicates, source, request)
   }
 
