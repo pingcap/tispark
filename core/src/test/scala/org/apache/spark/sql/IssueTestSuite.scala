@@ -315,8 +315,8 @@ class IssueTestSuite extends BaseTiSparkTest {
     val t1_df = spark.sql("select * from t1")
     val t1_group_df = t1_df.groupBy("k1", "k2").agg(sum("c1").alias("c1"))
     val t2_df = spark.sql("select * from t2")
-//    t2_df.printSchema()
-//    t2_df.show
+    t2_df.printSchema()
+    t2_df.show
     val join_df = t1_group_df.join(t2_df, Seq("k1", "k2"), "left_outer")
     join_df.printSchema()
     join_df.explain

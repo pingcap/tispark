@@ -157,8 +157,6 @@ public class IntegerType extends DataType {
     return Long.parseLong(value);
   }
 
-
-
   protected IntegerType(TiColumnInfo.InternalTypeHolder holder) {
     super(holder);
   }

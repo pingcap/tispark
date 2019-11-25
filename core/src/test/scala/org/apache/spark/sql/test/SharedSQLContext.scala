@@ -303,6 +303,7 @@ object SharedSQLContext extends Logging {
       PD_ADDRESSES -> pdAddresses
     )
 
+    // TODO(Zhexuan Yang) for zero datetime issue, we need discu
     jdbcUrl =
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
         s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=false" +

@@ -106,6 +106,4 @@ public class TimestampType extends AbstractDateTimeType {
         new ExtendedDateTime(utcDateTime, localExtendedDateTime.getMicrosOfMillis());
     DateTimeCodec.writeDateTimeProto(cdo, utcExtendedDateTime, getTimezone());
   }
-
-
 }

@@ -128,6 +128,4 @@ public class RealType extends DataType {
   public Object getOriginDefaultValueNonNull(String value, long version) {
     return Double.parseDouble(value);
   }
-
-
 }

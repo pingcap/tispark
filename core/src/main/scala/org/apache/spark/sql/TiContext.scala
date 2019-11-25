@@ -62,8 +62,8 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
 
   final val version: String = TiSparkVersion.version
 
-  val autoLoad: Boolean = false
-//    conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
+  val autoLoad: Boolean =
+    conf.getBoolean(TiConfigConst.ENABLE_AUTO_LOAD_STATISTICS, defaultValue = true)
 
   class DebugTool {
     implicit val formats: DefaultFormats = DefaultFormats

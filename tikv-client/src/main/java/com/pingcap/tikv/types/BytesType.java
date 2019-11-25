@@ -156,6 +156,4 @@ public class BytesType extends DataType {
   public Object getOriginDefaultValueNonNull(String value, long version) {
     return value;
   }
-
-
 }
