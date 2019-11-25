@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-
 package org.apache.spark.sql.tispark
 
 import java.sql.Timestamp
