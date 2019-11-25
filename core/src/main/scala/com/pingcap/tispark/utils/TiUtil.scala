@@ -23,12 +23,13 @@ import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionVal
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
-import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
+import com.pingcap.tispark.{TiConfigConst, TiDBRelation}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
+import org.apache.spark.sql.tispark.BasicExpression
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 

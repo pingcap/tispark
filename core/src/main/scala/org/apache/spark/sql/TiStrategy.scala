@@ -29,7 +29,7 @@ import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiConverter._
 import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.utils.ReflectionUtil._
-import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
+import com.pingcap.tispark.{TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.analysis.CleanupAliases
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
@@ -40,6 +40,7 @@ import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.sql.tispark.BasicExpression
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._
