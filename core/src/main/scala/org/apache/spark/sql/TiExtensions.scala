@@ -1,6 +1,6 @@
 package org.apache.spark.sql
 
-import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
+import com.pingcap.tispark.utils.ReflectionUtil
 
 import scala.collection.mutable
 
@@ -19,9 +19,9 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
   }
 
   override def apply(e: SparkSessionExtensions): Unit = {
-    e.injectParser(TiParser(getOrCreateTiContext))
-    e.injectResolutionRule(TiDDLRule(getOrCreateTiContext))
-    e.injectResolutionRule(TiResolutionRule(getOrCreateTiContext))
+    e.injectParser(ReflectionUtil.newTiParser(getOrCreateTiContext))
+    e.injectResolutionRule(ReflectionUtil.newTiDDLRule(getOrCreateTiContext))
+    e.injectResolutionRule(ReflectionUtil.newTiResolutionRule(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
 }

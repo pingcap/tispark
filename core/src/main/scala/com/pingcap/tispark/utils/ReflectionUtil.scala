@@ -21,13 +21,15 @@ import java.net.{URL, URLClassLoader}
 
 import com.pingcap.tispark.TiSparkInfo
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.TiContext
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.catalog.{CatalogTable, ExternalCatalog, SessionCatalog, TiSessionCatalog}
+import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.catalyst.{InternalRow, TableIdentifier}
+import org.apache.spark.sql.catalyst.catalog.{BucketSpec, CatalogStorageFormat, CatalogTable, CatalogTableType, ExternalCatalog, SessionCatalog, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, UnsafeRow}
+import org.apache.spark.sql.catalyst.parser.ParserInterface
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, SubqueryAlias}
-import org.apache.spark.sql.types.{DataType, Metadata}
+import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.types.{DataType, Metadata, StructType}
 import org.slf4j.LoggerFactory
 
 import scala.reflect.ClassTag
@@ -46,6 +48,10 @@ object ReflectionUtil {
     "org.apache.spark.sql.catalyst.catalog.TiDirectExternalCatalog"
   private val TI_COMPOSITE_SESSION_CATALOG_CLASS =
     "org.apache.spark.sql.catalyst.catalog.TiCompositeSessionCatalog"
+  private val TI_PARSER_FACTORY_CLASS = "org.apache.spark.sql.extensions.TiParserFactory"
+  private val TI_RESOLUTION_RULE_FACTORY_CLASS =
+    "org.apache.spark.sql.extensions.TiResolutionRuleFactory"
+  private val TI_DDL_RULE_FACTORY_CLASS = "org.apache.spark.sql.extensions.TiDDLRuleFactory"
 
   // In Spark 2.3.0 and 2.3.1 the method declaration is:
   // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
@@ -271,17 +277,33 @@ object ReflectionUtil {
       .asInstanceOf[AttributeReference]
   }
 
-  def callSessionCatalogCreateTable(obj: SessionCatalog,
-                                    tableDefinition: CatalogTable,
-                                    ignoreIfExists: java.lang.Boolean): Unit = {
+  def newTiParser(
+    getOrCreateTiContext: SparkSession => TiContext
+  ): (SparkSession, ParserInterface) => ParserInterface = {
     classLoader
-      .loadClass(SPARK_WRAPPER_CLASS)
-      .getDeclaredMethod(
-        "callSessionCatalogCreateTable",
-        classOf[SessionCatalog],
-        classOf[CatalogTable],
-        classOf[Boolean]
-      )
-      .invoke(null, obj, tableDefinition, ignoreIfExists)
+      .loadClass(TI_PARSER_FACTORY_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext])
+      .newInstance(getOrCreateTiContext)
+      .asInstanceOf[(SparkSession, ParserInterface) => ParserInterface]
+  }
+
+  def newTiResolutionRule(
+    getOrCreateTiContext: SparkSession => TiContext
+  ): SparkSession => Rule[LogicalPlan] = {
+    classLoader
+      .loadClass(TI_RESOLUTION_RULE_FACTORY_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext])
+      .newInstance(getOrCreateTiContext)
+      .asInstanceOf[SparkSession => Rule[LogicalPlan]]
+  }
+
+  def newTiDDLRule(
+    getOrCreateTiContext: SparkSession => TiContext
+  ): SparkSession => Rule[LogicalPlan] = {
+    classLoader
+      .loadClass(TI_DDL_RULE_FACTORY_CLASS)
+      .getDeclaredConstructor(classOf[SparkSession => TiContext])
+      .newInstance(getOrCreateTiContext)
+      .asInstanceOf[SparkSession => Rule[LogicalPlan]]
   }
 }
