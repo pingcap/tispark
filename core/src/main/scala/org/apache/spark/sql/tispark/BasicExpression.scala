@@ -1,19 +1,4 @@
-/*
- * Copyright 2017 PingCAP, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package com.pingcap.tispark
+package org.apache.spark.sql.tispark
 
 import java.sql.Timestamp
 
@@ -24,8 +9,6 @@ import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeRefe
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
-
-import scala.language.implicitConversions
 
 object BasicExpression {
   type TiExpression = com.pingcap.tikv.expression.Expression
@@ -58,12 +41,21 @@ object BasicExpression {
         // we do not support this expression in DAG mode
         expr.children.forall(
           (e: Expression) =>
-            childType.eq(e.dataType) && isSupportedExpression(e, requestTypes) // Do it recursively
+            sameCopType(childType, e.dataType) && isSupportedExpression(e, requestTypes) // Do it recursively
         )
       // For other request types we assume them supported
       // by default
       case _ => true
     }
+
+  def sameCopType(lhs: DataType, rhs: DataType): Boolean = {
+    (lhs, rhs) match {
+      case (_: IntegralType, _: IntegralType) => true
+      case (_: DecimalType, _: DecimalType) => true
+      case (_: FloatType | _: DoubleType, _: FloatType | _: DoubleType) => true
+      case _ => lhs.sameType(rhs)
+    }
+  }
 
   def convertToTiExpr(expr: Expression): Option[TiExpression] =
     expr match {
@@ -136,6 +128,9 @@ object BasicExpression {
         Some(expr)
 
       case PromotePrecision(Cast(BasicExpression(expr), _: DecimalType, _)) =>
+        Some(expr)
+
+      case PromotePrecision(BasicExpression(expr)) =>
         Some(expr)
 
       // TODO: Are all AttributeReference column reference in such context?
