@@ -301,4 +301,9 @@ public class JsonType extends DataType {
   public Object getOriginDefaultValueNonNull(String value, long version) {
     throw new AssertionError("json can't have a default value");
   }
+
+  @Override
+  public boolean isPushDownSupported() {
+    return false;
+  }
 }
