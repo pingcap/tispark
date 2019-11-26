@@ -141,6 +141,9 @@ class TiBatchWrite(@transient val df: DataFrame,
     // check unsupported
     checkUnsupported()
 
+    // cache data
+    df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+
     // check empty
     if (TiUtil.isDataFrameEmpty(df)) {
       logger.warn("data is empty!")
