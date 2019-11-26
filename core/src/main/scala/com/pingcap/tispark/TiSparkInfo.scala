@@ -16,7 +16,21 @@
 package com.pingcap.tispark
 
 object TiSparkInfo {
-  val SUPPORTED_SPARK_VERSION: List[String] = "3.0" :: "2.3" :: "2.4" :: Nil
+  val SCALA_VERSION: String = scala.util.Properties.releaseVersion.getOrElse("unknown")
+
+  val IS_SCALA_2_11: Boolean = SCALA_VERSION.startsWith("2.11")
+
+  val IS_SCALA_2_12: Boolean = SCALA_VERSION.startsWith("2.12")
+
+  val SUPPORTED_SPARK_VERSION: List[String] = {
+    if (IS_SCALA_2_11) {
+      "2.4" :: "2.3" :: Nil
+    } else if (IS_SCALA_2_12) {
+      "3.0" :: "2.4" :: Nil
+    } else {
+      "3.0" :: "2.4" :: "2.3" :: Nil
+    }
+  }
 
   val SPARK_VERSION: String = org.apache.spark.SPARK_VERSION
 
@@ -24,7 +38,8 @@ object TiSparkInfo {
     SUPPORTED_SPARK_VERSION.find(SPARK_VERSION.startsWith).getOrElse("unknown")
   }
   val info: String = {
-    s"""Supported Spark Version: ${SUPPORTED_SPARK_VERSION.mkString(" ")}
+    s"""Scala Version: $SCALA_VERSION
+       |Supported Spark Version: ${SUPPORTED_SPARK_VERSION.mkString(" ")}
        |Current Spark Version: $SPARK_VERSION
        |Current Spark Major Version: $SPARK_MAJOR_VERSION""".stripMargin
   }

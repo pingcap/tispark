@@ -8,6 +8,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def PD_BRANCH = "master"
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     def TIFLASH_BRANCH = "master"
     def MVN_PROFILE = "-Pjenkins"
     def TEST_MODE = "full"
@@ -18,12 +19,25 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def MVN_TEST_PROFILE1 = "-Pjenkins-test-spark-3.0"
     def MVN_TEST_PROFILE2 = "-Pjenkins-test-spark-2.4"
 >>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
+=======
+>>>>>>> support spark-2.3 and scala-2.11 (#1245)
     def TEST_MODE = "simple"
 >>>>>>> support spark-3.0
     def PARALLEL_NUMBER = 18
+<<<<<<< HEAD
     def TEST_REGION_SIZE = "normal"
     def TEST_TIFLASH = "false"
 
+=======
+    def MVN_PROFILE = ""
+    def MVN_PROFILE_SCALA_2_12 = "-Pspark-2.4-scala-2.12"
+    def MVN_TEST_PROFILE1_SCALA_2_12 = "-Pjenkins-test-spark-3.0"
+    def MVN_TEST_PROFILE2_SCALA_2_12 = "-Pjenkins-test-spark-2.4"
+    def MVN_PROFILE_SCALA_2_11 = "-Pspark-2.3-scala-2.11"
+    def MVN_TEST_PROFILE1_SCALA_2_11 = "-Pjenkins-test-spark-2.4"
+    def MVN_TEST_PROFILE2_SCALA_2_11 = "-Pjenkins-test-spark-2.3"
+    
+>>>>>>> support spark-2.3 and scala-2.11 (#1245)
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m1) {
@@ -234,10 +248,17 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
 =======
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+<<<<<<< HEAD
                         mvn compile ${MVN_PROFILE}
                         mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE1} -Dtest=moo ${mvnStr}
                         mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE2} -Dtest=moo ${mvnStr}
 >>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
+=======
+                        mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_11} ${MVN_TEST_PROFILE1_SCALA_2_11} -Dtest=moo ${mvnStr}
+                        mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_11} ${MVN_TEST_PROFILE2_SCALA_2_11} -Dtest=moo ${mvnStr}
+                        mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_12} ${MVN_TEST_PROFILE1_SCALA_2_12} -Dtest=moo ${mvnStr}
+                        mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_12} ${MVN_TEST_PROFILE2_SCALA_2_12} -Dtest=moo ${mvnStr}
+>>>>>>> support spark-2.3 and scala-2.11 (#1245)
                     """
                 }
             }
