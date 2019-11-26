@@ -25,6 +25,7 @@ public class SupportedExpressionValidator extends DefaultVisitor<Boolean, Expres
     if (!node.accept(validator, blacklist)) {
       return false;
     }
+
     try {
       ExpressionTypeCoercer coercer = new ExpressionTypeCoercer();
       coercer.infer(node);
@@ -35,6 +36,7 @@ public class SupportedExpressionValidator extends DefaultVisitor<Boolean, Expres
     } catch (Exception e) {
       return false;
     }
+
     return true;
   }
 

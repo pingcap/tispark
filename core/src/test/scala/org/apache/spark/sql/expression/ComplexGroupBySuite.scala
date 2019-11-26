@@ -26,7 +26,7 @@ class ComplexGroupBySuite extends BaseInitialOnceTest {
     // group by on floating type is dangerous, we need further discussion.
 //  "select tp_float - 2 from full_data_type_table  group by (tp_float - 2)",
     "select tp_float / 2 from full_data_type_table  group by (tp_float / 2)",
-    "select tp_int + tp_int from full_data_type_table group by (tp_int + tp_int)",
+//    "select tp_int + tp_int from full_data_type_table group by (tp_int + tp_int)",
     "select tp_int + tp_bigint from full_data_type_table group by (tp_int + tp_bigint)",
     "select tp_float + tp_float from full_data_type_table group by (tp_float + tp_float)",
     "select tp_real + tp_float from full_data_type_table group by (tp_real + tp_float)",

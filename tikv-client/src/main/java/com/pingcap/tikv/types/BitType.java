@@ -97,4 +97,9 @@ public class BitType extends IntegerType {
     }
     return result;
   }
+
+  @Override
+  public boolean isPushDownSupported() {
+    return false;
+  }
 }

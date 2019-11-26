@@ -404,9 +404,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
     }
     if (refinedSortOrder.exists(
-          order =>
-            !TiUtil.isSupportedBasicExpression(order.child, source, blacklist) &&
-              TiConverter.fromSparkType(order.dataType).isPushDownSupported
+          order => !TiUtil.isSupportedOrderBy(order.child, source, blacklist)
         )) {
       Option.empty
     } else {
