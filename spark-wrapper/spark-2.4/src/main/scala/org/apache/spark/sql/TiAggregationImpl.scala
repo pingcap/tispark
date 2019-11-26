@@ -30,25 +30,32 @@ object TiAggregationImpl {
     case PhysicalAggregation(groupingExpressions, aggregateExpressions, resultExpressions, child) =>
       // Rewrites all `Average`s into the form of `Divide(Sum / Count)` so that we can push the
       // converted `Sum`s and `Count`s down to TiKV.
-      val (averages, _) =
+      val averages =
         aggregateExpressions
           .map(_.asInstanceOf[AggregateExpression])
           .partition {
             case AggregateExpression(_: Average, _, _, _) => true
             case _                                        => false
           }
+          ._1
 
-      val (sums, _) = aggregateExpressions.map(_.asInstanceOf[AggregateExpression]).partition {
-        case AggregateExpression(_: Sum, _, _, _) => true
-        case _                                    => false
-      }
-
-      val (sumAndAvgEliminated, _) =
-        aggregateExpressions.map(_.asInstanceOf[AggregateExpression]).partition {
-          case AggregateExpression(_: Sum, _, _, _)     => false
-          case AggregateExpression(_: Average, _, _, _) => false
-          case _                                        => true
+      val sums = aggregateExpressions
+        .map(_.asInstanceOf[AggregateExpression])
+        .partition {
+          case AggregateExpression(_: Sum, _, _, _) => true
+          case _                                    => false
         }
+        ._1
+
+      val sumAndAvgEliminated =
+        aggregateExpressions
+          .map(_.asInstanceOf[AggregateExpression])
+          .partition {
+            case AggregateExpression(_: Sum, _, _, _)     => false
+            case AggregateExpression(_: Average, _, _, _) => false
+            case _                                        => true
+          }
+          ._1
 
       val sumsRewriteMap = sums.map {
         case s @ AggregateExpression(Sum(ref), _, _, _) =>
@@ -93,8 +100,8 @@ object TiAggregationImpl {
       }
 
       val rewrittenResultExpressions = resultExpressions
-        .map { _ transform avgRewrite }
         .map { _ transform sumRewrite }
+        .map { _ transform avgRewrite }
         .map { case e: NamedExpression => e }
 
       val rewrittenAggregateExpressions = {
