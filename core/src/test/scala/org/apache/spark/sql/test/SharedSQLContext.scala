@@ -402,6 +402,14 @@ object SharedSQLContext extends Logging {
       pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
       dbPrefix = getOrElse(prop, DB_PREFIX, "")
 
+      // properties for ticatalog plugin
+      if (!prop.containsKey("spark.sql.catalog.tidb_catalog")) {
+        prop.put("spark.sql.catalog.tidb_catalog", "org.apache.spark.sql.catalyst.catalog.TiCatalog")
+      }
+      if (!prop.containsKey("spark.sql.catalog.tidb_catalog.pd.address")) {
+        prop.put("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)
+      }
+
       // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
       tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "")
