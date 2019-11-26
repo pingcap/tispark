@@ -404,7 +404,8 @@ object SharedSQLContext extends Logging {
 
       // properties for ticatalog plugin
       if (!prop.containsKey("spark.sql.catalog.tidb_catalog")) {
-        prop.put("spark.sql.catalog.tidb_catalog", "org.apache.spark.sql.catalyst.catalog.TiCatalog")
+        prop
+          .put("spark.sql.catalog.tidb_catalog", "org.apache.spark.sql.catalyst.catalog.TiCatalog")
       }
       if (!prop.containsKey("spark.sql.catalog.tidb_catalog.pd.address")) {
         prop.put("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)
