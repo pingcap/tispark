@@ -27,6 +27,14 @@ import org.apache.spark.sql.catalyst.plans.logical.{SetCatalogAndNamespace, Show
 case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetCatalogAndNamespace)
     extends RunnableCommand {
   override def run(sparkSession: SparkSession): Seq[Row] = {
+    tiContext.tiCatalog.setCurrentDatabase(delegate.namespace.get.head)
+    Seq.empty[Row]
+  }
+}
+
+case class TiSetDatabaseCommandV2(tiContext: TiContext, delegate: SetCatalogAndNamespace)
+    extends RunnableCommand {
+  override def run(sparkSession: SparkSession): Seq[Row] = {
     // The catalog is updated first because CatalogManager resets the current namespace
     // when the current catalog is set.
     val catalogManager = tiContext.sparkSession.sessionState.analyzer.catalogManager

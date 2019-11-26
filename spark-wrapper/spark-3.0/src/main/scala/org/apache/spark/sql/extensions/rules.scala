@@ -14,19 +14,23 @@
  */
 package org.apache.spark.sql.extensions
 
-import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
-import org.apache.spark.sql.{SparkSession, TiContext}
-import org.apache.spark.sql.catalyst.analysis.EliminateSubqueryAliases
-import org.apache.spark.sql.catalyst.catalog.TiDBTable
+import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.catalyst.analysis.UnresolvedV2Relation
+import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, ShowNamespaces}
+import com.pingcap.tispark.statistics.StatisticsManager
+import com.pingcap.tispark.utils.ReflectionUtil.newSubqueryAlias
+import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
+import org.apache.spark.sql.catalyst.catalog.{TiDBTable, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
-import org.apache.spark.sql.catalyst.plans.logical.{DescribeTable, InsertIntoStatement, SetCatalogAndNamespace}
-import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace}
 import org.apache.spark.sql.catalyst.rules.Rule
+import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
+import org.apache.spark.sql.{AnalysisException, _}
 
 class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
@@ -36,6 +40,143 @@ class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
 }
 
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
+  sparkSession: SparkSession
+) extends Rule[LogicalPlan] {
+
+  private val tiContext: TiContext = getOrCreateTiContext(sparkSession)
+  private lazy val autoLoad = tiContext.autoLoad
+  protected lazy val meta: MetaManager = tiContext.meta
+  private lazy val tiCatalog = tiContext.tiCatalog
+  private lazy val tiSession = tiContext.tiSession
+  private lazy val sqlContext = tiContext.sqlContext
+
+  private def getDatabaseFromIdentifier(tableIdentifier: Seq[String]): String = {
+    if (tableIdentifier.size == 1) {
+      tiCatalog.getCurrentDatabase
+    } else {
+      tableIdentifier.head
+    }
+  }
+
+  protected val resolveTiDBRelation: Seq[String] => LogicalPlan =
+    tableIdentifier => {
+      val dbName = getDatabaseFromIdentifier(tableIdentifier)
+      val tableName =
+        if (tableIdentifier.size == 1) tableIdentifier.head else tableIdentifier.tail.head
+      val table = meta.getTable(dbName, tableName)
+      if (table.isEmpty) {
+        throw new AnalysisException(s"Table or view '$tableName' not found in database '$dbName'")
+      }
+      if (autoLoad) {
+        StatisticsManager.loadStatisticsInfo(table.get)
+      }
+      val sizeInBytes = StatisticsManager.estimateTableSize(table.get)
+      val tiDBRelation = TiDBRelation(
+        tiSession,
+        TiTableReference(dbName, tableName, sizeInBytes),
+        meta
+      )(sqlContext)
+      // Use SubqueryAlias so that projects and joins can correctly resolve
+      // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
+      newSubqueryAlias(tableName, LogicalRelation(tiDBRelation))
+    }
+
+  override def apply(plan: LogicalPlan): LogicalPlan =
+    plan transformUp resolveTiDBRelations
+
+  private def resolveTiDBRelations: PartialFunction[LogicalPlan, LogicalPlan] = {
+    case i @ InsertIntoStatement(UnresolvedRelation(tableIdentifier), _, _, _, _)
+        if tiCatalog
+          .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
+          .exists(_.isInstanceOf[TiSessionCatalog]) =>
+      i.copy(table = EliminateSubqueryAliases(resolveTiDBRelation(tableIdentifier)))
+    case UnresolvedRelation(tableIdentifier)
+        if tiCatalog
+          .catalogOf(if (tableIdentifier.size == 1) None else Some(tableIdentifier.head))
+          .exists(_.isInstanceOf[TiSessionCatalog]) =>
+      resolveTiDBRelation(tableIdentifier)
+  }
+}
+
+class TiDDLRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
+    extends (SparkSession => Rule[LogicalPlan]) {
+  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
+    TiDDLRule(getOrCreateTiContext)(v1)
+  }
+}
+
+case class NopCommand(name: String) extends Command {}
+case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
+    extends Rule[LogicalPlan] {
+  protected lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
+
+  def getDBAndTableName(ident: Identifier): (String, Option[String]) = {
+    ident.namespace() match {
+      case Array(db) =>
+        (ident.name(), Some(db))
+      case _ =>
+        (ident.name(), None)
+    }
+  }
+
+  def createDescribeTableInfo(dt: DescribeTableCommand): DescribeTableInfo = {
+    new DescribeTableInfo(
+      TableIdentifier(dt.table.table, dt.table.database),
+      dt.partitionSpec,
+      dt.isExtended
+    )
+  }
+
+  def createDescribeTableInfo(dt: DescribeTable): DescribeTableInfo = {
+    dt.table match {
+      case u: UnresolvedV2Relation =>
+        val (name, db) = getDBAndTableName(u.tableName)
+        new DescribeTableInfo(TableIdentifier(name, db), Map.empty[String, String], dt.isExtended)
+      case _ =>
+        new DescribeTableInfo(
+          TableIdentifier(dt.table.name, None),
+          Map.empty[String, String],
+          dt.isExtended
+        )
+    }
+  }
+
+  def isSupportedCatalog(sd: SetCatalogAndNamespace): Boolean = {
+    if (sd.catalogName.isEmpty)
+      false
+    else {
+      sd.catalogName.get.equals(CatalogManager.SESSION_CATALOG_NAME)
+    }
+  }
+
+  override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
+    // TODO: support other commands that may concern TiSpark catalog.
+    case sd: ShowNamespaces =>
+      TiShowDatabasesCommand(tiContext, sd)
+    case sd: SetCatalogAndNamespace if isSupportedCatalog(sd) =>
+      TiSetDatabaseCommand(tiContext, sd)
+    case st: ShowTablesCommand =>
+      TiShowTablesCommand(tiContext, st)
+    case st: ShowColumnsCommand =>
+      TiShowColumnsCommand(tiContext, st)
+    case dt: DescribeTableCommand =>
+      TiDescribeTablesCommand(tiContext, dt, createDescribeTableInfo(dt))
+    case dt: DescribeTable =>
+      // use NopCommand to avoid failAnalysis
+      TiDescribeTablesCommand(tiContext, NopCommand("empty"), createDescribeTableInfo(dt))
+    case ct: CreateTableLikeCommand =>
+      TiCreateTableLikeCommand(tiContext, ct)
+  }
+}
+
+class TiResolutionRuleV2Factory(getOrCreateTiContext: SparkSession => TiContext)
+    extends (SparkSession => Rule[LogicalPlan]) {
+  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
+    TiResolutionRuleV2(getOrCreateTiContext)(v1)
+  }
+}
+
+case class TiResolutionRuleV2(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
 ) extends Rule[LogicalPlan] {
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
@@ -86,20 +227,20 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     }
 }
 
-class TiDDLRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
+class TiDDLRuleV2Factory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
   override def apply(v1: SparkSession): Rule[LogicalPlan] = {
-    TiDDLRule(getOrCreateTiContext)(v1)
+    TiDDLRuleV2(getOrCreateTiContext)(v1)
   }
 }
 
-case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
+case class TiDDLRuleV2(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Rule[LogicalPlan] {
   protected lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
 
   override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
     // TODO: this is a hack to use current name space when resolve table in tidb_catalog
     case sd: SetCatalogAndNamespace =>
-      TiSetDatabaseCommand(tiContext, sd)
+      TiSetDatabaseCommandV2(tiContext, sd)
   }
 }
