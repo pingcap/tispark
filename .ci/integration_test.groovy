@@ -6,7 +6,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIDB_BRANCH = "master"
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
-    def MVN_PROFILE = "-Pspark-2.4-scala-2.12"
+    def MVN_PROFILE = "-Pspark-3.0-scala-2.12"
     def MVN_TEST_PROFILE1 = "-Pjenkins-test-spark-3.0"
     def MVN_TEST_PROFILE2 = "-Pjenkins-test-spark-2.4"
     def TEST_MODE = "simple"
@@ -155,7 +155,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
                         mvn compile ${MVN_PROFILE}
                         mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE1} -Dtest=moo ${mvnStr}
-                        mvn test ${MVN_PROFILE} ${MVN_TEST_PROFILE2} -Dtest=moo ${mvnStr}
                     """
                 }
             }
