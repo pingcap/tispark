@@ -55,7 +55,8 @@ case class TiDBTable(v1Table: CatalogTable) extends Table {
     }
   }
 
-  def catalogTable: CatalogTable = v1Table
+  def databaseName: String = v1Table.identifier.database.get
+  def tableName: String = v1Table.identifier.table
 
   lazy val options: Map[String, String] = {
     v1Table.storage.locationUri match {
@@ -70,7 +71,6 @@ case class TiDBTable(v1Table: CatalogTable) extends Table {
   override lazy val properties: util.Map[String, String] = v1Table.properties.asJava
 
   var tiTableInfo: Option[TiTableInfo] = None
-  var dbName: Option[String] = None
   override lazy val schema: StructType = v1Table.schema
 
   override lazy val partitioning: Array[Transform] = {
@@ -175,7 +175,6 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
     // add BATCH_READ to just keep compiler happy
     ret.capabilities.add(TableCapability.BATCH_READ)
     ret.tiTableInfo = Some(table)
-    ret.dbName = Some(dbName)
     ret
   }
 

@@ -53,14 +53,14 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
       val sizeInBytes = StatisticsManager.estimateTableSize(tiTable.tiTableInfo.get)
       val tiDBRelation = TiDBRelation(
         tiSession,
-        TiTableReference(tiTable.dbName.get, tiTable.tiTableInfo.get.getName, sizeInBytes),
+        TiTableReference(tiTable.databaseName, tiTable.tableName, sizeInBytes),
         meta
       )(sqlContext)
       // Use SubqueryAlias so that projects and joins can correctly resolve
       // UnresolvedAttributes in JoinConditions, Projects, Filters, etc.
       // todo since there is no UnresolvedAttributes, do we still need the subqueryAlias relation???
       newSubqueryAlias(
-        tiTable.tiTableInfo.get.getName,
+        tiTable.tableName,
         LogicalRelation(tiDBRelation, output, None, false)
       )
     }
