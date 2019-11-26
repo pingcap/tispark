@@ -69,18 +69,18 @@ public class MyDecimal implements Serializable {
   private static final int[] dig2bytes = new int[] {0, 1, 1, 2, 2, 3, 3, 4, 4, 4};
 
   // The following are fields of MyDecimal
-  private int _digitsInt;
-  private int _digitsFrac;
-  private boolean _negative;
-  private int[] _wordBuf = new int[maxWordBufLen];
+  private int digitsInt;
+  private int digitsFrac;
+  private boolean negative;
+  private int[] wordBuf = new int[maxWordBufLen];
 
   public MyDecimal() {}
 
   public MyDecimal(int digitsInt, int digitsFrac, boolean negative, int[] wordBuf) {
-    this._digitsInt = digitsInt;
-    this._digitsFrac = digitsFrac;
-    this._negative = negative;
-    this._wordBuf = wordBuf;
+    this.digitsInt = digitsInt;
+    this.digitsFrac = digitsFrac;
+    this.negative = negative;
+    this.wordBuf = wordBuf;
   }
   /*
    * Returns total precision of this decimal. Basically, it is sum of digitsInt and digitsFrac. But there
@@ -88,7 +88,7 @@ public class MyDecimal implements Serializable {
    * Precision reflects the actual effective precision without leading zero
    */
   public int precision() {
-    int frac = this._digitsFrac;
+    int frac = this.digitsFrac;
     int digitsInt =
         this.removeLeadingZeros()[
             1]; /*this function return an array and the second element is digitsInt*/
@@ -105,7 +105,7 @@ public class MyDecimal implements Serializable {
    * effective fraction without trailing zero
    */
   public int frac() {
-    return _digitsFrac;
+    return digitsFrac;
   }
 
   /**
@@ -130,16 +130,16 @@ public class MyDecimal implements Serializable {
       throw new IllegalArgumentException("Bad Float Number to parse");
     }
 
-    int digitsInt = precision - frac;
-    int wordsInt = digitsInt / digitsPerWord;
-    int leadingDigits = digitsInt - wordsInt * digitsPerWord;
-    int wordsFrac = frac / digitsPerWord;
-    int trailingDigits = frac - wordsFrac * digitsPerWord;
-    int wordsIntTo = wordsInt;
-    if (leadingDigits > 0) {
+    int _digitsInt = precision - frac;
+    int _wordsInt = _digitsInt / digitsPerWord;
+    int _leadingDigits = _digitsInt - _wordsInt * digitsPerWord;
+    int _wordsFrac = frac / digitsPerWord;
+    int trailingDigits = frac - _wordsFrac * digitsPerWord;
+    int wordsIntTo = _wordsInt;
+    if (_leadingDigits > 0) {
       wordsIntTo++;
     }
-    int wordsFracTo = wordsFrac;
+    int wordsFracTo = _wordsFrac;
     if (trailingDigits > 0) {
       wordsFracTo++;
     }
@@ -165,56 +165,56 @@ public class MyDecimal implements Serializable {
         wordsFracTo = 0;
         overflow = true;
       } else {
-        wordsIntTo = wordsInt;
-        wordsFracTo = wordBufLen - wordsInt;
+        wordsIntTo = _wordsInt;
+        wordsFracTo = wordBufLen - _wordsInt;
         truncated = true;
       }
     }
 
     if (overflow || truncated) {
       if (wordsIntTo < oldWordsIntTo) {
-        binIdx += dig2bytes[leadingDigits] + (wordsInt - wordsIntTo) * wordSize;
+        binIdx += dig2bytes[_leadingDigits] + (_wordsInt - wordsIntTo) * wordSize;
       } else {
         trailingDigits = 0;
-        wordsFrac = wordsFracTo;
+        _wordsFrac = wordsFracTo;
       }
     }
 
-    this._negative = mask != 0;
-    this._digitsInt = (byte) (wordsInt * digitsPerWord + leadingDigits);
-    this._digitsFrac = (byte) (wordsFrac * digitsPerWord + trailingDigits);
+    this.negative = mask != 0;
+    this.digitsInt = (byte) (_wordsInt * digitsPerWord + _leadingDigits);
+    this.digitsFrac = (byte) (_wordsFrac * digitsPerWord + trailingDigits);
 
     int wordIdx = 0;
-    if (leadingDigits > 0) {
-      int i = dig2bytes[leadingDigits];
+    if (_leadingDigits > 0) {
+      int i = dig2bytes[_leadingDigits];
       int x = readWord(bin, i, binIdx);
       binIdx += i;
-      this._wordBuf[wordIdx] = (x ^ mask) > 0 ? x ^ mask : (x ^ mask) & 0xFF;
-      if (this._wordBuf[wordIdx] >= powers10[leadingDigits + 1]) {
+      this.wordBuf[wordIdx] = (x ^ mask) > 0 ? x ^ mask : (x ^ mask) & 0xFF;
+      if (this.wordBuf[wordIdx] >= powers10[_leadingDigits + 1]) {
         throw new IllegalArgumentException("BadNumber");
       }
-      if (this._wordBuf[wordIdx] != 0) {
+      if (this.wordBuf[wordIdx] != 0) {
         wordIdx++;
       } else {
-        this._digitsInt -= leadingDigits;
+        this.digitsInt -= _leadingDigits;
       }
     }
-    for (int stop = binIdx + wordsInt * wordSize; binIdx < stop; binIdx += wordSize) {
-      this._wordBuf[wordIdx] = (readWord(bin, 4, binIdx) ^ mask);
-      if (this._wordBuf[wordIdx] > wordMax) {
+    for (int stop = binIdx + _wordsInt * wordSize; binIdx < stop; binIdx += wordSize) {
+      this.wordBuf[wordIdx] = (readWord(bin, 4, binIdx) ^ mask);
+      if (this.wordBuf[wordIdx] > wordMax) {
         throw new IllegalArgumentException("BadNumber");
       }
-      if (wordIdx > 0 || this._wordBuf[wordIdx] != 0) {
+      if (wordIdx > 0 || this.wordBuf[wordIdx] != 0) {
         wordIdx++;
       } else {
-        this._digitsInt -= digitsPerWord;
+        this.digitsInt -= digitsPerWord;
       }
     }
 
-    for (int stop = binIdx + wordsFrac * wordSize; binIdx < stop; binIdx += wordSize) {
+    for (int stop = binIdx + _wordsFrac * wordSize; binIdx < stop; binIdx += wordSize) {
       int x = readWord(bin, 4, binIdx);
-      this._wordBuf[wordIdx] = (x ^ mask) > 0 ? x ^ mask : (x ^ mask) & 0xFF;
-      if (this._wordBuf[wordIdx] > wordMax) {
+      this.wordBuf[wordIdx] = (x ^ mask) > 0 ? x ^ mask : (x ^ mask) & 0xFF;
+      if (this.wordBuf[wordIdx] > wordMax) {
         throw new IllegalArgumentException("BadNumber");
       }
       wordIdx++;
@@ -223,10 +223,10 @@ public class MyDecimal implements Serializable {
     if (trailingDigits > 0) {
       int i = dig2bytes[trailingDigits];
       int x = readWord(bin, i, binIdx);
-      this._wordBuf[wordIdx] =
+      this.wordBuf[wordIdx] =
           ((x ^ mask) > 0 ? x ^ mask : (x ^ mask) & 0xFF)
               * powers10[digitsPerWord - trailingDigits];
-      if (this._wordBuf[wordIdx] > wordMax) {
+      if (this.wordBuf[wordIdx] > wordMax) {
         throw new IllegalArgumentException("BadNumber");
       }
       wordIdx++;
@@ -247,15 +247,15 @@ public class MyDecimal implements Serializable {
   /** Truncates any prefix zeros such as 00.001. After this, digitsInt is truncated from 2 to 0. */
   private int[] removeLeadingZeros() {
     int wordIdx = 0;
-    int digitsInt = this._digitsInt;
+    int digitsInt = this.digitsInt;
     int i = ((digitsInt - 1) % digitsPerWord) + 1;
-    for (; digitsInt > 0 && this._wordBuf[wordIdx] == 0; ) {
+    for (; digitsInt > 0 && this.wordBuf[wordIdx] == 0; ) {
       digitsInt -= i;
       i = digitsPerWord;
       wordIdx++;
     }
     if (digitsInt > 0) {
-      digitsInt -= countLeadingZeroes((digitsInt - 1) % digitsPerWord, this._wordBuf[wordIdx]);
+      digitsInt -= countLeadingZeroes((digitsInt - 1) % digitsPerWord, this.wordBuf[wordIdx]);
     } else {
       digitsInt = 0;
     }
@@ -355,7 +355,7 @@ public class MyDecimal implements Serializable {
     // for +/-, we need skip them and record sign information into negative field.
     switch (str[startIdx]) {
       case '-':
-        this._negative = true;
+        this.negative = true;
         startIdx++;
         break;
       case '+':
@@ -409,8 +409,8 @@ public class MyDecimal implements Serializable {
         digitsInt = wordsInt * digitsPerWord;
       }
     }
-    this._digitsInt = digitsInt;
-    this._digitsFrac = digitsFrac;
+    this.digitsInt = digitsInt;
+    this.digitsFrac = digitsFrac;
     int wordIdx = wordsInt;
     int strIdxTmp = strIdx;
     int word = 0;
@@ -422,7 +422,7 @@ public class MyDecimal implements Serializable {
       innerIdx++;
       if (innerIdx == digitsPerWord) {
         wordIdx--;
-        this._wordBuf[wordIdx] = word;
+        this.wordBuf[wordIdx] = word;
         word = 0;
         innerIdx = 0;
       }
@@ -430,7 +430,7 @@ public class MyDecimal implements Serializable {
 
     if (innerIdx != 0) {
       wordIdx--;
-      this._wordBuf[wordIdx] = word;
+      this.wordBuf[wordIdx] = word;
     }
 
     wordIdx = wordsInt;
@@ -444,26 +444,26 @@ public class MyDecimal implements Serializable {
       word = (str[strIdx] - '0') + word * 10;
       innerIdx++;
       if (innerIdx == digitsPerWord) {
-        this._wordBuf[wordIdx] = word;
+        this.wordBuf[wordIdx] = word;
         wordIdx++;
         word = 0;
         innerIdx = 0;
       }
     }
     if (innerIdx != 0) {
-      this._wordBuf[wordIdx] = word * powers10[digitsPerWord - innerIdx];
+      this.wordBuf[wordIdx] = word * powers10[digitsPerWord - innerIdx];
     }
 
     // this is -0000 is just 0.
     boolean allZero = true;
     for (int i = 0; i < wordBufLen; i++) {
-      if (this._wordBuf[i] != 0) {
+      if (this.wordBuf[i] != 0) {
         allZero = false;
         break;
       }
     }
     if (allZero) {
-      this._negative = false;
+      this.negative = false;
     }
   }
 
@@ -472,11 +472,11 @@ public class MyDecimal implements Serializable {
   public String toString() {
     char[] str;
 
-    int digitsFrac = this._digitsFrac;
+    int _digitsFrac = this.digitsFrac;
     int[] res = removeLeadingZeros();
     int wordStartIdx = res[0];
     int digitsInt = res[1];
-    if (digitsInt + digitsFrac == 0) {
+    if (digitsInt + _digitsFrac == 0) {
       digitsInt = 1;
       wordStartIdx = 0;
     }
@@ -485,33 +485,33 @@ public class MyDecimal implements Serializable {
     if (digitsIntLen == 0) {
       digitsIntLen = 1;
     }
-    int digitsFracLen = digitsFrac;
+    int digitsFracLen = _digitsFrac;
     int length = digitsIntLen + digitsFracLen;
-    if (this._negative) {
+    if (this.negative) {
       length++;
     }
-    if (digitsFrac > 0) {
+    if (_digitsFrac > 0) {
       length++;
     }
     str = new char[length];
 
     int strIdx = 0;
-    if (this._negative) {
+    if (this.negative) {
       str[strIdx] = '-';
       strIdx++;
     }
 
     int fill;
-    if (digitsFrac > 0) {
+    if (_digitsFrac > 0) {
       int fracIdx = strIdx + digitsIntLen;
-      fill = digitsFracLen - digitsFrac;
+      fill = digitsFracLen - _digitsFrac;
       int wordIdx = wordStartIdx + digitsToWords(digitsInt);
       str[fracIdx] = '.';
       fracIdx++;
-      for (; digitsFrac > 0; digitsFrac -= digitsPerWord) {
-        int x = this._wordBuf[wordIdx];
+      for (; _digitsFrac > 0; _digitsFrac -= digitsPerWord) {
+        int x = this.wordBuf[wordIdx];
         wordIdx++;
-        for (int i = min(digitsFrac, digitsPerWord); i > 0; i--) {
+        for (int i = min(_digitsFrac, digitsPerWord); i > 0; i--) {
           int y = x / digMask;
           str[fracIdx] = (char) ((char) y + '0');
           fracIdx++;
@@ -537,7 +537,7 @@ public class MyDecimal implements Serializable {
       int wordIdx = wordStartIdx + digitsToWords(digitsInt);
       for (; digitsInt > 0; digitsInt -= digitsPerWord) {
         wordIdx--;
-        int x = this._wordBuf[wordIdx];
+        int x = this.wordBuf[wordIdx];
         for (int i = min(digitsInt, digitsPerWord); i > 0; i--) {
           int y = x / 10;
           strIdx--;
@@ -555,7 +555,7 @@ public class MyDecimal implements Serializable {
   public long toLong() {
     long x = 0;
     int wordIdx = 0;
-    for (int i = this._digitsInt; i > 0; i -= digitsPerWord) {
+    for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
       /*
         Attention: trick!
         we're calculating -|from| instead of |from| here
@@ -563,14 +563,14 @@ public class MyDecimal implements Serializable {
         so we can convert -9223372036854775808 correctly
       */
       long y = x;
-      x = x * wordBase - (long) this._wordBuf[wordIdx];
+      x = x * wordBase - (long) this.wordBuf[wordIdx];
       wordIdx++;
       if (y < Long.MIN_VALUE / wordBase || x > y) {
         /*
           the decimal is bigger than any possible integer
           return border integer depending on the sign
         */
-        if (this._negative) {
+        if (this.negative) {
           return Long.MIN_VALUE;
         }
         return Long.MAX_VALUE;
@@ -578,15 +578,15 @@ public class MyDecimal implements Serializable {
     }
 
     /* boundary case: 9223372036854775808 */
-    if (!this._negative && x == Long.MIN_VALUE) {
+    if (!this.negative && x == Long.MIN_VALUE) {
       return Long.MAX_VALUE;
     }
 
-    if (!this._negative) {
+    if (!this.negative) {
       x = -x;
     }
-    for (int i = this._digitsFrac; i > 0; i -= digitsPerWord) {
-      if (this._wordBuf[wordIdx] != 0) {
+    for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
+      if (this.wordBuf[wordIdx] != 0) {
         return x;
       }
       wordIdx++;
@@ -678,7 +678,7 @@ public class MyDecimal implements Serializable {
     }
 
     int mask = 0;
-    if (this._negative) {
+    if (this.negative) {
       mask = -1;
     }
 
@@ -689,8 +689,8 @@ public class MyDecimal implements Serializable {
     int trailingDigits = frac - wordsFrac * digitsPerWord;
 
     // this should be one of 0, 1, 2, 3, 4
-    int wordsFracFrom = this._digitsFrac / digitsPerWord;
-    int trailingDigitsFrom = this._digitsFrac - wordsFracFrom * digitsPerWord;
+    int wordsFracFrom = this.digitsFrac / digitsPerWord;
+    int trailingDigitsFrom = this.digitsFrac - wordsFracFrom * digitsPerWord;
     int intSize = wordsInt * wordSize + dig2bytes[leadingDigits];
     int fracSize = wordsFrac * wordSize + dig2bytes[trailingDigits];
     int fracSizeFrom = wordsFracFrom * wordSize + dig2bytes[trailingDigitsFrom];
@@ -749,7 +749,7 @@ public class MyDecimal implements Serializable {
     // xIntFrom part
     if (leadingDigitsFrom > 0) {
       int i = dig2bytes[leadingDigitsFrom];
-      int x = (this._wordBuf[wordIdxFrom] % powers10[leadingDigitsFrom]) ^ mask;
+      int x = (this.wordBuf[wordIdxFrom] % powers10[leadingDigitsFrom]) ^ mask;
       wordIdxFrom++;
       writeWord(bin, x, i, binIdx);
       binIdx += i;
@@ -759,7 +759,7 @@ public class MyDecimal implements Serializable {
     for (int stop = wordIdxFrom + wordsIntFrom + wordsFracFrom;
         wordIdxFrom < stop;
         binIdx += wordSize) {
-      int x = this._wordBuf[wordIdxFrom] ^ mask;
+      int x = this.wordBuf[wordIdxFrom] ^ mask;
       wordIdxFrom++;
       writeWord(bin, x, 4, binIdx);
     }
@@ -775,7 +775,7 @@ public class MyDecimal implements Serializable {
       for (; trailingDigitsFrom < lim && dig2bytes[trailingDigitsFrom] == i; ) {
         trailingDigitsFrom++;
       }
-      x = (this._wordBuf[wordIdxFrom] / powers10[digitsPerWord - trailingDigitsFrom]) ^ mask;
+      x = (this.wordBuf[wordIdxFrom] / powers10[digitsPerWord - trailingDigitsFrom]) ^ mask;
       writeWord(bin, x, i, binIdx);
       binIdx += i;
     }
@@ -818,8 +818,8 @@ public class MyDecimal implements Serializable {
 
   /** Clears this instance. */
   public void clear() {
-    this._digitsFrac = 0;
-    this._digitsInt = 0;
-    this._negative = false;
+    this.digitsFrac = 0;
+    this.digitsInt = 0;
+    this.negative = false;
   }
 }

@@ -100,8 +100,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
   private def isEnableChunk(): Boolean =
-    sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "false").toLowerCase.toBoolean ||
-      tiContext.tiConf.isEnableChunk
+    sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "true").toLowerCase.toBoolean
 
   private def timeZoneOffsetInSeconds(): Int = {
     val tz = DateTimeZone.getDefault

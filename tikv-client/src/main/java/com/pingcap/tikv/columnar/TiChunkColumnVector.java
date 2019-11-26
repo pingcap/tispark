@@ -22,11 +22,17 @@ import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 
+/** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
 public class TiChunkColumnVector extends TiColumnVector {
+  /** Represents the length of eahc different data type */
   private int fixLength;
+  /** Represents how many nulls in this column vector */
   private int numOfNulls;
+  /** Can be used to determine data at rowId is null or not */
   private byte[] nullBitMaps;
+  /** Can be used to read non-fixed length data type such as string */
   private long[] offsets;
+
   private ByteBuffer data;
 
   public TiChunkColumnVector(

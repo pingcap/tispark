@@ -14,14 +14,12 @@ import com.pingcap.tikv.types.RealType;
 import com.pingcap.tikv.types.SetType;
 import com.pingcap.tikv.types.StringType;
 import com.pingcap.tikv.types.TimeType;
-import java.util.Map;
 import java.util.logging.Logger;
 import org.apache.spark.sql.types.DataTypes;
 
 public class TypeMapping {
   private final static Logger logger = Logger.getLogger(TypeMapping.class.getName());
   private final static int MAX_PRECISION = 38;
-  private final static Map<String, org.apache.spark.sql.types.DataType> toSparkTypeMap = null;
 
   private static boolean isStringType(DataType type) {
     return type instanceof EnumType || type instanceof JsonType || type instanceof SetType

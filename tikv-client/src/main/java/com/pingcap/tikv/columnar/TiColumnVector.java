@@ -21,24 +21,18 @@ import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
 
 /**
- * An interface representing in-memory columnar data in Spark. This interface defines the main APIs
- * to access the data, as well as their batched versions. The batched versions are considered to be
- * faster and preferable whenever possible.
+ * An interface is mostly copied from Spark's ColumnVector (we do not link it here because we do not
+ * want to pollute tikv java client's dependencies).
  *
  * <p>Most of the APIs take the rowId as a parameter. This is the batch local 0-based row id for
- * values in this ColumnVector.
+ * values in this TiColumnVector.
  *
  * <p>Spark only calls specific `get` method according to the data type of this {@link
  * TiColumnVector}, e.g. if it's int type, Spark is guaranteed to only call {@link #getInt(int)} or
  * {@link #getInts(int, int)}.
  *
- * <p>ColumnVector is expected to be reused during the entire data loading process, to avoid
+ * <p>TiColumnVector is expected to be reused during the entire data loading process, to avoid
  * allocating memory again and again.
- *
- * <p>ColumnVector is meant to maximize CPU efficiency but not to minimize storage footprint.
- * Implementations should prefer computing efficiency over storage efficiency when design the
- * format. Since it is expected to reuse the ColumnVector instance while loading data, the storage
- * footprint is negligible.
  */
 public abstract class TiColumnVector implements AutoCloseable {
 

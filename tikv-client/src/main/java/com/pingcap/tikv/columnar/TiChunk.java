@@ -15,6 +15,10 @@
 
 package com.pingcap.tikv.columnar;
 
+/**
+ * TiChunk is an abstraction of Chunk data transmitted from TiKV. A Chunk represents a batch row
+ * data in columnar format.
+ */
 public class TiChunk {
   private TiColumnVector[] columnVectors;
   private int numOfRows;

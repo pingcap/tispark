@@ -18,8 +18,14 @@ import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
 
+/**
+ * An implementation of {@link TiColumnVector}. It is a faked column vector; the underlying data is
+ * in row format.
+ */
 public class TiRowColumnVector extends TiColumnVector {
+  /** row-wise format data and data is already decoded */
   private Row[] rows;
+  /** Represents the column index of original row */
   private int colIdx;
   /** Sets up the data type of this column vector. */
   public TiRowColumnVector(DataType type, int colIdx, Row[] rows, int numOfRows) {

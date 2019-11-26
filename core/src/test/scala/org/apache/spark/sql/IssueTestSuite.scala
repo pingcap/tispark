@@ -280,6 +280,7 @@ class IssueTestSuite extends BaseTiSparkTest {
   test("test sum rewriting logic") {
     // only test numeric types. Spark will raise analysis exception if we
     // perform sum aggregation over non-numeric types.
+    spark.conf.set(TiConfigConst.ENABLE_CHUNK, "false")
     judge("select sum(tp_decimal) from full_data_type_table")
     judge("select sum(tp_real) from full_data_type_table")
     judge("select sum(tp_double) from full_data_type_table")
