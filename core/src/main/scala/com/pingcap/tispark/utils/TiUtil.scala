@@ -75,10 +75,9 @@ object TiUtil {
 
     if (expr.children.isEmpty) {
       expr match {
-        // bit/duration type is not allowed to be pushed down
+        // bit, duration, set, and enum type is not allowed to be pushed down
         case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
-          val head = nameTypeMap.get(attr.name).head
-          return !head.isInstanceOf[BitType]
+          return nameTypeMap.get(attr.name).head.isPushDownSupported
         // TODO:Currently we do not support literal null type push down
         // when Constant is ready to support literal null or we have other
         // options, remove this.
@@ -96,6 +95,11 @@ object TiUtil {
 
     true
   }
+
+  def isSupportedOrderBy(expr: Expression,
+                         source: TiDBRelation,
+                         blacklist: ExpressionBlacklist): Boolean =
+    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
 
   def isSupportedFilter(expr: Expression,
                         source: TiDBRelation,
