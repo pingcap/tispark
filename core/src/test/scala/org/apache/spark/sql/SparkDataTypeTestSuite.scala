@@ -88,7 +88,7 @@ class SparkDataTypeTestSuite extends BaseTiSparkTest {
     )
   }
 
-  test("enum type test") {
+  ignore("enum type test") {
     compSparkWithTiDB(
       qSpark =
         "select id_dt, tp_enum from full_data_type_table order by tp_enum desc nulls last, id_dt limit 10",
@@ -97,7 +97,7 @@ class SparkDataTypeTestSuite extends BaseTiSparkTest {
     )
   }
 
-  test("set type test") {
+  ignore("set type test") {
     compSparkWithTiDB(
       qSpark =
         "select id_dt, tp_set from full_data_type_table order by tp_set desc nulls last, id_dt limit 10",
