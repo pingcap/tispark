@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,23 @@ package org.apache.spark.sql.extensions
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
-import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
-import org.apache.spark.sql.catalyst.catalog.{TiDBTable, TiSessionCatalog}
+import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.catalyst.analysis.EliminateSubqueryAliases
+import org.apache.spark.sql.catalyst.catalog.TiDBTable
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
-import org.apache.spark.sql.catalyst.plans.logical.{DescribeTable, InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace}
+import org.apache.spark.sql.catalyst.plans.logical.{DescribeTable, InsertIntoStatement, SetCatalogAndNamespace}
+import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-import org.apache.spark.sql.execution.datasources.v2.{DataSourceV2Relation, SetCatalogAndNamespaceExec}
-import org.apache.spark.sql.{AnalysisException, _}
+
+class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
+    extends (SparkSession => Rule[LogicalPlan]) {
+  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
+    TiResolutionRule(getOrCreateTiContext)(v1)
+  }
+}
 
 case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
@@ -36,14 +44,6 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   //private lazy val tiCatalog = tiContext.tiCatalog
   private lazy val tiSession = tiContext.tiSession
   private lazy val sqlContext = tiContext.sqlContext
-
-  //private def getDatabaseFromIdentifier(tableIdentifier: Seq[String]): String = {
-  //  if (tableIdentifier.size == 1) {
-  //    tiCatalog.getCurrentDatabase
-  //  } else {
-  //    tableIdentifier.head
-  //  }
-  //}
 
   protected val resolveTiDBRelation: (TiDBTable, Seq[AttributeReference]) => LogicalPlan =
     (tiTable, output) => {
@@ -86,23 +86,20 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
     }
 }
 
+class TiDDLRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
+    extends (SparkSession => Rule[LogicalPlan]) {
+  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
+    TiDDLRule(getOrCreateTiContext)(v1)
+  }
+}
+
 case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Rule[LogicalPlan] {
   protected lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
 
   override def apply(plan: LogicalPlan): LogicalPlan = plan transformUp {
-    // TODO: support other commands that may concern TiSpark catalog.
-    //case sd: ShowDatabasesCommand =>
-    //  TiShowDatabasesCommand(tiContext, sd)
+    // TODO: this is a hack to use current name space when resolve table in tidb_catalog
     case sd: SetCatalogAndNamespace =>
       TiSetDatabaseCommand(tiContext, sd)
-    //case st: ShowTablesCommand =>
-    //  TiShowTablesCommand(tiContext, st)
-    //case st: ShowColumnsCommand =>
-    //  TiShowColumnsCommand(tiContext, st)
-    //case dt: DescribeTableCommand =>
-    //  TiDescribeTablesCommand(tiContext, dt)
-    //case ct: CreateTableLikeCommand =>
-    //  TiCreateTableLikeCommand(tiContext, ct)
   }
 }
