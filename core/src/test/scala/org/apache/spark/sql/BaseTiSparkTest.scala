@@ -108,7 +108,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       tidbConn.setCatalog(dbName)
       initializeTimeZone()
       //spark.sql(s"use `$dbPrefix$dbName`")
-      spark.sql(s"use tidb_catalog.$dbName")
+      spark.sql(s"use tidb_catalog.`$dbName`")
     } else {
       // should be an existing database in hive/meta_store
       try {
