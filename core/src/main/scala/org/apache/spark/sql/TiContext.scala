@@ -45,6 +45,7 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
   val tiSession: TiSession = TiSession.getInstance(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
+  TiUtil.registerUDFs(sparkSession)
   StatisticsManager.initStatisticsManager(tiSession)
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)

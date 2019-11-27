@@ -1,7 +1,5 @@
 package org.apache.spark.sql
 
-import com.pingcap.tikv.types.Converter
-import com.pingcap.tispark.{TiSparkInfo, TiSparkVersion}
 import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
 
 import scala.collection.mutable
@@ -14,23 +12,10 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
       case Some(tiContext) => tiContext
       case None            =>
         // TODO: make Meta and RegionManager independent to sparkSession
-        registerUDFs(sparkSession)
         val tiContext = new TiContext(sparkSession)
         tiContextMap.put(sparkSession, tiContext)
         tiContext
     }
-  }
-
-  def registerUDFs(sparkSession: SparkSession): Unit = {
-    sparkSession.udf.register("ti_version", () => {
-      s"${TiSparkVersion.version}\n${TiSparkInfo.info}"
-    })
-    sparkSession.udf.register(
-      "time_to_str",
-      (value: Long, frac: Int) => Converter.convertDurationToStr(value, frac)
-    )
-    sparkSession.udf
-      .register("str_to_time", (value: String) => Converter.convertStrToDuration(value))
   }
 
   override def apply(e: SparkSessionExtensions): Unit = {
