@@ -34,7 +34,6 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Incorrect enum value: 'abc' for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "Incorrect enum value: 'abc'"
 
@@ -42,7 +41,6 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -72,7 +70,6 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Incorrect enum value: '5' for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 5 > upperBound 4"
 
@@ -80,7 +77,6 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
