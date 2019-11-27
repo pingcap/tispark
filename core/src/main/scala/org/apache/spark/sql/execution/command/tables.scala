@@ -44,7 +44,6 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
         Row(database, tableName, isTemp)
       }
     }
-    Seq.empty[Row]
   }
 }
 
@@ -77,7 +76,5 @@ case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsComma
     table.schema.map { c =>
       Row(c.name)
     }
-
-    Seq.empty[Row]
   }
 }

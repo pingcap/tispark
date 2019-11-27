@@ -30,15 +30,20 @@ class CatalogTestSuite extends BaseTiSparkTest {
 
   test("test new catalog") {
     setCurrentDatabase("default")
-    //runTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
-    runTest(s"select count(*) from tidb_catalog.tispark_test.full_data_type_table")
+    if (catalogPluginMode) {
+      runTest(s"select count(*) from tidb_catalog.tispark_test.full_data_type_table")
+    } else {
+      runTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
+    }
     setCurrentDatabase("tispark_test")
     runTest(s"select count(*) from full_data_type_table")
   }
 
-  ignore("test db prefix") {
+  test("test db prefix") {
     setCurrentDatabase("default")
-    explainAndRunTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
+    if (!catalogPluginMode) {
+      explainAndRunTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
+    }
   }
 
   test("test explain") {
@@ -92,7 +97,9 @@ class CatalogTestSuite extends BaseTiSparkTest {
       )
     setCurrentDatabase("tispark_test")
     spark.sql("desc full_data_type_table").explain(true)
-    //explainAndRunTest("desc tispark_test.full_data_type_table", skipJDBC = true, rTiDB = tidbDescTable)
+    if (!catalogPluginMode) {
+      explainAndRunTest("desc full_data_type_table", skipJDBC = true, rTiDB = tidbDescTable)
+    }
     spark.sql("desc extended full_data_type_table").explain()
     spark.sql("desc extended full_data_type_table").show(200, truncate = false)
     spark.sql("desc formatted full_data_type_table").show(200, truncate = false)
@@ -105,7 +112,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("drop table if exists t")
   }
 
-  ignore("test support show columns") {
+  test("test support show columns") {
     val columnNames = List(
       List("id_dt"),
       List("tp_varchar"),
@@ -136,25 +143,29 @@ class CatalogTestSuite extends BaseTiSparkTest {
       List("tp_set")
     )
     setCurrentDatabase("tispark_test")
-    explainAndRunTest(
-      "show columns from full_data_type_table",
-      skipJDBC = true,
-      rTiDB = columnNames
-    )
-    runTest(
-      s"show columns from ${dbPrefix}tispark_test.full_data_type_table",
-      skipJDBC = true,
-      rTiDB = columnNames
-    )
+    if (!catalogPluginMode) {
+      explainAndRunTest(
+        "show columns from full_data_type_table",
+        skipJDBC = true,
+        rTiDB = columnNames
+      )
+      runTest(
+        s"show columns from ${dbPrefix}tispark_test.full_data_type_table",
+        skipJDBC = true,
+        rTiDB = columnNames
+      )
+    }
   }
 
-  ignore("test support create table like") {
+  test("test support create table like") {
     setCurrentDatabase("default")
-    spark.sql("drop table if exists t")
-    spark.sql(s"create table t like ${dbPrefix}tpch_test.nation").show
-    spark.sql("show tables").show
-    checkSparkResultContains("show tables", List("default", "t", "false"))
-    spark.sql("show create table t").show(false)
+    if (!catalogPluginMode) {
+      spark.sql("drop table if exists t")
+      spark.sql(s"create table t like ${dbPrefix}tpch_test.nation").show
+      spark.sql("show tables").show
+      checkSparkResultContains("show tables", List("default", "t", "false"))
+      spark.sql("show create table t").show(false)
+    }
   }
 
   test("test create table as select") {
