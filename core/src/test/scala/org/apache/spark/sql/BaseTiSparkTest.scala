@@ -33,7 +33,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected var tableNames: Seq[String] = _
 
-  //private def tiCatalog = ti.tiCatalog
+  private def tiCatalog = ti.tiCatalog
 
   protected def isEnableTableLock: Boolean = {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
@@ -104,39 +104,36 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       .createOrReplaceTempView(s"`$viewName$postfix`")
 
   protected def setCurrentDatabase(dbName: String): Unit =
-    if (dbName != "default") {
-      tidbConn.setCatalog(dbName)
-      initializeTimeZone()
-      //spark.sql(s"use `$dbPrefix$dbName`")
-      spark.sql(s"use tidb_catalog.`$dbName`")
+    if (catalogPluginMode) {
+      if (dbName != "default") {
+        tidbConn.setCatalog(dbName)
+        initializeTimeZone()
+        spark.sql(s"use tidb_catalog.`$dbName`")
+      } else {
+        try {
+          spark.sql(s"use spark_catalog.`$dbName`")
+          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
+        } catch {
+          case e: NoSuchDatabaseException => fail(e)
+        }
+      }
     } else {
-      // should be an existing database in hive/meta_store
-      try {
-        spark.sql(s"use spark_catalog.`$dbName`")
-        logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
-      } catch {
-        case e: NoSuchDatabaseException => fail(e)
+      if (tiCatalog
+            .catalogOf(Some(dbPrefix + dbName))
+            .exists(_.isInstanceOf[TiSessionCatalog])) {
+        tidbConn.setCatalog(dbName)
+        initializeTimeZone()
+        spark.sql(s"use `$dbPrefix$dbName`")
+      } else {
+        // should be an existing database in hive/meta_store
+        try {
+          spark.sql(s"use `$dbName`")
+          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
+        } catch {
+          case e: NoSuchDatabaseException => fail(e)
+        }
       }
     }
-  /*
-    if (tiCatalog
-          .catalogOf(Some(dbPrefix + dbName))
-          .exists(_.isInstanceOf[TiSessionCatalog])) {
-      tidbConn.setCatalog(dbName)
-      initializeTimeZone()
-      //spark.sql(s"use `$dbPrefix$dbName`")
-      spark.sql(s"use tidb_catalog.$dbName")
-    } else {
-      // should be an existing database in hive/meta_store
-      try {
-        spark.sql(s"use spark_catalog.`$dbName`")
-        logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
-      } catch {
-        case e: NoSuchDatabaseException => fail(e)
-      }
-    }
-
-   */
 
   protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
     try {

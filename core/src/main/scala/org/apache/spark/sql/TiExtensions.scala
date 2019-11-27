@@ -1,5 +1,6 @@
 package org.apache.spark.sql
 
+import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.utils.ReflectionUtil
 
 class TiExtensions extends (SparkSessionExtensions => Unit) {
@@ -13,9 +14,9 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
   }
 
   override def apply(e: SparkSessionExtensions): Unit = {
-    //e.injectParser(ReflectionUtil.newTiParser(getOrCreateTiContext))
-    e.injectResolutionRule(ReflectionUtil.newTiDDLRuleV2(getOrCreateTiContext))
-    e.injectResolutionRule(ReflectionUtil.newTiResolutionRuleV2(getOrCreateTiContext))
+    e.injectParser(ReflectionUtil.newTiParser(getOrCreateTiContext))
+    e.injectResolutionRule(ReflectionUtil.newTiDDLRule(getOrCreateTiContext))
+    e.injectResolutionRule(ReflectionUtil.newTiResolutionRule(getOrCreateTiContext))
     e.injectPlannerStrategy(TiStrategy(getOrCreateTiContext))
   }
 }
@@ -38,4 +39,7 @@ object TiExtensions {
   def enabled(): Boolean = tiExtensions != null
 
   def reset(): Unit = tiExtensions = null
+
+  def catalogPluginMode(sparkSession: SparkSession): Boolean =
+    sparkSession.sparkContext.conf.get(TiConfigConst.USE_CATALOG_PLUGIN, "false").toBoolean
 }

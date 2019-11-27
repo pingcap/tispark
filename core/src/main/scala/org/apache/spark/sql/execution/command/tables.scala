@@ -27,7 +27,7 @@ import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
 case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    /*val db = delegate.databaseName.getOrElse(tiCatalog.getCurrentDatabase)
+    val db = delegate.databaseName.getOrElse(tiCatalog.getCurrentDatabase)
     // Show the information of tables.
     val tables =
       delegate.tableIdentifierPattern
@@ -43,7 +43,7 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
       } else {
         Row(database, tableName, isTemp)
       }
-    }*/
+    }
     Seq.empty[Row]
   }
 }
@@ -61,7 +61,7 @@ class DescribeTableInfo(val tableName: TableIdentifier,
 case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsCommand)
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
-    /*val databaseName = delegate.databaseName
+    val databaseName = delegate.databaseName
     val tableName = delegate.tableName
     val catalog = tiCatalog
     val resolver = sparkSession.sessionState.conf.resolver
@@ -78,7 +78,6 @@ case class TiShowColumnsCommand(tiContext: TiContext, delegate: ShowColumnsComma
       Row(c.name)
     }
 
-     */
     Seq.empty[Row]
   }
 }

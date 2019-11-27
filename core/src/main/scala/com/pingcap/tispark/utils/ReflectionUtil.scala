@@ -52,9 +52,6 @@ object ReflectionUtil {
   private val TI_RESOLUTION_RULE_FACTORY_CLASS =
     "org.apache.spark.sql.extensions.TiResolutionRuleFactory"
   private val TI_DDL_RULE_FACTORY_CLASS = "org.apache.spark.sql.extensions.TiDDLRuleFactory"
-  private val TI_RESOLUTION_RULE_V2_FACTORY_CLASS =
-    "org.apache.spark.sql.extensions.TiResolutionRuleV2Factory"
-  private val TI_DDL_RULE_V2_FACTORY_CLASS = "org.apache.spark.sql.extensions.TiDDLRuleV2Factory"
 
   // In Spark 2.3.0 and 2.3.1 the method declaration is:
   // private[spark] def mapPartitionsWithIndexInternal[U: ClassTag](
@@ -305,26 +302,6 @@ object ReflectionUtil {
   ): SparkSession => Rule[LogicalPlan] = {
     classLoader
       .loadClass(TI_DDL_RULE_FACTORY_CLASS)
-      .getDeclaredConstructor(classOf[SparkSession => TiContext])
-      .newInstance(getOrCreateTiContext)
-      .asInstanceOf[SparkSession => Rule[LogicalPlan]]
-  }
-
-  def newTiResolutionRuleV2(
-    getOrCreateTiContext: SparkSession => TiContext
-  ): SparkSession => Rule[LogicalPlan] = {
-    classLoader
-      .loadClass(TI_RESOLUTION_RULE_V2_FACTORY_CLASS)
-      .getDeclaredConstructor(classOf[SparkSession => TiContext])
-      .newInstance(getOrCreateTiContext)
-      .asInstanceOf[SparkSession => Rule[LogicalPlan]]
-  }
-
-  def newTiDDLRuleV2(
-    getOrCreateTiContext: SparkSession => TiContext
-  ): SparkSession => Rule[LogicalPlan] = {
-    classLoader
-      .loadClass(TI_DDL_RULE_V2_FACTORY_CLASS)
       .getDeclaredConstructor(classOf[SparkSession => TiContext])
       .newInstance(getOrCreateTiContext)
       .asInstanceOf[SparkSession => Rule[LogicalPlan]]

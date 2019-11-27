@@ -35,7 +35,11 @@ import org.apache.spark.sql.{AnalysisException, _}
 class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
   override def apply(v1: SparkSession): Rule[LogicalPlan] = {
-    TiResolutionRule(getOrCreateTiContext)(v1)
+    if (TiExtensions.catalogPluginMode(v1)) {
+      TiResolutionRuleV2(getOrCreateTiContext)(v1)
+    } else {
+      TiResolutionRule(getOrCreateTiContext)(v1)
+    }
   }
 }
 
@@ -101,7 +105,11 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
 class TiDDLRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
   override def apply(v1: SparkSession): Rule[LogicalPlan] = {
-    TiDDLRule(getOrCreateTiContext)(v1)
+    if (TiExtensions.catalogPluginMode(v1)) {
+      TiDDLRuleV2(getOrCreateTiContext)(v1)
+    } else {
+      TiDDLRule(getOrCreateTiContext)(v1)
+    }
   }
 }
 
@@ -169,13 +177,6 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
   }
 }
 
-class TiResolutionRuleV2Factory(getOrCreateTiContext: SparkSession => TiContext)
-    extends (SparkSession => Rule[LogicalPlan]) {
-  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
-    TiResolutionRuleV2(getOrCreateTiContext)(v1)
-  }
-}
-
 case class TiResolutionRuleV2(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
 ) extends Rule[LogicalPlan] {
@@ -225,13 +226,6 @@ case class TiResolutionRuleV2(getOrCreateTiContext: SparkSession => TiContext)(
       case _ =>
         plan transformUp resolveTiDBRelations
     }
-}
-
-class TiDDLRuleV2Factory(getOrCreateTiContext: SparkSession => TiContext)
-    extends (SparkSession => Rule[LogicalPlan]) {
-  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
-    TiDDLRuleV2(getOrCreateTiContext)(v1)
-  }
 }
 
 case class TiDDLRuleV2(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
