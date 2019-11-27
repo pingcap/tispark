@@ -37,7 +37,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 2 > upperBound 2"
 
@@ -45,7 +44,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg,
       msgStartWith = true
@@ -80,7 +78,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value -1 < lowerBound 0"
 
@@ -88,7 +85,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg,
       msgStartWith = true
@@ -122,7 +118,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 16 > upperBound 16"
 
@@ -130,7 +125,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg,
       msgStartWith = true
@@ -164,7 +158,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value -1 < lowerBound 0"
 
@@ -172,7 +165,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg,
       msgStartWith = true
@@ -207,7 +199,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 256 > upperBound 256"
 
@@ -215,7 +206,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg,
       msgStartWith = true
@@ -249,7 +239,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value -1 < lowerBound 0"
 
@@ -257,7 +246,6 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg,
       msgStartWith = true
