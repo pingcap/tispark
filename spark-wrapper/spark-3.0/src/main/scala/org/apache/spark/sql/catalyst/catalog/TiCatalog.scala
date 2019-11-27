@@ -106,7 +106,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {
     _name = Some(name)
     val pdAddress = options.getOrDefault("pd.address", "127.0.0.1:2379")
-    logger.info(s"Initialize TiCatalog with name: $name and pd address: $pdAddress")
+    logger.info(s"Initialize TiCatalog with name: $name, pd address: $pdAddress")
     val conf = TiConfiguration.createDefault(pdAddress)
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
