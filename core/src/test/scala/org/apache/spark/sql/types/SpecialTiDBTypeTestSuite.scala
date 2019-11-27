@@ -100,7 +100,7 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
     judge("select * from enum_t")
     judge("select * from enum_t where priority = 'High'")
   }
-
+  
   test("adding json support") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(json_doc json)")
