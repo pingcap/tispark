@@ -47,14 +47,6 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
 
   StatisticsManager.initStatisticsManager(tiSession)
-  sparkSession.udf.register("ti_version", () => {
-    s"${TiSparkVersion.version}\n${TiSparkInfo.info}"
-  })
-  sparkSession.udf.register(
-    "time_to_str",
-    (value: Long, frac: Int) => Converter.convertDurationToStr(value, frac)
-  )
-  sparkSession.udf.register("str_to_time", (value: String) => Converter.convertStrToDuration(value))
   CacheInvalidateListener
     .initCacheListener(sparkSession.sparkContext, tiSession.getRegionManager)
   tiSession.injectCallBackFunc(CacheInvalidateListener.getInstance())
