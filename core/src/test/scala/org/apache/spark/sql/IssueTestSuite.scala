@@ -16,7 +16,8 @@
 package org.apache.spark.sql
 
 import com.pingcap.tispark.TiConfigConst
-import org.apache.spark.sql.functions.{col, sum}
+import org.apache.spark.sql.functions.{col, lit, sum}
+import org.apache.spark.sql.types.FloatType
 
 class IssueTestSuite extends BaseTiSparkTest {
   // https://github.com/pingcap/tispark/issues/1186
