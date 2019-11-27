@@ -9,7 +9,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TEST_MODE = "simple"
     def PARALLEL_NUMBER = 18
     def MVN_PROFILE = ""
-    def MVN_PROFILE_SCALA_2_12 = "-Pspark-3.0-scala-2.12"
+    def MVN_PROFILE_SCALA_2_12 = "-Pspark-2.4-scala-2.12"
     def MVN_TEST_PROFILE1_SCALA_2_12 = "-Pjenkins-test-spark-3.0"
     def MVN_TEST_PROFILE2_SCALA_2_12 = "-Pjenkins-test-spark-2.4"
     def MVN_PROFILE_SCALA_2_11 = "-Pspark-2.3-scala-2.11"
@@ -157,7 +157,10 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     """
                     sh """
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+			mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_11} ${MVN_TEST_PROFILE1_SCALA_2_11} -Dtest=moo ${mvnStr}	
+                        mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_11} ${MVN_TEST_PROFILE2_SCALA_2_11} -Dtest=moo ${mvnStr}
                         mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_12} ${MVN_TEST_PROFILE1_SCALA_2_12} -Dtest=moo ${mvnStr}
+                        mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_12} ${MVN_TEST_PROFILE2_SCALA_2_12} -Dtest=moo ${mvnStr}
                     """
                 }
             }
