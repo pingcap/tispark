@@ -19,6 +19,7 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.UnresolvedV2Relation
 import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, ShowNamespaces}
 import com.pingcap.tispark.statistics.StatisticsManager
+import com.pingcap.tispark.utils.ReflectionUtil
 import com.pingcap.tispark.utils.ReflectionUtil.newSubqueryAlias
 import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.{TiDBTable, TiSessionCatalog}
@@ -36,6 +37,8 @@ class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
   override def apply(v1: SparkSession): Rule[LogicalPlan] = {
     if (TiExtensions.catalogPluginMode(v1)) {
+      // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
+      Thread.currentThread().setContextClassLoader(ReflectionUtil.classLoader)
       TiResolutionRuleV2(getOrCreateTiContext)(v1)
     } else {
       TiResolutionRule(getOrCreateTiContext)(v1)
