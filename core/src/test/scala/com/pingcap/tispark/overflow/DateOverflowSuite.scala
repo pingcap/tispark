@@ -37,7 +37,6 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: invalid time format: '{10000 1 1 0 0 0 0}'"
     val tidbErrorClass = classOf[java.lang.IllegalArgumentException]
     val tidbErrorMsg = null
 
@@ -45,7 +44,6 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -78,7 +76,6 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsgStart = "Data truncation"
     val tidbErrorClass = classOf[java.lang.IllegalArgumentException]
     val tidbErrorMsgStart = null
 
@@ -86,7 +83,6 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsgStart,
       tidbErrorClass,
       tidbErrorMsgStart,
       msgStartWith = true
