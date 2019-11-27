@@ -2,14 +2,20 @@ package org.apache.spark.sql
 
 import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
 
-class TiExtensions extends (SparkSessionExtensions => Unit) {
-  private var tiContext: TiContext = _
+import scala.collection.mutable
 
-  def getOrCreateTiContext(sparkSession: SparkSession): TiContext = {
-    if (tiContext == null) {
-      tiContext = new TiContext(sparkSession)
+class TiExtensions extends (SparkSessionExtensions => Unit) {
+  private val tiContextMap = mutable.HashMap.empty[SparkSession, TiContext]
+
+  def getOrCreateTiContext(sparkSession: SparkSession): TiContext = synchronized {
+    tiContextMap.get(sparkSession) match {
+      case Some(tiContext) => tiContext
+      case None            =>
+        // TODO: make Meta and RegionManager independent to sparkSession
+        val tiContext = new TiContext(sparkSession)
+        tiContextMap.put(sparkSession, tiContext)
+        tiContext
     }
-    tiContext
   }
 
   override def apply(e: SparkSessionExtensions): Unit = {
