@@ -19,7 +19,7 @@ import org.apache.spark.sql.BaseTiSparkTest
 
 class UnsignedTestSuite extends BaseTiSparkTest {
 
-  // unsigned big int should be encoded as decimal rather than int.
+  // after we push down decimal type, unsigned long push-down logic need revisit.
   ignore("Unsigned Index Tests for TISPARK-28 and TISPARK-29") {
     tidbStmt.execute("DROP TABLE IF EXISTS `unsigned_test`")
     tidbStmt.execute(
@@ -39,8 +39,10 @@ class UnsignedTestSuite extends BaseTiSparkTest {
         |  (0,18446744073709551615,-9223372036854775808),
         |  (18446744073709551615,18446744073709551615,9223372036854775807)""".stripMargin
     )
+
     tidbStmt.execute("ANALYZE TABLE `unsigned_test`")
     refreshConnections()
+
     // TODO: After we fixed unsigned behavior, delete `skipped` setting for this test
     val queries = Seq[String](
       "select * from unsigned_test",
