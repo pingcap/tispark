@@ -106,7 +106,6 @@ class BaseDataSourceTest(val table: String,
     data: List[Row],
     schema: StructType,
     jdbcErrorClass: Class[_],
-    jdbcErrorMsg: String,
     tidbErrorClass: Class[_],
     tidbErrorMsg: String,
     msgStartWith: Boolean = false
@@ -118,18 +117,6 @@ class BaseDataSourceTest(val table: String,
       caughtJDBC.getCause.getClass.equals(jdbcErrorClass),
       s"${caughtJDBC.getCause.getClass.getName} not equals to ${jdbcErrorClass.getName}"
     )
-
-    if (!msgStartWith) {
-      assert(
-        Objects.equals(caughtJDBC.getCause.getMessage, jdbcErrorMsg),
-        s"${caughtJDBC.getCause.getMessage} not equals to $jdbcErrorMsg"
-      )
-    } else {
-      assert(
-        startWith(caughtJDBC.getCause.getMessage, jdbcErrorMsg),
-        s"${caughtJDBC.getCause.getMessage} not start with $jdbcErrorMsg"
-      )
-    }
 
     val caughtTiDB = intercept[SparkException] {
       this.tidbWrite(data, schema)
