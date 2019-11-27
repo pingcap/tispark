@@ -27,6 +27,7 @@ import org.apache.spark.sql.connector.catalog.{Identifier, NamespaceChange, Supp
 import org.apache.spark.sql.connector.expressions.{LogicalExpressions, Transform}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -96,6 +97,7 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   var meta: Option[MetaManager] = None
   private var _name: Option[String] = None
   private var _current_namespace: Option[Array[String]] = None
+  private val logger = LoggerFactory.getLogger(getClass.getName)
 
   def setCurrentNamespace(namespace: Array[String]): Unit = synchronized {
     _current_namespace = Some(namespace)
@@ -103,7 +105,9 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
 
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {
     _name = Some(name)
-    val conf = TiConfiguration.createDefault(options.getOrDefault("pd.address", "127.0.0.1:2379"))
+    val pdAddress = options.getOrDefault("pd.address", "127.0.0.1:2379")
+    logger.info(s"Initialize TiCatalog with name: $name and pd address: $pdAddress")
+    val conf = TiConfiguration.createDefault(pdAddress)
     val session = TiSession.getInstance(conf)
     meta = Some(new MetaManager(session.getCatalog))
   }

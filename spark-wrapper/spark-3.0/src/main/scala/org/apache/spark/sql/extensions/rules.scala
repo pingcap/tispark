@@ -32,12 +32,15 @@ import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.{AnalysisException, _}
+import org.slf4j.LoggerFactory
 
 class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
+  private val logger = LoggerFactory.getLogger(getClass.getName)
   override def apply(v1: SparkSession): Rule[LogicalPlan] = {
     if (TiExtensions.catalogPluginMode(v1)) {
       // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
+      logger.info("TiSpark running in catalog plugin mode")
       Thread.currentThread().setContextClassLoader(ReflectionUtil.classLoader)
       TiResolutionRuleV2(getOrCreateTiContext)(v1)
     } else {
