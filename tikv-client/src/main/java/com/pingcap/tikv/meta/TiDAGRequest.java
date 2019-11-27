@@ -540,7 +540,6 @@ public class TiDAGRequest implements Serializable {
     addPushDownOrderBys();
   }
 
-  @SuppressWarnings("SuspiciousMethodCalls")
   private void pushDownAggAndGroupBy(
       DAGRequest.Builder dagRequestBuilder,
       Executor.Builder executorBuilder,

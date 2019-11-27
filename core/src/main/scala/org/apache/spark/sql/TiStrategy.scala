@@ -117,7 +117,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     if (isEnableChunk() && !useStreamingProcess()) {
       return EncodeType.TypeChunk
     }
-
     EncodeType.TypeDefault
   }
 

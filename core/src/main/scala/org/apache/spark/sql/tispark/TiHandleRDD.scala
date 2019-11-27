@@ -70,7 +70,6 @@ class TiHandleRDD(override val dagRequest: TiDAGRequest,
           if (context.isInterrupted()) {
             throw new TaskKilledException
           }
-
           lst.add(_)
         }
         lst

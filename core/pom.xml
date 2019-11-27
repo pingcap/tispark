@@ -202,8 +202,8 @@
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
-                    <showWarnings>false</showWarnings>
-                    <showDeprecation>false</showDeprecation>
+                    <showWarnings>true</showWarnings>
+                    <showDeprecation>true</showDeprecation>
                 </configuration>
             </plugin>
             <!-- Jar Plug-in -->

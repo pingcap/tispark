@@ -262,7 +262,6 @@ public class ProtoConverter extends Visitor<Expr, Object> {
               "Required column position info " + node.getName() + " is not in a valid context.");
     }
     Expr.Builder builder = Expr.newBuilder();
-
     builder.setTp(ExprType.ColumnRef);
     CodecDataOutput cdo = new CodecDataOutput();
     // After switching to DAG request mode, expression value

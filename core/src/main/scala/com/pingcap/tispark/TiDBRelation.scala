@@ -106,7 +106,6 @@ case class TiDBRelation(session: TiSession,
       session,
       sqlContext.sparkSession
     )
-
   }
 
   override def equals(obj: Any): Boolean = obj match {
