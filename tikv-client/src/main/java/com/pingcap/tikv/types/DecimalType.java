@@ -123,14 +123,13 @@ public class DecimalType extends DataType {
 
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    if(value instanceof BigDecimal) {
+    if (value instanceof BigDecimal) {
       MyDecimal dec = new MyDecimal();
       dec.fromString(((BigDecimal) value).toPlainString());
       DecimalCodec.writeDecimalFully(cdo, dec, (int) this.length, this.decimal);
     } else {
-      DecimalCodec.writeDecimalFully(cdo, (MyDecimal) value, (int)this.length, this.decimal);
+      DecimalCodec.writeDecimalFully(cdo, (MyDecimal) value, (int) this.length, this.decimal);
     }
-
   }
 
   @Override

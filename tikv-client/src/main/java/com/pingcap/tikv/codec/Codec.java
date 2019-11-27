@@ -415,8 +415,8 @@ public class Codec {
      * @param cdo cdo is destination data.
      * @param dec is decimal value that will be written into cdo.
      */
-    public static void writeDecimal(CodecDataOutput cdo, MyDecimal dec, int precision,
-        int fraction) {
+    public static void writeDecimal(
+        CodecDataOutput cdo, MyDecimal dec, int precision, int fraction) {
       int[] data = dec.toBin(precision, fraction);
       cdo.writeByte(precision);
       cdo.writeByte(fraction);
@@ -437,8 +437,8 @@ public class Codec {
       }
     }
 
-    public static void writeDecimalFully(CodecDataOutput cdo, MyDecimal val, int precision,
-        int fraction) {
+    public static void writeDecimalFully(
+        CodecDataOutput cdo, MyDecimal val, int precision, int fraction) {
       cdo.writeByte(DECIMAL_FLAG);
       writeDecimal(cdo, val, precision, fraction);
     }
