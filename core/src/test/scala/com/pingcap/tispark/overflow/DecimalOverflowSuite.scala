@@ -89,7 +89,6 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
       )
 
       val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-      val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
       val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
       val tidbErrorMsg = "Out of range"
 
@@ -97,7 +96,6 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
         List(row1),
         schema,
         jdbcErrorClass,
-        jdbcErrorMsg,
         tidbErrorClass,
         tidbErrorMsg
       )

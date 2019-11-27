@@ -42,7 +42,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 128 > upperBound 127"
 
@@ -50,7 +49,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -83,7 +81,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value -129 < lowerBound -128"
 
@@ -91,7 +88,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -124,7 +120,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 32768 > upperBound 32767"
 
@@ -132,7 +127,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -165,7 +159,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value -32769 < lowerBound -32768"
 
@@ -173,7 +166,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -206,7 +198,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 8388608 > upperBound 8388607"
 
@@ -214,7 +205,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -247,7 +237,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value -8388609 < lowerBound -8388608"
 
@@ -255,7 +244,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -288,7 +276,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 2147483648 > upperBound 2147483647"
 
@@ -296,7 +283,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -329,7 +315,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value -2147483649 < lowerBound -2147483648"
 
@@ -337,7 +322,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -370,7 +354,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[java.lang.NumberFormatException]
     val tidbErrorMsg = "For input string: \"9223372036854775808\""
 
@@ -378,7 +361,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -411,7 +393,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[java.lang.NumberFormatException]
     val tidbErrorMsg = "For input string: \"-9223372036854775809\""
 
@@ -419,7 +400,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -452,7 +432,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 128 > upperBound 127"
 
@@ -460,7 +439,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -493,7 +471,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Out of range value for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value -129 < lowerBound -128"
 
@@ -501,7 +478,6 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
