@@ -403,7 +403,7 @@ object SharedSQLContext extends Logging {
       import com.pingcap.tispark.TiConfigConst._
 
       pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
-      catalogPluginMode = getFlagOrTrue(prop, USE_CATALOG_PLUGIN)
+      catalogPluginMode = getFlagOrFalse(prop, USE_CATALOG_PLUGIN)
       dbPrefix = getOrElse(prop, DB_PREFIX, if (catalogPluginMode) "" else "tidb_")
 
       // properties for ticatalog plugin
