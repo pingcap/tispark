@@ -15,6 +15,7 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.utils.ReflectionUtil
 
 import scala.collection.mutable
@@ -45,6 +46,7 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 object TiExtensions {
   def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
 
+<<<<<<< HEAD
   def getTiContext(sparkSession: SparkSession): Option[TiContext] = {
     if (sparkSession.sessionState.planner.extraPlanningStrategies.nonEmpty &&
       sparkSession.sessionState.planner.extraPlanningStrategies.head
@@ -63,4 +65,10 @@ object TiExtensions {
       None
     }
   }
+=======
+  def reset(): Unit = tiExtensions = null
+
+  def catalogPluginMode(sparkSession: SparkSession): Boolean =
+    sparkSession.sparkContext.conf.get(TiConfigConst.USE_CATALOG_PLUGIN, "false").toBoolean
+>>>>>>> catalog plugin based TiSpark (#1246)
 }

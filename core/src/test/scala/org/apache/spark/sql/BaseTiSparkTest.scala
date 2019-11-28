@@ -166,12 +166,81 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     resList.toList
   }
 
+<<<<<<< HEAD
   protected def refreshConnections(
       testTables: TestTables,
       isHiveEnabled: Boolean = false): Unit = {
     super.refreshConnections(isHiveEnabled)
     loadTestData(testTables)
   }
+=======
+  protected def createOrReplaceTempView(dbName: String,
+                                        viewName: String,
+                                        postfix: String = "_j"): Unit =
+    spark.read
+      .format("jdbc")
+      .option(JDBCOptions.JDBC_URL, jdbcUrl)
+      .option(JDBCOptions.JDBC_TABLE_NAME, s"`$dbName`.`$viewName`")
+      .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
+      .load()
+      .createOrReplaceTempView(s"`$viewName$postfix`")
+
+  protected def setCurrentDatabase(dbName: String): Unit =
+    if (catalogPluginMode) {
+      if (dbName != "default") {
+        tidbConn.setCatalog(dbName)
+        initializeTimeZone()
+        spark.sql(s"use tidb_catalog.`$dbName`")
+      } else {
+        try {
+          spark.sql(s"use spark_catalog.`$dbName`")
+          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
+        } catch {
+          case e: NoSuchDatabaseException => fail(e)
+        }
+      }
+    } else {
+      if (tiCatalog
+            .catalogOf(Some(dbPrefix + dbName))
+            .exists(_.isInstanceOf[TiSessionCatalog])) {
+        tidbConn.setCatalog(dbName)
+        initializeTimeZone()
+        spark.sql(s"use `$dbPrefix$dbName`")
+      } else {
+        // should be an existing database in hive/meta_store
+        try {
+          spark.sql(s"use `$dbName`")
+          logger.warn(s"using database $dbName which does not belong to TiDB, switch to hive")
+        } catch {
+          case e: NoSuchDatabaseException => fail(e)
+        }
+      }
+    }
+
+  protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
+    try {
+      tableNames = Seq.empty[String]
+      for (dbName <- databases) {
+        setCurrentDatabase(dbName)
+        val tableDF = spark.read
+          .format("jdbc")
+          .option(JDBCOptions.JDBC_URL, jdbcUrl)
+          .option(JDBCOptions.JDBC_TABLE_NAME, "information_schema.tables")
+          .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
+          .load()
+          .filter(s"table_schema = '$dbName'")
+          .select("TABLE_NAME")
+        val tables = tableDF.collect().map((row: Row) => row.get(0).toString)
+        tables.foreach(createOrReplaceTempView(dbName, _))
+        tableNames ++= tables
+      }
+      logger.info("reload test data complete")
+    } catch {
+      case e: Exception => logger.warn("reload test data failed", e)
+    } finally {
+      tableNames = tableNames.sorted.reverse
+    }
+>>>>>>> catalog plugin based TiSpark (#1246)
 
   protected def loadTestData(testTables: TestTables): Unit = {
     val dbName = testTables.dbName

@@ -21,7 +21,12 @@ import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
+<<<<<<< HEAD
 import com.pingcap.tispark.TiDBUtils
+=======
+import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
+import com.pingcap.tispark.{TiDBUtils, TiSparkInfo}
+>>>>>>> catalog plugin based TiSpark (#1246)
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
@@ -33,6 +38,7 @@ import org.joda.time.DateTimeZone
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -76,7 +82,15 @@ trait SharedSQLContext
 
   protected def runTPCDS: Boolean = SharedSQLContext.runTPCDS
 
+<<<<<<< HEAD
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
+=======
+  protected def dbPrefix: String = SharedSQLContext.dbPrefix
+
+  protected def catalogPluginMode: Boolean = SharedSQLContext.catalogPluginMode
+
+  protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
+>>>>>>> catalog plugin based TiSpark (#1246)
 
   protected def refreshConnections(): Unit = refreshConnections(isHiveEnabled = false)
 
@@ -242,6 +256,45 @@ trait SharedSQLContext
       super.afterAll()
     }
   }
+<<<<<<< HEAD
+=======
+}
+
+object SharedSQLContext extends Logging {
+  private val timeZoneOffset = "-7:00"
+  // Timezone is fixed to a random GMT-7 for those timezone sensitive tests (timestamp_*, date_*, etc)
+  private val timeZone = TimeZone.getTimeZone("GMT-7")
+  // JDK time zone
+  TimeZone.setDefault(timeZone)
+  // Joda time zone
+  DateTimeZone.setDefault(DateTimeZone.forTimeZone(timeZone))
+  // Add Locale setting
+  Locale.setDefault(Locale.CHINA)
+
+  protected val logger: Logger = log
+  protected var sparkConf: SparkConf = _
+  private var _spark: SparkSession = _
+  private var _tidbConf: Properties = _
+  private var _tidbConnection: Connection = _
+  private var _tidbOptions: Map[String, String] = _
+  private var _statement: Statement = _
+  protected var jdbcUrl: String = _
+  protected var tpchDBName: String = _
+  protected var tpcdsDBName: String = _
+  protected var runTPCH: Boolean = true
+  protected var runTPCDS: Boolean = false
+  protected var dbPrefix: String = _
+  protected var catalogPluginMode: Boolean = _
+  protected var tidbUser: String = _
+  protected var tidbPassword: String = _
+  protected var tidbAddr: String = _
+  protected var tidbPort: Int = _
+  protected var pdAddresses: String = _
+  protected var tidb_catalog: String = _
+  protected var generateData: Boolean = _
+  protected var generateDataSeed: Option[Long] = None
+  protected var enableTiFlashTest: Boolean = _
+>>>>>>> catalog plugin based TiSpark (#1246)
 
   /**
    * Stop the underlying resources, if any.
@@ -416,8 +469,44 @@ trait SharedSQLContext
       conf.set(DB_PREFIX, dbPrefix)
     }
 
+<<<<<<< HEAD
   private class TiContextCache {
     private var _ti: TiContext = _
+=======
+      pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
+      catalogPluginMode =
+        if (TiSparkInfo.SPARK_MAJOR_VERSION == "3.0") getFlagOrFalse(prop, USE_CATALOG_PLUGIN)
+        else false
+      dbPrefix = if (catalogPluginMode) "" else getOrElse(prop, DB_PREFIX, "tidb_")
+
+      // properties for ticatalog plugin
+      if (catalogPluginMode) {
+        if (!prop.containsKey("spark.sql.catalog.tidb_catalog")) {
+          prop
+            .put(
+              "spark.sql.catalog.tidb_catalog",
+              "org.apache.spark.sql.catalyst.catalog.TiCatalog"
+            )
+        }
+        if (!prop.containsKey("spark.sql.catalog.tidb_catalog.pd.address")) {
+          prop.put("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)
+        }
+      }
+
+      // run TPC-H tests by default and disable TPC-DS tests by default
+      tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
+      tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "")
+
+      enableTiFlashTest = getOrElse(prop, ENABLE_TIFLASH_TEST, "false").toBoolean
+
+      runTPCH = tpchDBName != ""
+      runTPCDS = tpcdsDBName != ""
+
+      _tidbConf = prop
+      sparkConf = new SparkConf()
+
+      generateData = getOrElse(_tidbConf, SHOULD_GENERATE_DATA, "true").toLowerCase.toBoolean
+>>>>>>> catalog plugin based TiSpark (#1246)
 
     private[test] def clear(): Unit = {
       if (_ti == null) {
@@ -430,10 +519,29 @@ trait SharedSQLContext
       }
     }
 
+<<<<<<< HEAD
     private[test] def get(): TiContext = {
       if (_ti == null) {
         assert(_spark != null, "Spark Session should be initialized")
         _ti = TiExtensions.getTiContext(_spark).get
+=======
+      if (isTidbConfigPropertiesInjectedToSparkEnabled) {
+        sparkConf.set(PD_ADDRESSES, pdAddresses)
+        sparkConf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
+        sparkConf.set(ALLOW_INDEX_READ, getFlagOrTrue(prop, ALLOW_INDEX_READ).toString)
+        sparkConf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
+        sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
+        sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
+        sparkConf.set(DB_PREFIX, dbPrefix)
+        sparkConf.set(USE_CATALOG_PLUGIN, catalogPluginMode.toString)
+        if (catalogPluginMode) {
+          prop.asScala.foreach(entry => {
+            if (entry._1.startsWith("spark.sql.catalog.")) {
+              sparkConf.set(entry._1, entry._2)
+            }
+          })
+        }
+>>>>>>> catalog plugin based TiSpark (#1246)
       }
       _ti
     }

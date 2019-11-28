@@ -30,7 +30,7 @@ import org.apache.spark.sql.execution.command.{
   UncacheTableCommand
 }
 import org.apache.spark.sql.types.{DataType, StructType}
-import org.apache.spark.sql.{SparkSession, TiContext}
+import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
 
 <<<<<<< HEAD:core/src/main/scala/org/apache/spark/sql/extensions/parser.scala
 case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
@@ -40,7 +40,11 @@ case class TiParser(getOrCreateTiContext: SparkSession => TiContext)(
 class TiParserFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends ((SparkSession, ParserInterface) => ParserInterface) {
   override def apply(v1: SparkSession, v2: ParserInterface): ParserInterface = {
-    TiParser(getOrCreateTiContext)(v1, v2)
+    if (TiExtensions.catalogPluginMode(v1)) {
+      v2
+    } else {
+      TiParser(getOrCreateTiContext)(v1, v2)
+    }
   }
 }
 
