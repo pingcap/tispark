@@ -14,7 +14,7 @@
  */
 package org.apache.spark.sql.extensions
 
-import com.pingcap.tispark.{MetaManager, TiConfigConst, TiDBRelation, TiTableReference}
+import com.pingcap.tispark.{MetaManager, TiDBRelation, TiTableReference}
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.UnresolvedV2Relation
 import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, ShowNamespaces}
@@ -41,12 +41,6 @@ class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     if (TiExtensions.catalogPluginMode(v1)) {
       // set the class loader to Reflection class loader to avoid class not found exception while loading TiCatalog
       logger.info("TiSpark running in catalog plugin mode")
-      v1.sparkContext.conf
-        .set("spark.sql.catalog.tidb_catalog", "org.apache.spark.sql.catalyst.catalog.TiCatalog")
-      v1.sparkContext.conf.set(
-        "spark.sql.catalog.tidb_catalog.pd.address",
-        v1.sparkContext.conf.get(TiConfigConst.PD_ADDRESSES)
-      )
       Thread.currentThread().setContextClassLoader(ReflectionUtil.classLoader)
       TiResolutionRuleV2(getOrCreateTiContext)(v1)
     } else {
