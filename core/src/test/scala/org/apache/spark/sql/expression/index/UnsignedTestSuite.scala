@@ -19,7 +19,6 @@ import org.apache.spark.sql.BaseTiSparkTest
 
 class UnsignedTestSuite extends BaseTiSparkTest {
 
-  // after we push down decimal type, unsigned long push-down logic need revisit.
   test("Unsigned Index Tests for TISPARK-28 and TISPARK-29") {
     tidbStmt.execute("DROP TABLE IF EXISTS `unsigned_test`")
     tidbStmt.execute(
