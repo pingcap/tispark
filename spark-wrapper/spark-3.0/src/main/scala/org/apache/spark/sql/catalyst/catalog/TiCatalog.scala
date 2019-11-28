@@ -99,8 +99,8 @@ class TiCatalog extends TableCatalog with SupportsNamespaces {
   private var _current_namespace: Option[Array[String]] = None
   private val logger = LoggerFactory.getLogger(getClass.getName)
 
-  def setCurrentNamespace(namespace: Array[String]): Unit = synchronized {
-    _current_namespace = Some(namespace)
+  def setCurrentNamespace(namespace: Option[Array[String]]): Unit = synchronized {
+    _current_namespace = namespace
   }
 
   override def initialize(name: String, options: CaseInsensitiveStringMap): Unit = {
