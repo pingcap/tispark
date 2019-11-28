@@ -99,6 +99,7 @@ public class MyDecimalTest {
     tests.add(new MyDecimalTestStruct("0000000.001", "0.001", 3, 3));
     tests.add(new MyDecimalTestStruct("0.00012345000098765", "0.00012345000098765", 17, 17));
     tests.add(new MyDecimalTestStruct("-0.00012345000098765", "-0.00012345000098765", 17, 17));
+    tests.add(new MyDecimalTestStruct("0", "0", 1, 0));
     for (MyDecimalTestStruct a : tests) {
       MyDecimal dec = new MyDecimal();
       dec.fromString(a.in);
