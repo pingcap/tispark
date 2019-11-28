@@ -21,9 +21,8 @@ import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
-import com.pingcap.tikv.TiSession
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
-import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tispark.{TiDBUtils, TiSparkInfo}
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
@@ -34,8 +33,8 @@ import org.joda.time.DateTimeZone
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -403,8 +402,10 @@ object SharedSQLContext extends Logging {
       import com.pingcap.tispark.TiConfigConst._
 
       pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
-      catalogPluginMode = getFlagOrTrue(prop, USE_CATALOG_PLUGIN)
-      dbPrefix = getOrElse(prop, DB_PREFIX, if (catalogPluginMode) "" else "tidb_")
+      catalogPluginMode =
+        if (TiSparkInfo.SPARK_MAJOR_VERSION == "3.0") getFlagOrTrue(prop, USE_CATALOG_PLUGIN)
+        else false
+      dbPrefix = if (catalogPluginMode) "" else getOrElse(prop, DB_PREFIX, "tidb_")
 
       // properties for ticatalog plugin
       if (catalogPluginMode) {
