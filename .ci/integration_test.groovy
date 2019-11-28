@@ -31,11 +31,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
 =======
     def MVN_PROFILE = ""
     def MVN_PROFILE_SCALA_2_12 = "-Pspark-2.4-scala-2.12"
-    def MVN_TEST_PROFILE1_SCALA_2_12 = "-Pjenkins-test-spark-3.0"
-    def MVN_TEST_PROFILE2_SCALA_2_12 = "-Pjenkins-test-spark-2.4"
+    def MVN_PROFILE_SCALA_2_12_TEST = ["-Pjenkins-test-spark-3.0", "-Pjenkins-test-spark-2.4"]
     def MVN_PROFILE_SCALA_2_11 = "-Pspark-2.3-scala-2.11"
-    def MVN_TEST_PROFILE1_SCALA_2_11 = "-Pjenkins-test-spark-2.4"
-    def MVN_TEST_PROFILE2_SCALA_2_11 = "-Pjenkins-test-spark-2.3"
+    def MVN_PROFILE_SCALA_2_11_TEST = ["-Pjenkins-test-spark-2.4", "-Pjenkins-test-spark-2.3"]
     
 >>>>>>> support spark-2.3 and scala-2.11 (#1245)
     // parse tidb branch
@@ -242,6 +240,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         archive_url=http://fileserver.pingcap.net/download/builds/pingcap/tispark/cache/tispark-m2-cache-latest.tar.gz
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
+<<<<<<< HEAD
                     sh """
 <<<<<<< HEAD
                         export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M"
@@ -260,6 +259,24 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_12} ${MVN_TEST_PROFILE2_SCALA_2_12} -Dtest=moo ${mvnStr}
 >>>>>>> support spark-2.3 and scala-2.11 (#1245)
                     """
+=======
+
+                    MVN_PROFILE_SCALA_2_12_TEST.each { MVN_TEST_PROFILE ->
+                        sh """
+                            export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+                            mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_12} ${MVN_TEST_PROFILE} -Dtest=moo ${mvnStr}
+                        """
+                    }
+
+                    sh "./dev/change-scala-version.sh 2.11"
+
+                    MVN_PROFILE_SCALA_2_11_TEST.each { MVN_TEST_PROFILE ->
+                        sh """
+                            export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+                            mvn clean test ${MVN_PROFILE} ${MVN_PROFILE_SCALA_2_11} ${MVN_TEST_PROFILE} -Dtest=moo ${mvnStr}
+                        """
+                    }
+>>>>>>> add scala version on artifactId (#1253)
                 }
             }
 
