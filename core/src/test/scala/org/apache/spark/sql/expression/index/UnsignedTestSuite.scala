@@ -20,7 +20,7 @@ import org.apache.spark.sql.BaseTiSparkTest
 class UnsignedTestSuite extends BaseTiSparkTest {
 
   // after we push down decimal type, unsigned long push-down logic need revisit.
-  ignore("Unsigned Index Tests for TISPARK-28 and TISPARK-29") {
+  test("Unsigned Index Tests for TISPARK-28 and TISPARK-29") {
     tidbStmt.execute("DROP TABLE IF EXISTS `unsigned_test`")
     tidbStmt.execute(
       """CREATE TABLE `unsigned_test` (
@@ -42,6 +42,7 @@ class UnsignedTestSuite extends BaseTiSparkTest {
 
     tidbStmt.execute("ANALYZE TABLE `unsigned_test`")
     refreshConnections()
+    judge("select * from unsigned_test where c2 < 18446744073709551616")
 
     // TODO: After we fixed unsigned behavior, delete `skipped` setting for this test
     val queries = Seq[String](

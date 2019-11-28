@@ -16,11 +16,14 @@
 package com.pingcap.tikv.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.IntegerType;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
