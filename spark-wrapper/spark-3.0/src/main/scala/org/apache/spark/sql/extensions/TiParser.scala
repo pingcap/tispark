@@ -24,16 +24,24 @@ import org.apache.spark.sql.catalyst.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.sql.execution.SparkSqlParser
 import org.apache.spark.sql.execution.command.{CacheTableCommand, CreateViewCommand, ExplainCommand, UncacheTableCommand}
 import org.apache.spark.sql.types.{DataType, StructType}
+<<<<<<< HEAD
 import org.apache.spark.sql.{SparkSession, TiContext, TiExtensions}
+=======
+import org.apache.spark.sql.{SparkSession, TiContext}
+>>>>>>> aa7b0801baa0661bbb1dd6f4ba667ac11f17257c
 
 class TiParserFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends ((SparkSession, ParserInterface) => ParserInterface) {
   override def apply(v1: SparkSession, v2: ParserInterface): ParserInterface = {
+<<<<<<< HEAD
     if (TiExtensions.catalogPluginMode(v1)) {
       v2
     } else {
       TiParser(getOrCreateTiContext)(v1, v2)
     }
+=======
+    TiParser(getOrCreateTiContext)(v1, v2)
+>>>>>>> aa7b0801baa0661bbb1dd6f4ba667ac11f17257c
   }
 }
 
