@@ -30,7 +30,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GenericInternalRow, Literal, NamedExpression}
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
-import org.apache.spark.{SparkConf, sql}
+import org.apache.spark.{sql, SparkConf}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import scala.collection.JavaConversions._
