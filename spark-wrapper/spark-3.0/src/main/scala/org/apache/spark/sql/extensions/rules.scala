@@ -19,24 +19,17 @@ import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.analysis.UnresolvedV2Relation
 import org.apache.spark.sql.catalyst.plans.logical.{Command, DescribeTable, ShowNamespaces}
 import com.pingcap.tispark.statistics.StatisticsManager
-<<<<<<< HEAD
 import com.pingcap.tispark.utils.ReflectionUtil
 import com.pingcap.tispark.utils.ReflectionUtil.newSubqueryAlias
 import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
 import org.apache.spark.sql.catalyst.catalog.{TiDBTable, TiSessionCatalog}
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
-=======
-import com.pingcap.tispark.utils.ReflectionUtil.newSubqueryAlias
-import org.apache.spark.sql.catalyst.analysis.{EliminateSubqueryAliases, UnresolvedRelation}
-import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
->>>>>>> aa7b0801baa0661bbb1dd6f4ba667ac11f17257c
 import org.apache.spark.sql.{SparkSession, TiContext}
 import org.apache.spark.sql.catalyst.plans.logical.{InsertIntoStatement, LogicalPlan, SetCatalogAndNamespace}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier}
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.LogicalRelation
-<<<<<<< HEAD
 import org.apache.spark.sql.execution.datasources.v2.DataSourceV2Relation
 import org.apache.spark.sql.{AnalysisException, _}
 import org.slf4j.LoggerFactory
@@ -53,14 +46,6 @@ class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     } else {
       TiResolutionRule(getOrCreateTiContext)(v1)
     }
-=======
-import org.apache.spark.sql.{AnalysisException, _}
-
-class TiResolutionRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
-    extends (SparkSession => Rule[LogicalPlan]) {
-  override def apply(v1: SparkSession): Rule[LogicalPlan] = {
-    TiResolutionRule(getOrCreateTiContext)(v1)
->>>>>>> aa7b0801baa0661bbb1dd6f4ba667ac11f17257c
   }
 }
 
@@ -126,15 +111,11 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
 class TiDDLRuleFactory(getOrCreateTiContext: SparkSession => TiContext)
     extends (SparkSession => Rule[LogicalPlan]) {
   override def apply(v1: SparkSession): Rule[LogicalPlan] = {
-<<<<<<< HEAD
     if (TiExtensions.catalogPluginMode(v1)) {
       TiDDLRuleV2(getOrCreateTiContext)(v1)
     } else {
       TiDDLRule(getOrCreateTiContext)(v1)
     }
-=======
-    TiDDLRule(getOrCreateTiContext)(v1)
->>>>>>> aa7b0801baa0661bbb1dd6f4ba667ac11f17257c
   }
 }
 
@@ -201,7 +182,6 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
       TiCreateTableLikeCommand(tiContext, ct)
   }
 }
-<<<<<<< HEAD
 
 case class TiResolutionRuleV2(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
@@ -264,5 +244,3 @@ case class TiDDLRuleV2(getOrCreateTiContext: SparkSession => TiContext)(sparkSes
       TiSetDatabaseCommandV2(tiContext, sd)
   }
 }
-=======
->>>>>>> aa7b0801baa0661bbb1dd6f4ba667ac11f17257c

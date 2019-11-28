@@ -14,10 +14,7 @@
  */
 package org.apache.spark.sql.execution.command
 
-<<<<<<< HEAD
 import org.apache.spark.sql.catalyst.catalog.TiCatalog
-=======
->>>>>>> aa7b0801baa0661bbb1dd6f4ba667ac11f17257c
 import org.apache.spark.sql.{Row, SparkSession, TiContext}
 import org.apache.spark.sql.catalyst.plans.logical.{SetCatalogAndNamespace, ShowNamespaces}
 
@@ -35,7 +32,6 @@ case class TiSetDatabaseCommand(tiContext: TiContext, delegate: SetCatalogAndNam
   }
 }
 
-<<<<<<< HEAD
 case class TiSetDatabaseCommandV2(tiContext: TiContext, delegate: SetCatalogAndNamespace)
     extends RunnableCommand {
   override def run(sparkSession: SparkSession): Seq[Row] = {
@@ -66,8 +62,6 @@ case class TiSetDatabaseCommandV2(tiContext: TiContext, delegate: SetCatalogAndN
   }
 }
 
-=======
->>>>>>> aa7b0801baa0661bbb1dd6f4ba667ac11f17257c
 /**
  * CHECK Spark [[org.apache.spark.sql.catalyst.plans.logical.ShowNamespaces]]
  *
