@@ -122,7 +122,7 @@ class UnsignedTestSuite extends BaseTiSparkTest {
 
   override def afterAll(): Unit =
     try {
-//      tidbStmt.execute("drop table if exists `unsigned_test`")
+      tidbStmt.execute("drop table if exists `unsigned_test`")
     } finally {
       super.afterAll()
     }
