@@ -42,7 +42,6 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Data too long for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "length 10 > max length 8"
 
@@ -50,7 +49,6 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -83,7 +81,6 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Data too long for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "length 10 > max length 8"
 
@@ -91,7 +88,6 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -130,7 +126,6 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Data too long for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "length 300 > max length 255"
 
@@ -138,7 +133,6 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
