@@ -407,20 +407,6 @@ object SharedSQLContext extends Logging {
         else false
       dbPrefix = if (catalogPluginMode) "" else getOrElse(prop, DB_PREFIX, "tidb_")
 
-      // properties for ticatalog plugin
-      if (catalogPluginMode) {
-        if (!prop.containsKey("spark.sql.catalog.tidb_catalog")) {
-          prop
-            .put(
-              "spark.sql.catalog.tidb_catalog",
-              "org.apache.spark.sql.catalyst.catalog.TiCatalog"
-            )
-        }
-        if (!prop.containsKey("spark.sql.catalog.tidb_catalog.pd.address")) {
-          prop.put("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)
-        }
-      }
-
       // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
       tpcdsDBName = getOrElse(prop, TPCDS_DB_NAME, "")
@@ -458,7 +444,7 @@ object SharedSQLContext extends Logging {
         sparkConf.set(USE_CATALOG_PLUGIN, catalogPluginMode.toString)
         if (catalogPluginMode) {
           prop.asScala.foreach(entry => {
-            if (entry._1.startsWith(CATALOG_PREFIX)) {
+            if (entry._1.startsWith("spark.sql.catalog.")) {
               sparkConf.set(entry._1, entry._2)
             }
           })
