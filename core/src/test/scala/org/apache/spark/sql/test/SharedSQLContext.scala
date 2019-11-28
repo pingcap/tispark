@@ -21,9 +21,8 @@ import java.io.File
 import java.sql.{Connection, Date, Statement}
 import java.util.{Locale, Properties, TimeZone}
 
-import com.pingcap.tikv.TiSession
 import com.pingcap.tispark.TiConfigConst.PD_ADDRESSES
-import com.pingcap.tispark.TiDBUtils
+import com.pingcap.tispark.{TiDBUtils, TiSparkInfo}
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
@@ -35,6 +34,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import org.slf4j.Logger
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -67,6 +67,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def runTPCDS: Boolean = SharedSQLContext.runTPCDS
 
   protected def dbPrefix: String = SharedSQLContext.dbPrefix
+
+  protected def catalogPluginMode: Boolean = SharedSQLContext.catalogPluginMode
 
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
@@ -162,11 +164,13 @@ object SharedSQLContext extends Logging {
   protected var runTPCH: Boolean = true
   protected var runTPCDS: Boolean = false
   protected var dbPrefix: String = _
+  protected var catalogPluginMode: Boolean = _
   protected var tidbUser: String = _
   protected var tidbPassword: String = _
   protected var tidbAddr: String = _
   protected var tidbPort: Int = _
   protected var pdAddresses: String = _
+  protected var tidb_catalog: String = _
   protected var generateData: Boolean = _
   protected var generateDataSeed: Option[Long] = None
   protected var enableTiFlashTest: Boolean = _
@@ -400,7 +404,24 @@ object SharedSQLContext extends Logging {
       import com.pingcap.tispark.TiConfigConst._
 
       pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
-      dbPrefix = getOrElse(prop, DB_PREFIX, "tidb_")
+      catalogPluginMode =
+        if (TiSparkInfo.SPARK_MAJOR_VERSION == "3.0") getFlagOrFalse(prop, USE_CATALOG_PLUGIN)
+        else false
+      dbPrefix = if (catalogPluginMode) "" else getOrElse(prop, DB_PREFIX, "tidb_")
+
+      // properties for ticatalog plugin
+      if (catalogPluginMode) {
+        if (!prop.containsKey("spark.sql.catalog.tidb_catalog")) {
+          prop
+            .put(
+              "spark.sql.catalog.tidb_catalog",
+              "org.apache.spark.sql.catalyst.catalog.TiCatalog"
+            )
+        }
+        if (!prop.containsKey("spark.sql.catalog.tidb_catalog.pd.address")) {
+          prop.put("spark.sql.catalog.tidb_catalog.pd.address", pdAddresses)
+        }
+      }
 
       // run TPC-H tests by default and disable TPC-DS tests by default
       tpchDBName = getOrElse(prop, TPCH_DB_NAME, "tpch_test")
@@ -436,6 +457,14 @@ object SharedSQLContext extends Logging {
         sparkConf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
         sparkConf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
         sparkConf.set(DB_PREFIX, dbPrefix)
+        sparkConf.set(USE_CATALOG_PLUGIN, catalogPluginMode.toString)
+        if (catalogPluginMode) {
+          prop.asScala.foreach(entry => {
+            if (entry._1.startsWith("spark.sql.catalog.")) {
+              sparkConf.set(entry._1, entry._2)
+            }
+          })
+        }
       }
 
       sparkConf.set("spark.tispark.write.allow_spark_sql", "true")

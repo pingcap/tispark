@@ -1,5 +1,6 @@
 package org.apache.spark.sql
 
+import com.pingcap.tispark.TiConfigConst
 import com.pingcap.tispark.utils.ReflectionUtil
 
 import scala.collection.mutable
@@ -44,4 +45,7 @@ object TiExtensions {
   def enabled(): Boolean = tiExtensions != null
 
   def reset(): Unit = tiExtensions = null
+
+  def catalogPluginMode(sparkSession: SparkSession): Boolean =
+    sparkSession.sparkContext.conf.get(TiConfigConst.USE_CATALOG_PLUGIN, "false").toBoolean
 }

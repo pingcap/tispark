@@ -17,6 +17,7 @@ package com.pingcap.tispark
 
 object TiConfigConst {
   val PD_ADDRESSES: String = "spark.tispark.pd.addresses"
+  val USE_CATALOG_PLUGIN: String = "spark.tispark.catalog.plugin_spark_3_0"
   val GRPC_FRAME_SIZE: String = "spark.tispark.grpc.framesize"
   val GRPC_TIMEOUT: String = "spark.tispark.grpc.timeout_in_sec"
   val GRPC_RETRY_TIMES: String = "spark.tispark.grpc.retry.times"
