@@ -38,7 +38,6 @@ class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Incorrect time value: '{10000 11 11 11 11 11 0}'"
     val tidbErrorClass = classOf[java.lang.IllegalArgumentException]
     val tidbErrorMsg = "Timestamp format must be yyyy-mm-dd hh:mm:ss[.fffffffff]"
 
@@ -46,7 +45,6 @@ class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
