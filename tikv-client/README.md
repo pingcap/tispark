@@ -55,7 +55,7 @@ dagRequest.setLimit(10);
 dagRequest.resolve();
  
 // Fetch data
-Iterator<Row> iterator = snapshot.tableRead(dagRequest, table.getId());
+Iterator<Row> iterator = snapshot.tableReadRow(dagRequest, table.getId());
 System.out.println("Show result:");
 while (iterator.hasNext()) {
   Row rowData = iterator.next();

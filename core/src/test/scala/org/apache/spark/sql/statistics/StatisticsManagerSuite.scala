@@ -25,7 +25,7 @@ import com.pingcap.tikv.predicates.PredicateUtils.expressionToIndexRanges
 import com.pingcap.tikv.predicates.TiKVScanAnalyzer
 import com.pingcap.tispark.statistics.StatisticsManager
 import org.apache.spark.sql.BaseTiSparkTest
-import org.apache.spark.sql.execution.{CoprocessorRDD, HandleRDDExec, SparkPlan}
+import org.apache.spark.sql.execution.SparkPlan
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._

@@ -23,7 +23,8 @@ class ComplexGroupBySuite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select tp_int + 1 from full_data_type_table  group by (tp_int + 1)",
     "select tp_float * 2 from full_data_type_table  group by (tp_float * 2)",
-    "select tp_float - 2 from full_data_type_table  group by (tp_float - 2)",
+    // group by on floating type is dangerous, we need further discussion.
+//  "select tp_float - 2 from full_data_type_table  group by (tp_float - 2)",
     "select tp_float / 2 from full_data_type_table  group by (tp_float / 2)",
 //    "select tp_int + tp_int from full_data_type_table group by (tp_int + tp_int)",
     "select tp_int + tp_bigint from full_data_type_table group by (tp_int + tp_bigint)",

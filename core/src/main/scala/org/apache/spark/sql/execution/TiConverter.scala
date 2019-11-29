@@ -1,4 +1,19 @@
-package com.pingcap.tispark.utils
+/*
+ * Copyright 2019 PingCAP, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.spark.sql.execution
 
 import java.util.logging.Logger
 
@@ -18,76 +33,18 @@ object TiConverter {
   private final val logger = Logger.getLogger(getClass.getName)
   private final val MAX_PRECISION = sql.types.DecimalType.MAX_PRECISION
 
-  def toSparkRow(row: TiRow, rowTransformer: RowTransformer): Row = {
-    import scala.collection.JavaConversions._
-
-    val finalTypes = rowTransformer.getTypes.toList
-    val transRow = rowTransformer.transform(row)
-    val rowArray = new Array[Any](finalTypes.size)
-
-    for (i <- 0 until transRow.fieldCount) {
-      val colTp = finalTypes(i)
-      val isBigInt = colTp.getType.equals(MySQLType.TypeLonglong)
-      val isUnsigned = colTp.isUnsigned
-      val tmp = transRow.get(i, finalTypes(i))
-      rowArray(i) = if (isBigInt && isUnsigned) {
-        tmp match {
-          case l: java.lang.Long => Decimal.apply(UnsignedLong.fromLongBits(l).bigIntegerValue())
-          case _                 => tmp
-        }
-      } else {
-        tmp
-      }
-    }
-
-    Row.fromSeq(rowArray)
-  }
-
-  // convert tikv-java client FieldType to Spark DataType
-  def toSparkDataType(tp: TiDataType): SparkSQLDataType =
-    tp match {
-      case _: StringType => sql.types.StringType
-      case _: BytesType  => sql.types.BinaryType
-      case t: IntegerType =>
-        if (t.isUnsignedLong) {
-          DataTypes.createDecimalType(20, 0)
-        } else {
-          sql.types.LongType
-        }
-      case _: RealType => sql.types.DoubleType
-      // we need to make sure that tp.getLength does not result in negative number when casting.
-      // Decimal precision cannot exceed MAX_PRECISION.
-      case _: DecimalType =>
-        var len = tp.getLength
-        if (len > MAX_PRECISION) {
-          logger.warning(
-            "Decimal precision exceeding MAX_PRECISION=" + MAX_PRECISION + ", value will be truncated"
-          )
-          len = MAX_PRECISION
-        }
-        DataTypes.createDecimalType(
-          len.toInt,
-          tp.getDecimal
-        )
-      case _: DateTimeType  => sql.types.TimestampType
-      case _: TimestampType => sql.types.TimestampType
-      case _: DateType      => sql.types.DateType
-      case _: EnumType      => sql.types.StringType
-      case _: SetType       => sql.types.StringType
-      case _: JsonType      => sql.types.StringType
-      case _: TimeType      => sql.types.LongType
-    }
-
   def fromSparkType(tp: SparkSQLDataType): TiDataType =
     // TODO: review type system
     // pending: https://internal.pingcap.net/jira/browse/TISPARK-99
     tp match {
-      case _: sql.types.BinaryType    => BytesType.BLOB
-      case _: sql.types.StringType    => StringType.VARCHAR
-      case _: sql.types.LongType      => IntegerType.BIGINT
-      case _: sql.types.IntegerType   => IntegerType.INT
-      case _: sql.types.DoubleType    => RealType.DOUBLE
-      case _: sql.types.DecimalType   => DecimalType.DECIMAL
+      case _: sql.types.BinaryType  => BytesType.BLOB
+      case _: sql.types.StringType  => StringType.VARCHAR
+      case _: sql.types.LongType    => IntegerType.BIGINT
+      case _: sql.types.IntegerType => IntegerType.INT
+      case _: sql.types.DoubleType  => RealType.DOUBLE
+      case _: sql.types.FloatType   => RealType.FLOAT
+      case sql.types.DecimalType.Fixed(prec, scale) =>
+        new DecimalType(MySQLType.TypeNewDecimal, prec, scale)
       case _: sql.types.TimestampType => TimestampType.TIMESTAMP
       case _: sql.types.DateType      => DateType.DATE
     }

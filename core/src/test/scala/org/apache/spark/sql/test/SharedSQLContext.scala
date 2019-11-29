@@ -303,9 +303,11 @@ object SharedSQLContext extends Logging {
       PD_ADDRESSES -> pdAddresses
     )
 
+    // TODO(Zhexuan Yang) for zero datetime issue, we need further investigation.
+    // https://github.com/pingcap/tispark/issues/1238
     jdbcUrl =
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
-        s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false" +
+        s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=false" +
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
         s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}"
 

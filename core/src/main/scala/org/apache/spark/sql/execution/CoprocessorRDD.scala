@@ -18,50 +18,34 @@ package org.apache.spark.sql.execution
 import java.util
 import java.util.concurrent.{Callable, ExecutorCompletionService}
 
+import com.pingcap.tikv.columnar.{TiChunk, TiColumnarBatchHelper}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
-import com.pingcap.tikv.operation.SchemaInfer
-import com.pingcap.tikv.operation.iterator.CoprocessIterator
-import com.pingcap.tikv.operation.transformer.RowTransformer
+import com.pingcap.tikv.operation.iterator.CoprocessorIterator
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.ReflectionUtil._
-import com.pingcap.tispark.utils.{TiConverter, TiUtil}
+import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
+import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.expressions.{Attribute, GenericInternalRow, SortOrder, UnsafeProjection, UnsafeRow}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.expressions.{Attribute, UnsafeProjection}
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
-import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
-import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD, TiRowRDD}
-import org.apache.spark.sql.types.{ArrayType, DataType, LongType, Metadata}
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.tispark.TiRDD
+import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.tikv.kvproto.Coprocessor.KeyRange
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 
-trait LeafExecRDD extends LeafExecNode {
+trait LeafColumnarExecRDD extends LeafExecNode {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
   private[execution] val tiRDDs: List[TiRDD]
-
-  private[execution] val internalRDDs: List[RDD[InternalRow]] =
-    tiRDDs.map(rdd => RDDConversions.rowToRowRdd(rdd, output.map(_.dataType)))
-  private[execution] lazy val project = UnsafeProjection.create(schema)
-
-  private[execution] def internalRowToUnsafeRowWithIndex(
-    numOutputRows: SQLMetric
-  ): (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] =
-    (index, iter) => {
-      project.initialize(index)
-      iter.map { r =>
-        numOutputRows += 1
-        project(r)
-      }
-    }
 
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
 
@@ -87,91 +71,54 @@ trait LeafExecRDD extends LeafExecNode {
   override def simpleString: String = verboseString
 }
 
-case class CoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRowRDD]) extends LeafExecRDD {
+case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], fetchHandle: Boolean)
+    extends LeafColumnarExecRDD
+    with ColumnarBatchScan {
+  override val outputPartitioning: Partitioning = UnknownPartitioning(0)
 
-  override lazy val metrics: Map[String, SQLMetric] = Map(
-    "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows")
-  )
+  private[execution] val internalRDDs: List[RDD[InternalRow]] = tiRDDs
 
-  override val nodeName: String = "CoprocessorRDD"
+  override def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
 
-  override protected def doExecute(): RDD[InternalRow] = {
-    val numOutputRows = longMetric("numOutputRows")
-
-    val rddList = internalRDDs
-      .map(
-        rdd =>
-          ReflectionMapPartitionWithIndexInternal(
-            rdd,
-            internalRowToUnsafeRowWithIndex(numOutputRows)
-          ).invoke()
-      )
-    sparkContext.union(rddList)
+  override val nodeName: String = if (fetchHandle) {
+    "FetchHandleRDD"
+  } else {
+    "CoprocessorRDD"
   }
 
-  override def simpleString: String = verboseString
-}
-
-/**
- * HandleRDDExec is used for scanning handles from TiKV as a LeafExecNode in index plan.
- * Providing handle scan via a TiHandleRDD.
- *
- * @param tiRDDs handle source
- */
-case class HandleRDDExec(tiRDDs: List[TiHandleRDD]) extends LeafExecRDD {
-  override val nodeName: String = "HandleRDD"
-
-  override lazy val metrics: Map[String, SQLMetric] = Map(
-    "numOutputRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions")
-  )
-
   override protected def doExecute(): RDD[InternalRow] = {
-    val numOutputRegions = longMetric("numOutputRegions")
-
-    val rddList = internalRDDs
-      .map(
-        rdd =>
-          ReflectionMapPartitionWithIndexInternal(
-            rdd,
-            internalRowToUnsafeRowWithIndex(numOutputRegions)
-          ).invoke()
-      )
-    sparkContext.union(rddList)
+    if (!fetchHandle) {
+      WholeStageCodegenExec(this)(codegenStageId = 0).execute()
+    } else {
+      sparkContext.union(internalRDDs)
+    }
   }
 
-  final lazy val attributeRef = Seq(
-    newAttributeReference("RegionId", LongType, nullable = false, Metadata.empty),
-    newAttributeReference(
-      "Handles",
-      ArrayType(LongType, containsNull = false),
-      nullable = false,
-      Metadata.empty
-    )
-  )
-
-  override def output: Seq[Attribute] = attributeRef
+  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
 }
 
 /**
  * RegionTaskExec is used for issuing requests which are generated based
- * on handles retrieved from [[HandleRDDExec]].
+ * on handles retrieved from [[ColumnarCoprocessorRDD]].
  *
  * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
  * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
  *
- * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[CoprocessorRDD]] for further details.
+ * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[ColumnarCoprocessorRDD]] for further details.
  *
  */
-case class RegionTaskExec(child: SparkPlan,
-                          output: Seq[Attribute],
-                          dagRequest: TiDAGRequest,
-                          tiConf: TiConfiguration,
-                          ts: TiTimestamp,
-                          @transient private val session: TiSession,
-                          @transient private val sparkSession: SparkSession)
-    extends UnaryExecNode {
+case class ColumnarRegionTaskExec(child: SparkPlan,
+                                  output: Seq[Attribute],
+                                  dagRequest: TiDAGRequest,
+                                  tiConf: TiConfiguration,
+                                  ts: TiTimestamp,
+                                  @transient private val session: TiSession,
+                                  @transient private val sparkSession: SparkSession)
+    extends UnaryExecNode
+    with ColumnarBatchScan {
 
   override lazy val metrics: Map[String, SQLMetric] = Map(
+    "scanTime" -> SQLMetrics.createTimingMetric(sparkContext, "scan time"),
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
     "numHandles" -> SQLMetrics.createMetric(sparkContext, "number of handles used in double scan"),
     "numDowngradedTasks" -> SQLMetrics.createMetric(sparkContext, "number of downgraded tasks"),
@@ -187,31 +134,17 @@ case class RegionTaskExec(child: SparkPlan,
   private val downgradeThreshold = 1000000000
   // FIXME: https://github.com/pingcap/tispark/issues/731
   // enable downgrade sqlConf.getConfString(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD, "10000").toInt
-  private lazy val project = UnsafeProjection.create(schema)
-
-  type TiRow = com.pingcap.tikv.row.Row
 
   override val nodeName: String = "RegionTaskExec"
   // cache invalidation call back function
   // used for driver to update PD cache
-  private val callBackFunc = CacheInvalidateListener.getInstance()
+  private val callBackFunc: CacheInvalidateListener = CacheInvalidateListener.getInstance()
 
-  private def rowToInternalRow(row: Row,
-                               outputTypes: Seq[DataType],
-                               converters: Seq[Any => Any]): InternalRow = {
-    val mutableRow = new GenericInternalRow(outputTypes.length)
-    for (i <- outputTypes.indices) {
-      mutableRow(i) = converters(i)(row(i))
-    }
-
-    mutableRow
+  override protected def doExecute(): RDD[InternalRow] = {
+    WholeStageCodegenExec(this)(codegenStageId = 0).execute()
   }
 
-  private def isTaskRangeSizeInvalid(task: RegionTask): Boolean =
-    task == null ||
-      task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
-
-  private def internalRowToUnsafeRowWithIndex(
+  def fetchTableResultsFromHandles(
     numOutputRows: SQLMetric,
     numHandles: SQLMetric,
     numIndexScanTasks: SQLMetric,
@@ -220,13 +153,13 @@ case class RegionTaskExec(child: SparkPlan,
     numIndexRangesScanned: SQLMetric,
     numDowngradeRangesScanned: SQLMetric,
     downgradeDagRequest: TiDAGRequest
-  ): (Int, Iterator[InternalRow]) => Iterator[UnsafeRow] = { (index, iter) =>
+  ): (Int, Iterator[InternalRow]) => Iterator[InternalRow] = { (_, iter) =>
     // For each partition, we do some initialization work
     val logger = Logger.getLogger(getClass.getName)
-    logger.debug(s"In partition No.$index")
     val session = TiSession.getInstance(tiConf)
     session.injectCallBackFunc(callBackFunc)
     val batchSize = tiConf.getIndexScanBatchSize
+    val downgradeThreshold = tiConf.getDowngradeThreshold
 
     iter.flatMap { row =>
       val handles = row.getArray(1).toLongArray()
@@ -235,8 +168,10 @@ case class RegionTaskExec(child: SparkPlan,
       numRegions += 1
 
       val completionService =
-        new ExecutorCompletionService[util.Iterator[TiRow]](session.getThreadPoolForIndexScan)
-      var rowIterator: util.Iterator[TiRow] = null
+        new ExecutorCompletionService[util.Iterator[TiChunk]](
+          session.getThreadPoolForIndexScan
+        )
+      var rowIterator: util.Iterator[TiChunk] = null
 
       // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
       def generateIndexTasks(handles: TLongArrayList): util.List[RegionTask] = {
@@ -244,7 +179,7 @@ case class RegionTaskExec(child: SparkPlan,
         indexTasks.addAll(
           RangeSplitter
             .newSplitter(session.getRegionManager)
-            .splitAndSortHandlesByRegion(dagRequest.getIds, new TLongArrayList(handles))
+            .splitAndSortHandlesByRegion(dagRequest.getIds, handles)
         )
         indexTasks
       }
@@ -263,11 +198,17 @@ case class RegionTaskExec(child: SparkPlan,
       def satisfyDowngradeThreshold: Boolean =
         indexTaskRanges.size() > downgradeThreshold
 
+      def isTaskRangeSizeInvalid(task: RegionTask): Boolean =
+        task == null ||
+          task.getRanges.size() > tiConf.getMaxRequestKeyRangeSize
+
       def submitTasks(tasks: List[RegionTask], dagRequest: TiDAGRequest): Unit = {
         taskCount += 1
-        val task = new Callable[util.Iterator[TiRow]] {
-          override def call(): util.Iterator[TiRow] =
-            CoprocessIterator.getRowIterator(dagRequest, tasks, session)
+        val task = new Callable[util.Iterator[TiChunk]] {
+          override def call(): util.Iterator[TiChunk] = {
+            CoprocessorIterator.getTiChunkIterator(dagRequest, tasks, session)
+          }
+
         }
         completionService.submit(task)
       }
@@ -315,7 +256,6 @@ case class RegionTaskExec(child: SparkPlan,
           val indexTasks: util.List[RegionTask] = generateIndexTasks(handleList)
 
           indexTasks.foreach { task =>
-            val taskRange = task.getRanges
             val tasks = splitTasks(task)
             numIndexScanTasks += tasks.size
 
@@ -332,7 +272,7 @@ case class RegionTaskExec(child: SparkPlan,
             }
 
             submitTasks(tasks.toList, dagRequest)
-            numIndexRangesScanned += taskRange.size
+            numIndexRangesScanned += task.getRanges.size
           }
         }
 
@@ -367,7 +307,7 @@ case class RegionTaskExec(child: SparkPlan,
         }
       }
 
-      val schemaInferrer: SchemaInfer = if (satisfyDowngradeThreshold) {
+      if (satisfyDowngradeThreshold) {
         // Should downgrade to full table scan for one region
         logger.info(
           s"Index scan task range size = ${indexTaskRanges.size}, " +
@@ -375,19 +315,13 @@ case class RegionTaskExec(child: SparkPlan,
             s"index scan handle size = ${handles.length}, will try to merge."
         )
         doDowngradeScan(indexTaskRanges.toList)
-        SchemaInfer.create(downgradeDagRequest)
       } else {
         // Request doesn't need to be downgraded
         doIndexScan()
-        SchemaInfer.create(dagRequest)
       }
 
-      val rowTransformer: RowTransformer = schemaInferrer.getRowTransformer
-      val outputTypes = output.map(_.dataType)
-      val converters = outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
-
       // The result iterator serves as an wrapper to the final result we fetched from region tasks
-      val resultIter = new util.Iterator[UnsafeRow] {
+      new Iterator[ColumnarBatch] {
         override def hasNext: Boolean = {
 
           def proceedNextBatchTask(): Boolean = {
@@ -416,20 +350,14 @@ case class RegionTaskExec(child: SparkPlan,
           }
         }
 
-        override def next(): UnsafeRow = {
-          numOutputRows += 1
-          // Unsafe row projection
-          project.initialize(index)
-          val sparkRow = TiConverter.toSparkRow(rowIterator.next(), rowTransformer)
-          // Need to convert spark row to internal row for Catalyst
-          project(rowToInternalRow(sparkRow, outputTypes, converters))
+        override def next(): ColumnarBatch = {
+          TiColumnarBatchHelper.createColumnarBatch(rowIterator.next())
         }
-      }
-      resultIter
+      }.asInstanceOf[Iterator[InternalRow]]
     }
   }
 
-  override protected def doExecute(): RDD[InternalRow] = {
+  private def inputRDD(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
     val numHandles = longMetric("numHandles")
     val numIndexScanTasks = longMetric("numIndexScanTasks")
@@ -445,7 +373,7 @@ case class RegionTaskExec(child: SparkPlan,
 
     ReflectionMapPartitionWithIndexInternal(
       child.execute(),
-      internalRowToUnsafeRowWithIndex(
+      fetchTableResultsFromHandles(
         numOutputRows,
         numHandles,
         numIndexScanTasks,
@@ -462,4 +390,6 @@ case class RegionTaskExec(child: SparkPlan,
     s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
 
   override def simpleString: String = verboseString
+
+  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(inputRDD())
 }

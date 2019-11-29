@@ -17,12 +17,10 @@
 
 package com.pingcap.tikv.types;
 
-import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
-import java.sql.Timestamp;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -43,7 +41,7 @@ public class DateTimeType extends AbstractDateTimeType {
   }
 
   @Override
-  protected DateTimeZone getTimezone() {
+  public DateTimeZone getTimezone() {
     return Converter.getLocalTimezone();
   }
 
@@ -58,14 +56,8 @@ public class DateTimeType extends AbstractDateTimeType {
    * stored
    */
   @Override
-  protected Timestamp decodeNotNull(int flag, CodecDataInput cdi) {
-    ExtendedDateTime extendedDateTime = decodeDateTime(flag, cdi);
-    // Even though null is filtered out but data like 0000-00-00 exists
-    // according to MySQL JDBC behavior, it's converted to null
-    if (extendedDateTime == null) {
-      return null;
-    }
-    return extendedDateTime.toTimeStamp();
+  protected Long decodeNotNull(int flag, CodecDataInput cdi) {
+    return decodeDateTime(flag, cdi);
   }
 
   @Override

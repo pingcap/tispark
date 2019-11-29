@@ -18,17 +18,19 @@ package com.pingcap.tispark.utils
 import java.util.concurrent.TimeUnit
 
 import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.datatype.TypeMapping
 import com.pingcap.tikv.expression.ExpressionBlacklist
 import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
-import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiSparkInfo, TiSparkVersion}
-import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import com.pingcap.tispark._
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GenericInternalRow, Literal, NamedExpression}
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.{sql, SparkConf}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
 import scala.collection.JavaConversions._
@@ -73,10 +75,10 @@ object TiUtil {
 
     if (expr.children.isEmpty) {
       expr match {
-        // bit, duration, set, and enum type is not allowed to be pushed down
+        // bit, set and enum type is not allowed to be pushed down
         case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
           return nameTypeMap.get(attr.name).head.isPushDownSupported
-        // TODO:Currently we do not support literal null type push down
+        // TODO: Currently we do not support literal null type push down
         // when Constant is ready to support literal null or we have other
         // options, remove this.
         case constant: Literal =>
@@ -120,7 +122,7 @@ object TiUtil {
         .build()
       fields(i) = StructField(
         col.getName,
-        TiConverter.toSparkDataType(col.getType),
+        TypeMapping.toSparkType(col.getType),
         nullable = !notNull,
         metadata
       )
@@ -198,6 +200,11 @@ object TiUtil {
       tiConf.setUseTiFlash(conf.get(TiConfigConst.USE_TIFLASH).toBoolean)
     }
 
+    if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {
+      tiConf.setDowngradeThreshold(
+        conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt
+      )
+    }
     tiConf
   }
 
@@ -219,4 +226,15 @@ object TiUtil {
       val df = new DecimalFormat("#.#")
       s" EstimatedCount:${df.format(req.getEstimatedCount)}"
     } else ""
+
+  def rowToInternalRow(row: Row,
+                       outputTypes: Seq[sql.types.DataType],
+                       converters: Seq[Any => Any]): InternalRow = {
+    val mutableRow = new GenericInternalRow(outputTypes.length)
+    for (i <- outputTypes.indices) {
+      mutableRow(i) = converters(i)(row(i))
+    }
+
+    mutableRow
+  }
 }

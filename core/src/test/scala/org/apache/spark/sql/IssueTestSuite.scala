@@ -171,7 +171,7 @@ class IssueTestSuite extends BaseTiSparkTest {
   test("test date") {
     judge("select tp_date from full_data_type_table where tp_date >= date '2065-04-19'")
     judge(
-      "select tp_date, tp_datetime from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt"
+      "select tp_date, tp_datetime, id_dt from full_data_type_table where tp_date <= date '2065-04-19' order by id_dt limit 10"
     )
     judge(
       "select tp_date, tp_datetime, tp_timestamp from full_data_type_table_idx where tp_date < date '2017-11-02' order by id_dt"
@@ -277,6 +277,19 @@ class IssueTestSuite extends BaseTiSparkTest {
     judge("select c3, c4 from single_read")
   }
 
+  test("test sum rewriting logic") {
+    // only test numeric types. Spark will raise analysis exception if we
+    // perform sum aggregation over non-numeric types.
+    spark.conf.set(TiConfigConst.ENABLE_CHUNK, "false")
+    judge("select sum(tp_decimal) from full_data_type_table")
+    judge("select sum(tp_real) from full_data_type_table")
+    judge("select sum(tp_double) from full_data_type_table")
+    judge("select sum(tp_int) from full_data_type_table")
+    judge("select sum(id_dt) from full_data_type_table")
+    judge("select max(tp_float) from full_data_type_table")
+    judge("select min(tp_float) from full_data_type_table")
+  }
+
   test("TISPARK-16 fix excessive dag column") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
@@ -324,7 +337,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute(
       "INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')"
     )
-    spark.sql("select * from tmp_debug").collect()
+    spark.sql("select * from tmp_debug").collect().foreach(println)
   }
 
   // https://github.com/pingcap/tispark/issues/255

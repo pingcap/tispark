@@ -17,6 +17,7 @@ package org.apache.spark.sql
 
 import java.util.concurrent.TimeUnit
 
+import com.pingcap.tidb.tipb.EncodeType
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
@@ -26,8 +27,8 @@ import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.statistics.StatisticsManager
-import com.pingcap.tispark.utils.TiConverter._
-import com.pingcap.tispark.utils.{TiConverter, TiUtil}
+import org.apache.spark.sql.execution.TiConverter._
+import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
@@ -37,7 +38,7 @@ import org.apache.spark.sql.catalyst.expressions.{Alias, Ascending, Attribute, A
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution._
+import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, _}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.internal.SQLConf
 import org.joda.time.{DateTime, DateTimeZone}
@@ -98,6 +99,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def useStreamingProcess(): Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
+  private def isEnableChunk(): Boolean =
+    sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "true").toLowerCase.toBoolean
+
   private def timeZoneOffsetInSeconds(): Int = {
     val tz = DateTimeZone.getDefault
     val instant = DateTime.now.getMillis
@@ -105,6 +109,15 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val hours = TimeUnit.MILLISECONDS.toHours(offsetInMilliseconds).toInt
     val seconds = hours * 3600
     seconds
+  }
+
+  // streaming only support TypeDefault. Even we enable chunk, we should still
+  // use TypeDefault.
+  private def encodeType(): EncodeType = {
+    if (isEnableChunk() && !useStreamingProcess()) {
+      return EncodeType.TypeChunk
+    }
+    EncodeType.TypeDefault
   }
 
   private def pushDownType(): PushDownType =
@@ -171,7 +184,11 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       if (dagRequest.isDoubleRead) {
         source.dagRequestToRegionTaskExec(dagRequest, output)
       } else {
-        CoprocessorRDD(output, source.logicalPlanToRDD(dagRequest))
+        ColumnarCoprocessorRDD(
+          output,
+          source.logicalPlanToRDD(dagRequest, output),
+          fetchHandle = false
+        )
       }
     }
   }
@@ -180,7 +197,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     groupByList: Seq[NamedExpression],
     aggregates: Seq[AggregateExpression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
+    dagRequest: TiDAGRequest =
+      new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
     aggregates.map { _.aggregateFunction }.foreach {
       case _: Average =>
@@ -270,7 +288,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     tiColumns: Seq[TiColumnRef],
     filters: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
+    dagRequest: TiDAGRequest =
+      new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
 
@@ -307,7 +326,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     source: TiDBRelation,
     sortOrder: Seq[SortOrder]
   ): SparkPlan = {
-    val request = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
+    val request = new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
     request.setLimit(limit)
     addSortOrder(request, sortOrder)
 
@@ -383,9 +402,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
     }
     if (refinedSortOrder.exists(
-          order =>
-            !TiUtil.isSupportedBasicExpression(order.child, source, blacklist) &&
-              TiConverter.fromSparkType(order.dataType).isPushDownSupported
+          order => !TiUtil.isSupportedOrderBy(order.child, source, blacklist)
         )) {
       Option.empty
     } else {
@@ -397,7 +414,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
+    dagRequest: TiDAGRequest =
+      new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
   ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))

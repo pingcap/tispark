@@ -8,7 +8,7 @@ import com.pingcap.tispark.datasource.BaseDataSourceTest
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
-class DataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
+class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
 
   test("Test Read different types") {
 

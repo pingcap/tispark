@@ -173,7 +173,7 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
       case MEDIUMINT => (r.nextInt(1 << 24) - (1 << 23)).longValue()
       case INT       => r.nextInt.longValue
       case BIGINT    => r.nextLong
-      case FLOAT     => r.nextFloat.doubleValue
+      case FLOAT     => r.nextFloat
       case DOUBLE    => r.nextDouble
       case DECIMAL =>
         val len = getLength(tiDataType)

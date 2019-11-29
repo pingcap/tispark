@@ -10,6 +10,7 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.InvalidCodecFormatException;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
+import java.sql.Timestamp;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 
@@ -22,14 +23,12 @@ public abstract class AbstractDateTimeType extends DataType {
     super(tp);
   }
 
-  /** Return timezone used for encoding and decoding */
-  protected abstract DateTimeZone getTimezone();
-
+  public abstract DateTimeZone getTimezone();
   /**
    * Decode DateTime from packed long value In TiDB / MySQL, timestamp type is converted to UTC and
    * stored
    */
-  ExtendedDateTime decodeDateTime(int flag, CodecDataInput cdi) {
+  long decodeDateTime(int flag, CodecDataInput cdi) {
     ExtendedDateTime extendedDateTime;
     if (flag == Codec.UVARINT_FLAG) {
       extendedDateTime = DateTimeCodec.readFromUVarInt(cdi, getTimezone());
@@ -39,7 +38,18 @@ public abstract class AbstractDateTimeType extends DataType {
       throw new InvalidCodecFormatException(
           "Invalid Flag type for " + getClass().getSimpleName() + ": " + flag);
     }
-    return extendedDateTime;
+
+    // Even though null is filtered out but data like 0000-00-00 exists
+    // according to MySQL JDBC behavior, it can chose the **ROUND** behavior converted to the
+    // nearest
+    // value which is 0001-01-01.
+    if (extendedDateTime == null) {
+      Timestamp ts =
+          DateTimeCodec.createExtendedDateTime(getTimezone(), 1, 1, 1, 0, 0, 0, 0).toTimeStamp();
+      return ts.getTime() / 1000 * 100000 + ts.getNanos() / 1000;
+    }
+    Timestamp ts = extendedDateTime.toTimeStamp();
+    return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
   }
 
   /** Decode Date from packed long value */

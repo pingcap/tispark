@@ -20,7 +20,7 @@ package org.apache.spark.sql.benchmark
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation
-import org.apache.spark.sql.execution.{CoprocessorRDD, DataSourceScanExec}
+import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, DataSourceScanExec}
 
 class TPCHQuerySuite extends BaseTiSparkTest {
   private val tpchQueries = Seq(
@@ -96,7 +96,7 @@ class TPCHQuerySuite extends BaseTiSparkTest {
         classLoader = Thread.currentThread().getContextClassLoader
       )
       spark.sql(queryString).queryExecution.executedPlan.foreach {
-        case _: CoprocessorRDD =>
+        case _: ColumnarCoprocessorRDD =>
           throw new AssertionError("JDBC plan should not use CoprocessorRDD as data source node!")
         case _ =>
       }

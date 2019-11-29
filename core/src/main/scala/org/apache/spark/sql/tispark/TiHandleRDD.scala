@@ -15,20 +15,19 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
+import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import gnu.trove.list.array.TLongArrayList
-import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.{CatalystTypeConverters, InternalRow}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 /**
  * RDD used for retrieving handles from TiKV. Result is arranged as
@@ -41,14 +40,19 @@ import scala.collection.mutable.ListBuffer
  */
 class TiHandleRDD(override val dagRequest: TiDAGRequest,
                   override val physicalId: Long,
+                  val output: Seq[Attribute],
                   override val tiConf: TiConfiguration,
                   override val tableRef: TiTableReference,
                   @transient private val session: TiSession,
                   @transient private val sparkSession: SparkSession)
     extends TiRDD(dagRequest, physicalId, tiConf, tableRef, session, sparkSession) {
 
-  override def compute(split: Partition, context: TaskContext): Iterator[Row] =
-    new Iterator[Row] {
+  private val outputTypes = output.map(_.dataType)
+  private val converters =
+    outputTypes.map(CatalystTypeConverters.createToCatalystConverter)
+
+  override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
+    new Iterator[InternalRow] {
       dagRequest.resolve()
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSession.getInstance(tiConf)
@@ -86,13 +90,14 @@ class TiHandleRDD(override val dagRequest: TiDAGRequest,
         iterator.hasNext
       }
 
-      override def next(): Row = {
+      override def next(): InternalRow = {
         val next = iterator.next
         val regionId = next._1
         val handleList = next._2
 
         // Returns RegionId:[handle1, handle2, handle3...] K-V pair
-        Row.apply(regionId, handleList.toArray())
+        val sparkRow = Row.apply(regionId, handleList.toArray())
+        TiUtil.rowToInternalRow(sparkRow, outputTypes, converters)
       }
     }
 }

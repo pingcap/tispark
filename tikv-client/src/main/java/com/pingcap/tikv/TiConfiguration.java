@@ -34,6 +34,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_TRUNCATE_AS_WARNING = false;
   private static final int DEF_MAX_FRAME_SIZE = 268435456 * 2; // 256 * 2 MB
   private static final int DEF_INDEX_SCAN_BATCH_SIZE = 20000;
+  private static final int DEF_REGION_SCAN_DOWNGRADE_THRESHOLD = 10000000;
   // if keyRange size per request exceeds this limit, the request might be too large to be accepted
   // by TiKV(maximum request size accepted by TiKV is around 1MB)
   private static final int MAX_REQUEST_KEY_RANGE_SIZE = 20000;
@@ -58,6 +59,7 @@ public class TiConfiguration implements Serializable {
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
   private List<URI> pdAddrs = new ArrayList<>();
   private int indexScanBatchSize = DEF_INDEX_SCAN_BATCH_SIZE;
+  private int downgradeThreshold = DEF_REGION_SCAN_DOWNGRADE_THRESHOLD;
   private int indexScanConcurrency = DEF_INDEX_SCAN_CONCURRENCY;
   private int tableScanConcurrency = DEF_TABLE_SCAN_CONCURRENCY;
   private CommandPri commandPriority = DEF_COMMAND_PRIORITY;
@@ -280,5 +282,13 @@ public class TiConfiguration implements Serializable {
 
   public void setTiFlashLabelValue(String tiFlashLabelValue) {
     this.tiFlashLabelValue = tiFlashLabelValue;
+  }
+
+  public int getDowngradeThreshold() {
+    return downgradeThreshold;
+  }
+
+  public void setDowngradeThreshold(int downgradeThreshold) {
+    this.downgradeThreshold = downgradeThreshold;
   }
 }

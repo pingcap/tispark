@@ -16,6 +16,7 @@
 package com.pingcap.tikv.types;
 
 import static com.pingcap.tikv.codec.Codec.isNullFlag;
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -23,6 +24,7 @@ import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
+import com.pingcap.tikv.columnar.TiChunkColumnVector;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.exception.TypeException;
@@ -30,6 +32,8 @@ import com.pingcap.tikv.meta.Collation;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 
 /** Base Type for encoding and decoding TiDB row information. */
@@ -68,6 +72,16 @@ public abstract class DataType implements Serializable {
   public static final int OnUpdateNowFlag = 8192; /* Field is set to NOW on UPDATE */
   public static final int NumFlag = 32768; /* Field is a num (for clients) */
   public static final long COLUMN_VERSION_FLAG = 1;
+
+  public DataType(MySQLType tp, int prec, int scale) {
+    this.tp = tp;
+    this.flag = 0;
+    this.elems = ImmutableList.of();
+    this.length = prec;
+    this.decimal = scale;
+    this.charset = "";
+    this.collation = Collation.DEF_COLLATION_CODE;
+  }
 
   public enum EncodeType {
     KEY,
@@ -175,6 +189,113 @@ public abstract class DataType implements Serializable {
 
   protected abstract Object decodeNotNull(int flag, CodecDataInput cdi);
 
+  private int getFixLen() {
+    switch (this.getType()) {
+      case TypeFloat:
+        return 4;
+      case TypeTiny:
+      case TypeShort:
+      case TypeInt24:
+      case TypeLong:
+      case TypeLonglong:
+      case TypeDouble:
+      case TypeYear:
+      case TypeDuration:
+        return 8;
+      case TypeDecimal:
+        throw new UnsupportedOperationException(
+            "this should not get involved in calculation process");
+      case TypeTimestamp:
+      case TypeDate:
+      case TypeDatetime:
+        return 20;
+      case TypeNewDecimal:
+        return 40;
+      default:
+        return -1;
+    }
+  }
+
+  private byte[] setAllNotNull(int numNullBitMapBytes) {
+    byte[] nullBitMaps = new byte[numNullBitMapBytes];
+    for (int i = 0; i < numNullBitMapBytes; ) {
+      // allNotNullBitNMap's actual length
+      int numAppendBytes = Math.min(numNullBitMapBytes - i, 128);
+      if (numAppendBytes >= 0)
+        System.arraycopy(allNotNullBitMap, 0, nullBitMaps, i, numAppendBytes);
+      i += numAppendBytes;
+    }
+    return nullBitMaps;
+  }
+
+  private byte[] allNotNullBitMap = initAllNotNullBitMap();
+
+  private byte[] initAllNotNullBitMap() {
+    byte[] allNotNullBitMap = new byte[128];
+    Arrays.fill(allNotNullBitMap, (byte) 0xFF);
+    return allNotNullBitMap;
+  }
+
+  private int readIntLittleEndian(CodecDataInput cdi) {
+    int ch1 = cdi.readUnsignedByte();
+    int ch2 = cdi.readUnsignedByte();
+    int ch3 = cdi.readUnsignedByte();
+    int ch4 = cdi.readUnsignedByte();
+    return ((ch1) + (ch2 << 8) + (ch3 << 16) + (ch4 << 24));
+  }
+
+  private byte[] readBuffer = new byte[8];
+
+  private long readLongLittleEndian(CodecDataInput cdi) {
+    cdi.readFully(readBuffer, 0, 8);
+    return ((readBuffer[0] & 255)
+        + ((readBuffer[1] & 255) << 8)
+        + ((readBuffer[2] & 255) << 16)
+        + ((readBuffer[3] & 255) << 24)
+        + ((long) (readBuffer[4] & 255) << 32)
+        + ((long) (readBuffer[5] & 255) << 40)
+        + ((long) (readBuffer[6] & 255) << 48)
+        + ((long) (readBuffer[7] & 255) << 56));
+  }
+
+  // all data should be read in little endian.
+  public TiChunkColumnVector decodeColumn(CodecDataInput cdi) {
+    int numRows = readIntLittleEndian(cdi);
+    int numNulls = readIntLittleEndian(cdi);
+    assert (numRows >= 0) && (numNulls >= 0);
+    int numNullBitmapBytes = (numRows + 7) / 8;
+    byte[] nullBitMaps = new byte[numNullBitmapBytes];
+    if (numNulls > 0) {
+      cdi.readFully(nullBitMaps);
+    } else {
+      nullBitMaps = setAllNotNull(numNullBitmapBytes);
+    }
+
+    int numFixedBytes = getFixLen();
+    int numDataBytes = numFixedBytes * numRows;
+
+    int numOffsets;
+    long[] offsets = null;
+    // handle var element
+    if (numFixedBytes == -1) {
+      numOffsets = numRows + 1;
+      // read numOffsets * 8 bytes array
+      // and convert bytes to int64
+      offsets = new long[numOffsets];
+      for (int i = 0; i < numOffsets; i++) {
+        offsets[i] = readLongLittleEndian(cdi);
+      }
+      numDataBytes = (int) offsets[numRows];
+    }
+
+    // TODO this costs a lot, we need to find a way to avoid.
+    byte[] dataBuffer = new byte[numDataBytes];
+    cdi.readFully(dataBuffer);
+    ByteBuffer buffer = ByteBuffer.wrap(dataBuffer);
+    buffer.order(LITTLE_ENDIAN);
+    return new TiChunkColumnVector(
+        this, numFixedBytes, numRows, numNulls, nullBitMaps, offsets, buffer);
+  }
   /**
    * decode value from row which is nothing.
    *

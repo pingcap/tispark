@@ -18,6 +18,7 @@
 package com.pingcap.tikv.row;
 
 import com.pingcap.tikv.codec.KeyUtils;
+import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
 import java.sql.Date;
@@ -121,7 +122,7 @@ public class ObjectRowImpl implements Row {
 
   @Override
   public String getString(int pos) {
-    return (String) values[pos];
+    return Converter.convertToString(values[pos]);
   }
 
   @Override
