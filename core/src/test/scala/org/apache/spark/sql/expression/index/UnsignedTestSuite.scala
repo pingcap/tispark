@@ -41,7 +41,6 @@ class UnsignedTestSuite extends BaseTiSparkTest {
 
     tidbStmt.execute("ANALYZE TABLE `unsigned_test`")
     refreshConnections()
-    judge("select * from unsigned_test where c2 < 18446744073709551616")
 
     // TODO: After we fixed unsigned behavior, delete `skipped` setting for this test
     val queries = Seq[String](
