@@ -475,7 +475,7 @@ object SharedSQLContext extends Logging {
 =======
       pdAddresses = getOrElse(prop, PD_ADDRESSES, "127.0.0.1:2379")
       catalogPluginMode =
-        if (TiSparkInfo.SPARK_MAJOR_VERSION == "3.0") getFlagOrTrue(prop, USE_CATALOG_PLUGIN)
+        if (TiSparkInfo.SPARK_MAJOR_VERSION == "3.0") getFlagOrFalse(prop, USE_CATALOG_PLUGIN)
         else false
       dbPrefix = if (catalogPluginMode) "" else getOrElse(prop, DB_PREFIX, "tidb_")
 
