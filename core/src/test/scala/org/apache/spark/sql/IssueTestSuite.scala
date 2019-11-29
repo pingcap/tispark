@@ -337,8 +337,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     tidbStmt.execute(
       "INSERT INTO `tmp_debug` VALUES ('0000-00-00 00:00:00','0000-00-00','0000-00-00 00:00:00')"
     )
-    spark.sql("select * from tmp_debug").collect()
-    judge("select * from tmp_debug")
+    spark.sql("select * from tmp_debug").collect().foreach(println)
   }
 
   // https://github.com/pingcap/tispark/issues/255

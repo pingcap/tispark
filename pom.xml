@@ -95,9 +95,6 @@
     <profiles>
         <profile>
             <id>spark-3.0-scala-2.12</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <properties>
                 <spark.version.compile>3.0.0-preview</spark.version.compile>
                 <scala.binary.version>2.12</scala.binary.version>
@@ -137,6 +134,9 @@
 
         <profile>
             <id>spark-2.3-scala-2.11</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <spark.version.compile>2.3.4</spark.version.compile>
                 <scala.binary.version>2.11</scala.binary.version>

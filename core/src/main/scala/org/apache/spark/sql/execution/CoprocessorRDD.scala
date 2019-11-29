@@ -26,14 +26,13 @@ import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
-import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{Attribute, UnsafeProjection}
+import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.TiRDD
@@ -48,38 +47,10 @@ trait LeafColumnarExecRDD extends LeafExecNode {
   private[execution] val tiRDDs: List[TiRDD]
 
   def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
-<<<<<<< HEAD
-=======
-
-  /*def verboseString(maxFields: Int): String =
-    if (tiRDDs.size > 1) {
-      val b = new mutable.StringBuilder()
-      b.append(s"TiSpark $nodeName on partition table:\n")
-      tiRDDs.zipWithIndex.map {
-        case (_, i) => b.append(s"partition p$i")
-      }
-      b.append(s"with dag request: $dagRequest")
-      b.toString()
-    } else {
-      val engine = if (dagRequest.getUseTiFlash) {
-        "TiFlash"
-      } else {
-        "TiKV"
-      }
-      s"$engine $nodeName{$dagRequest}" +
-        s"${TiUtil.getReqEstCountStr(dagRequest)}"
-    }
-
-<<<<<<< HEAD
-  override def simpleString(maxFields: Int): String = verboseString(maxFields)
->>>>>>> Fix override verboseString and simpleString (#1230)
-=======
-  def simpleString(maxFields: Int): String = verboseString(maxFields)*/
->>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
 }
 
 case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], fetchHandle: Boolean)
-  extends LeafColumnarExecRDD
+    extends LeafColumnarExecRDD
     with ColumnarBatchScan {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
 
@@ -92,29 +63,7 @@ case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], f
   } else {
     "CoprocessorRDD"
   }
-<<<<<<< HEAD
 
-<<<<<<< HEAD
-=======
-  override def simpleString(maxFields: Int): String = verboseString(maxFields)
-=======
->>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
-}
-
-/**
- * HandleRDDExec is used for scanning handles from TiKV as a LeafExecNode in index plan.
- * Providing handle scan via a TiHandleRDD.
- *
- * @param tiRDDs handle source
- */
-case class HandleRDDExec(tiRDDs: List[TiHandleRDD]) extends LeafExecRDD {
-  override val nodeName: String = "HandleRDD"
-
-  override lazy val metrics: Map[String, SQLMetric] = Map(
-    "numOutputRegions" -> SQLMetrics.createMetric(sparkContext, "number of regions")
-  )
-
->>>>>>> Fix override verboseString and simpleString (#1230)
   override protected def doExecute(): RDD[InternalRow] = {
     if (!fetchHandle) {
       WholeStageCodegenExec(this)(codegenStageId = 0).execute()
@@ -127,15 +76,15 @@ case class HandleRDDExec(tiRDDs: List[TiHandleRDD]) extends LeafExecRDD {
 }
 
 /**
-  * RegionTaskExec is used for issuing requests which are generated based
-  * on handles retrieved from [[ColumnarCoprocessorRDD]].
-  *
-  * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
-  * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
-  *
-  * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[ColumnarCoprocessorRDD]] for further details.
-  *
-  */
+ * RegionTaskExec is used for issuing requests which are generated based
+ * on handles retrieved from [[ColumnarCoprocessorRDD]].
+ *
+ * RegionTaskExec will downgrade a index scan plan to table scan plan if handles retrieved from one
+ * region exceed spark.tispark.plan.downgrade.index_threshold in your spark config.
+ *
+ * Refer to code in [[com.pingcap.tispark.TiDBRelation]] and [[ColumnarCoprocessorRDD]] for further details.
+ *
+ */
 case class ColumnarRegionTaskExec(child: SparkPlan,
                                   output: Seq[Attribute],
                                   dagRequest: TiDAGRequest,
@@ -143,7 +92,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
                                   ts: TiTimestamp,
                                   @transient private val session: TiSession,
                                   @transient private val sparkSession: SparkSession)
-  extends UnaryExecNode
+    extends UnaryExecNode
     with ColumnarBatchScan {
 
   override lazy val metrics: Map[String, SQLMetric] = Map(
@@ -174,15 +123,15 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
   }
 
   def fetchTableResultsFromHandles(
-                                    numOutputRows: SQLMetric,
-                                    numHandles: SQLMetric,
-                                    numIndexScanTasks: SQLMetric,
-                                    numDowngradedTasks: SQLMetric,
-                                    numRegions: SQLMetric,
-                                    numIndexRangesScanned: SQLMetric,
-                                    numDowngradeRangesScanned: SQLMetric,
-                                    downgradeDagRequest: TiDAGRequest
-                                  ): (Int, Iterator[InternalRow]) => Iterator[InternalRow] = { (_, iter) =>
+    numOutputRows: SQLMetric,
+    numHandles: SQLMetric,
+    numIndexScanTasks: SQLMetric,
+    numDowngradedTasks: SQLMetric,
+    numRegions: SQLMetric,
+    numIndexRangesScanned: SQLMetric,
+    numDowngradeRangesScanned: SQLMetric,
+    downgradeDagRequest: TiDAGRequest
+  ): (Int, Iterator[InternalRow]) => Iterator[InternalRow] = { (_, iter) =>
     // For each partition, we do some initialization work
     val logger = Logger.getLogger(getClass.getName)
     val session = TiSession.getInstance(tiConf)
@@ -270,7 +219,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
       def feedBatch(): TLongArrayList = {
         val handles = new array.TLongArrayList(512)
         while (handleIterator.hasNext &&
-          handles.size() < batchSize) {
+               handles.size() < batchSize) {
           handles.add(handleIterator.next())
         }
         handles
@@ -415,22 +364,5 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
     ).invoke()
   }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-  override def verboseString: String =
-    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
-
-  override def simpleString: String = verboseString
-
   override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(inputRDD())
 }
-=======
-  override def verboseString(maxFields: Int): String =
-=======
-  /*def verboseString(maxFields: Int): String =
->>>>>>> Compile with spark-2.4 and run with spark-3.0 (#1233)
-    s"TiSpark $nodeName{downgradeThreshold=$downgradeThreshold,downgradeFilter=${dagRequest.getFilters}"
-
-  def simpleString(maxFields: Int): String = verboseString(maxFields)*/
-}
->>>>>>> Fix override verboseString and simpleString (#1230)
