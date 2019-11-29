@@ -348,6 +348,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             bin/tidb-server --store=tikv --path="127.0.0.1:2379" --config=go/src/github.com/pingcap/tispark/config/tidb.toml &>tidb.log &
                             sleep 60
                             """
+<<<<<<< HEAD
 
                             if (TEST_TIFLASH != "false") {
                                 sh """
@@ -361,6 +362,10 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             }
 
                             timeout(120) {
+=======
+    
+                            timeout(360) {
+>>>>>>> increate ci test timeout from 2hour to 3hour (#1260)
                                 run_test(chunk_suffix)
                             }
                         } catch (err) {
