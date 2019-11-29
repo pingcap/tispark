@@ -17,6 +17,8 @@
 
 package com.pingcap.tikv.types;
 
+import static org.junit.Assert.assertEquals;
+
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.types.DataType.EncodeType;
@@ -26,12 +28,11 @@ import org.junit.Test;
 public class DecimalTypeTest {
   @Test
   public void encodeTest() {
-    DataType type = DecimalType.DECIMAL;
+    DataType type = new DecimalType(MySQLType.TypeNewDecimal, 6, 2);
     BigDecimal originalVal = BigDecimal.valueOf(6.66);
-    // TODO(Zhexuan Yang) DecimalType.DECIMAL has unspecified len which cannot be used in encode.
-    // byte[] encodedKey = encode(originalVal, EncodeType.VALUE, type);
-    // Object val = decode(encodedKey, type);
-    // assertEquals(originalVal, val);
+    byte[] encodedKey = encode(originalVal, EncodeType.VALUE, type);
+    Object val = decode(encodedKey, type);
+    assertEquals(originalVal, val);
   }
 
   private static byte[] encode(Object val, EncodeType encodeType, DataType type) {
