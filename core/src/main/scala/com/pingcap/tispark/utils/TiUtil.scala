@@ -26,8 +26,8 @@ import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
-import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
-import org.apache.spark.sql.Row
+import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiSparkInfo, TiSparkVersion}
+import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
@@ -251,6 +251,18 @@ object TiUtil {
       tiConf.setDBPrefix(conf.get(TiConfigConst.DB_PREFIX))
     }
     tiConf
+  }
+
+  def registerUDFs(sparkSession: SparkSession): Unit = {
+    sparkSession.udf.register("ti_version", () => {
+      s"${TiSparkVersion.version}\n${TiSparkInfo.info}"
+    })
+    sparkSession.udf.register(
+      "time_to_str",
+      (value: Long, frac: Int) => Converter.convertDurationToStr(value, frac)
+    )
+    sparkSession.udf
+      .register("str_to_time", (value: String) => Converter.convertStrToDuration(value))
   }
 
   def getReqEstCountStr(req: TiDAGRequest): String =
