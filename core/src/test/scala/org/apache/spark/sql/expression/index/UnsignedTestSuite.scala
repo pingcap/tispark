@@ -38,8 +38,10 @@ class UnsignedTestSuite extends BaseTiSparkTest {
         |  (0,18446744073709551615,-9223372036854775808),
         |  (18446744073709551615,18446744073709551615,9223372036854775807)""".stripMargin
     )
+
     tidbStmt.execute("ANALYZE TABLE `unsigned_test`")
     refreshConnections()
+
     // TODO: After we fixed unsigned behavior, delete `skipped` setting for this test
     val queries = Seq[String](
       "select * from unsigned_test",
@@ -112,6 +114,7 @@ class UnsignedTestSuite extends BaseTiSparkTest {
     )
     assert(queries.size == answers.size)
     for (i <- queries.indices) {
+      println(queries(i))
       explainAndRunTest(queries(i), rJDBC = answers(i), skipTiDB = true)
     }
   }

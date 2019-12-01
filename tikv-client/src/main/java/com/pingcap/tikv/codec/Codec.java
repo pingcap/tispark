@@ -415,7 +415,20 @@ public class Codec {
      * @param cdo cdo is destination data.
      * @param dec is decimal value that will be written into cdo.
      */
-    static void writeDecimal(CodecDataOutput cdo, MyDecimal dec) {
+    public static void writeDecimal(
+        CodecDataOutput cdo, MyDecimal dec, int precision, int fraction) {
+      int[] data = dec.toBin(precision, fraction);
+      cdo.writeByte(precision);
+      cdo.writeByte(fraction);
+      for (int aData : data) {
+        cdo.writeByte(aData & 0xFF);
+      }
+    }
+
+    //  TODO remove this once we refactor unit test CodecTest
+    public static void writeDecimal(CodecDataOutput cdo, BigDecimal val) {
+      MyDecimal dec = new MyDecimal();
+      dec.fromString(val.toPlainString());
       int[] data = dec.toBin(dec.precision(), dec.frac());
       cdo.writeByte(dec.precision());
       cdo.writeByte(dec.frac());
@@ -424,26 +437,10 @@ public class Codec {
       }
     }
 
-    public static void writeDecimalFully(CodecDataOutput cdo, BigDecimal val) {
+    public static void writeDecimalFully(
+        CodecDataOutput cdo, MyDecimal val, int precision, int fraction) {
       cdo.writeByte(DECIMAL_FLAG);
-      writeDecimal(cdo, val);
-    }
-
-    public static void writeDecimalFully(CodecDataOutput cdo, MyDecimal val) {
-      cdo.writeByte(DECIMAL_FLAG);
-      writeDecimal(cdo, val);
-    }
-
-    /**
-     * Encoding a double value to byte buffer
-     *
-     * @param cdo For outputting data in bytes array
-     * @param val The data to encode
-     */
-    public static void writeDecimal(CodecDataOutput cdo, BigDecimal val) {
-      MyDecimal dec = new MyDecimal();
-      dec.fromString(val.toPlainString());
-      writeDecimal(cdo, dec);
+      writeDecimal(cdo, val, precision, fraction);
     }
   }
 

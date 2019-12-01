@@ -28,9 +28,9 @@ import org.junit.Test;
 public class DecimalTypeTest {
   @Test
   public void encodeTest() {
-    DataType type = DecimalType.DECIMAL;
+    DataType type = new DecimalType(MySQLType.TypeNewDecimal, 6, 2);
     BigDecimal originalVal = BigDecimal.valueOf(6.66);
-    byte[] encodedKey = encode(originalVal, EncodeType.KEY, type);
+    byte[] encodedKey = encode(originalVal, EncodeType.VALUE, type);
     Object val = decode(encodedKey, type);
     assertEquals(originalVal, val);
   }

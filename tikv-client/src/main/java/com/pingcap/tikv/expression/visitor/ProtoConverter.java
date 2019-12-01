@@ -280,6 +280,12 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     if (node.getValue() == null) {
       builder.setTp(ExprType.Null);
     } else {
+      // this is useful since SupportedExpressionValidator will catch this exception
+      // can mark it cannot be pushed down to coprocessor.
+      if (node.isOverflowed()) {
+        throw new UnsupportedOperationException(
+            "overflowed value cannot be pushed down to coprocessor");
+      }
       builder.setTp(type.getProtoExprType());
       CodecDataOutput cdo = new CodecDataOutput();
       type.encode(cdo, EncodeType.PROTO, node.getValue());

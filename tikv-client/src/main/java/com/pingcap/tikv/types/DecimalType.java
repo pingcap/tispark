@@ -127,28 +127,27 @@ public class DecimalType extends DataType {
 
   @Override
   protected void encodeKey(CodecDataOutput cdo, Object value) {
-    if (value instanceof MyDecimal) {
-      DecimalCodec.writeDecimalFully(cdo, (MyDecimal) value);
+    if (value instanceof BigDecimal) {
+      MyDecimal dec = new MyDecimal();
+      dec.fromString(((BigDecimal) value).toPlainString());
+      DecimalCodec.writeDecimalFully(cdo, dec, (int) this.length, this.decimal);
     } else {
-      BigDecimal val = Converter.convertToBigDecimal(value);
-      DecimalCodec.writeDecimalFully(cdo, val);
+      DecimalCodec.writeDecimalFully(cdo, (MyDecimal) value, (int) this.length, this.decimal);
     }
   }
 
   @Override
   protected void encodeValue(CodecDataOutput cdo, Object value) {
-    if (value instanceof MyDecimal) {
-      DecimalCodec.writeDecimalFully(cdo, (MyDecimal) value);
-    } else {
-      BigDecimal val = Converter.convertToBigDecimal(value);
-      DecimalCodec.writeDecimalFully(cdo, val);
-    }
+    // we can simply encodeKey here since the encoded value of decimal is also need comparable.
+    encodeKey(cdo, value);
   }
 
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     BigDecimal val = Converter.convertToBigDecimal(value);
-    DecimalCodec.writeDecimal(cdo, val);
+    MyDecimal dec = new MyDecimal();
+    dec.fromString(val.toPlainString());
+    DecimalCodec.writeDecimal(cdo, dec, dec.precision(), dec.frac());
   }
 
   @Override
