@@ -249,6 +249,13 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       }
     }
 
+    session.getRegionManager().onRegionStale(region.getId());
+    TiRegion newRegion = session.getRegionManager().getRegionById(region.getId());
+
+    if (!newRegion.equals(region)) {
+      return getTiFlashStore(newRegion);
+    }
+
     throw new TiClientInternalException("cannot find valid tiflash replica");
   }
 
