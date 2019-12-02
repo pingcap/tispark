@@ -42,45 +42,6 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
 
   protected val logger: Logger = log
 
-  override protected def getPartitions: Array[Partition] = {
-    val partitions = super.getPartitions
-
-    if (!dagRequest.getUseTiFlash)
-      return partitions
-
-    //TODO: the region cache logic need rewrite.
-    //https://github.com/pingcap/tispark/issues/1170
-    val regionMgr = session.getRegionManager
-    partitions.map(p => {
-      val tiPartition = p.asInstanceOf[TiPartition]
-      val tasks = tiPartition.tasks
-        .map(task => {
-          val learnerList = task.getRegion.getLearnerList
-          val learnerStore = learnerList
-            .collectFirst {
-              case peer =>
-                val store = regionMgr.getStoreById(peer.getStoreId)
-                if (store.getLabelsList
-                      .exists(
-                        label =>
-                          label.getKey == tiConf.getTiFlashLabelKey && label.getValue == tiConf.getTiFlashLabelValue
-                      )) {
-                  store
-                } else {
-                  null
-                }
-            }
-            .getOrElse(
-              throw new Exception(
-                "No TiFlash store [" + tiConf.getTiFlashLabelKey + ":" + tiConf.getTiFlashLabelValue + "] found for region " + task.getRegion.getId
-              )
-            )
-          RegionTask.newInstance(task.getRegion, learnerStore, List.empty[KeyRange])
-        })
-      new TiPartition(tiPartition.idx, tasks, tiPartition.appId)
-    })
-  }
-
   // cache invalidation call back function
   // used for driver to update PD cache
   private val callBackFunc = CacheInvalidateListener.getInstance()

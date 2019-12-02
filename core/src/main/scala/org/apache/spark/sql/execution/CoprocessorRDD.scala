@@ -59,7 +59,7 @@ trait LeafColumnarExecRDD extends LeafExecNode {
       b.append(s"with dag request: $dagRequest")
       b.toString()
     } else {
-      val engine = if (dagRequest.getUseTiFlash) {
+      val engine = if (dagRequest.isUseTiFlash) {
         "TiFlash"
       } else {
         "TiKV"

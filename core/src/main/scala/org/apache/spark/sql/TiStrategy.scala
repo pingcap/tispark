@@ -103,6 +103,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def isEnableChunk(): Boolean =
     sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "true").toLowerCase.toBoolean
 
+  private def isUseTiFlash(): Boolean =
+    sqlConf.getConfString(TiConfigConst.USE_TIFLASH, "false").toLowerCase.toBoolean
+
   private def timeZoneOffsetInSeconds(): Int = {
     val tz = DateTimeZone.getDefault
     val instant = DateTime.now.getMillis
@@ -300,7 +303,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     scanBuilder.buildTiDAGReq(
       allowIndexRead(),
-      tiContext.tiConf.isUseTiFlash,
+      isUseTiFlash(),
       tiColumns.map { _.getColumnInfo }.asJava,
       tiFilters.asJava,
       source.table,

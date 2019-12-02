@@ -22,6 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Metapb;
+import org.tikv.kvproto.Metapb.Peer;
+import org.tikv.kvproto.Metapb.Store;
+import org.tikv.kvproto.Metapb.StoreLabel;
 
 public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   private ExecutorCompletionService<Iterator<SelectResponse>> streamingService;
@@ -35,14 +38,27 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
   protected EncodeType encodeType;
 
+  private StoreType storeType;
+
+  public enum StoreType {
+    TiKV,
+    TiFlash
+  }
+
   DAGIterator(
       DAGRequest req,
       List<RangeSplitter.RegionTask> regionTasks,
       TiSession session,
       SchemaInfer infer,
-      PushDownType pushDownType) {
+      PushDownType pushDownType,
+      boolean isUseTiFlash) {
     super(req, regionTasks, session, infer);
     this.pushDownType = pushDownType;
+    if (isUseTiFlash) {
+      this.storeType = StoreType.TiFlash;
+    } else {
+      this.storeType = StoreType.TiKV;
+    }
     switch (pushDownType) {
       case NORMAL:
         dagService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
@@ -184,6 +200,10 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       TiRegion region = task.getRegion();
       Metapb.Store store = task.getStore();
 
+      if (storeType == StoreType.TiFlash) {
+        store = getTiFlashStore(region);
+      }
+
       try {
         RegionStoreClient client = session.getRegionStoreClientBuilder().build(region, store);
         Collection<RangeSplitter.RegionTask> tasks =
@@ -216,6 +236,20 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     }
 
     return SelectResponse.newBuilder().addAllChunks(resultChunk).setEncodeType(encodeType).build();
+  }
+
+  private Store getTiFlashStore(TiRegion region) {
+    for (Peer peer : region.getLearnerList()) {
+      Store s = session.getRegionManager().getStoreById(peer.getStoreId());
+      for (StoreLabel label : s.getLabelsList()) {
+        if (label.getKey().equals(session.getConf().getTiFlashLabelKey())
+            && label.getValue().equals(session.getConf().getTiFlashLabelValue())) {
+          return s;
+        }
+      }
+    }
+
+    throw new TiClientInternalException("cannot find valid tiflash replica");
   }
 
   private Iterator<SelectResponse> processByStreaming(RangeSplitter.RegionTask regionTask) {
