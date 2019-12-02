@@ -43,6 +43,8 @@ import org.tikv.kvproto.Metapb.StoreState;
 @SuppressWarnings("UnstableApiUsage")
 public class RegionManager {
   private static final Logger logger = Logger.getLogger(RegionManager.class);
+  // TODO: the region cache logic need rewrite.
+  // https://github.com/pingcap/tispark/issues/1170
   private final RegionCache cache;
 
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;

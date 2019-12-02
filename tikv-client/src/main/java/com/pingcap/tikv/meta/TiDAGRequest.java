@@ -158,7 +158,7 @@ public class TiDAGRequest implements Serializable {
     this.useTiFlash = useTiFlash;
   }
 
-  public boolean getUseTiFlash() {
+  public boolean isUseTiFlash() {
     return useTiFlash;
   }
 
