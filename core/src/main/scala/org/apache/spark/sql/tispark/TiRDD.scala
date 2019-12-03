@@ -16,10 +16,11 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.operation.SchemaInfer
 import com.pingcap.tikv.operation.transformer.RowTransformer
-import com.pingcap.tikv.types.DataType
+import com.pingcap.tikv.types.{Converter, DataType}
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.listener.CacheInvalidateListener
@@ -57,6 +58,13 @@ class TiRDD(val dagRequest: TiDAGRequest,
   private val callBackFunc = CacheInvalidateListener.getInstance()
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = new Iterator[Row] {
+    if (!tiConf.checkLocalTimeZone()) {
+      throw new TiInternalException(
+        "timezone are different! dirver: " + tiConf.getLocalTimeZone + " executor:" + Converter.getLocalTimezone +
+        " please set spark.driver.extraJavaOptions=-Duser.timezone=GMT+8 and spark.executor.extraJavaOptions -Duser.timezone=GMT+8"
+      )
+    }
+
     dagRequest.resolve()
 
     // bypass, sum return a long type

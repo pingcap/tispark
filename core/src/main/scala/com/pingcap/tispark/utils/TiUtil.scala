@@ -254,8 +254,10 @@ object TiUtil {
   }
 
   def registerUDFs(sparkSession: SparkSession): Unit = {
+    val timeZoneStr: String = "TimeZone: " + Converter.getLocalTimezone.toString
+
     sparkSession.udf.register("ti_version", () => {
-      s"${TiSparkVersion.version}\n${TiSparkInfo.info}"
+      s"${TiSparkVersion.version}\n${TiSparkInfo.info}\n$timeZoneStr"
     })
     sparkSession.udf.register(
       "time_to_str",
