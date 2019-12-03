@@ -15,7 +15,9 @@
 
 package org.apache.spark.sql.tispark
 
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.types.Converter
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
@@ -50,6 +52,13 @@ class TiHandleRDD(val dagRequest: TiDAGRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] =
     new Iterator[Row] {
+      if (!tiConf.getLocalTimeZone.equals(Converter.getLocalTimezone)) {
+        throw new TiInternalException(
+          "timezone are different! dirver: " + tiConf.getLocalTimeZone + " executor:" + Converter.getLocalTimezone +
+            " please set user.timezone in spark.driver.extraJavaOptions and spark.executor.extraJavaOptions"
+        )
+      }
+
       dagRequest.resolve()
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSessionCache.getSession(tiConf)
