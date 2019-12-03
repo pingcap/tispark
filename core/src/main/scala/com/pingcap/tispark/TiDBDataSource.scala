@@ -15,6 +15,7 @@
 
 package com.pingcap.tispark
 
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, TiContext}
@@ -42,7 +43,13 @@ class TiDBDataSource
     val tiContext = new TiContext(sqlContext.sparkSession, Some(options))
     TiSparkConnectorUtils.checkVersionAndEnablePushdown(sqlContext.sparkSession, tiContext)
     val ts = tiContext.tiSession.createTxnClient().getTimestamp
-    TiDBRelation(tiContext.tiSession, options.tiTableRef, tiContext.meta, ts, Some(options))(
+    TiDBRelation(
+      tiContext.tiSession,
+      TiUtil.getTiTableRef(tiContext.tiConf, options),
+      tiContext.meta,
+      ts,
+      Some(options)
+    )(
       sqlContext
     )
   }
