@@ -78,10 +78,6 @@ public class TiConfiguration implements Serializable {
     return localTimeZone;
   }
 
-  public boolean checkLocalTimeZone() {
-    return Converter.getLocalTimezone().equals(this.localTimeZone);
-  }
-
   public int getTimeout() {
     return timeout;
   }
