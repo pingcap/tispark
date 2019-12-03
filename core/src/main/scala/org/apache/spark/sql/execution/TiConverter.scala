@@ -17,21 +17,13 @@ package org.apache.spark.sql.execution
 
 import java.util.logging.Logger
 
-import com.google.common.primitives.UnsignedLong
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.types._
-import com.pingcap.tispark.TiBatchWrite.TiRow
 import org.apache.spark.sql
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{DataTypes, Decimal}
 
 object TiConverter {
   type TiDataType = com.pingcap.tikv.types.DataType
   type SparkSQLDataType = org.apache.spark.sql.types.DataType
-
-  private final val logger = Logger.getLogger(getClass.getName)
-  private final val MAX_PRECISION = sql.types.DecimalType.MAX_PRECISION
 
   def fromSparkType(tp: SparkSQLDataType): TiDataType =
     // TODO: review type system
