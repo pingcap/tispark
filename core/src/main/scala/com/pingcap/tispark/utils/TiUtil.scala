@@ -209,9 +209,6 @@ object TiUtil {
       .register("str_to_time", (value: String) => Converter.convertStrToDuration(value))
   }
 
-  def getTiTableRef(conf: TiConfiguration, options: TiDBOptions): TiTableReference =
-    TiTableReference(conf.getDBPrefix + options.database, options.table)
-
   def getReqEstCountStr(req: TiDAGRequest): String =
     if (req.getEstimatedCount > 0) {
       import java.text.DecimalFormat
