@@ -19,7 +19,6 @@ import java.util.Locale
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 
@@ -83,7 +82,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val url: String =
     s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=false&rewriteBatchedStatements=true"
 
-  def getTiTableRef(conf: TiConfiguration): TiTableReference = TiUtil.getTiTableRef(conf, this)
+  def getTiTableRef(conf: TiConfiguration): TiTableReference =
+    TiTableReference(conf.getDBPrefix + database, table)
 
 }
 
