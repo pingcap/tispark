@@ -80,11 +80,6 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // ------------------------------------------------------------
   val url: String =
     s"jdbc:mysql://address=(protocol=tcp)(host=$address)(port=$port)/?user=$user&password=$password&useSSL=false&rewriteBatchedStatements=true"
-
-  val tiTableRef: TiTableReference = {
-    val dbPrefix = parameters.getOrElse(TiConfigConst.DB_PREFIX, "")
-    TiTableReference(dbPrefix + database, table)
-  }
 }
 
 object TiDBOptions {
