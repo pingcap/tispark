@@ -15,8 +15,10 @@
 package com.pingcap.tikv.columnar;
 
 import com.google.common.primitives.UnsignedLong;
+import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.MyDecimal;
 import com.pingcap.tikv.types.*;
+import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
@@ -228,10 +230,21 @@ public class TiChunkColumnVector extends TiColumnVector {
     return new String(getRawBinary(start + 8, end));
   }
 
+  private String getJsonString(int rowId) {
+    long start = this.offsets[rowId];
+    long end = this.offsets[rowId + 1];
+    return JsonUtils.parseJson(new CodecDataInput(getRawBinary(start, end))).toString();
+  }
+
   public String getUTF8String(int rowId) {
     if (type instanceof EnumType) {
       return getEnumString(rowId);
     }
+
+    if (type instanceof JsonType) {
+      return getJsonString(rowId);
+    }
+
     return new String(getBinary(rowId));
   }
 
