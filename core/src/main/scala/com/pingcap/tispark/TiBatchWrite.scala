@@ -26,7 +26,7 @@ import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
 import com.pingcap.tikv.types.IntegerType
-import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
+import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
 import com.pingcap.tikv.{TiBatchWriteUtils, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
 import com.pingcap.tispark.utils.TiUtil
@@ -124,7 +124,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     // initialize
     tiConf = tiContext.tiConf
     tiSession = tiContext.tiSession
-    tiTableRef = options.tiTableRef
+    tiTableRef = options.getTiTableRef(tiConf)
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
     tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
 
