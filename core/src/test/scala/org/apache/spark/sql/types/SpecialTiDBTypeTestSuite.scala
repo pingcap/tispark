@@ -101,9 +101,7 @@ class SpecialTiDBTypeTestSuite extends BaseTiSparkTest {
     judge("select * from enum_t where priority = 'High'")
   }
 
-  // TODO, getting json value is not implemented correctly.
-  // https://github.com/pingcap/tispark/issues/1256
-  ignore("adding json support") {
+  test("adding json support") {
     tidbStmt.execute("drop table if exists t")
     tidbStmt.execute("create table t(json_doc json)")
     tidbStmt.execute(
