@@ -21,7 +21,7 @@ import org.apache.spark.internal.Logging
 import org.scalatest._
 import org.slf4j.Logger
 
-abstract class SparkFunSuite extends FunSuite with BeforeAndAfterAll with Logging {
+abstract class SparkFunSuite extends FunSuite with Logging {
   protected val logger: Logger = log
 
   // helper function

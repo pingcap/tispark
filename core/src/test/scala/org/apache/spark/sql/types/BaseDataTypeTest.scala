@@ -39,6 +39,12 @@ trait BaseDataTypeTest extends BaseTiSparkTest {
     runTest(query)
   }
 
-  // initialize test framework
-  SharedSQLContext.init()
+  def check(): Unit
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    check()
+  }
+
+  init()
 }
