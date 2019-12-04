@@ -212,7 +212,7 @@ public class Converter {
   static final DateTimeFormatter UTC_TIME_FORMATTER =
       DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC);
 
-  static DateTimeZone getLocalTimezone() {
+  public static DateTimeZone getLocalTimezone() {
     return localTimeZone;
   }
 

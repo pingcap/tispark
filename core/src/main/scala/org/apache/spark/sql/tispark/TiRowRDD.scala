@@ -17,8 +17,9 @@ package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
 import com.pingcap.tikv.columnar.TiColumnarBatchHelper
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
+import com.pingcap.tikv.types.Converter
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.SparkSession
@@ -27,7 +28,6 @@ import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 import org.slf4j.Logger
-import org.tikv.kvproto.Coprocessor.KeyRange
 
 import scala.collection.JavaConversions._
 
@@ -48,6 +48,13 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
     new Iterator[ColumnarBatch] {
+      if (!tiConf.getLocalTimeZone.equals(Converter.getLocalTimezone)) {
+        throw new TiInternalException(
+          "timezone are different! dirver: " + tiConf.getLocalTimeZone + " executor:" + Converter.getLocalTimezone +
+            " please set user.timezone in spark.driver.extraJavaOptions and spark.executor.extraJavaOptions"
+        )
+      }
+
       dagRequest.resolve()
 
       private val tiPartition = split.asInstanceOf[TiPartition]

@@ -16,13 +16,8 @@
 package com.pingcap.tikv.operation;
 
 import com.pingcap.tikv.expression.ByItem;
-import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiDAGRequest;
-import com.pingcap.tikv.operation.transformer.Cast;
-import com.pingcap.tikv.operation.transformer.NoOp;
-import com.pingcap.tikv.operation.transformer.RowTransformer;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.util.Pair;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +31,6 @@ import java.util.List;
  */
 public class SchemaInfer {
   private List<DataType> types;
-  private RowTransformer rt;
 
   public static SchemaInfer create(TiDAGRequest dagRequest) {
     return create(dagRequest, false);
@@ -50,37 +44,6 @@ public class SchemaInfer {
     types = new ArrayList<>();
     dagRequest.init(readHandle);
     extractFieldTypes(dagRequest, readHandle);
-    buildTransform(dagRequest);
-  }
-
-  private void buildTransform(TiDAGRequest dagRequest) {
-    RowTransformer.Builder rowTrans = RowTransformer.newBuilder();
-    // Update:
-    // Switching to DAG mode will eliminate first blob
-    // TODO:check correctness of ↑
-    // 1. if group by is empty, first column should be "single group"
-    // which is a string
-    // 2. if multiple group by items present, it is wrapped inside
-    // a byte array. we make a multiple decoding
-    // 3. for no aggregation case, make only projected columns
-
-    // append aggregates if present
-    if (dagRequest.hasPushDownAggregate()) {
-      for (Pair<Expression, DataType> pair : dagRequest.getPushDownAggregatePairs()) {
-        rowTrans.addProjection(new Cast(pair.second));
-      }
-      if (dagRequest.hasPushDownGroupBy()) {
-        for (ByItem byItem : dagRequest.getGroupByItems()) {
-          rowTrans.addProjection(new NoOp(dagRequest.getExpressionType(byItem.getExpr())));
-        }
-      }
-    } else {
-      for (Expression field : dagRequest.getFields()) {
-        rowTrans.addProjection(new NoOp(dagRequest.getExpressionType(field)));
-      }
-    }
-    rowTrans.addSourceFieldTypes(types);
-    rt = rowTrans.build();
   }
 
   /**
@@ -116,9 +79,5 @@ public class SchemaInfer {
 
   public List<DataType> getTypes() {
     return types;
-  }
-
-  public RowTransformer getRowTransformer() {
-    return this.rt;
   }
 }

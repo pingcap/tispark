@@ -1,6 +1,5 @@
 /*
- *
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,19 +11,16 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package com.pingcap.tikv.operation.transformer;
+package com.pingcap.tikv.exception;
 
-import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.types.DataType;
-import java.util.List;
+public class TiInternalException extends RuntimeException {
+  public TiInternalException(Exception e) {
+    super(e);
+  }
 
-public interface Projection {
-  void set(Object value, Row row, int pos);
-
-  int size();
-
-  List<DataType> getTypes();
+  public TiInternalException(String msg) {
+    super(msg);
+  }
 }
