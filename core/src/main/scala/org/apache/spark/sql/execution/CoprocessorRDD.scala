@@ -50,8 +50,7 @@ trait LeafColumnarExecRDD extends LeafExecNode {
 }
 
 case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], fetchHandle: Boolean)
-    extends LeafColumnarExecRDD
-    with ColumnarBatchScan {
+    extends LeafColumnarExecRDD {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
 
   private[execution] val internalRDDs: List[RDD[InternalRow]] = tiRDDs
@@ -64,15 +63,17 @@ case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], f
     "CoprocessorRDD"
   }
 
+  override val supportsColumnar: Boolean = !fetchHandle
+
   override protected def doExecute(): RDD[InternalRow] = {
-    if (!fetchHandle) {
-      WholeStageCodegenExec(this)(codegenStageId = 0).execute()
-    } else {
-      sparkContext.union(internalRDDs)
-    }
+    sparkContext.union(internalRDDs)
   }
 
-  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
+  protected override def doExecuteColumnar(): RDD[ColumnarBatch] = {
+    sparkContext.union(internalRDDs.map(rdd => rdd.asInstanceOf[RDD[ColumnarBatch]]))
+  }
+
+//  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
 }
 
 /**
@@ -92,8 +93,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
                                   ts: TiTimestamp,
                                   @transient private val session: TiSession,
                                   @transient private val sparkSession: SparkSession)
-    extends UnaryExecNode
-    with ColumnarBatchScan {
+    extends UnaryExecNode {
 
   override lazy val metrics: Map[String, SQLMetric] = Map(
     "scanTime" -> SQLMetrics.createTimingMetric(sparkContext, "scan time"),
@@ -118,8 +118,16 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
   // used for driver to update PD cache
   private val callBackFunc: CacheInvalidateListener = CacheInvalidateListener.getInstance()
 
+  override val supportsColumnar: Boolean = true
+
+  override protected def doExecuteColumnar(): RDD[ColumnarBatch] = {
+    inputRDD().asInstanceOf[RDD[ColumnarBatch]]
+  }
+
   override protected def doExecute(): RDD[InternalRow] = {
-    WholeStageCodegenExec(this)(codegenStageId = 0).execute()
+    throw new UnsupportedOperationException(
+      "ColumnarRegionTaskExec does not support row-wise execution"
+    )
   }
 
   def fetchTableResultsFromHandles(
@@ -363,6 +371,4 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
       )
     ).invoke()
   }
-
-  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(inputRDD())
 }

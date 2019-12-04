@@ -184,7 +184,7 @@ public class TiColumnVectorAdapter extends ColumnVector {
    * @return child [[ColumnVector]] at the given ordinal.
    */
   @Override
-  protected ColumnVector getChild(int ordinal) {
+  public ColumnVector getChild(int ordinal) {
     throw new UnsupportedOperationException("TiColumnVectorAdapter is not supported this method");
   }
 
