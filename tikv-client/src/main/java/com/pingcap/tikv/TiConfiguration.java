@@ -16,6 +16,7 @@
 package com.pingcap.tikv;
 
 import com.pingcap.tikv.pd.PDUtils;
+import com.pingcap.tikv.types.Converter;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import org.joda.time.DateTimeZone;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 
@@ -54,6 +56,7 @@ public class TiConfiguration implements Serializable {
   private boolean truncateAsWarning = DEF_TRUNCATE_AS_WARNING;
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
   private List<URI> pdAddrs = new ArrayList<>();
+  private DateTimeZone localTimeZone = Converter.getLocalTimezone();
   private int indexScanBatchSize = DEF_INDEX_SCAN_BATCH_SIZE;
   private int indexScanConcurrency = DEF_INDEX_SCAN_CONCURRENCY;
   private int tableScanConcurrency = DEF_TABLE_SCAN_CONCURRENCY;
@@ -80,6 +83,10 @@ public class TiConfiguration implements Serializable {
     String[] addrs = addressStr.split(",");
     Arrays.sort(addrs);
     return PDUtils.addrsToUrls(addrs);
+  }
+
+  public DateTimeZone getLocalTimeZone() {
+    return localTimeZone;
   }
 
   public int getTimeout() {
