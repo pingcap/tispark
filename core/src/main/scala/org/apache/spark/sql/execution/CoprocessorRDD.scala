@@ -72,8 +72,6 @@ case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], f
   protected override def doExecuteColumnar(): RDD[ColumnarBatch] = {
     sparkContext.union(internalRDDs.map(rdd => rdd.asInstanceOf[RDD[ColumnarBatch]]))
   }
-
-//  override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
 }
 
 /**
