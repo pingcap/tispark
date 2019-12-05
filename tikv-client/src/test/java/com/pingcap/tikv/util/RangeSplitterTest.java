@@ -47,19 +47,6 @@ public class RangeSplitterTest {
     }
 
     @Override
-    public Pair<TiRegion, Metapb.Store> getRegionStorePairByRegionId(long id) {
-      Map.Entry<KeyRange, TiRegion> entry =
-          mockRegionMap
-              .entrySet()
-              .stream()
-              .filter(e -> e.getValue().getId() == id)
-              .findFirst()
-              .get();
-      return Pair.create(
-          entry.getValue(), Metapb.Store.newBuilder().setId(entry.getValue().getId()).build());
-    }
-
-    @Override
     public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(ByteString key) {
       for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
         KeyRange range = entry.getKey();

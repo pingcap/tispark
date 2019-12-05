@@ -59,12 +59,7 @@ trait LeafColumnarExecRDD extends LeafExecNode {
       b.append(s"with dag request: $dagRequest")
       b.toString()
     } else {
-      val engine = if (dagRequest.isUseTiFlash) {
-        "TiFlash"
-      } else {
-        "TiKV"
-      }
-      s"$engine $nodeName{$dagRequest}" +
+      s"${dagRequest.getStoreType.name()} $nodeName{$dagRequest}" +
         s"${TiUtil.getReqEstCountStr(dagRequest)}"
     }
 
@@ -285,7 +280,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
         // TODO: Maybe we can optimize splitRangeByRegion if we are sure the key ranges are in the same region?
         val downgradeTasks = RangeSplitter
           .newSplitter(session.getRegionManager)
-          .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges))
+          .splitRangeByRegion(KeyRangeUtils.mergeSortedRanges(taskRanges), dagRequest.getStoreType)
 
         downgradeTasks.foreach { task =>
           val downgradeTaskRanges = task.getRanges

@@ -25,6 +25,7 @@ import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.region.TiStoreType;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.io.Serializable;
@@ -207,9 +208,10 @@ public class RangeSplitter {
    * Split key ranges into corresponding region tasks and group by their region id
    *
    * @param keyRanges List of key ranges
+   * @param storeType Store type, null or TiKV for TiKV(leader), otherwise TiFlash(learner)
    * @return List of RegionTask, each task corresponds to a different region.
    */
-  public List<RegionTask> splitRangeByRegion(List<KeyRange> keyRanges) {
+  public List<RegionTask> splitRangeByRegion(List<KeyRange> keyRanges, TiStoreType storeType) {
     if (keyRanges == null || keyRanges.size() == 0) {
       return ImmutableList.of();
     }
@@ -221,7 +223,7 @@ public class RangeSplitter {
 
     while (true) {
       Pair<TiRegion, Metapb.Store> regionStorePair =
-          regionManager.getRegionStorePairByKey(range.getStart());
+          regionManager.getRegionStorePairByKey(range.getStart(), storeType);
 
       if (regionStorePair == null) {
         throw new NullPointerException(
@@ -261,5 +263,15 @@ public class RangeSplitter {
           resultBuilder.add(new RegionTask(regionStorePair.first, regionStorePair.second, v));
         });
     return resultBuilder.build();
+  }
+
+  /**
+   * Split key ranges into corresponding region tasks and group by their region id
+   *
+   * @param keyRanges List of key ranges
+   * @return List of RegionTask, each task corresponds to a different region.
+   */
+  public List<RegionTask> splitRangeByRegion(List<KeyRange> keyRanges) {
+    return splitRangeByRegion(keyRanges, TiStoreType.TiKV);
   }
 }
