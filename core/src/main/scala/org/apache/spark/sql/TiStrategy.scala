@@ -27,7 +27,7 @@ import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.TiConverter._
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.{TiConverter, TiUtil}
 import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
@@ -309,6 +309,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val request = new TiDAGRequest(pushDownType(), timeZoneOffsetInSeconds())
     request.setLimit(limit)
     addSortOrder(request, sortOrder)
+
     pruneFilterProject(projectList, filterPredicates, source, request)
   }
 
@@ -381,7 +382,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
     }
     if (refinedSortOrder.exists(
-          order => !TiUtil.isSupportedBasicExpression(order.child, source, blacklist)
+          order => !TiUtil.isSupportedOrderBy(order.child, source, blacklist)
         )) {
       Option.empty
     } else {
