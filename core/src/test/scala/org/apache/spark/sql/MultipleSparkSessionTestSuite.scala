@@ -26,9 +26,11 @@ class MultipleSparkSessionTestSuite extends BaseTiSparkTest {
   test("Test multiple Spark Session with different catalog") {
     val sparkSession1 = spark
     val sparkSession2 = sparkSession1.newSession()
-    sparkSession1.sql(s"use ${dbPrefix}tispark_test")
-    sparkSession2.sql(s"use ${dbPrefix}prefix_index")
-    sparkSession1.sql("show tables").show()
-    sparkSession2.sql("show tables").show()
+    val db1 = s"${dbPrefix}tispark_test"
+    val db2 = s"${dbPrefix}mysql"
+    sparkSession1.sql(s"use $db1")
+    sparkSession2.sql(s"use $db2")
+    assert(sparkSession1.sql("show tables").select("database").head().getString(0) === db1)
+    assert(sparkSession2.sql("show tables").select("database").head().getString(0) === db2)
   }
 }
