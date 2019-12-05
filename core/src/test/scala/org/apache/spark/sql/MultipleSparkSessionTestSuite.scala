@@ -16,13 +16,19 @@
 package org.apache.spark.sql
 
 class MultipleSparkSessionTestSuite extends BaseTiSparkTest {
-  test("Multiple Spark Session register udf") {
+  test("Test multiple Spark Session register udf") {
     val sparkSession1 = spark
     assert(sparkSession1.sql("select ti_version()").count() === 1)
-    SparkSession.clearActiveSession()
-    SparkSession.clearDefaultSession()
     val sparkSession2 = sparkSession1.newSession()
-    SparkSession.setDefaultSession(sparkSession2)
     assert(sparkSession2.sql("select ti_version()").count() === 1)
+  }
+
+  test("Test multiple Spark Session with different catalog") {
+    val sparkSession1 = spark
+    val sparkSession2 = sparkSession1.newSession()
+    sparkSession1.sql(s"use ${dbPrefix}tispark_test")
+    sparkSession2.sql(s"use ${dbPrefix}prefix_index")
+    sparkSession1.sql("show tables").show()
+    sparkSession2.sql("show tables").show()
   }
 }
