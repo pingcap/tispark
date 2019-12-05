@@ -26,7 +26,7 @@ class DataTypeExampleTest extends BaseDataTypeTest with RunUnitDataTypeTestActio
   val database: String = "data_type_test_example"
   val testDesc: String = "Base test for data types"
 
-  override lazy protected val generator =
+  override lazy protected val generator: BaseDataTypeGenerator =
     BaseDataTypeGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
 
   def startTest(typeName: String): Unit = {
@@ -47,6 +47,5 @@ class DataTypeExampleTest extends BaseDataTypeTest with RunUnitDataTypeTestActio
     }
   }
 
-  check()
   test()
 }

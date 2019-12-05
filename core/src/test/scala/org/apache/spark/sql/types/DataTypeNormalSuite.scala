@@ -27,7 +27,7 @@ class DataTypeNormalSuite extends BaseDataTypeTest with RunUnitDataTypeTestActio
   override val database = "data_type_test"
   override val testDesc = "Test for single column data types (and unsigned types)"
 
-  override lazy protected val generator =
+  override lazy protected val generator: BaseDataTypeGenerator =
     BaseDataTypeGenerator(dataTypes, unsignedDataTypes, dataTypeTestDir, database, testDesc)
 
   def startTest(typeName: String): Unit = {
@@ -48,6 +48,5 @@ class DataTypeNormalSuite extends BaseDataTypeTest with RunUnitDataTypeTestActio
     }
   }
 
-  check()
   test()
 }
