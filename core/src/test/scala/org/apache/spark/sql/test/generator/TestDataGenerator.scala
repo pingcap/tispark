@@ -20,7 +20,6 @@ package org.apache.spark.sql.test.generator
 import com.pingcap.tikv.row.ObjectRowImpl
 import org.apache.spark.SparkFunSuite
 import org.apache.spark.sql.test.generator.DataType._
-import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.util.Random
@@ -282,25 +281,40 @@ object TestDataGenerator {
     }
   }
 
-  def hash(value: Any): String = value match {
-    case null                  => "null"
-    case b: Array[boolean]     => b.mkString("[", ",", "]")
-    case b: Array[Byte]        => b.mkString("[", ",", "]")
-    case t: java.sql.Timestamp =>
-      // timestamp was indexed as Integer when treated as unique key
-      s"${t.getTime / 1000}"
-    case list: List[Any] =>
+  def hash(value: Any, len: Int = -1): String = value match {
+    case null            => "null"
+    case any: (Any, Int) => hash(any._1, any._2)
+    case list: List[(Any, Int)] =>
       val ret = StringBuilder.newBuilder
       ret ++= "("
       for (i <- list.indices) {
         if (i > 0) ret ++= ","
-        ret ++= hash(list(i))
+        ret ++= hash(list(i)._1, list(i)._2)
       }
       ret ++= ")"
       ret.toString
-    case x => x.toString
+    case b: Array[Boolean] =>
+      if (len != -1) {
+        b.slice(0, len).mkString("[", ",", "]")
+      } else {
+        b.mkString("[", ",", "]")
+      }
+    case b: Array[Byte] =>
+      if (len != -1) {
+        b.slice(0, len).mkString("[", ",", "]")
+      } else {
+        b.mkString("[", ",", "]")
+      }
+    case t: java.sql.Timestamp =>
+      // timestamp was indexed as Integer when treated as unique key
+      s"${t.getTime / 1000}"
+    case s: String if len != -1 => s.slice(0, len)
+    case x if len == -1         => x.toString
+    case _                      => throw new RuntimeException(s"hash method for value $value not found!")
   }
 
+  // value may be (Any, Int) or List[(Any, Int)], in this case, it means
+  // the value to be hashed is a list of/one unique value(s) with prefix length.
   def checkUnique(value: Any, set: mutable.Set[Any]): Boolean = {
     val hashedValue = hash(value)
     if (!set.apply(hashedValue)) {
@@ -311,49 +325,46 @@ object TestDataGenerator {
     }
   }
 
-  private def generateRandomRow(schema: Schema,
-                                r: Random,
-                                pkOffset: List[Int],
-                                set: mutable.Set[Any]): TiRow = {
+  private def generateRandomRow(schema: Schema, r: Random, set: mutable.Set[Any]): TiRow = {
     val length = schema.columnInfo.length
     val row: TiRow = ObjectRowImpl.create(length)
-    while (true) {
-      for (i <- schema.columnInfo.indices) {
-        val columnInfo = schema.columnInfo(i)
-        generateRandomColValue(row, i, r, columnInfo.generator)
-      }
-      if (pkOffset.nonEmpty) {
-        val value = pkOffset.map { i =>
-          row.get(i, schema.columnInfo(i).generator.tiDataType)
-        }
-        if (checkUnique(value, set)) {
-          return row
-        }
-      } else {
-        return row
-      }
+    for (i <- schema.columnInfo.indices) {
+      val columnInfo = schema.columnInfo(i)
+      generateRandomColValue(row, i, r, columnInfo.generator)
     }
-    throw new RuntimeException("Inaccessible")
+    row
   }
 
   def generateRandomRows(schema: Schema, n: Long, r: Random): List[TiRow] = {
     val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
     // offset of pk columns
-    val pkOffset: List[Int] = {
+    val pkOffset: List[(Int, Int)] = {
       val primary = schema.indexInfo.filter(_.isPrimary)
       if (primary.nonEmpty && primary.size == 1) {
-        primary.head.indexColumns.map(x => schema.columnNames.indexOf(x.column))
+        primary.head.indexColumns.map(
+          x =>
+            (
+              schema.columnNames.indexOf(x.column),
+              if (x.length == null) -1
+              else x.length.intValue()
+          )
+        )
       } else {
-        List.empty[Int]
+        List.empty[(Int, Int)]
       }
     }
-    schema.columnInfo.foreach { col =>
-      col.generator.reset()
-      col.generator.preGenerateRandomValues(r, n)
+    schema.columnInfo.indices.foreach { i =>
+      schema.columnInfo(i).generator.reset()
+      pkOffset.find(_._1 == i) match {
+        case Some((_, len)) =>
+          schema.columnInfo(i).generator.preGenerateRandomValues(r, n, len)
+        case None =>
+          schema.columnInfo(i).generator.preGenerateRandomValues(r, n)
+      }
     }
 
     (1.toLong to n).map { _ =>
-      generateRandomRow(schema, r, pkOffset, set)
+      generateRandomRow(schema, r, set)
     }.toList
   }
 
