@@ -21,7 +21,8 @@ import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.Converter
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.{TiPartition, TiTableReference}
+import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.{TiConfigConst, TiPartition, TiTableReference}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
@@ -33,6 +34,7 @@ import scala.collection.JavaConversions._
 
 class TiRowRDD(override val dagRequest: TiDAGRequest,
                override val physicalId: Long,
+               val chunkBatchSize: Int,
                override val tiConf: TiConfiguration,
                val output: Seq[Attribute],
                override val tableRef: TiTableReference,
@@ -63,7 +65,8 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
       private val snapshot = session.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 
-      private val iterator = snapshot.tableReadChunk(dagRequest, tasks)
+      private val iterator =
+        snapshot.tableReadChunk(dagRequest, tasks, chunkBatchSize)
 
       override def hasNext: Boolean = {
         // Kill the task in case it has been marked as killed. This logic is from

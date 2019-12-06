@@ -26,7 +26,7 @@ import java.time.LocalDate;
 
 /** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
 public class TiChunkColumnVector extends TiColumnVector {
-  /** Represents the length of eahc different data type */
+  /** Represents the length of each different data type */
   private int fixLength;
   /** Represents how many nulls in this column vector */
   private int numOfNulls;
@@ -269,6 +269,6 @@ public class TiChunkColumnVector extends TiColumnVector {
   /** @return child [[TiColumnVector]] at the given ordinal. */
   @Override
   protected TiColumnVector getChild(int ordinal) {
-    throw new UnsupportedOperationException("getChild is not supported");
+    throw new UnsupportedOperationException("TiChunkColumnVector does not support this operation");
   }
 }

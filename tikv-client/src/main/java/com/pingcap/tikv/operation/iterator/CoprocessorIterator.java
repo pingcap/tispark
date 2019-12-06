@@ -23,7 +23,9 @@ import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.TiChunk;
+import com.pingcap.tikv.columnar.TiChunkBatchColumnVector;
 import com.pingcap.tikv.columnar.TiChunkColumnVector;
+import com.pingcap.tikv.columnar.TiColumnVector;
 import com.pingcap.tikv.columnar.TiRowColumnVector;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
@@ -32,6 +34,7 @@ import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -102,7 +105,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
    * @return a DAGIterator to be processed
    */
   public static CoprocessorIterator<TiChunk> getTiChunkIterator(
-      TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
+      TiDAGRequest req, List<RegionTask> regionTasks, TiSession session, int numOfRows) {
     TiDAGRequest dagRequest = req.copy();
     return new DAGIterator<TiChunk>(
         dagRequest.buildTableScan(),
@@ -114,7 +117,6 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
       @Override
       public TiChunk next() {
         // TODO make it configurable
-        int numOfRows = 1024;
         DataType[] dataTypes = this.schemaInfer.getTypes().toArray(new DataType[0]);
         // TODO tiColumnarBatch is meant to be reused in the entire data loading process.
         // TODO we need have some fallback solution to handle tikv's response using default encode.
@@ -132,13 +134,26 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
           return new TiChunk(columnarVectors);
         } else {
           // hasNext => create dataInput, so we do not need to advance next dataInput.
-          TiChunkColumnVector[] columnarVectors = new TiChunkColumnVector[dataTypes.length];
+          TiColumnVector[] columnarVectors = new TiColumnVector[dataTypes.length];
+          List<List<TiChunkColumnVector>> childColumnVectors = new ArrayList<>();
           for (int i = 0; i < dataTypes.length; i++) {
-            // TODO when data return in TypeChunk format, one chunk means one column.
-            columnarVectors[i] = dataTypes[i].decodeColumn(dataInput);
+            childColumnVectors.add(new ArrayList<>());
           }
-          // left data should be trashed.
-          dataInput = new CodecDataInput(new byte[0]);
+
+          int count = 0;
+          for (; count < numOfRows && hasNext(); ) {
+            for (int i = 0; i < dataTypes.length; i++) {
+              childColumnVectors.get(i).add(dataTypes[i].decodeColumn(dataInput));
+            }
+            int size = childColumnVectors.get(0).size();
+            count += childColumnVectors.get(0).get(size - 1).numOfRows();
+            // left data should be trashed.
+            dataInput = new CodecDataInput(new byte[0]);
+          }
+
+          for (int i = 0; i < dataTypes.length; i++) {
+            columnarVectors[i] = new TiChunkBatchColumnVector(childColumnVectors.get(i), count);
+          }
 
           return new TiChunk(columnarVectors);
         }

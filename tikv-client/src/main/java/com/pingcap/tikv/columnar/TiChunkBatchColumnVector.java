@@ -14,25 +14,41 @@
  */
 package com.pingcap.tikv.columnar;
 
-import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
 
-/**
- * An implementation of {@link TiColumnVector}. It is a faked column vector; the underlying data is
- * in row format.
- */
-public class TiRowColumnVector extends TiColumnVector {
-  /** row-wise format data and data is already decoded */
-  private Row[] rows;
-  /** Represents the column index of original row */
-  private int colIdx;
-  /** Sets up the data type of this column vector. */
-  public TiRowColumnVector(DataType type, int colIdx, Row[] rows, int numOfRows) {
-    super(type, numOfRows);
-    this.rows = rows;
-    this.colIdx = colIdx;
+/** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
+public class TiChunkBatchColumnVector extends TiColumnVector {
+  private List<TiChunkColumnVector> childColumns;
+  private int numOfNulls;
+  private int[] rightEndpoints;
+
+  public TiChunkBatchColumnVector(List<TiChunkColumnVector> child, int numOfRows) {
+    super(child.get(0).dataType(), numOfRows);
+    this.childColumns = child;
+    this.numOfNulls =
+        child
+            .stream()
+            .reduce(
+                0,
+                (partialAgeResult, columnVector) -> partialAgeResult + columnVector.numNulls(),
+                Integer::sum);
+    int right = 0;
+    this.rightEndpoints = new int[child.size() + 1];
+    this.rightEndpoints[0] = 0;
+    for (int i = 1; i < rightEndpoints.length; i++) {
+      right += child.get(i - 1).numOfRows();
+      this.rightEndpoints[i] = right;
+    }
   }
+
+  public final String typeName() {
+    return dataType().getType().name();
+  }
+
+  // TODO: once we switch off_heap mode, we need control memory access pattern.
+  public void free() {}
 
   /**
    * Cleans up memory for this column vector. The column vector is not usable after this.
@@ -41,28 +57,37 @@ public class TiRowColumnVector extends TiColumnVector {
    * in-memory and we don't expect any exception to happen during closing.
    */
   @Override
-  public void close() {
-    this.rows = null;
-  }
+  public void close() {}
 
   /** Returns true if this column vector contains any null values. */
   @Override
   public boolean hasNull() {
-    throw new UnsupportedOperationException(
-        "row-wise column vector does not support this operation");
+    return numOfNulls > 0;
   }
 
   /** Returns the number of nulls in this column vector. */
   @Override
   public int numNulls() {
-    throw new UnsupportedOperationException(
-        "row-wise column vector does not support this operation");
+    return numOfNulls;
+  }
+
+  private int[] getColumnVectorIdxAndRowId(int rowId) {
+    int offset = Arrays.binarySearch(this.rightEndpoints, rowId);
+    int idx;
+    if (offset >= 0) {
+      idx = offset;
+    } else {
+      idx = -(offset + 2);
+    }
+    assert idx < childColumns.size() && idx >= 0;
+    return new int[] {idx, rowId - rightEndpoints[idx]};
   }
 
   /** Returns whether the value at rowId is NULL. */
   @Override
   public boolean isNullAt(int rowId) {
-    return rows[rowId].get(colIdx, null) == null;
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).isNullAt(pair[1]);
   }
 
   /**
@@ -71,7 +96,8 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public boolean getBoolean(int rowId) {
-    return rows[rowId].getLong(colIdx) == 1;
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getBoolean(pair[1]);
   }
 
   /**
@@ -80,7 +106,8 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public byte getByte(int rowId) {
-    return (byte) rows[rowId].getLong(colIdx);
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getByte(pair[1]);
   }
 
   /**
@@ -89,7 +116,8 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public short getShort(int rowId) {
-    return (short) rows[rowId].getLong(colIdx);
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getShort(pair[1]);
   }
 
   /**
@@ -98,7 +126,8 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public int getInt(int rowId) {
-    return (int) rows[rowId].getLong(colIdx);
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getInt(pair[1]);
   }
 
   /**
@@ -107,7 +136,8 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public long getLong(int rowId) {
-    return rows[rowId].getLong(colIdx);
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getLong(pair[1]);
   }
 
   /**
@@ -116,7 +146,8 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public float getFloat(int rowId) {
-    return ((Number) rows[rowId].getDouble(colIdx)).floatValue();
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getFloat(pair[1]);
   }
 
   /**
@@ -125,7 +156,8 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public double getDouble(int rowId) {
-    return rows[rowId].getDouble(colIdx);
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getDouble(pair[1]);
   }
 
   /**
@@ -133,18 +165,8 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public BigDecimal getDecimal(int rowId, int precision, int scale) {
-    Object val = rows[rowId].get(colIdx, null);
-    if (val instanceof BigDecimal) {
-      return (BigDecimal) val;
-    }
-
-    if (val instanceof Long) {
-      return BigDecimal.valueOf((long) val);
-    }
-
-    throw new UnsupportedOperationException(
-        String.format(
-            "failed to getDecimal and the value is %s:%s", val.getClass().getCanonicalName(), val));
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getDecimal(pair[1]);
   }
 
   /**
@@ -154,7 +176,8 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public String getUTF8String(int rowId) {
-    return rows[rowId].getString(colIdx);
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getUTF8String(pair[1]);
   }
 
   /**
@@ -162,13 +185,14 @@ public class TiRowColumnVector extends TiColumnVector {
    */
   @Override
   public byte[] getBinary(int rowId) {
-    return rows[rowId].getBytes(colIdx);
+    int[] pair = getColumnVectorIdxAndRowId(rowId);
+    return childColumns.get(pair[0]).getBinary(pair[1]);
   }
 
   /** @return child [[TiColumnVector]] at the given ordinal. */
   @Override
   protected TiColumnVector getChild(int ordinal) {
     throw new UnsupportedOperationException(
-        "row-wise column vector does not support this operation");
+        "TiChunkBatchColumnVector does not support this operation");
   }
 }

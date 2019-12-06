@@ -30,6 +30,7 @@ object TiConfigConst {
   val COPROCESS_STREAMING: String = "spark.tispark.coprocess.streaming"
   val ENABLE_CHUNK: String = "spark.tispark.coprocess.chunk"
   val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"
+  val CHUNK_BATCH_SIZE: String = "spark.tispark.coprocessor.chunk_batch_size"
   val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String = "spark.tispark.plan.downgrade.index_threshold"
   val UNSUPPORTED_TYPES: String = "spark.tispark.type.unsupported_mysql_types"
   val ENABLE_AUTO_LOAD_STATISTICS: String = "spark.tispark.statistics.auto_load"
