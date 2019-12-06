@@ -19,9 +19,6 @@ class DataSourceWithoutExtensionsSuite
     )
   )
 
-  override def beforeAll(): Unit =
-    super.beforeAll()
-
   test("Test Select without extensions") {
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
