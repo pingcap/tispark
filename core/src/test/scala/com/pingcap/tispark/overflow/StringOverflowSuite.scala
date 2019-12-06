@@ -42,7 +42,6 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Data too long for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 123456789 length > max length 8"
 
@@ -50,7 +49,6 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -83,7 +81,6 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Data too long for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 123456789 length > max length 8"
 
@@ -91,7 +88,6 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -129,7 +125,6 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Data too long for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = s"value $str length > max length 255"
 
@@ -137,7 +132,6 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )
@@ -170,7 +164,6 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
       )
     )
     val jdbcErrorClass = classOf[java.sql.BatchUpdateException]
-    val jdbcErrorMsg = "Data truncation: Data too long for column 'c1' at row 1"
     val tidbErrorClass = classOf[com.pingcap.tikv.exception.ConvertOverflowException]
     val tidbErrorMsg = "value 123456789 length > max length 8"
 
@@ -178,7 +171,6 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
       List(row),
       schema,
       jdbcErrorClass,
-      jdbcErrorMsg,
       tidbErrorClass,
       tidbErrorMsg
     )

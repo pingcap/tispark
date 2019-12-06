@@ -322,6 +322,11 @@ public abstract class DataType implements Serializable {
    */
   public abstract Object getOriginDefaultValueNonNull(String value, long version);
 
+  /** @return true if this type can be pushed down to TiKV or TiFLASH */
+  public boolean isPushDownSupported() {
+    return true;
+  }
+
   public Object getOriginDefaultValue(String value, long version) {
     if (value == null) return null;
     return getOriginDefaultValueNonNull(value, version);

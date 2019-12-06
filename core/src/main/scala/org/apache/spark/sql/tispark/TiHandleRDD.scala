@@ -15,20 +15,18 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
+import com.pingcap.tikv.exception.TiInternalException
+import com.pingcap.tikv.meta.TiDAGRequest
+import com.pingcap.tikv.types.Converter
 import com.pingcap.tikv.util.RangeSplitter
-import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.{TiPartition, TiTableReference}
 import gnu.trove.list.array.TLongArrayList
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.{Partition, TaskContext, TaskKilledException}
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 /**
  * RDD used for retrieving handles from TiKV. Result is arranged as
@@ -49,6 +47,13 @@ class TiHandleRDD(override val dagRequest: TiDAGRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] =
     new Iterator[Row] {
+      if (!tiConf.getLocalTimeZone.equals(Converter.getLocalTimezone)) {
+        throw new TiInternalException(
+          "timezone are different! dirver: " + tiConf.getLocalTimeZone + " executor:" + Converter.getLocalTimezone +
+            " please set user.timezone in spark.driver.extraJavaOptions and spark.executor.extraJavaOptions"
+        )
+      }
+
       dagRequest.resolve()
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSession.getInstance(tiConf)

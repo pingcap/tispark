@@ -128,10 +128,10 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
     !tiDataType.isNotNull && r.nextInt(20) == 0
   }
 
-  def randomUniqueValue(r: Random, set: mutable.Set[Any]): Any = {
+  def randomUniqueValue(r: Random, set: mutable.Set[Any], len: Int = -1): Any = {
     while (true) {
       val value = randomValue(r)
-      if (checkUnique(value, set)) {
+      if (checkUnique((value, len), set)) {
         return value
       }
     }
@@ -231,14 +231,15 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
   }
 
   // pre-generate n random values
-  def preGenerateRandomValues(r: Random, n: Long): Unit = {
+  def preGenerateRandomValues(r: Random, n: Long, len: Int = -1): Unit = {
     if (n <= 1e6) {
       generatedRandomValues = if (generateUnique) {
         assert(n <= rangeSize, "random generator cannot generate unique value less than available")
         val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
-        set ++= specialBound.map(TestDataGenerator.hash)
-        (0L until n - specialBound.size).map { _ =>
-          randomUniqueValue(r, set)
+        set ++= specialBound.map(x => TestDataGenerator.hash(x, len))
+        val size = set.size
+        (0L until n - size).map { _ =>
+          randomUniqueValue(r, set, len)
         }.toList ++ specialBound
       } else {
         (0L until n - specialBound.size).map { _ =>
@@ -246,15 +247,10 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
         }.toList ++ specialBound
       }
 
-      val expectedGeneratedRandomValuesLen = if (generateUnique) {
-        generatedRandomValues.toSet.size
-      } else {
-        generatedRandomValues.size
-      }
-
+      val expectedGeneratedRandomValuesLen = generatedRandomValues.size
       assert(
         expectedGeneratedRandomValuesLen >= n,
-        s"Generate values size=$generatedRandomValues less than n=$n on datatype $dataType"
+        s"Generate values size=$expectedGeneratedRandomValuesLen less than n=$n on datatype $dataType. unique=$generateUnique "
       )
       curPos = 0
     }
@@ -267,8 +263,7 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
     } else {
       if (generatedRandomValues.isEmpty) {
         if (generateUnique) {
-          val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
-          randomUniqueValue(r, set)
+          throw new RuntimeException("unique values should be pre-generated")
         } else {
           randomValue(r)
         }
@@ -285,11 +280,11 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
       generatedRandomValues.nonEmpty,
       "Values not pre-generated, please generate values first to use next()"
     )
-    assert(
-      hasNext || !generateUnique,
-      s"Generated random values(${generatedRandomValues.size}) is less than needed(${curPos + 1})."
-    )
     if (!hasNext) {
+      assert(
+        !generateUnique,
+        s"Generated random values(${generatedRandomValues.size}) is less than needed(${curPos + 1})."
+      )
       // reuse previous generated data
       curPos = 0
     }
