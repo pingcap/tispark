@@ -202,13 +202,14 @@ public class RegionManager {
       Peer leader = region.getLeader();
       store = cache.getStoreById(leader.getStoreId());
     } else {
+      outerLoop:
       for (Peer peer : region.getLearnerList()) {
         Store s = getStoreById(peer.getStoreId());
         for (Metapb.StoreLabel label : s.getLabelsList()) {
           if (label.getKey().equals(storeType.getLabelKey())
               && label.getValue().equals(storeType.getLabelValue())) {
             store = s;
-            break;
+            break outerLoop;
           }
         }
       }
