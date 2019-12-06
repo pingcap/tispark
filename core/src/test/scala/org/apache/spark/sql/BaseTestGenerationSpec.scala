@@ -25,7 +25,7 @@ trait BaseTestGenerationSpec {
 
   protected val preDescription: String = "Generating Data for "
 
-  protected var cols: List[ReflectedDataType] = List.empty[ReflectedDataType]
+  protected var cols: List[ReflectedDataType] = _
 
   def getTableName(dataTypes: String*): String
 
@@ -34,9 +34,10 @@ trait BaseTestGenerationSpec {
   def getColumnName(dataType: String): String = s"col_$dataType"
 
   def getColumnNameByOffset(offset: Int): String = {
+    require(cols != null)
     assert(
       cols.size > offset,
-      "column length incorrect, maybe `cols` is not initialized correctly?"
+      s"column length incorrect ${cols.size} <= $offset, maybe `cols` is not initialized correctly?"
     )
     val dataType = cols(offset)
     val suffix = if (cols.count(_ == dataType) > 1) {

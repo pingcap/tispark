@@ -69,11 +69,7 @@ class TxnTestSuite extends BaseTiSparkTest {
    * @return Unit
    */
   protected def queryTIDBTxn(query: Seq[String], wait: Boolean): Unit = {
-    val jdbcUsername = getOrElse(paramConf(), TiDB_USER, "root")
-
-    val jdbcPassword = getOrElse(paramConf(), TiDB_PASSWORD, "")
-
-    val conn = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+    val conn = DriverManager.getConnection(jdbcUrl)
     try {
       //Assume a valid connection object conn
       conn.setAutoCommit(false)
