@@ -198,7 +198,7 @@ public class RegionManager {
     }
 
     Store store = null;
-    if (storeType == null || storeType == TiStoreType.TiKV) {
+    if (storeType == TiStoreType.TiKV) {
       Peer leader = region.getLeader();
       store = cache.getStoreById(leader.getStoreId());
     } else {
