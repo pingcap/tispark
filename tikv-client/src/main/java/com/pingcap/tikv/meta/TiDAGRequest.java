@@ -25,7 +25,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.pingcap.tidb.tipb.*;
-import com.pingcap.tidb.tipb.DAGRequest.Builder;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
@@ -37,6 +36,7 @@ import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.predicates.PredicateUtils;
+import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.KeyRangeUtils;
@@ -154,12 +154,12 @@ public class TiDAGRequest implements Serializable {
     this.prunedParts = prunedParts;
   }
 
-  public void setUseTiFlash(boolean useTiFlash) {
-    this.useTiFlash = useTiFlash;
+  public TiStoreType getStoreType() {
+    return storeType;
   }
 
-  public boolean isUseTiFlash() {
-    return useTiFlash;
+  public void setStoreType(TiStoreType storeType) {
+    this.storeType = storeType;
   }
 
   public TiDAGRequest(PushDownType pushDownType) {
@@ -216,7 +216,7 @@ public class TiDAGRequest implements Serializable {
 
   private TiTableInfo tableInfo;
   private List<TiPartitionDef> prunedParts;
-  private boolean useTiFlash;
+  private TiStoreType storeType = TiStoreType.TiKV;
   private TiIndexInfo indexInfo;
   private final List<ColumnRef> fields = new ArrayList<>();
   private final List<DataType> indexDataTypes = new ArrayList<>();

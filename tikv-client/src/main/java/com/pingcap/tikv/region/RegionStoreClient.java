@@ -74,6 +74,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
   }
 
+  private TiStoreType storeType;
+
   private static final Logger logger = Logger.getLogger(RegionStoreClient.class);
 
   @VisibleForTesting public final LockResolverClient lockResolverClient;
@@ -466,7 +468,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
           new GrpcException("TiKV down or Network partition"));
       logger.warn("Re-splitting region task due to region error: TiKV down or Network partition");
       // Split ranges
-      return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges);
+      return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
     }
 
     if (response.hasRegionError()) {
@@ -475,7 +477,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
           BackOffFunction.BackOffFuncType.BoRegionMiss, new GrpcException(regionError.toString()));
       logger.warn("Re-splitting region task due to region error:" + regionError.getMessage());
       // Split ranges
-      return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges);
+      return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
     }
 
     if (response.hasLocked()) {
@@ -488,7 +490,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
         backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
       }
       // Split ranges
-      return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges);
+      return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
     }
 
     String otherError = response.getOtherError();
@@ -582,9 +584,11 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       this.regionManager = regionManager;
     }
 
-    public RegionStoreClient build(TiRegion region, Store store) throws GrpcException {
+    public RegionStoreClient build(TiRegion region, Store store, TiStoreType storeType)
+        throws GrpcException {
       Objects.requireNonNull(region, "region is null");
       Objects.requireNonNull(store, "store is null");
+      Objects.requireNonNull(storeType, "storeType is null");
 
       String addressStr = store.getAddress();
       if (logger.isDebugEnabled()) {
@@ -596,17 +600,25 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       TikvStub asyncStub = TikvGrpc.newStub(channel);
 
       return new RegionStoreClient(
-          conf, region, channelFactory, blockingStub, asyncStub, regionManager);
+          conf, region, storeType, channelFactory, blockingStub, asyncStub, regionManager);
+    }
+
+    public RegionStoreClient build(TiRegion region, Store store) throws GrpcException {
+      return build(region, store, TiStoreType.TiKV);
     }
 
     public RegionStoreClient build(ByteString key) throws GrpcException {
-      Pair<TiRegion, Store> pair = regionManager.getRegionStorePairByKey(key);
-      return build(pair.first, pair.second);
+      return build(key, TiStoreType.TiKV);
+    }
+
+    public RegionStoreClient build(ByteString key, TiStoreType storeType) throws GrpcException {
+      Pair<TiRegion, Store> pair = regionManager.getRegionStorePairByKey(key, storeType);
+      return build(pair.first, pair.second, storeType);
     }
 
     public RegionStoreClient build(TiRegion region) throws GrpcException {
       Store store = regionManager.getStoreById(region.getLeader().getStoreId());
-      return build(region, store);
+      return build(region, store, TiStoreType.TiKV);
     }
 
     public RegionManager getRegionManager() {
@@ -617,11 +629,13 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   private RegionStoreClient(
       TiConfiguration conf,
       TiRegion region,
+      TiStoreType storeType,
       ChannelFactory channelFactory,
       TikvBlockingStub blockingStub,
       TikvStub asyncStub,
       RegionManager regionManager) {
     super(conf, region, channelFactory, blockingStub, asyncStub, regionManager);
+    this.storeType = storeType;
     this.lockResolverClient =
         new LockResolverClient(
             conf, region, this.blockingStub, this.asyncStub, channelFactory, regionManager);

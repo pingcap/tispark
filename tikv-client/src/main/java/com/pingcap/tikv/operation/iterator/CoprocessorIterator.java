@@ -81,7 +81,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         session,
         SchemaInfer.create(dagRequest),
         dagRequest.getPushDownType(),
-        dagRequest.isUseTiFlash()) {
+        dagRequest.getStoreType()) {
       @Override
       public Row next() {
         return rowReader.readRow(schemaInfer.getTypes().toArray(new DataType[0]));
@@ -110,7 +110,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         session,
         SchemaInfer.create(dagRequest),
         dagRequest.getPushDownType(),
-        dagRequest.isUseTiFlash()) {
+        dagRequest.getStoreType()) {
       @Override
       public TiChunk next() {
         // TODO make it configurable
@@ -164,7 +164,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         session,
         SchemaInfer.create(req, true),
         req.getPushDownType(),
-        req.isUseTiFlash()) {
+        req.getStoreType()) {
       @Override
       public Long next() {
         return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);

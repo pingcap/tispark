@@ -40,7 +40,7 @@ abstract class TiRDD(val dagRequest: TiDAGRequest,
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter
       .newSplitter(session.getRegionManager)
-      .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId))
+      .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId), dagRequest.getStoreType)
 
     val hostTasksMap = new mutable.HashMap[String, mutable.Set[RegionTask]]
     with mutable.MultiMap[String, RegionTask]

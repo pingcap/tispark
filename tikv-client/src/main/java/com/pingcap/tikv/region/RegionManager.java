@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import org.apache.log4j.Logger;
+import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.Metapb.StoreState;
@@ -184,6 +185,10 @@ public class RegionManager {
   }
 
   public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key) {
+    return getRegionStorePairByKey(key, TiStoreType.TiKV);
+  }
+
+  public Pair<TiRegion, Store> getRegionStorePairByKey(ByteString key, TiStoreType storeType) {
     TiRegion region = cache.getRegionByKey(key);
     if (region == null) {
       throw new TiClientInternalException("Region not exist for key:" + formatBytesUTF8(key));
@@ -191,19 +196,31 @@ public class RegionManager {
     if (!region.isValid()) {
       throw new TiClientInternalException("Region invalid: " + region.toString());
     }
-    Peer leader = region.getLeader();
-    long storeId = leader.getStoreId();
-    return Pair.create(region, cache.getStoreById(storeId));
-  }
 
-  public Pair<TiRegion, Store> getRegionStorePairByRegionId(long id) {
-    TiRegion region = cache.getRegionById(id);
-    if (!region.isValid()) {
-      throw new TiClientInternalException("Region invalid: " + region.toString());
+    Store store = null;
+    if (storeType == TiStoreType.TiKV) {
+      Peer leader = region.getLeader();
+      store = cache.getStoreById(leader.getStoreId());
+    } else {
+      outerLoop:
+      for (Peer peer : region.getLearnerList()) {
+        Store s = getStoreById(peer.getStoreId());
+        for (Metapb.StoreLabel label : s.getLabelsList()) {
+          if (label.getKey().equals(storeType.getLabelKey())
+              && label.getValue().equals(storeType.getLabelValue())) {
+            store = s;
+            break outerLoop;
+          }
+        }
+      }
     }
-    Peer leader = region.getLeader();
-    long storeId = leader.getStoreId();
-    return Pair.create(region, cache.getStoreById(storeId));
+
+    if (store == null) {
+      throw new TiClientInternalException(
+          "Cannot find valid store on " + storeType + " for region " + region.toString());
+    }
+
+    return Pair.create(region, store);
   }
 
   public Store getStoreById(long id) {

@@ -34,6 +34,7 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.meta.*;
+import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.statistics.IndexStatistics;
 import com.pingcap.tikv.statistics.TableStatistics;
 import com.pingcap.tikv.util.Pair;
@@ -233,7 +234,9 @@ public class TiKVScanAnalyzer {
     }
 
     dagRequest.addRanges(minPlan.getKeyRanges());
-    dagRequest.setUseTiFlash(isUseTiFlash);
+    if (isUseTiFlash) {
+      dagRequest.setStoreType(TiStoreType.TiFlash);
+    }
     dagRequest.setPrunedParts(minPlan.getPrunedParts());
     dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
     if (minPlan.isIndexScan()) {

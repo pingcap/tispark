@@ -12,6 +12,7 @@ import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.key.RowKey.DecodeResult.Status;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.region.TiStoreType;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import java.util.ArrayList;
@@ -47,20 +48,8 @@ public class RangeSplitterTest {
     }
 
     @Override
-    public Pair<TiRegion, Metapb.Store> getRegionStorePairByRegionId(long id) {
-      Map.Entry<KeyRange, TiRegion> entry =
-          mockRegionMap
-              .entrySet()
-              .stream()
-              .filter(e -> e.getValue().getId() == id)
-              .findFirst()
-              .get();
-      return Pair.create(
-          entry.getValue(), Metapb.Store.newBuilder().setId(entry.getValue().getId()).build());
-    }
-
-    @Override
-    public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(ByteString key) {
+    public Pair<TiRegion, Metapb.Store> getRegionStorePairByKey(
+        ByteString key, TiStoreType storeType) {
       for (Map.Entry<KeyRange, TiRegion> entry : mockRegionMap.entrySet()) {
         KeyRange range = entry.getKey();
         if (KeyRangeUtils.makeRange(range.getStart(), range.getEnd()).contains(Key.toRawKey(key))) {

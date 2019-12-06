@@ -86,7 +86,8 @@ public class Snapshot {
     return tableReadRow(
         dagRequest,
         RangeSplitter.newSplitter(session.getRegionManager())
-            .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId)));
+            .splitRangeByRegion(
+                dagRequest.getRangesByPhysicalId(physicalId), dagRequest.getStoreType()));
   }
 
   /**

@@ -13,6 +13,7 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.RangeSplitter;
@@ -22,9 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Metapb;
-import org.tikv.kvproto.Metapb.Peer;
-import org.tikv.kvproto.Metapb.Store;
-import org.tikv.kvproto.Metapb.StoreLabel;
 
 public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
   private ExecutorCompletionService<Iterator<SelectResponse>> streamingService;
@@ -38,12 +36,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
   protected EncodeType encodeType;
 
-  private StoreType storeType;
-
-  public enum StoreType {
-    TiKV,
-    TiFlash
-  }
+  private TiStoreType storeType;
 
   DAGIterator(
       DAGRequest req,
@@ -51,14 +44,10 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       TiSession session,
       SchemaInfer infer,
       PushDownType pushDownType,
-      boolean isUseTiFlash) {
+      TiStoreType storeType) {
     super(req, regionTasks, session, infer);
     this.pushDownType = pushDownType;
-    if (isUseTiFlash) {
-      this.storeType = StoreType.TiFlash;
-    } else {
-      this.storeType = StoreType.TiKV;
-    }
+    this.storeType = storeType;
     switch (pushDownType) {
       case NORMAL:
         dagService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
@@ -200,12 +189,9 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       TiRegion region = task.getRegion();
       Metapb.Store store = task.getStore();
 
-      if (storeType == StoreType.TiFlash) {
-        store = getTiFlashStore(region);
-      }
-
       try {
-        RegionStoreClient client = session.getRegionStoreClientBuilder().build(region, store);
+        RegionStoreClient client =
+            session.getRegionStoreClientBuilder().build(region, store, storeType);
         Collection<RangeSplitter.RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, ranges, responseQueue);
         if (tasks != null) {
@@ -238,27 +224,6 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     return SelectResponse.newBuilder().addAllChunks(resultChunk).setEncodeType(encodeType).build();
   }
 
-  private Store getTiFlashStore(TiRegion region) {
-    for (Peer peer : region.getLearnerList()) {
-      Store s = session.getRegionManager().getStoreById(peer.getStoreId());
-      for (StoreLabel label : s.getLabelsList()) {
-        if (label.getKey().equals(session.getConf().getTiFlashLabelKey())
-            && label.getValue().equals(session.getConf().getTiFlashLabelValue())) {
-          return s;
-        }
-      }
-    }
-
-    session.getRegionManager().onRegionStale(region.getId());
-    TiRegion newRegion = session.getRegionManager().getRegionById(region.getId());
-
-    if (!newRegion.equals(region)) {
-      return getTiFlashStore(newRegion);
-    }
-
-    throw new TiClientInternalException("cannot find valid tiflash replica");
-  }
-
   private Iterator<SelectResponse> processByStreaming(RangeSplitter.RegionTask regionTask) {
     List<Coprocessor.KeyRange> ranges = regionTask.getRanges();
     TiRegion region = regionTask.getRegion();
@@ -266,7 +231,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
     RegionStoreClient client;
     try {
-      client = session.getRegionStoreClientBuilder().build(region, store);
+      client = session.getRegionStoreClientBuilder().build(region, store, storeType);
       Iterator<SelectResponse> responseIterator = client.coprocessStreaming(dagRequest, ranges);
       if (responseIterator == null) {
         eof = true;
