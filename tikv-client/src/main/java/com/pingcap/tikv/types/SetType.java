@@ -113,4 +113,9 @@ public class SetType extends DataType {
   public Object getOriginDefaultValueNonNull(String value, long version) {
     return value;
   }
+
+  @Override
+  public boolean isPushDownSupported() {
+    return false;
+  }
 }
