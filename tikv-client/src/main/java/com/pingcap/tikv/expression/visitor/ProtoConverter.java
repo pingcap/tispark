@@ -72,8 +72,13 @@ public class ProtoConverter extends Visitor<Expr, Object> {
 
   private DataType getType(Expression expression) {
     DataType type = typeMap.get(expression);
+
     if (type == null) {
       throw new TiExpressionException(String.format("Expression %s type unknown", expression));
+    }
+    // for timestamp type, coprocessor will use datetime to do calculation.
+    if (type instanceof TimestampType) {
+      return DateTimeType.DATETIME;
     }
     return type;
   }
@@ -264,7 +269,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     // the first executor of a DAG request.
     IntegerCodec.writeLong(cdo, position);
     builder.setVal(cdo.toByteString());
-
+    builder.setFieldType(toPBFieldType(getType(node)));
     return builder.build();
   }
 
@@ -275,10 +280,17 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     if (node.getValue() == null) {
       builder.setTp(ExprType.Null);
     } else {
+      // this is useful since SupportedExpressionValidator will catch this exception
+      // can mark it cannot be pushed down to coprocessor.
+      if (node.isOverflowed()) {
+        throw new UnsupportedOperationException(
+            "overflowed value cannot be pushed down to coprocessor");
+      }
       builder.setTp(type.getProtoExprType());
       CodecDataOutput cdo = new CodecDataOutput();
       type.encode(cdo, EncodeType.PROTO, node.getValue());
       builder.setVal(cdo.toByteString());
+      builder.setFieldType(toPBFieldType(getType(node)));
     }
     return builder.build();
   }

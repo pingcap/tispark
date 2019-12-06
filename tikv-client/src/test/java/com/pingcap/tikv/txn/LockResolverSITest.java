@@ -39,15 +39,15 @@ public class LockResolverSITest extends LockResolverTest {
 
   @Before
   public void setUp() {
-    TiConfiguration conf = TiConfiguration.createDefault("127.0.0.1:2379");
+    TiConfiguration conf = TiConfiguration.createDefault(pdAddr);
     conf.setIsolationLevel(IsolationLevel.SI);
     try {
       session = TiSession.getInstance(conf);
       this.builder = session.getRegionStoreClientBuilder();
       init = true;
     } catch (Exception e) {
-      logger.warn("TiDB cluster may not be present");
       init = false;
+      fail("TiDB cluster may not be present");
     }
   }
 

@@ -26,9 +26,10 @@ import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
 import com.pingcap.tikv.types.IntegerType
-import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer, KeyRangeUtils}
+import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
 import com.pingcap.tikv.{TiBatchWriteUtils, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.Partitioner
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
@@ -123,7 +124,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     // initialize
     tiConf = tiContext.tiConf
     tiSession = tiContext.tiSession
-    tiTableRef = options.tiTableRef
+    tiTableRef = options.getTiTableRef(tiConf)
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
     tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
 
@@ -140,8 +141,11 @@ class TiBatchWrite(@transient val df: DataFrame,
     // check unsupported
     checkUnsupported()
 
+    // cache data
+    df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+
     // check empty
-    if (df.count() == 0) {
+    if (TiUtil.isDataFrameEmpty(df)) {
       logger.warn("data is empty!")
       return
     }
@@ -884,8 +888,7 @@ class TiRegionPartitioner(regions: List[TiRegion], writeConcurrency: Int) extend
 
     regions.indices.foreach { i =>
       val region = regions(i)
-      val range = KeyRangeUtils.makeRange(region.getStartKey, region.getEndKey)
-      if (range.contains(rawKey)) {
+      if (region.contains(rawKey)) {
         return i % numPartitions
       }
     }

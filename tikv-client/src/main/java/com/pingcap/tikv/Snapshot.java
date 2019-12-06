@@ -15,10 +15,12 @@
 
 package com.pingcap.tikv;
 
-import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getHandleIterator;
-import static com.pingcap.tikv.operation.iterator.CoprocessIterator.getRowIterator;
+import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getHandleIterator;
+import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getRowIterator;
+import static com.pingcap.tikv.operation.iterator.CoprocessorIterator.getTiChunkIterator;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.columnar.TiChunk;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
@@ -66,14 +68,22 @@ public class Snapshot {
         .get(key, timestamp.getVersion());
   }
 
+  public Iterator<TiChunk> tableReadChunk(TiDAGRequest dagRequest, List<RegionTask> tasks) {
+    if (dagRequest.isDoubleRead()) {
+      throw new UnsupportedOperationException(
+          "double read case should first read handle in row-wise fashion");
+    } else {
+      return getTiChunkIterator(dagRequest, tasks, getSession());
+    }
+  }
   /**
    * Issue a table read request
    *
    * @param dagRequest DAG request for coprocessor
    * @return a Iterator that contains all result from this select request.
    */
-  public Iterator<Row> tableRead(TiDAGRequest dagRequest, long physicalId) {
-    return tableRead(
+  public Iterator<Row> tableReadRow(TiDAGRequest dagRequest, long physicalId) {
+    return tableReadRow(
         dagRequest,
         RangeSplitter.newSplitter(session.getRegionManager())
             .splitRangeByRegion(dagRequest.getRangesByPhysicalId(physicalId)));
@@ -87,7 +97,7 @@ public class Snapshot {
    * @param tasks RegionTasks of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  public Iterator<Row> tableRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
+  private Iterator<Row> tableReadRow(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
       Iterator<Long> iter = getHandleIterator(dagRequest, tasks, getSession());
       return new IndexScanIterator(this, dagRequest, iter);

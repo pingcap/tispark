@@ -15,26 +15,18 @@
 
 package org.apache.spark.sql.test
 
-import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 
 /**
  * A special [[SparkSession]] prepared for testing.
  */
-private[spark] class TestSparkSession(sparkConf: SparkConf, isHiveEnabled: Boolean) {
+private[spark] class TestSparkSession(sparkContext: SparkContext) {
   self =>
-  private val builder = SparkSession
+  private val spark = SparkSession
     .builder()
-    .master("local[*]")
-    .appName("tispark-integration-test")
-    .config(sparkConf.set("spark.sql.testkey", "true"))
-  private val spark = if (isHiveEnabled) {
-    builder
-      .enableHiveSupport()
-      .getOrCreate()
-  } else {
-    builder.getOrCreate()
-  }
+    .sparkContext(sparkContext)
+    .getOrCreate()
   SparkSession.setDefaultSession(spark)
   SparkSession.setActiveSession(spark)
 

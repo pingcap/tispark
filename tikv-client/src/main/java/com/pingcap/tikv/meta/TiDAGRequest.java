@@ -53,7 +53,6 @@ import org.tikv.kvproto.Coprocessor;
  * <p>Used for constructing a new DAG request to TiKV
  */
 public class TiDAGRequest implements Serializable {
-
   public static class Builder {
     private List<String> requiredCols = new ArrayList<>();
     private List<Expression> filters = new ArrayList<>();
@@ -127,7 +126,7 @@ public class TiDAGRequest implements Serializable {
     }
 
     public TiDAGRequest build(PushDownType pushDownType) {
-      TiDAGRequest req = new TiDAGRequest(pushDownType);
+      TiDAGRequest req = new TiDAGRequest(pushDownType, EncodeType.TypeDefault);
       req.setTableInfo(tableInfo);
       req.addRanges(ranges);
       req.addFilters(filters);
@@ -159,16 +158,27 @@ public class TiDAGRequest implements Serializable {
     this.useTiFlash = useTiFlash;
   }
 
-  public boolean getUseTiFlash() {
+  public boolean isUseTiFlash() {
     return useTiFlash;
   }
 
   public TiDAGRequest(PushDownType pushDownType) {
     this.pushDownType = pushDownType;
+    this.encodeType = EncodeType.TypeDefault;
+  }
+
+  public TiDAGRequest(PushDownType pushDownType, EncodeType encodeType) {
+    this.pushDownType = pushDownType;
+    this.encodeType = encodeType;
+  }
+
+  public TiDAGRequest(PushDownType pushDownType, EncodeType encodeType, int timeZoneOffset) {
+    this(pushDownType, encodeType);
+    this.timeZoneOffset = timeZoneOffset;
   }
 
   public TiDAGRequest(PushDownType pushDownType, int timeZoneOffset) {
-    this(pushDownType);
+    this(pushDownType, EncodeType.TypeDefault);
     this.timeZoneOffset = timeZoneOffset;
   }
 
@@ -236,6 +246,7 @@ public class TiDAGRequest implements Serializable {
   private boolean distinct;
   private boolean isDoubleRead;
   private final PushDownType pushDownType;
+  private final EncodeType encodeType;
   private IdentityHashMap<Expression, DataType> typeMap;
   private double estimatedCount = -1;
 
@@ -276,17 +287,20 @@ public class TiDAGRequest implements Serializable {
   }
 
   public DAGRequest buildIndexScan() {
-    DAGRequest.Builder builder = buildScan(true);
-    return buildRequest(builder);
+    List<Integer> outputOffsets = new ArrayList<>();
+    DAGRequest.Builder builder = buildScan(true, outputOffsets);
+    return buildRequest(builder, outputOffsets);
   }
 
   public DAGRequest buildTableScan() {
+    List<Integer> outputOffsets = new ArrayList<>();
     boolean isCoveringIndex = isCoveringIndexScan();
-    DAGRequest.Builder builder = buildScan(isCoveringIndex);
-    return buildRequest(builder);
+    DAGRequest.Builder builder = buildScan(isCoveringIndex, outputOffsets);
+    return buildRequest(builder, outputOffsets);
   }
 
-  private DAGRequest buildRequest(DAGRequest.Builder dagRequestBuilder) {
+  private DAGRequest buildRequest(
+      DAGRequest.Builder dagRequestBuilder, List<Integer> outputOffsets) {
     checkNotNull(startTs, "startTs is null");
     checkArgument(startTs.getVersion() != 0, "timestamp is 0");
     DAGRequest request =
@@ -294,6 +308,8 @@ public class TiDAGRequest implements Serializable {
             .setTimeZoneOffset(timeZoneOffset)
             .setFlags(flags)
             .setStartTs(startTs.getVersion())
+            .addAllOutputOffsets(outputOffsets)
+            .setEncodeType(this.encodeType)
             .build();
 
     validateRequest(request);
@@ -312,7 +328,7 @@ public class TiDAGRequest implements Serializable {
    *     com.pingcap.tidb.tipb.IndexScan}
    * @return final DAGRequest built
    */
-  private DAGRequest.Builder buildScan(boolean buildIndexScan) {
+  private DAGRequest.Builder buildScan(boolean buildIndexScan, List<Integer> outputOffsets) {
     long id = tableInfo.getId();
     checkNotNull(startTs, "startTs is null");
     checkArgument(startTs.getVersion() != 0, "timestamp is 0");
@@ -385,7 +401,7 @@ public class TiDAGRequest implements Serializable {
           throw new DAGRequestException("Incorrect index scan with zero column count");
         }
 
-        dagRequestBuilder.addOutputOffsets(colCount - 1);
+        outputOffsets.add(colCount - 1);
       } else {
         int colCount = indexScanBuilder.getColumnsCount();
         boolean pkIsNeeded = false;
@@ -396,7 +412,7 @@ public class TiDAGRequest implements Serializable {
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
             if (col.getColumnInfo().equals(columnInfo)) {
-              dagRequestBuilder.addOutputOffsets(pos);
+              outputOffsets.add(pos);
               colOffsetInFieldMap.put(col, pos);
             }
           }
@@ -406,7 +422,7 @@ public class TiDAGRequest implements Serializable {
           else if (col.getColumnInfo().isPrimaryKey() && tableInfo.isPkHandle()) {
             pkIsNeeded = true;
             // offset should be processed for each primary key encountered
-            dagRequestBuilder.addOutputOffsets(colCount);
+            outputOffsets.add(colCount);
             // for index scan, column offset must be in the order of index->handle
             colOffsetInFieldMap.put(col, indexColOffsets.size());
           } else {
@@ -438,7 +454,7 @@ public class TiDAGRequest implements Serializable {
           lastOffset++;
         }
         // column offset should be in accordance with fields
-        dagRequestBuilder.addOutputOffsets(colOffsetInFieldMap.get(col));
+        outputOffsets.add(colOffsetInFieldMap.get(col));
       }
 
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
@@ -474,7 +490,8 @@ public class TiDAGRequest implements Serializable {
     if (!getGroupByItems().isEmpty() || !getAggregates().isEmpty()) {
       // only allow table scan or covering index scan push down groupby and agg
       if (!isIndexDoubleScan || (isGroupByCoveredByIndex() && isAggregateCoveredByIndex())) {
-        pushDownAggAndGroupBy(dagRequestBuilder, executorBuilder, colOffsetInFieldMap);
+        pushDownAggAndGroupBy(
+            dagRequestBuilder, executorBuilder, outputOffsets, colOffsetInFieldMap);
       } else {
         return dagRequestBuilder;
       }
@@ -526,22 +543,35 @@ public class TiDAGRequest implements Serializable {
   private void pushDownAggAndGroupBy(
       DAGRequest.Builder dagRequestBuilder,
       Executor.Builder executorBuilder,
+      List<Integer> outputOffsets,
       Map<ColumnRef, Integer> colOffsetInFieldMap) {
     Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
+    getAggregates()
+        .forEach(
+            tiExpr ->
+                aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
     getGroupByItems()
         .forEach(
             tiByItem ->
                 aggregationBuilder.addGroupBy(
                     ProtoConverter.toProto(tiByItem.getExpr(), colOffsetInFieldMap)));
-    getAggregates()
-        .forEach(
-            tiExpr ->
-                aggregationBuilder.addAggFunc(ProtoConverter.toProto(tiExpr, colOffsetInFieldMap)));
     executorBuilder.setTp(ExecType.TypeAggregation);
     dagRequestBuilder.addExecutors(executorBuilder.setAggregation(aggregationBuilder));
     executorBuilder.clear();
     addPushDownGroupBys();
     addPushDownAggregates();
+
+    // adding output offsets for aggs
+    outputOffsets.clear();
+    for (int i = 0; i < getAggregates().size(); i++) {
+      outputOffsets.add(i);
+    }
+
+    // adding output offsets for group by
+    int currentMaxOutputOffset = outputOffsets.get(outputOffsets.size() - 1) + 1;
+    for (int i = 0; i < getGroupByItems().size(); i++) {
+      outputOffsets.add(currentMaxOutputOffset + i);
+    }
   }
 
   private boolean isExpressionCoveredByIndex(Expression expr) {
@@ -591,6 +621,8 @@ public class TiDAGRequest implements Serializable {
    */
   private void validateRequest(DAGRequest dagRequest) {
     requireNonNull(dagRequest);
+    // check encode type
+    requireNonNull(dagRequest.getEncodeType());
 
     // A DAG request must contain a valid timestamp
     if (dagRequest.getStartTs() == 0) {

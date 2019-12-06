@@ -422,7 +422,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       List<KeyRange> ranges,
       Queue<SelectResponse> responseQueue) {
     if (req == null || ranges == null || req.getExecutorsCount() < 1) {
-      throw new IllegalArgumentException("Invalid coprocess argument!");
+      throw new IllegalArgumentException("Invalid coprocessor argument!");
     }
 
     Supplier<Coprocessor.Request> reqToSend =

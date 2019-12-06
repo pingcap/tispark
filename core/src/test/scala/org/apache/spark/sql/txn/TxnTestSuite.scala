@@ -20,6 +20,7 @@ package org.apache.spark.sql.txn
 import java.sql.{DriverManager, SQLException}
 
 import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.catalyst.expressions.UnsafeRow
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.test.TestConstants.{TiDB_PASSWORD, TiDB_USER}
 import org.apache.spark.sql.test.Utils.getOrElse
@@ -69,11 +70,7 @@ class TxnTestSuite extends BaseTiSparkTest {
    * @return Unit
    */
   protected def queryTIDBTxn(query: Seq[String], wait: Boolean): Unit = {
-    val jdbcUsername = getOrElse(paramConf(), TiDB_USER, "root")
-
-    val jdbcPassword = getOrElse(paramConf(), TiDB_PASSWORD, "")
-
-    val conn = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
+    val conn = DriverManager.getConnection(jdbcUrl)
     try {
       //Assume a valid connection object conn
       conn.setAutoCommit(false)

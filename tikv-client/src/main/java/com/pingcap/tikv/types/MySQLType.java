@@ -34,6 +34,8 @@ public enum MySQLType {
   TypeLonglong(8, 8, 1, 20),
   TypeInt24(9, 3, 1, 9),
   TypeDate(10, 3, 1, -1),
+  // TypeDuration is just MySQL time type.
+  // MySQL uses the 'HHH:MM:SS' format, which is larger than 24 hours.
   TypeDuration(11, 8, 1, -1),
   TypeDatetime(12, 8, 1, -1),
   TypeYear(13, 8, 1, 4),

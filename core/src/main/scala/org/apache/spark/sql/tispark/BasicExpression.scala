@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,17 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark
+package org.apache.spark.sql.tispark
 
 import java.sql.Timestamp
 
 import com.pingcap.tikv.expression._
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, StartsWith, Subtract}
+import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Cast, CheckOverflow, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, PromotePrecision, StartsWith, Subtract}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
-
-import scala.language.implicitConversions
 
 object BasicExpression {
   type TiExpression = com.pingcap.tikv.expression.Expression
@@ -58,12 +56,21 @@ object BasicExpression {
         // we do not support this expression in DAG mode
         expr.children.forall(
           (e: Expression) =>
-            childType.eq(e.dataType) && isSupportedExpression(e, requestTypes) // Do it recursively
+            sameCopType(childType, e.dataType) && isSupportedExpression(e, requestTypes) // Do it recursively
         )
       // For other request types we assume them supported
       // by default
       case _ => true
     }
+
+  def sameCopType(lhs: DataType, rhs: DataType): Boolean = {
+    (lhs, rhs) match {
+      case (_: IntegralType, _: IntegralType)                           => true
+      case (_: DecimalType, _: DecimalType)                             => true
+      case (_: FloatType | _: DoubleType, _: FloatType | _: DoubleType) => true
+      case _                                                            => lhs.sameType(rhs)
+    }
+  }
 
   def convertToTiExpr(expr: Expression): Option[TiExpression] =
     expr match {
@@ -129,6 +136,20 @@ object BasicExpression {
 
       case Like(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(StringRegExpression.like(lhs, rhs))
+
+      // Coprocessor has its own behavior of type promoting and overflow check
+      // so we simply remove it from expression and let cop handle it
+      case CheckOverflow(BasicExpression(expr), _) =>
+        Some(expr)
+
+      case PromotePrecision(BasicExpression(expr)) =>
+        Some(expr)
+
+      case PromotePrecision(Cast(BasicExpression(expr), _: DecimalType, _)) =>
+        Some(expr)
+
+      case PromotePrecision(BasicExpression(expr)) =>
+        Some(expr)
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>

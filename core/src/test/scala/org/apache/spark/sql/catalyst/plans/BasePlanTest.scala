@@ -17,41 +17,34 @@ package org.apache.spark.sql.catalyst.plans
 
 import com.pingcap.tikv.meta.TiDAGRequest.IndexScanType
 import com.pingcap.tikv.meta.{TiDAGRequest, TiIndexInfo}
-import org.apache.spark.sql.execution.{CoprocessorRDD, HandleRDDExec, RegionTaskExec, SparkPlan}
+import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, ColumnarRegionTaskExec, SparkPlan}
+import org.apache.spark.sql.execution.ColumnarRegionTaskExec
 import org.apache.spark.sql.{BaseTiSparkTest, Dataset}
-import org.scalatest.exceptions.TestFailedException
 
 class BasePlanTest extends BaseTiSparkTest {
   def toPlan[T](df: Dataset[T]): SparkPlan = df.queryExecution.executedPlan
 
   def explain[T](df: Dataset[T]): Unit = df.explain
 
-  val extractCoprocessorRDD: PartialFunction[SparkPlan, CoprocessorRDD] = {
-    case plan: CoprocessorRDD => plan
+  val extractCoprocessorRDD: PartialFunction[SparkPlan, ColumnarCoprocessorRDD] = {
+    case plan: ColumnarCoprocessorRDD => plan
   }
-  val extractRegionTaskExec: PartialFunction[SparkPlan, RegionTaskExec] = {
-    case plan: RegionTaskExec => plan
-  }
-  val extractHandleRDDExec: PartialFunction[SparkPlan, HandleRDDExec] = {
-    case plan: HandleRDDExec => plan
+  val extractRegionTaskExec: PartialFunction[SparkPlan, ColumnarRegionTaskExec] = {
+    case plan: ColumnarRegionTaskExec => plan
   }
 
   val extractTiSparkPlan: PartialFunction[SparkPlan, SparkPlan] = {
-    case plan: CoprocessorRDD => plan
-    case plan: HandleRDDExec  => plan
+    case plan: ColumnarCoprocessorRDD => plan
+    case plan: ColumnarRegionTaskExec => plan
   }
 
   val extractDAGRequest: PartialFunction[SparkPlan, TiDAGRequest] = {
-    case plan: CoprocessorRDD => plan.dagRequest
-    case plan: HandleRDDExec  => plan.dagRequest
+    case plan: ColumnarRegionTaskExec => plan.dagRequest
+    case plan: ColumnarCoprocessorRDD => plan.dagRequest
   }
 
-  private def extractIndexInfo(coprocessorRDD: CoprocessorRDD): TiIndexInfo =
+  private def extractIndexInfo(coprocessorRDD: ColumnarCoprocessorRDD): TiIndexInfo =
     coprocessorRDD.dagRequest.getIndexInfo
-
-  private def extractIndexInfo(handleRDDExec: HandleRDDExec): TiIndexInfo = {
-    handleRDDExec.dagRequest.getIndexInfo
-  }
 
   def extractTiSparkPlans[T](df: Dataset[T]): Seq[SparkPlan] = toPlan(df).collect {
     extractTiSparkPlan
@@ -61,27 +54,19 @@ class BasePlanTest extends BaseTiSparkTest {
     toPlan(df).collect { extractDAGRequest }.toList
   }
 
-  def toCoprocessorRDDs[T](df: Dataset[T]): List[CoprocessorRDD] =
+  def toCoprocessorRDDs[T](df: Dataset[T]): List[ColumnarCoprocessorRDD] =
     toPlan(df).collect { extractCoprocessorRDD }.toList
 
-  def toRegionTaskExecs[T](df: Dataset[T]): List[RegionTaskExec] =
+  def toRegionTaskExecs[T](df: Dataset[T]): List[ColumnarRegionTaskExec] =
     toPlan(df).collect { extractRegionTaskExec }.toList
 
-  def toHandleRDDExecs[T](df: Dataset[T]): List[HandleRDDExec] =
-    toPlan(df).collect { extractHandleRDDExec }.toList
-
-  private def checkIndex(coprocessorRDD: CoprocessorRDD, index: String): Boolean = {
+  private def checkIndex(coprocessorRDD: ColumnarCoprocessorRDD, index: String): Boolean = {
     extractIndexInfo(coprocessorRDD).getName.equalsIgnoreCase(index)
   }
 
-  private def checkIndex(handleRDDExec: HandleRDDExec, index: String): Boolean = {
-    extractIndexInfo(handleRDDExec).getName.equalsIgnoreCase(index)
-  }
-
   private def checkIndex(plan: SparkPlan, index: String): Boolean = plan match {
-    case p: CoprocessorRDD => checkIndex(p, index)
-    case p: HandleRDDExec  => checkIndex(p, index)
-    case _                 => false
+    case p: ColumnarCoprocessorRDD => checkIndex(p, index)
+    case _                         => false
   }
 
   def checkIndex[T](df: Dataset[T], index: String): Boolean = {
@@ -92,19 +77,14 @@ class BasePlanTest extends BaseTiSparkTest {
     dagRequest.getIndexScanType
   }
 
-  private def getIndexScanType(coprocessorRDD: CoprocessorRDD): IndexScanType = {
+  private def getIndexScanType(coprocessorRDD: ColumnarCoprocessorRDD): IndexScanType = {
     getIndexScanType(coprocessorRDD.dagRequest)
-  }
-
-  private def getIndexScanType(handleRDDExec: HandleRDDExec): IndexScanType = {
-    getIndexScanType(handleRDDExec.dagRequest)
   }
 
   private def checkIndexScanType(plan: SparkPlan, indexScanType: IndexScanType): Boolean =
     plan match {
-      case p: CoprocessorRDD => getIndexScanType(p).equals(indexScanType)
-      case p: HandleRDDExec  => getIndexScanType(p).equals(indexScanType)
-      case _                 => false
+      case p: ColumnarCoprocessorRDD => getIndexScanType(p).equals(indexScanType)
+      case _                         => false
     }
 
   /**
@@ -132,8 +112,6 @@ class BasePlanTest extends BaseTiSparkTest {
     }
     if (filteredRequests.isEmpty) {
       fail(df, s"No TiSpark plan contains desired table $tableName")
-    } else if (filteredRequests.size > 1) {
-      fail(df, s"Multiple TiSpark plan contains desired table $tableName")
     } else if (!tiSparkPlans.exists(checkIndexScanType(_, indexScanType))) {
       fail(
         df,

@@ -61,7 +61,7 @@ object ReflectionUtil {
   // Hereby we use reflection to support different Spark versions.
   case class ReflectionMapPartitionWithIndexInternal(
     rdd: RDD[InternalRow],
-    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[InternalRow]
   ) {
     // Spark HDP Release may not compatible with official Release
     // see https://github.com/pingcap/tispark/issues/1006
@@ -107,13 +107,13 @@ object ReflectionUtil {
   // Spark-2.3.0 & Spark-2.3.1
   private def reflectMapPartitionsWithIndexInternalV1(
     rdd: RDD[InternalRow],
-    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[InternalRow]
   ): (String, Method) = {
     (
       "v1",
       classOf[RDD[InternalRow]].getDeclaredMethod(
         "mapPartitionsWithIndexInternal",
-        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+        classOf[(Int, Iterator[InternalRow]) => Iterator[InternalRow]],
         classOf[Boolean],
         classOf[ClassTag[UnsafeRow]]
       )
@@ -123,13 +123,13 @@ object ReflectionUtil {
   // >= Spark-2.3.2
   private def reflectMapPartitionsWithIndexInternalV2(
     rdd: RDD[InternalRow],
-    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[InternalRow]
   ): (String, Method) = {
     (
       "v2",
       classOf[RDD[InternalRow]].getDeclaredMethod(
         "mapPartitionsWithIndexInternal",
-        classOf[(Int, Iterator[InternalRow]) => Iterator[UnsafeRow]],
+        classOf[(Int, Iterator[InternalRow]) => Iterator[InternalRow]],
         classOf[Boolean],
         classOf[Boolean],
         classOf[ClassTag[UnsafeRow]]
@@ -141,7 +141,7 @@ object ReflectionUtil {
     version: String,
     method: Method,
     rdd: RDD[InternalRow],
-    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[UnsafeRow]
+    internalRowToUnsafeRowWithIndex: (Int, Iterator[InternalRow]) => Iterator[InternalRow]
   ): RDD[InternalRow] = {
     version match {
       case "v1" =>

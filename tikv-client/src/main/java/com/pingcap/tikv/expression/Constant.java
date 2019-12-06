@@ -16,6 +16,7 @@
 package com.pingcap.tikv.expression;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.UnsignedLong;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.types.*;
 import java.math.BigDecimal;
@@ -123,5 +124,17 @@ public class Constant implements Expression {
   @Override
   public <R, C> R accept(Visitor<R, C> visitor, C context) {
     return visitor.visit(this, context);
+  }
+
+  private BigDecimal UNSIGNED_LONG_MAX = new BigDecimal(UnsignedLong.fromLongBits(-1).toString());
+
+  public boolean isOverflowed() {
+    if (type instanceof IntegerType) {
+      if (((IntegerType) type).isUnsignedLong()) {
+        return ((BigDecimal) value).min(UNSIGNED_LONG_MAX).signum() > 0
+            || ((BigDecimal) value).signum() < 0;
+      }
+    }
+    return false;
   }
 }

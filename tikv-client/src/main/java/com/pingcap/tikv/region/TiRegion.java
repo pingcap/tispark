@@ -22,7 +22,9 @@ import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.util.FastByteComparisons;
+import com.pingcap.tikv.util.KeyRangeUtils;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,8 +87,7 @@ public class TiRegion implements Serializable {
   }
 
   public List<Peer> getLearnerList() {
-    int peerCnt = getMeta().getPeersCount();
-    List<Peer> peers = new ArrayList<Peer>();
+    List<Peer> peers = new ArrayList<>();
     for (Peer peer : getMeta().getPeersList()) {
       if (peer.getIsLearner()) {
         peers.add(peer);
@@ -101,6 +102,10 @@ public class TiRegion implements Serializable {
 
   public ByteString getStartKey() {
     return meta.getStartKey();
+  }
+
+  public boolean contains(Key key) {
+    return KeyRangeUtils.makeRange(this.getStartKey(), this.getEndKey()).contains(key);
   }
 
   public ByteString getEndKey() {
