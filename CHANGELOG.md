@@ -1,6 +1,15 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+
+## [TiSpark 2.1.7] 2019-12-09
+### Fixes
+- Add task retry if tikv is down [#1207](https://github.com/pingcap/tispark/pull/1207)
+- Fix output offsets: add field type to Constant and ColumnRef when encoding proto [#1231](https://github.com/pingcap/tispark/pull/1231)
+- Register udf `ti_version` for every sparksession [#1258](https://github.com/pingcap/tispark/pull/1258)
+- Add timezone check [#1275](https://github.com/pingcap/tispark/pull/1275)
+- Disable set, enum and bit pushed down [#1242](https://github.com/pingcap/tispark/pull/1242)
+
 ## [TiSpark 2.1.6] 2019-11-08
 ### Fixes
 - Fix TopN push down bug [#1185](https://github.com/pingcap/tispark/pull/1185)
