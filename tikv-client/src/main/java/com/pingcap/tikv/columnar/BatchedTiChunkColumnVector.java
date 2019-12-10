@@ -19,12 +19,12 @@ import java.util.Arrays;
 import java.util.List;
 
 /** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
-public class TiChunkBatchColumnVector extends TiColumnVector {
+public class BatchedTiChunkColumnVector extends TiColumnVector {
   private List<TiChunkColumnVector> childColumns;
   private int numOfNulls;
   private int[] rightEndpoints;
 
-  public TiChunkBatchColumnVector(List<TiChunkColumnVector> child, int numOfRows) {
+  public BatchedTiChunkColumnVector(List<TiChunkColumnVector> child, int numOfRows) {
     super(child.get(0).dataType(), numOfRows);
     this.childColumns = child;
     this.numOfNulls =
@@ -79,7 +79,7 @@ public class TiChunkBatchColumnVector extends TiColumnVector {
     } else {
       idx = -(offset + 2);
     }
-    if (idx < childColumns.size() && idx >= 0) {
+    if (idx >= childColumns.size() || idx < 0) {
       throw new UnsupportedOperationException("Something goes wrong, it should never happen");
     }
     return new int[] {idx, rowId - rightEndpoints[idx]};
