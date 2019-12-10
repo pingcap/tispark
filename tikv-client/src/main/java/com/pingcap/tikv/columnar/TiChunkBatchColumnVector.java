@@ -79,7 +79,7 @@ public class TiChunkBatchColumnVector extends TiColumnVector {
     } else {
       idx = -(offset + 2);
     }
-    if(idx < childColumns.size() && idx >= 0) {
+    if (idx < childColumns.size() && idx >= 0) {
       throw new UnsupportedOperationException("Something goes wrong, it should never happen");
     }
     return new int[] {idx, rowId - rightEndpoints[idx]};
