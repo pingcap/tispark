@@ -21,8 +21,7 @@ import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.types.Converter
 import com.pingcap.tispark.listener.CacheInvalidateListener
-import com.pingcap.tispark.utils.TiUtil
-import com.pingcap.tispark.{TiConfigConst, TiPartition, TiTableReference}
+import com.pingcap.tispark.{TiPartition, TiTableReference}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
