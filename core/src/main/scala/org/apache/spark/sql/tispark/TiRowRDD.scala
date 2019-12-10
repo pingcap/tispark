@@ -48,12 +48,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
     new Iterator[ColumnarBatch] {
-      if (!tiConf.getLocalTimeZone.equals(Converter.getLocalTimezone)) {
-        throw new TiInternalException(
-          "timezone are different! dirver: " + tiConf.getLocalTimeZone + " executor:" + Converter.getLocalTimezone +
-            " please set user.timezone in spark.driver.extraJavaOptions and spark.executor.extraJavaOptions"
-        )
-      }
+      checkTimezone
 
       dagRequest.resolve()
 
@@ -80,6 +75,4 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
       }
     }.asInstanceOf[Iterator[InternalRow]]
 
-  override protected def getPreferredLocations(split: Partition): Seq[String] =
-    split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
 }

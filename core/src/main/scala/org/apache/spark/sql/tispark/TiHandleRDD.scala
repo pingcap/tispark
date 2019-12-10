@@ -55,12 +55,7 @@ class TiHandleRDD(override val dagRequest: TiDAGRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
     new Iterator[InternalRow] {
-      if (!tiConf.getLocalTimeZone.equals(Converter.getLocalTimezone)) {
-        throw new TiInternalException(
-          "timezone are different! dirver: " + tiConf.getLocalTimeZone + " executor:" + Converter.getLocalTimezone +
-            " please set user.timezone in spark.driver.extraJavaOptions and spark.executor.extraJavaOptions"
-        )
-      }
+      checkTimezone
 
       dagRequest.resolve()
       private val tiPartition = split.asInstanceOf[TiPartition]
