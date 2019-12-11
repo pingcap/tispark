@@ -104,6 +104,7 @@ case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], f
  */
 case class ColumnarRegionTaskExec(child: SparkPlan,
                                   output: Seq[Attribute],
+                                  chunkBatchSize: Int,
                                   dagRequest: TiDAGRequest,
                                   tiConf: TiConfiguration,
                                   ts: TiTimestamp,
@@ -201,7 +202,12 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
         taskCount += 1
         val task = new Callable[util.Iterator[TiChunk]] {
           override def call(): util.Iterator[TiChunk] = {
-            CoprocessorIterator.getTiChunkIterator(dagRequest, tasks, session)
+            CoprocessorIterator.getTiChunkIterator(
+              dagRequest,
+              tasks,
+              session,
+              chunkBatchSize
+            )
           }
 
         }

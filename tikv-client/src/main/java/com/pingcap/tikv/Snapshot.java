@@ -68,12 +68,13 @@ public class Snapshot {
         .get(key, timestamp.getVersion());
   }
 
-  public Iterator<TiChunk> tableReadChunk(TiDAGRequest dagRequest, List<RegionTask> tasks) {
+  public Iterator<TiChunk> tableReadChunk(
+      TiDAGRequest dagRequest, List<RegionTask> tasks, int numOfRows) {
     if (dagRequest.isDoubleRead()) {
       throw new UnsupportedOperationException(
           "double read case should first read handle in row-wise fashion");
     } else {
-      return getTiChunkIterator(dagRequest, tasks, getSession());
+      return getTiChunkIterator(dagRequest, tasks, getSession(), numOfRows);
     }
   }
   /**

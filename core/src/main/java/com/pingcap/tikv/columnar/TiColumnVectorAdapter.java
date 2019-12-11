@@ -160,10 +160,6 @@ public class TiColumnVectorAdapter extends ColumnVector {
     return  Decimal.apply(tiColumnVector.getDecimal(rowId, precision, scale));
   }
 
-  public Decimal getDecimal(int rowId) {
-    return getDecimal(rowId, 0, 0);
-  }
-
   /**
    * Returns the string type value for rowId. If the slot for rowId is null, it should return null.
    * Note that the returned UTF8String may point to the data of this column vector, please copy it
@@ -186,9 +182,5 @@ public class TiColumnVectorAdapter extends ColumnVector {
   @Override
   protected ColumnVector getChild(int ordinal) {
     throw new UnsupportedOperationException("TiColumnVectorAdapter is not supported this method");
-  }
-
-  int numOfRows() {
-    return tiColumnVector.numOfRows();
   }
 }

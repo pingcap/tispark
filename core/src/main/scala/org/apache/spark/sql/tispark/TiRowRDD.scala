@@ -33,6 +33,7 @@ import scala.collection.JavaConversions._
 
 class TiRowRDD(override val dagRequest: TiDAGRequest,
                override val physicalId: Long,
+               val chunkBatchSize: Int,
                override val tiConf: TiConfiguration,
                val output: Seq[Attribute],
                override val tableRef: TiTableReference,
@@ -63,7 +64,8 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
       private val snapshot = session.createSnapshot(dagRequest.getStartTs)
       private[this] val tasks = tiPartition.tasks
 
-      private val iterator = snapshot.tableReadChunk(dagRequest, tasks)
+      private val iterator =
+        snapshot.tableReadChunk(dagRequest, tasks, chunkBatchSize)
 
       override def hasNext: Boolean = {
         // Kill the task in case it has been marked as killed. This logic is from

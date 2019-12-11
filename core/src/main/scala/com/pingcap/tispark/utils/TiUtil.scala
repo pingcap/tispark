@@ -30,7 +30,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GenericInternalRow, Literal, NamedExpression}
 import org.apache.spark.sql.tispark.BasicExpression
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{sql, SparkConf}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
@@ -208,6 +208,9 @@ object TiUtil {
     }
     tiConf
   }
+
+  def getChunkBatchSize(sqlContext: SQLContext) =
+    sqlContext.getConf(TiConfigConst.CHUNK_BATCH_SIZE, "1024").toInt
 
   def registerUDFs(sparkSession: SparkSession): Unit = {
     val timeZoneStr: String = "TimeZone: " + Converter.getLocalTimezone.toString
