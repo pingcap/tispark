@@ -148,7 +148,8 @@ capacity = "8G"
 # bit smaller.
 # region-max-size = "144MB"
 # region-split-size = "96MB"
-region-split-size = "1MB"
+# region-max-size = "2MB"
+# region-split-size = "1MB"
 
 [rocksdb]
 # Maximum number of concurrent background jobs (compactions and flushes)
