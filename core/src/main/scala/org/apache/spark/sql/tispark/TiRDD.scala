@@ -16,7 +16,9 @@
 package org.apache.spark.sql.tispark
 
 import com.pingcap.tikv._
+import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
+import com.pingcap.tikv.types.Converter
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask
 import com.pingcap.tispark.{TiPartition, TiTableReference}
@@ -36,6 +38,15 @@ abstract class TiRDD(val dagRequest: TiDAGRequest,
                      @transient private val session: TiSession,
                      @transient private val sparkSession: SparkSession)
     extends RDD[InternalRow](sparkSession.sparkContext, Nil) {
+
+  protected def checkTimezone(): Unit = {
+    if (!tiConf.getLocalTimeZone.equals(Converter.getLocalTimezone)) {
+      throw new TiInternalException(
+        "timezone are different! driver: " + tiConf.getLocalTimeZone + " executor:" + Converter.getLocalTimezone +
+          " please set user.timezone in spark.driver.extraJavaOptions and spark.executor.extraJavaOptions"
+      )
+    }
+  }
 
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter
@@ -61,4 +72,7 @@ abstract class TiRDD(val dagRequest: TiDAGRequest,
     }
     result.toArray
   }
+
+  override protected def getPreferredLocations(split: Partition): Seq[String] =
+    split.asInstanceOf[TiPartition].tasks.head.getHost :: Nil
 }
