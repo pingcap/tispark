@@ -80,8 +80,7 @@ public class Catalog implements AutoCloseable {
         tableMap = loadTables(db);
       }
       Collection<TiTableInfo> tables = tableMap.values();
-      tables.removeIf(TiTableInfo::isView);
-      return ImmutableList.copyOf(tables);
+      return tables.stream().filter(tbl -> !tbl.isView()).collect(Collectors.toList());
     }
 
     public TiTableInfo getTable(TiDBInfo db, String tableName) {
