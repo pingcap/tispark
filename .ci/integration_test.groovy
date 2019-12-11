@@ -9,6 +9,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def MVN_PROFILE = "-Pjenkins"
     def TEST_MODE = "simple"
     def PARALLEL_NUMBER = 18
+    def TEST_REGION_SIZE = "normal"
     
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
@@ -41,6 +42,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def m5 = ghprbCommentBody =~ /mode\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m5) {
         TEST_MODE = "${m5[0][1]}"
+    }
+
+    // parse test region size
+    def m6 = ghprbCommentBody =~ /region\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m6) {
+        TEST_REGION_SIZE = "${m6[0][1]}"
     }
     
     def readfile = { filename ->
@@ -96,6 +103,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         shuf test -o  test2
                         mv test2 test
                         """
+
+                        if(TEST_REGION_SIZE  != "normal") {
+                            sh "sed -i 's/\\# region-max-size = \\\"2MB\\\"/region-max-size = \\\"2MB\\\"/' config/tikv.toml"
+                            sh "sed -i 's/\\# region-split-size = \\\"1MB\\\"/region-split-size = \\\"1MB\\\"/' config/tikv.toml"
+                            sh "cat config/tikv.toml"
+                        }
 
                         if(TEST_MODE != "simple") {
                             sh """
