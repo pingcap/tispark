@@ -248,11 +248,12 @@ object TiUtil {
   def extractDAGReq(df: DataFrame): TiDAGRequest = {
     val executedPlan = df.queryExecution.executedPlan
     val copRDD = executedPlan.find(e => e.isInstanceOf[ColumnarCoprocessorRDD])
-    val regionTaskExec = executedPlan.find(e => e.isInstanceOf[ColumnarCoprocessorRDD])
+    val regionTaskExec = executedPlan.find(e => e.isInstanceOf[ColumnarRegionTaskExec])
     if (copRDD.isDefined) {
       copRDD.get
         .asInstanceOf[ColumnarCoprocessorRDD]
-        .tiRDDs(0)
+        .tiRDDs
+        .head
         .dagRequest
     } else {
       regionTaskExec.get

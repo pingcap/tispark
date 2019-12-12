@@ -16,9 +16,17 @@
 package org.apache.spark.sql.catalyst.plans.logical
 
 import com.pingcap.tikv.meta.TiTimestamp
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.plans.BasePlanTest
 
 class LogicalPlanTestSuite extends BasePlanTest {
+  test("fix Residual Filter containing wrong info") {
+    val df = spark
+      .sql("select * from full_data_type_table where tp_mediumint > 0 order by tp_int")
+    if (TiUtil.extractDAGReq(df).toString.contains("Residual Filters")) {
+      fail("Residual Filters should not appear")
+    }
+  }
 
   test("test timestamp in logical plan") {
     tidbStmt.execute("DROP TABLE IF EXISTS `test1`")

@@ -20,14 +20,6 @@ import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
-  test("fix Residual Filter containing wrong info") {
-    val df = spark
-      .sql("select * from full_data_type_table where tp_mediumint > 0 order by tp_int")
-    if (TiUtil.extractDAGReq(df).toString.contains("Residual Filters")) {
-      fail("Residual Filters should not appear")
-    }
-  }
-
   // https://github.com/pingcap/tispark/issues/1186
   test("Consider nulls order when performing TopN") {
     // table `full_data_type_table` contains a single line of nulls
