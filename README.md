@@ -13,9 +13,9 @@ Read the [Quick Start](./docs/userguide.md).
 
 ## Getting TiSpark
 
-+ Currently, TiSpark 2.1.7 is the latest stable version, which is highly recommended. It is compatible with Spark 2.3.0+ and Spark 2.4.0+. It is also compatible with TiDB-2.x and TiDB-3.x.
-  - When using TiSpark 2.1.7 with Spark 2.3.0+, use version `2.1.7-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md).
-  - When using TiSpark 2.1.7 with Spark 2.4.0+, use version `2.1.7-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md).
++ Currently, TiSpark 2.1.8 is the latest stable version, which is highly recommended. It is compatible with Spark 2.3.0+ and Spark 2.4.0+. It is also compatible with TiDB-2.x and TiDB-3.x.
+  - When using TiSpark 2.1.8 with Spark 2.3.0+, use version `2.1.8-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md).
+  - When using TiSpark 2.1.8 with Spark 2.4.0+, use version `2.1.8-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md).
 
 + TiSpark 1.2.1 is the latest stable version compatible with Spark 2.1.0+.
   - When using TiSpark 1.2.1, follow the [document for Spark 2.1](./docs/userguide_spark2.1.md).
@@ -39,7 +39,7 @@ If you want to use TiSpark-2.1.x, please use the following configuration:
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-core</artifactId>
-      <version>2.1.7-spark_${spark.version}</version>
+      <version>2.1.8-spark_${spark.version}</version>
     </dependency>
 </dependencies>
 ```
@@ -68,8 +68,8 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 | Spark Version | Recommended TiSpark Version |
 | ------------- | ---------------------- |
-| Spark-2.4.x | TiSpark-2.2.0、TiSpark-2.1.7 |
-| Spark-2.3.x | TiSpark-2.2.0、TiSpark-2.1.7 |
+| Spark-2.4.x | TiSpark-2.2.0、TiSpark-2.1.8 |
+| Spark-2.3.x | TiSpark-2.2.0、TiSpark-2.1.8 |
 | Spark-2.2.x | TiSpark-1.2.1 |
 | Spark-2.1.x | TiSpark-1.2.1 |
 
@@ -77,7 +77,7 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 | TiSpark Version | Latest TiDB Version | Latest TiKV Version | Latest PD Version |
 | ----- | ------ | ------ | ------ |
-| < 1.2 | v2.1.7 | v2.1.7 | v2.1.7 |
+| < 1.2 | v2.1.8 | v2.1.8 | v2.1.8 |
 | 1.2.x | v2.1.x | v2.1.x | v2.1.x |
 | 2.x | v3.0.2 | v3.0.2 | v3.0.2 |
 | Latest (master) | Latest | Latest | Latest |
@@ -253,7 +253,7 @@ In most cases, TiSpark use a full table scan on partition tables. Only in certai
 
 ## Upgrade from TiDB-2.x to TiDB-3.x
 When upgrading from TiDB-2.x to TiDB-3.x,
-1. make sure that you are using at least TiSpark-2.1.2 (TiSpark-2.1.7 is highly recommended).
+1. make sure that you are using at least TiSpark-2.1.2 (TiSpark-2.1.8 is highly recommended).
 2. `tidbMapDatabase` is deprecated after TiSpark-2.x, make sure that you are not using it.
 
 ## How to test
