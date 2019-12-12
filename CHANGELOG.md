@@ -1,6 +1,9 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.1.8] 2019-12-12
+### Fixes
+- Fix UnsupportedOperationException: using stream rather than removeIf [#1303](https://github.com/pingcap/tispark/pull/1303)
 
 ## [TiSpark 2.1.7] 2019-12-09
 ### Fixes
