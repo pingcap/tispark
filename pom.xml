@@ -52,6 +52,12 @@
             <organization>PingCAP</organization>
             <organizationUrl>https://www.pingcap.com</organizationUrl>
         </developer>
+        <developer>
+            <name>Liangliang Gu</name>
+            <email>guliangliang@pingcap.com</email>
+            <organization>PingCAP</organization>
+            <organizationUrl>https://www.pingcap.com</organizationUrl>
+        </developer>
     </developers>
 
     <scm>
