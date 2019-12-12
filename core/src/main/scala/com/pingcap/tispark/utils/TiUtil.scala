@@ -28,6 +28,7 @@ import com.pingcap.tispark.{TiConfigConst, TiDBRelation, _}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GenericInternalRow, Literal, NamedExpression}
+import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, ColumnarRegionTaskExec}
 import org.apache.spark.sql.tispark.BasicExpression
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
@@ -242,5 +243,21 @@ object TiUtil {
     }
 
     mutableRow
+  }
+
+  def extractDAGReq(df: DataFrame): TiDAGRequest = {
+    val executedPlan = df.queryExecution.executedPlan
+    val copRDD = executedPlan.find(e => e.isInstanceOf[ColumnarCoprocessorRDD])
+    val regionTaskExec = executedPlan.find(e => e.isInstanceOf[ColumnarCoprocessorRDD])
+    if (copRDD.isDefined) {
+      copRDD.get
+        .asInstanceOf[ColumnarCoprocessorRDD]
+        .tiRDDs(0)
+        .dagRequest
+    } else {
+      regionTaskExec.get
+        .asInstanceOf[ColumnarRegionTaskExec]
+        .dagRequest
+    }
   }
 }

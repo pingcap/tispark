@@ -16,6 +16,7 @@
 package org.apache.spark.sql
 
 import com.pingcap.tikv.meta.TiDAGRequest
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, ColumnarRegionTaskExec}
 import org.apache.spark.sql.execution.ColumnarRegionTaskExec
 
@@ -171,19 +172,7 @@ class PartitionTableSuite extends BaseTiSparkTest {
 
   private def extractDAGReq(df: DataFrame): TiDAGRequest = {
     enablePartitionForTiDB()
-    val executedPlan = df.queryExecution.executedPlan
-    val copRDD = executedPlan.find(e => e.isInstanceOf[ColumnarCoprocessorRDD])
-    val regionTaskExec = executedPlan.find(e => e.isInstanceOf[ColumnarCoprocessorRDD])
-    if (copRDD.isDefined) {
-      copRDD.get
-        .asInstanceOf[ColumnarCoprocessorRDD]
-        .tiRDDs(0)
-        .dagRequest
-    } else {
-      regionTaskExec.get
-        .asInstanceOf[ColumnarRegionTaskExec]
-        .dagRequest
-    }
+    TiUtil.extractDAGReq(df)
   }
 
   test("part pruning on unix_timestamp") {
