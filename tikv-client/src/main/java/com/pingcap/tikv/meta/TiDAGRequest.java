@@ -1041,10 +1041,12 @@ public class TiDAGRequest implements Serializable {
       sb.append(String.format("[table: %s] ", tableInfo.getName()));
     }
 
+    boolean isIndexScan = false;
     switch (getIndexScanType()) {
       case INDEX_SCAN:
         sb.append("IndexScan");
         sb.append(String.format("[Index: %s] ", indexInfo.getName()));
+        isIndexScan = true;
         break;
       case COVERING_INDEX_SCAN:
         sb.append("CoveringIndexScan");
@@ -1059,11 +1061,14 @@ public class TiDAGRequest implements Serializable {
       Joiner.on(", ").skipNulls().appendTo(sb, getFields());
     }
 
-    if (!getDowngradeFilters().isEmpty()) {
-      if (!getFilters().isEmpty()) {
-        sb.append(", Residual Filter: ");
-        Joiner.on(", ").skipNulls().appendTo(sb, getFilters());
-      }
+    if (isIndexScan && !getDowngradeFilters().isEmpty()) {
+      sb.append(", Downgrade Filter: ");
+      Joiner.on(", ").skipNulls().appendTo(sb, getDowngradeFilters());
+    }
+
+    if (!isIndexScan && !getFilters().isEmpty()) {
+      sb.append(", Residual Filter: ");
+      Joiner.on(", ").skipNulls().appendTo(sb, getFilters());
     }
 
     if (!getPushDownFilters().isEmpty()) {
