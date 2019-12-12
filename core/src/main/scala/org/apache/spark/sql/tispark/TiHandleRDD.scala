@@ -15,9 +15,7 @@
 
 package org.apache.spark.sql.tispark
 
-import com.pingcap.tikv.exception.TiInternalException
 import com.pingcap.tikv.meta.TiDAGRequest
-import com.pingcap.tikv.types.Converter
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.utils.TiUtil
