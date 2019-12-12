@@ -256,6 +256,9 @@ When upgrading from TiDB-2.x to TiDB-3.x,
 1. make sure that you are using at least TiSpark-2.1.2 (TiSpark-2.1.8 is highly recommended).
 2. `tidbMapDatabase` is deprecated after TiSpark-2.x, make sure that you are not using it.
 
+## Example Programs
+There are some [sample programs](https://github.com/pingcap/tispark-test/tree/master/tispark-examples) for TiSpark. You can run them locally or on a cluster following the document.
+
 ## How to test
 
 TiDB uses [docker-compose](https://docs.docker.com/compose/) to provide the TiDB cluster service which allows you to run test across different platforms.
