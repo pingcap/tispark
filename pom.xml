@@ -79,6 +79,8 @@
         <gpg.skip>true</gpg.skip>
         <javadoc.skip>true</javadoc.skip>
         <gpg.keyname>name</gpg.keyname>
+        <skipFetchTestData>false</skipFetchTestData>
+        <skipCloneProtoFiles>false</skipCloneProtoFiles>
     </properties>
 
     <profiles>
@@ -97,6 +99,13 @@
             <id>local-debug</id>
             <properties>
                 <spark.scope>compile</spark.scope>
+            </properties>
+        </profile>
+        <profile>
+            <id>jenkins</id>
+            <properties>
+                <skipFetchTestData>true</skipFetchTestData>
+                <skipCloneProtoFiles>true</skipCloneProtoFiles>
             </properties>
         </profile>
     </profiles>
