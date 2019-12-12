@@ -255,10 +255,13 @@ object TiUtil {
         .tiRDDs
         .head
         .dagRequest
-    } else {
+    } else if(regionTaskExec.isDefined) {
       regionTaskExec.get
         .asInstanceOf[ColumnarRegionTaskExec]
         .dagRequest
+    } else {
+      throw new UnsupportedOperationException("cannot find ColumnarCoprocessorRDD or " +
+        "ColumnarRegionTaskExec in DataFrame.")
     }
   }
 }
