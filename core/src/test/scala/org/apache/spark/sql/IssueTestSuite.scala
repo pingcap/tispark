@@ -22,7 +22,7 @@ import org.apache.spark.sql.functions.{col, sum}
 class IssueTestSuite extends BaseTiSparkTest {
   test("fix Residual Filter containing wrong info") {
     val df = spark
-      .sql("select * from full_data_type_table_idx where tp_mediumint > 0 order by tp_int")
+      .sql("select * from full_data_type_table where tp_mediumint > 0 order by tp_int")
     if (TiUtil.extractDAGReq(df).toString.contains("Residual Filters")) {
       fail("Residual Filters should not appear")
     }
