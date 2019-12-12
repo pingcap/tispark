@@ -172,6 +172,9 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <skip>${skipCloneProtoFiles}</skip>
+                </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>

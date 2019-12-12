@@ -14,6 +14,10 @@
 #   limitations under the License.
 #
 
+CURRENT_DIR=`pwd`
+TISPARK_HOME="$(cd "`dirname "$0"`"/../..; pwd)"
+cd $TISPARK_HOME/tikv-client
+
 kvproto_hash=a63718839aee85e3315e58d7bd8a49c721a43294
 
 raft_rs_hash=4fd768dc24bf9ac370f4ac2f2c3eeafef8214c66
@@ -37,3 +41,5 @@ if [ -d "tipb" ]; then
 else
 	git clone https://github.com/pingcap/tipb; cd tipb; git checkout ${tipb_hash}; cd ..
 fi
+
+cd $CURRENT_DIR

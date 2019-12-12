@@ -6,7 +6,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIDB_BRANCH = "master"
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
-    def MVN_PROFILE = ""
+    def MVN_PROFILE = "-Pjenkins"
     def PARALLEL_NUMBER = 9
     
     // parse tidb branch
@@ -33,7 +33,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     // parse mvn profile
     def m4 = ghprbCommentBody =~ /profile\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m4) {
-        MVN_PROFILE = "-P ${m4[0][1]}"
+        MVN_PROFILE = MVN_PROFILE + " -P${m4[0][1]}"
     }
     
     def readfile = { filename ->
@@ -94,6 +94,10 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         sed -i 's/\\//\\./g' test
                         sed -i 's/\\.scala//g' test
                         split test -n r/$PARALLEL_NUMBER test_unit_ -a 1 --numeric-suffixes=1
+                        cp .ci/log4j-ci.properties core/src/test/resources/log4j.properties
+                        bash core/scripts/version.sh
+                        bash core/scripts/fetch-test-data.sh
+                        bash tikv-client/scripts/proto.sh
                         """
                     }
     
@@ -115,7 +119,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        mvn  test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
+                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=51M"
+                        mvn compile ${MVN_PROFILE}
+                        mvn test ${MVN_PROFILE} -Dtest=moo ${mvnStr}
                     """
                 }
             }
@@ -127,7 +133,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
                     sh """
-                        mvn verify -am -pl tikv-client
+                        export MAVEN_OPTS="-Xmx6G -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512M"
+                        mvn test ${MVN_PROFILE} -am -pl tikv-client
                     """
                     unstash "CODECOV_TOKEN"
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'
