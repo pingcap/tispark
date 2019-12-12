@@ -151,6 +151,9 @@ Below configurations can be put together with spark-defaults.conf or passed in t
 ## Statistics information
 If you want to know how TiSpark could benefit from TiDB's statistic information, read more [here](./docs/userguide.md).
 
+## Example Programs
+There are some [sample programs](https://github.com/pingcap/tispark-test/tree/master/tispark-examples) for TiSpark. You can run them locally or on a cluster following the document.
+
 ## How to test
 We use [docker-compose](https://docs.docker.com/compose/) to provide tidb cluster service which allows you to run test across different platforms. It is recommended to install docker in order to test locally, or you can set up your own TiDB cluster locally as you wish.
 
