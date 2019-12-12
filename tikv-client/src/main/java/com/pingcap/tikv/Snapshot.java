@@ -25,7 +25,6 @@ import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
-import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
@@ -101,8 +100,7 @@ public class Snapshot {
    */
   private Iterator<Row> tableReadRow(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     if (dagRequest.isDoubleRead()) {
-      Iterator<Long> iter = getHandleIterator(dagRequest, tasks, getSession());
-      return new IndexScanIterator(this, dagRequest, iter);
+      throw new UnsupportedOperationException("Double Read should be handled by TiSpark side.");
     } else {
       return getRowIterator(dagRequest, tasks, getSession());
     }
