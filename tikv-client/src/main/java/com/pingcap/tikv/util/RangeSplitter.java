@@ -162,7 +162,7 @@ public class RangeSplitter {
    * @param handles Handle list
    * @return A list of region tasks
    */
-  private List<RegionTask> splitAndSortHandlesByRegion(long tableId, TLongArrayList handles) {
+  public List<RegionTask> splitAndSortHandlesByRegion(long tableId, TLongArrayList handles) {
     // Max value for current index handle range
     ImmutableList.Builder<RegionTask> regionTasks = ImmutableList.builder();
 

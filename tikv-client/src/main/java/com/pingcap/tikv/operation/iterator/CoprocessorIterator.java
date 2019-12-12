@@ -34,6 +34,7 @@ import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import gnu.trove.list.array.TLongArrayList;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -170,9 +171,9 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
    * @param session TiSession
    * @return a DAGIterator to be processed
    */
-  public static CoprocessorIterator<Long> getHandleIterator(
+  public static CoprocessorIterator<TLongArrayList> getHandleIterator(
       TiDAGRequest req, List<RegionTask> regionTasks, TiSession session) {
-    return new DAGIterator<Long>(
+    return new DAGIterator<TLongArrayList>(
         req.buildIndexScan(),
         regionTasks,
         session,
@@ -180,8 +181,13 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         req.getPushDownType(),
         req.getStoreType()) {
       @Override
-      public Long next() {
-        return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);
+      public TLongArrayList next() {
+        int batchSize = 1024;
+        TLongArrayList handles = new TLongArrayList(batchSize);
+        for (int i = 0; i < batchSize && hasNext(); i++) {
+          handles.add(rowReader.readRow(handleTypes).getLong(handleTypes.length - 1));
+        }
+        return handles;
       }
     };
   }

@@ -28,6 +28,7 @@ import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import gnu.trove.list.array.TLongArrayList;
 import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -114,7 +115,7 @@ public class Snapshot {
    * @param tasks RegionTask of the coprocessor request to send
    * @return Row iterator to iterate over resulting rows
    */
-  public Iterator<Long> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
+  public Iterator<TLongArrayList> indexHandleRead(TiDAGRequest dagRequest, List<RegionTask> tasks) {
     return getHandleIterator(dagRequest, tasks, session);
   }
 

@@ -26,7 +26,7 @@ import com.pingcap.tikv.util.{KeyRangeUtils, RangeSplitter}
 import com.pingcap.tikv.{TiConfiguration, TiSession}
 import com.pingcap.tispark.listener.CacheInvalidateListener
 import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexInternal
-import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.utils.{DoubleReadUtils, TiUtil}
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
 import org.apache.log4j.Logger
@@ -85,7 +85,7 @@ case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], f
     if (!fetchHandle) {
       WholeStageCodegenExec(this)(codegenStageId = 0).execute()
     } else {
-      sparkContext.union(internalRDDs)
+      WholeStageCodegenExec(this)(codegenStageId = 0).execute()
     }
   }
 
@@ -169,20 +169,13 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
         )
       var rowIterator: util.Iterator[TiChunk] = null
 
-      // After `splitAndSortHandlesByRegion`, ranges in the task are arranged in order
-      def generateIndexTasks(handles: TLongArrayList): util.List[RegionTask] = {
-        val indexTasks: util.List[RegionTask] = new util.ArrayList[RegionTask]()
-        indexTasks.addAll(
-          RangeSplitter
-            .newSplitter(session.getRegionManager)
-            .splitAndSortHandlesByRegion(dagRequest.getIds, handles)
-        )
-        indexTasks
-      }
-
       // indexTasks was made to be used later to determine whether we should downgrade to
       // table scan or not.
-      val indexTasks: util.List[RegionTask] = generateIndexTasks(new TLongArrayList(handles))
+      val indexTasks: util.List[RegionTask] = DoubleReadUtils.generateIndexTasks(
+        new TLongArrayList(handles),
+        session.getRegionManager,
+        dagRequest.getIds
+      )
       val indexTaskRanges = indexTasks.flatMap {
         _.getRanges
       }
@@ -254,7 +247,12 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
           numHandles += handleList.size()
           logger.debug("Single batch handles size:" + handleList.size())
 
-          val indexTasks: util.List[RegionTask] = generateIndexTasks(handleList)
+          val indexTasks: util.List[RegionTask] =
+            DoubleReadUtils.generateIndexTasks(
+              new TLongArrayList(handleList),
+              session.getRegionManager,
+              dagRequest.getIds
+            )
 
           indexTasks.foreach { task =>
             val tasks = splitTasks(task)
