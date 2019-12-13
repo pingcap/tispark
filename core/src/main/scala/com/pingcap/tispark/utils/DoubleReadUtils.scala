@@ -3,8 +3,6 @@ package com.pingcap.tispark.utils
 import java.util
 
 import com.google.common.collect.ImmutableList
-import com.pingcap.tikv.TiSession
-import com.pingcap.tikv.meta.TiDAGRequest
 import com.pingcap.tikv.region.RegionManager
 import com.pingcap.tikv.util.RangeSplitter
 import com.pingcap.tikv.util.RangeSplitter.RegionTask

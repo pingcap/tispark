@@ -92,7 +92,7 @@ case class TiDBRelation(session: TiSession,
 
     // TODO: we may optimize by partitioning the result by region.
     // https://github.com/pingcap/tispark/issues/1200
-    ColumnarCoprocessorRDD(output, tiHandleRDDs.toList, fetchHandle = true)
+    ColumnarCoprocessorRDD(output, tiHandleRDDs.toList)
   }
 
   override def equals(obj: Any): Boolean = obj match {

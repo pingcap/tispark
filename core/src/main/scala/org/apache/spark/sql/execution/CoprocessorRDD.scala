@@ -36,7 +36,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartitioning}
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
-import org.apache.spark.sql.tispark.TiRDD
+import org.apache.spark.sql.tispark.{TiHandleRDD, TiRDD, TiRowRDD}
 import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.tikv.kvproto.Coprocessor.KeyRange
 
@@ -66,7 +66,7 @@ trait LeafColumnarExecRDD extends LeafExecNode {
   override def simpleString: String = verboseString
 }
 
-case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], fetchHandle: Boolean)
+case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD])
     extends LeafColumnarExecRDD
     with ColumnarBatchScan {
   override val outputPartitioning: Partitioning = UnknownPartitioning(0)
@@ -75,19 +75,14 @@ case class ColumnarCoprocessorRDD(output: Seq[Attribute], tiRDDs: List[TiRDD], f
 
   override def dagRequest: TiDAGRequest = tiRDDs.head.dagRequest
 
-  override val nodeName: String = if (fetchHandle) {
-    "FetchHandleRDD"
+  override val nodeName: String = if (tiRDDs.head.isInstanceOf[TiHandleRDD]) {
+    "DoubleReadExec"
   } else {
-    "CoprocessorRDD"
+    "TableReadExec"
   }
 
-  override protected def doExecute(): RDD[InternalRow] = {
-    if (!fetchHandle) {
-      WholeStageCodegenExec(this)(codegenStageId = 0).execute()
-    } else {
-      WholeStageCodegenExec(this)(codegenStageId = 0).execute()
-    }
-  }
+  override protected def doExecute(): RDD[InternalRow] =
+    WholeStageCodegenExec(this)(codegenStageId = 0).execute()
 
   override def inputRDDs(): Seq[RDD[InternalRow]] = Seq(sparkContext.union(internalRDDs))
 }
