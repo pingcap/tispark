@@ -406,7 +406,7 @@ public class Codec {
       int binSize = dec.fromBin(precision, frac, data.toArray());
       cdi.mark(curPos + binSize);
       cdi.reset();
-      return dec.toDecimal();
+      return dec.toBigDecimal();
     }
 
     /**

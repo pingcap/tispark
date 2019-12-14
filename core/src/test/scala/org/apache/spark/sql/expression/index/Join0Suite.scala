@@ -23,10 +23,10 @@ class Join0Suite extends BaseInitialOnceTest {
   private val allCases = Seq[String](
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_decimal = b.tp_decimal",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.id_dt = b.id_dt",
-    "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_double = b.tp_double",
+    "select a.id_dt from full_data_type_table_idx a join full_data_type_table_x b on a.tp_double = b.tp_double",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_real = b.tp_real",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_mediumint = b.tp_mediumint",
-    "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_bigint = b.tp_bigint",
+    "select a.id_dt from full_data_type_table_idx a join full_pe_table_idx b on a.tp_bigint = b.tp_bigint",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_datetime = b.tp_datetime",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_smallint = b.tp_smallint",
     "select a.id_dt from full_data_type_table_idx a join full_data_type_table_idx b on a.tp_float = b.tp_float",

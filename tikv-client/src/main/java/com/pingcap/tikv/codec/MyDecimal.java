@@ -18,6 +18,7 @@ package com.pingcap.tikv.codec;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 
 // TODO: We shouldn't allow empty MyDecimal
@@ -233,15 +234,6 @@ public class MyDecimal implements Serializable {
     }
 
     return binSize;
-  }
-
-  /** Returns a double value from MyDecimal instance. */
-  public BigDecimal toDecimal() {
-    return new BigDecimal(toString());
-  }
-
-  public double toDouble() {
-    return Float.parseFloat(toString());
   }
 
   /** Truncates any prefix zeros such as 00.001. After this, digitsInt is truncated from 2 to 0. */
@@ -552,6 +544,45 @@ public class MyDecimal implements Serializable {
     return new String(str);
   }
 
+  public BigInteger toBigInteger() {
+    BigInteger x = BigInteger.ZERO;
+    int wordIdx = 0;
+    for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
+      x = x.multiply(BigInteger.valueOf(wordBase)).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
+      wordIdx++;
+    }
+
+    int intWordIdx = wordIdx;
+    for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
+      if (wordBuf[wordIdx] == 0) {
+        break;
+      }
+      x = x.multiply(BigInteger.valueOf(wordBase)).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
+      wordIdx++;
+    }
+
+    boolean hasFracWord = intWordIdx != wordIdx;
+    if (hasFracWord) {
+      int wordFracNeeded = digitsFrac / digitsPerWord + 1;
+      int wordFracActual = wordIdx - intWordIdx;
+      boolean missingWord = (wordFracNeeded - wordFracActual) > 0;
+      if (missingWord) {
+        for (int i = wordFracActual + 1; i < wordFracNeeded; i++) {
+          x = x.multiply(BigInteger.valueOf(powers10[powers10.length - 1]));
+        }
+        x = x.multiply(BigInteger.valueOf(powers10[digitsFrac % digitsPerWord]));
+      } else {
+        x = x.divide(BigInteger.valueOf(powers10[wordFracNeeded * digitsPerWord - digitsFrac]));
+      }
+    } else {
+      x = x.multiply(BigInteger.valueOf(powers10[digitsFrac]));
+    }
+    if (negative) {
+      x = x.negate();
+    }
+    return x;
+  }
+
   public long toLong() {
     long x = 0;
     int wordIdx = 0;
@@ -682,11 +713,11 @@ public class MyDecimal implements Serializable {
       mask = -1;
     }
 
-    int digitsInt = precision - frac;
-    int wordsInt = digitsInt / digitsPerWord;
-    int leadingDigits = digitsInt - wordsInt * digitsPerWord;
-    int wordsFrac = frac / digitsPerWord;
-    int trailingDigits = frac - wordsFrac * digitsPerWord;
+    int digitsInt = precision - frac; // how many digits before dot
+    int wordsInt = digitsInt / digitsPerWord; // how many words to stores int part before dot.
+    int leadingDigits = digitsInt - wordsInt * digitsPerWord; // first digits
+    int wordsFrac = frac / digitsPerWord; // how many words to store int part after dot
+    int trailingDigits = frac - wordsFrac * digitsPerWord; // last digits
 
     // this should be one of 0, 1, 2, 3, 4
     int wordsFracFrom = this.digitsFrac / digitsPerWord;
@@ -821,5 +852,9 @@ public class MyDecimal implements Serializable {
     this.digitsFrac = 0;
     this.digitsInt = 0;
     this.negative = false;
+  }
+
+  public BigDecimal toBigDecimal() {
+    return new BigDecimal(toBigInteger(), digitsFrac);
   }
 }

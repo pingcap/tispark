@@ -168,7 +168,7 @@ public class BatchedTiChunkColumnVector extends TiColumnVector {
   @Override
   public BigDecimal getDecimal(int rowId, int precision, int scale) {
     int[] pair = getColumnVectorIdxAndRowId(rowId);
-    return childColumns.get(pair[0]).getDecimal(pair[1]);
+    return childColumns.get(pair[0]).getDecimal(pair[1], precision, scale);
   }
 
   /**
