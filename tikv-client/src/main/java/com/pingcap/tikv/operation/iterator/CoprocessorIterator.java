@@ -43,7 +43,6 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
   protected final List<RegionTask> regionTasks;
   protected final DAGRequest dagRequest;
   protected final DataType[] handleTypes;
-  //  protected final ExecutorCompletionService<Iterator<SelectResponse>> completionService;
   protected RowReader rowReader;
   protected CodecDataInput dataInput;
   protected boolean eof = false;

@@ -217,11 +217,7 @@ public class TiChunkColumnVector extends TiColumnVector {
     }
     // TODO figure out how to use precision and scale
     MyDecimal decimal = getMyDecimal(rowId);
-    return new BigDecimal(decimal.toString());
-  }
-
-  public BigDecimal getDecimal(int rowId) {
-    return getDecimal(rowId, 0, 0);
+    return decimal.toBigDecimal();
   }
 
   private String getEnumString(int rowId) {

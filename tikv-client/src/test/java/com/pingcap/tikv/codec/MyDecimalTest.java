@@ -26,23 +26,6 @@ import org.junit.Test;
 
 public class MyDecimalTest {
   @Test
-  public void toLongTest() {
-    List<MyDecimalTestStruct> tests = new ArrayList<>();
-    tests.add(new MyDecimalTestStruct("-9223372036854775807", "-9223372036854775807"));
-    tests.add(new MyDecimalTestStruct("-9223372036854775808", "-9223372036854775808"));
-    tests.add(new MyDecimalTestStruct("9223372036854775808", "9223372036854775807"));
-    tests.add(new MyDecimalTestStruct("-9223372036854775809", "-9223372036854775808"));
-    tests.add(new MyDecimalTestStruct("18446744073709551615", "9223372036854775807"));
-
-    for (MyDecimalTestStruct t : tests) {
-      MyDecimal dec = new MyDecimal();
-      dec.fromString(t.in);
-      String result = dec.toLong() + "";
-      assertEquals(t.out, result);
-    }
-  }
-
-  @Test
   public void fromStringTest() {
     List<MyDecimalTestStruct> tests = new ArrayList<>();
     tests.add(
