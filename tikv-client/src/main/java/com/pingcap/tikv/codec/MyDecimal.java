@@ -544,87 +544,6 @@ public class MyDecimal implements Serializable {
     return new String(str);
   }
 
-  public BigInteger toBigInteger() {
-    BigInteger x = BigInteger.ZERO;
-    int wordIdx = 0;
-    for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
-      x = x.multiply(BigInteger.valueOf(wordBase)).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
-      wordIdx++;
-    }
-
-    int intWordIdx = wordIdx;
-    for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
-      if (wordBuf[wordIdx] == 0) {
-        break;
-      }
-      x = x.multiply(BigInteger.valueOf(wordBase)).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
-      wordIdx++;
-    }
-
-    boolean hasFracWord = intWordIdx != wordIdx;
-    if (hasFracWord) {
-      int wordFracNeeded = digitsFrac / digitsPerWord + 1;
-      int wordFracActual = wordIdx - intWordIdx;
-      boolean missingWord = (wordFracNeeded - wordFracActual) > 0;
-      if (missingWord) {
-        for (int i = wordFracActual + 1; i < wordFracNeeded; i++) {
-          x = x.multiply(BigInteger.valueOf(powers10[powers10.length - 1]));
-        }
-        x = x.multiply(BigInteger.valueOf(powers10[digitsFrac % digitsPerWord]));
-      } else {
-        x = x.divide(BigInteger.valueOf(powers10[wordFracNeeded * digitsPerWord - digitsFrac]));
-      }
-    } else {
-      x = x.multiply(BigInteger.valueOf(powers10[digitsFrac]));
-    }
-    if (negative) {
-      x = x.negate();
-    }
-    return x;
-  }
-
-  public long toLong() {
-    long x = 0;
-    int wordIdx = 0;
-    for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
-      /*
-        Attention: trick!
-        we're calculating -|from| instead of |from| here
-        because |LONGLONG_MIN| > LONGLONG_MAX
-        so we can convert -9223372036854775808 correctly
-      */
-      long y = x;
-      x = x * wordBase - (long) this.wordBuf[wordIdx];
-      wordIdx++;
-      if (y < Long.MIN_VALUE / wordBase || x > y) {
-        /*
-          the decimal is bigger than any possible integer
-          return border integer depending on the sign
-        */
-        if (this.negative) {
-          return Long.MIN_VALUE;
-        }
-        return Long.MAX_VALUE;
-      }
-    }
-
-    /* boundary case: 9223372036854775808 */
-    if (!this.negative && x == Long.MIN_VALUE) {
-      return Long.MAX_VALUE;
-    }
-
-    if (!this.negative) {
-      x = -x;
-    }
-    for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
-      if (this.wordBuf[wordIdx] != 0) {
-        return x;
-      }
-      wordIdx++;
-    }
-    return x;
-  }
-
   // decimalBinSize returns the size of array to hold a binary representation of a decimal.
   private int decimalBinSize(int precision, int frac) {
     int digitsInt = precision - frac;
@@ -854,7 +773,88 @@ public class MyDecimal implements Serializable {
     this.negative = false;
   }
 
+  private BigInteger toBigInteger() {
+    BigInteger x = BigInteger.ZERO;
+    int wordIdx = 0;
+    for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
+      x = x.multiply(BigInteger.valueOf(wordBase)).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
+      wordIdx++;
+    }
+
+    int intWordIdx = wordIdx;
+    for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
+      if (wordBuf[wordIdx] == 0) {
+        break;
+      }
+      x = x.multiply(BigInteger.valueOf(wordBase)).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
+      wordIdx++;
+    }
+
+    boolean hasFracWord = intWordIdx != wordIdx;
+    if (hasFracWord) {
+      int wordFracNeeded = digitsFrac / digitsPerWord + 1;
+      int wordFracActual = wordIdx - intWordIdx;
+      boolean missingWord = (wordFracNeeded - wordFracActual) > 0;
+      if (missingWord) {
+        for (int i = wordFracActual + 1; i < wordFracNeeded; i++) {
+          x = x.multiply(BigInteger.valueOf(powers10[powers10.length - 1]));
+        }
+        x = x.multiply(BigInteger.valueOf(powers10[digitsFrac % digitsPerWord]));
+      } else {
+        x = x.divide(BigInteger.valueOf(powers10[wordFracNeeded * digitsPerWord - digitsFrac]));
+      }
+    } else {
+      x = x.multiply(BigInteger.valueOf(powers10[digitsFrac]));
+    }
+    if (negative) {
+      x = x.negate();
+    }
+    return x;
+  }
+
+  public long toLong() {
+    long x = 0;
+    int wordIdx = 0;
+    for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
+      x = x * wordBase + this.wordBuf[wordIdx];
+      wordIdx++;
+    }
+
+    int intWordIdx = wordIdx;
+    for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
+      if (wordBuf[wordIdx] == 0) {
+        break;
+      }
+      x = x * wordBase + this.wordBuf[wordIdx];
+      wordIdx++;
+    }
+
+    boolean hasFracWord = intWordIdx != wordIdx;
+    if (hasFracWord) {
+      int wordFracNeeded = digitsFrac / digitsPerWord + 1;
+      int wordFracActual = wordIdx - intWordIdx;
+      boolean missingWord = (wordFracNeeded - wordFracActual) > 0;
+      if (missingWord) {
+        for (int i = wordFracActual + 1; i < wordFracNeeded; i++) {
+          x = x * powers10[powers10.length - 1];
+        }
+        x = x * powers10[digitsFrac % digitsPerWord];
+      } else {
+        x = x / powers10[wordFracNeeded * digitsPerWord - digitsFrac];
+      }
+    } else {
+      x = x * powers10[digitsFrac];
+    }
+    if (negative) {
+      x = -x;
+    }
+    return x;
+  }
+
   public BigDecimal toBigDecimal() {
+    if (digitsInt + digitsFrac < 19) {
+      return new BigDecimal(BigInteger.valueOf(toLong()), digitsFrac);
+    }
     return new BigDecimal(toBigInteger(), digitsFrac);
   }
 }
