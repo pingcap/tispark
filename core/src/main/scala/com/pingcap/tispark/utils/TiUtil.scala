@@ -207,11 +207,19 @@ object TiUtil {
         conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt
       )
     }
+
+    if (conf.contains(TiConfigConst.PARTITION_PER_SPLIT)) {
+      tiConf.setPartitionPerSplit(conf.get(TiConfigConst.PARTITION_PER_SPLIT).toInt)
+    }
+
     tiConf
   }
 
-  def getChunkBatchSize(sqlContext: SQLContext) =
+  def getChunkBatchSize(sqlContext: SQLContext): Int =
     sqlContext.getConf(TiConfigConst.CHUNK_BATCH_SIZE, "1024").toInt
+
+  def getPartitionPerSplit(sqlContext: SQLContext): Int =
+    sqlContext.getConf(TiConfigConst.PARTITION_PER_SPLIT, "10").toInt
 
   def registerUDFs(sparkSession: SparkSession): Unit = {
     val timeZoneStr: String = "TimeZone: " + Converter.getLocalTimezone.toString

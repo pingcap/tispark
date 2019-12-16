@@ -51,6 +51,7 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
   private static final boolean DEF_USE_TIFLASH = false;
+  private static final int DEF_PARTITION_PER_SPLIT = 10;
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -73,6 +74,7 @@ public class TiConfiguration implements Serializable {
   private boolean writeEnable = DEF_WRITE_ENABLE;
   private boolean writeWithoutLockTable = DEF_WRITE_WITHOUT_LOCK_TABLE;
   private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
+  private int partitionPerSplit = DEF_PARTITION_PER_SPLIT;
 
   private boolean useTiFlash = DEF_USE_TIFLASH;
 
@@ -277,5 +279,13 @@ public class TiConfiguration implements Serializable {
 
   public void setDowngradeThreshold(int downgradeThreshold) {
     this.downgradeThreshold = downgradeThreshold;
+  }
+
+  public int getPartitionPerSplit() {
+    return partitionPerSplit;
+  }
+
+  public void setPartitionPerSplit(int partitionPerSplit) {
+    this.partitionPerSplit = partitionPerSplit;
   }
 }
