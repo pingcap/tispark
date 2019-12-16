@@ -8,11 +8,6 @@ class DecimalTypeSuite extends BaseTiSparkTest {
     judge("select tp_decimal from full_data_type_table")
   }
 
-  test("test bigint reading logic") {
-    judge("select tp_bigint from full_data_type_table_idx")
-    judge("select tp_bigint from full_data_type_table")
-  }
-
   test("test decimal reading logic with fraction 9") {
     tidbStmt.execute("drop table if exists tbl_dec")
     tidbStmt.execute("create table tbl_dec(d decimal(28, 9))")

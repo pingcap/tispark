@@ -776,27 +776,13 @@ public class MyDecimal implements Serializable {
       wordIdx++;
     }
 
-    int intWordIdx = wordIdx;
     for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
       x = x.multiply(wordBaseBigInt).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
       wordIdx++;
     }
 
-    boolean hasFracWord = intWordIdx != wordIdx;
-    if (hasFracWord) {
-      int wordFracNeeded = digitsFrac / digitsPerWord + 1;
-      int wordFracActual = wordIdx - intWordIdx;
-      boolean missingWord = (wordFracNeeded - wordFracActual) > 0;
-      if (missingWord) {
-        for (int i = wordFracActual + 1; i < wordFracNeeded; i++) {
-          x = x.multiply(powers10BigInt[powers10BigInt.length - 1]);
-        }
-        x = x.multiply(powers10BigInt[digitsFrac % digitsPerWord]);
-      } else {
-        x = x.divide(powers10BigInt[wordFracNeeded * digitsPerWord - digitsFrac]);
-      }
-    } else {
-      x = x.multiply(powers10BigInt[digitsFrac]);
+    if (digitsFrac % digitsPerWord != 0) {
+      x = x.divide(powers10BigInt[digitsPerWord - digitsFrac % digitsPerWord]);
     }
     if (negative) {
       x = x.negate();
@@ -812,28 +798,15 @@ public class MyDecimal implements Serializable {
       wordIdx++;
     }
 
-    int intWordIdx = wordIdx;
     for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
       x = x * wordBase + this.wordBuf[wordIdx];
       wordIdx++;
     }
 
-    boolean hasFracWord = intWordIdx != wordIdx;
-    if (hasFracWord) {
-      int wordFracNeeded = digitsFrac / digitsPerWord + 1;
-      int wordFracActual = wordIdx - intWordIdx;
-      boolean missingWord = (wordFracNeeded - wordFracActual) > 0;
-      if (missingWord) {
-        for (int i = wordFracActual + 1; i < wordFracNeeded; i++) {
-          x = x * powers10[powers10.length - 1];
-        }
-        x = x * powers10[digitsFrac % digitsPerWord];
-      } else {
-        x = x / powers10[wordFracNeeded * digitsPerWord - digitsFrac];
-      }
-    } else {
-      x = x * powers10[digitsFrac];
+    if (digitsFrac % digitsPerWord != 0) {
+      x = x / powers10[digitsPerWord - digitsFrac % digitsPerWord];
     }
+
     if (negative) {
       x = -x;
     }
