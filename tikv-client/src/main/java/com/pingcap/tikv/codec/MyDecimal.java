@@ -42,6 +42,7 @@ public class MyDecimal implements Serializable {
   private static final int ten9 = 1000000000;
   private static final int digMask = ten8;
   private static final int wordBase = ten9;
+  private static final BigInteger wordBaseBigInt = BigInteger.valueOf(ten9);
   private static final int wordMax = wordBase - 1;
   private static final int[] div9 =
       new int[] {
@@ -63,6 +64,20 @@ public class MyDecimal implements Serializable {
       };
   private static final int[] powers10 =
       new int[] {ten0, ten1, ten2, ten3, ten4, ten5, ten6, ten7, ten8, ten9};
+
+  private static final BigInteger[] powers10BigInt =
+      new BigInteger[] {
+        BigInteger.valueOf(ten0),
+        BigInteger.valueOf(ten1),
+        BigInteger.valueOf(ten2),
+        BigInteger.valueOf(ten3),
+        BigInteger.valueOf(ten4),
+        BigInteger.valueOf(ten5),
+        BigInteger.valueOf(ten6),
+        BigInteger.valueOf(ten7),
+        BigInteger.valueOf(ten8),
+        BigInteger.valueOf(ten9)
+      };
 
   // A MyDecimal holds 9 words.
   private static final int maxWordBufLen = 9;
@@ -757,13 +772,13 @@ public class MyDecimal implements Serializable {
     BigInteger x = BigInteger.ZERO;
     int wordIdx = 0;
     for (int i = this.digitsInt; i > 0; i -= digitsPerWord) {
-      x = x.multiply(BigInteger.valueOf(wordBase)).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
+      x = x.multiply(wordBaseBigInt).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
       wordIdx++;
     }
 
     int intWordIdx = wordIdx;
     for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
-      x = x.multiply(BigInteger.valueOf(wordBase)).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
+      x = x.multiply(wordBaseBigInt).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
       wordIdx++;
     }
 
@@ -774,14 +789,14 @@ public class MyDecimal implements Serializable {
       boolean missingWord = (wordFracNeeded - wordFracActual) > 0;
       if (missingWord) {
         for (int i = wordFracActual + 1; i < wordFracNeeded; i++) {
-          x = x.multiply(BigInteger.valueOf(powers10[powers10.length - 1]));
+          x = x.multiply(powers10BigInt[powers10BigInt.length - 1]);
         }
-        x = x.multiply(BigInteger.valueOf(powers10[digitsFrac % digitsPerWord]));
+        x = x.multiply(powers10BigInt[digitsFrac % digitsPerWord]);
       } else {
-        x = x.divide(BigInteger.valueOf(powers10[wordFracNeeded * digitsPerWord - digitsFrac]));
+        x = x.divide(powers10BigInt[wordFracNeeded * digitsPerWord - digitsFrac]);
       }
     } else {
-      x = x.multiply(BigInteger.valueOf(powers10[digitsFrac]));
+      x = x.multiply(powers10BigInt[digitsFrac]);
     }
     if (negative) {
       x = x.negate();
@@ -799,9 +814,6 @@ public class MyDecimal implements Serializable {
 
     int intWordIdx = wordIdx;
     for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
-      if (wordBuf[wordIdx] == 0) {
-        break;
-      }
       x = x * wordBase + this.wordBuf[wordIdx];
       wordIdx++;
     }
@@ -829,6 +841,9 @@ public class MyDecimal implements Serializable {
   }
 
   public BigDecimal toBigDecimal() {
+    // 19 is the length of digits of Long.MAX_VALUE
+    // If a decimal can be expressed as a long value, we should use toLong method which has
+    // better performance than toBigInteger.
     if (digitsInt + digitsFrac < 19) {
       return new BigDecimal(BigInteger.valueOf(toLong()), digitsFrac);
     }
