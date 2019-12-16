@@ -230,7 +230,6 @@ public class MyDecimal implements Serializable {
       if (this.wordBuf[wordIdx] > wordMax) {
         throw new IllegalArgumentException("BadNumber");
       }
-      wordIdx++;
     }
 
     return binSize;
@@ -272,8 +271,8 @@ public class MyDecimal implements Serializable {
     return leading;
   }
 
-  private int min(int a, int b) {
-    return Math.min(a, b);
+  private int min(int a) {
+    return Math.min(a, MyDecimal.digitsPerWord);
   }
 
   /** Returns size of word for a give value with number of digits */
@@ -372,7 +371,6 @@ public class MyDecimal implements Serializable {
       digitsFrac = endIdx - strIdx - 1;
     } else {
       digitsFrac = 0;
-      endIdx = strIdx;
     }
 
     if (digitsInt + digitsFrac == 0) {
@@ -493,17 +491,15 @@ public class MyDecimal implements Serializable {
       strIdx++;
     }
 
-    int fill;
     if (_digitsFrac > 0) {
       int fracIdx = strIdx + digitsIntLen;
-      fill = digitsFracLen - _digitsFrac;
       int wordIdx = wordStartIdx + digitsToWords(digitsInt);
       str[fracIdx] = '.';
       fracIdx++;
       for (; _digitsFrac > 0; _digitsFrac -= digitsPerWord) {
         int x = this.wordBuf[wordIdx];
         wordIdx++;
-        for (int i = min(_digitsFrac, digitsPerWord); i > 0; i--) {
+        for (int i = min(_digitsFrac); i > 0; i--) {
           int y = x / digMask;
           str[fracIdx] = (char) ((char) y + '0');
           fracIdx++;
@@ -511,18 +507,6 @@ public class MyDecimal implements Serializable {
           x *= 10;
         }
       }
-      for (; fill > 0; fill--) {
-        str[fracIdx] = '0';
-        fracIdx++;
-      }
-    }
-    fill = digitsIntLen - digitsInt;
-    if (digitsInt == 0) {
-      fill--; /* symbol 0 before digital point */
-    }
-    for (; fill > 0; fill--) {
-      str[strIdx] = '0';
-      strIdx++;
     }
     if (digitsInt > 0) {
       strIdx += digitsInt;
@@ -530,11 +514,11 @@ public class MyDecimal implements Serializable {
       for (; digitsInt > 0; digitsInt -= digitsPerWord) {
         wordIdx--;
         int x = this.wordBuf[wordIdx];
-        for (int i = min(digitsInt, digitsPerWord); i > 0; i--) {
-          int y = x / 10;
+        for (int i = min(digitsInt); i > 0; i--) {
+          int temp = x / 10;
           strIdx--;
-          str[strIdx] = (char) ('0' + (x - y * 10));
-          x = y;
+          str[strIdx] = (char) ('0' + (x - temp * 10));
+          x = temp;
         }
       }
     } else {
