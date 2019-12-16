@@ -271,10 +271,6 @@ public class MyDecimal implements Serializable {
     return leading;
   }
 
-  private int min(int a) {
-    return Math.min(a, MyDecimal.digitsPerWord);
-  }
-
   /** Returns size of word for a give value with number of digits */
   private int digitsToWords(int digits) {
     if ((digits + digitsPerWord - 1) >= 0 && ((digits + digitsPerWord - 1) < 128)) {
@@ -499,7 +495,7 @@ public class MyDecimal implements Serializable {
       for (; _digitsFrac > 0; _digitsFrac -= digitsPerWord) {
         int x = this.wordBuf[wordIdx];
         wordIdx++;
-        for (int i = min(_digitsFrac); i > 0; i--) {
+        for (int i = Math.min(_digitsFrac, MyDecimal.digitsPerWord); i > 0; i--) {
           int y = x / digMask;
           str[fracIdx] = (char) ((char) y + '0');
           fracIdx++;
@@ -514,7 +510,7 @@ public class MyDecimal implements Serializable {
       for (; digitsInt > 0; digitsInt -= digitsPerWord) {
         wordIdx--;
         int x = this.wordBuf[wordIdx];
-        for (int i = min(digitsInt); i > 0; i--) {
+        for (int i = Math.min(digitsInt, MyDecimal.digitsPerWord); i > 0; i--) {
           int temp = x / 10;
           strIdx--;
           str[strIdx] = (char) ('0' + (x - temp * 10));
@@ -767,9 +763,6 @@ public class MyDecimal implements Serializable {
 
     int intWordIdx = wordIdx;
     for (int i = this.digitsFrac; i > 0; i -= digitsPerWord) {
-      if (wordBuf[wordIdx] == 0) {
-        break;
-      }
       x = x.multiply(BigInteger.valueOf(wordBase)).add(BigInteger.valueOf(this.wordBuf[wordIdx]));
       wordIdx++;
     }
