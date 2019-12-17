@@ -28,13 +28,13 @@ class IssueTestSuite extends BaseTiSparkTest {
     val dagReq = TiUtil.extractDAGReq(df)
     dagReq.buildTableScan()
     val pushDownAggs = dagReq.getPushDownAggregates
-    if(pushDownAggs.size() != 1) {
+    if (pushDownAggs.size() != 1) {
       fail("count(1) is not pushed down to coprocessor")
     }
 
     val count = pushDownAggs.get(0).asInstanceOf[AggregateFunction]
 
-    if(!count.toString.equals("Count(1)")) {
+    if (!count.toString.equals("Count(1)")) {
       fail("count(1) is not pushed down to coprocessor")
     }
   }

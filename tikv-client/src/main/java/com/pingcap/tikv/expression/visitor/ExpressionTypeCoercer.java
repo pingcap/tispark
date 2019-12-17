@@ -152,7 +152,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
   @Override
   protected Pair<DataType, Double> visit(Constant node, DataType targetType) {
     if (targetType == null) {
-      if(node.getType() == null) {
+      if (node.getType() == null) {
         throw new UnsupportedOperationException("Constant does not come with a data type.");
       }
       typeMap.put(node, node.getType());
