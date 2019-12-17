@@ -15,10 +15,29 @@
 
 package org.apache.spark.sql
 
+import com.pingcap.tikv.expression.AggregateFunction
 import com.pingcap.tispark.TiConfigConst
+import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
+  test("count(1) is not pushed down") {
+    tidbStmt.execute("drop table if exists t_count")
+    tidbStmt.execute("create table t_count(a int)")
+    val df = spark.sql("select count(*) from t_count")
+    val dagReq = TiUtil.extractDAGReq(df)
+    dagReq.buildTableScan()
+    val pushDownAggs = dagReq.getPushDownAggregates
+    if(pushDownAggs.size() != 1) {
+      fail("count(1) is not pushed down to coprocessor")
+    }
+
+    val count = pushDownAggs.get(0).asInstanceOf[AggregateFunction]
+
+    if(!count.toString.equals("Count(1)")) {
+      fail("count(1) is not pushed down to coprocessor")
+    }
+  }
   // https://github.com/pingcap/tispark/issues/1186
   test("Consider nulls order when performing TopN") {
     // table `full_data_type_table` contains a single line of nulls
