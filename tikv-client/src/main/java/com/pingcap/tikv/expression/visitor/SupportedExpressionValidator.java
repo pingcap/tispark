@@ -17,6 +17,7 @@ package com.pingcap.tikv.expression.visitor;
 
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.ExpressionBlacklist;
+import com.pingcap.tikv.types.DataType;
 
 public class SupportedExpressionValidator extends DefaultVisitor<Boolean, ExpressionBlacklist> {
   private static final SupportedExpressionValidator validator = new SupportedExpressionValidator();
@@ -27,7 +28,8 @@ public class SupportedExpressionValidator extends DefaultVisitor<Boolean, Expres
     }
     try {
       ExpressionTypeCoercer coercer = new ExpressionTypeCoercer();
-      coercer.infer(node);
+      DataType type = coercer.infer(node);
+      coercer.getTypeMap().put(node, type);
       ProtoConverter protoConverter = new ProtoConverter(coercer.getTypeMap(), false);
       if (node.accept(protoConverter, null) == null) {
         return false;

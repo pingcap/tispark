@@ -1066,7 +1066,8 @@ public class TiDAGRequest implements Serializable {
       Joiner.on(", ").skipNulls().appendTo(sb, getDowngradeFilters());
     }
 
-    if (!isIndexScan && !getFilters().isEmpty()) {
+    if (!isIndexScan && getPushDownFilters().isEmpty() &&
+        !getFilters().isEmpty()) {
       sb.append(", Residual Filter: ");
       Joiner.on(", ").skipNulls().appendTo(sb, getFilters());
     }
