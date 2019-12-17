@@ -17,7 +17,6 @@ package com.pingcap.tikv.expression.visitor;
 
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.ExpressionBlacklist;
-import com.pingcap.tikv.types.DataType;
 
 public class SupportedExpressionValidator extends DefaultVisitor<Boolean, ExpressionBlacklist> {
   private static final SupportedExpressionValidator validator = new SupportedExpressionValidator();
