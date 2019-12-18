@@ -65,7 +65,9 @@ public class Constant implements Expression {
     } else if (value instanceof Double) {
       return RealType.DOUBLE;
     } else if (value instanceof BigDecimal) {
-      return DecimalType.DECIMAL;
+      int prec = ((BigDecimal) value).precision();
+      int frac = ((BigDecimal) value).scale();
+      return new DecimalType(prec, frac);
     } else if (value instanceof DateTime) {
       return DateTimeType.DATETIME;
     } else if (value instanceof Date) {

@@ -73,7 +73,7 @@ object DataType extends Enumeration {
   val MEDIUMINT = Val("mediumint", com.pingcap.tikv.types.IntegerType.MEDIUMINT)
   val INT = Val("int", com.pingcap.tikv.types.IntegerType.INT)
   val BIGINT = Val("bigint", com.pingcap.tikv.types.IntegerType.BIGINT)
-  val DECIMAL = Val("decimal", com.pingcap.tikv.types.DecimalType.DECIMAL)
+  val DECIMAL = Val("decimal", new com.pingcap.tikv.types.DecimalType(20, 6))
   val FLOAT = Val("float", com.pingcap.tikv.types.RealType.FLOAT)
   val DOUBLE = Val("double", com.pingcap.tikv.types.RealType.DOUBLE)
   val TIMESTAMP = Val("timestamp", com.pingcap.tikv.types.TimestampType.TIMESTAMP)

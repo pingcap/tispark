@@ -32,14 +32,15 @@ import java.math.RoundingMode;
 
 public class DecimalType extends DataType {
   public static final DecimalType DECIMAL = new DecimalType(MySQLType.TypeNewDecimal);
+  public static final DecimalType BIG_INT_DECIMAL = new DecimalType(38, 0);
   public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeNewDecimal};
 
   private DecimalType(MySQLType tp) {
     super(tp);
   }
 
-  public DecimalType(MySQLType tp, int prec, int scale) {
-    super(tp, prec, scale);
+  public DecimalType(int prec, int scale) {
+    super(MySQLType.TypeNewDecimal, prec, scale);
   }
 
   DecimalType(TiColumnInfo.InternalTypeHolder holder) {
