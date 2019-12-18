@@ -55,13 +55,15 @@ case class TiDBRelation(session: TiSession,
     import scala.collection.JavaConverters._
     val ids = dagRequest.getIds.asScala
     var tiRDDs = new ListBuffer[TiRowRDD]
+    val tiConf = session.getConf
+    tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
     ids.foreach(
       id => {
         tiRDDs += new TiRowRDD(
           dagRequest,
           id,
           TiUtil.getChunkBatchSize(sqlContext),
-          session.getConf,
+          tiConf,
           output,
           tableRef,
           session,
@@ -86,6 +88,8 @@ case class TiDBRelation(session: TiSession,
       )
     )
 
+    val tiConf = session.getConf
+    tiConf.setPartitionPerSplit(TiUtil.getPartitionPerSplit(sqlContext))
     ids.foreach(
       id => {
         tiHandleRDDs +=
@@ -93,7 +97,7 @@ case class TiDBRelation(session: TiSession,
             dagRequest,
             id,
             attributeRef,
-            session.getConf,
+            tiConf,
             tableRef,
             session,
             sqlContext.sparkSession

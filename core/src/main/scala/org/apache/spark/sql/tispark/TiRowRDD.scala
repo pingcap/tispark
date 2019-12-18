@@ -49,7 +49,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
     new Iterator[ColumnarBatch] {
-      checkTimezone
+      checkTimezone()
 
       dagRequest.resolve()
 

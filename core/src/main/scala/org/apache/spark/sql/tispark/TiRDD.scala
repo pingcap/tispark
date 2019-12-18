@@ -48,6 +48,8 @@ abstract class TiRDD(val dagRequest: TiDAGRequest,
     }
   }
 
+  private lazy val partitionPerSplit = tiConf.getPartitionPerSplit
+
   override protected def getPartitions: Array[Partition] = {
     val keyWithRegionTasks = RangeSplitter
       .newSplitter(session.getRegionManager)
@@ -61,9 +63,12 @@ abstract class TiRDD(val dagRequest: TiDAGRequest,
     for (task <- keyWithRegionTasks) {
       hostTasksMap.addBinding(task.getHost, task)
       val tasks = hostTasksMap(task.getHost)
-      result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
-      index += 1
-      hostTasksMap.remove(task.getHost)
+      if (tasks.size >= partitionPerSplit) {
+        result.append(new TiPartition(index, tasks.toSeq, sparkContext.applicationId))
+        index += 1
+        hostTasksMap.remove(task.getHost)
+      }
+
     }
     // add rest
     for (tasks <- hostTasksMap.values) {
