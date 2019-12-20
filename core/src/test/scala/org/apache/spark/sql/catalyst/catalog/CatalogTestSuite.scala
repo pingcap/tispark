@@ -95,6 +95,9 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("desc extended full_data_type_table").explain()
     spark.sql("desc extended full_data_type_table").show(200, truncate = false)
     spark.sql("desc formatted full_data_type_table").show(200, truncate = false)
+    spark.sql("drop view if exists v")
+    spark.sql("create temporary view v as select * from full_data_type_table")
+    explainAndRunTest("desc v", skipJDBC = true, rTiDB = tidbDescTable)
     refreshConnections(true)
     setCurrentDatabase("default")
     spark.sql("drop table if exists t")
@@ -150,7 +153,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
   test("test support create table like") {
     setCurrentDatabase("default")
     spark.sql("drop table if exists t")
-    spark.sql(s"create table t like ${dbPrefix}tpch_test.nation").show
+    spark.sql(s"create table t like ${dbPrefix}tpch_test.nation")
     spark.sql("show tables").show
     checkSparkResultContains("show tables", List("default", "t", "false"))
     spark.sql("show create table t").show(false)
