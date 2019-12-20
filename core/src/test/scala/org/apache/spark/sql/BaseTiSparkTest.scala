@@ -418,11 +418,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         spark.conf.set(TiConfigConst.USE_TIFLASH, "true")
         r4 = queryViaTiSpark(qSpark)
         sparkPlan = getSparkPlan(qSpark)
-        if (!compSqlResult(qSpark, r1, r4, checkLimit)) {
+        if (!compSqlResult(qSpark, r3, r4, checkLimit)) {
           fail(
             s"""Failed with
                |TiFlash:\t\t${listToString(r4)}
-               |Spark With TiFlash:${listToString(r2)}
                |TiDB:\t\t\t${listToString(r3)}
                |TiFlash Plan:\n$sparkPlan""".stripMargin
           )

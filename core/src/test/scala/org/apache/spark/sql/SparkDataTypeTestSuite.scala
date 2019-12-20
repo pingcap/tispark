@@ -29,9 +29,9 @@ class SparkDataTypeTestSuite extends BaseTiSparkTest {
   test("double type test") {
     compSparkWithTiDB(
       qSpark =
-        "select id_dt, tp_double, tp_float, tp_real from full_data_type_table order by tp_double desc nulls first limit 10",
+        "select id_dt, tp_double, tp_float, tp_real from full_data_type_table order by id_dt, tp_double desc nulls first limit 10",
       qTiDB =
-        "select id_dt, tp_double, tp_float, tp_real from full_data_type_table order by tp_double is null desc, tp_double desc limit 10"
+        "select id_dt, tp_double, tp_float, tp_real from full_data_type_table order by id_dt, tp_double is null desc, tp_double desc limit 10"
     )
   }
 
