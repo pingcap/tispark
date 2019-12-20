@@ -162,7 +162,7 @@ public class TiSession implements AutoCloseable {
         if (tableScanThreadPool == null) {
           tableScanThreadPool =
               Executors.newFixedThreadPool(
-                  conf.getTableScanConcurrency(),
+                  conf.getTableScanConcurrency() / conf.getPartitionPerSplit(),
                   new ThreadFactoryBuilder().setDaemon(true).build());
         }
         res = tableScanThreadPool;

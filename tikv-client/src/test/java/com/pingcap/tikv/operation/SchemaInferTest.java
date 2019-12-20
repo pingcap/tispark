@@ -74,7 +74,7 @@ public class SchemaInferTest {
     tiDAGRequest.resolve();
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
-    assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
+    assertEquals(DecimalType.class, dataTypes.get(0).getClass());
   }
 
   private List<TiDAGRequest> makeSelectDAGReq(ByItem... byItems) {
@@ -102,7 +102,7 @@ public class SchemaInferTest {
     for (TiDAGRequest req : dagRequests) {
       List<DataType> dataTypes = SchemaInfer.create(req).getTypes();
       assertEquals(2, dataTypes.size());
-      assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
+      assertEquals(DecimalType.class, dataTypes.get(0).getClass());
       assertEquals(IntegerType.BIGINT.getClass(), dataTypes.get(1).getClass());
     }
   }

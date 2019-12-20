@@ -21,19 +21,23 @@ import com.pingcap.tidb.tipb.Chunk;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.TiSession;
+import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.BatchedTiChunkColumnVector;
 import com.pingcap.tikv.columnar.TiChunk;
 import com.pingcap.tikv.columnar.TiChunkColumnVector;
 import com.pingcap.tikv.columnar.TiColumnVector;
 import com.pingcap.tikv.columnar.TiRowColumnVector;
+import com.pingcap.tikv.columnar.datatypes.CHType;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.operation.SchemaInfer;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.row.RowReader;
 import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.util.CHTypeMapping;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -129,7 +133,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
             columnarVectors[i] = new TiRowColumnVector(dataTypes[i], i, rows, count);
           }
           return new TiChunk(columnarVectors);
-        } else {
+        } else if (this.encodeType == EncodeType.TypeChunk) {
           TiColumnVector[] columnarVectors = new TiColumnVector[dataTypes.length];
           List<List<TiChunkColumnVector>> childColumnVectors = new ArrayList<>();
           for (int i = 0; i < dataTypes.length; i++) {
@@ -141,7 +145,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
           // TODO(Zhexuan Yang) we need control memory limit in case of out of memory error
           for (; count < numOfRows && hasNext(); ) {
             for (int i = 0; i < dataTypes.length; i++) {
-              childColumnVectors.get(i).add(dataTypes[i].decodeColumn(dataInput));
+              childColumnVectors.get(i).add(dataTypes[i].decodeChunkColumn(dataInput));
             }
             int size = childColumnVectors.get(0).size();
             count += childColumnVectors.get(0).get(size - 1).numOfRows();
@@ -154,6 +158,33 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
           }
 
           return new TiChunk(columnarVectors);
+        } else {
+          // reading column count
+          long colCount = IntegerCodec.readUVarLong(dataInput);
+          long numOfRows = IntegerCodec.readUVarLong(dataInput);
+          TiColumnVector[] columnVectors = new TiColumnVector[(int) colCount];
+
+          for (int columnIdx = 0; columnIdx < colCount; columnIdx++) {
+            // reading column name
+            long length = IntegerCodec.readUVarLong(dataInput);
+            for (int i = 0; i < length; i++) {
+              dataInput.readByte();
+            }
+
+            // reading type name
+            length = IntegerCodec.readUVarLong(dataInput);
+            byte[] utf8Bytes = new byte[(int) length];
+            for (int i = 0; i < length; i++) {
+              utf8Bytes[i] = dataInput.readByte();
+            }
+            String typeName = new String(utf8Bytes, StandardCharsets.UTF_8);
+            CHType type = CHTypeMapping.parseType(typeName);
+            columnVectors[columnIdx] = type.decode(dataInput, (int) numOfRows);
+            // TODO this is workaround to bybass nullable type
+            type.setNullable(false);
+          }
+          dataInput = new CodecDataInput(new byte[0]);
+          return new TiChunk(columnVectors);
         }
       }
     };

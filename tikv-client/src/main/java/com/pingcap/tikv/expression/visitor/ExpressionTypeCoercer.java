@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv.expression.visitor;
 
+import static com.pingcap.tikv.types.DecimalType.BIG_INT_DECIMAL;
 import static java.util.Objects.requireNonNull;
 
 import com.pingcap.tikv.exception.TiExpressionException;
@@ -175,14 +176,16 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
         }
       case Sum:
         {
-          if (targetType != null && targetType.equals(DecimalType.DECIMAL)) {
+          if (targetType != null && targetType instanceof DecimalType) {
             throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
           }
           DataType colType = node.getArgument().accept(this, null).first;
           if (colType instanceof RealType) {
             typeMap.put(node, RealType.DOUBLE);
+          } else if (colType instanceof DecimalType) {
+            typeMap.put(node, colType);
           } else {
-            typeMap.put(node, DecimalType.DECIMAL);
+            typeMap.put(node, BIG_INT_DECIMAL);
           }
           return Pair.create(targetType, FUNCTION_CRED);
         }

@@ -118,8 +118,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   // streaming only support TypeDefault. Even we enable chunk, we should still
   // use TypeDefault.
   private def encodeType(): EncodeType = {
-    if (isEnableChunk() && !useStreamingProcess()) {
+    if (isEnableChunk() && !useStreamingProcess() && !isUseTiFlash()) {
       return EncodeType.TypeChunk
+    } else if (isUseTiFlash()) {
+      return EncodeType.TypeBlock
     }
     EncodeType.TypeDefault
   }

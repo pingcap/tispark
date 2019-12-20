@@ -79,4 +79,6 @@ public class TypeMapping {
     throw new UnsupportedOperationException(String.format("found unsupported type %s",
         type.getClass().getCanonicalName()));
   }
+
+
 }
