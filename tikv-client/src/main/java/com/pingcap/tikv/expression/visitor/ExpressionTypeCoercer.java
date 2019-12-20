@@ -182,7 +182,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
           DataType colType = node.getArgument().accept(this, null).first;
           if (colType instanceof RealType) {
             typeMap.put(node, RealType.DOUBLE);
-          } else if (colType instanceof DecimalType){
+          } else if (colType instanceof DecimalType) {
             typeMap.put(node, colType);
           } else {
             typeMap.put(node, BIG_INT_DECIMAL);

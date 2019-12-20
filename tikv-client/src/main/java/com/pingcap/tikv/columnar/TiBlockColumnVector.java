@@ -2,10 +2,8 @@ package com.pingcap.tikv.columnar;
 
 import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 
-import com.pingcap.tikv.codec.Codec.DateTimeCodec;
 import com.pingcap.tikv.columnar.datatypes.CHType;
 import com.pingcap.tikv.types.AbstractDateTimeType;
-import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.util.MemoryUtil;
 import java.math.BigDecimal;
@@ -13,7 +11,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.util.Objects;
 
 public class TiBlockColumnVector extends TiColumnVector {
   private int fixedLength;
@@ -174,7 +171,8 @@ public class TiBlockColumnVector extends TiColumnVector {
     int minute = (hms >> 6) & ((1 << 6) - 1);
     int hour = hms >> 12;
     int microsec = (int) (v % (1 << 24));
-    Timestamp ts = new Timestamp(year - 1900, month - 1, day, hour, minute, second, microsec * 1000);
+    Timestamp ts =
+        new Timestamp(year - 1900, month - 1, day, hour, minute, second, microsec * 1000);
     return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
   }
 

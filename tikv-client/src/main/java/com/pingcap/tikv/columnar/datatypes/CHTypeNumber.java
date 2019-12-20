@@ -3,7 +3,6 @@ package com.pingcap.tikv.columnar.datatypes;
 import static com.pingcap.tikv.types.DecimalType.BIG_INT_DECIMAL;
 
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DecimalType;
 import com.pingcap.tikv.types.IntegerType;
 
 public abstract class CHTypeNumber extends CHType {
