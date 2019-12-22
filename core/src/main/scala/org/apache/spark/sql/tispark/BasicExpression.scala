@@ -22,6 +22,7 @@ import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Cast, CheckOverflow, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, PromotePrecision, StartsWith, Subtract}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
+import org.apache.spark.sql.execution.TiConverter
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
 
@@ -75,7 +76,7 @@ object BasicExpression {
   def convertToTiExpr(expr: Expression): Option[TiExpression] =
     expr match {
       case Literal(value, dataType) =>
-        Some(Constant.create(convertLiteral(value, dataType)))
+        Some(Constant.create(convertLiteral(value, dataType), TiConverter.fromSparkType(dataType)))
 
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ArithmeticBinaryExpression.plus(lhs, rhs))
@@ -139,13 +140,19 @@ object BasicExpression {
 
       // Coprocessor has its own behavior of type promoting and overflow check
       // so we simply remove it from expression and let cop handle it
-      case CheckOverflow(BasicExpression(expr), _) =>
+      case CheckOverflow(BasicExpression(expr), dec: DecimalType) =>
+        // TODO: this is just a work around
+        // refactor on Expression system can finally resolve the problem.
+        expr.dataType = TiConverter.fromSparkType(dec)
+        expr.resolved = true
         Some(expr)
 
       case PromotePrecision(BasicExpression(expr)) =>
         Some(expr)
 
-      case PromotePrecision(Cast(BasicExpression(expr), _: DecimalType, _)) =>
+      case PromotePrecision(Cast(BasicExpression(expr), dec: DecimalType, _)) =>
+        expr.dataType = TiConverter.fromSparkType(dec)
+        expr.resolved = true
         Some(expr)
 
       case PromotePrecision(BasicExpression(expr)) =>
@@ -153,12 +160,10 @@ object BasicExpression {
 
       // TODO: Are all AttributeReference column reference in such context?
       case attr: AttributeReference =>
-        // Do we need add ValToType in TiExpr?
-        // Some(TiExpr.create().setValue(attr.name).toProto)
-        Some(ColumnRef.create(attr.name))
+        Some(ColumnRef.create(attr.name, TiConverter.fromSparkType(attr.dataType)))
 
       case uAttr: UnresolvedAttribute =>
-        Some(ColumnRef.create(uAttr.name))
+        Some(ColumnRef.create(uAttr.name, TiConverter.fromSparkType(uAttr.dataType)))
 
       // TODO: Remove it and let it fail once done all translation
       case _ => Option.empty[TiExpression]

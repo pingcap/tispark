@@ -18,7 +18,6 @@
 package com.pingcap.tikv.operation;
 
 import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.plus;
-import static com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer.inferType;
 import static org.junit.Assert.assertEquals;
 
 import com.google.protobuf.ByteString;
@@ -44,7 +43,8 @@ public class SchemaInferTest {
   private TiTableInfo table = CatalogTransaction.parseFromJson(table29Bs, TiTableInfo.class);
   private ColumnRef name = ColumnRef.create("name", table);
   private ColumnRef number = ColumnRef.create("number", table);
-  private Expression sum = AggregateFunction.newCall(FunctionType.Sum, number);
+  private AggregateFunction sum =
+      AggregateFunction.newCall(FunctionType.Sum, number, number.dataType);
   private ByItem simpleGroupBy = ByItem.create(number, false);
   private ByItem complexGroupBy =
       ByItem.create(plus(number, Constant.create(1, IntegerType.BIGINT)), false);
@@ -57,7 +57,6 @@ public class SchemaInferTest {
     tiDAGRequest.addRequiredColumn(name);
     tiDAGRequest.setTableInfo(table);
     tiDAGRequest.setStartTs(ts);
-    tiDAGRequest.resolve();
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
     assertEquals(StringType.VARCHAR.getClass(), dataTypes.get(0).getClass());
@@ -68,10 +67,9 @@ public class SchemaInferTest {
     // select sum(number) from t1;
     TiDAGRequest tiDAGRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL);
     tiDAGRequest.addRequiredColumn(number);
-    tiDAGRequest.addAggregate(sum, inferType(sum));
+    tiDAGRequest.addAggregate(sum);
     tiDAGRequest.setTableInfo(table);
     tiDAGRequest.setStartTs(ts);
-    tiDAGRequest.resolve();
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
     assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
@@ -85,10 +83,9 @@ public class SchemaInferTest {
       dagRequest.setTableInfo(table);
       dagRequest.addRequiredColumn(name);
       dagRequest.addRequiredColumn(number);
-      dagRequest.addAggregate(sum, inferType(sum));
+      dagRequest.addAggregate(sum);
       dagRequest.getGroupByItems().add(byItem);
       dagRequest.setStartTs(ts);
-      dagRequest.resolve();
       reqs.add(dagRequest);
     }
 

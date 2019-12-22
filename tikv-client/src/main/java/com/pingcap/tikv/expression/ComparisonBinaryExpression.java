@@ -23,10 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.key.TypedKey;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 import java.util.Objects;
 
-public class ComparisonBinaryExpression implements Expression {
+public class ComparisonBinaryExpression extends Expression {
   public enum Type {
     EQUAL,
     NOT_EQUAL,
@@ -88,7 +89,8 @@ public class ComparisonBinaryExpression implements Expression {
 
     public TypedKey getTypedLiteral(int prefixLength) {
       if (key == null) {
-        key = TypedKey.toTypedKey(getValue().getValue(), getColumnRef().getType(), prefixLength);
+        key =
+            TypedKey.toTypedKey(getValue().getValue(), getColumnRef().getDataType(), prefixLength);
       }
       return key;
     }
@@ -100,6 +102,8 @@ public class ComparisonBinaryExpression implements Expression {
   private transient NormalizedPredicate normalizedPredicate;
 
   public ComparisonBinaryExpression(Type type, Expression left, Expression right) {
+    super(IntegerType.BOOLEAN);
+    this.resolved = true;
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
     this.compType = requireNonNull(type, "type is null");

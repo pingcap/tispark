@@ -66,7 +66,6 @@ public class DAGIteratorTest extends MockServerTest {
     req.addRequiredColumn(ColumnRef.create("c1"));
     req.addRequiredColumn(ColumnRef.create("c2"));
     req.setStartTs(new TiTimestamp(0, 1));
-    req.resolve();
 
     List<KeyRange> keyRanges =
         ImmutableList.of(

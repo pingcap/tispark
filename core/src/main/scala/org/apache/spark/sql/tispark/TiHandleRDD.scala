@@ -53,9 +53,8 @@ class TiHandleRDD(override val dagRequest: TiDAGRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
     new Iterator[InternalRow] {
-      checkTimezone
+      checkTimezone()
 
-      dagRequest.resolve()
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSession.getInstance(tiConf)
       private val snapshot = session.createSnapshot(dagRequest.getStartTs)

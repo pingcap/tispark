@@ -25,7 +25,7 @@ import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 import java.util.Objects;
 
-public class StringRegExpression implements Expression {
+public class StringRegExpression extends Expression {
   public enum Type {
     STARTS_WITH,
     CONTAINS,
@@ -71,7 +71,7 @@ public class StringRegExpression implements Expression {
 
   public TypedKey getTypedLiteral(int prefixLength) {
     if (key == null) {
-      key = TypedKey.toTypedKey(getValue().getValue(), getColumnRef().getType(), prefixLength);
+      key = TypedKey.toTypedKey(getValue().getValue(), getColumnRef().getDataType(), prefixLength);
     }
     return key;
   }
@@ -82,6 +82,8 @@ public class StringRegExpression implements Expression {
   private final Type regType;
 
   public StringRegExpression(Type type, Expression left, Expression right, Expression reg) {
+    super(IntegerType.BOOLEAN);
+    resolved = true;
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
     this.regType = requireNonNull(type, "type is null");

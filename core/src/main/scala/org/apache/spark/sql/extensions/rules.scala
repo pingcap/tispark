@@ -30,7 +30,7 @@ case class TiResolutionRule(getOrCreateTiContext: SparkSession => TiContext)(
   sparkSession: SparkSession
 ) extends Rule[LogicalPlan] {
   protected val tiContext: TiContext = getOrCreateTiContext(sparkSession)
-  private lazy val autoLoad = tiContext.autoLoad
+  private lazy val autoLoad = false
   protected lazy val meta: MetaManager = tiContext.meta
   private lazy val tiCatalog = tiContext.tiCatalog
   private lazy val tiSession = tiContext.tiSession

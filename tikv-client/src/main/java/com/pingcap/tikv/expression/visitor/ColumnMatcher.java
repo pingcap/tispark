@@ -37,6 +37,6 @@ public class ColumnMatcher extends DefaultVisitor<Boolean, Void> {
 
   @Override
   protected Boolean visit(ColumnRef node, Void context) {
-    return node.getColumnInfo().matchName(columnRef.getName());
+    return node.matchName(columnRef.getName());
   }
 }

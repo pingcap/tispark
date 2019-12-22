@@ -38,8 +38,8 @@ public class DecimalType extends DataType {
     super(tp);
   }
 
-  public DecimalType(MySQLType tp, int prec, int scale) {
-    super(tp, prec, scale);
+  public DecimalType(int prec, int scale) {
+    super(MySQLType.TypeNewDecimal, prec, scale);
   }
 
   DecimalType(TiColumnInfo.InternalTypeHolder holder) {

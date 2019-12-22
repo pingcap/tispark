@@ -32,6 +32,7 @@ import java.util.List;
  * Validate and infer expression type Collected results are returned getTypeMap For now we don't do
  * any type promotion and only coerce from left to right.
  */
+@Deprecated
 public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataType> {
   private final IdentityHashMap<Expression, DataType> typeMap = new IdentityHashMap<>();
   private static final double MAX_CREDIBILITY = 1.0;
@@ -66,10 +67,12 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
 
   @Override
   protected Pair<DataType, Double> visit(ColumnRef node, DataType targetType) {
-    DataType type = node.getType();
+    DataType type = node.getDataType();
     if (targetType != null && !targetType.equals(type)) {
       throw new TiExpressionException(String.format("Column %s cannot be %s", node, targetType));
     }
+    node.dataType = type;
+    node.resolved = true;
     typeMap.put(node, type);
     return Pair.create(type, COLUMN_REF_CRED);
   }
@@ -112,6 +115,7 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
     }
     if (!typeMap.containsKey(node)) {
       coerceType(null, node.getLeft(), node.getRight());
+      node.dataType = IntegerType.BOOLEAN;
       typeMap.put(node, IntegerType.BOOLEAN);
     }
     return Pair.create(IntegerType.BOOLEAN, COMPARISON_OP_CRED);
@@ -131,9 +135,14 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
 
   @Override
   protected Pair<DataType, Double> visit(ArithmeticBinaryExpression node, DataType targetType) {
-    Pair<DataType, Double> result = coerceType(targetType, node.getLeft(), node.getRight());
-    typeMap.put(node, result.first);
-    return result;
+    if (node.isResolved()) {
+      typeMap.put(node, node.dataType);
+      return Pair.create(node.dataType, MAX_CREDIBILITY);
+    } else {
+      Pair<DataType, Double> result = coerceType(targetType, node.getLeft(), node.getRight());
+      typeMap.put(node, result.first);
+      return result;
+    }
   }
 
   @Override
@@ -154,7 +163,8 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
     if (targetType == null) {
       return Pair.create(node.getType(), CONSTANT_CRED);
     } else {
-      node.setType(targetType);
+      node.dataType = targetType;
+      node.resolved = true;
       typeMap.put(node, targetType);
       return Pair.create(targetType, CONSTANT_CRED);
     }
@@ -175,16 +185,24 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
         }
       case Sum:
         {
-          if (targetType != null && targetType.equals(DecimalType.DECIMAL)) {
-            throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
-          }
-          DataType colType = node.getArgument().accept(this, null).first;
-          if (colType instanceof RealType) {
-            typeMap.put(node, RealType.DOUBLE);
+          // TODO: this is used to bybass sum(tp_decimal) promotion
+          // we will fix this later.
+          if (node.isResolved()) {
+            typeMap.put(node, new DecimalType(15, 4));
+            //            typeMap.put(node, node.getDataType());
+            return Pair.create(new DecimalType(15, 4), FUNCTION_CRED);
           } else {
-            typeMap.put(node, DecimalType.DECIMAL);
+            if (targetType instanceof DecimalType) {
+              throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
+            }
+            DataType colType = node.getArgument().accept(this, null).first;
+            if (colType instanceof RealType) {
+              typeMap.put(node, RealType.DOUBLE);
+            } else {
+              typeMap.put(node, new DecimalType(20, 6));
+            }
+            return Pair.create(targetType, FUNCTION_CRED);
           }
-          return Pair.create(targetType, FUNCTION_CRED);
         }
       case First:
       case Max:

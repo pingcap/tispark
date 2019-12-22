@@ -27,7 +27,6 @@ import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
-import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.PrunedPartitionBuilder;
 import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
@@ -265,8 +264,6 @@ public class TiKVScanAnalyzer {
       TableStatistics tableStatistics) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
-
-    MetaResolver.resolve(conditions, table);
 
     TiKVScanPlan.Builder planBuilder = TiKVScanPlan.Builder.newBuilder();
     ScanSpec result = extractConditions(conditions, table, index);

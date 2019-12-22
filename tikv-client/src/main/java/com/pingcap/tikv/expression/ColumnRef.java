@@ -16,7 +16,6 @@
 package com.pingcap.tikv.expression;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -24,40 +23,53 @@ import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
 
-public class ColumnRef implements Expression {
+public class ColumnRef extends Expression {
   public static ColumnRef create(String name, TiTableInfo table) {
-    for (TiColumnInfo columnInfo : table.getColumns()) {
-      if (columnInfo.matchName(name)) {
-        return new ColumnRef(columnInfo.getName(), columnInfo, table);
-      }
+    TiColumnInfo col = table.getColumn(name);
+    if (col != null) {
+      return new ColumnRef(name, col.getType());
     }
+
     throw new TiExpressionException(
         String.format("Column name %s not found in table %s", name, table));
   }
 
+  @Deprecated
   public static ColumnRef create(String name) {
     return new ColumnRef(name);
   }
 
+  public static ColumnRef create(String name, DataType dataType) {
+    return new ColumnRef(name, dataType);
+  }
+
   private final String name;
 
-  private TiColumnInfo columnInfo;
   private TiTableInfo tableInfo;
 
+  @Deprecated
   public ColumnRef(String name) {
     this.name = name;
   }
 
-  public ColumnRef(String name, TiColumnInfo columnInfo, TiTableInfo tableInfo) {
+  public ColumnRef(String name, DataType dataType) {
+    super(dataType);
+    resolved = true;
     this.name = name;
-    this.columnInfo = columnInfo;
+  }
+
+  public ColumnRef(String name, DataType dataType, TiTableInfo tableInfo) {
+    this.name = name;
+    this.dataType = dataType;
     this.tableInfo = tableInfo;
+    this.resolved = true;
   }
 
   public String getName() {
     return name;
   }
 
+  @Deprecated
   public void resolve(TiTableInfo table) {
     TiColumnInfo columnInfo = null;
     for (TiColumnInfo col : table.getColumns()) {
@@ -76,26 +88,20 @@ public class ColumnRef implements Expression {
     }
 
     this.tableInfo = table;
-    this.columnInfo = columnInfo;
   }
 
-  public TiColumnInfo getColumnInfo() {
-    if (columnInfo == null) {
-      throw new TiClientInternalException(String.format("ColumnRef [%s] is unbound", name));
-    }
-    return columnInfo;
+  public boolean matchName(String name) {
+    return this.name.equalsIgnoreCase(name);
   }
 
-  public DataType getType() {
-    return getColumnInfo().getType();
+  @Override
+  public DataType getDataType() {
+    return dataType;
   }
 
-  public TiTableInfo getTableInfo() {
-    return tableInfo;
-  }
-
+  @Override
   public boolean isResolved() {
-    return tableInfo != null && columnInfo != null;
+    return resolved;
   }
 
   @Override
@@ -107,8 +113,7 @@ public class ColumnRef implements Expression {
     if (another instanceof ColumnRef) {
       ColumnRef that = (ColumnRef) another;
       if (isResolved() && that.isResolved()) {
-        return Objects.equals(columnInfo, that.columnInfo)
-            && Objects.equals(tableInfo, that.tableInfo);
+        return Objects.equals(tableInfo, that.tableInfo);
       } else {
         return name.equalsIgnoreCase(that.name);
       }
@@ -120,7 +125,7 @@ public class ColumnRef implements Expression {
   @Override
   public int hashCode() {
     if (isResolved()) {
-      return Objects.hash(tableInfo, columnInfo);
+      return Objects.hash(name, tableInfo);
     } else {
       return Objects.hashCode(name);
     }

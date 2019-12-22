@@ -15,11 +15,33 @@
 
 package com.pingcap.tikv.expression;
 
+import com.pingcap.tikv.types.DataType;
 import java.io.Serializable;
 import java.util.List;
 
-public interface Expression extends Serializable {
-  List<Expression> getChildren();
+public abstract class Expression implements Serializable {
+  public abstract List<Expression> getChildren();
 
-  <R, C> R accept(Visitor<R, C> visitor, C context);
+  public abstract <R, C> R accept(Visitor<R, C> visitor, C context);
+
+  public DataType dataType;
+
+  public boolean resolved;
+
+  public Expression(DataType dataType) {
+    this.dataType = dataType;
+    this.resolved = true;
+  }
+
+  public Expression() {
+    this.resolved = false;
+  }
+
+  public boolean isResolved() {
+    return getChildren().stream().allMatch(Expression::isResolved);
+  }
+
+  public DataType getDataType() {
+    return dataType;
+  }
 }

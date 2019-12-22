@@ -19,10 +19,11 @@ import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.*;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
 
-public class ArithmeticBinaryExpression implements Expression {
+public class ArithmeticBinaryExpression extends Expression {
   public enum Type {
     PLUS,
     MINUS,
@@ -34,38 +35,41 @@ public class ArithmeticBinaryExpression implements Expression {
   }
 
   public static ArithmeticBinaryExpression plus(Expression left, Expression right) {
-    return new ArithmeticBinaryExpression(PLUS, left, right);
+    return new ArithmeticBinaryExpression(left.dataType, PLUS, left, right);
   }
 
   public static ArithmeticBinaryExpression minus(Expression left, Expression right) {
-    return new ArithmeticBinaryExpression(MINUS, left, right);
+    return new ArithmeticBinaryExpression(left.dataType, MINUS, left, right);
   }
 
   public static ArithmeticBinaryExpression multiply(Expression left, Expression right) {
-    return new ArithmeticBinaryExpression(MULTIPLY, left, right);
+    return new ArithmeticBinaryExpression(left.dataType, MULTIPLY, left, right);
   }
 
   public static ArithmeticBinaryExpression divide(Expression left, Expression right) {
-    return new ArithmeticBinaryExpression(DIVIDE, left, right);
+    return new ArithmeticBinaryExpression(left.dataType, DIVIDE, left, right);
   }
 
   public static ArithmeticBinaryExpression bitAnd(Expression left, Expression right) {
-    return new ArithmeticBinaryExpression(BIT_AND, left, right);
+    return new ArithmeticBinaryExpression(left.dataType, BIT_AND, left, right);
   }
 
   public static ArithmeticBinaryExpression bitOr(Expression left, Expression right) {
-    return new ArithmeticBinaryExpression(BIT_OR, left, right);
+    return new ArithmeticBinaryExpression(left.dataType, BIT_OR, left, right);
   }
 
   public static ArithmeticBinaryExpression bitXor(Expression left, Expression right) {
-    return new ArithmeticBinaryExpression(BIT_XOR, left, right);
+    return new ArithmeticBinaryExpression(left.dataType, BIT_XOR, left, right);
   }
 
   private final Expression left;
   private final Expression right;
   private final Type compType;
 
-  public ArithmeticBinaryExpression(Type type, Expression left, Expression right) {
+  public ArithmeticBinaryExpression(
+      DataType dataType, Type type, Expression left, Expression right) {
+    super(dataType);
+    resolved = true;
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
     this.compType = requireNonNull(type, "type is null");

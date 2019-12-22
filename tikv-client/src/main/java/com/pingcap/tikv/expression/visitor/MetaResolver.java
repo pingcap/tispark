@@ -21,6 +21,7 @@ import com.pingcap.tikv.meta.TiTableInfo;
 import java.util.List;
 import java.util.Objects;
 
+@Deprecated
 public class MetaResolver extends DefaultVisitor<Void, Expression> {
   public static void resolve(Expression expression, TiTableInfo table) {
     MetaResolver resolver = new MetaResolver(table);

@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
 import com.pingcap.tikv.expression.ExpressionBlacklist
-import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
+import com.pingcap.tikv.expression.visitor.SupportedExpressionValidator
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
@@ -59,7 +59,6 @@ object TiUtil {
     if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
 
     BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpression =>
-      MetaResolver.resolve(expr, tiDBRelation.table)
       return SupportedExpressionValidator.isSupportedExpression(expr, blacklist)
     }
   }
