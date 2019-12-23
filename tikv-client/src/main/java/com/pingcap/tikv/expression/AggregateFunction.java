@@ -19,10 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
 
-public class AggregateFunction implements Expression {
+public class AggregateFunction extends Expression {
   public enum FunctionType {
     Sum,
     Count,
@@ -34,8 +35,19 @@ public class AggregateFunction implements Expression {
   private final FunctionType type;
   private final Expression argument;
 
+  public static AggregateFunction newCall(
+      FunctionType type, Expression argument, DataType dataType) {
+    return new AggregateFunction(type, argument, dataType);
+  }
+
   public static AggregateFunction newCall(FunctionType type, Expression argument) {
     return new AggregateFunction(type, argument);
+  }
+
+  private AggregateFunction(FunctionType type, Expression argument, DataType dataType) {
+    super(dataType);
+    this.type = requireNonNull(type, "function type is null");
+    this.argument = requireNonNull(argument, "function argument is null");
   }
 
   private AggregateFunction(FunctionType type, Expression argument) {

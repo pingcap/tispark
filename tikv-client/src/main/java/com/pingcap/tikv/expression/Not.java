@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Objects;
 
-public class Not implements Expression {
+public class Not extends Expression {
 
   public static Not not(Expression expression) {
     return new Not(expression);

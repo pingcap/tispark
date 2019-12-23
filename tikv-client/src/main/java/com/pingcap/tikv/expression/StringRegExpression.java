@@ -25,7 +25,7 @@ import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 import java.util.Objects;
 
-public class StringRegExpression implements Expression {
+public class StringRegExpression extends Expression {
   public enum Type {
     STARTS_WITH,
     CONTAINS,

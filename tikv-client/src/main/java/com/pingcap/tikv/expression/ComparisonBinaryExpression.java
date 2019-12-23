@@ -26,7 +26,7 @@ import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
 
-public class ComparisonBinaryExpression implements Expression {
+public class ComparisonBinaryExpression extends Expression {
   public enum Type {
     EQUAL,
     NOT_EQUAL,

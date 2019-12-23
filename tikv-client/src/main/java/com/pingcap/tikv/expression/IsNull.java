@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Objects;
 
-public class IsNull implements Expression {
+public class IsNull extends Expression {
   private Expression expression;
 
   public IsNull(Expression expression) {

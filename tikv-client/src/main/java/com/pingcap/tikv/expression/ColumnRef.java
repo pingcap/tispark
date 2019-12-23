@@ -24,7 +24,7 @@ import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
 
-public class ColumnRef implements Expression {
+public class ColumnRef extends Expression {
   public static ColumnRef create(String name, TiTableInfo table) {
     for (TiColumnInfo columnInfo : table.getColumns()) {
       if (columnInfo.matchName(name)) {

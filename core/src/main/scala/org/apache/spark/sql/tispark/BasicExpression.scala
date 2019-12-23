@@ -22,6 +22,7 @@ import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Cast, CheckOverflow, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, PromotePrecision, StartsWith, Subtract}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
+import org.apache.spark.sql.execution.TiConverter
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
 
@@ -83,8 +84,8 @@ object BasicExpression {
       case Subtract(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ArithmeticBinaryExpression.minus(lhs, rhs))
 
-      case Multiply(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(ArithmeticBinaryExpression.multiply(lhs, rhs))
+      case e @ Multiply(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(ArithmeticBinaryExpression.multiply(TiConverter.fromSparkType(e.dataType), lhs, rhs))
 
       case Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ArithmeticBinaryExpression.divide(lhs, rhs))
@@ -139,10 +140,15 @@ object BasicExpression {
 
       // Coprocessor has its own behavior of type promoting and overflow check
       // so we simply remove it from expression and let cop handle it
-      case CheckOverflow(BasicExpression(expr), _) =>
+      case CheckOverflow(BasicExpression(expr), dec: DecimalType) =>
+        // TODO: this is just a work around
+        // refactor on Expression system can finally resolve the problem.
+        expr.dataType = new com.pingcap.tikv.types.DecimalType(dec.precision, dec.scale)
+        expr.resolved = true
         Some(expr)
 
-      case PromotePrecision(BasicExpression(expr)) =>
+      case p @ PromotePrecision(BasicExpression(expr)) =>
+        p.dataType
         Some(expr)
 
       case PromotePrecision(Cast(BasicExpression(expr), _: DecimalType, _)) =>

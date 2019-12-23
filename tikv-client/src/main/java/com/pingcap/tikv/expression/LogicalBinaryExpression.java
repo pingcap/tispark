@@ -9,7 +9,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Objects;
 
-public class LogicalBinaryExpression implements Expression {
+public class LogicalBinaryExpression extends Expression {
   public enum Type {
     AND,
     OR,
