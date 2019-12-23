@@ -184,9 +184,8 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
           // TODO: this is used to bybass sum(tp_decimal) promotion
           // we will fix this later.
           if (node.isResolved()) {
-            typeMap.put(node, new DecimalType(15, 4));
-            //            typeMap.put(node, node.getDataType());
-            return Pair.create(new DecimalType(15, 4), FUNCTION_CRED);
+            typeMap.put(node, node.getDataType());
+            return Pair.create(node.getDataType(), FUNCTION_CRED);
           } else {
             if (targetType instanceof DecimalType) {
               throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
