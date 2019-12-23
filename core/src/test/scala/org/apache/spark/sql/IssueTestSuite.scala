@@ -19,12 +19,6 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkTest {
-  test("adbc") {
-    setCurrentDatabase("tispark_test")
-    spark.conf.set(TiConfigConst.USE_TIFLASH, "true")
-    spark.sql("select tp_datetime from full_data_type_table").show
-  }
-
   // https://github.com/pingcap/tispark/issues/1186
   test("Consider nulls order when performing TopN") {
     // table `full_data_type_table` contains a single line of nulls
@@ -286,7 +280,6 @@ class IssueTestSuite extends BaseTiSparkTest {
   test("test sum rewriting logic") {
     // only test numeric types. Spark will raise analysis exception if we
     // perform sum aggregation over non-numeric types.
-    spark.conf.set(TiConfigConst.ENABLE_CHUNK, "false")
     judge("select sum(tp_decimal) from full_data_type_table")
     judge("select sum(tp_real) from full_data_type_table")
     judge("select sum(tp_double) from full_data_type_table")

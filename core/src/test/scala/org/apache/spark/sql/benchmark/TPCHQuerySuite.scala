@@ -25,11 +25,11 @@ import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, DataSourceScanExe
 
 class TPCHQuerySuite extends BaseTiSparkTest {
   private val tpchQueries = Seq(
-    "q1",
-    "q2",
-    "q3",
-    "q4",
-    "q5",
+//    "q1",
+//    "q2",
+//    "q3",
+//    "q4",
+//    "q5",
     "q6",
     "q7",
     "q8",

@@ -19,10 +19,11 @@ import static com.pingcap.tikv.expression.ArithmeticBinaryExpression.Type.*;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
 
-public class ArithmeticBinaryExpression implements Expression {
+public class ArithmeticBinaryExpression extends Expression {
   public enum Type {
     PLUS,
     MINUS,
@@ -39,6 +40,11 @@ public class ArithmeticBinaryExpression implements Expression {
 
   public static ArithmeticBinaryExpression minus(Expression left, Expression right) {
     return new ArithmeticBinaryExpression(MINUS, left, right);
+  }
+
+  public static ArithmeticBinaryExpression multiply(
+      DataType dataType, Expression left, Expression right) {
+    return new ArithmeticBinaryExpression(MULTIPLY, left, right);
   }
 
   public static ArithmeticBinaryExpression multiply(Expression left, Expression right) {
@@ -64,6 +70,14 @@ public class ArithmeticBinaryExpression implements Expression {
   private final Expression left;
   private final Expression right;
   private final Type compType;
+
+  public ArithmeticBinaryExpression(
+      DataType dataType, Type type, Expression left, Expression right) {
+    super(dataType);
+    this.left = requireNonNull(left, "left expression is null");
+    this.right = requireNonNull(right, "right expression is null");
+    this.compType = requireNonNull(type, "type is null");
+  }
 
   public ArithmeticBinaryExpression(Type type, Expression left, Expression right) {
     this.left = requireNonNull(left, "left expression is null");

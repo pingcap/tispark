@@ -132,9 +132,14 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
 
   @Override
   protected Pair<DataType, Double> visit(ArithmeticBinaryExpression node, DataType targetType) {
-    Pair<DataType, Double> result = coerceType(targetType, node.getLeft(), node.getRight());
-    typeMap.put(node, result.first);
-    return result;
+    if (node.isResolved()) {
+      typeMap.put(node, node.dataType);
+      return Pair.create(node.dataType, MAX_CREDIBILITY);
+    } else {
+      Pair<DataType, Double> result = coerceType(targetType, node.getLeft(), node.getRight());
+      typeMap.put(node, result.first);
+      return result;
+    }
   }
 
   @Override
@@ -176,18 +181,26 @@ public class ExpressionTypeCoercer extends Visitor<Pair<DataType, Double>, DataT
         }
       case Sum:
         {
-          if (targetType != null && targetType instanceof DecimalType) {
-            throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
-          }
-          DataType colType = node.getArgument().accept(this, null).first;
-          if (colType instanceof RealType) {
-            typeMap.put(node, RealType.DOUBLE);
-          } else if (colType instanceof DecimalType) {
-            typeMap.put(node, colType);
+          // TODO: this is used to bybass sum(tp_decimal) promotion
+          // we will fix this later.
+          if (node.isResolved()) {
+            typeMap.put(node, new DecimalType(15, 4));
+            //            typeMap.put(node, node.getDataType());
+            return Pair.create(new DecimalType(15, 4), FUNCTION_CRED);
           } else {
-            typeMap.put(node, BIG_INT_DECIMAL);
+            if (targetType instanceof DecimalType) {
+              throw new TiExpressionException(String.format("Sum cannot be %s", targetType));
+            }
+            DataType colType = node.getArgument().accept(this, null).first;
+            if (colType instanceof RealType) {
+              typeMap.put(node, RealType.DOUBLE);
+            } else if (colType instanceof DecimalType) {
+              typeMap.put(node, colType);
+            } else {
+              typeMap.put(node, BIG_INT_DECIMAL);
+            }
+            return Pair.create(targetType, FUNCTION_CRED);
           }
-          return Pair.create(targetType, FUNCTION_CRED);
         }
       case First:
       case Max:

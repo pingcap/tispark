@@ -28,7 +28,7 @@ object TiConfigConst {
   val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
   val ALLOW_INDEX_READ: String = "spark.tispark.plan.allow_index_read"
   val COPROCESS_STREAMING: String = "spark.tispark.coprocess.streaming"
-  val ENABLE_CHUNK: String = "spark.tispark.coprocess.chunk"
+  val CODEC_FORMAT: String = "spark.tispark.coprocess.codec_format"
   val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"
   val CHUNK_BATCH_SIZE: String = "spark.tispark.coprocessor.chunk_batch_size"
   val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String = "spark.tispark.plan.downgrade.index_threshold"
