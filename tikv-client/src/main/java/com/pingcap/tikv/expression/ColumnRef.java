@@ -43,7 +43,13 @@ public class ColumnRef extends Expression {
     return new ColumnRef(name, dataType);
   }
 
+  public static ColumnRef create(String name, TiColumnInfo columnInfo) {
+    return new ColumnRef(name, columnInfo.getType());
+  }
+
   private final String name;
+
+  private TiColumnInfo columnInfo;
 
   private TiTableInfo tableInfo;
 
@@ -133,7 +139,7 @@ public class ColumnRef extends Expression {
 
   @Override
   public String toString() {
-    return String.format("[%s]", getName());
+    return String.format("[%s]#[%s]", getName(), dataType.getClass().getSimpleName());
   }
 
   @Override

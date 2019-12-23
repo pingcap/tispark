@@ -101,7 +101,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
   private def isEnableChunk: Boolean =
-    sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "true").toLowerCase.toBoolean
+    sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "false").toLowerCase.toBoolean
 
   private def isUseTiFlash: Boolean =
     sqlConf.getConfString(TiConfigConst.USE_TIFLASH, "false").toLowerCase.toBoolean
@@ -120,8 +120,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def encodeType(): EncodeType = {
     if (isEnableChunk && !useStreamingProcess) {
       EncodeType.TypeChunk
+    } else {
+      EncodeType.TypeDefault
     }
-    EncodeType.TypeDefault
   }
 
   private def pushDownType(): PushDownType =
@@ -216,9 +217,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg, fromSparkType(f.dataType)))
 
       case f @ Count(args) if args.length == 1 =>
-        val tiArg = if(args.head.isInstanceOf[Literal]) {
+        val tiArg = if (args.head.isInstanceOf[Literal]) {
           val firstCol = source.table.getColumns.get(0)
-          val firstColRef = ColumnRef.create(firstCol.getName, firstCol.getType)
+          val firstColRef = ColumnRef.create(firstCol.getName, source.table)
           dagRequest.addRequiredColumn(firstColRef)
           firstColRef
         } else {
@@ -254,7 +255,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           .foreach(
             (ref: TiColumnRef) =>
               dagRequest
-                .addAggregate(AggregateFunction.newCall(FunctionType.First, ref, ref.getDataType))
+                .addAggregate(
+                  AggregateFunction
+                    .newCall(FunctionType.First, ref, source.table.getColumn(ref.getName).getType)
+              )
           )
       case _ =>
     }
@@ -470,7 +474,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       projectSeq.foreach(
         attr =>
           dagRequest.addRequiredColumn(
-            ColumnRef.create(attr.name, source.table.getColumn(attr.name).getType)
+            ColumnRef.create(attr.name, source.table.getColumn(attr.name))
         )
       )
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
@@ -482,7 +486,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       projectSeq.foreach(
         attr =>
           dagRequest.addRequiredColumn(
-            ColumnRef.create(attr.name, source.table.getColumn(attr.name).getType)
+            ColumnRef.create(attr.name, source.table.getColumn(attr.name))
         )
       )
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
