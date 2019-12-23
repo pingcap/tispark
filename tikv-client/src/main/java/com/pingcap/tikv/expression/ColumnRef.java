@@ -72,7 +72,7 @@ public class ColumnRef extends Expression {
   }
 
   public String getName() {
-    return name;
+    return name.toLowerCase();
   }
 
   @Deprecated
@@ -139,7 +139,7 @@ public class ColumnRef extends Expression {
 
   @Override
   public String toString() {
-    return String.format("[%s]#[%s]", getName(), dataType.getClass().getSimpleName());
+    return String.format("%s@%s", getName(), dataType.getClass().getSimpleName());
   }
 
   @Override

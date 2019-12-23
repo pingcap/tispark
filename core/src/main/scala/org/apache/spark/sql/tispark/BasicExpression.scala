@@ -18,6 +18,7 @@ package org.apache.spark.sql.tispark
 import java.sql.Timestamp
 
 import com.pingcap.tikv.expression._
+import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
 import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Cast, CheckOverflow, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, PromotePrecision, StartsWith, Subtract}
@@ -25,6 +26,8 @@ import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.execution.TiConverter
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
+
+case class BasicExpression(expr: Expression, meta: TiTableInfo)
 
 object BasicExpression {
   type TiExpression = com.pingcap.tikv.expression.Expression
@@ -42,7 +45,7 @@ object BasicExpression {
         // and must be restored by DateTimeUtils.daysToMillis
         case DateType =>
           new DateTime(DateTimeUtils.daysToMillis(value.asInstanceOf[DateTimeUtils.SQLDate]))
-        case TimestampType  => new Timestamp(value.asInstanceOf[Long] / 1000)
+        case TimestampType  => val ts = new Timestamp(value.asInstanceOf[Long] / 1000)
         case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
         case _              => value

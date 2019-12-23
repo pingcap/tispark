@@ -113,13 +113,13 @@ public class TiDAGRequestTest {
 
   private static boolean selectRequestEquals(TiDAGRequest lhs, TiDAGRequest rhs) {
     assertEquals(lhs.getFields().size(), rhs.getFields().size());
-    Map<ColumnRef, Integer> lhsMap = new HashMap<>();
-    Map<ColumnRef, Integer> rhsMap = new HashMap<>();
+    Map<String, Integer> lhsMap = new HashMap<>();
+    Map<String, Integer> rhsMap = new HashMap<>();
     for (int i = 0; i < lhs.getFields().size(); i++) {
       ColumnRef lCol = lhs.getFields().get(i);
       ColumnRef rCol = rhs.getFields().get(i);
-      lhsMap.put(lCol, i);
-      rhsMap.put(rCol, i);
+      lhsMap.put(lCol.getName(), i);
+      rhsMap.put(rCol.getName(), i);
     }
     for (int i = 0; i < lhs.getFields().size(); i++) {
       Expression lhsExpr = lhs.getFields().get(i);

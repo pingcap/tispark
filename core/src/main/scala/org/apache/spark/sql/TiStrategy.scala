@@ -101,7 +101,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
   private def isEnableChunk: Boolean =
-    sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "false").toLowerCase.toBoolean
+    sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "true").toLowerCase.toBoolean
 
   private def isUseTiFlash: Boolean =
     sqlConf.getConfString(TiConfigConst.USE_TIFLASH, "false").toLowerCase.toBoolean
