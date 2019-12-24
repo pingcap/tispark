@@ -45,7 +45,7 @@ object BasicExpression {
         // and must be restored by DateTimeUtils.daysToMillis
         case DateType =>
           new DateTime(DateTimeUtils.daysToMillis(value.asInstanceOf[DateTimeUtils.SQLDate]))
-        case TimestampType  => val ts = new Timestamp(value.asInstanceOf[Long] / 1000)
+        case TimestampType  => new Timestamp(value.asInstanceOf[Long] / 1000)
         case StringType     => value.toString
         case _: DecimalType => value.asInstanceOf[Decimal].toBigDecimal.bigDecimal
         case _              => value

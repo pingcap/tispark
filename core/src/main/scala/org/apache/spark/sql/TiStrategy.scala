@@ -218,8 +218,14 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
       case f @ Count(args) if args.length == 1 =>
         val tiArg = if (args.head.isInstanceOf[Literal]) {
-          val firstCol = source.table.getColumns.get(0)
-          val firstColRef = ColumnRef.create(firstCol.getName, source.table)
+          val firstColRef = if (source.table.hasPrimaryKey) {
+            val col = source.table.getColumns.asScala.filter(col => col.isPrimaryKey).head
+            ColumnRef.create(col.getName, source.table)
+          } else {
+            val firstCol = source.table.getColumns.get(0)
+            ColumnRef.create(firstCol.getName, source.table)
+          }
+
           dagRequest.addRequiredColumn(firstColRef)
           firstColRef
         } else {

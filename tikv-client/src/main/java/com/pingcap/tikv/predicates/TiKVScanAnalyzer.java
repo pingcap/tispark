@@ -427,6 +427,10 @@ public class TiKVScanAnalyzer {
   // query engine doesn't have to lookup the table again compared with double read.
   boolean isCoveringIndex(
       List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
+    if (columns.isEmpty()) {
+      return false;
+    }
+
     Map<String, TiIndexColumn> colInIndex =
         indexColumns
             .getIndexColumns()
