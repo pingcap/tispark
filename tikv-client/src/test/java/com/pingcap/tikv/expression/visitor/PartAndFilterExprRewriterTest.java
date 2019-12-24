@@ -4,6 +4,8 @@ import static org.junit.Assert.*;
 
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.FuncCallExpr.Type;
+import com.pingcap.tikv.types.DateType;
+import com.pingcap.tikv.types.IntegerType;
 import org.joda.time.DateTime;
 import org.junit.Test;
 
@@ -11,18 +13,19 @@ public class PartAndFilterExprRewriterTest {
 
   @Test
   public void TestRewrite() {
-    Expression col = ColumnRef.create("y");
-    Expression col2 = ColumnRef.create("a");
+    Expression col = ColumnRef.create("y", DateType.DATE);
+    Expression col2 = ColumnRef.create("a", IntegerType.INT);
     Expression partExpr = new FuncCallExpr(col, Type.YEAR);
     DateTime date = DateTime.parse("1995-10-10");
     // rewrite right hand side's constant. Apply year to it.
     Expression exprToBeRewrited =
         LogicalBinaryExpression.or(
-            ComparisonBinaryExpression.equal(col, Constant.create(date)),
-            ComparisonBinaryExpression.greaterEqual(col2, Constant.create(5)));
+            ComparisonBinaryExpression.equal(col, Constant.create(date, DateType.DATE)),
+            ComparisonBinaryExpression.greaterEqual(col2, Constant.create(5, IntegerType.INT)));
     PartAndFilterExprRewriter expressionRewriter = new PartAndFilterExprRewriter(partExpr);
     Expression rewrote = expressionRewriter.rewrite(exprToBeRewrited);
-    assertEquals("[[[y] EQUAL 1995] OR [[a] GREATER_EQUAL 5]]", rewrote.toString());
+    assertEquals(
+        "[[y@DateType EQUAL 1995] OR [a@IntegerType GREATER_EQUAL 5]]", rewrote.toString());
 
     // not support case
     partExpr = new Not(col);
@@ -34,14 +37,16 @@ public class PartAndFilterExprRewriterTest {
 
     // rewrite left hand. Rewrite year(y) to y.
     Expression year = new FuncCallExpr(col, Type.YEAR);
-    exprToBeRewrited = ComparisonBinaryExpression.lessEqual(year, Constant.create("1995"));
+    exprToBeRewrited =
+        ComparisonBinaryExpression.lessEqual(year, Constant.create("1995", IntegerType.INT));
     rewrote = expressionRewriter.rewrite(exprToBeRewrited);
-    assertEquals("[[y] LESS_EQUAL \"1995\"]", rewrote.toString());
+    assertEquals("[y@DateType LESS_EQUAL \"1995\"]", rewrote.toString());
 
     // simple column case. No rewriting happens.
-    exprToBeRewrited = ComparisonBinaryExpression.lessEqual(col, Constant.create(1));
+    exprToBeRewrited =
+        ComparisonBinaryExpression.lessEqual(col, Constant.create(1, IntegerType.INT));
     expressionRewriter = new PartAndFilterExprRewriter(col);
     rewrote = expressionRewriter.rewrite(exprToBeRewrited);
-    assertEquals("[[y] LESS_EQUAL 1]", rewrote.toString());
+    assertEquals("[y@DateType LESS_EQUAL 1]", rewrote.toString());
   }
 }

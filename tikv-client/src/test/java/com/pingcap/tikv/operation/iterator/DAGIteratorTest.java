@@ -63,8 +63,8 @@ public class DAGIteratorTest extends MockServerTest {
     TiTableInfo table = createTable();
     TiDAGRequest req = new TiDAGRequest(PushDownType.NORMAL);
     req.setTableInfo(table);
-    req.addRequiredColumn(ColumnRef.create("c1"));
-    req.addRequiredColumn(ColumnRef.create("c2"));
+    req.addRequiredColumn(ColumnRef.create("c1", IntegerType.INT));
+    req.addRequiredColumn(ColumnRef.create("c2", StringType.VARCHAR));
     req.setStartTs(new TiTimestamp(0, 1));
 
     List<KeyRange> keyRanges =

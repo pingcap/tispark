@@ -3,6 +3,8 @@ package com.pingcap.tikv.expression;
 import com.pingcap.tikv.expression.FuncCallExpr.Type;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateTimeType;
+import com.pingcap.tikv.types.DateType;
+import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,15 +21,18 @@ public class FuncCallExprEval {
         Type.YEAR,
         literal -> {
           DataType type = literal.getType();
-          if (type == StringType.VARCHAR) {
+          if (type instanceof StringType) {
             DateTime date = DateTime.parse((String) literal.getValue());
-            return Constant.create(date.getYear());
-          } else if (type == DateTimeType.DATETIME) {
+            return Constant.create(date.getYear(), IntegerType.INT);
+          } else if (type instanceof DateType) {
             DateTime date = (DateTime) literal.getValue();
-            return Constant.create(date.getYear());
-          } else {
-            return literal;
+            return Constant.create(date.getYear(), IntegerType.INT);
+          } else if (type instanceof DateTimeType) {
+            DateTime date = (DateTime) literal.getValue();
+            return Constant.create(date.getYear(), IntegerType.INT);
           }
+          throw new UnsupportedOperationException(
+              String.format("cannot apply year to %s", type.getClass().getSimpleName()));
         });
 
     // for newly adding type, please also adds the corresponding logic here.

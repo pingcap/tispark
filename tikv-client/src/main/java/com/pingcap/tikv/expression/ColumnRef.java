@@ -25,6 +25,7 @@ import java.util.Objects;
 
 public class ColumnRef extends Expression {
   public static ColumnRef create(String name, TiTableInfo table) {
+    name = name.replaceAll("`", "");
     TiColumnInfo col = table.getColumn(name);
     if (col != null) {
       return new ColumnRef(name, col.getType());
@@ -139,7 +140,11 @@ public class ColumnRef extends Expression {
 
   @Override
   public String toString() {
-    return String.format("%s@%s", getName(), dataType.getClass().getSimpleName());
+    if (dataType != null) {
+      return String.format("%s@%s", getName(), dataType.getClass().getSimpleName());
+    } else {
+      return String.format("[%s]", getName());
+    }
   }
 
   @Override

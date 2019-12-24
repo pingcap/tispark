@@ -25,7 +25,7 @@ Because TiDB is a database that supports `transaction`, The TiDB Connector for S
 
 TiSpark only supports the `Append` SaveMode. This behavior is controlled by the `replace` option. The default value is `false`.
 
-In addition, if `replace` is true, data to be inserted is duplicated before the insertion.
+In addition, if `replace` is true, data to be inserted is deduplicated before the insertion.
 
 + If `replace` is `true`:
 
