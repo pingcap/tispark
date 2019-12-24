@@ -26,13 +26,13 @@ import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.operation.transformer.RowTransformer
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tikv.types._
-import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiSparkInfo, TiSparkVersion}
+import com.pingcap.tispark.{BasicExpression, TiConfigConst, TiDBRelation, TiSparkVersion}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, Literal, NamedExpression}
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.aggregate.SortAggregateExec
-import org.apache.spark.sql.types.{DataType, DataTypes, Decimal, MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.types.{DataType, DataTypes, Decimal}
 import org.apache.spark.{sql, SparkConf}
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
@@ -262,7 +262,7 @@ object TiUtil {
     val timeZoneStr: String = "TimeZone: " + Converter.getLocalTimezone.toString
 
     sparkSession.udf.register("ti_version", () => {
-      s"${TiSparkVersion.version}\n${TiSparkInfo.info}\n$timeZoneStr"
+      s"${TiSparkVersion.version}\n$timeZoneStr"
     })
     sparkSession.udf.register(
       "time_to_str",
