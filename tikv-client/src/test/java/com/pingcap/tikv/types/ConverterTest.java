@@ -1,7 +1,9 @@
 package com.pingcap.tikv.types;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
+import java.nio.charset.StandardCharsets;
 import org.junit.Test;
 
 public class ConverterTest {
@@ -16,7 +18,31 @@ public class ConverterTest {
   public void convertToStringTest() {}
 
   @Test
-  public void convertToBytesTest() {}
+  public void convertToBytesTest() {
+    String dairy = "dairy";
+    byte[] dairyBytes = dairy.getBytes();
+    assertArrayEquals(Converter.convertToBytes(dairy, 2), new byte[] {100, 97});
+    assertArrayEquals(Converter.convertToBytes(dairy, 5), new byte[] {100, 97, 105, 114, 121});
+    assertArrayEquals(Converter.convertToBytes(dairy, 10), new byte[] {100, 97, 105, 114, 121});
+    assertArrayEquals(Converter.convertToBytes(dairyBytes, 2), new byte[] {100, 97});
+    assertArrayEquals(Converter.convertToBytes(dairyBytes, 5), new byte[] {100, 97, 105, 114, 121});
+    assertArrayEquals(
+        Converter.convertToBytes(dairyBytes, 10), new byte[] {100, 97, 105, 114, 121});
+  }
+
+  @Test
+  public void convertUtf8ToBytesTest() {
+    String dairy = "dairy";
+    byte[] dairyBytes = dairy.getBytes(StandardCharsets.UTF_8);
+    assertArrayEquals(Converter.convertUtf8ToBytes(dairy, 2), new byte[] {100, 97});
+    assertArrayEquals(Converter.convertUtf8ToBytes(dairy, 5), new byte[] {100, 97, 105, 114, 121});
+    assertArrayEquals(Converter.convertUtf8ToBytes(dairy, 10), new byte[] {100, 97, 105, 114, 121});
+    assertArrayEquals(Converter.convertUtf8ToBytes(dairyBytes, 2), new byte[] {100, 97});
+    assertArrayEquals(
+        Converter.convertUtf8ToBytes(dairyBytes, 5), new byte[] {100, 97, 105, 114, 121});
+    assertArrayEquals(
+        Converter.convertUtf8ToBytes(dairyBytes, 10), new byte[] {100, 97, 105, 114, 121});
+  }
 
   @Test
   public void getLocalTimezoneTest() {}
