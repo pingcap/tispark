@@ -25,7 +25,7 @@ import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
 import org.apache.spark.sql.tispark.{TiHandleRDD, TiRowRDD}
 import org.apache.spark.sql.types.{ArrayType, LongType, Metadata, StructType}
-import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode, execution}
+import org.apache.spark.sql.{execution, DataFrame, SQLContext, SaveMode}
 
 import scala.collection.mutable.ListBuffer
 
