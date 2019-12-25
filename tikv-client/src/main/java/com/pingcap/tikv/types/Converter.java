@@ -138,11 +138,6 @@ public class Converter {
     return UnsignedLong.valueOf(v);
   }
 
-  public static BigInteger convertToBigInt(Object val) {
-    assert val instanceof String;
-    return new BigInteger(val.toString());
-  }
-
   public static long convertToLong(Object val) {
     requireNonNull(val, "val is null");
     if (val instanceof Number) {

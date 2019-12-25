@@ -28,7 +28,6 @@ import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.types.DataType;
-import com.pingcap.tikv.types.DecimalType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
 import java.util.ArrayList;
@@ -99,7 +98,7 @@ public class SchemaInferTest {
     for (TiDAGRequest req : dagRequests) {
       List<DataType> dataTypes = SchemaInfer.create(req).getTypes();
       assertEquals(2, dataTypes.size());
-      assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
+      assertEquals(IntegerType.BIGINT.getClass(), dataTypes.get(0).getClass());
       assertEquals(IntegerType.BIGINT.getClass(), dataTypes.get(1).getClass());
     }
   }
