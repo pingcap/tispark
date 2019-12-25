@@ -61,7 +61,7 @@ object BasicExpression {
   def convertToTiExpr(expr: Expression): Option[TiExpression] =
     expr match {
       case Literal(value, dataType) =>
-        Some(Constant.create(convertLiteral(value, dataType), TiConverter.fromSparkType(dataType)))
+        Some(Constant.create(convertLiteral(value, dataType)))
 
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ArithmeticBinaryExpression.plus(lhs, rhs))

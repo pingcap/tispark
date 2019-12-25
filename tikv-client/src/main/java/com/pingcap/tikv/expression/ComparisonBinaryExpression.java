@@ -89,8 +89,8 @@ public class ComparisonBinaryExpression extends Expression {
 
     public TypedKey getTypedLiteral(int prefixLength) {
       if (key == null) {
-        key =
-            TypedKey.toTypedKey(getValue().getValue(), getColumnRef().getDataType(), prefixLength);
+        DataType colRefType = getColumnRef().getDataType();
+        key = TypedKey.toTypedKey(getValue().getValue(), colRefType, prefixLength);
       }
       return key;
     }

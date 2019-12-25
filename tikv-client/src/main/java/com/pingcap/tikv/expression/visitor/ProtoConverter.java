@@ -27,6 +27,7 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.types.*;
 import com.pingcap.tikv.types.DataType.EncodeType;
 import java.util.Map;
@@ -190,7 +191,11 @@ public class ProtoConverter extends Visitor<Expr, Object> {
 
   @Override
   protected Expr visit(ComparisonBinaryExpression node, Object context) {
-    // assume after type coerce, children should be compatible
+    NormalizedPredicate predicate = node.normalize();
+    if (predicate.getValue().isOverflowed()) {
+      throw new UnsupportedOperationException(
+          "overflowed ComparisonBinaryExpression cannot be pushed down");
+    }
     Expression child = node.getLeft();
     String typeSignature = getTypeSignature(child);
     ScalarFuncSig protoSig;

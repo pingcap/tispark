@@ -72,7 +72,7 @@ public class SchemaInferTest {
     tiDAGRequest.setStartTs(ts);
     List<DataType> dataTypes = SchemaInfer.create(tiDAGRequest).getTypes();
     assertEquals(1, dataTypes.size());
-    assertEquals(DecimalType.DECIMAL.getClass(), dataTypes.get(0).getClass());
+    assertEquals(IntegerType.INT.getClass(), dataTypes.get(0).getClass());
   }
 
   private List<TiDAGRequest> makeSelectDAGReq(ByItem... byItems) {

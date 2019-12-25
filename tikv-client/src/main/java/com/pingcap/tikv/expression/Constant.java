@@ -44,6 +44,7 @@ public class Constant extends Expression {
   public Constant(Object value, DataType type) {
     this.value = value;
     this.dataType = (type == null && value != null) ? getDefaultType(value) : type;
+    this.resolved = true;
   }
 
   protected static boolean isIntegerType(Object value) {

@@ -5,7 +5,7 @@ import com.pingcap.tikv.expression.{AggregateFunction, ByItem, ColumnRef, Expres
 import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import com.pingcap.tispark.TiDBRelation
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Count, First, Max, Min, PromotedSum, Sum, SumNotNullable}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Count, DeclarativeAggregate, First, Max, Min, PromotedSum, Sum, SumNotNullable}
 import org.apache.spark.sql.execution.TiConverter.fromSparkType
 
 import scala.collection.JavaConversions._
@@ -44,20 +44,10 @@ object ExprUtils {
         throw new IllegalArgumentException("Should never be here")
 
       case f @ Sum(BasicExpression(arg)) =>
-        MetaResolver.resolve(arg, meta)
-        dagRequest
-          .addAggregate(
-            AggregateFunction
-              .newCall(AggregateFunction.FunctionType.Sum, arg, fromSparkType(f.dataType))
-          )
+        addingSumAggToDAgReq(meta, dagRequest, f, arg)
 
       case f @ PromotedSum(BasicExpression(arg)) =>
-        MetaResolver.resolve(arg, meta)
-        dagRequest
-          .addAggregate(
-            AggregateFunction
-              .newCall(AggregateFunction.FunctionType.Sum, arg, fromSparkType(f.dataType))
-          )
+        addingSumAggToDAgReq(meta, dagRequest, f, arg)
 
       case f @ Count(args) if args.length == 1 =>
         val tiArg = if (args.head.isInstanceOf[Literal]) {
@@ -106,11 +96,25 @@ object ExprUtils {
       case _ =>
     }
 
+  private def addingSumAggToDAgReq(meta: TiTableInfo,
+                                   dagRequest: TiDAGRequest,
+                                   f: DeclarativeAggregate,
+                                   arg: TiExpression) = {
+    MetaResolver.resolve(arg, meta)
+    dagRequest
+      .addAggregate(
+        AggregateFunction
+          .newCall(AggregateFunction.FunctionType.Sum, arg, fromSparkType(f.dataType))
+      )
+  }
+
   def transformFilter(expr: Expression,
                       meta: TiTableInfo,
                       dagRequest: TiDAGRequest): TiExpression = {
     expr match {
-      case BasicExpression(arg) => arg
+      case BasicExpression(arg) =>
+        MetaResolver.resolve(arg, meta)
+        arg
     }
   }
 
@@ -135,7 +139,9 @@ object ExprUtils {
 
   def transformAttrToColRef(attr: Attribute, meta: TiTableInfo): TiExpression = {
     attr match {
-      case BasicExpression(expr) => expr
+      case BasicExpression(expr) =>
+        MetaResolver.resolve(expr, meta)
+        expr
     }
   }
   type TiDataType = com.pingcap.tikv.types.DataType
@@ -158,6 +164,7 @@ object ExprUtils {
     if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
 
     BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpression =>
+      MetaResolver.resolve(expr, tiDBRelation.table)
       return SupportedExpressionValidator.isSupportedExpression(expr, blacklist)
     }
   }

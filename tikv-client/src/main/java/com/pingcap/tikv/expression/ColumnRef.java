@@ -76,11 +76,11 @@ public class ColumnRef extends Expression {
     return name.toLowerCase();
   }
 
-  @Deprecated
   public void resolve(TiTableInfo table) {
     TiColumnInfo columnInfo = null;
     for (TiColumnInfo col : table.getColumns()) {
       if (col.matchName(name)) {
+        this.dataType = col.getType();
         columnInfo = col;
         break;
       }
@@ -119,11 +119,7 @@ public class ColumnRef extends Expression {
 
     if (another instanceof ColumnRef) {
       ColumnRef that = (ColumnRef) another;
-      if (isResolved() && that.isResolved()) {
-        return Objects.equals(tableInfo, that.tableInfo);
-      } else {
-        return name.equalsIgnoreCase(that.name);
-      }
+      return name.equalsIgnoreCase(that.name);
     } else {
       return false;
     }

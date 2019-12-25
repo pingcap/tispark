@@ -32,6 +32,7 @@ import java.util.Objects;
  * has different behavior. A method {@code visitComparisonBinaryExpr} is added with extra boolean
  * variable to control the behavior.
  */
+@SuppressWarnings("UnstableApiUsage")
 public class RangeSetBuilder<C extends Comparable> extends DefaultVisitor<RangeSet<C>, Void> {
 
   /**
