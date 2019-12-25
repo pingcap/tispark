@@ -128,7 +128,7 @@ public class ColumnRef extends Expression {
   @Override
   public int hashCode() {
     if (isResolved()) {
-      return Objects.hash(name, tableInfo);
+      return Objects.hash(name);
     } else {
       return Objects.hashCode(name);
     }
