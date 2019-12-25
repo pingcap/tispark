@@ -179,9 +179,11 @@ public class Converter {
   static byte[] convertToBytes(Object val, int prefixLength) {
     requireNonNull(val, "val is null");
     if (val instanceof byte[]) {
-      return Arrays.copyOf((byte[]) val, prefixLength);
+      byte[] valByte = (byte[]) val;
+      return Arrays.copyOf(valByte, Math.min(valByte.length, prefixLength));
     } else if (val instanceof String) {
-      return Arrays.copyOf(((String) val).getBytes(), prefixLength);
+      String valStr = (String) val;
+      return Arrays.copyOf(((String) val).getBytes(), Math.min(valStr.length(), prefixLength));
     }
     throw new TypeException(
         String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
