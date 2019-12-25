@@ -1,35 +1,17 @@
-/*
- * Copyright 2019 PingCAP, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package org.apache.spark.sql.tispark
+package org.apache.spark.sql.catalyst.expressions
 
 import java.sql.Timestamp
 
 import com.pingcap.tikv.expression._
-import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
 import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
-import org.apache.spark.sql.catalyst.expressions.{Add, Alias, And, AttributeReference, Cast, CheckOverflow, Contains, Divide, EndsWith, EqualTo, Expression, GreaterThan, GreaterThanOrEqual, IsNotNull, IsNull, LessThan, LessThanOrEqual, Like, Literal, Multiply, Not, Or, PromotePrecision, StartsWith, Subtract}
 import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.execution.TiConverter
 import org.apache.spark.sql.types._
 import org.joda.time.DateTime
 
-case class BasicExpression(expr: Expression, meta: TiTableInfo)
-
 object BasicExpression {
+  type TiDataType = com.pingcap.tikv.types.DataType
   type TiExpression = com.pingcap.tikv.expression.Expression
   type TiNot = com.pingcap.tikv.expression.Not
   type TiIsNull = com.pingcap.tikv.expression.IsNull
@@ -172,5 +154,7 @@ object BasicExpression {
       case _ => Option.empty[TiExpression]
     }
 
-  def unapply(expr: Expression): Option[TiExpression] = convertToTiExpr(expr)
+  def unapply(expr: Expression): Option[TiExpression] = {
+    convertToTiExpr(expr)
+  }
 }

@@ -181,6 +181,7 @@ public class Converter {
     if (val instanceof byte[]) {
       return Arrays.copyOf((byte[]) val, prefixLength);
     } else if (val instanceof String) {
+      prefixLength = Math.min(((String) val).length(), prefixLength);
       return Arrays.copyOf(((String) val).getBytes(), prefixLength);
     }
     throw new TypeException(
