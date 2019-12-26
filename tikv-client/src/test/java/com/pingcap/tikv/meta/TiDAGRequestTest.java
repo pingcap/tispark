@@ -73,8 +73,8 @@ public class TiDAGRequestTest {
     ColumnRef col2 = ColumnRef.create("c2", table);
     ColumnRef col3 = ColumnRef.create("c3", table);
 
-    AggregateFunction sum = AggregateFunction.newCall(FunctionType.Sum, col1, col1.dataType);
-    AggregateFunction min = AggregateFunction.newCall(FunctionType.Min, col1, col1.dataType);
+    AggregateFunction sum = AggregateFunction.newCall(FunctionType.Sum, col1, col1.getDataType());
+    AggregateFunction min = AggregateFunction.newCall(FunctionType.Min, col1, col1.getDataType());
 
     selReq
         .addRequiredColumn(col1)

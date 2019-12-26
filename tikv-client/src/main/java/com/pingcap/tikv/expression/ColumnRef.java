@@ -50,10 +50,6 @@ public class ColumnRef extends Expression {
 
   private final String name;
 
-  private TiColumnInfo columnInfo;
-
-  private TiTableInfo tableInfo;
-
   @Deprecated
   public ColumnRef(String name) {
     this.name = name;
@@ -63,13 +59,6 @@ public class ColumnRef extends Expression {
     super(dataType);
     resolved = true;
     this.name = name;
-  }
-
-  public ColumnRef(String name, DataType dataType, TiTableInfo tableInfo) {
-    this.name = name;
-    this.dataType = dataType;
-    this.tableInfo = tableInfo;
-    this.resolved = true;
   }
 
   public String getName() {
@@ -93,8 +82,6 @@ public class ColumnRef extends Expression {
     if (columnInfo.getId() == 0) {
       throw new TiExpressionException("Zero Id is not a referable column id");
     }
-
-    this.tableInfo = table;
   }
 
   public boolean matchName(String name) {
@@ -119,7 +106,8 @@ public class ColumnRef extends Expression {
 
     if (another instanceof ColumnRef) {
       ColumnRef that = (ColumnRef) another;
-      return name.equalsIgnoreCase(that.name);
+      return name.equalsIgnoreCase(that.name)
+          && this.dataType.equals(((ColumnRef) another).dataType);
     } else {
       return false;
     }
@@ -128,7 +116,7 @@ public class ColumnRef extends Expression {
   @Override
   public int hashCode() {
     if (isResolved()) {
-      return Objects.hash(name);
+      return Objects.hash(this.name, this.dataType);
     } else {
       return Objects.hashCode(name);
     }

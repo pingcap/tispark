@@ -89,10 +89,6 @@ public class Constant extends Expression {
     return value;
   }
 
-  public DataType getType() {
-    return dataType;
-  }
-
   @Override
   public String toString() {
     if (value == null) {

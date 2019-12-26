@@ -35,19 +35,19 @@ public class StringRegExpression extends Expression {
 
   public static StringRegExpression startsWith(Expression left, Expression right) {
     Expression reg =
-        Constant.create(((Constant) right).getValue() + "%", ((Constant) right).getType());
+        Constant.create(((Constant) right).getValue() + "%", ((Constant) right).getDataType());
     return new StringRegExpression(STARTS_WITH, left, right, reg);
   }
 
   public static StringRegExpression contains(Expression left, Expression right) {
     Expression reg =
-        Constant.create("%" + ((Constant) right).getValue() + "%", ((Constant) right).getType());
+        Constant.create(
+            "%" + ((Constant) right).getValue() + "%", ((Constant) right).getDataType());
     return new StringRegExpression(CONTAINS, left, right, reg);
   }
 
   public static StringRegExpression endsWith(Expression left, Expression right) {
-    Expression reg =
-        Constant.create("%" + ((Constant) right).getValue(), ((Constant) right).getType());
+    Expression reg = Constant.create("%" + ((Constant) right).getValue(), right.getDataType());
     return new StringRegExpression(ENDS_WITH, left, right, reg);
   }
 

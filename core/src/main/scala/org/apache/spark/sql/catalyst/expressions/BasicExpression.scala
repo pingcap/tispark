@@ -128,16 +128,14 @@ object BasicExpression {
       case CheckOverflow(BasicExpression(expr), dec: DecimalType) =>
         // TODO: this is just a work around
         // refactor on Expression system can finally resolve the problem.
-        expr.dataType = TiConverter.fromSparkType(dec)
-        expr.resolved = true
+        expr.setDataType(TiConverter.fromSparkType(dec))
         Some(expr)
 
       case PromotePrecision(BasicExpression(expr)) =>
         Some(expr)
 
       case PromotePrecision(Cast(BasicExpression(expr), dec: DecimalType, _)) =>
-        expr.dataType = TiConverter.fromSparkType(dec)
-        expr.resolved = true
+        expr.setDataType(TiConverter.fromSparkType(dec))
         Some(expr)
 
       case PromotePrecision(BasicExpression(expr)) =>

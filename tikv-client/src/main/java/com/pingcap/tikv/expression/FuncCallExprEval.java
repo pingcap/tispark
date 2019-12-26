@@ -20,7 +20,7 @@ public class FuncCallExprEval {
     evalMap.put(
         Type.YEAR,
         literal -> {
-          DataType type = literal.getType();
+          DataType type = literal.getDataType();
           if (type instanceof StringType) {
             DateTime date = DateTime.parse((String) literal.getValue());
             return Constant.create(date.getYear(), IntegerType.INT);

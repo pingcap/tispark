@@ -67,7 +67,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
   }
 
   private DataType getType(Expression expression) {
-    DataType type = expression.dataType;
+    DataType type = expression.getDataType();
 
     if (type == null) {
       throw new TiExpressionException(String.format("Expression %s type unknown", expression));
@@ -274,7 +274,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
   @Override
   protected Expr visit(Constant node, Object context) {
     Expr.Builder builder = Expr.newBuilder();
-    DataType type = node.getType();
+    DataType type = node.getDataType();
     if (node.getValue() == null) {
       builder.setTp(ExprType.Null);
     } else {

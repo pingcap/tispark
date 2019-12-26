@@ -52,10 +52,11 @@ public class MetaResolver extends DefaultVisitor<Void, Expression> {
   @Override
   protected Void visit(ComparisonBinaryExpression node, Expression parent) {
     NormalizedPredicate predicate = node.normalize();
-    // TODO: fix this if we have complex ComparisonBinaryExpression
+    // TODO(Zhexuan Yang): fix this if we have complex ComparisonBinaryExpression
+    // We may need add a expressionRewriter to address this.
     if (predicate != null) {
       visit(predicate.getColumnRef(), node);
-      predicate.getValue().dataType = predicate.getColumnRef().dataType;
+      predicate.getValue().setDataType(predicate.getColumnRef().getDataType());
     }
     return null;
   }

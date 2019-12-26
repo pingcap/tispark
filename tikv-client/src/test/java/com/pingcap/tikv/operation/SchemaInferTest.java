@@ -43,7 +43,7 @@ public class SchemaInferTest {
   private ColumnRef name = ColumnRef.create("name", table);
   private ColumnRef number = ColumnRef.create("number", table);
   private AggregateFunction sum =
-      AggregateFunction.newCall(FunctionType.Sum, number, number.dataType);
+      AggregateFunction.newCall(FunctionType.Sum, number, number.getDataType());
   private ByItem simpleGroupBy = ByItem.create(number, false);
   private ByItem complexGroupBy =
       ByItem.create(plus(number, Constant.create(1, IntegerType.BIGINT)), false);

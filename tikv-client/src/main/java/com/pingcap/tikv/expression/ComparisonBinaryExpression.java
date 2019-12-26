@@ -16,7 +16,7 @@
 package com.pingcap.tikv.expression;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Type.*;
+import static com.pingcap.tikv.expression.ComparisonBinaryExpression.Operator.*;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class ComparisonBinaryExpression extends Expression {
-  public enum Type {
+  public enum Operator {
     EQUAL,
     NOT_EQUAL,
     LESS_THAN,
@@ -79,7 +79,7 @@ public class ComparisonBinaryExpression extends Expression {
       return (Constant) pred.getRight();
     }
 
-    public Type getType() {
+    public Operator getType() {
       return pred.getComparisonType();
     }
 
@@ -98,15 +98,15 @@ public class ComparisonBinaryExpression extends Expression {
 
   private final Expression left;
   private final Expression right;
-  private final Type compType;
+  private final Operator compOperator;
   private transient NormalizedPredicate normalizedPredicate;
 
-  public ComparisonBinaryExpression(Type type, Expression left, Expression right) {
+  public ComparisonBinaryExpression(Operator operator, Expression left, Expression right) {
     super(IntegerType.BOOLEAN);
     this.resolved = true;
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
-    this.compType = requireNonNull(type, "type is null");
+    this.compOperator = requireNonNull(operator, "type is null");
   }
 
   @Override
@@ -127,8 +127,8 @@ public class ComparisonBinaryExpression extends Expression {
     return right;
   }
 
-  public Type getComparisonType() {
-    return compType;
+  public Operator getComparisonType() {
+    return compOperator;
   }
 
   public NormalizedPredicate normalize() {
@@ -138,25 +138,25 @@ public class ComparisonBinaryExpression extends Expression {
     if (getLeft() instanceof Constant && getRight() instanceof ColumnRef) {
       Constant left = (Constant) getLeft();
       ColumnRef right = (ColumnRef) getRight();
-      Type newType;
+      Operator newOperator;
       switch (getComparisonType()) {
         case EQUAL:
-          newType = EQUAL;
+          newOperator = EQUAL;
           break;
         case LESS_EQUAL:
-          newType = GREATER_EQUAL;
+          newOperator = GREATER_EQUAL;
           break;
         case LESS_THAN:
-          newType = GREATER_THAN;
+          newOperator = GREATER_THAN;
           break;
         case GREATER_EQUAL:
-          newType = LESS_EQUAL;
+          newOperator = LESS_EQUAL;
           break;
         case GREATER_THAN:
-          newType = LESS_THAN;
+          newOperator = LESS_THAN;
           break;
         case NOT_EQUAL:
-          newType = NOT_EQUAL;
+          newOperator = NOT_EQUAL;
           break;
         default:
           throw new TiExpressionException(
@@ -164,7 +164,7 @@ public class ComparisonBinaryExpression extends Expression {
                   "PredicateNormalizer is not able to process type %s", getComparisonType()));
       }
       ComparisonBinaryExpression newExpression =
-          new ComparisonBinaryExpression(newType, right, left);
+          new ComparisonBinaryExpression(newOperator, right, left);
       normalizedPredicate = new NormalizedPredicate(newExpression);
       return normalizedPredicate;
     } else if (getRight() instanceof Constant && getLeft() instanceof ColumnRef) {
@@ -190,13 +190,13 @@ public class ComparisonBinaryExpression extends Expression {
     }
 
     ComparisonBinaryExpression that = (ComparisonBinaryExpression) other;
-    return (compType == that.compType)
+    return (compOperator == that.compOperator)
         && Objects.equals(left, that.left)
         && Objects.equals(right, that.right);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(compType, left, right);
+    return Objects.hash(compOperator, left, right);
   }
 }
