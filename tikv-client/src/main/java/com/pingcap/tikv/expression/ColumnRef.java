@@ -106,8 +106,13 @@ public class ColumnRef extends Expression {
 
     if (another instanceof ColumnRef) {
       ColumnRef that = (ColumnRef) another;
-      return name.equalsIgnoreCase(that.name)
-          && this.dataType.equals(((ColumnRef) another).dataType);
+      if(isResolved()) {
+        return name.equalsIgnoreCase(that.name)
+            && this.dataType.equals(((ColumnRef) another).dataType);
+      } else {
+        return name.equalsIgnoreCase(that.name);
+      }
+
     } else {
       return false;
     }
