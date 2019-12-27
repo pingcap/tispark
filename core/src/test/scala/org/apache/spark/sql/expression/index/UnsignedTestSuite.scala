@@ -112,7 +112,7 @@ class UnsignedTestSuite extends BaseTiSparkTest {
       List(List(1), List(2), List(3)),
       List(List(0), List(1), List(2), List(3), List(unsignedLongMaxValue))
     )
-//    assert(queries.size == answers.size)
+    assert(queries.size == answers.size)
     for (i <- queries.indices) {
       println(queries(i))
       explainAndRunTest(queries(i), rJDBC = answers(i), skipTiDB = true)
