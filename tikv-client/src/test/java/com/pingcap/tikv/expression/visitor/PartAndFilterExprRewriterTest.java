@@ -25,7 +25,7 @@ public class PartAndFilterExprRewriterTest {
     PartAndFilterExprRewriter expressionRewriter = new PartAndFilterExprRewriter(partExpr);
     Expression rewrote = expressionRewriter.rewrite(exprToBeRewrited);
     assertEquals(
-        "[[y@DateType EQUAL 1995] OR [a@IntegerType GREATER_EQUAL 5]]", rewrote.toString());
+        "[[y@DATE EQUAL 1995] OR [a@LONG GREATER_EQUAL 5]]", rewrote.toString());
 
     // not support case
     partExpr = new Not(col);
@@ -40,13 +40,13 @@ public class PartAndFilterExprRewriterTest {
     exprToBeRewrited =
         ComparisonBinaryExpression.lessEqual(year, Constant.create("1995", IntegerType.INT));
     rewrote = expressionRewriter.rewrite(exprToBeRewrited);
-    assertEquals("[y@DateType LESS_EQUAL \"1995\"]", rewrote.toString());
+    assertEquals("[y@DATE LESS_EQUAL \"1995\"]", rewrote.toString());
 
     // simple column case. No rewriting happens.
     exprToBeRewrited =
         ComparisonBinaryExpression.lessEqual(col, Constant.create(1, IntegerType.INT));
     expressionRewriter = new PartAndFilterExprRewriter(col);
     rewrote = expressionRewriter.rewrite(exprToBeRewrited);
-    assertEquals("[y@DateType LESS_EQUAL 1]", rewrote.toString());
+    assertEquals("[y@DATE LESS_EQUAL 1]", rewrote.toString());
   }
 }
