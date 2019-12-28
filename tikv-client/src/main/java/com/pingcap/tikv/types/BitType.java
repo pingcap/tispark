@@ -51,6 +51,10 @@ public class BitType extends IntegerType {
     }
   }
 
+  public String getName() {
+    return "BIT";
+  }
+
   @Override
   protected Object doConvertToTiDBType(Object value)
       throws ConvertNotSupportException, ConvertOverflowException {

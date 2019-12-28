@@ -131,6 +131,11 @@ public class EnumType extends DataType {
   }
 
   @Override
+  public String getName() {
+    return "ENUM";
+  }
+
+  @Override
   public ExprType getProtoExprType() {
     return ExprType.MysqlEnum;
   }

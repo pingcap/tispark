@@ -112,6 +112,11 @@ public class SetType extends DataType {
   }
 
   @Override
+  public String getName() {
+    return "SET";
+  }
+
+  @Override
   public ExprType getProtoExprType() {
     return ExprType.MysqlSet;
   }

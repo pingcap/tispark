@@ -143,6 +143,14 @@ public class IntegerType extends DataType {
   }
 
   @Override
+  public String getName() {
+    if (isUnsigned()) {
+      return "UNSIGNED LONG";
+    }
+    return "LONG";
+  }
+
+  @Override
   public ExprType getProtoExprType() {
     return isUnsigned() ? ExprType.Uint64 : ExprType.Int64;
   }

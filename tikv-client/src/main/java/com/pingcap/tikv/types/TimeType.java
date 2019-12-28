@@ -94,6 +94,11 @@ public class TimeType extends DataType {
   }
 
   @Override
+  public String getName() {
+    return "TIME";
+  }
+
+  @Override
   public ExprType getProtoExprType() {
     return ExprType.MysqlDuration;
   }

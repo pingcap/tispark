@@ -152,7 +152,7 @@ public class TiTableInfo implements Serializable {
   }
 
   public TiColumnInfo getColumn(String name) {
-    return this.columnsMap.get(name);
+    return this.columnsMap.get(name.toLowerCase());
   }
 
   public TiColumnInfo getColumn(int offset) {

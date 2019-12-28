@@ -130,7 +130,7 @@ public class ColumnRef extends Expression {
   @Override
   public String toString() {
     if (dataType != null) {
-      return String.format("%s@%s", getName(), dataType.getClass().getSimpleName());
+      return String.format("%s@%s", getName(), dataType.getName());
     } else {
       return String.format("[%s]", getName());
     }

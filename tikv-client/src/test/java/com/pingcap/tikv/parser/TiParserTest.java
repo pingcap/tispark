@@ -150,6 +150,6 @@ public class TiParserTest {
     TiTableInfo tableInfo = createTaleInfoWithParts();
     TiParser parser = new TiParser(tableInfo);
     Expression expr = parser.parseExpression("`a` < 5");
-    Assert.assertEquals(expr.toString(), "[a@IntegerType LESS_THAN 5]");
+    Assert.assertEquals(expr.toString(), "[a@LONG LESS_THAN 5]");
   }
 }

@@ -51,6 +51,11 @@ public class DateTimeType extends AbstractDateTimeType {
     return convertToMysqlDateTime(value);
   }
 
+  @Override
+  public String getName() {
+    return "DATETIME" + "@" + getTimezone().getID();
+  }
+
   /**
    * Decode timestamp from packed long value In TiDB / MySQL, timestamp type is converted to UTC and
    * stored
