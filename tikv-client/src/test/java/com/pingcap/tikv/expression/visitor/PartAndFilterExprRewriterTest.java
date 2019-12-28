@@ -24,8 +24,7 @@ public class PartAndFilterExprRewriterTest {
             ComparisonBinaryExpression.greaterEqual(col2, Constant.create(5, IntegerType.INT)));
     PartAndFilterExprRewriter expressionRewriter = new PartAndFilterExprRewriter(partExpr);
     Expression rewrote = expressionRewriter.rewrite(exprToBeRewrited);
-    assertEquals(
-        "[[y@DATE EQUAL 1995] OR [a@LONG GREATER_EQUAL 5]]", rewrote.toString());
+    assertEquals("[[y@DATE EQUAL 1995] OR [a@LONG GREATER_EQUAL 5]]", rewrote.toString());
 
     // not support case
     partExpr = new Not(col);
