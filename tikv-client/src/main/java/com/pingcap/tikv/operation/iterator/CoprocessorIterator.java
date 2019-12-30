@@ -83,7 +83,8 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         session,
         SchemaInfer.create(dagRequest),
         dagRequest.getPushDownType(),
-        dagRequest.getStoreType()) {
+        dagRequest.getStoreType(),
+        dagRequest.getStartTs().getVersion()) {
       @Override
       public Row next() {
         return rowReader.readRow(schemaInfer.getTypes().toArray(new DataType[0]));
@@ -110,9 +111,10 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         dagRequest.buildTableScan(),
         regionTasks,
         session,
-        SchemaInfer.create(dagRequest),
+        SchemaInfer.create(req),
         dagRequest.getPushDownType(),
-        dagRequest.getStoreType()) {
+        dagRequest.getStoreType(),
+        dagRequest.getStartTs().getVersion()) {
       @Override
       public TiChunk next() {
         DataType[] dataTypes = this.schemaInfer.getTypes().toArray(new DataType[0]);
@@ -177,7 +179,8 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         session,
         SchemaInfer.create(req, true),
         req.getPushDownType(),
-        req.getStoreType()) {
+        req.getStoreType(),
+        req.getStartTs().getVersion()) {
       @Override
       public Long next() {
         return rowReader.readRow(handleTypes).getLong(handleTypes.length - 1);

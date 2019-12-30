@@ -422,7 +422,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       BackOffer backOffer,
       DAGRequest req,
       List<KeyRange> ranges,
-      Queue<SelectResponse> responseQueue) {
+      Queue<SelectResponse> responseQueue,
+      long startTs) {
     if (req == null || ranges == null || req.getExecutorsCount() < 1) {
       throw new IllegalArgumentException("Invalid coprocessor argument!");
     }
@@ -432,6 +433,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             Coprocessor.Request.newBuilder()
                 .setContext(region.getContext())
                 .setTp(REQ_TYPE_DAG.getValue())
+                .setStartTs(startTs)
                 .setData(req.toByteString())
                 .addAllRanges(ranges)
                 .build();

@@ -302,9 +302,6 @@ public class KVMockServer extends TikvGrpc.TikvImplBase {
       verifyContext(requestWrap.getContext());
 
       DAGRequest request = DAGRequest.parseFrom(requestWrap.getData());
-      if (request.getStartTs() == 0) {
-        throw new Exception();
-      }
 
       List<Coprocessor.KeyRange> keyRanges = requestWrap.getRangesList();
 
