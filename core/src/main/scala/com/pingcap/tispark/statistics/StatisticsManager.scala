@@ -141,9 +141,8 @@ object StatisticsManager {
     loadStatsFromStorage(tblId, tblStatistic, table, loadAll, neededColIds)
   }
 
-  private[statistics] def readDAGRequest(req: TiDAGRequest, physicalId: Long): Iterator[Row] = {
+  private[statistics] def readDAGRequest(req: TiDAGRequest, physicalId: Long): Iterator[Row] =
     snapshot.tableReadRow(req, physicalId)
-  }
 
   private def loadStatsFromStorage(tblId: Long,
                                    tblStatistic: TableStatistics,

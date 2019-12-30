@@ -78,7 +78,7 @@ object BasicExpression {
   def convertToTiExpr(expr: Expression): Option[TiExpression] =
     expr match {
       case Literal(value, dataType) =>
-        Some(Constant.create(convertLiteral(value, dataType)))
+        Some(Constant.create(convertLiteral(value, dataType), TiConverter.fromSparkType(dataType)))
 
       case Add(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ArithmeticBinaryExpression.plus(lhs, rhs))
@@ -143,8 +143,6 @@ object BasicExpression {
       // Coprocessor has its own behavior of type promoting and overflow check
       // so we simply remove it from expression and let cop handle it
       case CheckOverflow(BasicExpression(expr), dec: DecimalType) =>
-        // TODO: this is just a work around
-        // refactor on Expression system can finally resolve the problem.
         expr.setDataType(TiConverter.fromSparkType(dec))
         Some(expr)
 
