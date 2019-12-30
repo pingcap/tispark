@@ -172,7 +172,7 @@ public class TiIndexInfo implements Serializable {
         if (!column.isPrimaryKey()) {
           continue;
         }
-        ColumnInfo pbColumn = column.toProtoBuilder(tableInfo).setPkHandle(true).build();
+        ColumnInfo pbColumn = column.toProto(tableInfo);
         builder.addColumns(pbColumn);
       }
     }
@@ -190,10 +190,6 @@ public class TiIndexInfo implements Serializable {
         name,
         Joiner.on(",")
             .skipNulls()
-            .join(
-                indexColumns
-                    .stream()
-                    .map(column -> column.getName())
-                    .collect(Collectors.toList())));
+            .join(indexColumns.stream().map(TiIndexColumn::getName).collect(Collectors.toList())));
   }
 }

@@ -16,6 +16,8 @@
 package com.pingcap.tikv.expression.visitor;
 
 import com.pingcap.tikv.expression.ColumnRef;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.meta.TiTableInfo;
 import java.util.List;
@@ -45,6 +47,18 @@ public class MetaResolver extends DefaultVisitor<Void, Expression> {
   public void resolve(Expression expression) {
     Objects.requireNonNull(expression, "expression is null");
     expression.accept(this, null);
+  }
+
+  @Override
+  protected Void visit(ComparisonBinaryExpression node, Expression parent) {
+    NormalizedPredicate predicate = node.normalize();
+    // TODO(Zhexuan Yang): fix this if we have complex ComparisonBinaryExpression
+    // We may need add a expressionRewriter to address this.
+    if (predicate != null) {
+      visit(predicate.getColumnRef(), node);
+      predicate.getValue().setDataType(predicate.getColumnRef().getDataType());
+    }
+    return null;
   }
 
   @Override

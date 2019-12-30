@@ -147,6 +147,11 @@ public class BytesType extends DataType {
   }
 
   @Override
+  public String getName() {
+    return "BYTES";
+  }
+
+  @Override
   public ExprType getProtoExprType() {
     return getCharset().equals(Charset.CharsetBin) ? ExprType.Bytes : ExprType.String;
   }

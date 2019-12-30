@@ -27,7 +27,9 @@ import com.pingcap.tikv.meta.TiColumnInfo.InternalTypeHolder;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataTypeFactory;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -37,6 +39,7 @@ public class TiTableInfo implements Serializable {
   private final String charset;
   private final String collate;
   private final List<TiColumnInfo> columns;
+  private final Map<String, TiColumnInfo> columnsMap;
   private final List<TiIndexInfo> indices;
   private final boolean pkIsHandle;
   private final String comment;
@@ -71,6 +74,10 @@ public class TiTableInfo implements Serializable {
     this.charset = charset;
     this.collate = collate;
     this.columns = ImmutableList.copyOf(requireNonNull(columns, "columns is null"));
+    this.columnsMap = new HashMap<>();
+    for (TiColumnInfo col : this.columns) {
+      this.columnsMap.put(col.getName(), col);
+    }
     // TODO: Use more precise predication according to types
     this.rowSize = columns.stream().mapToLong(TiColumnInfo::getSize).sum();
     this.pkIsHandle = pkIsHandle;
@@ -142,6 +149,10 @@ public class TiTableInfo implements Serializable {
 
   public long getEstimatedRowSizeInByte() {
     return rowSize;
+  }
+
+  public TiColumnInfo getColumn(String name) {
+    return this.columnsMap.get(name.toLowerCase());
   }
 
   public TiColumnInfo getColumn(int offset) {

@@ -27,9 +27,9 @@ import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
+import com.pingcap.tikv.expression.ComparisonBinaryExpression.NormalizedPredicate;
 import com.pingcap.tikv.types.*;
 import com.pingcap.tikv.types.DataType.EncodeType;
-import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -49,29 +49,25 @@ public class ProtoConverter extends Visitor<Expr, Object> {
           .put(TimeType.class, "Duration")
           .build();
 
-  private final IdentityHashMap<Expression, DataType> typeMap;
   private final boolean validateColPosition;
 
-  public ProtoConverter(IdentityHashMap<Expression, DataType> typeMap) {
-    this(typeMap, true);
+  public ProtoConverter() {
+    this(true);
   }
 
   /**
    * Instantiate a {{@code ProtoConverter}} using a typeMap.
    *
-   * @param typeMap the type map
    * @param validateColPosition whether to consider column position in this converter. By default, a
    *     {{@code TiDAGRequest}} should check whether a {{@code ColumnRef}}'s position is correct in
    *     it's executors. Can ignore this validation if `validateColPosition` is set to false.
    */
-  public ProtoConverter(
-      IdentityHashMap<Expression, DataType> typeMap, boolean validateColPosition) {
-    this.typeMap = typeMap;
+  public ProtoConverter(boolean validateColPosition) {
     this.validateColPosition = validateColPosition;
   }
 
   private DataType getType(Expression expression) {
-    DataType type = typeMap.get(expression);
+    DataType type = expression.getDataType();
 
     if (type == null) {
       throw new TiExpressionException(String.format("Expression %s type unknown", expression));
@@ -97,9 +93,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
   }
 
   public static Expr toProto(Expression expression, Object context) {
-    ExpressionTypeCoercer coercer = new ExpressionTypeCoercer();
-    coercer.infer(expression);
-    ProtoConverter converter = new ProtoConverter(coercer.getTypeMap());
+    ProtoConverter converter = new ProtoConverter();
     return expression.accept(converter, context);
   }
 
@@ -197,7 +191,11 @@ public class ProtoConverter extends Visitor<Expr, Object> {
 
   @Override
   protected Expr visit(ComparisonBinaryExpression node, Object context) {
-    // assume after type coerce, children should be compatible
+    NormalizedPredicate predicate = node.normalize();
+    if (predicate.getValue().isOverflowed()) {
+      throw new UnsupportedOperationException(
+          "overflowed ComparisonBinaryExpression cannot be pushed down");
+    }
     Expression child = node.getLeft();
     String typeSignature = getTypeSignature(child);
     ScalarFuncSig protoSig;
@@ -255,10 +253,10 @@ public class ProtoConverter extends Visitor<Expr, Object> {
     long position = 0;
     if (validateColPosition) {
       requireNonNull(context, "Context of a ColumnRef should not be null");
-      Map<ColumnRef, Integer> colIdOffsetMap = (Map<ColumnRef, Integer>) context;
+      Map<String, Integer> colIdOffsetMap = (Map<String, Integer>) context;
       position =
           requireNonNull(
-              colIdOffsetMap.get(node),
+              colIdOffsetMap.get(node.getName()),
               "Required column position info " + node.getName() + " is not in a valid context.");
     }
     Expr.Builder builder = Expr.newBuilder();
@@ -276,7 +274,7 @@ public class ProtoConverter extends Visitor<Expr, Object> {
   @Override
   protected Expr visit(Constant node, Object context) {
     Expr.Builder builder = Expr.newBuilder();
-    DataType type = node.getType();
+    DataType type = node.getDataType();
     if (node.getValue() == null) {
       builder.setTp(ExprType.Null);
     } else {

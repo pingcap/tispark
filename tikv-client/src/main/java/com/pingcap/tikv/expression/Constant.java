@@ -29,21 +29,22 @@ import org.joda.time.DateTime;
 // Refactor needed.
 // Refer to https://github.com/pingcap/tipb/blob/master/go-tipb/expression.pb.go
 // TODO: This might need a refactor to accept an DataType?
-public class Constant implements Expression {
+public class Constant extends Expression {
   private final Object value;
-  private DataType type;
 
   public static Constant create(Object value, DataType type) {
     return new Constant(value, type);
   }
 
+  @Deprecated
   public static Constant create(Object value) {
     return new Constant(value, null);
   }
 
   public Constant(Object value, DataType type) {
     this.value = value;
-    this.type = (type == null && value != null) ? getDefaultType(value) : type;
+    this.dataType = (type == null && value != null) ? getDefaultType(value) : type;
+    this.resolved = true;
   }
 
   protected static boolean isIntegerType(Object value) {
@@ -81,15 +82,11 @@ public class Constant implements Expression {
   }
 
   public void setType(DataType type) {
-    this.type = type;
+    this.dataType = type;
   }
 
   public Object getValue() {
     return value;
-  }
-
-  public DataType getType() {
-    return type;
   }
 
   @Override
@@ -129,8 +126,8 @@ public class Constant implements Expression {
   private BigDecimal UNSIGNED_LONG_MAX = new BigDecimal(UnsignedLong.fromLongBits(-1).toString());
 
   public boolean isOverflowed() {
-    if (type instanceof IntegerType) {
-      if (((IntegerType) type).isUnsignedLong()) {
+    if (this.dataType instanceof IntegerType) {
+      if (((IntegerType) this.dataType).isUnsignedLong()) {
         return ((BigDecimal) value).min(UNSIGNED_LONG_MAX).signum() > 0
             || ((BigDecimal) value).signum() < 0;
       }

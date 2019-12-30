@@ -49,8 +49,8 @@ dagRequest.addRanges(ranges);
 dagRequest.addField(TiColumnRef.create("c_mktsegment", table));
 dagRequest.setTableInfo(table);
 dagRequest.setStartTs(session.getTimestamp().getVersion());
-dagRequest.addWhere(new GreaterEqual(TiConstant.create(5), TiConstant.create(5)));
-dagRequest.addGroupByItem(TiByItem.create(TiColumnRef.create("c_mktsegment"), false));
+dagRequest.addWhere(new GreaterEqual(TiConstant.create(5, IntegerType.BIGINT), TiConstant.create(5, IntegerType.BIGINT)));
+dagRequest.addGroupByItem(TiByItem.create(TiColumnRef.create("c_mktsegment", table), false));
 dagRequest.setLimit(10);
 dagRequest.resolve();
  

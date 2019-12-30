@@ -19,29 +19,25 @@ import java.util.concurrent.TimeUnit
 
 import com.pingcap.tidb.tipb.EncodeType
 import com.pingcap.tikv.exception.IgnoreUnsupportedTypeException
-import com.pingcap.tikv.expression.AggregateFunction.FunctionType
 import com.pingcap.tikv.expression._
-import com.pingcap.tikv.expression.visitor.{ColumnMatcher, MetaResolver}
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.statistics.StatisticsManager
-import org.apache.spark.sql.execution.TiConverter._
-import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.utils.ReflectionUtil._
+import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.analysis.CleanupAliases
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, _}
-import org.apache.spark.sql.catalyst.expressions.{Alias, Ascending, Attribute, AttributeMap, AttributeSet, Descending, Expression, IntegerLiteral, IsNull, NamedExpression, NullsFirst, NullsLast, SortOrder, SubqueryExpression}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Count, First, Max, Min, SpecialSum, Sum, SumNotNullable}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Ascending, Attribute, AttributeMap, AttributeSet, Descending, ExprUtils, Expression, IntegerLiteral, IsNull, NamedExpression, NullsFirst, NullsLast, SortOrder, SubqueryExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
 import org.apache.spark.sql.catalyst.plans.logical._
-import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, _}
 import org.apache.spark.sql.execution.datasources.LogicalRelation
+import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, _}
 import org.apache.spark.sql.internal.SQLConf
-import org.apache.spark.sql.tispark.BasicExpression
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.JavaConverters._
@@ -97,13 +93,13 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def allowIndexRead(): Boolean =
     sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "true").toLowerCase.toBoolean
 
-  private def useStreamingProcess(): Boolean =
+  private def useStreamingProcess: Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
-  private def isEnableChunk(): Boolean =
+  private def isEnableChunk: Boolean =
     sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "true").toLowerCase.toBoolean
 
-  private def isUseTiFlash(): Boolean =
+  private def isUseTiFlash: Boolean =
     sqlConf.getConfString(TiConfigConst.USE_TIFLASH, "false").toLowerCase.toBoolean
 
   private def timeZoneOffsetInSeconds(): Int = {
@@ -118,14 +114,15 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   // streaming only support TypeDefault. Even we enable chunk, we should still
   // use TypeDefault.
   private def encodeType(): EncodeType = {
-    if (isEnableChunk() && !useStreamingProcess()) {
-      return EncodeType.TypeChunk
+    if (isEnableChunk && !useStreamingProcess) {
+      EncodeType.TypeChunk
+    } else {
+      EncodeType.TypeDefault
     }
-    EncodeType.TypeDefault
   }
 
   private def pushDownType(): PushDownType =
-    if (useStreamingProcess()) {
+    if (useStreamingProcess) {
       PushDownType.STREAMING
     } else {
       PushDownType.NORMAL
@@ -176,10 +173,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   ): SparkPlan = {
     dagRequest.setTableInfo(source.table)
     dagRequest.setStartTs(source.ts)
-    dagRequest.resolve()
 
     val notAllowPushDown = dagRequest.getFields.asScala
-      .map { _.getColumnInfo.getType.getType }
+      .map { _.getDataType.getType }
       .exists { typeBlackList.isUnsupportedType }
 
     if (notAllowPushDown) {
@@ -204,58 +200,12 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagRequest: TiDAGRequest =
       new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
-    aggregates.map { _.aggregateFunction }.foreach {
-      case _: Average =>
-        throw new IllegalArgumentException("Should never be here")
-
-      case f @ Sum(BasicExpression(arg)) =>
-        dagRequest
-          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
-
-      case f @ PromotedSum(BasicExpression(arg)) =>
-        dagRequest
-          .addAggregate(AggregateFunction.newCall(FunctionType.Sum, arg), fromSparkType(f.dataType))
-
-      case f @ Count(args) if args.length == 1 =>
-        val tiArgs = args.flatMap(BasicExpression.convertToTiExpr)
-        dagRequest.addAggregate(
-          AggregateFunction.newCall(FunctionType.Count, tiArgs.head),
-          fromSparkType(f.dataType)
-        )
-
-      case f @ Min(BasicExpression(arg)) =>
-        dagRequest
-          .addAggregate(AggregateFunction.newCall(FunctionType.Min, arg), fromSparkType(f.dataType))
-
-      case f @ Max(BasicExpression(arg)) =>
-        dagRequest
-          .addAggregate(AggregateFunction.newCall(FunctionType.Max, arg), fromSparkType(f.dataType))
-
-      case f @ First(BasicExpression(arg), _) =>
-        dagRequest
-          .addAggregate(
-            AggregateFunction.newCall(FunctionType.First, arg),
-            fromSparkType(f.dataType)
-          )
-
-      case _ =>
+    aggregates.map { _.aggregateFunction }.foreach { expr =>
+      ExprUtils.transformAggExprToTiAgg(expr, source.table, dagRequest)
     }
 
-    groupByList.foreach {
-      case BasicExpression(keyExpr) =>
-        dagRequest.addGroupByItem(ByItem.create(keyExpr, false))
-        // We need to add a `First` function in DAGRequest along with group by
-        dagRequest.resolve()
-        dagRequest.getFields.asScala
-          .filter(ColumnMatcher.`match`(_, keyExpr))
-          .foreach(
-            (ref: TiColumnRef) =>
-              dagRequest.addAggregate(
-                AggregateFunction.newCall(FunctionType.First, ref),
-                ref.getType
-            )
-          )
-      case _ =>
+    groupByList.foreach { expr =>
+      ExprUtils.transformGroupingToTiGrouping(expr, source.table, dagRequest)
     }
 
     dagRequest
@@ -273,10 +223,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
    */
   def buildTiColumnRefFromColumnSeq(attributeSet: AttributeSet,
                                     source: TiDBRelation): Seq[TiColumnRef] = {
-    val tiColumnSeq: Seq[TiExpression] = attributeSet.toSeq.collect {
-      case BasicExpression(expr) => expr
+    val tiColumnSeq: Seq[TiExpression] = attributeSet.toSeq.map { expr =>
+      ExprUtils.transformAttrToColRef(expr, source.table)
     }
-    val resolver = new MetaResolver(source.table)
     var tiColumns: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
     for (expression <- tiColumnSeq) {
       val colSetPerExpr = PredicateUtils.extractColumnRefFromExpression(expression)
@@ -284,7 +233,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
         tiColumns += _
       }
     }
-    tiColumns.foreach { resolver.resolve(_) }
     tiColumns.toSeq
   }
 
@@ -295,7 +243,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagRequest: TiDAGRequest =
       new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
-    val tiFilters: Seq[TiExpression] = filters.collect { case BasicExpression(expr) => expr }
+    val tiFilters: Seq[TiExpression] = filters.map {
+      ExprUtils.transformFilter(_, source.table, dagRequest)
+    }
 
     val scanBuilder: TiKVScanAnalyzer = new TiKVScanAnalyzer
 
@@ -303,8 +253,10 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     scanBuilder.buildTiDAGReq(
       allowIndexRead(),
-      isUseTiFlash(),
-      tiColumns.map { _.getColumnInfo }.asJava,
+      isUseTiFlash,
+      tiColumns.map { colRef =>
+        source.table.getColumn(colRef.getName)
+      }.asJava,
       tiFilters.asJava,
       source.table,
       tblStatistics,
@@ -312,16 +264,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       dagRequest
     )
   }
-
-  private def addSortOrder(request: TiDAGRequest, sortOrder: Seq[SortOrder]): Unit =
-    sortOrder.foreach { order: SortOrder =>
-      request.addOrderByItem(
-        ByItem.create(
-          BasicExpression.convertToTiExpr(order.child).get,
-          order.direction.sql.equalsIgnoreCase("DESC")
-        )
-      )
-    }
 
   private def pruneTopNFilterProject(
     limit: Int,
@@ -332,14 +274,14 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   ): SparkPlan = {
     val request = new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
     request.setLimit(limit)
-    addSortOrder(request, sortOrder)
+    ExprUtils.transformSortOrderToTiOrderBy(request, sortOrder, source.table)
 
     pruneFilterProject(projectList, filterPredicates, source, request)
   }
 
   private def collectLimit(limit: Int, child: LogicalPlan): SparkPlan = child match {
     case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
-        if filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) =>
+        if filters.forall(ExprUtils.isSupportedFilter(_, source, blacklist)) =>
       pruneTopNFilterProject(limit, projectList, filters, source, Nil)
     case _ => planLater(child)
   }
@@ -357,7 +299,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     child match {
       case PhysicalOperation(projectList, filters, LogicalRelation(source: TiDBRelation, _, _, _))
-          if filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) =>
+          if filters.forall(ExprUtils.isSupportedFilter(_, source, blacklist)) =>
         val refinedOrders = refineSortOrder(projectList, sortOrder, source)
         if (refinedOrders.isEmpty) {
           execution.TakeOrderedAndProjectExec(limit, sortOrder, project, planLater(child))
@@ -406,7 +348,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
     }
     if (refinedSortOrder.exists(
-          order => !TiUtil.isSupportedOrderBy(order.child, source, blacklist)
+          order => !ExprUtils.isSupportedOrderBy(order.child, source, blacklist)
         )) {
       Option.empty
     } else {
@@ -427,7 +369,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     val (pushdownFilters: Seq[Expression], residualFilters: Seq[Expression]) =
       filterPredicates.partition(
-        (expression: Expression) => TiUtil.isSupportedFilter(expression, source, blacklist)
+        (expression: Expression) => ExprUtils.isSupportedFilter(expression, source, blacklist)
       )
 
     val residualFilter: Option[Expression] =
@@ -466,14 +408,24 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       // when the columns of this projection are enough to evaluate all filter conditions,
       // just do a scan followed by a filter, with no extra project.
       val projectSeq: Seq[Attribute] = projectList.asInstanceOf[Seq[Attribute]]
-      projectSeq.foreach(attr => dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
+      projectSeq.foreach(
+        attr =>
+          dagRequest.addRequiredColumn(
+            ColumnRef.create(attr.name, source.table.getColumn(attr.name))
+        )
+      )
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       residualFilter.map(FilterExec(_, scan)).getOrElse(scan)
     } else {
       // for now all column used will be returned for old interface
       // TODO: once switch to new interface we change this pruning logic
       val projectSeq: Seq[Attribute] = (projectSet ++ filterSet).toSeq
-      projectSeq.foreach(attr => dagRequest.addRequiredColumn(ColumnRef.create(attr.name)))
+      projectSeq.foreach(
+        attr =>
+          dagRequest.addRequiredColumn(
+            ColumnRef.create(attr.name, source.table.getColumn(attr.name))
+        )
+      )
       val scan = toCoprocessorRDD(source, projectSeq, dagRequest)
       ProjectExec(projectList, residualFilter.map(FilterExec(_, scan)).getOrElse(scan))
     }
@@ -563,9 +515,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     source: TiDBRelation
   ): Boolean =
     allowAggregationPushdown &&
-      filters.forall(TiUtil.isSupportedFilter(_, source, blacklist)) &&
-      groupingExpressions.forall(TiUtil.isSupportedGroupingExpr(_, source, blacklist)) &&
-      aggregateExpressions.forall(TiUtil.isSupportedAggregate(_, source, blacklist)) &&
+      filters.forall(ExprUtils.isSupportedFilter(_, source, blacklist)) &&
+      groupingExpressions.forall(ExprUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
+      aggregateExpressions.forall(ExprUtils.isSupportedAggregate(_, source, blacklist)) &&
       !aggregateExpressions.exists(_.isDistinct) &&
       // TODO: This is a temporary fix for the issue: https://github.com/pingcap/tispark/issues/1039
       !groupingExpressions.exists(_.isInstanceOf[Alias])

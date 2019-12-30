@@ -72,6 +72,11 @@ public class UninitializedType extends DataType {
   }
 
   @Override
+  public String getName() {
+    return "NULL";
+  }
+
+  @Override
   public ExprType getProtoExprType() {
     throw new UnsupportedOperationException(
         "UninitializedType cannot be applied in calculation process.");

@@ -42,12 +42,16 @@ public class ComparisonBinaryExpressionTest {
   }
 
   private void verifyNormalize(
-      ComparisonBinaryExpression cond, String colName, Object value, DataType dataType, Type type) {
+      ComparisonBinaryExpression cond,
+      String colName,
+      Object value,
+      DataType dataType,
+      Operator operator) {
     NormalizedPredicate normCond = cond.normalize();
     assertEquals(colName, normCond.getColumnRef().getName());
     assertEquals(value, normCond.getValue().getValue());
     assertEquals(TypedKey.toTypedKey(value, dataType), normCond.getTypedLiteral());
-    assertEquals(type, normCond.getType());
+    assertEquals(operator, normCond.getType());
   }
 
   @Test
@@ -57,28 +61,28 @@ public class ComparisonBinaryExpressionTest {
     Constant c1 = Constant.create(1, IntegerType.INT);
     // index col = c1, long
     ComparisonBinaryExpression cond = equal(col1, c1);
-    verifyNormalize(cond, "c1", 1, IntegerType.INT, Type.EQUAL);
+    verifyNormalize(cond, "c1", 1, IntegerType.INT, Operator.EQUAL);
 
     cond = lessEqual(c1, col1);
-    verifyNormalize(cond, "c1", 1, IntegerType.INT, Type.GREATER_EQUAL);
+    verifyNormalize(cond, "c1", 1, IntegerType.INT, Operator.GREATER_EQUAL);
 
     cond = lessThan(c1, col1);
-    verifyNormalize(cond, "c1", 1, IntegerType.INT, Type.GREATER_THAN);
+    verifyNormalize(cond, "c1", 1, IntegerType.INT, Operator.GREATER_THAN);
 
     cond = greaterEqual(c1, col1);
-    verifyNormalize(cond, "c1", 1, IntegerType.INT, Type.LESS_EQUAL);
+    verifyNormalize(cond, "c1", 1, IntegerType.INT, Operator.LESS_EQUAL);
 
     cond = greaterThan(c1, col1);
-    verifyNormalize(cond, "c1", 1, IntegerType.INT, Type.LESS_THAN);
+    verifyNormalize(cond, "c1", 1, IntegerType.INT, Operator.LESS_THAN);
 
     cond = equal(c1, col1);
-    verifyNormalize(cond, "c1", 1, IntegerType.INT, Type.EQUAL);
+    verifyNormalize(cond, "c1", 1, IntegerType.INT, Operator.EQUAL);
 
     cond = notEqual(c1, col1);
-    verifyNormalize(cond, "c1", 1, IntegerType.INT, Type.NOT_EQUAL);
+    verifyNormalize(cond, "c1", 1, IntegerType.INT, Operator.NOT_EQUAL);
 
     cond = lessEqual(col1, c1);
-    verifyNormalize(cond, "c1", 1, IntegerType.INT, Type.LESS_EQUAL);
+    verifyNormalize(cond, "c1", 1, IntegerType.INT, Operator.LESS_EQUAL);
 
     cond = equal(divide(col1, c1), c1);
     assertNull(cond.normalize());

@@ -114,6 +114,7 @@ class PartitionTableSuite extends BaseTiSparkTest {
 
   test("constant folding does not apply case") {
     enablePartitionForTiDB()
+    tidbStmt.execute("drop table if exists t3")
     tidbStmt.execute(
       "create table t3 (c1 int) partition by range(c1) (partition p0 values less than maxvalue)"
     )

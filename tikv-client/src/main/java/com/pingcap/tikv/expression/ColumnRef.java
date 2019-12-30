@@ -16,7 +16,6 @@
 package com.pingcap.tikv.expression;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiExpressionException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
@@ -24,44 +23,53 @@ import com.pingcap.tikv.types.DataType;
 import java.util.List;
 import java.util.Objects;
 
-public class ColumnRef implements Expression {
+public class ColumnRef extends Expression {
   public static ColumnRef create(String name, TiTableInfo table) {
-    for (TiColumnInfo columnInfo : table.getColumns()) {
-      if (columnInfo.matchName(name)) {
-        return new ColumnRef(columnInfo.getName(), columnInfo, table);
-      }
+    name = name.replaceAll("`", "");
+    TiColumnInfo col = table.getColumn(name);
+    if (col != null) {
+      return new ColumnRef(name, col.getType());
     }
+
     throw new TiExpressionException(
         String.format("Column name %s not found in table %s", name, table));
   }
 
+  @Deprecated
   public static ColumnRef create(String name) {
     return new ColumnRef(name);
   }
 
+  public static ColumnRef create(String name, DataType dataType) {
+    return new ColumnRef(name, dataType);
+  }
+
+  public static ColumnRef create(String name, TiColumnInfo columnInfo) {
+    return new ColumnRef(name, columnInfo.getType());
+  }
+
   private final String name;
 
-  private TiColumnInfo columnInfo;
-  private TiTableInfo tableInfo;
-
+  @Deprecated
   public ColumnRef(String name) {
     this.name = name;
   }
 
-  public ColumnRef(String name, TiColumnInfo columnInfo, TiTableInfo tableInfo) {
+  public ColumnRef(String name, DataType dataType) {
+    super(dataType);
+    resolved = true;
     this.name = name;
-    this.columnInfo = columnInfo;
-    this.tableInfo = tableInfo;
   }
 
   public String getName() {
-    return name;
+    return name.toLowerCase();
   }
 
   public void resolve(TiTableInfo table) {
     TiColumnInfo columnInfo = null;
     for (TiColumnInfo col : table.getColumns()) {
       if (col.matchName(name)) {
+        this.dataType = col.getType();
         columnInfo = col;
         break;
       }
@@ -74,28 +82,20 @@ public class ColumnRef implements Expression {
     if (columnInfo.getId() == 0) {
       throw new TiExpressionException("Zero Id is not a referable column id");
     }
-
-    this.tableInfo = table;
-    this.columnInfo = columnInfo;
   }
 
-  public TiColumnInfo getColumnInfo() {
-    if (columnInfo == null) {
-      throw new TiClientInternalException(String.format("ColumnRef [%s] is unbound", name));
-    }
-    return columnInfo;
+  public boolean matchName(String name) {
+    return this.name.equalsIgnoreCase(name);
   }
 
-  public DataType getType() {
-    return getColumnInfo().getType();
+  @Override
+  public DataType getDataType() {
+    return dataType;
   }
 
-  public TiTableInfo getTableInfo() {
-    return tableInfo;
-  }
-
+  @Override
   public boolean isResolved() {
-    return tableInfo != null && columnInfo != null;
+    return resolved;
   }
 
   @Override
@@ -107,11 +107,12 @@ public class ColumnRef implements Expression {
     if (another instanceof ColumnRef) {
       ColumnRef that = (ColumnRef) another;
       if (isResolved() && that.isResolved()) {
-        return Objects.equals(columnInfo, that.columnInfo)
-            && Objects.equals(tableInfo, that.tableInfo);
+        return name.equalsIgnoreCase(that.name)
+            && this.dataType.equals(((ColumnRef) another).dataType);
       } else {
         return name.equalsIgnoreCase(that.name);
       }
+
     } else {
       return false;
     }
@@ -120,7 +121,7 @@ public class ColumnRef implements Expression {
   @Override
   public int hashCode() {
     if (isResolved()) {
-      return Objects.hash(tableInfo, columnInfo);
+      return Objects.hash(this.name, this.dataType);
     } else {
       return Objects.hashCode(name);
     }
@@ -128,7 +129,11 @@ public class ColumnRef implements Expression {
 
   @Override
   public String toString() {
-    return String.format("[%s]", getName());
+    if (dataType != null) {
+      return String.format("%s@%s", getName(), dataType.getName());
+    } else {
+      return String.format("[%s]", getName());
+    }
   }
 
   @Override
