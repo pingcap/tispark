@@ -126,7 +126,7 @@ public class TiParserTest {
 
     sql = "\"abc\"";
     stringLiteral = parser.parseExpression(sql);
-    Assert.assertEquals(stringLiteral, Constant.create("\"abc\""));
+    Assert.assertEquals(stringLiteral, Constant.create("abc"));
   }
 
   private TiTableInfo createTaleInfoWithParts() {
