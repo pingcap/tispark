@@ -271,6 +271,8 @@ public class Converter {
       } catch (Exception e) {
         throw new TypeException(String.format("Error parsing string %s to date", val), e);
       }
+    } else if (val instanceof Integer) {
+      return new Date((Integer) val, 0, 0);
     } else if (val instanceof Long) {
       return new Date((long) val);
     } else if (val instanceof Timestamp) {

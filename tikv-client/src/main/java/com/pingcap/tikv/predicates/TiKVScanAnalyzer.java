@@ -26,8 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
-import com.pingcap.tikv.expression.visitor.PrunedPartitionBuilder;
 import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
@@ -278,8 +278,8 @@ public class TiKVScanAnalyzer {
     List<TiPartitionDef> prunedParts = null;
     // apply partition pruning here.
     if (table.getPartitionInfo() != null) {
-      PrunedPartitionBuilder prunedPartBuilder = new PrunedPartitionBuilder();
-      prunedParts = prunedPartBuilder.prune(table, conditions);
+      PartitionPruner partitionPruner = new PartitionPruner(table);
+      prunedParts = partitionPruner.prune(conditions);
     }
 
     // table name and columns
