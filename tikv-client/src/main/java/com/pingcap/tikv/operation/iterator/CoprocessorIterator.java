@@ -111,7 +111,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
         dagRequest.buildTableScan(),
         regionTasks,
         session,
-        SchemaInfer.create(req),
+        SchemaInfer.create(dagRequest),
         dagRequest.getPushDownType(),
         dagRequest.getStoreType(),
         dagRequest.getStartTs().getVersion()) {

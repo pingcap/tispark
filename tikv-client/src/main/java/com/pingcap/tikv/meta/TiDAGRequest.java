@@ -307,7 +307,6 @@ public class TiDAGRequest implements Serializable {
         dagRequestBuilder
             .setTimeZoneOffset(timeZoneOffset)
             .setFlags(flags)
-            .setStartTsFallback(startTs.getVersion())
             .addAllOutputOffsets(outputOffsets)
             .setEncodeType(this.encodeType)
             .build();
