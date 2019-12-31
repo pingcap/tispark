@@ -30,7 +30,7 @@ trait MultiColumnPKDataTypeSuites
   val database: String = "multi_column_pk_data_type_test"
   val testDesc: String = "Base test for multi-column pk data types"
 
-  override val generator = MultiColumnDataTypePKGenerator(
+  override val generator: MultiColumnDataTypePKGenerator = MultiColumnDataTypePKGenerator(
     dataTypes,
     unsignedDataTypes,
     dataTypeTestDir,

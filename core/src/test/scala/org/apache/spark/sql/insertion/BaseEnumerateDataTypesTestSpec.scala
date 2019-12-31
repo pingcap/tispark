@@ -13,23 +13,12 @@ trait BaseEnumerateDataTypesTestSpec
     with BaseTestGenerationSpec {
   def genIndex(dataTypes: List[ReflectedDataType], r: Random): List[List[Index]]
 
-  def genLen(dataType: ReflectedDataType): String = {
-    val baseType = getBaseType(dataType)
-    val length = getLength(baseType)
-    dataType match {
-      case DECIMAL                       => s"$length,${getDecimal(baseType)}"
-      case _ if isVarString(dataType)    => s"$length"
-      case _ if isCharOrBinary(dataType) => "10"
-      case _                             => ""
-    }
-  }
-
   // this only generate schema with one unique index
   def genSchema(dataTypes: List[ReflectedDataType], tablePrefix: String): List[Schema] = {
     val indices = genIndex(dataTypes, r)
 
     val dataTypesWithDescription = dataTypes.map { dataType =>
-      val len = genLen(dataType)
+      val len = getTypeLength(dataType)
       if (isNumeric(dataType)) {
         (dataType, len, "not null")
       } else {
@@ -50,7 +39,7 @@ trait BaseEnumerateDataTypesTestSpec
     }
   }
 
-  private def toString(dataTypes: Seq[String]): String = dataTypes.hashCode().toString
+  private def toString(dataTypes: Seq[String]): String = dataTypes.mkString("[", ",", "]")
 
   override val rowCount = 50
 

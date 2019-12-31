@@ -17,7 +17,6 @@
 
 package org.apache.spark.sql.test.generator
 
-import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.test.generator.DataType._
 
 /**
@@ -48,7 +47,7 @@ case class Schema(database: String,
 
   assert(indexInfo.count(_.isPrimary) <= 1, "more than one primary key exist in schema")
 
-  val pkIndexInfo = indexInfo.filter(_.isPrimary)
+  val pkIndexInfo: List[IndexInfo] = indexInfo.filter(_.isPrimary)
   val pkColumnName: String = if (pkIndexInfo.isEmpty) {
     ""
   } else {

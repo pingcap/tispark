@@ -385,8 +385,8 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       } catch {
         case e: Throwable =>
           try {
-            logger.error(s"TiSpark failed when executing: $qSpark")
-            logger.warn("failure detected: \n", sparkPlan)
+            logger.error(s"TiSpark failed when executing: $qSpark", e)
+            logger.warn("failure detected with plan: \n", sparkPlan)
           } finally {
             fail(e)
           }
