@@ -57,7 +57,8 @@ public class RangePartitionPruner {
     Objects.requireNonNull(cnfExpr, "cnf expression cannot be null at pruning stage");
 
     // we need rewrite filter expression if partition expression is a Year expression.
-    // This step is designed to deal with y < '1885-10-10' where y is a date type.
+    // This step is designed to deal with y < '1995-10-10'(in filter condition and also a part of
+    // partition expression) where y is a date type.
     // Rewrite will apply partition expression on the constant part.
     // After rewriting, it becomes y < 1995;
     PartAndFilterExprRewriter expressionRewriter = new PartAndFilterExprRewriter(partExpr);
@@ -123,7 +124,7 @@ public class RangePartitionPruner {
    * When table is a partition table and its type is range. We use this method to do the pruning.
    * Range partition has two types: 1. range 2. range column. If it is the first case,
    * pruneRangeNormalPart will be called. Otherwise pruneRangeColPart will be called. For now, we
-   * simply skip range column partition case. TODO: support partition pruning on range column later.
+   * simply skip range column partition case.
    *
    * @param filters is where condition belong to a select statement.
    * @return a pruned partition for scanning.
