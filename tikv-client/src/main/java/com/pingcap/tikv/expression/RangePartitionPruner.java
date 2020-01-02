@@ -59,8 +59,7 @@ public class RangePartitionPruner {
     // we need rewrite filter expression if partition expression is a Year expression.
     // This step is designed to deal with y < '1995-10-10'(in filter condition and also a part of
     // partition expression) where y is a date type.
-    // Rewrite will apply partition expression on the constant part.
-    // After rewriting, it becomes y < 1995;
+    // Rewriting only applies partition expression on the constant part, resulting year(y) < 1995.
     PartAndFilterExprRewriter expressionRewriter = new PartAndFilterExprRewriter(partExpr);
     cnfExpr = expressionRewriter.rewrite(cnfExpr);
     // if we find an unsupported partition function, we downgrade to scan all partitions.
