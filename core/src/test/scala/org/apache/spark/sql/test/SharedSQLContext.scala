@@ -255,7 +255,10 @@ object SharedSQLContext extends Logging {
       logger.info(s"load data is mode: $loadData")
 
       jdbcUrl =
-        s"jdbc:mysql://address=(protocol=tcp)(host=$jdbcHostname)(port=$jdbcPort)/?user=$jdbcUsername&password=$jdbcPassword&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&useSSL=false&rewriteBatchedStatements=true"
+        s"jdbc:mysql://address=(protocol=tcp)(host=$jdbcHostname)(port=$jdbcPort)/?user=$jdbcUsername&password=$jdbcPassword" +
+          s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=false" +
+          s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
+          s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
       _statement = _tidbConnection.createStatement()

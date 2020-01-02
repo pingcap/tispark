@@ -90,7 +90,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
           .catalogOf(Some(dbPrefix + dbName))
           .exists(_.isInstanceOf[TiSessionCatalog])) {
       tidbConn.setCatalog(dbName)
-      initializeTimeZone()
+      logger.info(s"set catalog to $dbName!")
+      initializeStatement()
       spark.sql(s"use `$dbPrefix$dbName`")
     } else {
       // should be an existing database in hive/meta_store
@@ -145,10 +146,8 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     loadTestData()
   }
 
-  protected def initializeTimeZone(): Unit = {
+  protected def initializeStatement(): Unit = {
     tidbStmt = tidbConn.createStatement()
-    // Set default time zone to GMT-7
-    tidbStmt.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
   protected case class TestTables(dbName: String, tables: String*)
