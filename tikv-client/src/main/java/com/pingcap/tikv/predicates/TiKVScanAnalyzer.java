@@ -278,8 +278,7 @@ public class TiKVScanAnalyzer {
     List<TiPartitionDef> prunedParts = null;
     // apply partition pruning here.
     if (table.getPartitionInfo() != null) {
-      PartitionPruner partitionPruner = new PartitionPruner(table);
-      prunedParts = partitionPruner.prune(conditions);
+      prunedParts = PartitionPruner.prune(table, conditions);
     }
 
     // table name and columns

@@ -187,10 +187,28 @@ class PartitionTableSuite extends BaseTiSparkTest {
                        |PARTITION BY RANGE columns (purchased) (
                        |  PARTITION p0 VALUES LESS THAN ('1995-10-10'),
                        |  PARTITION p1 VALUES LESS THAN ('2000-10-10'),
-                       |  PARTITION p2 VALUES LESS THAN ('2005-10-10')
+                       |  PARTITION p2 VALUES LESS THAN ('2005-10-10'),
+                       |  PARTITION p3 VALUES LESS THAN maxvalue
                        |)
                      """.stripMargin)
     refreshConnections()
+    assert(
+      extractDAGReq(
+        spark
+          .sql(
+            "select * from pt4 where purchased < date'1994-10-10' or purchased > date'2994-10-10'"
+          )
+      ).getPrunedParts
+        .size() == 2
+    )
+
+    assert(
+      extractDAGReq(
+        spark
+          .sql("select * from pt4 where purchased < date'1994-10-10' and id < 10")
+      ).getPrunedParts
+        .size() == 1
+    )
 
     assert(
       extractDAGReq(
@@ -260,7 +278,7 @@ class PartitionTableSuite extends BaseTiSparkTest {
     assert(
       extractDAGReq(
         spark
-        // expected part info only contains one part which is p2.
+        // expected part info only contains one part which is p1.
           .sql(
             "select * from pt3 where purchased > date'1996-10-10' and purchased < date'2000-10-10'"
           )
