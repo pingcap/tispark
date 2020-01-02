@@ -56,9 +56,10 @@ public class RangePartitionPruner {
   private List<TiPartitionDef> pruneRangeNormalPart(Expression cnfExpr) {
     Objects.requireNonNull(cnfExpr, "cnf expression cannot be null at pruning stage");
 
-    // we need rewrite filter expression. This step is designed to  deal with
-    // y < '1885-10-10' where y is a date type. Rewrite will apply partition expression
-    // on the constant part. After rewriting, it becomes y < 1995;
+    // we need rewrite filter expression if partition expression is a Year expression.
+    // This step is designed to deal with y < '1885-10-10' where y is a date type.
+    // Rewrite will apply partition expression on the constant part.
+    // After rewriting, it becomes y < 1995;
     PartAndFilterExprRewriter expressionRewriter = new PartAndFilterExprRewriter(partExpr);
     cnfExpr = expressionRewriter.rewrite(cnfExpr);
     // if we find an unsupported partition function, we downgrade to scan all partitions.
