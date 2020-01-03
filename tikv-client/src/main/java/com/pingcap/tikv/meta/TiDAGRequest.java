@@ -309,6 +309,8 @@ public class TiDAGRequest implements Serializable {
             .setFlags(flags)
             .addAllOutputOffsets(outputOffsets)
             .setEncodeType(this.encodeType)
+            // set start ts fallback is to solving compatible issue.
+            .setStartTsFallback(startTs.getVersion())
             .build();
 
     validateRequest(request);
