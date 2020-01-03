@@ -28,7 +28,6 @@ class BaseDataSourceTest(val table: String,
   override def beforeAll(): Unit = {
     enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark
     super.beforeAllWithoutLoadData()
-    initializeTimeZone()
   }
 
   protected def jdbcUpdate(query: String): Unit =

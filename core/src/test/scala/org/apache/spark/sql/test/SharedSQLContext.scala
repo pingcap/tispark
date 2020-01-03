@@ -219,10 +219,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
     logger.info("Analyzing table finished.")
   }
 
-  protected def initializeTimeZone(): Unit = {
+  protected def initializeStatement(): Unit = {
     _statement = _tidbConnection.createStatement()
-    // Set default time zone to GMT-7
-    _statement.execute(s"SET time_zone = '$timeZoneOffset'")
   }
 
   protected def loadSQLFile(directory: String, file: String): Unit = {
@@ -235,7 +233,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
       val queryString = source.mkString
       source.close()
       _tidbConnection.setCatalog("mysql")
-      initializeTimeZone()
+      initializeStatement()
       _statement.execute(queryString)
       logger.info(s"Load $fullFileName successfully.")
     } catch {
@@ -298,7 +296,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
         s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=false" +
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
-        s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}"
+        s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
 
     _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
     _statement = _tidbConnection.createStatement()
