@@ -34,22 +34,38 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
     extends TiCommand(delegate) {
   override def run(sparkSession: SparkSession): Seq[Row] = {
     val db = delegate.databaseName.getOrElse(tiCatalog.getCurrentDatabase)
-    // Show the information of tables.
-    val tables =
-      delegate.tableIdentifierPattern
-        .map(tiCatalog.listTables(db, _))
-        .getOrElse(tiCatalog.listTables(db))
-    tables.map { tableIdent =>
-      val database = tableIdent.database.getOrElse("")
-      val tableName = tableIdent.table
-      val isTemp = tiCatalog.isTemporaryTable(tableIdent)
-      if (delegate.isExtended) {
-        val information = tiCatalog.getTempViewOrPermanentTableMetadata(tableIdent).simpleString
-        Row(database, tableName, isTemp, s"$information\n")
-      } else {
-        Row(database, tableName, isTemp)
+    if (delegate.partitionSpec.isEmpty) {
+      // Show the information of tables.
+      val tables =
+        delegate.tableIdentifierPattern
+          .map(tiCatalog.listTables(db, _))
+          .getOrElse(tiCatalog.listTables(db))
+      tables.map { tableIdent =>
+        val database = tableIdent.database.getOrElse("")
+        val tableName = tableIdent.table
+        val isTemp = tiCatalog.isTemporaryTable(tableIdent)
+        if (delegate.isExtended) {
+          val information = tiCatalog.getTempViewOrPermanentTableMetadata(tableIdent).simpleString
+          Row(database, tableName, isTemp, s"$information\n")
+        } else {
+          Row(database, tableName, isTemp)
+        }
       }
+    } else {
+      // Show the information of partitions.
+      //
+      // Note: tableIdentifierPattern should be non-empty, otherwise a [[ParseException]]
+      // should have been thrown by the sql parser.
+      val tableIdent = TableIdentifier(delegate.tableIdentifierPattern.get, Some(db))
+      val table = tiCatalog.getTableMetadata(tableIdent).identifier
+      val partition = tiCatalog.getPartition(tableIdent, delegate.partitionSpec.get)
+      val database = table.database.getOrElse("")
+      val tableName = table.table
+      val isTemp = tiCatalog.isTemporaryTable(table)
+      val information = partition.simpleString
+      Seq(Row(database, tableName, isTemp, s"$information\n"))
     }
+
   }
 }
 
