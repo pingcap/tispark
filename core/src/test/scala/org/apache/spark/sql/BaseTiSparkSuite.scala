@@ -146,10 +146,6 @@ class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
     loadTestData()
   }
 
-  protected def initializeStatement(): Unit = {
-    tidbStmt = tidbConn.createStatement()
-  }
-
   protected case class TestTables(dbName: String, tables: String*)
 
   protected def refreshConnections(testTables: TestTables, isHiveEnabled: Boolean = false): Unit = {
