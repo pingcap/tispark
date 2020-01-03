@@ -25,7 +25,6 @@ import com.pingcap.tikv.exception.UnsupportedTypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class SetType extends DataType {
   public static final SetType SET = new SetType(MySQLType.TypeSet);
@@ -63,8 +62,18 @@ public class SetType extends DataType {
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {
-    if (flag != Codec.UVARINT_FLAG) throw new TypeException("Invalid IntegerType flag: " + flag);
-    long number = IntegerCodec.readUVarLong(cdi);
+    long number;
+    switch (flag) {
+      case Codec.UVARINT_FLAG:
+        number = IntegerCodec.readUVarLong(cdi);
+        break;
+      case Codec.UINT_FLAG:
+        number = IntegerCodec.readULong(cdi);
+        break;
+      default:
+        throw new TypeException("Invalid IntegerType flag: " + flag);
+    }
+
     List<String> items = new ArrayList<>();
     int length = this.getElems().size();
     for (int i = 0; i < length; i++) {
@@ -82,7 +91,7 @@ public class SetType extends DataType {
       throw new TypeException(String.format("invalid number %d for Set %s", number, getElems()));
     }
 
-    return items.stream().collect(Collectors.joining(","));
+    return String.join(",", items);
   }
 
   /** {@inheritDoc} */
