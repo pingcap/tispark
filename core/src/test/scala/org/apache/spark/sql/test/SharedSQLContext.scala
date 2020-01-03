@@ -221,6 +221,9 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
 
   protected def initializeStatement(): Unit = {
     _statement = _tidbConnection.createStatement()
+    // TODO: support new row format
+    //  https://github.com/pingcap/tispark/issues/1355
+    _statement.execute("SET GLOBAL tidb_row_format_version=1")
   }
 
   protected def loadSQLFile(directory: String, file: String): Unit = {
@@ -292,14 +295,11 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
   private def initializeJDBCUrl(): Unit = {
     // TODO(Zhexuan Yang) for zero datetime issue, we need further investigation.
     //  https://github.com/pingcap/tispark/issues/1238
-    // TODO: support new row format
-    //  https://github.com/pingcap/tispark/issues/1355
     jdbcUrl =
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
         s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=false" +
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
-        s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}" +
-        s"&sessionVariables=time_zone='$timeZoneOffset',tidb_row_format_version=1"
+        s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
 
     _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
     initializeStatement()
