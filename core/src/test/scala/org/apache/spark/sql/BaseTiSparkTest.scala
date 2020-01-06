@@ -107,9 +107,12 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     if (tiCatalog
           .catalogOf(Some(dbPrefix + dbName))
           .exists(_.isInstanceOf[TiSessionCatalog])) {
-      tidbConn.setCatalog(dbName)
-      logger.info(s"set catalog to $dbName!")
-      initializeStatement()
+      if (!tidbConn.getCatalog.equals(dbName)) {
+        // reuse previous connection if catalog is not changed
+        logger.info(s"set catalog to $dbName!")
+        tidbConn.setCatalog(dbName)
+        initializeStatement()
+      }
       spark.sql(s"use `$dbPrefix$dbName`")
     } else {
       // should be an existing database in hive/meta_store
