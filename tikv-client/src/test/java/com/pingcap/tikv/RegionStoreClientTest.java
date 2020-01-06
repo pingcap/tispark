@@ -139,8 +139,8 @@ public class RegionStoreClientTest extends MockServerTest {
     server.put("key6", "value6");
     server.put("key7", "value7");
     DAGRequest.Builder builder = DAGRequest.newBuilder();
-    builder.setStartTs(1);
     builder.addExecutors(Executor.newBuilder().setTp(ExecType.TypeTableScan).build());
+    builder.setStartTsFallback(1);
     List<KeyRange> keyRanges =
         ImmutableList.of(
             createByteStringRange(ByteString.copyFromUtf8("key1"), ByteString.copyFromUtf8("key4")),
@@ -159,7 +159,7 @@ public class RegionStoreClientTest extends MockServerTest {
         results.containsAll(ImmutableList.of("value1", "value2", "value4", "value6", "value7")));
 
     builder = DAGRequest.newBuilder();
-    builder.setStartTs(1);
+    builder.setStartTsFallback(1);
     keyRanges =
         ImmutableList.of(
             createByteStringRange(
@@ -181,7 +181,7 @@ public class RegionStoreClientTest extends MockServerTest {
     BackOffer backOffer = defaultBackOff();
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
 
-    client.coprocess(backOffer, request, ranges, responseQueue);
+    client.coprocess(backOffer, request, ranges, responseQueue, 1);
 
     List<Chunk> resultChunk = new ArrayList<>();
     while (!responseQueue.isEmpty()) {
