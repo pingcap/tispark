@@ -38,8 +38,8 @@ public class DecimalType extends DataType {
     super(tp);
   }
 
-  public DecimalType(MySQLType tp, int prec, int scale) {
-    super(tp, prec, scale);
+  public DecimalType(int prec, int scale) {
+    super(MySQLType.TypeNewDecimal, prec, scale);
   }
 
   DecimalType(TiColumnInfo.InternalTypeHolder holder) {
@@ -148,6 +148,11 @@ public class DecimalType extends DataType {
     MyDecimal dec = new MyDecimal();
     dec.fromString(val.toPlainString());
     DecimalCodec.writeDecimal(cdo, dec, dec.precision(), dec.frac());
+  }
+
+  @Override
+  public String getName() {
+    return String.format("DECIMAL(%d, %d)", length, decimal);
   }
 
   @Override

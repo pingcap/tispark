@@ -1,6 +1,5 @@
 package com.pingcap.tikv.types;
 
-import com.google.gson.*;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
@@ -57,6 +56,11 @@ public class JsonType extends DataType {
   @Override
   protected void encodeProto(CodecDataOutput cdo, Object value) {
     throw new UnsupportedOperationException("JsonType.encodeProto|value=" + value);
+  }
+
+  @Override
+  public String getName() {
+    return "JSON";
   }
 
   @Override

@@ -54,7 +54,7 @@ public class IndexMatcher extends DefaultVisitor<Boolean, Void> {
   @Override
   protected Boolean visit(ColumnRef node, Void context) {
     String indexColumnName = indexColumn.getName();
-    return node.getColumnInfo().matchName(indexColumnName);
+    return node.matchName(indexColumnName);
   }
 
   @Override

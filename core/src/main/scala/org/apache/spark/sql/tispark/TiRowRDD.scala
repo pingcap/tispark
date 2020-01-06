@@ -49,9 +49,7 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
 
   override def compute(split: Partition, context: TaskContext): Iterator[InternalRow] =
     new Iterator[ColumnarBatch] {
-      checkTimezone
-
-      dagRequest.resolve()
+      checkTimezone()
 
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSession.getInstance(tiConf)

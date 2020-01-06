@@ -26,7 +26,6 @@ import com.pingcap.tikv.types.DataType
 import com.pingcap.tikv.{Snapshot, TiSession}
 import com.pingcap.tispark.statistics.StatisticsHelper.shouldUpdateHistogram
 import com.pingcap.tispark.statistics.estimate.{DefaultTableSizeEstimator, TableSizeEstimator}
-import org.apache.spark.sql.vectorized.ColumnarBatch
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._

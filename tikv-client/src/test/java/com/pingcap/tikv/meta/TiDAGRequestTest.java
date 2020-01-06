@@ -26,7 +26,6 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tidb.tipb.Expr;
 import com.pingcap.tikv.expression.*;
 import com.pingcap.tikv.expression.AggregateFunction.FunctionType;
-import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.types.StringType;
@@ -74,15 +73,15 @@ public class TiDAGRequestTest {
     ColumnRef col2 = ColumnRef.create("c2", table);
     ColumnRef col3 = ColumnRef.create("c3", table);
 
-    AggregateFunction sum = AggregateFunction.newCall(FunctionType.Sum, col1);
-    AggregateFunction min = AggregateFunction.newCall(FunctionType.Min, col1);
+    AggregateFunction sum = AggregateFunction.newCall(FunctionType.Sum, col1, col1.getDataType());
+    AggregateFunction min = AggregateFunction.newCall(FunctionType.Min, col1, col1.getDataType());
 
     selReq
         .addRequiredColumn(col1)
         .addRequiredColumn(col2)
         .addRequiredColumn(col3)
-        .addAggregate(sum, ExpressionTypeCoercer.inferType(sum))
-        .addAggregate(min, ExpressionTypeCoercer.inferType(min))
+        .addAggregate(sum)
+        .addAggregate(min)
         .addFilters(ImmutableList.of(plus(c1, c2)))
         .addGroupByItem(ByItem.create(ColumnRef.create("c2", table), true))
         .addOrderByItem(ByItem.create(ColumnRef.create("c3", table), false))
@@ -114,13 +113,13 @@ public class TiDAGRequestTest {
 
   private static boolean selectRequestEquals(TiDAGRequest lhs, TiDAGRequest rhs) {
     assertEquals(lhs.getFields().size(), rhs.getFields().size());
-    Map<ColumnRef, Integer> lhsMap = new HashMap<>();
-    Map<ColumnRef, Integer> rhsMap = new HashMap<>();
+    Map<String, Integer> lhsMap = new HashMap<>();
+    Map<String, Integer> rhsMap = new HashMap<>();
     for (int i = 0; i < lhs.getFields().size(); i++) {
       ColumnRef lCol = lhs.getFields().get(i);
       ColumnRef rCol = rhs.getFields().get(i);
-      lhsMap.put(lCol, i);
-      rhsMap.put(rCol, i);
+      lhsMap.put(lCol.getName(), i);
+      rhsMap.put(rCol.getName(), i);
     }
     for (int i = 0; i < lhs.getFields().size(); i++) {
       Expression lhsExpr = lhs.getFields().get(i);

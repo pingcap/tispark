@@ -208,7 +208,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
 
   private def initStatistics(): Unit = {
     _tidbConnection.setCatalog("tispark_test")
-    _statement = _tidbConnection.createStatement()
+    initializeStatement()
     logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
     _statement.execute("analyze table tispark_test.full_data_type_table_idx")
     logger.info("Analyzing table tispark_test.full_data_type_table...")
@@ -219,10 +219,11 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
     logger.info("Analyzing table finished.")
   }
 
-  protected def initializeTimeZone(): Unit = {
+  protected def initializeStatement(): Unit = {
     _statement = _tidbConnection.createStatement()
-    // Set default time zone to GMT-7
-    _statement.execute(s"SET time_zone = '$timeZoneOffset'")
+    // TODO: support new row format
+    //  https://github.com/pingcap/tispark/issues/1355
+    _statement.execute("SET GLOBAL tidb_row_format_version=1")
   }
 
   protected def loadSQLFile(directory: String, file: String): Unit = {
@@ -235,7 +236,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
       val queryString = source.mkString
       source.close()
       _tidbConnection.setCatalog("mysql")
-      initializeTimeZone()
+      initializeStatement()
       _statement.execute(queryString)
       logger.info(s"Load $fullFileName successfully.")
     } catch {
@@ -293,15 +294,15 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
 
   private def initializeJDBCUrl(): Unit = {
     // TODO(Zhexuan Yang) for zero datetime issue, we need further investigation.
-    // https://github.com/pingcap/tispark/issues/1238
+    //  https://github.com/pingcap/tispark/issues/1238
     jdbcUrl =
       s"jdbc:mysql://address=(protocol=tcp)(host=$tidbAddr)(port=$tidbPort)/?user=$tidbUser&password=$tidbPassword" +
         s"&useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=round&useSSL=false" +
         s"&rewriteBatchedStatements=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10" +
-        s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}"
+        s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
 
     _tidbConnection = TiDBUtils.createConnectionFactory(jdbcUrl)()
-    _statement = _tidbConnection.createStatement()
+    initializeStatement()
   }
 
   private def initializeJDBC(forceNotLoad: Boolean = false): Unit = {

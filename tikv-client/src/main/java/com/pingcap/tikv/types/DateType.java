@@ -85,6 +85,11 @@ public class DateType extends AbstractDateTimeType {
     Codec.DateCodec.writeDateProto(cdo, dt, getTimezone());
   }
 
+  @Override
+  public String getName() {
+    return "DATE";
+  }
+
   /** {@inheritDoc} */
   @Override
   protected Long decodeNotNull(int flag, CodecDataInput cdi) {
