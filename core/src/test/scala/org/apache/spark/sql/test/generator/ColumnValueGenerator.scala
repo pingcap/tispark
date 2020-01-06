@@ -262,7 +262,7 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
   }
 
   private def generateRandomSetValue(r: Random): String = {
-    enumValues.filter(_ => r.nextBoolean()).mkString("'", "','", "'")
+    enumValues.filter(_ => r.nextBoolean()).mkString(",")
   }
 
   // pre-generate n random values
