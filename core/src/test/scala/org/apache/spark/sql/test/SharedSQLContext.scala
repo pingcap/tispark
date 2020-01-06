@@ -204,7 +204,10 @@ object SharedSQLContext extends Logging {
     _statement = _tidbConnection.createStatement()
     // TODO: support new row format
     //  https://github.com/pingcap/tispark/issues/1355
-    _statement.execute("SET GLOBAL tidb_row_format_version=1")
+    val resultSet = _statement.executeQuery("SHOW GLOBAL VARIABLES LIKE 'tidb_row_format_version'")
+    if (resultSet.next()) {
+      _statement.execute("SET GLOBAL tidb_row_format_version=1")
+    }
   }
 
   private def queryTiDBViaJDBC(query: String): List[List[Any]] = {
