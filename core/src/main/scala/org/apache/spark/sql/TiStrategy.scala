@@ -103,7 +103,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "chblock").toLowerCase
     codecFormatStr match {
       case "chunk"   => EncodeType.TypeChunk
-      case "chblock" => EncodeType.TypeBlock
+      case "chblock" => EncodeType.TypeCHBlock
       case _         => EncodeType.TypeDefault
     }
   }

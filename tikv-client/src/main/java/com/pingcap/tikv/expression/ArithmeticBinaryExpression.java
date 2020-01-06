@@ -44,7 +44,7 @@ public class ArithmeticBinaryExpression extends Expression {
 
   public static ArithmeticBinaryExpression multiply(
       DataType dataType, Expression left, Expression right) {
-    return new ArithmeticBinaryExpression(MULTIPLY, left, right);
+    return new ArithmeticBinaryExpression(dataType, MULTIPLY, left, right);
   }
 
   public static ArithmeticBinaryExpression multiply(Expression left, Expression right) {
