@@ -120,7 +120,7 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
       for (TerminalNode str : ctx.STRING_LITERAL()) {
         sb.append(str.getSymbol().getText());
       }
-      return Constant.create(sb.toString());
+      return Constant.create(sb.toString().replace("\"", ""));
     }
     throw new UnsupportedSyntaxException(ctx.toString() + " is not supported yet");
   }

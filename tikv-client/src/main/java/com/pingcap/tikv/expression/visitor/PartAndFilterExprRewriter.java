@@ -21,7 +21,7 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
 
   private boolean unsupportedPartFnFound;
 
-  PartAndFilterExprRewriter(Expression partExpr) {
+  public PartAndFilterExprRewriter(Expression partExpr) {
     Objects.requireNonNull(partExpr, "partition expression cannot be null");
     this.partExpr = partExpr;
     this.columnRefs = PredicateUtils.extractColumnRefFromExpression(partExpr);
@@ -91,11 +91,11 @@ public class PartAndFilterExprRewriter extends DefaultVisitor<Expression, Void> 
     return new ComparisonBinaryExpression(node.getComparisonType(), left, right);
   }
 
-  Expression rewrite(Expression target) {
+  public Expression rewrite(Expression target) {
     return target.accept(this, null);
   }
 
-  boolean isUnsupportedPartFnFound() {
+  public boolean isUnsupportedPartFnFound() {
     return unsupportedPartFnFound;
   }
 }
