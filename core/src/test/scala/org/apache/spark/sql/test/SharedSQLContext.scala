@@ -50,6 +50,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def tidbConn: Connection = SharedSQLContext.tidbConn
 
+  protected def tidbStmt: Statement = SharedSQLContext._statement
+
   protected def sql: String => DataFrame = spark.sql _
 
   protected def jdbcUrl: String = SharedSQLContext.jdbcUrl

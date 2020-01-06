@@ -28,8 +28,6 @@ import scala.collection.mutable.ArrayBuffer
 
 class BaseTiSparkSuite extends QueryTest with SharedSQLContext {
 
-  protected var tidbStmt: Statement = _
-
   private val defaultTestDatabases: Seq[String] = Seq("tispark_test")
 
   protected var tableNames: Seq[String] = _
