@@ -44,6 +44,14 @@ public class StringType extends BytesType {
     return convertToString(value);
   }
 
+  @Override
+  public String getName() {
+    if (length != -1) {
+      return String.format("VARCHAR(%d)", length);
+    }
+    return "VARCHAR";
+  }
+
   private String convertToString(Object value) throws ConvertNotSupportException {
     String result;
     if (value instanceof Boolean) {

@@ -152,6 +152,11 @@ public class DecimalType extends DataType {
   }
 
   @Override
+  public String getName() {
+    return String.format("DECIMAL(%d, %d)", length, decimal);
+  }
+
+  @Override
   public ExprType getProtoExprType() {
     return ExprType.MysqlDecimal;
   }

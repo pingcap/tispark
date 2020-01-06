@@ -395,6 +395,8 @@ public abstract class DataType implements Serializable {
 
   protected abstract void encodeProto(CodecDataOutput cdo, Object value);
 
+  public abstract String getName();
+
   /**
    * encode a Key's prefix to CodecDataOutput
    *

@@ -24,7 +24,7 @@ import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta._
 import com.pingcap.tikv.row.Row
 import com.pingcap.tikv.statistics._
-import com.pingcap.tikv.types.BytesType
+import com.pingcap.tikv.types.{BytesType, IntegerType}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConversions._
@@ -224,7 +224,10 @@ object StatisticsHelper {
       .setFullTableScan(tableInfo)
       .addFilter(
         ComparisonBinaryExpression
-          .equal(ColumnRef.create("table_id"), Constant.create(targetTblId))
+          .equal(
+            ColumnRef.create("table_id", IntegerType.BIGINT),
+            Constant.create(targetTblId, IntegerType.BIGINT)
+          )
       )
       .addRequiredCols(
         requiredCols.filter(checkColExists(tableInfo, _))
@@ -251,10 +254,13 @@ object StatisticsHelper {
       .setFullTableScan(bucketTable)
       .addFilter(
         ComparisonBinaryExpression
-          .equal(ColumnRef.create("table_id"), Constant.create(targetTblId))
+          .equal(
+            ColumnRef.create("table_id", IntegerType.BIGINT),
+            Constant.create(targetTblId, IntegerType.BIGINT)
+          )
       )
       .setLimit(Int.MaxValue)
-      .addOrderBy(ByItem.create(ColumnRef.create("bucket_id"), false))
+      .addOrderBy(ByItem.create(ColumnRef.create("bucket_id", IntegerType.BIGINT), false))
       .addRequiredCols(
         bucketRequiredCols.filter(checkColExists(bucketTable, _))
       )

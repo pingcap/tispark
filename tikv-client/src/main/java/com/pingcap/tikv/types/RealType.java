@@ -114,6 +114,14 @@ public class RealType extends DataType {
   }
 
   @Override
+  public String getName() {
+    if (tp == MySQLType.TypeDouble) {
+      return "DOUBLE";
+    }
+    return "FLOAT";
+  }
+
+  @Override
   public ExprType getProtoExprType() {
     if (tp == MySQLType.TypeDouble) {
       return ExprType.Float64;

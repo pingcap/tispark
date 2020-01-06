@@ -19,101 +19,18 @@ import java.util.concurrent.TimeUnit
 
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
-import com.pingcap.tikv.expression.ExpressionBlacklist
-import com.pingcap.tikv.expression.visitor.{MetaResolver, SupportedExpressionValidator}
-import com.pingcap.tikv.meta.{TiColumnInfo, TiDAGRequest, TiTableInfo}
-import com.pingcap.tikv.region.RegionStoreClient.RequestTypes
+import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
 import com.pingcap.tikv.types._
-import com.pingcap.tispark.{TiConfigConst, TiDBRelation, _}
+import com.pingcap.tispark.{TiConfigConst, _}
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.aggregate._
-import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Expression, GenericInternalRow, Literal, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.GenericInternalRow
 import org.apache.spark.sql.execution.{ColumnarCoprocessorRDD, ColumnarRegionTaskExec}
-import org.apache.spark.sql.tispark.BasicExpression
 import org.apache.spark.sql.types.{MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{sql, SparkConf}
 import org.tikv.kvproto.Kvrpcpb.{CommandPri, IsolationLevel}
 
-import scala.collection.JavaConversions._
-import scala.collection.mutable
-
 object TiUtil {
-  type TiDataType = com.pingcap.tikv.types.DataType
-  type TiExpression = com.pingcap.tikv.expression.Expression
-
-  def isSupportedAggregate(aggExpr: AggregateExpression,
-                           tiDBRelation: TiDBRelation,
-                           blacklist: ExpressionBlacklist): Boolean =
-    aggExpr.aggregateFunction match {
-      case Average(_) | Sum(_) | SumNotNullable(_) | PromotedSum(_) | Count(_) | Min(_) | Max(_) =>
-        !aggExpr.isDistinct &&
-          aggExpr.aggregateFunction.children
-            .forall(isSupportedBasicExpression(_, tiDBRelation, blacklist))
-      case _ => false
-    }
-
-  def isSupportedBasicExpression(expr: Expression,
-                                 tiDBRelation: TiDBRelation,
-                                 blacklist: ExpressionBlacklist): Boolean = {
-    if (!BasicExpression.isSupportedExpression(expr, RequestTypes.REQ_TYPE_DAG)) return false
-
-    BasicExpression.convertToTiExpr(expr).fold(false) { expr: TiExpression =>
-      MetaResolver.resolve(expr, tiDBRelation.table)
-      return SupportedExpressionValidator.isSupportedExpression(expr, blacklist)
-    }
-  }
-
-  /**
-   * Is expression allowed to be pushed down
-   *
-   * @param expr the expression to examine
-   * @return whether expression can be pushed down
-   */
-  def isPushDownSupported(expr: Expression, source: TiDBRelation): Boolean = {
-    val nameTypeMap = mutable.HashMap[String, com.pingcap.tikv.types.DataType]()
-    source.table.getColumns
-      .foreach((info: TiColumnInfo) => nameTypeMap(info.getName) = info.getType)
-
-    if (expr.children.isEmpty) {
-      expr match {
-        // bit, set and enum type is not allowed to be pushed down
-        case attr: AttributeReference if nameTypeMap.contains(attr.name) =>
-          return nameTypeMap.get(attr.name).head.isPushDownSupported
-        // TODO: Currently we do not support literal null type push down
-        // when Constant is ready to support literal null or we have other
-        // options, remove this.
-        case constant: Literal =>
-          return constant.value != null
-        case _ => return true
-      }
-    } else {
-      for (expr <- expr.children) {
-        if (!isPushDownSupported(expr, source)) {
-          return false
-        }
-      }
-    }
-
-    true
-  }
-
-  def isSupportedOrderBy(expr: Expression,
-                         source: TiDBRelation,
-                         blacklist: ExpressionBlacklist): Boolean =
-    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
-
-  def isSupportedFilter(expr: Expression,
-                        source: TiDBRelation,
-                        blacklist: ExpressionBlacklist): Boolean =
-    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
-
-  // if contains UDF / functions that cannot be folded
-  def isSupportedGroupingExpr(expr: NamedExpression,
-                              source: TiDBRelation,
-                              blacklist: ExpressionBlacklist): Boolean =
-    isSupportedBasicExpression(expr, source, blacklist) && isPushDownSupported(expr, source)
-
   def getSchemaFromTable(table: TiTableInfo): StructType = {
     val fields = new Array[StructField](table.getColumns.size())
     for (i <- 0 until table.getColumns.size()) {

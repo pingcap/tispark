@@ -179,9 +179,11 @@ public class Converter {
   static byte[] convertToBytes(Object val, int prefixLength) {
     requireNonNull(val, "val is null");
     if (val instanceof byte[]) {
-      return Arrays.copyOf((byte[]) val, prefixLength);
+      byte[] valByte = (byte[]) val;
+      return Arrays.copyOf(valByte, Math.min(valByte.length, prefixLength));
     } else if (val instanceof String) {
-      return Arrays.copyOf(((String) val).getBytes(), prefixLength);
+      String valStr = (String) val;
+      return Arrays.copyOf(((String) val).getBytes(), Math.min(valStr.length(), prefixLength));
     }
     throw new TypeException(
         String.format("Cannot cast %s to bytes", val.getClass().getSimpleName()));
@@ -269,6 +271,9 @@ public class Converter {
       } catch (Exception e) {
         throw new TypeException(String.format("Error parsing string %s to date", val), e);
       }
+    } else if (val instanceof Integer) {
+      // when the val is a Integer, it is only have year part of a Date.
+      return new Date((Integer) val, 0, 0);
     } else if (val instanceof Long) {
       return new Date((long) val);
     } else if (val instanceof Timestamp) {

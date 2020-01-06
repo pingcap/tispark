@@ -26,9 +26,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
+import com.pingcap.tikv.expression.PartitionPruner;
 import com.pingcap.tikv.expression.visitor.IndexMatcher;
-import com.pingcap.tikv.expression.visitor.MetaResolver;
-import com.pingcap.tikv.expression.visitor.PrunedPartitionBuilder;
 import com.pingcap.tikv.key.IndexScanKeyRangeBuilder;
 import com.pingcap.tikv.key.Key;
 import com.pingcap.tikv.key.RowKey;
@@ -266,8 +265,6 @@ public class TiKVScanAnalyzer {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
-    MetaResolver.resolve(conditions, table);
-
     TiKVScanPlan.Builder planBuilder = TiKVScanPlan.Builder.newBuilder();
     ScanSpec result = extractConditions(conditions, table, index);
 
@@ -281,8 +278,7 @@ public class TiKVScanAnalyzer {
     List<TiPartitionDef> prunedParts = null;
     // apply partition pruning here.
     if (table.getPartitionInfo() != null) {
-      PrunedPartitionBuilder prunedPartBuilder = new PrunedPartitionBuilder();
-      prunedParts = prunedPartBuilder.prune(table, conditions);
+      prunedParts = PartitionPruner.prune(table, conditions);
     }
 
     // table name and columns
@@ -430,6 +426,10 @@ public class TiKVScanAnalyzer {
   // query engine doesn't have to lookup the table again compared with double read.
   boolean isCoveringIndex(
       List<TiColumnInfo> columns, TiIndexInfo indexColumns, boolean pkIsHandle) {
+    if (columns.isEmpty()) {
+      return false;
+    }
+
     Map<String, TiIndexColumn> colInIndex =
         indexColumns
             .getIndexColumns()

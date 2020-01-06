@@ -51,8 +51,6 @@ class TiRowRDD(override val dagRequest: TiDAGRequest,
     new Iterator[ColumnarBatch] {
       checkTimezone()
 
-      dagRequest.resolve()
-
       private val tiPartition = split.asInstanceOf[TiPartition]
       private val session = TiSession.getInstance(tiConf)
       session.injectCallBackFunc(callBackFunc)

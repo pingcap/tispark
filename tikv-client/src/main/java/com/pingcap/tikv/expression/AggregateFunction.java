@@ -40,17 +40,8 @@ public class AggregateFunction extends Expression {
     return new AggregateFunction(type, argument, dataType);
   }
 
-  public static AggregateFunction newCall(FunctionType type, Expression argument) {
-    return new AggregateFunction(type, argument);
-  }
-
   private AggregateFunction(FunctionType type, Expression argument, DataType dataType) {
     super(dataType);
-    this.type = requireNonNull(type, "function type is null");
-    this.argument = requireNonNull(argument, "function argument is null");
-  }
-
-  private AggregateFunction(FunctionType type, Expression argument) {
     this.type = requireNonNull(type, "function type is null");
     this.argument = requireNonNull(argument, "function argument is null");
   }

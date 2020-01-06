@@ -28,11 +28,10 @@ import com.pingcap.tidb.tipb.*;
 import com.pingcap.tikv.codec.KeyUtils;
 import com.pingcap.tikv.exception.DAGRequestException;
 import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.expression.AggregateFunction;
 import com.pingcap.tikv.expression.ByItem;
 import com.pingcap.tikv.expression.ColumnRef;
 import com.pingcap.tikv.expression.Expression;
-import com.pingcap.tikv.expression.visitor.ExpressionTypeCoercer;
-import com.pingcap.tikv.expression.visitor.MetaResolver;
 import com.pingcap.tikv.expression.visitor.ProtoConverter;
 import com.pingcap.tikv.key.RowKey;
 import com.pingcap.tikv.predicates.PredicateUtils;
@@ -40,7 +39,6 @@ import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.IntegerType;
 import com.pingcap.tikv.util.KeyRangeUtils;
-import com.pingcap.tikv.util.Pair;
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -100,11 +98,6 @@ public class TiDAGRequest implements Serializable {
       return this;
     }
 
-    public Builder addRequiredCols(String... cols) {
-      this.requiredCols.addAll(Arrays.asList(cols));
-      return this;
-    }
-
     public Builder addRequiredCols(List<String> cols) {
       this.requiredCols.addAll(cols);
       return this;
@@ -138,10 +131,9 @@ public class TiDAGRequest implements Serializable {
       if (limit != 0) {
         req.setLimit(limit);
       }
-      requiredCols.forEach(c -> req.addRequiredColumn(ColumnRef.create(c)));
+      requiredCols.forEach(c -> req.addRequiredColumn(ColumnRef.create(c, tableInfo.getColumn(c))));
       req.setStartTs(startTs);
 
-      req.resolve();
       return req;
     }
   }
@@ -225,7 +217,7 @@ public class TiDAGRequest implements Serializable {
   private final List<ByItem> orderByItems = new ArrayList<>();
   // System like Spark has different type promotion rules
   // we need a cast to target when given
-  private final List<Pair<Expression, DataType>> aggregates = new ArrayList<>();
+  private final List<AggregateFunction> aggregates = new ArrayList<>();
   private final Map<Long, List<Coprocessor.KeyRange>> idToRanges = new HashMap<>();
   // If index scanning of this request is not possible in some scenario, we downgrade it
   // to a table scan and use downGradeRanges instead of index scan ranges stored in
@@ -233,7 +225,7 @@ public class TiDAGRequest implements Serializable {
   private final List<Expression> downgradeFilters = new ArrayList<>();
 
   private final List<Expression> pushDownFilters = new ArrayList<>();
-  private final List<Pair<Expression, DataType>> pushDownAggregates = new ArrayList<>();
+  private final List<AggregateFunction> pushDownAggregates = new ArrayList<>();
   private final List<ByItem> pushDownGroupBys = new ArrayList<>();
   private final List<ByItem> pushDownOrderBys = new ArrayList<>();
   private int pushDownLimits;
@@ -247,7 +239,6 @@ public class TiDAGRequest implements Serializable {
   private boolean isDoubleRead;
   private final PushDownType pushDownType;
   private final EncodeType encodeType;
-  private IdentityHashMap<Expression, DataType> typeMap;
   private double estimatedCount = -1;
 
   private static ColumnInfo handleColumn =
@@ -258,33 +249,6 @@ public class TiDAGRequest implements Serializable {
           // we need to set this to true in order to retrieve the handle,
           // so the name 'setPkHandle' may sounds strange.
           .build();
-
-  private List<Expression> getAllExpressions() {
-    ImmutableList.Builder<Expression> builder = ImmutableList.builder();
-    builder.addAll(getFields());
-    builder.addAll(getFilters());
-    builder.addAll(getPushDownFilters());
-    builder.addAll(getAggregates());
-    getGroupByItems().forEach(item -> builder.add(item.getExpr()));
-    getOrderByItems().forEach(item -> builder.add(item.getExpr()));
-    if (having != null) {
-      builder.add(having);
-    }
-    return builder.build();
-  }
-
-  public DataType getExpressionType(Expression expression) {
-    requireNonNull(typeMap, "request is not resolved");
-    return typeMap.get(expression);
-  }
-
-  public void resolve() {
-    MetaResolver resolver = new MetaResolver(tableInfo);
-    ExpressionTypeCoercer inferrer = new ExpressionTypeCoercer();
-    resolver.resolve(getAllExpressions());
-    inferrer.infer(getAllExpressions());
-    typeMap = inferrer.getTypeMap();
-  }
 
   public DAGRequest buildIndexScan() {
     List<Integer> outputOffsets = new ArrayList<>();
@@ -307,9 +271,10 @@ public class TiDAGRequest implements Serializable {
         dagRequestBuilder
             .setTimeZoneOffset(timeZoneOffset)
             .setFlags(flags)
-            .setStartTs(startTs.getVersion())
             .addAllOutputOffsets(outputOffsets)
             .setEncodeType(this.encodeType)
+            // set start ts fallback is to solving compatible issue.
+            .setStartTsFallback(startTs.getVersion())
             .build();
 
     validateRequest(request);
@@ -338,9 +303,9 @@ public class TiDAGRequest implements Serializable {
     IndexScan.Builder indexScanBuilder = IndexScan.newBuilder();
     TableScan.Builder tblScanBuilder = TableScan.newBuilder();
     // find a column's offset in fields
-    Map<ColumnRef, Integer> colOffsetInFieldMap = new HashMap<>();
+    Map<String, Integer> colOffsetInFieldMap = new HashMap<>();
     // find a column's position in index
-    Map<TiColumnInfo, Integer> colPosInIndexMap = new HashMap<>();
+    Map<String, Integer> colPosInIndexMap = new HashMap<>();
 
     if (buildIndexScan) {
       // IndexScan
@@ -362,7 +327,7 @@ public class TiDAGRequest implements Serializable {
       for (Integer idx : indexColOffsets) {
         TiColumnInfo tiColumnInfo = columnInfoList.get(idx);
         ColumnInfo columnInfo = tiColumnInfo.toProto(tableInfo);
-        colPosInIndexMap.put(tiColumnInfo, idxPos++);
+        colPosInIndexMap.put(tiColumnInfo.getName(), idxPos++);
 
         ColumnInfo.Builder colBuilder = ColumnInfo.newBuilder(columnInfo);
         if (columnInfo.getColumnId() == -1) {
@@ -372,19 +337,19 @@ public class TiDAGRequest implements Serializable {
         indexScanBuilder.addColumns(colBuilder);
       }
 
+      int colCount = indexScanBuilder.getColumnsCount();
       if (isDoubleRead()) {
-        int colCount = indexScanBuilder.getColumnsCount();
         // double read case: need to retrieve handle
         // =================== IMPORTANT ======================
         // offset for dagRequest should be in accordance with fields
         // The last pos will be the handle
         // TODO: we may merge indexDoubleRead and coveringIndexRead logic
         for (ColumnRef col : getFields()) {
-          Integer pos = colPosInIndexMap.get(col.getColumnInfo());
+          Integer pos = colPosInIndexMap.get(col.getName());
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
-            if (col.getColumnInfo().equals(columnInfo)) {
-              colOffsetInFieldMap.put(col, pos);
+            if (col.matchName(columnInfo.getName())) {
+              colOffsetInFieldMap.put(col.getName(), pos);
             }
             // TODO: primary key may also be considered if pkIsHandle
           }
@@ -394,7 +359,7 @@ public class TiDAGRequest implements Serializable {
           // add handle column
           indexScanBuilder.addColumns(handleColumn);
           ++colCount;
-          addRequiredIndexDataType(IntegerType.INT);
+          addRequiredIndexDataType();
         }
 
         if (colCount == 0) {
@@ -403,28 +368,27 @@ public class TiDAGRequest implements Serializable {
 
         outputOffsets.add(colCount - 1);
       } else {
-        int colCount = indexScanBuilder.getColumnsCount();
         boolean pkIsNeeded = false;
         // =================== IMPORTANT ======================
         // offset for dagRequest should be in accordance with fields
         for (ColumnRef col : getFields()) {
-          Integer pos = colPosInIndexMap.get(col.getColumnInfo());
+          Integer pos = colPosInIndexMap.get(col.getName());
           if (pos != null) {
             TiColumnInfo columnInfo = columnInfoList.get(indexColOffsets.get(pos));
-            if (col.getColumnInfo().equals(columnInfo)) {
+            if (col.matchName(columnInfo.getName())) {
               outputOffsets.add(pos);
-              colOffsetInFieldMap.put(col, pos);
+              colOffsetInFieldMap.put(col.getName(), pos);
             }
           }
           // if a column of field is not contained in index selected,
           // logically it must be the pk column and
           // the pkIsHandle must be true. Extra check here.
-          else if (col.getColumnInfo().isPrimaryKey() && tableInfo.isPkHandle()) {
+          else if (tableInfo.getColumn(col.getName()).isPrimaryKey() && tableInfo.isPkHandle()) {
             pkIsNeeded = true;
             // offset should be processed for each primary key encountered
             outputOffsets.add(colCount);
             // for index scan, column offset must be in the order of index->handle
-            colOffsetInFieldMap.put(col, indexColOffsets.size());
+            colOffsetInFieldMap.put(col.getName(), indexColOffsets.size());
           } else {
             throw new DAGRequestException(
                 "columns other than primary key and index key exist in fields while index single read: "
@@ -448,13 +412,13 @@ public class TiDAGRequest implements Serializable {
       int lastOffset = 0;
       for (ColumnRef col : getFields()) {
         // can't allow duplicated col added into executor.
-        if (!colOffsetInFieldMap.containsKey(col)) {
-          tblScanBuilder.addColumns(col.getColumnInfo().toProto(tableInfo));
-          colOffsetInFieldMap.put(col, lastOffset);
+        if (!colOffsetInFieldMap.containsKey(col.getName())) {
+          tblScanBuilder.addColumns(tableInfo.getColumn(col.getName()).toProto(tableInfo));
+          colOffsetInFieldMap.put(col.getName(), lastOffset);
           lastOffset++;
         }
         // column offset should be in accordance with fields
-        outputOffsets.add(colOffsetInFieldMap.get(col));
+        outputOffsets.add(colOffsetInFieldMap.get(col.getName()));
       }
 
       dagRequestBuilder.addExecutors(executorBuilder.setTblScan(tblScanBuilder));
@@ -524,7 +488,7 @@ public class TiDAGRequest implements Serializable {
   private void pushDownOrderBy(
       DAGRequest.Builder dagRequestBuilder,
       Executor.Builder executorBuilder,
-      Map<ColumnRef, Integer> colOffsetInFieldMap) {
+      Map<String, Integer> colOffsetInFieldMap) {
     TopN.Builder topNBuilder = TopN.newBuilder();
     getOrderByItems()
         .forEach(
@@ -544,7 +508,7 @@ public class TiDAGRequest implements Serializable {
       DAGRequest.Builder dagRequestBuilder,
       Executor.Builder executorBuilder,
       List<Integer> outputOffsets,
-      Map<ColumnRef, Integer> colOffsetInFieldMap) {
+      Map<String, Integer> colOffsetInFieldMap) {
     Aggregation.Builder aggregationBuilder = Aggregation.newBuilder();
     getAggregates()
         .forEach(
@@ -608,7 +572,7 @@ public class TiDAGRequest implements Serializable {
     if (aggregates.isEmpty()) {
       return false;
     }
-    return aggregates.stream().allMatch(x -> isExpressionCoveredByIndex(x.first));
+    return aggregates.stream().allMatch(this::isExpressionCoveredByIndex);
   }
 
   /**
@@ -624,10 +588,6 @@ public class TiDAGRequest implements Serializable {
     // check encode type
     requireNonNull(dagRequest.getEncodeType());
 
-    // A DAG request must contain a valid timestamp
-    if (dagRequest.getStartTs() == 0) {
-      throw new DAGRequestException("startTs was not initialized for dagRequest");
-    }
     // A DAG request must has at least one executor.
     if (dagRequest.getExecutorsCount() < 1) {
       throw new DAGRequestException("Invalid executors count:" + dagRequest.getExecutorsCount());
@@ -756,17 +716,13 @@ public class TiDAGRequest implements Serializable {
     return distinct;
   }
 
-  public TiDAGRequest addAggregate(Expression expr, DataType targetType) {
+  public TiDAGRequest addAggregate(AggregateFunction expr) {
     requireNonNull(expr, "aggregation expr is null");
-    aggregates.add(Pair.create(expr, targetType));
+    aggregates.add(expr);
     return this;
   }
 
-  List<Expression> getAggregates() {
-    return aggregates.stream().map(p -> p.first).collect(Collectors.toList());
-  }
-
-  public List<Pair<Expression, DataType>> getAggregatePairs() {
+  List<AggregateFunction> getAggregates() {
     return aggregates;
   }
 
@@ -812,6 +768,10 @@ public class TiDAGRequest implements Serializable {
    * @param column is column referred during selectReq
    */
   public TiDAGRequest addRequiredColumn(ColumnRef column) {
+    if (!column.isResolved()) {
+      throw new UnsupportedOperationException(
+          String.format("cannot add unresolved column %s to dag request", column.getName()));
+    }
     fields.add(requireNonNull(column, "columnRef is null"));
     return this;
   }
@@ -820,13 +780,9 @@ public class TiDAGRequest implements Serializable {
     return fields;
   }
 
-  /**
-   * Required index columns for double read
-   *
-   * @param tp index column data type
-   */
-  private void addRequiredIndexDataType(DataType tp) {
-    indexDataTypes.add(requireNonNull(tp, "dataType is null"));
+  /** Required index columns for double read */
+  private void addRequiredIndexDataType() {
+    indexDataTypes.add(requireNonNull(IntegerType.BIGINT, "dataType is null"));
   }
 
   public List<DataType> getIndexDataTypes() {
@@ -865,9 +821,8 @@ public class TiDAGRequest implements Serializable {
     return filters;
   }
 
-  public TiDAGRequest addDowngradeFilter(Expression filter) {
+  public void addDowngradeFilter(Expression filter) {
     this.downgradeFilters.add(requireNonNull(filter, "downgrade filter is null"));
-    return this;
   }
 
   public List<Expression> getDowngradeFilters() {
@@ -888,11 +843,7 @@ public class TiDAGRequest implements Serializable {
     this.pushDownAggregates.addAll(aggregates);
   }
 
-  public List<Expression> getPushDownAggregates() {
-    return pushDownAggregates.stream().map(p -> p.first).collect(Collectors.toList());
-  }
-
-  public List<Pair<Expression, DataType>> getPushDownAggregatePairs() {
+  public List<AggregateFunction> getPushDownAggregates() {
     return pushDownAggregates;
   }
 
@@ -935,7 +886,7 @@ public class TiDAGRequest implements Serializable {
    * @return the boolean
    */
   public boolean hasPushDownAggregate() {
-    return !getPushDownAggregatePairs().isEmpty();
+    return !getPushDownAggregates().isEmpty();
   }
 
   /**
@@ -1101,7 +1052,7 @@ public class TiDAGRequest implements Serializable {
       }
     }
 
-    if (!getPushDownAggregatePairs().isEmpty()) {
+    if (!getPushDownFilters().isEmpty()) {
       sb.append(", Aggregates: ");
       Joiner.on(", ").skipNulls().appendTo(sb, getPushDownAggregates());
     }

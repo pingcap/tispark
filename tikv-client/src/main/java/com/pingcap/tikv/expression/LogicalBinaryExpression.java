@@ -6,6 +6,7 @@ package com.pingcap.tikv.expression;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,6 +30,7 @@ public class LogicalBinaryExpression extends Expression {
   }
 
   public LogicalBinaryExpression(Type type, Expression left, Expression right) {
+    super(IntegerType.BOOLEAN);
     this.left = requireNonNull(left, "left expression is null");
     this.right = requireNonNull(right, "right expression is null");
     this.compType = requireNonNull(type, "type is null");

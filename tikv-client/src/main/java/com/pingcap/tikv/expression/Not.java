@@ -18,6 +18,7 @@ package com.pingcap.tikv.expression;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
+import com.pingcap.tikv.types.IntegerType;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,6 +31,8 @@ public class Not extends Expression {
   private Expression expression;
 
   public Not(Expression expression) {
+    super(IntegerType.BOOLEAN);
+    resolved = true;
     this.expression = requireNonNull(expression, "expression is null");
   }
 

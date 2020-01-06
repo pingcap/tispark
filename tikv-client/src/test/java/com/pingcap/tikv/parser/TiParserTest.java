@@ -126,7 +126,7 @@ public class TiParserTest {
 
     sql = "\"abc\"";
     stringLiteral = parser.parseExpression(sql);
-    Assert.assertEquals(stringLiteral, Constant.create("\"abc\""));
+    Assert.assertEquals(stringLiteral, Constant.create("abc"));
   }
 
   private TiTableInfo createTaleInfoWithParts() {
@@ -150,6 +150,6 @@ public class TiParserTest {
     TiTableInfo tableInfo = createTaleInfoWithParts();
     TiParser parser = new TiParser(tableInfo);
     Expression expr = parser.parseExpression("`a` < 5");
-    Assert.assertEquals(expr.toString(), "[[a] LESS_THAN 5]");
+    Assert.assertEquals(expr.toString(), "[a@LONG LESS_THAN 5]");
   }
 }

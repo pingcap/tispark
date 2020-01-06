@@ -36,6 +36,7 @@ public class Constant extends Expression {
     return new Constant(value, type);
   }
 
+  @Deprecated
   public static Constant create(Object value) {
     return new Constant(value, null);
   }
@@ -43,6 +44,7 @@ public class Constant extends Expression {
   public Constant(Object value, DataType type) {
     this.value = value;
     this.dataType = (type == null && value != null) ? getDefaultType(value) : type;
+    this.resolved = true;
   }
 
   protected static boolean isIntegerType(Object value) {
@@ -87,10 +89,6 @@ public class Constant extends Expression {
 
   public Object getValue() {
     return value;
-  }
-
-  public DataType getType() {
-    return dataType;
   }
 
   @Override
