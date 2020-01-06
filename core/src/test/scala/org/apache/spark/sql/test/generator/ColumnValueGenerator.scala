@@ -220,8 +220,9 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
         // start from 1970-01-01 00:00:01 to 2038-01-19 03:14:07
         val milliseconds = Math.abs(r.nextInt * 1000L + 1000L) + Math.abs(r.nextInt(1000))
         new java.sql.Timestamp(milliseconds)
-      case ENUM | SET => generateRandomEnumValue(r)
-      case _          => throw new RuntimeException(s"random $dataType generator not supported yet")
+      case ENUM => generateRandomEnumValue(r)
+      case SET  => generateRandomSetValue(r)
+      case _    => throw new RuntimeException(s"random $dataType generator not supported yet")
     }
   }
 
@@ -258,6 +259,10 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
 
   private def generateRandomEnumValue(r: Random): String = {
     enumValues(r.nextInt(rangeSize.toInt))
+  }
+
+  private def generateRandomSetValue(r: Random): String = {
+    enumValues.filter(_ => r.nextBoolean()).mkString("'", "','", "'")
   }
 
   // pre-generate n random values
