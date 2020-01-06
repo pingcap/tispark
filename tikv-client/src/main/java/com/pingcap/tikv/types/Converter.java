@@ -272,6 +272,7 @@ public class Converter {
         throw new TypeException(String.format("Error parsing string %s to date", val), e);
       }
     } else if (val instanceof Integer) {
+      // when the val is a Integer, it is only have year part of a Date.
       return new Date((Integer) val, 0, 0);
     } else if (val instanceof Long) {
       return new Date((long) val);

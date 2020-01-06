@@ -83,7 +83,10 @@ public class RangeColumnPartitionPruner
   @Override
   protected Set<Integer> visit(ComparisonBinaryExpression node, LogicalBinaryExpression parent) {
     NormalizedPredicate predicate = node.normalize();
-    // TODO check can we normalize ComparisonBinaryExpression.
+    if (predicate == null) {
+      throw new UnsupportedOperationException(
+          String.format("ComparisonBinaryExpression %s cannot be normalized", node.toString()));
+    }
     String colRefName = predicate.getColumnRef().getName();
     List<Expression> partExprs = partExprsPerColumnRef.get(colRefName);
     Set<Integer> partDefs = new HashSet<>();
