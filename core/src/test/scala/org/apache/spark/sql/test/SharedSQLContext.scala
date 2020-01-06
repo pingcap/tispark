@@ -50,6 +50,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
 
   protected def tidbConn: Connection = SharedSQLContext.tidbConn
 
+  protected def tidbStmt: Statement = SharedSQLContext._statement
+
   protected def sql: String => DataFrame = spark.sql _
 
   protected def jdbcUrl: String = SharedSQLContext.jdbcUrl
@@ -67,6 +69,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with BeforeAndAfter
   protected def timeZoneOffset: String = SharedSQLContext.timeZoneOffset
 
   protected def initStatistics(): Unit = SharedSQLContext.initStatistics()
+
+  protected def initializeStatement(): Unit = SharedSQLContext.initializeStatement()
 
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
 
@@ -185,7 +189,7 @@ object SharedSQLContext extends Logging {
 
   protected def initStatistics(): Unit = {
     _tidbConnection.setCatalog("tispark_test")
-    _statement = _tidbConnection.createStatement()
+    initializeStatement()
     logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
     _statement.execute("analyze table tispark_test.full_data_type_table_idx")
     logger.info("Analyzing table tispark_test.full_data_type_table...")
@@ -194,6 +198,13 @@ object SharedSQLContext extends Logging {
     logger.info("Analyzing table resolveLock_test.CUSTOMER...")
     _statement.execute("analyze table resolveLock_test.CUSTOMER")
     logger.info("Analyzing table finished.")
+  }
+
+  protected def initializeStatement(): Unit = {
+    _statement = _tidbConnection.createStatement()
+    // TODO: support new row format
+    //  https://github.com/pingcap/tispark/issues/1355
+    _statement.execute("SET GLOBAL tidb_row_format_version=1")
   }
 
   private def queryTiDBViaJDBC(query: String): List[List[Any]] = {
@@ -261,7 +272,7 @@ object SharedSQLContext extends Logging {
           s"&allowMultiQueries=true&serverTimezone=${timeZone.getDisplayName}&sessionVariables=time_zone='$timeZoneOffset'"
 
       _tidbConnection = DriverManager.getConnection(jdbcUrl, jdbcUsername, jdbcPassword)
-      _statement = _tidbConnection.createStatement()
+      initializeStatement()
 
       if (shouldLoadData(loadData) && !forceNotLoad) {
         logger.info("Loading TiSparkTestData")
