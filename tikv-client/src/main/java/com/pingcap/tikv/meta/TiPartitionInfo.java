@@ -26,8 +26,8 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TiPartitionInfo implements Serializable {
 
-  public long getType() {
-    return type;
+  public PartitionType getType() {
+    return toPartType((int) type);
   }
 
   public enum PartitionType {
@@ -43,7 +43,7 @@ public class TiPartitionInfo implements Serializable {
   private final boolean enable;
   private final List<TiPartitionDef> defs;
 
-  public static PartitionType toPartType(int tp) {
+  private PartitionType toPartType(int tp) {
     switch (tp) {
       case 1:
         return PartitionType.RangePartition;

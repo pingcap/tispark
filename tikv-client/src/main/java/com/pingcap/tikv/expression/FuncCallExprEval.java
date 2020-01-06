@@ -32,7 +32,7 @@ public class FuncCallExprEval {
             return Constant.create(date.getYear(), IntegerType.INT);
           }
           throw new UnsupportedOperationException(
-              String.format("cannot apply year to %s", type.getClass().getSimpleName()));
+              String.format("cannot apply year on %s", type.getName()));
         });
 
     // for newly adding type, please also adds the corresponding logic here.
