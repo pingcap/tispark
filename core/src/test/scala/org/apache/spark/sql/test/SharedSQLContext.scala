@@ -223,7 +223,10 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
     _statement = _tidbConnection.createStatement()
     // TODO: support new row format
     //  https://github.com/pingcap/tispark/issues/1355
-    _statement.execute("SET GLOBAL tidb_row_format_version=1")
+    val resultSet = _statement.executeQuery("SHOW GLOBAL VARIABLES LIKE 'tidb_row_format_version'")
+    if (resultSet.next()) {
+      _statement.execute("SET GLOBAL tidb_row_format_version=1")
+    }
   }
 
   protected def loadSQLFile(directory: String, file: String): Unit = {
