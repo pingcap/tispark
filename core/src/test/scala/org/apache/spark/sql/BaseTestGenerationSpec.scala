@@ -17,7 +17,8 @@
 
 package org.apache.spark.sql
 
-import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
+import org.apache.spark.sql.test.generator.DataType.{getBaseType, DECIMAL, ReflectedDataType}
+import org.apache.spark.sql.test.generator.TestDataGenerator.{getDecimal, getLength, isCharOrBinary, isVarString}
 
 trait BaseTestGenerationSpec {
 
@@ -59,5 +60,16 @@ trait BaseTestGenerationSpec {
 
   def getIndexNameByOffset(offsets: Int*): String =
     s"idx_${offsets.map(getColumnNameByOffset).mkString("_")}"
+
+  def getTypeLength(dataType: ReflectedDataType): String = {
+    val baseType = getBaseType(dataType)
+    val length = getLength(baseType)
+    dataType match {
+      case DECIMAL                       => s"$length,${getDecimal(baseType)}"
+      case _ if isVarString(dataType)    => s"$length"
+      case _ if isCharOrBinary(dataType) => "10"
+      case _                             => ""
+    }
+  }
 
 }

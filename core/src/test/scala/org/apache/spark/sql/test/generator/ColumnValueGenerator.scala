@@ -18,6 +18,7 @@
 package org.apache.spark.sql.test.generator
 
 import org.apache.spark.sql.test.generator.DataType._
+import org.apache.spark.sql.test.generator.GeneratorUtils._
 import org.apache.spark.sql.test.generator.TestDataGenerator.{checkUnique, getLength, isBinaryCharset, isCharCharset, isNumeric}
 
 import scala.collection.mutable
@@ -31,7 +32,8 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
                                 noDefault: Boolean = false,
                                 default: Any = null,
                                 isPrimaryKey: Boolean = false,
-                                isUnique: Boolean = false) {
+                                isUnique: Boolean = false,
+                                isRandomEnumValue: Boolean = false) {
 
   private val flag: Int = {
     import com.pingcap.tikv.types.DataType._
@@ -57,16 +59,29 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
 
   private val generateUnique = isPrimaryKey || isUnique
 
+  private val enumValues: List[String] = if (isRandomEnumValue) {
+    val r = new Random()
+    val randomEnumValues = new mutable.ListBuffer[String]
+    val set = new mutable.HashSet[String]
+    for (_ <- 0 until 50) {
+      randomEnumValues += randomUniqueString(r, set, 5)
+    }
+    randomEnumValues.toList
+  } else {
+    defaultEnumValues
+  }
+
   import com.pingcap.tikv.meta.Collation._
   val tiDataType: TiDataType = getType(dataType, flag, M, D, "", DEF_COLLATION_CODE)
 
   val rangeSize: Long = dataType match {
-    case BIT       => 1 << tiDataType.getLength.toInt
-    case BOOLEAN   => 1 << 1
-    case TINYINT   => 1 << 8
-    case SMALLINT  => 1 << 16
-    case MEDIUMINT => 1 << 24
-    case INT       => 1L << 32
+    case BIT        => 1 << tiDataType.getLength.toInt
+    case BOOLEAN    => 1 << 1
+    case TINYINT    => 1 << 8
+    case SMALLINT   => 1 << 16
+    case MEDIUMINT  => 1 << 24
+    case INT        => 1L << 32
+    case ENUM | SET => enumValues.size
     // just treat the range size as infinity, the value is meaningless
     case _ => Long.MaxValue
   }
@@ -128,7 +143,17 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
     !tiDataType.isNotNull && r.nextInt(20) == 0
   }
 
-  def randomUniqueValue(r: Random, set: mutable.Set[Any], len: Int = -1): Any = {
+  def randomUniqueString(r: Random, set: mutable.Set[String], len: Int = -1): String = {
+    while (true) {
+      val value = generateRandomString(r, len)
+      if (checkUnique((value, -1), set)) {
+        return value
+      }
+    }
+    throw new RuntimeException("Unreachable")
+  }
+
+  def randomUniqueValue(r: Random, set: mutable.Set[String], len: Int = -1): Any = {
     while (true) {
       val value = randomValue(r)
       if (checkUnique((value, len), set)) {
@@ -195,7 +220,9 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
         // start from 1970-01-01 00:00:01 to 2038-01-19 03:14:07
         val milliseconds = Math.abs(r.nextInt * 1000L + 1000L) + Math.abs(r.nextInt(1000))
         new java.sql.Timestamp(milliseconds)
-      case _ => throw new RuntimeException(s"random $dataType generator not supported yet")
+      case ENUM => generateRandomEnumValue(r)
+      case SET  => generateRandomSetValue(r)
+      case _    => throw new RuntimeException(s"random $dataType generator not supported yet")
     }
   }
 
@@ -230,12 +257,20 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
     b
   }
 
+  private def generateRandomEnumValue(r: Random): String = {
+    enumValues(r.nextInt(rangeSize.toInt))
+  }
+
+  private def generateRandomSetValue(r: Random): String = {
+    enumValues.filter(_ => r.nextBoolean()).mkString(",")
+  }
+
   // pre-generate n random values
   def preGenerateRandomValues(r: Random, n: Long, len: Int = -1): Unit = {
     if (n <= 1e6) {
       generatedRandomValues = if (generateUnique) {
         assert(n <= rangeSize, "random generator cannot generate unique value less than available")
-        val set: mutable.Set[Any] = mutable.HashSet.empty[Any]
+        val set: mutable.Set[String] = mutable.HashSet.empty[String]
         set ++= specialBound.map(x => TestDataGenerator.hash(x, len))
         val size = set.size
         (0L until n - size).map { _ =>
@@ -298,7 +333,8 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
 
   ////////////////// To Description String //////////////////
   private val typeDescString: String = dataType match {
-    case BOOLEAN => ""
+    case BOOLEAN    => ""
+    case ENUM | SET => enumValues.mkString("('", "','", "')")
     case _ =>
       if (M == -1) {
         ""
