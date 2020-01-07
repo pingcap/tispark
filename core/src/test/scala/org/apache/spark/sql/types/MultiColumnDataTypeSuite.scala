@@ -29,7 +29,7 @@ class MultiColumnDataTypeSuite
   val database: String = "multi_column_data_type_test"
   val testDesc: String = "Base test for multi-column data types"
 
-  override val generator = BaseMultiColumnDataTypeGenerator(
+  override val generator: BaseMultiColumnDataTypeGenerator = BaseMultiColumnDataTypeGenerator(
     dataTypes,
     unsignedDataTypes,
     dataTypeTestDir,
