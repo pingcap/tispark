@@ -29,12 +29,13 @@ import io.grpc.stub.AbstractStub;
 import io.grpc.stub.ClientCalls;
 import io.grpc.stub.StreamObserver;
 import java.util.function.Supplier;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractGRPCClient<
         BlockingStubT extends AbstractStub<BlockingStubT>, StubT extends AbstractStub<StubT>>
     implements AutoCloseable {
-  protected final Logger logger = Logger.getLogger(this.getClass());
+  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
   protected TiConfiguration conf;
   protected final ChannelFactory channelFactory;
   protected BlockingStubT blockingStub;

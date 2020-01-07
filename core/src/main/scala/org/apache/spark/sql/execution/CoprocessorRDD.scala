@@ -29,7 +29,6 @@ import com.pingcap.tispark.utils.ReflectionUtil.ReflectionMapPartitionWithIndexI
 import com.pingcap.tispark.utils.TiUtil
 import gnu.trove.list.array
 import gnu.trove.list.array.TLongArrayList
-import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
@@ -38,6 +37,7 @@ import org.apache.spark.sql.catalyst.plans.physical.{Partitioning, UnknownPartit
 import org.apache.spark.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.sql.tispark.TiRDD
 import org.apache.spark.sql.vectorized.ColumnarBatch
+import org.slf4j.LoggerFactory
 import org.tikv.kvproto.Coprocessor.KeyRange
 
 import scala.collection.JavaConversions._
@@ -151,7 +151,7 @@ case class ColumnarRegionTaskExec(child: SparkPlan,
     downgradeDagRequest: TiDAGRequest
   ): (Int, Iterator[InternalRow]) => Iterator[InternalRow] = { (_, iter) =>
     // For each partition, we do some initialization work
-    val logger = Logger.getLogger(getClass.getName)
+    val logger = LoggerFactory.getLogger(getClass.getName)
     val session = TiSession.getInstance(tiConf)
     session.injectCallBackFunc(callBackFunc)
     val batchSize = tiConf.getIndexScanBatchSize
