@@ -115,7 +115,6 @@ class TPCHQuerySuite extends BaseTiSparkTest {
   tpchQueries.foreach { name =>
     test(name) {
       if (runTPCH) {
-        spark.conf.set(TiConfigConst.USE_TIFLASH, "true")
         assertResult(tiSparkRes(name))(jdbcRes(name))
       }
     }

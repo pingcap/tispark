@@ -146,8 +146,7 @@ object BasicExpression {
         expr.setDataType(TiConverter.fromSparkType(dec))
         Some(expr)
 
-      case p @ PromotePrecision(BasicExpression(expr)) =>
-        p.dataType
+      case PromotePrecision(BasicExpression(expr)) =>
         Some(expr)
 
       case PromotePrecision(Cast(BasicExpression(expr), dec: DecimalType, _)) =>
