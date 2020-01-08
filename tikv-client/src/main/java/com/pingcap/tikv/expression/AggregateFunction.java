@@ -35,6 +35,10 @@ public class AggregateFunction extends Expression {
   private final FunctionType type;
   private final Expression argument;
 
+  public static AggregateFunction newCall(FunctionType type, Expression argument) {
+    return newCall(type, argument, argument.dataType);
+  }
+
   public static AggregateFunction newCall(
       FunctionType type, Expression argument, DataType dataType) {
     return new AggregateFunction(type, argument, dataType);

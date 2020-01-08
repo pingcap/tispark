@@ -38,16 +38,20 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
 
   private TiStoreType storeType;
 
+  private long startTs;
+
   DAGIterator(
       DAGRequest req,
       List<RangeSplitter.RegionTask> regionTasks,
       TiSession session,
       SchemaInfer infer,
       PushDownType pushDownType,
-      TiStoreType storeType) {
+      TiStoreType storeType,
+      long startTs) {
     super(req, regionTasks, session, infer);
     this.pushDownType = pushDownType;
     this.storeType = storeType;
+    this.startTs = startTs;
     switch (pushDownType) {
       case NORMAL:
         dagService = new ExecutorCompletionService<>(session.getThreadPoolForTableScan());
@@ -193,7 +197,7 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
         RegionStoreClient client =
             session.getRegionStoreClientBuilder().build(region, store, storeType);
         Collection<RangeSplitter.RegionTask> tasks =
-            client.coprocess(backOffer, dagRequest, ranges, responseQueue);
+            client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
         if (tasks != null) {
           remainTasks.addAll(tasks);
         }

@@ -271,9 +271,10 @@ public class TiDAGRequest implements Serializable {
         dagRequestBuilder
             .setTimeZoneOffset(timeZoneOffset)
             .setFlags(flags)
-            .setStartTs(startTs.getVersion())
             .addAllOutputOffsets(outputOffsets)
             .setEncodeType(this.encodeType)
+            // set start ts fallback is to solving compatible issue.
+            .setStartTsFallback(startTs.getVersion())
             .build();
 
     validateRequest(request);
@@ -587,10 +588,6 @@ public class TiDAGRequest implements Serializable {
     // check encode type
     requireNonNull(dagRequest.getEncodeType());
 
-    // A DAG request must contain a valid timestamp
-    if (dagRequest.getStartTs() == 0) {
-      throw new DAGRequestException("startTs was not initialized for dagRequest");
-    }
     // A DAG request must has at least one executor.
     if (dagRequest.getExecutorsCount() < 1) {
       throw new DAGRequestException("Invalid executors count:" + dagRequest.getExecutorsCount());

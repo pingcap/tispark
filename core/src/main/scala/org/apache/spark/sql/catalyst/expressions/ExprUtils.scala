@@ -86,28 +86,28 @@ object ExprUtils {
             .newCall(AggregateFunction.FunctionType.Count, tiArg, fromSparkType(f.dataType))
         )
 
-      case f @ Min(BasicExpression(arg)) =>
+      case _ @Min(BasicExpression(arg)) =>
         MetaResolver.resolve(arg, meta)
         dagRequest
           .addAggregate(
             AggregateFunction
-              .newCall(AggregateFunction.FunctionType.Min, arg, fromSparkType(f.dataType))
+              .newCall(AggregateFunction.FunctionType.Min, arg)
           )
 
-      case f @ Max(BasicExpression(arg)) =>
+      case _ @Max(BasicExpression(arg)) =>
         MetaResolver.resolve(arg, meta)
         dagRequest
           .addAggregate(
             AggregateFunction
-              .newCall(AggregateFunction.FunctionType.Max, arg, fromSparkType(f.dataType))
+              .newCall(AggregateFunction.FunctionType.Max, arg)
           )
 
-      case f @ First(BasicExpression(arg), _) =>
+      case _ @First(BasicExpression(arg), _) =>
         MetaResolver.resolve(arg, meta)
         dagRequest
           .addAggregate(
             AggregateFunction
-              .newCall(AggregateFunction.FunctionType.First, arg, fromSparkType(f.dataType))
+              .newCall(AggregateFunction.FunctionType.First, arg)
           )
 
       case _ =>

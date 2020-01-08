@@ -21,7 +21,7 @@ import org.apache.spark.sql.test.generator.DataType._
 import org.apache.spark.sql.test.generator.TestDataGenerator._
 
 class DataTypeNormalSuite extends BaseDataTypeTest with RunUnitDataTypeTestAction {
-  override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: stringType
+  override val dataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles ::: stringType ::: enumAndSets
   override val unsignedDataTypes: List[ReflectedDataType] = integers ::: decimals ::: doubles
   override val dataTypeTestDir = "dataType-test"
   override val database = "data_type_test"
