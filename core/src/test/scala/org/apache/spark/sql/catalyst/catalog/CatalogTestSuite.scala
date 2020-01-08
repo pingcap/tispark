@@ -86,6 +86,9 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     spark.sql("desc t").show
     spark.sql("desc formatted t").show
     spark.sql("drop table if exists t")
+    spark.sql("create table state_part(District string,Enrolments string) PARTITIONED BY(state string)")
+    spark.sql("desc state_part")
+    spark.sql("drop table if exists state_part")
   }
 
   test("test support show columns") {
