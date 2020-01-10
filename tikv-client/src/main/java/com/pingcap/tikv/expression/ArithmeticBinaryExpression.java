@@ -51,6 +51,11 @@ public class ArithmeticBinaryExpression extends Expression {
     return new ArithmeticBinaryExpression(left.dataType, MULTIPLY, left, right);
   }
 
+  public static ArithmeticBinaryExpression divide(
+      DataType dataType, Expression left, Expression right) {
+    return new ArithmeticBinaryExpression(left.dataType, DIVIDE, left, right);
+  }
+
   public static ArithmeticBinaryExpression divide(Expression left, Expression right) {
     return new ArithmeticBinaryExpression(left.dataType, DIVIDE, left, right);
   }

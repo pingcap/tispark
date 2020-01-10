@@ -183,7 +183,6 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
             CHType type = CHTypeMapping.parseType(typeName);
             columnVectors[columnIdx] = type.decode(dataInput, (int) numOfRows);
             // TODO this is workaround to bybass nullable type
-            type.setNullable(false);
           }
           dataInput = new CodecDataInput(new byte[0]);
           return new TiChunk(columnVectors);

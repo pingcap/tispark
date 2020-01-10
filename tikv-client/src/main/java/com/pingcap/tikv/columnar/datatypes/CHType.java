@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 // TODO Support nested, array and struct types.
 public abstract class CHType {
   protected int length;
-  private boolean nullable = false;
+  protected boolean nullable = false;
 
   abstract String name();
 

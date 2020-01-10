@@ -12,9 +12,7 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeUInt8 extends CHTypeNumber {
-    public static final CHTypeUInt8 instance = new CHTypeUInt8();
-
-    private CHTypeUInt8() {
+    public CHTypeUInt8() {
       this.length = 0;
     }
 
@@ -25,9 +23,7 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeUInt16 extends CHTypeNumber {
-    public static final CHTypeUInt16 instance = new CHTypeUInt16();
-
-    private CHTypeUInt16() {
+    public CHTypeUInt16() {
       this.length = 1;
     }
 
@@ -38,9 +34,7 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeUInt32 extends CHTypeNumber {
-    public static final CHTypeUInt32 instance = new CHTypeUInt32();
-
-    private CHTypeUInt32() {
+    public CHTypeUInt32() {
       this.length = 2;
     }
 
@@ -51,9 +45,7 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeUInt64 extends CHTypeNumber {
-    public static final CHTypeUInt64 instance = new CHTypeUInt64();
-
-    private CHTypeUInt64() {
+    public CHTypeUInt64() {
       this.length = 3;
     }
 
@@ -69,9 +61,7 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeInt8 extends CHTypeNumber {
-    public static final CHTypeInt8 instance = new CHTypeInt8();
-
-    private CHTypeInt8() {
+    public CHTypeInt8() {
       this.length = 0;
     }
 
@@ -82,9 +72,8 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeInt16 extends CHTypeNumber {
-    public static final CHTypeInt16 instance = new CHTypeInt16();
 
-    private CHTypeInt16() {
+    public CHTypeInt16() {
       this.length = 1;
     }
 
@@ -95,9 +84,7 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeInt32 extends CHTypeNumber {
-    public static final CHTypeInt32 instance = new CHTypeInt32();
-
-    private CHTypeInt32() {
+    public CHTypeInt32() {
       this.length = 2;
     }
 
@@ -108,9 +95,7 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeInt64 extends CHTypeNumber {
-    public static final CHTypeInt64 instance = new CHTypeInt64();
-
-    private CHTypeInt64() {
+    public CHTypeInt64() {
       this.length = 3;
     }
 
@@ -121,9 +106,7 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeFloat32 extends CHTypeNumber {
-    public static final CHTypeFloat32 instance = new CHTypeFloat32();
-
-    private CHTypeFloat32() {
+    public CHTypeFloat32() {
       this.length = 2;
     }
 
@@ -134,9 +117,7 @@ public abstract class CHTypeNumber extends CHType {
   }
 
   public static class CHTypeFloat64 extends CHTypeNumber {
-    public static final CHTypeFloat64 instance = new CHTypeFloat64();
-
-    private CHTypeFloat64() {
+    public CHTypeFloat64() {
       this.length = 3;
     }
 

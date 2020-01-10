@@ -4,9 +4,7 @@ import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DateType;
 
 public class CHTypeDate extends CHType {
-  public static final CHTypeDate instance = new CHTypeDate();
-
-  private CHTypeDate() {
+  public CHTypeDate() {
     this.length = 1;
   }
 

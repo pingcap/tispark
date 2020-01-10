@@ -13,7 +13,6 @@ import com.pingcap.tikv.util.MemoryUtil;
 import java.nio.ByteBuffer;
 
 public class CHTypeString extends CHType {
-  public static final CHTypeString instance = new CHTypeString();
   // Use to prevent frequently reallocate the chars buffer.
   // ClickHouse does not pass a total length at the beginning, so sad...
   private static final ThreadLocal<ByteBuffer> initBuffer =

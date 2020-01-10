@@ -7,7 +7,16 @@ import com.pingcap.tikv.columnar.datatypes.CHTypeDecimal;
 import com.pingcap.tikv.columnar.datatypes.CHTypeFixedString;
 import com.pingcap.tikv.columnar.datatypes.CHTypeMyDate;
 import com.pingcap.tikv.columnar.datatypes.CHTypeMyDateTime;
-import com.pingcap.tikv.columnar.datatypes.CHTypeNumber;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeFloat32;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeFloat64;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeInt16;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeInt32;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeInt64;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeInt8;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeUInt16;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeUInt32;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeUInt64;
+import com.pingcap.tikv.columnar.datatypes.CHTypeNumber.CHTypeUInt8;
 import com.pingcap.tikv.columnar.datatypes.CHTypeString;
 import org.apache.commons.lang3.StringUtils;
 
@@ -19,35 +28,35 @@ public class CHTypeMapping {
     typeName = typeName.trim();
     switch (typeName) {
       case "UInt8":
-        return CHTypeNumber.CHTypeUInt8.instance;
+        return new CHTypeUInt8();
       case "UInt16":
-        return CHTypeNumber.CHTypeUInt16.instance;
+        return new CHTypeUInt16();
       case "UInt32":
-        return CHTypeNumber.CHTypeUInt32.instance;
+        return new CHTypeUInt32();
       case "UInt64":
-        return CHTypeNumber.CHTypeUInt64.instance;
+        return new CHTypeUInt64();
       case "Int8":
-        return CHTypeNumber.CHTypeInt8.instance;
+        return new CHTypeInt8();
       case "Int16":
-        return CHTypeNumber.CHTypeInt16.instance;
+        return new CHTypeInt16();
       case "Int32":
-        return CHTypeNumber.CHTypeInt32.instance;
+        return new CHTypeInt32();
       case "Int64":
-        return CHTypeNumber.CHTypeInt64.instance;
+        return new CHTypeInt64();
       case "Float32":
-        return CHTypeNumber.CHTypeFloat32.instance;
+        return new CHTypeFloat32();
       case "Float64":
-        return CHTypeNumber.CHTypeFloat64.instance;
+        return new CHTypeFloat64();
       case "Date":
-        return CHTypeDate.instance;
+        return new CHTypeDate();
       case "DateTime":
-        return CHTypeDateTime.instance;
+        return new CHTypeDateTime();
       case "MyDateTime":
-        return CHTypeMyDateTime.instance;
+        return new CHTypeMyDateTime();
       case "MyDate":
-        return CHTypeMyDate.instance;
+        return new CHTypeMyDate();
       case "String":
-        return CHTypeString.instance;
+        return new CHTypeString();
     }
     if (typeName.startsWith("FixedString")) {
       String remain = StringUtils.removeStart(typeName, "FixedString");
@@ -60,7 +69,7 @@ public class CHTypeMapping {
       }
     }
     if (typeName.startsWith("MyDateTime")) {
-      return CHTypeMyDateTime.instance;
+      return new CHTypeMyDateTime();
     }
     if (typeName.startsWith("Decimal")) {
       String remain = StringUtils.removeStart(typeName, "Decimal");
