@@ -156,7 +156,8 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
             int size = childColumnVectors.get(0).size();
             count += childColumnVectors.get(0).get(size - 1).numOfRows();
             // left data should be trashed.
-            dataInput = new CodecDataInput(new byte[0]);
+            dataInput = null;
+            //dataInput = new CodecDataInput(new byte[0]);
           }
 
           for (int i = 0; i < dataTypes.length; i++) {
@@ -187,12 +188,14 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
               utf8Bytes[i] = dataInput.readByte();
             }
             String typeName = new String(utf8Bytes, StandardCharsets.UTF_8);
+            logger.warn("TTTTTTT type name length " + length + ", type name " + typeName);
             CHType type = CHTypeMapping.parseType(typeName);
             columnVectors[columnIdx] = type.decode(dataInput, (int) numOfRows);
             // TODO this is workaround to bybass nullable type
             type.setNullable(false);
           }
-          dataInput = new CodecDataInput(new byte[0]);
+          dataInput = null;
+          //dataInput = new CodecDataInput(new byte[0]);
           return new TiChunk(columnVectors);
         }
       }
