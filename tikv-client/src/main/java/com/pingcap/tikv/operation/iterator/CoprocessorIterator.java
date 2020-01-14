@@ -37,6 +37,9 @@ import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.CHTypeMapping;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -54,6 +57,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
   protected int chunkIndex;
   protected List<Chunk> chunkList;
   protected SchemaInfer schemaInfer;
+  private static final Logger logger = LoggerFactory.getLogger(CoprocessorIterator.class.getName());
 
   CoprocessorIterator(
       DAGRequest req, List<RegionTask> regionTasks, TiSession session, SchemaInfer infer) {
@@ -175,6 +179,9 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
 
             // reading type name
             length = IntegerCodec.readUVarLong(dataInput);
+            if (length == 0) {
+              logger.warn("XXXXXXX type name length = 0, maybe something wrong");
+            }
             byte[] utf8Bytes = new byte[(int) length];
             for (int i = 0; i < length; i++) {
               utf8Bytes[i] = dataInput.readByte();
