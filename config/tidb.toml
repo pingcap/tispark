@@ -108,7 +108,7 @@ tcp-keep-alive = true
 
 # feedback probability of statistics
 # turn it off to fix https://github.com/pingcap/tispark/issues/1183
-feedback-probability = 0
+feedback-probability = 0.0
 
 # The maximum number of retries when commit a transaction.
 retry-limit = 10
