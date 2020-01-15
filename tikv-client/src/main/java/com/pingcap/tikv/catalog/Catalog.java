@@ -25,14 +25,15 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Catalog implements AutoCloseable {
   private Supplier<Snapshot> snapshotProvider;
   private CatalogCache metaCache;
   private final boolean showRowId;
   private final String dbPrefix;
-  private final Logger logger = Logger.getLogger(this.getClass());
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   @Override
   public void close() {}

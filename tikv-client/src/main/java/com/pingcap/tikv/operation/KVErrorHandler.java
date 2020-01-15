@@ -37,14 +37,15 @@ import io.grpc.StatusRuntimeException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.function.Function;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Errorpb;
 import org.tikv.kvproto.Kvrpcpb;
 
 // TODO: consider refactor to Builder mode
 // TODO: KVErrorHandler should resolve locks if it could.
 public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
-  private static final Logger logger = Logger.getLogger(KVErrorHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(KVErrorHandler.class);
   // if a store does not have leader currently, store id is set to 0
   private static final int NO_LEADER_STORE_ID = 0;
   private final Function<RespT, Errorpb.Error> getRegionError;

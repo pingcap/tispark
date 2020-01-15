@@ -35,7 +35,8 @@ import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.CleanupRequest;
 import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
@@ -56,7 +57,7 @@ public class LockResolverClient extends AbstractRegionStoreClient {
   private static final long MAX_LOCK_TTL = 120000;
   // ttl = ttlFactor * sqrt(writeSizeInMiB)
   private static final long TTL_FACTOR = 6000;
-  private static final Logger logger = Logger.getLogger(LockResolverClient.class);
+  private static final Logger logger = LoggerFactory.getLogger(LockResolverClient.class);
 
   private final ReadWriteLock readWriteLock;
   // Note: Because the internal of long is same as unsigned_long
