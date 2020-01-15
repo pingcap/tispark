@@ -65,7 +65,6 @@ case class TiShowTablesCommand(tiContext: TiContext, delegate: ShowTablesCommand
       val information = partition.simpleString
       Seq(Row(database, tableName, isTemp, s"$information\n"))
     }
-
   }
 }
 
