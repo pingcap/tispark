@@ -96,7 +96,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def useStreamingProcess: Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
-  // streaming only support TypeDefault. Even we enable chunk, we should still
+  // streaming only supports TypeDefault. Even we enable chunk, we should still
   // use TypeDefault.
   private def getCodecFormat(): EncodeType = {
     val codecFormatStr =

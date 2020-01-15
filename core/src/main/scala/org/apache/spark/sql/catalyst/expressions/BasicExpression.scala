@@ -89,8 +89,8 @@ object BasicExpression {
       case e @ Multiply(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(ArithmeticBinaryExpression.multiply(TiConverter.fromSparkType(e.dataType), lhs, rhs))
 
-      case Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
-        Some(ArithmeticBinaryExpression.divide(lhs, rhs))
+      case d @ Divide(BasicExpression(lhs), BasicExpression(rhs)) =>
+        Some(ArithmeticBinaryExpression.divide(TiConverter.fromSparkType(d.dataType), lhs, rhs))
 
       case And(BasicExpression(lhs), BasicExpression(rhs)) =>
         Some(LogicalBinaryExpression.and(lhs, rhs))
