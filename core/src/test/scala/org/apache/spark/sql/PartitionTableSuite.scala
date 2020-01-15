@@ -177,46 +177,51 @@ class PartitionTableSuite extends BaseTiSparkTest {
   test("part pruning on date column") {
     enablePartitionForTiDB()
     tidbStmt.execute("DROP TABLE IF EXISTS `pt4`")
-    tidbStmt.execute("""
-                       |CREATE TABLE `pt4` (
-                       |  `id` int(11) DEFAULT NULL,
-                       |  `name` varchar(50) DEFAULT NULL,
-                       |  `purchased` date DEFAULT NULL,
-                       |  index `idx_pur`(`purchased`)
-                       |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
-                       |PARTITION BY RANGE columns (purchased) (
-                       |  PARTITION p0 VALUES LESS THAN ('1995-10-10'),
-                       |  PARTITION p1 VALUES LESS THAN ('2000-10-10'),
-                       |  PARTITION p2 VALUES LESS THAN ('2005-10-10'),
-                       |  PARTITION p3 VALUES LESS THAN maxvalue
-                       |)
+    try {
+      tidbStmt.execute("""
+                         |CREATE TABLE `pt4` (
+                         |  `id` int(11) DEFAULT NULL,
+                         |  `name` varchar(50) DEFAULT NULL,
+                         |  `purchased` date DEFAULT NULL,
+                         |  index `idx_pur`(`purchased`)
+                         |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+                         |PARTITION BY RANGE columns (purchased) (
+                         |  PARTITION p0 VALUES LESS THAN ('1995-10-10'),
+                         |  PARTITION p1 VALUES LESS THAN ('2000-10-10'),
+                         |  PARTITION p2 VALUES LESS THAN ('2005-10-10'),
+                         |  PARTITION p3 VALUES LESS THAN maxvalue
+                         |)
                      """.stripMargin)
-    refreshConnections()
-    assert(
-      extractDAGReq(
-        spark
-          .sql(
-            "select * from pt4 where purchased < date'1994-10-10' or purchased > date'2994-10-10'"
-          )
-      ).getPrunedParts
-        .size() == 2
-    )
+      refreshConnections()
+      assert(
+        extractDAGReq(
+          spark
+            .sql(
+              "select * from pt4 where purchased < date'1994-10-10' or purchased > date'2994-10-10'"
+            )
+        ).getPrunedParts
+          .size() == 2
+      )
 
-    assert(
-      extractDAGReq(
-        spark
-          .sql("select * from pt4 where purchased < date'1994-10-10' and id < 10")
-      ).getPrunedParts
-        .size() == 1
-    )
+      assert(
+        extractDAGReq(
+          spark
+            .sql("select * from pt4 where purchased < date'1994-10-10' and id < 10")
+        ).getPrunedParts
+          .size() == 1
+      )
 
-    assert(
-      extractDAGReq(
-        spark
-          .sql("select * from pt4 where purchased = date'1994-10-10'")
-      ).getPrunedParts
-        .size() == 1
-    )
+      assert(
+        extractDAGReq(
+          spark
+            .sql("select * from pt4 where purchased = date'1994-10-10'")
+        ).getPrunedParts
+          .size() == 1
+      )
+    } catch {
+      case _: java.sql.SQLException =>
+      // ignore SQL exception for old version of TiDB
+    }
   }
 
   test("part pruning on unix_timestamp") {
