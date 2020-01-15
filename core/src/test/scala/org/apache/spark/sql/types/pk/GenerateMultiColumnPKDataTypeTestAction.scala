@@ -83,14 +83,14 @@ trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTyp
   }
 
   def genDescription(dataType: ReflectedDataType): (ReflectedDataType, String, String) = {
-    val len = genLen(dataType)
+    val len = getTypeLength(dataType)
     (dataType, len, "")
   }
 
   def genDescriptionNotNullable(
     dataType: ReflectedDataType
   ): (ReflectedDataType, String, String) = {
-    val len = genLen(dataType)
+    val len = getTypeLength(dataType)
     (dataType, len, "not null")
   }
 

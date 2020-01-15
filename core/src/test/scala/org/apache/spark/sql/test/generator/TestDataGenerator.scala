@@ -62,15 +62,15 @@ object TestDataGenerator {
   val stringAndBinaries: List[ReflectedDataType] = strings ::: binaries
   val charCharset: List[ReflectedDataType] = strings ::: texts
   val binaryCharset: List[ReflectedDataType] = binaries ::: bytes
-  // TODO: support enum and set https://github.com/pingcap/tispark/issues/946
-  // val stringType: List[DataType] = texts ::: strings ::: binaries ::: enums ::: sets
+  val enumAndSets: List[ReflectedDataType] = enums ::: sets
+  // val stringType: List[ReflectedDataType] = texts ::: strings ::: binaries ::: enumAndSets
   val stringType: List[ReflectedDataType] = charCharset ::: binaryCharset
   val varString: List[ReflectedDataType] = List(VARCHAR, VARBINARY)
 
   val unsignedType: List[ReflectedDataType] = numeric
 
   // TODO: support json
-  val allDataTypes: List[ReflectedDataType] = numeric ::: dateAndDateTime ::: stringType
+  val allDataTypes: List[ReflectedDataType] = numeric ::: dateAndDateTime ::: stringType ::: enumAndSets
   // supported data types for generator
   val supportedDataTypes: List[ReflectedDataType] = allDataTypes
 
@@ -86,7 +86,9 @@ object TestDataGenerator {
   //  def isBooleans(dataType: DataType): Boolean = booleans.contains(dataType)
   //  def isIntegers(dataType: DataType): Boolean = integers.contains(dataType)
   def isDecimals(dataType: ReflectedDataType): Boolean = decimals.contains(dataType)
+
   def isDoubles(dataType: ReflectedDataType): Boolean = doubles.contains(dataType)
+
   //  def isTimestamps(dataType: DataType): Boolean = timestamps.contains(dataType)
   //  def isDates(dataType: DataType): Boolean = dates.contains(dataType)
   //  def isDurations(dataType: DataType): Boolean = durations.contains(dataType)
@@ -99,11 +101,18 @@ object TestDataGenerator {
   //  def isSets(dataType: DataType): Boolean = sets.contains(dataType)
   //  def isJsons(dataType: DataType): Boolean = jsons.contains(dataType)
   def isNumeric(dataType: ReflectedDataType): Boolean = numeric.contains(dataType)
+
   def isStringType(dataType: ReflectedDataType): Boolean = stringType.contains(dataType)
+
   def isVarString(dataType: ReflectedDataType): Boolean = varString.contains(dataType)
+
   def isCharCharset(dataType: ReflectedDataType): Boolean = charCharset.contains(dataType)
+
   def isBinaryCharset(dataType: ReflectedDataType): Boolean = binaryCharset.contains(dataType)
+
   def isCharOrBinary(dataType: ReflectedDataType): Boolean = stringAndBinaries.contains(dataType)
+
+  def isEnumOrSet(dataType: ReflectedDataType): Boolean = enumAndSets.contains(dataType)
 
   def getLength(dataType: TiDataType): Long =
     if (dataType.isLengthUnSpecified) {
@@ -111,6 +120,7 @@ object TestDataGenerator {
     } else {
       dataType.getLength
     }
+
   def getDecimal(dataType: TiDataType): Int = dataType.getDecimal
 
   // Generating names
@@ -158,11 +168,11 @@ object TestDataGenerator {
    *     ))
    * }}}
    *
-   * @param database database name
-   * @param table table name
-   * @param r random
+   * @param database                 database name
+   * @param table                    table name
+   * @param r                        random
    * @param dataTypesWithDescription (typeName, lengthDescriptions, extraDescriptions)
-   * @param indices index info, list of column ids chosen (start from 1)
+   * @param indices                  index info, list of column ids chosen (start from 1)
    * @return Generated Schema
    */
   def schemaGenerator(database: String,
@@ -263,7 +273,9 @@ object TestDataGenerator {
             val x = columnDesc(pkColumn)
             columnDesc(pkColumn) = (x._1, x._2, x._3 + " not null")
           }
-          (generateIndexName(columns.map { _._1 }), (columns, idx.isPrimaryKey))
+          (generateIndexName(columns.map {
+            _._1
+          }), (columns, idx.isPrimaryKey))
         }.toMap
 
     Schema(database, table, columnNames, columnDesc.toMap, idxColumns)
@@ -282,14 +294,15 @@ object TestDataGenerator {
   }
 
   def hash(value: Any, len: Int = -1): String = value match {
-    case null            => "null"
-    case any: (Any, Int) => hash(any._1, any._2)
-    case list: List[(Any, Int)] =>
+    case null             => "null"
+    case (v: Any, l: Int) => hash(v, l)
+    case list: List[Any] =>
       val ret = StringBuilder.newBuilder
       ret ++= "("
       for (i <- list.indices) {
         if (i > 0) ret ++= ","
-        ret ++= hash(list(i)._1, list(i)._2)
+        val elem = list(i).asInstanceOf[(Any, Int)]
+        ret ++= hash(elem._1, elem._2)
       }
       ret ++= ")"
       ret.toString
@@ -315,7 +328,7 @@ object TestDataGenerator {
 
   // value may be (Any, Int) or List[(Any, Int)], in this case, it means
   // the value to be hashed is a list of/one unique value(s) with prefix length.
-  def checkUnique(value: Any, set: mutable.Set[Any]): Boolean = {
+  def checkUnique(value: Any, set: mutable.Set[String]): Boolean = {
     val hashedValue = hash(value)
     if (!set.apply(hashedValue)) {
       set += hashedValue
@@ -413,17 +426,18 @@ class TestDataGenerator extends SparkFunSuite {
         Key(List(DefaultColumn(3), DefaultColumn(5)))
       )
     )
-    val answer = """CREATE TABLE `tispark_test`.`test_table` (
-                   |  `col_int0` int not null,
-                   |  `col_int1` int default null,
-                   |  `col_double` double not null default 0.2,
-                   |  `col_varchar` varchar(50) default null,
-                   |  `col_decimal` decimal(20,3) default null,
-                   |  PRIMARY KEY (`col_int0`),
-                   |  KEY `idx_col_int1_col_double`(`col_int1`,`col_double`),
-                   |  KEY `idx_col_varchar`(`col_varchar`(20)),
-                   |  KEY `idx_col_double_col_decimal`(`col_double`,`col_decimal`)
-                   |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin
+    val answer =
+      """CREATE TABLE `tispark_test`.`test_table` (
+        |  `col_int0` int not null,
+        |  `col_int1` int default null,
+        |  `col_double` double not null default 0.2,
+        |  `col_varchar` varchar(50) default null,
+        |  `col_decimal` decimal(20,3) default null,
+        |  PRIMARY KEY (`col_int0`),
+        |  KEY `idx_col_int1_col_double`(`col_int1`,`col_double`),
+        |  KEY `idx_col_varchar`(`col_varchar`(20)),
+        |  KEY `idx_col_double_col_decimal`(`col_double`,`col_decimal`)
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""".stripMargin
     assert(schema.toString === answer)
     assert(schema2.toString === answer)
   }
