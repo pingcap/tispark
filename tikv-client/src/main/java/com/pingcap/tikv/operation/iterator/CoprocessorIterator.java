@@ -168,28 +168,37 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
           long colCount = IntegerCodec.readUVarLongForCHBlock(dataInput);
           long numOfRows = IntegerCodec.readUVarLongForCHBlock(dataInput);
           TiColumnVector[] columnVectors = new TiColumnVector[(int) colCount];
+          String[] colNames = new String[(int) colCount];
+          String[] typeNames = new String[(int) colCount];
 
           for (int columnIdx = 0; columnIdx < colCount; columnIdx++) {
             // reading column name
             long length = IntegerCodec.readUVarLongForCHBlock(dataInput);
+            // for (int i = 0; i < length; i++) {
+            //  dataInput.readByte();
+            // }
+            byte[] colutf8Bytes = new byte[(int) length];
             for (int i = 0; i < length; i++) {
-              dataInput.readByte();
+              colutf8Bytes[i] = dataInput.readByte();
             }
+            String colName = new String(colutf8Bytes, StandardCharsets.US_ASCII);
+            colNames[columnIdx] = colName;
 
             // reading type name
-            length = IntegerCodec.readUVarLongForCHBlock(dataInput);
-            if (length == 0) {
+            long typelength = IntegerCodec.readUVarLongForCHBlock(dataInput);
+            if (typelength == 0) {
               logger.warn("XXXXXXX type name length = 0, maybe something wrong");
             }
-            byte[] utf8Bytes = new byte[(int) length];
-            for (int i = 0; i < length; i++) {
+            byte[] utf8Bytes = new byte[(int) typelength];
+            for (int i = 0; i < typelength; i++) {
               utf8Bytes[i] = dataInput.readByte();
             }
             String typeName = new String(utf8Bytes, StandardCharsets.US_ASCII);
-            logger.warn("TTTTTTT type name length " + length + ", type name " + typeName);
+            logger.warn("TTTTTTT type name length " + typelength + ", type name " + typeName);
             CHType type = CHTypeMapping.parseType(typeName);
             columnVectors[columnIdx] = type.decode(dataInput, (int) numOfRows);
             // TODO this is workaround to bybass nullable type
+            typeNames[columnIdx] = typeName;
           }
           dataInput = new CodecDataInput(new byte[0]);
           return new TiChunk(columnVectors);
