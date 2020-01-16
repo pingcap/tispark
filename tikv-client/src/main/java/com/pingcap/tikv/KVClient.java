@@ -22,7 +22,7 @@ import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.operation.iterator.ConcreteScanIterator;
 import com.pingcap.tikv.region.RegionStoreClient;
-import com.pingcap.tikv.region.RegionStoreClient.*;
+import com.pingcap.tikv.region.RegionStoreClient.RegionStoreClientBuilder;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
@@ -30,7 +30,8 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 
@@ -38,7 +39,7 @@ public class KVClient implements AutoCloseable {
   private final RegionStoreClientBuilder clientBuilder;
   private final TiConfiguration conf;
   private final ExecutorService executorService;
-  private static final Logger logger = Logger.getLogger(KVClient.class);
+  private static final Logger logger = LoggerFactory.getLogger(KVClient.class);
 
   private static final int BATCH_GET_SIZE = 16 * 1024;
 

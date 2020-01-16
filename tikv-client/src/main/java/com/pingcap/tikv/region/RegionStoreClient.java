@@ -36,7 +36,8 @@ import com.pingcap.tikv.util.*;
 import io.grpc.ManagedChannel;
 import java.util.*;
 import java.util.function.Supplier;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Coprocessor;
 import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Coprocessor.Request;
@@ -76,7 +77,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
   private TiStoreType storeType;
 
-  private static final Logger logger = Logger.getLogger(RegionStoreClient.class);
+  private static final Logger logger = LoggerFactory.getLogger(RegionStoreClient.class);
 
   @VisibleForTesting public final LockResolverClient lockResolverClient;
 

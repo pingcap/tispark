@@ -19,7 +19,7 @@ import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
 import java.util.Properties
 
-import org.apache.log4j.Logger
+import org.slf4j.Logger
 
 import scala.collection.JavaConversions._
 

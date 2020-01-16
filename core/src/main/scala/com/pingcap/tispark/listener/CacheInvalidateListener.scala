@@ -21,8 +21,8 @@ import com.pingcap.tikv.event.CacheInvalidateEvent
 import com.pingcap.tikv.region.RegionManager
 import com.pingcap.tispark.accumulator.CacheInvalidateAccumulator
 import com.pingcap.tispark.handler.CacheInvalidateEventHandler
-import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
+import org.slf4j.LoggerFactory
 
 class CacheInvalidateListener()
     extends Serializable
@@ -39,7 +39,7 @@ class CacheInvalidateListener()
 
 object CacheInvalidateListener {
   private var manager: CacheInvalidateListener = _
-  private final val logger = Logger.getLogger(getClass.getName)
+  private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   def getInstance(): CacheInvalidateListener = {
     if (manager == null) {

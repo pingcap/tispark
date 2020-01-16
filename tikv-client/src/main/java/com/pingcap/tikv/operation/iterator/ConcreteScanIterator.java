@@ -30,14 +30,15 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import com.pingcap.tikv.util.Pair;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 import org.tikv.kvproto.Metapb;
 
 public class ConcreteScanIterator extends ScanIterator {
   private final long version;
-  private final Logger logger = Logger.getLogger(ConcreteScanIterator.class);
+  private final Logger logger = LoggerFactory.getLogger(ConcreteScanIterator.class);
 
   public ConcreteScanIterator(
       TiConfiguration conf,

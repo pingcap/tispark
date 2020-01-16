@@ -26,11 +26,12 @@ import com.pingcap.tikv.pd.PDError;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import java.util.function.Function;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Pdpb;
 
 public class PDErrorHandler<RespT> implements ErrorHandler<RespT> {
-  private static final Logger logger = Logger.getLogger(PDErrorHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(PDErrorHandler.class);
   private final Function<RespT, PDError> getError;
   private final PDClient client;
 
