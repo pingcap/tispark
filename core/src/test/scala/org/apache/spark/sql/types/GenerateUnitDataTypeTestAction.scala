@@ -55,21 +55,10 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestG
 
   def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)
 
-  def genLen(dataType: ReflectedDataType): String = {
-    val baseType = getBaseType(dataType)
-    val length = getLength(baseType)
-    dataType match {
-      case DECIMAL                       => s"$length,${getDecimal(baseType)}"
-      case _ if isVarString(dataType)    => s"$length"
-      case _ if isCharOrBinary(dataType) => "10"
-      case _                             => ""
-    }
-  }
-
   def init(): Unit = {
     for (dataType <- dataTypes) {
       val typeName = getTypeName(dataType)
-      val len = genLen(dataType)
+      val len = getTypeLength(dataType)
       val tableName = getTableName(typeName)
       val schema = genSchema(dataType, tableName, len, "")
       val data = genData(schema)
@@ -77,7 +66,7 @@ trait GenerateUnitDataTypeTestAction extends UnitDataTypeTestSpec with BaseTestG
     }
     for (dataType <- unsignedDataTypes) {
       val typeName = getTypeName(dataType)
-      val len = genLen(dataType)
+      val len = getTypeLength(dataType)
       val tableName = getTableNameWithDesc(extraDesc, typeName)
       val schema = genSchema(dataType, tableName, len, extraDesc)
       val data = genData(schema)

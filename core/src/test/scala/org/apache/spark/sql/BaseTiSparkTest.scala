@@ -109,9 +109,12 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     if (tiCatalog
           .catalogOf(Some(dbPrefix + dbName))
           .exists(_.isInstanceOf[TiSessionCatalog])) {
-      tidbConn.setCatalog(dbName)
-      logger.info(s"set catalog to $dbName!")
-      initializeStatement()
+      if (!tidbConn.getCatalog.equals(dbName)) {
+        // reuse previous connection if catalog is not changed
+        logger.info(s"set catalog to $dbName!")
+        tidbConn.setCatalog(dbName)
+        initializeStatement()
+      }
       spark.sql(s"use `$dbPrefix$dbName`")
     } else {
       // should be an existing database in hive/meta_store
@@ -358,14 +361,33 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     var r1: List[List[Any]] = rSpark
     var r2: List[List[Any]] = rJDBC
     var r3: List[List[Any]] = rTiDB
+    val getSparkPlan: String => String = sql =>
+      try {
+        val dataFrame = spark.sql(sql)
+        import org.apache.spark.sql.execution.command.ExplainCommand
+        spark.sessionState
+          .executePlan(ExplainCommand(dataFrame.queryExecution.logical))
+          .executedPlan
+          .executeCollect()
+          .map(_.getString(0))
+          .mkString("\n")
+      } catch {
+        case _: Throwable => ""
+    }
+    var sparkPlan: String = "null"
 
     if (r1 == null) {
       try {
         r1 = queryViaTiSpark(qSpark)
+        sparkPlan = getSparkPlan(qSpark)
       } catch {
         case e: Throwable =>
-          logger.error(s"TiSpark failed when executing: $qSpark")
-          fail(e)
+          try {
+            logger.error(s"TiSpark failed when executing: $qSpark", e)
+            logger.warn("failure detected with plan: \n", sparkPlan)
+          } finally {
+            fail(e)
+          }
       }
     }
 

@@ -49,20 +49,9 @@ trait GenerateMultiColumnDataTypeTestAction
 
   def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)
 
-  def genLen(dataType: ReflectedDataType): String = {
-    val baseType = getBaseType(dataType)
-    val length = getLength(baseType)
-    dataType match {
-      case DECIMAL                       => s"$length,${getDecimal(baseType)}"
-      case _ if isVarString(dataType)    => s"$length"
-      case _ if isCharOrBinary(dataType) => "10"
-      case _                             => ""
-    }
-  }
-
   def init(tableName: String): Unit = {
     val dataTypesWithDescription = dataTypes.map { dataType =>
-      val len = genLen(dataType)
+      val len = getTypeLength(dataType)
       (dataType, len, "")
     }
     val schema = genSchema(tableName, dataTypesWithDescription)
