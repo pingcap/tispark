@@ -35,7 +35,7 @@ public abstract class CHType {
   public abstract DataType toDataType();
 
   protected int bufferSize(int size) {
-    return size << length;
+    return size * length;
   }
 
   public TiBlockColumnVector decode(CodecDataInput cdi, int size) {

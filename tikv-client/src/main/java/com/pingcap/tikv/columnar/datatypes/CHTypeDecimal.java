@@ -20,10 +20,6 @@ public class CHTypeDecimal extends CHType {
     }
   }
 
-  protected int bufferSize(int size) {
-    return size * length;
-  }
-
   @Override
   public String name() {
     return "Decimal(" + precision + ", " + scale + ")";
