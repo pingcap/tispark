@@ -33,10 +33,11 @@ import com.pingcap.tikv.util.Pair;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CatalogTransaction {
-  protected static final Logger logger = Logger.getLogger(CatalogTransaction.class);
+  protected static final Logger logger = LoggerFactory.getLogger(CatalogTransaction.class);
   private final Snapshot snapshot;
 
   CatalogTransaction(Snapshot snapshot) {

@@ -19,7 +19,6 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <protobuf.version>3.1.0</protobuf.version>
         <junit.version>4.12</junit.version>
-        <log4j.version>1.2.17</log4j.version>
         <slf4j.version>1.7.16</slf4j.version>
         <grpc.version>1.17.0</grpc.version>
         <powermock.version>1.6.6</powermock.version>
@@ -59,11 +58,6 @@
             <artifactId>jcl-over-slf4j</artifactId>
             <version>${slf4j.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/net.sf.trove4j/trove4j -->
         <dependency>

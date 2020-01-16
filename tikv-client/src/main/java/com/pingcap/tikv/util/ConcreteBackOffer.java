@@ -23,14 +23,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ConcreteBackOffer implements BackOffer {
   private int maxSleep;
   private int totalSleep;
   private Map<BackOffFunction.BackOffFuncType, BackOffFunction> backOffFunctionMap;
   private List<Exception> errors;
-  private static final Logger logger = Logger.getLogger(ConcreteBackOffer.class);
+  private static final Logger logger = LoggerFactory.getLogger(ConcreteBackOffer.class);
 
   public static ConcreteBackOffer newCustomBackOff(int maxSleep) {
     return new ConcreteBackOffer(maxSleep);

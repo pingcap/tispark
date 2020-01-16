@@ -35,7 +35,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.Metapb.Peer;
 import org.tikv.kvproto.Metapb.Store;
@@ -43,7 +44,7 @@ import org.tikv.kvproto.Metapb.StoreState;
 
 @SuppressWarnings("UnstableApiUsage")
 public class RegionManager {
-  private static final Logger logger = Logger.getLogger(RegionManager.class);
+  private static final Logger logger = LoggerFactory.getLogger(RegionManager.class);
   // TODO: the region cache logic need rewrite.
   // https://github.com/pingcap/tispark/issues/1170
   private final RegionCache cache;

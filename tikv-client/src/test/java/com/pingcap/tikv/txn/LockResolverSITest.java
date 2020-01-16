@@ -29,13 +29,16 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
-import org.tikv.kvproto.Kvrpcpb.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
+import org.tikv.kvproto.Kvrpcpb.Mutation;
+import org.tikv.kvproto.Kvrpcpb.Op;
 
 public class LockResolverSITest extends LockResolverTest {
-  private final Logger logger = Logger.getLogger(this.getClass());
+  private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   @Before
   public void setUp() {
