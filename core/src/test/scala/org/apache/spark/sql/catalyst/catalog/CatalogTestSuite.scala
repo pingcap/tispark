@@ -88,6 +88,27 @@ class CatalogTestSuite extends BaseTiSparkSuite {
     spark.sql("drop table if exists t")
   }
 
+  test("test show hive partition table") {
+    refreshConnections(true)
+    setCurrentDatabase("default")
+    spark.sql("drop table if exists salesdata")
+    spark.sql(
+      "create table salesdata (salesperson_id int, product_id int) partitioned by (date_of_sale string)"
+    )
+    spark.conf.set("hive.exec.dynamic.partition.mode", "nonstrict")
+    spark.sql("insert into table salesdata values(0, 1, '10-27-2017')")
+    spark.sql("insert into table salesdata values(0, 1, '10-28-2017')")
+    spark.sql("insert into table salesdata values(0, 1, '10-29-2017')")
+    val partitionsRes =
+      List(
+        List("date_of_sale=10-27-2017"),
+        List("date_of_sale=10-28-2017"),
+        List("date_of_sale=10-29-2017")
+      )
+    runTest("show partitions salesdata", skipJDBC = true, rTiDB = partitionsRes)
+    spark.sql("drop table if exists salesdata")
+  }
+
   test("test support show columns") {
     val columnNames = List(
       List("id_dt"),
