@@ -486,6 +486,7 @@ public class TiKVScanAnalyzer {
     // Equal conditions needs to be process first according to index sequence
     // When index is null, no access condition can be applied
     ScanSpec.Builder specBuilder = new ScanSpec.Builder(table, index);
+    // todo use the conditions to prune region
     if (!useTiFlash && index != null) {
       Set<Expression> visited = new HashSet<>();
       IndexMatchingLoop:
