@@ -219,12 +219,13 @@ public class TiKVScanAnalyzer {
       TableStatistics tableStatistics,
       TiTimestamp ts,
       TiDAGRequest dagRequest) {
-    TiKVScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
+    TiKVScanPlan minPlan = buildTableScan(conditions, table, tableStatistics, isUseTiFlash);
     if (allowIndexScan && !isUseTiFlash) {
       minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
       double minCost = minPlan.getCost();
       for (TiIndexInfo index : table.getIndices()) {
-        TiKVScanPlan plan = buildIndexScan(columnList, conditions, index, table, tableStatistics);
+        TiKVScanPlan plan =
+            buildIndexScan(columnList, conditions, index, table, tableStatistics, isUseTiFlash);
         if (plan.getCost() < minCost) {
           minPlan = plan;
           minCost = plan.getCost();
@@ -251,9 +252,13 @@ public class TiKVScanAnalyzer {
   }
 
   private TiKVScanPlan buildTableScan(
-      List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
+      List<Expression> conditions,
+      TiTableInfo table,
+      TableStatistics tableStatistics,
+      boolean useTiFlash) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
+    return buildIndexScan(
+        table.getColumns(), conditions, pkIndex, table, tableStatistics, useTiFlash);
   }
 
   TiKVScanPlan buildIndexScan(
@@ -261,12 +266,13 @@ public class TiKVScanAnalyzer {
       List<Expression> conditions,
       TiIndexInfo index,
       TiTableInfo table,
-      TableStatistics tableStatistics) {
+      TableStatistics tableStatistics,
+      boolean useTiFlash) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
     TiKVScanPlan.Builder planBuilder = TiKVScanPlan.Builder.newBuilder();
-    ScanSpec result = extractConditions(conditions, table, index);
+    ScanSpec result = extractConditions(conditions, table, index, useTiFlash);
 
     double cost = SelectivityCalculator.calcPseudoSelectivity(result);
     planBuilder.setCost(cost);
@@ -463,6 +469,11 @@ public class TiKVScanAnalyzer {
   @VisibleForTesting
   public static ScanSpec extractConditions(
       List<Expression> conditions, TiTableInfo table, TiIndexInfo index) {
+    return extractConditions(conditions, table, index, false);
+  }
+
+  public static ScanSpec extractConditions(
+      List<Expression> conditions, TiTableInfo table, TiIndexInfo index, boolean useTiFlash) {
     // 0. Different than TiDB implementation, here logic has been unified for TableScan and
     // IndexScan by
     // adding fake index on clustered table's pk
@@ -475,7 +486,8 @@ public class TiKVScanAnalyzer {
     // Equal conditions needs to be process first according to index sequence
     // When index is null, no access condition can be applied
     ScanSpec.Builder specBuilder = new ScanSpec.Builder(table, index);
-    if (index != null) {
+    // todo use the conditions to prune region
+    if (!useTiFlash && index != null) {
       Set<Expression> visited = new HashSet<>();
       IndexMatchingLoop:
       for (int i = 0; i < index.getIndexColumns().size(); i++) {
