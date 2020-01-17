@@ -185,7 +185,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
             for (int i = 0; i < length; i++) {
               utf8Bytes[i] = dataInput.readByte();
             }
-            String typeName = new String(utf8Bytes, StandardCharsets.US_ASCII);
+            String typeName = new String(utf8Bytes, StandardCharsets.UTF_8);
             logger.warn("TTTTTTT type name length " + length + ", type name " + typeName);
             CHType type = CHTypeMapping.parseType(typeName);
             columnVectors[columnIdx] = type.decode(dataInput, (int) numOfRows);
