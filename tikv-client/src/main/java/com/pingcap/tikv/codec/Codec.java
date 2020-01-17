@@ -210,17 +210,6 @@ public class Codec {
       }
       throw new InvalidCodecFormatException("readUVarLong encountered unfinished data");
     }
-
-    public static long readUVarLongForCHBlock(CodecDataInput cdi) {
-      long value = 0;
-      int i = 0;
-      long b;
-      while (((b = cdi.readByte() & 0xFF) & 0x80) != 0) {
-        value |= (b & 0x7F) << i;
-        i += 7;
-      }
-      return value | (b << i);
-    }
   }
 
   public static class BytesCodec {

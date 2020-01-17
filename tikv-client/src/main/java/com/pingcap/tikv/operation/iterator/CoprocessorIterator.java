@@ -37,12 +37,13 @@ import com.pingcap.tikv.row.RowReaderFactory;
 import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.util.CHTypeMapping;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public abstract class CoprocessorIterator<T> implements Iterator<T> {
   protected final TiSession session;
@@ -165,19 +166,19 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
           return new TiChunk(columnarVectors);
         } else {
           // reading column count
-          long colCount = IntegerCodec.readUVarLongForCHBlock(dataInput);
-          long numOfRows = IntegerCodec.readUVarLongForCHBlock(dataInput);
+          long colCount = IntegerCodec.readUVarLong(dataInput);
+          long numOfRows = IntegerCodec.readUVarLong(dataInput);
           TiColumnVector[] columnVectors = new TiColumnVector[(int) colCount];
 
           for (int columnIdx = 0; columnIdx < colCount; columnIdx++) {
             // reading column name
-            long length = IntegerCodec.readUVarLongForCHBlock(dataInput);
+            long length = IntegerCodec.readUVarLong(dataInput);
             for (int i = 0; i < length; i++) {
               dataInput.readByte();
             }
 
             // reading type name
-            length = IntegerCodec.readUVarLongForCHBlock(dataInput);
+            length = IntegerCodec.readUVarLong(dataInput);
             if (length == 0) {
               logger.warn("XXXXXXX type name length = 0, maybe something wrong");
             }
