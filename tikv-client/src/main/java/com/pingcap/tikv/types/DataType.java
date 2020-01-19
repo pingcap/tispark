@@ -259,7 +259,7 @@ public abstract class DataType implements Serializable {
   }
 
   // all data should be read in little endian.
-  public TiChunkColumnVector decodeColumn(CodecDataInput cdi) {
+  public TiChunkColumnVector decodeChunkColumn(CodecDataInput cdi) {
     int numRows = readIntLittleEndian(cdi);
     int numNulls = readIntLittleEndian(cdi);
     assert (numRows >= 0) && (numNulls >= 0);

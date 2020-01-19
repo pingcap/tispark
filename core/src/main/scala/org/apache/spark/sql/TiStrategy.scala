@@ -96,8 +96,26 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def useStreamingProcess: Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
-  private def isEnableChunk: Boolean =
-    sqlConf.getConfString(TiConfigConst.ENABLE_CHUNK, "true").toLowerCase.toBoolean
+  // streaming only supports TypeDefault. Even we enable chunk, we should still
+  // use TypeDefault.
+  private def getCodecFormat(): EncodeType = {
+    val codecFormatStr =
+      sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "chblock").toLowerCase
+    if (useStreamingProcess) {
+      return EncodeType.TypeDefault
+    }
+    codecFormatStr match {
+      case "chunk" =>
+        EncodeType.TypeChunk
+      case "chblock" =>
+        if (isUseTiFlash) {
+          EncodeType.TypeCHBlock
+        } else {
+          EncodeType.TypeChunk
+        }
+      case _ => EncodeType.TypeDefault
+    }
+  }
 
   private def isUseTiFlash: Boolean =
     sqlConf.getConfString(TiConfigConst.USE_TIFLASH, "false").toLowerCase.toBoolean
@@ -109,16 +127,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     val hours = TimeUnit.MILLISECONDS.toHours(offsetInMilliseconds).toInt
     val seconds = hours * 3600
     seconds
-  }
-
-  // streaming only support TypeDefault. Even we enable chunk, we should still
-  // use TypeDefault.
-  private def encodeType(): EncodeType = {
-    if (isEnableChunk && !useStreamingProcess) {
-      EncodeType.TypeChunk
-    } else {
-      EncodeType.TypeDefault
-    }
   }
 
   private def pushDownType(): PushDownType =
@@ -198,7 +206,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     aggregates: Seq[AggregateExpression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest =
-      new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
+      new TiDAGRequest(pushDownType(), getCodecFormat(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
     aggregates.map { _.aggregateFunction }.foreach { expr =>
       ExprUtils.transformAggExprToTiAgg(expr, source.table, dagRequest)
@@ -241,7 +249,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     filters: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest =
-      new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
+      new TiDAGRequest(pushDownType(), getCodecFormat(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpression] = filters.map {
       ExprUtils.transformFilter(_, source.table, dagRequest)
@@ -272,7 +280,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     source: TiDBRelation,
     sortOrder: Seq[SortOrder]
   ): SparkPlan = {
-    val request = new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
+    val request = new TiDAGRequest(pushDownType(), getCodecFormat(), timeZoneOffsetInSeconds())
     request.setLimit(limit)
     ExprUtils.transformSortOrderToTiOrderBy(request, sortOrder, source.table)
 
@@ -361,7 +369,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest =
-      new TiDAGRequest(pushDownType(), encodeType(), timeZoneOffsetInSeconds())
+      new TiDAGRequest(pushDownType(), getCodecFormat(), timeZoneOffsetInSeconds())
   ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))

@@ -28,7 +28,7 @@ object TiConfigConst {
   val REQUEST_ISOLATION_LEVEL: String = "spark.tispark.request.isolation.level"
   val ALLOW_INDEX_READ: String = "spark.tispark.plan.allow_index_read"
   val COPROCESS_STREAMING: String = "spark.tispark.coprocess.streaming"
-  val ENABLE_CHUNK: String = "spark.tispark.coprocess.chunk"
+  val CODEC_FORMAT: String = "spark.tispark.coprocess.codec_format"
   val UNSUPPORTED_PUSHDOWN_EXPR: String = "spark.tispark.plan.unsupported_pushdown_exprs"
   val CHUNK_BATCH_SIZE: String = "spark.tispark.coprocessor.chunk_batch_size"
   val REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD: String = "spark.tispark.plan.downgrade.index_threshold"
@@ -43,6 +43,7 @@ object TiConfigConst {
   val TIKV_REGION_SPLIT_SIZE_IN_MB: String = "spark.tispark.tikv.region_split_size_in_mb"
   val USE_TIFLASH: String = "spark.tispark.use.tiflash"
   val ENABLE_TIFLASH_TEST: String = "spark.tispark.enable.tiflash_test"
+  val PARTITION_PER_SPLIT: String = "spark.tispark.partition_per_split"
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"

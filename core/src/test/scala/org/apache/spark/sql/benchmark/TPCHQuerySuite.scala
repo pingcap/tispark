@@ -17,6 +17,7 @@
 
 package org.apache.spark.sql.benchmark
 
+import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.util.resourceToString
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCRelation
