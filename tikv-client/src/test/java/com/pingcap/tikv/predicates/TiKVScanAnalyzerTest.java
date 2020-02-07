@@ -271,8 +271,7 @@ public class TiKVScanAnalyzerTest {
     TiIndexInfo index = TiIndexInfo.generateFakePrimaryKeyIndex(table);
     TiKVScanAnalyzer scanBuilder = new TiKVScanAnalyzer();
     TiKVScanAnalyzer.TiKVScanPlan scanPlan =
-        scanBuilder.buildIndexScan(
-            ImmutableList.of(), ImmutableList.of(), index, table, null, false);
+        scanBuilder.buildIndexScan(ImmutableList.of(), ImmutableList.of(), index, table, null);
 
     ByteString startKey = RowKey.toRowKey(table.getId(), Long.MIN_VALUE).toByteString();
     ByteString endKey = RowKey.createBeyondMax(table.getId()).toByteString();
