@@ -214,6 +214,10 @@ public class RegionManager {
           }
         }
       }
+      if (store == null) {
+        // clear the region cache so we may get the learner peer next time
+        cache.invalidateRegion(region.getId());
+      }
     }
 
     if (store == null) {
