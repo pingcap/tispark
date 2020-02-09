@@ -5,7 +5,7 @@ import com.pingcap.tikv.types.DateTimeType;
 
 public class CHTypeDateTime extends CHType {
   public CHTypeDateTime() {
-    this.length = 8 << 2;
+    this.length = 4;
   }
 
   @Override
