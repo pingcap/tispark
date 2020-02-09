@@ -194,14 +194,14 @@ public class TiBlockColumnVector extends TiColumnVector {
     if (type instanceof AbstractDateTimeType) {
       return getDateTime(rowId);
     }
-    if (fixedLength == 0) {
+    if (fixedLength == 1) {
       return getByte(rowId);
-    } else if (fixedLength == 1) {
-      return getShort(rowId);
     } else if (fixedLength == 2) {
+      return getShort(rowId);
+    } else if (fixedLength == 4) {
       return getInt(rowId);
-    } else if (fixedLength == 3) {
-      return MemoryUtil.getLong(dataAddr + (rowId << fixedLength));
+    } else if (fixedLength == 8) {
+      return MemoryUtil.getLong(dataAddr + (rowId * fixedLength));
     }
     throw new UnsupportedOperationException(
         String.format("getting long with fixed length %d", fixedLength));
@@ -213,7 +213,7 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public float getFloat(int rowId) {
-    return MemoryUtil.getFloat(dataAddr + (rowId << fixedLength));
+    return MemoryUtil.getFloat(dataAddr + (rowId * fixedLength));
   }
 
   /**
@@ -222,7 +222,7 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public double getDouble(int rowId) {
-    return MemoryUtil.getDouble(dataAddr + (rowId << fixedLength));
+    return MemoryUtil.getDouble(dataAddr + (rowId * fixedLength));
   }
 
   /**

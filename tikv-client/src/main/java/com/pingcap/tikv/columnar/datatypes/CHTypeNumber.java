@@ -24,7 +24,7 @@ public abstract class CHTypeNumber extends CHType {
 
   public static class CHTypeUInt16 extends CHTypeNumber {
     public CHTypeUInt16() {
-      this.length = 8 << 1;
+      this.length = 2;
     }
 
     @Override
@@ -35,7 +35,7 @@ public abstract class CHTypeNumber extends CHType {
 
   public static class CHTypeUInt32 extends CHTypeNumber {
     public CHTypeUInt32() {
-      this.length = 8 << 2;
+      this.length = 4;
     }
 
     @Override
@@ -46,7 +46,7 @@ public abstract class CHTypeNumber extends CHType {
 
   public static class CHTypeUInt64 extends CHTypeNumber {
     public CHTypeUInt64() {
-      this.length = 8 << 3;
+      this.length = 8;
     }
 
     @Override
@@ -74,7 +74,7 @@ public abstract class CHTypeNumber extends CHType {
   public static class CHTypeInt16 extends CHTypeNumber {
 
     public CHTypeInt16() {
-      this.length = 8 << 1;
+      this.length = 2;
     }
 
     @Override
@@ -85,7 +85,7 @@ public abstract class CHTypeNumber extends CHType {
 
   public static class CHTypeInt32 extends CHTypeNumber {
     public CHTypeInt32() {
-      this.length = 8 << 2;
+      this.length = 4;
     }
 
     @Override
@@ -96,7 +96,7 @@ public abstract class CHTypeNumber extends CHType {
 
   public static class CHTypeInt64 extends CHTypeNumber {
     public CHTypeInt64() {
-      this.length = 8 << 3;
+      this.length = 8;
     }
 
     @Override
@@ -107,7 +107,7 @@ public abstract class CHTypeNumber extends CHType {
 
   public static class CHTypeFloat32 extends CHTypeNumber {
     public CHTypeFloat32() {
-      this.length = 8 << 2;
+      this.length = 4;
     }
 
     @Override
@@ -118,7 +118,7 @@ public abstract class CHTypeNumber extends CHType {
 
   public static class CHTypeFloat64 extends CHTypeNumber {
     public CHTypeFloat64() {
-      this.length = 8 << 3;
+      this.length = 8;
     }
 
     @Override
