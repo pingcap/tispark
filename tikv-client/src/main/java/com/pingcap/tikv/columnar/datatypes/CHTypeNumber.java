@@ -13,7 +13,7 @@ public abstract class CHTypeNumber extends CHType {
 
   public static class CHTypeUInt8 extends CHTypeNumber {
     public CHTypeUInt8() {
-      this.length = 8;
+      this.length = 1;
     }
 
     @Override
@@ -62,7 +62,7 @@ public abstract class CHTypeNumber extends CHType {
 
   public static class CHTypeInt8 extends CHTypeNumber {
     public CHTypeInt8() {
-      this.length = 8;
+      this.length = 1;
     }
 
     @Override
