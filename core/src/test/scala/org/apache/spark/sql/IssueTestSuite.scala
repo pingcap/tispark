@@ -19,6 +19,28 @@ import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.sql.functions.{col, sum}
 
 class IssueTestSuite extends BaseTiSparkSuite {
+  test("fix partition table pruning when partdef contains bigint") {
+    tidbStmt.execute("DROP TABLE IF EXISTS t")
+    tidbStmt.execute(
+      """
+        |CREATE TABLE `t` (
+        |`xh` int(11) DEFAULT NULL,
+        |`pt` bigint(20) DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+        |PARTITION BY RANGE ( `pt` ) (PARTITION p202112 VALUES LESS THAN (20211201000000)
+        |)
+      """.stripMargin
+    )
+    //error
+    tidbStmt.execute("insert into t(xh, pt) values(1, 20211200000000)")
+
+    //error
+    tidbStmt.execute("insert into t(xh, pt) values(1, 202112)")
+
+    sql("select xh, pt from t").show()
+    sql("select xh, pt from t where xh=1").show()
+  }
+
   // https://github.com/pingcap/tispark/issues/1186
   test("Consider nulls order when performing TopN") {
     // table `full_data_type_table` contains a single line of nulls

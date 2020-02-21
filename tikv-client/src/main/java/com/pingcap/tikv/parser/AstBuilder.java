@@ -3,8 +3,6 @@ package com.pingcap.tikv.parser;
 import static com.pingcap.tikv.types.IntegerType.BOOLEAN;
 
 import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.pingcap.tikv.exception.UnsupportedSyntaxException;
 import com.pingcap.tikv.expression.ArithmeticBinaryExpression;
 import com.pingcap.tikv.expression.ColumnRef;
@@ -80,12 +78,12 @@ public class AstBuilder extends MySqlParserBaseVisitor<Expression> {
 
   private Expression parseIntOrLongOrDec(String val) {
     try {
-      return Constant.create(Ints.tryParse(val), IntegerType.INT);
+      return Constant.create(Integer.parseInt(val), IntegerType.INT);
     } catch (Exception e) {
       try {
-        return Constant.create(Longs.tryParse(val), IntegerType.BIGINT);
+        return Constant.create(Long.parseLong(val), IntegerType.BIGINT);
       } catch (Exception e2) {
-        return Constant.create(Doubles.tryParse(val), RealType.DOUBLE);
+        return Constant.create(Double.parseDouble(val), RealType.DOUBLE);
       }
     }
   }
