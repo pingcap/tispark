@@ -198,7 +198,7 @@ public class PrunedPartitionBuilder extends RangeSetBuilder<Long> {
     }
 
     List<String> columnInfos = tableInfo.getPartitionInfo().getColumns();
-    boolean isRangeCol = columnInfos != null & columnInfos.size() > 0;
+    boolean isRangeCol = columnInfos != null && columnInfos.size() > 0;
     if (isRangeCol) {
       // TODO: range column partition pruning will be support later.
       // pruning can also be performed for WHERE conditions that involve comparisons of the
