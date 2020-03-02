@@ -16,9 +16,10 @@ package org.apache.spark.sql.execution.command
 
 import com.pingcap.tispark.utils.ReflectionUtil._
 import org.apache.spark.sql.catalyst.TableIdentifier
-import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
+import org.apache.spark.sql.catalyst.analysis.{NoSuchDatabaseException, UnresolvedAttribute}
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.sql.catalyst.plans.logical.Histogram
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructType}
 import org.apache.spark.sql.{AnalysisException, Row, SparkSession, TiContext}
 
@@ -181,6 +182,90 @@ case class TiDescribeTablesCommand(tiContext: TiContext, delegate: DescribeTable
     }
   }
 
+}
+
+/**
+ * CHECK Spark [[org.apache.spark.sql.execution.command.DescribeColumnCommand]]
+ *
+ * @param tiContext tiContext which contains our catalog info
+ * @param delegate original DescribeColumnCommand
+ */
+case class TiDescribeColumnCommand(tiContext: TiContext, delegate: DescribeColumnCommand)
+    extends TiCommand(delegate) {
+
+  private def getDatabaseFromIdentifier(tableIdentifier: TableIdentifier): String =
+    tableIdentifier.database.getOrElse(tiCatalog.getCurrentDatabase)
+
+  override def run(sparkSession: SparkSession): Seq[Row] = {
+    val resolver = sparkSession.sessionState.conf.resolver
+
+    val tableIdentifier = delegate.table
+    val tableWithDBName = tableIdentifier.database match {
+      case Some(_) => tableIdentifier
+      case None =>
+        val dbName = getDatabaseFromIdentifier(tableIdentifier)
+        TableIdentifier(tableIdentifier.table, Some(dbName))
+    }
+
+    val relation = sparkSession.table(tableWithDBName).queryExecution.analyzed
+
+    val colName = UnresolvedAttribute(delegate.colNameParts).name
+    val field = {
+      relation.resolve(delegate.colNameParts, resolver).getOrElse {
+        throw new AnalysisException(s"Column $colName does not exist")
+      }
+    }
+    if (!field.isInstanceOf[Attribute]) {
+      // If the field is not an attribute after `resolve`, then it's a nested field.
+      throw new AnalysisException(
+        s"DESC TABLE COLUMN command does not support nested data types: $colName"
+      )
+    }
+
+    val catalogTable = tiCatalog.getTempViewOrPermanentTableMetadata(delegate.table)
+    val colStats = catalogTable.stats.map(_.colStats).getOrElse(Map.empty)
+    val cs = colStats.get(field.name)
+
+    val comment = if (field.metadata.contains("comment")) {
+      Option(field.metadata.getString("comment"))
+    } else {
+      None
+    }
+
+    val buffer = ArrayBuffer[Row](
+      Row("col_name", field.name),
+      Row("data_type", field.dataType.catalogString),
+      Row("comment", comment.getOrElse("NULL"))
+    )
+    if (delegate.isExtended) {
+      // Show column stats when EXTENDED or FORMATTED is specified.
+      buffer += Row("min", cs.flatMap(_.min.map(_.toString)).getOrElse("NULL"))
+      buffer += Row("max", cs.flatMap(_.max.map(_.toString)).getOrElse("NULL"))
+      buffer += Row("num_nulls", cs.map(_.nullCount.toString).getOrElse("NULL"))
+      buffer += Row("distinct_count", cs.map(_.distinctCount.toString).getOrElse("NULL"))
+      buffer += Row("avg_col_len", cs.map(_.avgLen.toString).getOrElse("NULL"))
+      buffer += Row("max_col_len", cs.map(_.maxLen.toString).getOrElse("NULL"))
+      val histDesc = for {
+        c <- cs
+        hist <- c.histogram
+      } yield histogramDescription(hist)
+      buffer ++= histDesc.getOrElse(Seq(Row("histogram", "NULL")))
+    }
+    buffer
+  }
+
+  private def histogramDescription(histogram: Histogram): Seq[Row] = {
+    val header =
+      Row("histogram", s"height: ${histogram.height}, num_of_bins: ${histogram.bins.length}")
+    val bins = histogram.bins.zipWithIndex.map {
+      case (bin, index) =>
+        Row(
+          s"bin_$index",
+          s"lower_bound: ${bin.lo}, upper_bound: ${bin.hi}, distinct_count: ${bin.ndv}"
+        )
+    }
+    header +: bins
+  }
 }
 
 /**
