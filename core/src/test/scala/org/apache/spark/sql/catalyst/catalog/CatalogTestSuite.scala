@@ -369,6 +369,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
       """.stripMargin
     )
 
+    setCurrentDatabase("tispark_test")
     // column does not exist
     intercept[AnalysisException] {
       spark.sql("desc t a").show()
@@ -380,6 +381,7 @@ class CatalogTestSuite extends BaseTiSparkTest {
       skipJDBC = true,
       rTiDB = expectedDescExtendedTableColumn
     )
+    spark.sql("drop table if exists t")
   }
 
   override def beforeAll(): Unit = {
