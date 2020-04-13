@@ -80,7 +80,7 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 | < 1.2 | v2.1.8 | v2.1.8 | v2.1.8 |
 | 1.2.x | v2.1.x | v2.1.x | v2.1.x |
 | 2.x | v3.0.2 | v3.0.2 | v3.0.2 |
-| Latest (master) | Latest | Latest | Latest |
+| Latest (master) | v3.0.12 | v3.0.12 | v3.0.12 |
 
 ## Spark versions supported by TiSpark
 
