@@ -314,8 +314,10 @@ class TiBatchWrite(@transient val df: DataFrame,
       wrappedEncodedRdd
     }
 
+    val simplifiedWrappedEncodedRowRdd = encodedTiRowRDD.map(row =>
+        SimplifiedWrappedEncodedRow(row.handle, row.encodedKey, row.encodedValue))
     // shuffle data in same task which belong to same region
-    val shuffledRDD = shuffleKeyToSameRegion(encodedTiRowRDD).cache()
+    val shuffledRDD = shuffleKeyToSameRegion(simplifiedWrappedEncodedRowRdd).cache()
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
@@ -345,6 +347,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
 
+    df.repartition(10)
     // executors secondary pre-write
     finalWriteRDD.foreachPartition { iterator =>
       val ti2PCClientOnExecutor =
@@ -578,7 +581,7 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   @throws(classOf[NoSuchTableException])
-  private def shuffleKeyToSameRegion(rdd: RDD[WrappedEncodedRow]): RDD[WrappedEncodedRow] = {
+  private def shuffleKeyToSameRegion(rdd: RDD[SimplifiedWrappedEncodedRow]): RDD[SimplifiedWrappedEncodedRow] = {
     val regions = getRegions
     val tiRegionPartitioner = new TiRegionPartitioner(regions, options.writeConcurrency)
 
@@ -908,6 +911,14 @@ case class WrappedEncodedRow(row: TiRow,
                              remove: Boolean)
     extends Ordered[WrappedEncodedRow] {
   override def compare(that: WrappedEncodedRow): Int = this.handle.toInt - that.handle.toInt
+}
+
+case class SimplifiedWrappedEncodedRow(
+                             handle: Long,
+                             encodedKey: SerializableKey,
+                             encodedValue: Array[Byte])
+  extends Ordered[SimplifiedWrappedEncodedRow] {
+  override def compare(that: SimplifiedWrappedEncodedRow): Int = this.handle.toInt - that.handle.toInt
 }
 
 class SerializableKey(val bytes: Array[Byte]) extends Serializable {
