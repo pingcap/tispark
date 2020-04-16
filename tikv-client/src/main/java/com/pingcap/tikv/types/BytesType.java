@@ -54,6 +54,11 @@ public class BytesType extends DataType {
   }
 
   @Override
+  public boolean isPushDownSupported() {
+    return false;
+  }
+
+  @Override
   public long getSize() {
     if (isLengthUnSpecified()) {
       return getPrefixSize() + getDefaultDataSize();
