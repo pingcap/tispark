@@ -248,6 +248,9 @@ public class TiDAGRequest implements Serializable {
           // We haven't changed the field name in protobuf file, but
           // we need to set this to true in order to retrieve the handle,
           // so the name 'setPkHandle' may sounds strange.
+          .setTp(8)
+          .setColumnLen(20)
+          .setFlag(2)
           .build();
 
   public DAGRequest buildIndexScan() {
