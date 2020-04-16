@@ -589,6 +589,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     rdd
       .map(obj => (obj.encodedKey, obj))
+      // remove duplicate rows if key equals (should not happen, cause already deduplicated)
       .reduceByKey(
         tiRegionPartitioner,
         (a: SimplifiedWrappedEncodedRow, _: SimplifiedWrappedEncodedRow) => a
