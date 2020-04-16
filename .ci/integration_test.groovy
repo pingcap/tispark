@@ -151,6 +151,17 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         unstash 'tispark'
     
                         try {
+                            if(TIDB_BRANCH.contains("4.0") && TIKV_BRANCH.contains("4.0") && PD_BRANCH.contains("4.0")) {
+                                sh """
+                                rm go/src/github.com/pingcap/tispark/config/pd.toml
+                                rm go/src/github.com/pingcap/tispark/config/tikv.toml
+                                rm go/src/github.com/pingcap/tispark/config/tidb.toml
+                                mv go/src/github.com/pingcap/tispark/config/pd-4.0.toml go/src/github.com/pingcap/tispark/config/pd.toml
+                                mv go/src/github.com/pingcap/tispark/config/tikv-4.0.toml go/src/github.com/pingcap/tispark/config/tikv.toml
+                                mv go/src/github.com/pingcap/tispark/config/tidb-4.0.toml go/src/github.com/pingcap/tispark/config/tidb.toml
+                                """
+                            }
+
                             sh """
                             sudo sysctl -w net.ipv4.ip_local_port_range='10000 30000'
                             killall -9 tidb-server || true
