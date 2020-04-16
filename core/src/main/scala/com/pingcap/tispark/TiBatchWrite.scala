@@ -912,6 +912,8 @@ case class WrappedEncodedRow(row: TiRow,
                              remove: Boolean)
     extends Ordered[WrappedEncodedRow] {
   override def compare(that: WrappedEncodedRow): Int = this.handle.toInt - that.handle.toInt
+
+  override def hashCode(): Int = encodedKey.hashCode()
 }
 
 case class SimplifiedWrappedEncodedRow(handle: Long,
@@ -920,6 +922,8 @@ case class SimplifiedWrappedEncodedRow(handle: Long,
     extends Ordered[SimplifiedWrappedEncodedRow] {
   override def compare(that: SimplifiedWrappedEncodedRow): Int =
     this.handle.toInt - that.handle.toInt
+
+  override def hashCode(): Int = encodedKey.hashCode()
 }
 
 class SerializableKey(val bytes: Array[Byte]) extends Serializable {
