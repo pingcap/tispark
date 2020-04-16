@@ -589,12 +589,11 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     rdd
       .map(obj => (obj.encodedKey, obj))
-      .groupByKey(tiRegionPartitioner)
-      .map {
-        case (_, iterable) =>
-          // remove duplicate rows if key equals (should not happen, cause already deduplicated)
-          iterable.head
-      }
+      .reduceByKey(
+        tiRegionPartitioner,
+        (a: SimplifiedWrappedEncodedRow, _: SimplifiedWrappedEncodedRow) => a
+      )
+      .map(_._2)
   }
 
   private def getRegions: List[TiRegion] = {
