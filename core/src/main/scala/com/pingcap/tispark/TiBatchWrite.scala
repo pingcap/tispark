@@ -315,7 +315,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     val simplifiedWrappedEncodedRowRdd = encodedTiRowRDD.map(
-      row => SimplifiedWrappedEncodedRow(row.handle, row.encodedKey, row.encodedValue)
+      row => SimplifiedWrappedEncodedRow(row.encodedKey, row.encodedValue)
     )
     // shuffle data in same task which belong to same region
     val shuffledRDD = shuffleKeyToSameRegion(simplifiedWrappedEncodedRowRdd).cache()
@@ -327,16 +327,15 @@ class TiBatchWrite(@transient val df: DataFrame,
         logger.warn("there is no data in source rdd")
         return
       } else {
-        val one = takeOne(0)
-        (one.encodedKey, one.encodedValue)
+        takeOne(0)
       }
     }
 
     logger.info(s"primary key: $primaryKey primary row: $primaryRow")
 
     // filter primary key
-    val finalWriteRDD = shuffledRDD.filter { wrappedEncodedRow =>
-      !wrappedEncodedRow.encodedKey.equals(primaryKey)
+    val secondaryKeysRDD = shuffledRDD.filter { keyValue =>
+      !keyValue._1.equals(primaryKey)
     }
 
     val startTs = startTimeStamp.getVersion
@@ -349,14 +348,14 @@ class TiBatchWrite(@transient val df: DataFrame,
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
 
     // executors secondary pre-write
-    finalWriteRDD.foreachPartition { iterator =>
+    secondaryKeysRDD.foreachPartition { iterator =>
       val ti2PCClientOnExecutor =
         new TwoPhaseCommitter(tiConf, startTs, options.lockTTLSeconds * 1000)
 
-      val pairs = iterator.map { wrappedEncodedRow =>
+      val pairs = iterator.map { keyValue =>
         new TwoPhaseCommitter.BytePairWrapper(
-          wrappedEncodedRow.encodedKey.bytes,
-          wrappedEncodedRow.encodedValue
+          keyValue._1.bytes,
+          keyValue._2
         )
       }.asJava
 
@@ -389,11 +388,11 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // executors secondary commit
     if (!options.skipCommitSecondaryKey) {
-      finalWriteRDD.foreachPartition { iterator =>
+      secondaryKeysRDD.foreachPartition { iterator =>
         val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
 
-        val keys = iterator.map { wrappedEncodedRow =>
-          new TwoPhaseCommitter.ByteWrapper(wrappedEncodedRow.encodedKey.bytes)
+        val keys = iterator.map { keyValue =>
+          new TwoPhaseCommitter.ByteWrapper(keyValue._1.bytes)
         }.asJava
 
         try {
@@ -583,18 +582,17 @@ class TiBatchWrite(@transient val df: DataFrame,
   @throws(classOf[NoSuchTableException])
   private def shuffleKeyToSameRegion(
     rdd: RDD[SimplifiedWrappedEncodedRow]
-  ): RDD[SimplifiedWrappedEncodedRow] = {
+  ): RDD[(SerializableKey, Array[Byte])] = {
     val regions = getRegions
     val tiRegionPartitioner = new TiRegionPartitioner(regions, options.writeConcurrency)
 
     rdd
-      .map(obj => (obj.encodedKey, obj))
+      .map(obj => (obj.encodedKey, obj.encodedValue))
       // remove duplicate rows if key equals (should not happen, cause already deduplicated)
       .reduceByKey(
         tiRegionPartitioner,
-        (a: SimplifiedWrappedEncodedRow, _: SimplifiedWrappedEncodedRow) => a
+        (a: Array[Byte], _: Array[Byte]) => a
       )
-      .map(_._2)
   }
 
   private def getRegions: List[TiRegion] = {
@@ -916,13 +914,9 @@ case class WrappedEncodedRow(row: TiRow,
   override def hashCode(): Int = encodedKey.hashCode()
 }
 
-case class SimplifiedWrappedEncodedRow(handle: Long,
-                                       encodedKey: SerializableKey,
-                                       encodedValue: Array[Byte])
-    extends Ordered[SimplifiedWrappedEncodedRow] {
-  override def compare(that: SimplifiedWrappedEncodedRow): Int =
-    this.handle.toInt - that.handle.toInt
-
+// SimplifiedWrappedEncodedRow is used at last stage if write process.
+// At this stage, sorting should not be happened anymore.
+case class SimplifiedWrappedEncodedRow(encodedKey: SerializableKey, encodedValue: Array[Byte]) {
   override def hashCode(): Int = encodedKey.hashCode()
 }
 
