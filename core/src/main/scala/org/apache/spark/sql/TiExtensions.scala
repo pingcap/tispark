@@ -1,21 +1,21 @@
 package org.apache.spark.sql
 
-import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.extensions.{TiDDLRule, TiParser, TiResolutionRule}
 
 import scala.collection.mutable
 
 class TiExtensions extends (SparkSessionExtensions => Unit) {
+  private val tiContextMap = mutable.HashMap.empty[SparkSession, TiContext]
 
-  private var tiContext: TiContext = _
-
-  def getOrCreateTiContext(sparkSession: SparkSession): TiContext = {
-    TiUtil.registerUDFs(sparkSession)
-
-    if (tiContext == null) {
-      tiContext = new TiContext(sparkSession)
+  def getOrCreateTiContext(sparkSession: SparkSession): TiContext = synchronized {
+    tiContextMap.get(sparkSession) match {
+      case Some(tiContext) => tiContext
+      case None            =>
+        // TODO: make Meta and RegionManager independent to sparkSession
+        val tiContext = new TiContext(sparkSession)
+        tiContextMap.put(sparkSession, tiContext)
+        tiContext
     }
-    tiContext
   }
 
   override def apply(e: SparkSessionExtensions): Unit = {
