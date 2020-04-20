@@ -17,7 +17,7 @@ package com.pingcap.tispark
 
 import java.util.Locale
 
-import com.pingcap.tikv.TiConfiguration
+import com.pingcap.tikv.{TTLManager, TiConfiguration}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
@@ -72,9 +72,13 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val enableRegionSplit: Boolean =
     parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
 
-  val lockTTLSeconds: Long = parameters.getOrElse(TIDB_LOCK_TTL_SECONDS, "3600").toLong
-
   val writeConcurrency: Int = parameters.getOrElse(TIDB_WRITE_CONCURRENCY, "0").toInt
+
+  // ttlMode = { "FIXED", "UPDATE", "DEFAULT" }
+  val ttlMode: String = parameters.getOrElse(TIDB_TTL_MODE, "DEFAULT").toUpperCase()
+
+  val sleepAfterPrewritePrimaryKey: Long =
+    parameters.getOrElse(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong
 
   // ------------------------------------------------------------
   // Calculated parameters
@@ -85,6 +89,23 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   def getTiTableRef(conf: TiConfiguration): TiTableReference =
     TiTableReference(conf.getDBPrefix + database, table)
 
+  def isTTLUpdate(tikvSupportUpdateTTL: Boolean): Boolean = {
+    if (tikvSupportUpdateTTL) {
+      !ttlMode.equals("FIXED")
+    } else {
+      if (ttlMode.equals("UPDATE")) {
+        throw new TiBatchWriteException("current tikv does not support ttl update!")
+      }
+      false
+    }
+  }
+
+  def getLockTTLSeconds(tikvSupportUpdateTTL: Boolean): Long =
+    if (isTTLUpdate(tikvSupportUpdateTTL)) {
+      TTLManager.MANAGED_LOCK_TTL / 1000
+    } else {
+      parameters.getOrElse(TIDB_LOCK_TTL_SECONDS, "3600").toLong
+    }
 }
 
 object TiDBOptions {
@@ -130,4 +151,10 @@ object TiDBOptions {
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
   val TIDB_LOCK_TTL_SECONDS: String = newOption("lockTTLSeconds")
   val TIDB_WRITE_CONCURRENCY: String = newOption("writeConcurrency")
+  val TIDB_TTL_MODE: String = newOption("ttlMode")
+
+  // ------------------------------------------------------------
+  // parameters only for test
+  // ------------------------------------------------------------
+  val TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY: String = newOption("sleepAfterPrewritePrimaryKey")
 }

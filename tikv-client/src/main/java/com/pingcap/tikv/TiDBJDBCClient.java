@@ -137,7 +137,7 @@ public class TiDBJDBCClient implements AutoCloseable {
       logger.info("split index region: " + sql);
       tidbStmt.execute(sql);
     } catch (Exception ignored) {
-      logger.warn("failed to split index region");
+      logger.warn("failed to split index region", ignored);
     }
   }
 
@@ -191,7 +191,7 @@ public class TiDBJDBCClient implements AutoCloseable {
     try (Statement tidbStmt = connection.createStatement()) {
       tidbStmt.execute(sb.toString());
     } catch (Exception ignored) {
-      logger.warn("failed to split index region");
+      logger.warn("failed to split index region", ignored);
     }
   }
 

@@ -19,7 +19,9 @@ package com.pingcap.tikv.region;
 
 import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
 import static com.pingcap.tikv.txn.LockResolverClient.extractLockFromKeyErr;
-import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.*;
+import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
+import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
+import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
@@ -27,14 +29,30 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
 import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.exception.*;
+import com.pingcap.tikv.exception.GrpcException;
+import com.pingcap.tikv.exception.KeyException;
+import com.pingcap.tikv.exception.LockException;
+import com.pingcap.tikv.exception.RegionException;
+import com.pingcap.tikv.exception.SelectException;
+import com.pingcap.tikv.exception.TiClientInternalException;
+import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
 import com.pingcap.tikv.txn.Lock;
 import com.pingcap.tikv.txn.LockResolverClient;
-import com.pingcap.tikv.util.*;
+import com.pingcap.tikv.util.BackOffFunction;
+import com.pingcap.tikv.util.BackOffer;
+import com.pingcap.tikv.util.ChannelFactory;
+import com.pingcap.tikv.util.ConcreteBackOffer;
+import com.pingcap.tikv.util.Pair;
+import com.pingcap.tikv.util.RangeSplitter;
 import io.grpc.ManagedChannel;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Queue;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +61,21 @@ import org.tikv.kvproto.Coprocessor.KeyRange;
 import org.tikv.kvproto.Coprocessor.Request;
 import org.tikv.kvproto.Coprocessor.Response;
 import org.tikv.kvproto.Errorpb;
-import org.tikv.kvproto.Kvrpcpb.*;
+import org.tikv.kvproto.Kvrpcpb.BatchGetRequest;
+import org.tikv.kvproto.Kvrpcpb.BatchGetResponse;
+import org.tikv.kvproto.Kvrpcpb.CommitRequest;
+import org.tikv.kvproto.Kvrpcpb.CommitResponse;
+import org.tikv.kvproto.Kvrpcpb.GetRequest;
+import org.tikv.kvproto.Kvrpcpb.GetResponse;
+import org.tikv.kvproto.Kvrpcpb.KeyError;
+import org.tikv.kvproto.Kvrpcpb.KvPair;
+import org.tikv.kvproto.Kvrpcpb.Mutation;
+import org.tikv.kvproto.Kvrpcpb.PrewriteRequest;
+import org.tikv.kvproto.Kvrpcpb.PrewriteResponse;
+import org.tikv.kvproto.Kvrpcpb.ScanRequest;
+import org.tikv.kvproto.Kvrpcpb.ScanResponse;
+import org.tikv.kvproto.Kvrpcpb.TxnHeartBeatRequest;
+import org.tikv.kvproto.Kvrpcpb.TxnHeartBeatResponse;
 import org.tikv.kvproto.Metapb.Store;
 import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
@@ -55,6 +87,7 @@ import org.tikv.kvproto.TikvGrpc.TikvStub;
 //  if a request needs to be retried because of an un-retryable cause, e.g., keys
 //  need to be re-split across regions/stores, region info outdated, e.t.c., you
 //  should retry it in an upper client logic (KVClient, TxnClient, e.t.c.)
+
 /** Note that RegionStoreClient itself is not thread-safe */
 public class RegionStoreClient extends AbstractRegionStoreClient {
   public enum RequestTypes {
@@ -356,6 +389,51 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       backOffer.doBackOff(BoTxnLock, new KeyException(resp.getErrorsList().get(0)));
     }
     return false;
+  }
+
+  /** TXN Heart Beat: update primary key ttl */
+  public void txnHeartBeat(BackOffer bo, ByteString primaryLock, long startTs, long ttl) {
+    while (true) {
+      Supplier<TxnHeartBeatRequest> factory =
+          () ->
+              TxnHeartBeatRequest.newBuilder()
+                  .setContext(region.getContext())
+                  .setStartVersion(startTs)
+                  .setPrimaryLock(primaryLock)
+                  .setAdviseLockTtl(ttl)
+                  .build();
+      KVErrorHandler<TxnHeartBeatResponse> handler =
+          new KVErrorHandler<>(
+              regionManager,
+              this,
+              lockResolverClient,
+              region,
+              resp -> resp.hasRegionError() ? resp.getRegionError() : null,
+              resp -> resp.hasError() ? resp.getError() : null);
+      TxnHeartBeatResponse resp =
+          callWithRetry(bo, TikvGrpc.METHOD_KV_TXN_HEART_BEAT, factory, handler);
+      if (isTxnHeartBeatSuccess(resp)) {
+        return;
+      }
+    }
+  }
+
+  private boolean isTxnHeartBeatSuccess(TxnHeartBeatResponse resp)
+      throws TiClientInternalException, RegionException {
+    if (resp == null) {
+      this.regionManager.onRequestFail(region);
+      throw new TiClientInternalException("TxnHeartBeat Response failed without a cause");
+    }
+
+    if (resp.hasRegionError()) {
+      throw new RegionException(resp.getRegionError());
+    }
+
+    if (resp.hasError()) {
+      throw new TiClientInternalException("TxnHeartBeat fail, " + resp.getError().getAbort());
+    }
+
+    return true;
   }
 
   /**
