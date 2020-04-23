@@ -19,6 +19,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
+import java.util.List;
 import java.util.concurrent.Future;
 import org.tikv.kvproto.Metapb.Store;
 
@@ -60,4 +61,6 @@ public interface ReadOnlyPDClient {
   Store getStore(BackOffer backOffer, long storeId);
 
   Future<Store> getStoreAsync(BackOffer backOffer, long storeId);
+
+  List<Store> getAllStores(BackOffer backOffer);
 }
