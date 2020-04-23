@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.TiDBJDBCClient
+import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient}
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import com.pingcap.tikv.meta.TiTableInfo
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
@@ -45,6 +45,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
     val tiDBJDBCClient = new TiDBJDBCClient(conn)
     tiDBJDBCClient.isEnableSplitRegion
+  }
+
+  protected def supportTTLUpdate: Boolean = {
+    StoreVersion.minTiKVVersion("3.0.5", this.ti.tiSession.getPDClient)
   }
 
   protected def queryViaTiSpark(query: String): List[List[Any]] = {
