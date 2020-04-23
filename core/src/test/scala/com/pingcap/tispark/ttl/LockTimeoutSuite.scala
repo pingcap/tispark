@@ -24,6 +24,10 @@ class LockTimeoutSuite extends BaseDataSourceTest("test_lock_timeout") {
   }
 
   test("Test Lock TTL Timeout") {
+    if (!supportTTLUpdate) {
+      cancel
+    }
+
     val seconds = 1000
     val sleep1 = TTLManager.MANAGED_LOCK_TTL + 10 * seconds
     val sleep2 = TTLManager.MANAGED_LOCK_TTL + 15 * seconds
