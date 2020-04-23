@@ -18,8 +18,6 @@ package com.pingcap.tikv.txn;
 import static junit.framework.TestCase.*;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -29,35 +27,20 @@ import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Kvrpcpb.Mutation;
 import org.tikv.kvproto.Kvrpcpb.Op;
 
 public class LockResolverSITest extends LockResolverTest {
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
-  @Before
-  public void setUp() {
-    TiConfiguration conf = TiConfiguration.createDefault(pdAddr);
-    conf.setIsolationLevel(IsolationLevel.SI);
-    try {
-      session = TiSession.getInstance(conf);
-      this.builder = session.getRegionStoreClientBuilder();
-      init = true;
-    } catch (Exception e) {
-      init = false;
-      fail("TiDB cluster may not be present");
-    }
+  public LockResolverSITest() {
+    super(IsolationLevel.SI);
   }
 
   @Test
   public void getSITest() {
     if (!init) {
-      skipTest();
+      skipTestInit();
       return;
     }
     session.getConf().setIsolationLevel(IsolationLevel.SI);
@@ -70,7 +53,7 @@ public class LockResolverSITest extends LockResolverTest {
   @Test
   public void cleanLockTest() {
     if (!init) {
-      skipTest();
+      skipTestInit();
       return;
     }
     for (int i = 0; i < 26; i++) {
@@ -81,7 +64,7 @@ public class LockResolverSITest extends LockResolverTest {
     }
 
     List<Mutation> mutations = new ArrayList<>();
-    List<ByteString> keys = new ArrayList<>();
+    List<String> keys = new ArrayList<>();
     for (int i = 0; i < 26; i++) {
       String k = String.valueOf((char) ('a' + i));
       String v = String.valueOf((char) ('a' + i + 1));
@@ -92,13 +75,15 @@ public class LockResolverSITest extends LockResolverTest {
               .setValue(ByteString.copyFromUtf8(v))
               .build();
       mutations.add(m);
-      keys.add(ByteString.copyFromUtf8(k));
+      keys.add(k);
     }
 
     TiTimestamp startTs = session.getTimestamp();
     TiTimestamp endTs = session.getTimestamp();
 
-    boolean res = prewrite(mutations, startTs.getVersion(), mutations.get(0));
+    boolean res =
+        prewrite(
+            mutations, startTs.getVersion(), mutations.get(0).getKey().toStringUtf8(), DEFAULT_TTL);
     assertTrue(res);
     res = commit(keys, startTs.getVersion(), endTs.getVersion());
     assertTrue(res);
@@ -120,50 +105,9 @@ public class LockResolverSITest extends LockResolverTest {
   }
 
   @Test
-  public void txnStatusTest() {
-    if (!init) {
-      skipTest();
-      return;
-    }
-    TiTimestamp startTs = session.getTimestamp();
-    TiTimestamp endTs = session.getTimestamp();
-
-    putKV("a", "a", startTs.getVersion(), endTs.getVersion());
-    TiRegion tiRegion = session.getRegionManager().getRegionByKey(ByteString.copyFromUtf8("a"));
-    RegionStoreClient client = builder.build(tiRegion);
-    BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(BackOffer.CLEANUP_MAX_BACKOFF);
-    long status =
-        client.lockResolverClient.getTxnStatus(
-            backOffer, startTs.getVersion(), ByteString.copyFromUtf8("a"));
-    assertEquals(status, endTs.getVersion());
-
-    startTs = session.getTimestamp();
-    endTs = session.getTimestamp();
-
-    assertTrue(lockKey("a", "a", "a", "a", true, startTs.getVersion(), endTs.getVersion()));
-    tiRegion = session.getRegionManager().getRegionByKey(ByteString.copyFromUtf8("a"));
-    client = builder.build(tiRegion);
-    status =
-        client.lockResolverClient.getTxnStatus(
-            backOffer, startTs.getVersion(), ByteString.copyFromUtf8("a"));
-    assertEquals(status, endTs.getVersion());
-
-    startTs = session.getTimestamp();
-    endTs = session.getTimestamp();
-
-    assertTrue(lockKey("a", "a", "a", "a", false, startTs.getVersion(), endTs.getVersion()));
-    tiRegion = session.getRegionManager().getRegionByKey(ByteString.copyFromUtf8("a"));
-    client = builder.build(tiRegion);
-    status =
-        client.lockResolverClient.getTxnStatus(
-            backOffer, startTs.getVersion(), ByteString.copyFromUtf8("a"));
-    assertNotSame(status, endTs.getVersion());
-  }
-
-  @Test
   public void SITest() {
     if (!init) {
-      skipTest();
+      skipTestInit();
       return;
     }
     TiTimestamp startTs = session.getTimestamp();
@@ -181,15 +125,6 @@ public class LockResolverSITest extends LockResolverTest {
     TiRegion tiRegion = session.getRegionManager().getRegionByKey(ByteString.copyFromUtf8("a"));
     RegionStoreClient client = builder.build(tiRegion);
 
-    try {
-      BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
-      // In SI mode, a lock <a, aa> is read. Try resolve it if expires TTL.
-      client.get(backOffer, ByteString.copyFromUtf8("a"), session.getTimestamp().getVersion());
-      fail();
-    } catch (KeyException e) {
-      assertEquals(ByteString.copyFromUtf8("a"), e.getKeyError().getLocked().getKey());
-    }
-
     {
       BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
       // With TTL set to 10, after 10 milliseconds <a, aa> is resolved.
@@ -201,10 +136,7 @@ public class LockResolverSITest extends LockResolverTest {
 
     try {
       // Trying to continue the commit phase of <a, aa> will fail because TxnLockNotFound
-      commit(
-          Collections.singletonList(ByteString.copyFromUtf8("a")),
-          startTs.getVersion(),
-          endTs.getVersion());
+      commit(Collections.singletonList("a"), startTs.getVersion(), endTs.getVersion());
       fail();
     } catch (KeyException e) {
       assertFalse(e.getKeyError().getRetryable().isEmpty());
