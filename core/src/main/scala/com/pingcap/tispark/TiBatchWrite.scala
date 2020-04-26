@@ -30,7 +30,7 @@ import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
 import com.pingcap.tikv.{TTLManager, TiBatchWriteUtils, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
 import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.Partitioner
+import org.apache.spark.{Partitioner, SparkConf}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions.lit
@@ -123,6 +123,14 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
   }
 
+  private def mergeSparkConfWithDataSourceConf(conf: SparkConf,
+                                               options: TiDBOptions): TiConfiguration = {
+    val clonedConf = conf.clone()
+    // priority: data source config > spark config
+    clonedConf.setAll(options.parameters)
+    TiUtil.sparkConfToTiConf(clonedConf)
+  }
+
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def doWrite(): Unit = {
@@ -134,7 +142,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     // initialize
-    tiConf = tiContext.tiConf
+    tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     tiSession = tiContext.tiSession
     tiTableRef = options.getTiTableRef(tiConf)
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
