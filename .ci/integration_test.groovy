@@ -6,10 +6,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def TIDB_BRANCH = "master"
     def TIKV_BRANCH = "master"
     def PD_BRANCH = "master"
+    def TIFLASH_BRANCH = "master"
     def MVN_PROFILE = "-Pjenkins"
     def TEST_MODE = "full"
     def PARALLEL_NUMBER = 18
     def TEST_REGION_SIZE = "normal"
+    def TEST_TIFLASH = "false"
     
     // parse tidb branch
     def m1 = ghprbCommentBody =~ /tidb\s*=\s*([^\s\\]+)(\s|\\|$)/
@@ -32,22 +34,35 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     }
     println "TIKV_BRANCH=${TIKV_BRANCH}"
 
-    // parse mvn profile
-    def m4 = ghprbCommentBody =~ /profile\s*=\s*([^\s\\]+)(\s|\\|$)/
+    // parse tiflash branch
+    def m4 = ghprbCommentBody =~ /tiflash\s*=\s*([^\s\\]+)(\s|\\|$)/
     if (m4) {
-        MVN_PROFILE = MVN_PROFILE + " -P${m4[0][1]}"
+        TIFLASH_BRANCH = "${m4[0][1]}"
+    }
+    println "TIFLASH_BRANCH=${TIFLASH_BRANCH}"
+
+    // parse mvn profile
+    def m5 = ghprbCommentBody =~ /profile\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m5) {
+        MVN_PROFILE = MVN_PROFILE + " -P${m5[0][1]}"
     }
 
     // parse test mode
-    def m5 = ghprbCommentBody =~ /mode\s*=\s*([^\s\\]+)(\s|\\|$)/
-    if (m5) {
-        TEST_MODE = "${m5[0][1]}"
+    def m6 = ghprbCommentBody =~ /mode\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m6) {
+        TEST_MODE = "${m6[0][1]}"
     }
 
     // parse test region size
-    def m6 = ghprbCommentBody =~ /region\s*=\s*([^\s\\]+)(\s|\\|$)/
-    if (m6) {
-        TEST_REGION_SIZE = "${m6[0][1]}"
+    def m7 = ghprbCommentBody =~ /region\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m7) {
+        TEST_REGION_SIZE = "${m7[0][1]}"
+    }
+
+    // parse test mode
+    def m8 = ghprbCommentBody =~ /test-flash\s*=\s*([^\s\\]+)(\s|\\|$)/
+    if (m8) {
+        TEST_TIFLASH = "${m8[0][1]}"
     }
     
     def readfile = { filename ->
@@ -85,6 +100,20 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     // pd
                     def pd_sha1 = sh(returnStdout: true, script: "curl ${FILE_SERVER_URL}/download/refs/pingcap/pd/${PD_BRANCH}/sha1").trim()
                     sh "curl ${FILE_SERVER_URL}/download/builds/pingcap/pd/${pd_sha1}/centos7/pd-server.tar.gz | tar xz"
+                    // tiflash
+                    if (TEST_TIFLASH != "false") {
+                        def tiflash_sha1 = sh(returnStdout: true, script: "curl ${FILE_SERVER_URL}/download/refs/pingcap/tiflash/${TIFLASH_BRANCH}/sha1").trim()
+                        sh "curl ${FILE_SERVER_URL}/download/builds/pingcap/tiflash/${TIFLASH_BRANCH}/${tiflash_sha1}/centos7/tiflash.tar.gz | tar xz"
+                        sh """
+                        cd tiflash
+                        tar -zcvf flash_cluster_manager.tgz flash_cluster_manager/
+                        rm ./flash_cluster_manager.tgz
+                        pwd
+                        cd ..
+                        """
+                        stash includes: "tiflash/**", name: "tiflash_binary"
+                    }
+
                     stash includes: "bin/**", name: "binaries"
                     
                     dir("/home/jenkins/agent/git/tispark") {
@@ -104,16 +133,20 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         mv test2 test
                         """
 
-                        if(TEST_REGION_SIZE  != "normal") {
+                        if (TEST_REGION_SIZE  != "normal") {
                             sh "sed -i 's/\\# region-max-size = \\\"2MB\\\"/region-max-size = \\\"2MB\\\"/' config/tikv.toml"
                             sh "sed -i 's/\\# region-split-size = \\\"1MB\\\"/region-split-size = \\\"1MB\\\"/' config/tikv.toml"
                             sh "cat config/tikv.toml"
                         }
 
-                        if(TEST_MODE != "simple") {
+                        if (TEST_MODE != "simple") {
                             sh """
                             find core/src -name '*MultiColumnPKDataTypeSuite*' >> test
                             """
+                        }
+
+                        if (TEST_TIFLASH != "false") {
+                            sh "cp .ci/tidb_config-for-tiflash-test.properties core/src/test/resources/tidb_config.properties"
                         }
 
                         sh """
@@ -124,7 +157,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         """
 
                         for (int i = 1; i <= PARALLEL_NUMBER; i++) {
-                            if(i < 10) {
+                            if (i < 10) {
                                 sh """cat test_unit_0$i"""
                             } else {
                                 sh """cat test_unit_$i"""
@@ -150,7 +183,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     
             def run_tispark_test = { chunk_suffix ->
                 dir("go/src/github.com/pingcap/tispark") {
-                    if(chunk_suffix < 10) {
+                    if (chunk_suffix < 10) {
                         run_chunks = readfile("test_unit_0${chunk_suffix}")
                     } else {
                         run_chunks = readfile("test_unit_${chunk_suffix}")
@@ -193,10 +226,13 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         deleteDir()
                         unstash 'binaries'
                         unstash 'tispark'
+                        if (TEST_TIFLASH != "false") {
+                            unstash 'tiflash_binary'
+                        }
     
                         try {
 
-                            if(TIDB_BRANCH.contains("4.0") && TIKV_BRANCH.contains("4.0") && PD_BRANCH.contains("4.0")) {
+                            if (TIDB_BRANCH.contains("4.0") && TIKV_BRANCH.contains("4.0") && PD_BRANCH.contains("4.0")) {
                                 sh """
                                 rm go/src/github.com/pingcap/tispark/config/pd.toml
                                 rm go/src/github.com/pingcap/tispark/config/tikv.toml
@@ -213,6 +249,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             killall -9 tidb-server || true
                             killall -9 tikv-server || true
                             killall -9 pd-server || true
+                            killall -9 tiflash || true
+                            touch tiflash_cmd_line.log
                             sleep 10
                             bin/pd-server --name=pd --data-dir=pd --config=go/src/github.com/pingcap/tispark/config/pd.toml &>pd.log &
                             sleep 10
@@ -223,6 +261,17 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             bin/tidb-server --store=tikv --path="127.0.0.1:2379" --config=go/src/github.com/pingcap/tispark/config/tidb.toml &>tidb.log &
                             sleep 60
                             """
+
+                            if (TEST_TIFLASH != "false") {
+                                sh "ls -l ./tiflash/"
+                                sh "pwd"
+                                sh """
+                                sudo sysctl -w net.ipv4.ip_local_port_range='10000 30000'
+                                export LD_LIBRARY_PATH=/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash
+                                tiflash/tiflash server config --config-file go/src/github.com/pingcap/tispark/config/tiflash.toml &>tiflash_cmd_line.log &
+                                sleep 60
+                                """
+                            }
     
                             timeout(120) {
                                 run_test(chunk_suffix)
@@ -235,6 +284,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             sh "cat pd.log"
                             sh "cat tikv.log"
                             sh "cat tidb.log"
+                            if (TEST_TIFLASH != "false") {
+                                sh "cat tiflash_cmd_line.log"
+                            }
                             throw err
                         }
                     }

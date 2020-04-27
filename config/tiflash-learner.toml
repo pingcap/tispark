@@ -1,0 +1,18 @@
+log-file = "/root/go/src/github.com/pingcap/tispark/tiflash_tikv.log"
+
+[rocksdb]
+wal-dir = ""
+
+[security]
+ca-path = ""
+cert-path = ""
+key-path = ""
+
+[server]
+addr = "0.0.0.0:20170"
+advertise-addr = "127.0.0.1:20170"
+engine-addr = "127.0.0.1:3930"
+status-addr = "127.0.0.1:20292"
+
+[storage]
+data-dir = "/data/flash"
