@@ -1,4 +1,4 @@
-log-file = "/root/go/src/github.com/pingcap/tispark/tiflash_tikv.log"
+log-file = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/tiflash_tikv.log"
 
 [rocksdb]
 wal-dir = ""
@@ -15,4 +15,4 @@ engine-addr = "127.0.0.1:3930"
 status-addr = "127.0.0.1:20292"
 
 [storage]
-data-dir = "/data/flash"
+data-dir = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/flash"

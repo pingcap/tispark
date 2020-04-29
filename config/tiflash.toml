@@ -3,7 +3,7 @@ display_name = "TiFlash"
 http_port = 9000
 listen_host = "0.0.0.0"
 mark_cache_size = 5368709120
-path = "/data/tiflash/"
+path = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/data"
 tcp_port = 8123
 tmp_path = "/tmp"
 
@@ -14,19 +14,19 @@ runAsDaemon = true
 service_addr = "127.0.0.1:3930"
 tidb_status_addr = "127.0.0.1:10080"
 [flash.flash_cluster]
-cluster_manager_path = "/root/go/src/github.com/pingcap/tispark/tiflash/flash_cluster_manager"
-log = "/root/go/src/github.com/pingcap/tispark/tiflash_cluster_manager.log"
+cluster_manager_path = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/flash_cluster_manager"
+log = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/tiflash_cluster_manager.log"
 master_ttl = 60
 refresh_interval = 20
 update_rule_interval = 5
 [flash.proxy]
-config = "/root/go/src/github.com/pingcap/tispark/config/tiflash-learner.toml"
+config = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/config/tiflash-learner.toml"
 
 [logger]
 count = 20
-errorlog = "/root/go/src/github.com/pingcap/tispark/tiflash_error.log"
+errorlog = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/tiflash_error.log"
 level = "info"
-log = "/root/go/src/github.com/pingcap/tispark/tiflash.log"
+log = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/tiflash.log"
 size = "1000M"
 
 [profiles]
