@@ -917,7 +917,7 @@ case class WrappedEncodedRow(row: TiRow,
   override def hashCode(): Int = encodedKey.hashCode()
 }
 
-// SimplifiedWrappedEncodedRow is used at last stage if write process.
+// EncodedKVPair is used at last stage if write process.
 // At this stage, sorting should not be happened anymore.
 case class EncodedKVPair(encodedKey: SerializableKey, encodedValue: Array[Byte]) {
   override def hashCode(): Int = encodedKey.hashCode()
