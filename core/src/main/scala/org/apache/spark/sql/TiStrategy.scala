@@ -100,20 +100,21 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   // use TypeDefault.
   private def getCodecFormat(): EncodeType = {
     val codecFormatStr =
-      sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "chblock").toLowerCase
+      sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "default").toLowerCase
     if (useStreamingProcess) {
       return EncodeType.TypeDefault
     }
-    codecFormatStr match {
-      case "chunk" =>
-        EncodeType.TypeChunk
-      case "chblock" =>
-        if (isUseTiFlash) {
-          EncodeType.TypeCHBlock
-        } else {
+
+    if (isUseTiFlash) {
+      codecFormatStr match {
+        case "chunk" =>
           EncodeType.TypeChunk
-        }
-      case _ => EncodeType.TypeDefault
+        case "chblock" =>
+          EncodeType.TypeCHBlock
+        case _ => EncodeType.TypeDefault
+      }
+    } else {
+      EncodeType.TypeDefault
     }
   }
 

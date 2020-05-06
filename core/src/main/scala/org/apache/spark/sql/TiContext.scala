@@ -36,11 +36,9 @@ import scalaj.http.Http
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = None)
-    extends Serializable
-    with Logging {
+class TiContext(val sparkSession: SparkSession) extends Serializable with Logging {
   lazy val sqlContext: SQLContext = sparkSession.sqlContext
-  val conf: SparkConf = mergeWithDataSourceConfig(sparkSession.sparkContext.conf, options)
+  val conf: SparkConf = sparkSession.sparkContext.conf
   val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.getInstance(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
@@ -160,16 +158,6 @@ class TiContext(val sparkSession: SparkSession, options: Option[TiDBOptions] = N
   // add backtick for table name in case it contains, e.g., a minus sign
   private def getViewName(dbName: String, tableName: String, dbNameAsPrefix: Boolean): String =
     "`" + (if (dbNameAsPrefix) dbName + "_" + tableName else tableName) + "`"
-
-  private def mergeWithDataSourceConfig(conf: SparkConf, options: Option[TiDBOptions]): SparkConf =
-    options match {
-      case Some(opt) =>
-        val clonedConf = conf.clone()
-        // priority: data source config > spark config
-        clonedConf.setAll(opt.parameters)
-        clonedConf
-      case None => conf
-    }
 
   // tidbMapTable does not do any check any meta information
   // it just register table for later use

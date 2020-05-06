@@ -7,7 +7,7 @@ import scala.collection.mutable
 class TiExtensions extends (SparkSessionExtensions => Unit) {
   private val tiContextMap = mutable.HashMap.empty[SparkSession, TiContext]
 
-  def getOrCreateTiContext(sparkSession: SparkSession): TiContext = synchronized {
+  private def getOrCreateTiContext(sparkSession: SparkSession): TiContext = synchronized {
     tiContextMap.get(sparkSession) match {
       case Some(tiContext) => tiContext
       case None            =>
@@ -27,21 +27,26 @@ class TiExtensions extends (SparkSessionExtensions => Unit) {
 }
 
 object TiExtensions {
-  private var tiExtensions: TiExtensions = _
+  def enabled(sparkSession: SparkSession): Boolean = getTiContext(sparkSession).isDefined
 
-  def getInstance(sparkSession: SparkSession): TiExtensions = {
-    if (tiExtensions == null) {
-      synchronized {
-        if (tiExtensions == null) {
-          tiExtensions = new TiExtensions
-          tiExtensions.apply(sparkSession.extensions)
-        }
-      }
+  def getTiContext(sparkSession: SparkSession): Option[TiContext] = {
+    if (sparkSession.sessionState.planner.extraPlanningStrategies.nonEmpty &&
+        sparkSession.sessionState.planner.extraPlanningStrategies.head
+          .isInstanceOf[TiStrategy]) {
+      Some(
+        sparkSession.sessionState.planner.extraPlanningStrategies.head
+          .asInstanceOf[TiStrategy]
+          .getOrCreateTiContext(sparkSession)
+      )
+    } else if (sparkSession.experimental.extraStrategies.nonEmpty &&
+               sparkSession.experimental.extraStrategies.head.isInstanceOf[TiStrategy]) {
+      Some(
+        sparkSession.experimental.extraStrategies.head
+          .asInstanceOf[TiStrategy]
+          .getOrCreateTiContext(sparkSession)
+      )
+    } else {
+      None
     }
-    tiExtensions
   }
-
-  def enabled(): Boolean = tiExtensions != null
-
-  def reset(): Unit = tiExtensions = null
 }

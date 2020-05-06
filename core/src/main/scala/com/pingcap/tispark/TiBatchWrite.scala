@@ -27,10 +27,10 @@ import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
 import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
-import com.pingcap.tikv.{TiBatchWriteUtils, TiDBJDBCClient, _}
+import com.pingcap.tikv.{TTLManager, TiBatchWriteUtils, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
 import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.Partitioner
+import org.apache.spark.{Partitioner, SparkConf}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions.lit
@@ -85,6 +85,10 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var isEnableSplitRegion: Boolean = _
   private var tableLocked: Boolean = false
 
+  @transient private var ttlManager: TTLManager = _
+  private var isTTLUpdate: Boolean = _
+  private var lockTTLSeconds: Long = _
+
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def write(): Unit = {
@@ -103,12 +107,28 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     try {
+      if (ttlManager != null) {
+        ttlManager.close()
+      }
+    } catch {
+      case _: Throwable =>
+    }
+
+    try {
       if (tiDBJDBCClient != null) {
         tiDBJDBCClient.close()
       }
     } catch {
       case _: Throwable =>
     }
+  }
+
+  private def mergeSparkConfWithDataSourceConf(conf: SparkConf,
+                                               options: TiDBOptions): TiConfiguration = {
+    val clonedConf = conf.clone()
+    // priority: data source config > spark config
+    clonedConf.setAll(options.parameters)
+    TiUtil.sparkConfToTiConf(clonedConf)
   }
 
   @throws(classOf[NoSuchTableException])
@@ -122,7 +142,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     // initialize
-    tiConf = tiContext.tiConf
+    tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     tiSession = tiContext.tiSession
     tiTableRef = options.getTiTableRef(tiConf)
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
@@ -137,6 +157,10 @@ class TiBatchWrite(@transient val df: DataFrame,
     uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
     handleCol = tiTableInfo.getPKIsHandleColumn
     tableColSize = tiTableInfo.getColumns.size()
+
+    val tikvSupportUpdateTTL = StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
+    isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
+    lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
 
     // check unsupported
     checkUnsupported()
@@ -239,6 +263,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // get timestamp as start_ts
     val startTimeStamp = tiSession.getTimestamp
+    val startTs = startTimeStamp.getVersion
+    logger.info(s"startTS: $startTs")
 
     // for partition table, we need calculate each row and tell which physical table
     // that row is belong to.
@@ -314,8 +340,11 @@ class TiBatchWrite(@transient val df: DataFrame,
       wrappedEncodedRdd
     }
 
+    val simplifiedWrappedEncodedRowRdd = encodedTiRowRDD.map(
+      row => SimplifiedWrappedEncodedRow(row.encodedKey, row.encodedValue)
+    )
     // shuffle data in same task which belong to same region
-    val shuffledRDD = shuffleKeyToSameRegion(encodedTiRowRDD).cache()
+    val shuffledRDD = shuffleKeyToSameRegion(simplifiedWrappedEncodedRowRdd).cache()
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
@@ -324,36 +353,44 @@ class TiBatchWrite(@transient val df: DataFrame,
         logger.warn("there is no data in source rdd")
         return
       } else {
-        val one = takeOne(0)
-        (one.encodedKey, one.encodedValue)
+        takeOne(0)
       }
     }
 
     logger.info(s"primary key: $primaryKey primary row: $primaryRow")
 
     // filter primary key
-    val finalWriteRDD = shuffledRDD.filter { wrappedEncodedRow =>
-      !wrappedEncodedRow.encodedKey.equals(primaryKey)
+    val secondaryKeysRDD = shuffledRDD.filter { keyValue =>
+      !keyValue._1.equals(primaryKey)
     }
 
-    val startTs = startTimeStamp.getVersion
-    logger.info(s"startTS: $startTs")
-
     // driver primary pre-write
-    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs, options.lockTTLSeconds * 1000)
+    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
 
-    // executors secondary pre-write
-    finalWriteRDD.foreachPartition { iterator =>
-      val ti2PCClientOnExecutor =
-        new TwoPhaseCommitter(tiConf, startTs, options.lockTTLSeconds * 1000)
+    // for test
+    if (options.sleepAfterPrewritePrimaryKey > 0) {
+      logger.debug(s"sleep ${options.sleepAfterPrewritePrimaryKey} ms for test")
+      Thread.sleep(options.sleepAfterPrewritePrimaryKey)
+    }
 
-      val pairs = iterator.map { wrappedEncodedRow =>
+    // start primary key ttl update
+    if (isTTLUpdate) {
+      ttlManager = new TTLManager(tiConf, startTs, primaryKey.bytes)
+      ttlManager.keepAlive()
+    }
+
+    // executors secondary pre-write
+    secondaryKeysRDD.foreachPartition { iterator =>
+      val ti2PCClientOnExecutor =
+        new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
+
+      val pairs = iterator.map { keyValue =>
         new TwoPhaseCommitter.BytePairWrapper(
-          wrappedEncodedRow.encodedKey.bytes,
-          wrappedEncodedRow.encodedValue
+          keyValue._1.bytes,
+          keyValue._2
         )
       }.asJava
 
@@ -381,16 +418,21 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
 
+    // stop primary key ttl update
+    if (isTTLUpdate) {
+      ttlManager.close()
+    }
+
     // unlock table
     unlockTable()
 
     // executors secondary commit
     if (!options.skipCommitSecondaryKey) {
-      finalWriteRDD.foreachPartition { iterator =>
+      secondaryKeysRDD.foreachPartition { iterator =>
         val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
 
-        val keys = iterator.map { wrappedEncodedRow =>
-          new TwoPhaseCommitter.ByteWrapper(wrappedEncodedRow.encodedKey.bytes)
+        val keys = iterator.map { keyValue =>
+          new TwoPhaseCommitter.ByteWrapper(keyValue._1.bytes)
         }.asJava
 
         try {
@@ -578,18 +620,19 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   @throws(classOf[NoSuchTableException])
-  private def shuffleKeyToSameRegion(rdd: RDD[WrappedEncodedRow]): RDD[WrappedEncodedRow] = {
+  private def shuffleKeyToSameRegion(
+    rdd: RDD[SimplifiedWrappedEncodedRow]
+  ): RDD[(SerializableKey, Array[Byte])] = {
     val regions = getRegions
     val tiRegionPartitioner = new TiRegionPartitioner(regions, options.writeConcurrency)
 
     rdd
-      .map(obj => (obj.encodedKey, obj))
-      .groupByKey(tiRegionPartitioner)
-      .map {
-        case (_, iterable) =>
-          // remove duplicate rows if key equals (should not happen, cause already deduplicated)
-          iterable.head
-      }
+      .map(obj => (obj.encodedKey, obj.encodedValue))
+      // remove duplicate rows if key equals (should not happen, cause already deduplicated)
+      .reduceByKey(
+        tiRegionPartitioner,
+        (a: Array[Byte], _: Array[Byte]) => a
+      )
   }
 
   private def getRegions: List[TiRegion] = {
@@ -907,6 +950,14 @@ case class WrappedEncodedRow(row: TiRow,
                              remove: Boolean)
     extends Ordered[WrappedEncodedRow] {
   override def compare(that: WrappedEncodedRow): Int = this.handle.toInt - that.handle.toInt
+
+  override def hashCode(): Int = encodedKey.hashCode()
+}
+
+// SimplifiedWrappedEncodedRow is used at last stage if write process.
+// At this stage, sorting should not be happened anymore.
+case class SimplifiedWrappedEncodedRow(encodedKey: SerializableKey, encodedValue: Array[Byte]) {
+  override def hashCode(): Int = encodedKey.hashCode()
 }
 
 class SerializableKey(val bytes: Array[Byte]) extends Serializable {

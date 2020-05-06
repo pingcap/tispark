@@ -148,7 +148,11 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     return () -> GetStoreRequest.newBuilder().setHeader(header).setStoreId(storeId).build();
   }
 
-  private PDErrorHandler<GetStoreResponse> buildPDErrorHandler() {
+  private Supplier<GetAllStoresRequest> buildGetAllStoresReq() {
+    return () -> GetAllStoresRequest.newBuilder().setHeader(header).build();
+  }
+
+  private <T> PDErrorHandler<GetStoreResponse> buildPDErrorHandler() {
     return new PDErrorHandler<>(
         r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null, this);
   }
@@ -172,6 +176,18 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         responseObserver,
         buildPDErrorHandler());
     return responseObserver.getFuture();
+  }
+
+  @Override
+  public List<Store> getAllStores(BackOffer backOffer) {
+    return callWithRetry(
+            backOffer,
+            PDGrpc.METHOD_GET_ALL_STORES,
+            buildGetAllStoresReq(),
+            new PDErrorHandler<>(
+                r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
+                this))
+        .getStoresList();
   }
 
   @Override

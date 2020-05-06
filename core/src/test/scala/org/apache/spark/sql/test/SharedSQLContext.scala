@@ -77,15 +77,14 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
 
   protected def refreshConnections(isHiveEnabled: Boolean): Unit = {
     stop()
-    init(forceNotLoad = true, isHiveEnabled = isHiveEnabled)
     SharedSparkContext.stop()
+
+    init(forceNotLoad = true, isHiveEnabled = isHiveEnabled)
     initializeContext(isHiveEnabled)
     initializeSparkSession()
   }
 
   protected var enableHive: Boolean = false
-
-  protected var enableTidbConfigPropertiesInjectedToSpark: Boolean = true
 
   protected def tidbUser: String = SharedSQLContext.tidbUser
 
@@ -110,19 +109,14 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
    */
   protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
-  protected def init(forceNotLoad: Boolean = false,
-                     isHiveEnabled: Boolean = false,
-                     isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true): Unit = {
+  protected def init(forceNotLoad: Boolean = false, isHiveEnabled: Boolean = false): Unit = {
     _isHiveEnabled = isHiveEnabled
-    initializeConf(forceNotLoad, isTidbConfigPropertiesInjectedToSparkEnabled)
+    initializeConf(forceNotLoad)
   }
 
   override protected def beforeAll(): Unit = {
     try {
-      init(
-        isHiveEnabled = enableHive,
-        isTidbConfigPropertiesInjectedToSparkEnabled = enableTidbConfigPropertiesInjectedToSpark
-      )
+      init(isHiveEnabled = enableHive)
       // initialize spark context
       super.beforeAll()
       initializeSparkSession()
@@ -156,18 +150,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
     private[test] def get(): TiContext = {
       if (_ti == null) {
         assert(_spark != null, "Spark Session should be initialized")
-        if (_spark.sessionState.planner.extraPlanningStrategies.nonEmpty &&
-            _spark.sessionState.planner.extraPlanningStrategies.head
-              .isInstanceOf[TiStrategy]) {
-          _ti = _spark.sessionState.planner.extraPlanningStrategies.head
-            .asInstanceOf[TiStrategy]
-            .getOrCreateTiContext(_spark)
-        } else if (_spark.experimental.extraStrategies.nonEmpty &&
-                   _spark.experimental.extraStrategies.head.isInstanceOf[TiStrategy]) {
-          _ti = _spark.experimental.extraStrategies.head
-            .asInstanceOf[TiStrategy]
-            .getOrCreateTiContext(_spark)
-        }
+        _ti = TiExtensions.getTiContext(_spark).get
       }
       _ti
     }
@@ -329,9 +312,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
     }
   }
 
-  private def initializeSpark(
-    isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true
-  ): Unit = synchronized {
+  private def initializeSpark(): Unit = synchronized {
     if (_tidbConf == null) {
       _tidbConf = SharedSQLContext.tidbConf
 
@@ -354,24 +335,19 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
         }
       }
     }
-    if (isTidbConfigPropertiesInjectedToSparkEnabled) {
-      import com.pingcap.tispark.TiConfigConst._
-      conf.set(PD_ADDRESSES, pdAddresses)
-      conf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
-      conf.set(ALLOW_INDEX_READ, getFlagOrTrue(_tidbConf, ALLOW_INDEX_READ).toString)
-      conf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
-      conf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
-      conf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
-      conf.set(DB_PREFIX, dbPrefix)
-    }
+    import com.pingcap.tispark.TiConfigConst._
+    conf.set(PD_ADDRESSES, pdAddresses)
+    conf.set(ENABLE_AUTO_LOAD_STATISTICS, "true")
+    conf.set(ALLOW_INDEX_READ, getFlagOrTrue(_tidbConf, ALLOW_INDEX_READ).toString)
+    conf.set("spark.sql.decimalOperations.allowPrecisionLoss", "false")
+    conf.set(REQUEST_ISOLATION_LEVEL, SNAPSHOT_ISOLATION_LEVEL)
+    conf.set("spark.sql.extensions", "org.apache.spark.sql.TiExtensions")
+    conf.set(DB_PREFIX, dbPrefix)
   }
 
-  private def initializeConf(
-    forceNotLoad: Boolean = false,
-    isTidbConfigPropertiesInjectedToSparkEnabled: Boolean = true
-  ): Unit = {
+  private def initializeConf(forceNotLoad: Boolean = false): Unit = {
     initializeJDBC(forceNotLoad)
-    initializeSpark(isTidbConfigPropertiesInjectedToSparkEnabled)
+    initializeSpark()
   }
 
   /**

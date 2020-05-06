@@ -2,7 +2,6 @@ package com.pingcap.tispark.datasource
 
 import java.util.Objects
 
-import com.pingcap.tikv.TiSession
 import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
@@ -12,22 +11,12 @@ import org.apache.spark.sql.{BaseTiSparkTest, DataFrame, Row}
 
 import scala.collection.mutable.ArrayBuffer
 
-// Two modes:
-// 1. without TiExtensions:
-// set isTidbConfigPropertiesInjectedToSparkEnabled = false
-// will not load tidb_config.properties to SparkConf
-// 2. with TiExtensions
-// set isTidbConfigPropertiesInjectedToSparkEnabled = true
-// will load tidb_config.properties to SparkConf
-class BaseDataSourceTest(val table: String,
-                         val database: String = "tispark_test",
-                         val _enableTidbConfigPropertiesInjectedToSpark: Boolean = true)
+class BaseDataSourceTest(val table: String, val database: String = "tispark_test")
     extends BaseTiSparkTest {
   protected def dbtable = s"`$database`.`$table`"
 
   override def beforeAll(): Unit = {
-    enableTidbConfigPropertiesInjectedToSpark = _enableTidbConfigPropertiesInjectedToSpark
-    super.beforeAllWithoutLoadData()
+    super.beforeAll()
   }
 
   protected def jdbcUpdate(query: String): Unit =
@@ -260,10 +249,5 @@ class BaseDataSourceTest(val table: String,
     checkAnswer(loadedDf, expectedAnswer)
   }
 
-  protected def getTestDatabaseNameInSpark(database: String): String =
-    if (_enableTidbConfigPropertiesInjectedToSpark) {
-      s"$dbPrefix$database"
-    } else {
-      database
-    }
+  protected def getTestDatabaseNameInSpark(database: String): String = s"$dbPrefix$database"
 }

@@ -193,6 +193,7 @@
                                     <directory>${basedir}/kvproto/include</directory>
                                     <includes>
                                         <include>**/gogoproto/**</include>
+                                        <include>**/google/**</include>
                                     </includes>
                                 </resource>
                                 <resource>
