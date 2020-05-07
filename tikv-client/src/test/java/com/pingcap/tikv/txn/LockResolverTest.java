@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,13 +97,13 @@ abstract class LockResolverTest {
             .setValue(ByteString.copyFromUtf8(value))
             .build();
 
-    boolean res = prewrite(Collections.singletonList(m), startTS, key, DEFAULT_TTL);
+    boolean res = prewriteString(Collections.singletonList(m), startTS, key, DEFAULT_TTL);
     assertTrue(res);
-    res = commit(Collections.singletonList(key), startTS, commitTS);
+    res = commitString(Collections.singletonList(key), startTS, commitTS);
     assertTrue(res);
   }
 
-  boolean prewrite(String key, String value, long startTS, String primaryKey, long ttl) {
+  boolean prewriteString(String key, String value, long startTS, String primaryKey, long ttl) {
     Mutation m =
         Mutation.newBuilder()
             .setKey(ByteString.copyFromUtf8(key))
@@ -110,10 +111,14 @@ abstract class LockResolverTest {
             .setValue(ByteString.copyFromUtf8(value))
             .build();
 
-    return prewrite(Collections.singletonList(m), startTS, primaryKey, ttl);
+    return prewriteString(Collections.singletonList(m), startTS, primaryKey, ttl);
   }
 
-  boolean prewrite(List<Mutation> mutations, long startTS, String primary, long ttl) {
+  boolean prewriteString(List<Mutation> mutations, long startTS, String primary, long ttl) {
+    return prewrite(mutations, startTS, ByteString.copyFromUtf8(primary), ttl);
+  }
+
+  boolean prewrite(List<Mutation> mutations, long startTS, ByteString primary, long ttl) {
     if (mutations.size() == 0) return true;
     BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
 
@@ -122,12 +127,7 @@ abstract class LockResolverTest {
         try {
           TiRegion region = session.getRegionManager().getRegionByKey(m.getKey());
           RegionStoreClient client = builder.build(region);
-          client.prewrite(
-              backOffer,
-              ByteString.copyFromUtf8(primary),
-              Collections.singletonList(m),
-              startTS,
-              ttl);
+          client.prewrite(backOffer, primary, Collections.singletonList(m), startTS, ttl);
           break;
         } catch (RegionException e) {
           backOffer.doBackOff(BackOffFunction.BackOffFuncType.BoRegionMiss, e);
@@ -137,14 +137,20 @@ abstract class LockResolverTest {
     return true;
   }
 
-  boolean commit(List<String> keys, long startTS, long commitTS) {
+  boolean commitString(List<String> keys, long startTS, long commitTS) {
+    return commit(
+        keys.stream().map(ByteString::copyFromUtf8).collect(Collectors.toList()),
+        startTS,
+        commitTS);
+  }
+
+  boolean commit(List<ByteString> keys, long startTS, long commitTS) {
     if (keys.size() == 0) return true;
     BackOffer backOffer = ConcreteBackOffer.newCustomBackOff(1000);
 
-    for (String k : keys) {
+    for (ByteString byteStringK : keys) {
       while (true) {
         try {
-          ByteString byteStringK = ByteString.copyFromUtf8(k);
           TiRegion tiRegion = session.getRegionManager().getRegionByKey(byteStringK);
           RegionStoreClient client = builder.build(tiRegion);
           client.commit(backOffer, Collections.singletonList(byteStringK), startTS, commitTS);
@@ -193,13 +199,13 @@ abstract class LockResolverTest {
               .setOp(Op.Put)
               .build());
     }
-    if (!prewrite(mutations, startTs, primaryKey, ttl)) return false;
+    if (!prewriteString(mutations, startTs, primaryKey, ttl)) return false;
 
     if (commitPrimary) {
       if (!key.equals(primaryKey)) {
-        return commit(Arrays.asList(primaryKey, key), startTs, commitTS);
+        return commitString(Arrays.asList(primaryKey, key), startTs, commitTS);
       } else {
-        return commit(Collections.singletonList(primaryKey), startTs, commitTS);
+        return commitString(Collections.singletonList(primaryKey), startTs, commitTS);
       }
     }
 
@@ -324,8 +330,9 @@ abstract class LockResolverTest {
 
   void commitFail(String key, long startTs, long endTs) {
     try {
-      // Trying to continue the commit phase of <key, value2> will fail because TxnLockNotFound
-      commit(Collections.singletonList(key), startTs, endTs);
+      // Trying to continue the commitString phase of <key, value2> will fail because
+      // TxnLockNotFound
+      commitString(Collections.singletonList(key), startTs, endTs);
       fail();
     } catch (KeyException e) {
       assertFalse(e.getKeyError().getRetryable().isEmpty());

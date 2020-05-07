@@ -82,10 +82,10 @@ public class LockResolverSITest extends LockResolverTest {
     TiTimestamp endTs = session.getTimestamp();
 
     boolean res =
-        prewrite(
+        prewriteString(
             mutations, startTs.getVersion(), mutations.get(0).getKey().toStringUtf8(), DEFAULT_TTL);
     assertTrue(res);
-    res = commit(keys, startTs.getVersion(), endTs.getVersion());
+    res = commitString(keys, startTs.getVersion(), endTs.getVersion());
     assertTrue(res);
 
     for (int i = 0; i < 26; i++) {
@@ -135,8 +135,8 @@ public class LockResolverSITest extends LockResolverTest {
     }
 
     try {
-      // Trying to continue the commit phase of <a, aa> will fail because TxnLockNotFound
-      commit(Collections.singletonList("a"), startTs.getVersion(), endTs.getVersion());
+      // Trying to continue the commitString phase of <a, aa> will fail because TxnLockNotFound
+      commitString(Collections.singletonList("a"), startTs.getVersion(), endTs.getVersion());
       fail();
     } catch (KeyException e) {
       assertFalse(e.getKeyError().getRetryable().isEmpty());

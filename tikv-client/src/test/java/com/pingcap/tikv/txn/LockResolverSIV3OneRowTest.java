@@ -119,8 +119,8 @@ public class LockResolverSIV3OneRowTest extends LockResolverTest {
     // TTL not expire, resolved key fail
     checkTTLNotExpired(key);
 
-    // continue the commit phase of <key, value2>
-    commit(Collections.singletonList(key), startTs, endTs);
+    // continue the commitString phase of <key, value2>
+    commitString(Collections.singletonList(key), startTs, endTs);
 
     // get
     assertEquals(pointGet(key), value2);

@@ -50,17 +50,17 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     long startTs = session.getTimestamp().getVersion();
     long endTs = session.getTimestamp().getVersion();
 
-    // prewrite <primary key, value1>
-    assertTrue(prewrite(primaryKey, value1, startTs, primaryKey, DEFAULT_TTL));
+    // prewriteString <primary key, value1>
+    assertTrue(prewriteString(primaryKey, value1, startTs, primaryKey, DEFAULT_TTL));
 
-    // prewrite <secondary key, value2>
-    assertTrue(prewrite(secondaryKey, value2, startTs, primaryKey, DEFAULT_TTL));
+    // prewriteString <secondary key, value2>
+    assertTrue(prewriteString(secondaryKey, value2, startTs, primaryKey, DEFAULT_TTL));
 
-    // commit primary key
-    assertTrue(commit(Collections.singletonList(primaryKey), startTs, endTs));
+    // commitString primary key
+    assertTrue(commitString(Collections.singletonList(primaryKey), startTs, endTs));
 
-    // commit secondary key
-    assertTrue(commit(Collections.singletonList(secondaryKey), startTs, endTs));
+    // commitString secondary key
+    assertTrue(commitString(Collections.singletonList(secondaryKey), startTs, endTs));
 
     // get check primary key & secondary key
     assertEquals(pointGet(primaryKey), value1);
@@ -93,11 +93,11 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     long startTs = session.getTimestamp().getVersion();
     long endTs = session.getTimestamp().getVersion();
 
-    // prewrite <primary key, value1>
-    assertTrue(prewrite(primaryKey, value3, startTs, primaryKey, ttl));
+    // prewriteString <primary key, value1>
+    assertTrue(prewriteString(primaryKey, value3, startTs, primaryKey, ttl));
 
-    // prewrite <secondary key, value2>
-    assertTrue(prewrite(secondaryKey, value4, startTs, primaryKey, ttl));
+    // prewriteString <secondary key, value2>
+    assertTrue(prewriteString(secondaryKey, value4, startTs, primaryKey, ttl));
 
     // check ttl not expired
     checkTTLNotExpired(primaryKey);
@@ -110,7 +110,7 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     assertEquals(pointGet(primaryKey), value1);
     assertEquals(pointGet(secondaryKey), value2);
 
-    // commit fail
+    // commitString fail
     commitFail(primaryKey, startTs, endTs);
   }
 
@@ -140,11 +140,11 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     long startTs = session.getTimestamp().getVersion();
     long endTs = session.getTimestamp().getVersion();
 
-    // prewrite <primary key, value1>
-    assertTrue(prewrite(primaryKey, value3, startTs, primaryKey, ttl));
+    // prewriteString <primary key, value1>
+    assertTrue(prewriteString(primaryKey, value3, startTs, primaryKey, ttl));
 
-    // prewrite <secondary key, value2>
-    assertTrue(prewrite(secondaryKey, value4, startTs, primaryKey, ttl));
+    // prewriteString <secondary key, value2>
+    assertTrue(prewriteString(secondaryKey, value4, startTs, primaryKey, ttl));
 
     // check ttl not expired
     checkTTLNotExpired(primaryKey);
@@ -153,8 +153,8 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     // TTL expires
     Thread.sleep(ttl);
 
-    // commit primary key
-    assertTrue(commit(Collections.singletonList(primaryKey), startTs, endTs));
+    // commitString primary key
+    assertTrue(commitString(Collections.singletonList(primaryKey), startTs, endTs));
 
     // get check primary key & secondary key
     assertEquals(pointGet(primaryKey), value3);
@@ -181,18 +181,18 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     long startTs = session.getTimestamp().getVersion();
     long endTs = session.getTimestamp().getVersion();
 
-    // prewrite <primary key, value1>
-    assertTrue(prewrite(primaryKey, value1, startTs, primaryKey, ttl));
+    // prewriteString <primary key, value1>
+    assertTrue(prewriteString(primaryKey, value1, startTs, primaryKey, ttl));
 
-    // prewrite <secondary key, value2>
-    assertTrue(prewrite(secondaryKey, value2, startTs, primaryKey, ttl));
+    // prewriteString <secondary key, value2>
+    assertTrue(prewriteString(secondaryKey, value2, startTs, primaryKey, ttl));
 
     // check ttl not expired
     checkTTLNotExpired(primaryKey);
     checkTTLNotExpired(secondaryKey);
 
-    // commit primary key
-    assertTrue(commit(Collections.singletonList(primaryKey), startTs, endTs));
+    // commitString primary key
+    assertTrue(commitString(Collections.singletonList(primaryKey), startTs, endTs));
 
     // get check primary key & secondary key
     assertEquals(pointGet(primaryKey), value1);
@@ -232,11 +232,11 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     long startTs = session.getTimestamp().getVersion();
     long endTs = session.getTimestamp().getVersion();
 
-    // prewrite <primary key, value1>
-    assertTrue(prewrite(primaryKey, value3, startTs, primaryKey, primaryTTL));
+    // prewriteString <primary key, value1>
+    assertTrue(prewriteString(primaryKey, value3, startTs, primaryKey, primaryTTL));
 
-    // prewrite <secondary key, value2>
-    assertTrue(prewrite(secondaryKey, value4, startTs, primaryKey, secondaryTTL));
+    // prewriteString <secondary key, value2>
+    assertTrue(prewriteString(secondaryKey, value4, startTs, primaryKey, secondaryTTL));
 
     // secondary ttl expired, but primary not
     Thread.sleep(secondaryTTL);

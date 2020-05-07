@@ -77,7 +77,8 @@ public class LockResolverRCTest extends LockResolverTest {
 
     try {
       // After committing <a, aa>, we can read it.
-      assertTrue(commit(Collections.singletonList("a"), startTs.getVersion(), endTs.getVersion()));
+      assertTrue(
+          commitString(Collections.singletonList("a"), startTs.getVersion(), endTs.getVersion()));
       BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
       ByteString v =
           client.get(backOffer, ByteString.copyFromUtf8("a"), session.getTimestamp().getVersion());
