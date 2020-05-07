@@ -5,7 +5,7 @@ import org.apache.spark.sql.types._
 
 class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condition") {
 
-  private val TEST_LARGE_DATA_SIZE = 102400
+  private val TEST_LARGE_DATA_SIZE = 25600
 
   private val TEST_LARGE_COLUMN_SIZE = 512
 

@@ -27,10 +27,10 @@ import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
 import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
-import com.pingcap.tikv.{TiBatchWriteUtils, TiDBJDBCClient, _}
+import com.pingcap.tikv.{TTLManager, TiBatchWriteUtils, TiDBJDBCClient, _}
 import com.pingcap.tispark.TiBatchWrite.TiRow
 import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.Partitioner
+import org.apache.spark.{Partitioner, SparkConf}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 import org.apache.spark.sql.functions.lit
@@ -85,6 +85,10 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var isEnableSplitRegion: Boolean = _
   private var tableLocked: Boolean = false
 
+  @transient private var ttlManager: TTLManager = _
+  private var isTTLUpdate: Boolean = _
+  private var lockTTLSeconds: Long = _
+
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   private def write(): Unit = {
@@ -103,12 +107,28 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     try {
+      if (ttlManager != null) {
+        ttlManager.close()
+      }
+    } catch {
+      case _: Throwable =>
+    }
+
+    try {
       if (tiDBJDBCClient != null) {
         tiDBJDBCClient.close()
       }
     } catch {
       case _: Throwable =>
     }
+  }
+
+  private def mergeSparkConfWithDataSourceConf(conf: SparkConf,
+                                               options: TiDBOptions): TiConfiguration = {
+    val clonedConf = conf.clone()
+    // priority: data source config > spark config
+    clonedConf.setAll(options.parameters)
+    TiUtil.sparkConfToTiConf(clonedConf)
   }
 
   @throws(classOf[NoSuchTableException])
@@ -122,7 +142,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     // initialize
-    tiConf = tiContext.tiConf
+    tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
     tiSession = tiContext.tiSession
     tiTableRef = options.getTiTableRef(tiConf)
     tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
@@ -137,6 +157,10 @@ class TiBatchWrite(@transient val df: DataFrame,
     uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
     handleCol = tiTableInfo.getPKIsHandleColumn
     tableColSize = tiTableInfo.getColumns.size()
+
+    val tikvSupportUpdateTTL = StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
+    isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
+    lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
 
     // check unsupported
     checkUnsupported()
@@ -239,6 +263,8 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // get timestamp as start_ts
     val startTimeStamp = tiSession.getTimestamp
+    val startTs = startTimeStamp.getVersion
+    logger.info(s"startTS: $startTs")
 
     // for partition table, we need calculate each row and tell which physical table
     // that row is belong to.
@@ -338,19 +364,28 @@ class TiBatchWrite(@transient val df: DataFrame,
       !keyValue._1.equals(primaryKey)
     }
 
-    val startTs = startTimeStamp.getVersion
-    logger.info(s"startTS: $startTs")
-
     // driver primary pre-write
-    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs, options.lockTTLSeconds * 1000)
+    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
 
+    // for test
+    if (options.sleepAfterPrewritePrimaryKey > 0) {
+      logger.debug(s"sleep ${options.sleepAfterPrewritePrimaryKey} ms for test")
+      Thread.sleep(options.sleepAfterPrewritePrimaryKey)
+    }
+
+    // start primary key ttl update
+    if (isTTLUpdate) {
+      ttlManager = new TTLManager(tiConf, startTs, primaryKey.bytes)
+      ttlManager.keepAlive()
+    }
+
     // executors secondary pre-write
     secondaryKeysRDD.foreachPartition { iterator =>
       val ti2PCClientOnExecutor =
-        new TwoPhaseCommitter(tiConf, startTs, options.lockTTLSeconds * 1000)
+        new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
 
       val pairs = iterator.map { keyValue =>
         new TwoPhaseCommitter.BytePairWrapper(
@@ -382,6 +417,11 @@ class TiBatchWrite(@transient val df: DataFrame,
       throw new TiBatchWriteException("tidb's jdbc connection is lost!")
     }
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
+
+    // stop primary key ttl update
+    if (isTTLUpdate) {
+      ttlManager.close()
+    }
 
     // unlock table
     unlockTable()
