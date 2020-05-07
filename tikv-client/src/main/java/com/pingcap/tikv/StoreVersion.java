@@ -57,7 +57,7 @@ public class StoreVersion {
     return toIntVersion() > other.toIntVersion();
   }
 
-  public static int compare(String v0, String v1) {
+  public static int compareTo(String v0, String v1) {
     return new StoreVersion(v0).toIntVersion() - new StoreVersion(v1).toIntVersion();
   }
 

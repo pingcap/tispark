@@ -85,7 +85,7 @@ public interface AbstractLockResolverClient {
       ChannelFactory channelFactory,
       RegionManager regionManager,
       PDClient pdClient) {
-    if (StoreVersion.compare(store.getVersion(), MIN_RESOLVE_LOCK_V3_VERSION) < 0) {
+    if (StoreVersion.compareTo(store.getVersion(), MIN_RESOLVE_LOCK_V3_VERSION) < 0) {
       return new LockResolverClientV2(
           conf, region, blockingStub, asyncStub, channelFactory, regionManager);
     } else {
