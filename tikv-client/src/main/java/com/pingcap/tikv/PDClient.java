@@ -67,7 +67,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
             r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,
             this);
 
-    TsoResponse resp = callWithRetry(backOffer, PDGrpc.METHOD_TSO, request, handler);
+    TsoResponse resp = callWithRetry(backOffer, PDGrpc.getTsoMethod(), request, handler);
     Timestamp timestamp = resp.getTimestamp();
     return new TiTimestamp(timestamp.getPhysical(), timestamp.getLogical());
   }
@@ -84,7 +84,8 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     PDErrorHandler<GetRegionResponse> handler =
         new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
 
-    GetRegionResponse resp = callWithRetry(backOffer, PDGrpc.METHOD_GET_REGION, request, handler);
+    GetRegionResponse resp =
+        callWithRetry(backOffer, PDGrpc.getGetRegionMethod(), request, handler);
     return new TiRegion(
         resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
   }
@@ -105,7 +106,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
     PDErrorHandler<GetRegionResponse> handler =
         new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
 
-    callAsyncWithRetry(backOffer, PDGrpc.METHOD_GET_REGION, request, responseObserver, handler);
+    callAsyncWithRetry(backOffer, PDGrpc.getGetRegionMethod(), request, responseObserver, handler);
     return responseObserver.getFuture();
   }
 
@@ -117,7 +118,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
 
     GetRegionResponse resp =
-        callWithRetry(backOffer, PDGrpc.METHOD_GET_REGION_BY_ID, request, handler);
+        callWithRetry(backOffer, PDGrpc.getGetRegionByIDMethod(), request, handler);
     // Instead of using default leader instance, explicitly set no leader to null
     return new TiRegion(
         resp.getRegion(), resp.getLeader(), conf.getIsolationLevel(), conf.getCommandPriority());
@@ -140,7 +141,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
         new PDErrorHandler<>(getRegionResponseErrorExtractor, this);
 
     callAsyncWithRetry(
-        backOffer, PDGrpc.METHOD_GET_REGION_BY_ID, request, responseObserver, handler);
+        backOffer, PDGrpc.getGetRegionByIDMethod(), request, responseObserver, handler);
     return responseObserver.getFuture();
   }
 
@@ -160,7 +161,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   @Override
   public Store getStore(BackOffer backOffer, long storeId) {
     return callWithRetry(
-            backOffer, PDGrpc.METHOD_GET_STORE, buildGetStoreReq(storeId), buildPDErrorHandler())
+            backOffer, PDGrpc.getGetStoreMethod(), buildGetStoreReq(storeId), buildPDErrorHandler())
         .getStore();
   }
 
@@ -171,7 +172,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
 
     callAsyncWithRetry(
         backOffer,
-        PDGrpc.METHOD_GET_STORE,
+        PDGrpc.getGetStoreMethod(),
         buildGetStoreReq(storeId),
         responseObserver,
         buildPDErrorHandler());
@@ -182,7 +183,7 @@ public class PDClient extends AbstractGRPCClient<PDBlockingStub, PDStub>
   public List<Store> getAllStores(BackOffer backOffer) {
     return callWithRetry(
             backOffer,
-            PDGrpc.METHOD_GET_ALL_STORES,
+            PDGrpc.getGetAllStoresMethod(),
             buildGetAllStoresReq(),
             new PDErrorHandler<>(
                 r -> r.getHeader().hasError() ? buildFromPdpbError(r.getHeader().getError()) : null,

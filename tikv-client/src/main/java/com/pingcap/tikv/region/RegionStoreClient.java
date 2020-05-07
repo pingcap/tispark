@@ -143,7 +143,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             resp -> resp.hasRegionError() ? resp.getRegionError() : null,
             resp -> resp.hasError() ? resp.getError() : null);
 
-    GetResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_GET, factory, handler);
+    GetResponse resp = callWithRetry(backOffer, TikvGrpc.getKvGetMethod(), factory, handler);
 
     handleGetResponse(resp);
     return resp.getValue();
@@ -184,7 +184,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             resp -> resp.hasRegionError() ? resp.getRegionError() : null,
             resp -> null);
     BatchGetResponse resp =
-        callWithRetry(backOffer, TikvGrpc.METHOD_KV_BATCH_GET, request, handler);
+        callWithRetry(backOffer, TikvGrpc.getKvBatchGetMethod(), request, handler);
     return handleBatchGetResponse(backOffer, resp);
   }
 
@@ -245,7 +245,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> null);
-      ScanResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_SCAN, request, handler);
+      ScanResponse resp = callWithRetry(backOffer, TikvGrpc.getKvScanMethod(), request, handler);
       if (isScanSuccess(backOffer, resp)) {
         return doScan(resp);
       }
@@ -343,7 +343,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> null);
-      PrewriteResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_PREWRITE, factory, handler);
+      PrewriteResponse resp = callWithRetry(bo, TikvGrpc.getKvPrewriteMethod(), factory, handler);
       if (isPrewriteSuccess(bo, resp)) {
         return;
       }
@@ -413,7 +413,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.hasError() ? resp.getError() : null);
       TxnHeartBeatResponse resp =
-          callWithRetry(bo, TikvGrpc.METHOD_KV_TXN_HEART_BEAT, factory, handler);
+          callWithRetry(bo, TikvGrpc.getKvTxnHeartBeatMethod(), factory, handler);
       if (isTxnHeartBeatSuccess(resp)) {
         return;
       }
@@ -464,7 +464,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             region,
             resp -> resp.hasRegionError() ? resp.getRegionError() : null,
             resp -> resp.hasError() ? resp.getError() : null);
-    CommitResponse resp = callWithRetry(backOffer, TikvGrpc.METHOD_KV_COMMIT, factory, handler);
+    CommitResponse resp = callWithRetry(backOffer, TikvGrpc.getKvCommitMethod(), factory, handler);
     handleCommitResponse(resp);
   }
 
@@ -529,7 +529,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
             resp -> resp.hasRegionError() ? resp.getRegionError() : null,
             resp -> null);
     Coprocessor.Response resp =
-        callWithRetry(backOffer, TikvGrpc.METHOD_COPROCESSOR, reqToSend, handler);
+        callWithRetry(backOffer, TikvGrpc.getCoprocessorMethod(), reqToSend, handler);
     return handleCopResponse(backOffer, resp, ranges, responseQueue);
   }
 
@@ -646,7 +646,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     StreamingResponse responseIterator =
         this.callServerStreamingWithRetry(
             ConcreteBackOffer.newCopNextMaxBackOff(),
-            TikvGrpc.METHOD_COPROCESSOR_STREAM,
+            TikvGrpc.getCoprocessorStreamMethod(),
             reqToSend,
             handler);
     return doCoprocessor(responseIterator);

@@ -167,7 +167,7 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.hasError() ? resp.getError() : null);
       Kvrpcpb.ResolveLockResponse resp =
-          callWithRetry(bo, TikvGrpc.METHOD_KV_RESOLVE_LOCK, factory, handler);
+          callWithRetry(bo, TikvGrpc.getKvResolveLockMethod(), factory, handler);
 
       if (resp.hasError()) {
         logger.error(
@@ -228,7 +228,7 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
               resp -> resp.hasError() ? resp.getError() : null);
-      CleanupResponse resp = callWithRetry(bo, TikvGrpc.METHOD_KV_CLEANUP, factory, handler);
+      CleanupResponse resp = callWithRetry(bo, TikvGrpc.getKvCleanupMethod(), factory, handler);
 
       if (resp.hasRegionError()) {
         bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));
