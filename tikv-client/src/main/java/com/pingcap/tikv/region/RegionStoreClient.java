@@ -18,7 +18,6 @@
 package com.pingcap.tikv.region;
 
 import static com.pingcap.tikv.region.RegionStoreClient.RequestTypes.REQ_TYPE_DAG;
-import static com.pingcap.tikv.txn.LockResolverClient.extractLockFromKeyErr;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoRegionMiss;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLock;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
@@ -28,6 +27,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.SelectResponse;
+import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.exception.GrpcException;
 import com.pingcap.tikv.exception.KeyException;
@@ -38,8 +38,8 @@ import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.exception.TiKVException;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.streaming.StreamingResponse;
+import com.pingcap.tikv.txn.AbstractLockResolverClient;
 import com.pingcap.tikv.txn.Lock;
-import com.pingcap.tikv.txn.LockResolverClient;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
@@ -112,7 +112,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
 
   private static final Logger logger = LoggerFactory.getLogger(RegionStoreClient.class);
 
-  @VisibleForTesting public final LockResolverClient lockResolverClient;
+  @VisibleForTesting public final AbstractLockResolverClient lockResolverClient;
 
   /**
    * Fetch a value according to a key
@@ -210,8 +210,8 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     }
 
     if (!locks.isEmpty()) {
-      boolean ok = lockResolverClient.resolveLocks(backOffer, locks);
-      if (!ok) {
+      long msBeforeExpired = lockResolverClient.resolveLocks(backOffer, locks);
+      if (msBeforeExpired > 0) {
         // resolveLocks already retried, just throw error to upper logic.
         throw new TiKVException("locks not resolved, retry");
       }
@@ -271,7 +271,7 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     List<KvPair> newKvPairs = new ArrayList<>();
     for (KvPair kvPair : kvPairs) {
       if (kvPair.hasError()) {
-        Lock lock = extractLockFromKeyErr(kvPair.getError());
+        Lock lock = AbstractLockResolverClient.extractLockFromKeyErr(kvPair.getError());
         newKvPairs.add(
             KvPair.newBuilder()
                 .setError(kvPair.getError())
@@ -385,8 +385,10 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       return true;
     }
 
-    if (!lockResolverClient.resolveLocks(backOffer, locks)) {
-      backOffer.doBackOff(BoTxnLock, new KeyException(resp.getErrorsList().get(0)));
+    long msBeforeExpired = lockResolverClient.resolveLocks(backOffer, locks);
+    if (msBeforeExpired > 0) {
+      backOffer.doBackOffWithMaxSleep(
+          BoTxnLock, msBeforeExpired, new KeyException(resp.getErrorsList().get(0)));
     }
     return false;
   }
@@ -564,11 +566,11 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     if (response.hasLocked()) {
       Lock lock = new Lock(response.getLocked());
       logger.debug(String.format("coprocessor encounters locks: %s", lock));
-      boolean ok =
+      long msBeforeExpired =
           lockResolverClient.resolveLocks(
               backOffer, new ArrayList<>(Collections.singletonList(lock)));
-      if (!ok) {
-        backOffer.doBackOff(BoTxnLockFast, new LockException(lock));
+      if (msBeforeExpired > 0) {
+        backOffer.doBackOffWithMaxSleep(BoTxnLockFast, msBeforeExpired, new LockException(lock));
       }
       // Split ranges
       return RangeSplitter.newSplitter(this.regionManager).splitRangeByRegion(ranges, storeType);
@@ -654,15 +656,20 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
     private final TiConfiguration conf;
     private final ChannelFactory channelFactory;
     private final RegionManager regionManager;
+    private final PDClient pdClient;
 
     public RegionStoreClientBuilder(
-        TiConfiguration conf, ChannelFactory channelFactory, RegionManager regionManager) {
+        TiConfiguration conf,
+        ChannelFactory channelFactory,
+        RegionManager regionManager,
+        PDClient pdClient) {
       Objects.requireNonNull(conf, "conf is null");
       Objects.requireNonNull(channelFactory, "channelFactory is null");
       Objects.requireNonNull(regionManager, "regionManager is null");
       this.conf = conf;
       this.channelFactory = channelFactory;
       this.regionManager = regionManager;
+      this.pdClient = pdClient;
     }
 
     public RegionStoreClient build(TiRegion region, Store store, TiStoreType storeType)
@@ -681,7 +688,15 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
       TikvStub asyncStub = TikvGrpc.newStub(channel);
 
       return new RegionStoreClient(
-          conf, region, storeType, channelFactory, blockingStub, asyncStub, regionManager);
+          conf,
+          region,
+          store,
+          storeType,
+          channelFactory,
+          blockingStub,
+          asyncStub,
+          regionManager,
+          pdClient);
     }
 
     public RegionStoreClient build(TiRegion region, Store store) throws GrpcException {
@@ -710,15 +725,25 @@ public class RegionStoreClient extends AbstractRegionStoreClient {
   private RegionStoreClient(
       TiConfiguration conf,
       TiRegion region,
+      Store store,
       TiStoreType storeType,
       ChannelFactory channelFactory,
       TikvBlockingStub blockingStub,
       TikvStub asyncStub,
-      RegionManager regionManager) {
+      RegionManager regionManager,
+      PDClient pdClient) {
     super(conf, region, channelFactory, blockingStub, asyncStub, regionManager);
     this.storeType = storeType;
+
     this.lockResolverClient =
-        new LockResolverClient(
-            conf, region, this.blockingStub, this.asyncStub, channelFactory, regionManager);
+        AbstractLockResolverClient.getInstance(
+            store,
+            conf,
+            region,
+            this.blockingStub,
+            this.asyncStub,
+            channelFactory,
+            regionManager,
+            pdClient);
   }
 }
