@@ -129,7 +129,9 @@ object TiUtil {
     if (conf.contains(TiConfigConst.ISOLATION_READ_ENGINES)) {
       import scala.collection.JavaConversions._
       tiConf.setIsolationReadEngines(
-        getIsolationReadEnginesFromString(conf.get(TiConfigConst.ISOLATION_READ_ENGINES)).toList
+        getIsolationReadEnginesFromString(
+          conf.get(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIKV_STORAGE_ENGINE)
+        ).toList
       )
     }
 
@@ -147,8 +149,8 @@ object TiUtil {
       .toLowerCase()
       .split(",")
       .map {
-        case "tikv"    => TiStoreType.TiKV
-        case "tiflash" => TiStoreType.TiFlash
+        case TiConfigConst.TIKV_STORAGE_ENGINE    => TiStoreType.TiKV
+        case TiConfigConst.TIFLASH_STORAGE_ENGINE => TiStoreType.TiFlash
         case s =>
           throw new UnsupportedOperationException(
             s"Unknown isolation engine type: $s, valid types are 'tikv, tiflash'"
@@ -158,7 +160,9 @@ object TiUtil {
   }
 
   def getIsolationReadEngines(sqlContext: SQLContext): List[TiStoreType] =
-    getIsolationReadEnginesFromString(sqlContext.getConf(TiConfigConst.ISOLATION_READ_ENGINES))
+    getIsolationReadEnginesFromString(
+      sqlContext.getConf(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIKV_STORAGE_ENGINE)
+    )
 
   def registerUDFs(sparkSession: SparkSession): Unit = {
     val timeZoneStr: String = "TimeZone: " + Converter.getLocalTimezone.toString

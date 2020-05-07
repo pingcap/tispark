@@ -391,6 +391,8 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
 object SharedSQLContext extends Logging {
   protected val timeZoneOffset = "-7:00"
   protected val logger: Logger = log
+  // Timezone is fixed to a random GMT-7 for those timezone sensitive tests (timestamp_*, date_*, etc)
+  private val timeZone = TimeZone.getTimeZone("GMT-7")
   // JDK time zone
   TimeZone.setDefault(timeZone)
   // Joda time zone
@@ -410,8 +412,6 @@ object SharedSQLContext extends Logging {
     }
     Some(tmpSeed)
   }
-  // Timezone is fixed to a random GMT-7 for those timezone sensitive tests (timestamp_*, date_*, etc)
-  private val timeZone = TimeZone.getTimeZone("GMT-7")
   protected var tidbUser: String = _
   protected var tidbPassword: String = _
   protected var tidbAddr: String = _

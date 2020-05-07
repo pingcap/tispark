@@ -17,7 +17,9 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalException}
+import com.pingcap.tikv.expression.{ColumnRef, ComparisonBinaryExpression, Constant}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
+import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tispark.utils.ReflectionUtil.newAttributeReference
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.expressions.Attribute
@@ -37,9 +39,12 @@ case class TiDBRelation(session: TiSession,
   @transient val sqlContext: SQLContext
 ) extends BaseRelation
     with InsertableRelation {
-  val table: TiTableInfo = meta
-    .getTable(tableRef.databaseName, tableRef.tableName)
-    .getOrElse(
+  val table: TiTableInfo = getTableOrThrow(meta.getTable(tableRef.databaseName, tableRef.tableName))
+
+  override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
+
+  private def getTableOrThrow(option: Option[TiTableInfo]): TiTableInfo =
+    option.getOrElse(
       throw new TiClientInternalException(
         "Table not exist " + tableRef + " valid databases are: " + meta.getDatabases
           .map(_.getName)
@@ -47,7 +52,39 @@ case class TiDBRelation(session: TiSession,
       )
     )
 
-  override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
+  lazy val isTiFlashReplicaAvailable: Boolean = {
+    // select * from information_schema.tiflash_replica where table_id = $id
+    // TABLE_SCHEMA, TABLE_NAME, TABLE_ID, REPLICA_COUNT, LOCATION_LABELS, AVAILABLE, PROGRESS
+
+    import scala.collection.JavaConversions._
+    val tiflashReplicaTable = getTableOrThrow(
+      meta.getTable("INFORMATION_SCHEMA", "TIFLASH_REPLICA")
+    )
+    val timestamp = session.getTimestamp
+    val tableId = table.getId
+    val dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL)
+    val colAvailable = ColumnRef.create("AVAILABLE", IntegerType.TINYINT)
+    val colTableId = ColumnRef.create("TABLE_ID", IntegerType.BIGINT)
+    dagRequest.addRequiredColumn(colAvailable)
+    dagRequest.addFilters(
+      List(
+        ComparisonBinaryExpression.equal(colTableId, Constant.create(tableId, IntegerType.BIGINT))
+      ).toList
+    )
+    dagRequest.setLimit(1)
+    dagRequest.setTableInfo(tiflashReplicaTable)
+    dagRequest.setStartTs(timestamp)
+
+    val snapshot = session.createSnapshot(ts)
+    val rows = snapshot.tableReadRow(dagRequest, tableId)
+    if (!rows.hasNext) {
+      false
+    } else {
+      val result = rows.next().getInteger(0) > 0
+      assert(!rows.hasNext)
+      result
+    }
+  }
 
   override def sizeInBytes: Long = tableRef.sizeInBytes
 

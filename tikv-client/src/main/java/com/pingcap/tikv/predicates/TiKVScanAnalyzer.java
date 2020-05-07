@@ -176,7 +176,7 @@ public class TiKVScanAnalyzer {
     private final Map<Long, List<KeyRange>> keyRanges;
     private final Set<Expression> filters;
     private final double cost;
-    private TiIndexInfo index;
+    private final TiIndexInfo index;
     private final boolean isDoubleRead;
     private final double estimatedRowCount;
     private final List<TiPartitionDef> prunedParts;
@@ -226,34 +226,49 @@ public class TiKVScanAnalyzer {
       TiTableInfo table,
       TiTimestamp ts,
       TiDAGRequest dagRequest) {
-    return buildTiDAGReq(true, false, columnList, conditions, table, null, ts, dagRequest);
+    return buildTiDAGReq(true, true, false, columnList, conditions, table, null, ts, dagRequest);
   }
 
   // Build scan plan picking access path with lowest cost by estimation
   public TiDAGRequest buildTiDAGReq(
       boolean allowIndexScan,
-      boolean isUseTiFlash,
+      boolean canUseTiKV,
+      boolean canUseTiFlash,
       List<TiColumnInfo> columnList,
       List<Expression> conditions,
       TiTableInfo table,
       TableStatistics tableStatistics,
       TiTimestamp ts,
       TiDAGRequest dagRequest) {
-    TiKVScanPlan minPlan = buildTableScan(conditions, table, tableStatistics);
-    if (allowIndexScan && !isUseTiFlash) {
+
+    TiKVScanPlan minPlan = null;
+    if (canUseTiKV) {
+      minPlan = buildTableScan(conditions, table, tableStatistics);
+    }
+    if (canUseTiFlash) {
+      // it is possible that only TiFlash plan exists due to isolation read.
+      TiKVScanPlan plan = buildTiFlashScan(columnList, conditions, table, tableStatistics);
+      if (minPlan == null || plan.getCost() < minPlan.getCost()) {
+        minPlan = plan;
+      }
+    } else if (canUseTiKV && allowIndexScan) {
       minPlan.getFilters().forEach(dagRequest::addDowngradeFilter);
       double minCost = minPlan.getCost();
       for (TiIndexInfo index : table.getIndices()) {
-        TiKVScanPlan plan = buildIndexScan(columnList, conditions, index, table, tableStatistics);
+        TiKVScanPlan plan =
+            buildIndexScan(columnList, conditions, index, table, tableStatistics, false);
         if (plan.getCost() < minCost) {
           minPlan = plan;
           minCost = plan.getCost();
         }
       }
     }
+    if (minPlan == null) {
+      throw new RuntimeException("No valid plan found for table '" + table.getName() + "'");
+    }
 
     dagRequest.addRanges(minPlan.getKeyRanges());
-    if (isUseTiFlash) {
+    if (canUseTiFlash) {
       dagRequest.setStoreType(TiStoreType.TiFlash);
     }
     dagRequest.setPrunedParts(minPlan.getPrunedParts());
@@ -273,7 +288,16 @@ public class TiKVScanAnalyzer {
   private TiKVScanPlan buildTableScan(
       List<Expression> conditions, TiTableInfo table, TableStatistics tableStatistics) {
     TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
-    return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics);
+    return buildIndexScan(table.getColumns(), conditions, pkIndex, table, tableStatistics, false);
+  }
+
+  private TiKVScanPlan buildTiFlashScan(
+      List<TiColumnInfo> columnList,
+      List<Expression> conditions,
+      TiTableInfo table,
+      TableStatistics tableStatistics) {
+    TiIndexInfo pkIndex = TiIndexInfo.generateFakePrimaryKeyIndex(table);
+    return buildIndexScan(columnList, conditions, pkIndex, table, tableStatistics, true);
   }
 
   TiKVScanPlan buildIndexScan(
@@ -281,7 +305,8 @@ public class TiKVScanAnalyzer {
       List<Expression> conditions,
       TiIndexInfo index,
       TiTableInfo table,
-      TableStatistics tableStatistics) {
+      TableStatistics tableStatistics,
+      boolean useTiFlash) {
     requireNonNull(table, "Table cannot be null to encoding keyRange");
     requireNonNull(conditions, "conditions cannot be null to encoding keyRange");
 
@@ -307,9 +332,18 @@ public class TiKVScanAnalyzer {
     if (index == null || index.isFakePrimaryKey()) {
       planBuilder
           .setDoubleRead(false)
-          .calculateCostAndEstimateCount(tableColSize)
           .setKeyRanges(buildTableScanKeyRange(table, irs, prunedParts));
+      if (useTiFlash) {
+        // TiFlash is a columnar storage engine
+        long colSize =
+            columnList.stream().mapToLong(TiColumnInfo::getSize).sum() + TABLE_PREFIX_SIZE;
+        planBuilder.calculateCostAndEstimateCount(colSize).setStoreType(TiStoreType.TiFlash);
+      } else {
+        planBuilder.calculateCostAndEstimateCount(tableColSize);
+      }
     } else {
+      // TiFlash does not support index scan.
+      assert (!useTiFlash);
       long indexSize = index.getIndexColumnSize() + TABLE_PREFIX_SIZE + INDEX_PREFIX_SIZE;
       planBuilder
           .setIndex(index)

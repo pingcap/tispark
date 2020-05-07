@@ -160,7 +160,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def useStreamingProcess: Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
-  private def codecFormat(): EncodeType = {
+  private def codecFormat(useTiFlash: Boolean = false): EncodeType = {
     val codecFormatStr =
       sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "default").toLowerCase
     // streaming only supports TypeDefault. Even we enable chunk, we should still use TypeDefault.
@@ -168,7 +168,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       return EncodeType.TypeDefault
     }
 
-    if (canUseTiFlash) {
+    if (useTiFlash) {
       codecFormatStr match {
         case "chunk" =>
           EncodeType.TypeChunk
@@ -181,8 +181,15 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     }
   }
 
-  private def canUseTiFlash: Boolean =
-    TiUtil.getIsolationReadEngines(sqlContext).contains(TiStoreType.TiFlash)
+  private def canUseTiKV(): Boolean =
+    TiUtil
+      .getIsolationReadEngines(sqlContext)
+      .contains(TiStoreType.TiKV)
+
+  private def canUseTiFlash(source: TiDBRelation): Boolean =
+    TiUtil
+      .getIsolationReadEngines(sqlContext)
+      .contains(TiStoreType.TiFlash) && source.isTiFlashReplicaAvailable
 
   private def timeZoneOffsetInSeconds(): Int = {
     val tz = DateTimeZone.getDefault
@@ -235,8 +242,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     groupByList: Seq[NamedExpression],
     aggregates: Seq[AggregateExpression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest =
-      new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
+    dagRequest: TiDAGRequest
   ): TiDAGRequest = {
     aggregates
       .map {
@@ -257,8 +263,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     tiColumns: Seq[TiColumnRef],
     filters: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest =
-      new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
+    dagRequest: TiDAGRequest
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpression] = filters.map {
       ExprUtils.transformFilter(_, source.table, dagRequest)
@@ -270,7 +275,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     scanBuilder.buildTiDAGReq(
       allowIndexRead(),
-      canUseTiFlash,
+      canUseTiKV(),
+      canUseTiFlash(source),
       tiColumns.map { colRef =>
         source.table.getColumn(colRef.getName)
       }.asJava,
@@ -289,7 +295,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     source: TiDBRelation,
     sortOrder: Seq[SortOrder]
   ): SparkPlan = {
-    val request = new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
+    val request = newTiDAGRequest()
     request.setLimit(limit)
     ExprUtils.transformSortOrderToTiOrderBy(request, sortOrder, source.table)
 
@@ -377,8 +383,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     projectList: Seq[NamedExpression],
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
-    dagRequest: TiDAGRequest =
-      new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
+    dagRequest: TiDAGRequest
   ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))
@@ -541,11 +546,14 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       // TODO: This is a temporary fix for the issue: https://github.com/pingcap/tispark/issues/1039
       !groupingExpressions.exists(_.isInstanceOf[Alias])
 
+  private def newTiDAGRequest(): TiDAGRequest =
+    new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
+
   // We do through similar logic with original Spark as in SparkStrategies.scala
   // Difference is we need to test if a sub-plan can be consumed all together by TiKV
   // and then we don't return (don't planLater) and plan the remaining all at once
+  // TODO: This test should be done once for all children
   private def doPlan(source: TiDBRelation, plan: LogicalPlan): Seq[SparkPlan] =
-    // TODO: This test should be done once for all children
     plan match {
       case logical.ReturnAnswer(rootPlan) =>
         rootPlan match {
@@ -573,7 +581,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           filters,
           LogicalRelation(source: TiDBRelation, _, _, _)
           ) =>
-        pruneFilterProject(projectList, filters, source) :: Nil
+        pruneFilterProject(projectList, filters, source, newTiDAGRequest()) :: Nil
 
       // Basic logic of original Spark's aggregation plan is:
       // PhysicalAggregation extractor will rewrite original aggregation
@@ -597,7 +605,8 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           _.references
         })
         val tiColumns = buildTiColumnRefFromColumnSeq(projectSet, source)
-        val dagReq: TiDAGRequest = filterToDAGRequest(tiColumns, filters, source)
+        val dagReq: TiDAGRequest =
+          filterToDAGRequest(tiColumns, filters, source, newTiDAGRequest())
         groupAggregateProjection(
           tiColumns,
           groupingExpressions,

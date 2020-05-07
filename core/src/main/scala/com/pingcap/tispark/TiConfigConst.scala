@@ -47,4 +47,7 @@ object TiConfigConst {
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"
+
+  val TIKV_STORAGE_ENGINE: String = "tikv"
+  val TIFLASH_STORAGE_ENGINE: String = "tiflash"
 }
