@@ -34,12 +34,21 @@ import org.tikv.kvproto.Metapb;
 
 public class RegionStoreClientTest extends MockServerTest {
 
-  private RegionStoreClient createClient() {
+  private RegionStoreClient createClientV2() {
+    return createClient("2.1.19");
+  }
+
+  private RegionStoreClient createClientV3() {
+    return createClient("3.0.12");
+  }
+
+  private RegionStoreClient createClient(String version) {
     Metapb.Store store =
         Metapb.Store.newBuilder()
             .setAddress(LOCAL_ADDR + ":" + port)
             .setId(1)
             .setState(Metapb.StoreState.Up)
+            .setVersion(version)
             .build();
 
     RegionStoreClient.RegionStoreClientBuilder builder = session.getRegionStoreClientBuilder();
@@ -49,7 +58,11 @@ public class RegionStoreClientTest extends MockServerTest {
 
   @Test
   public void getTest() throws Exception {
-    RegionStoreClient client = createClient();
+    doGetTest(createClientV2());
+    doGetTest(createClientV3());
+  }
+
+  private void doGetTest(RegionStoreClient client) {
     server.put("key1", "value1");
     ByteString value = client.get(defaultBackOff(), ByteString.copyFromUtf8("key1"), 1);
     assertEquals(ByteString.copyFromUtf8("value1"), value);
@@ -67,8 +80,11 @@ public class RegionStoreClientTest extends MockServerTest {
 
   @Test
   public void batchGetTest() throws Exception {
-    RegionStoreClient client = createClient();
+    doBatchGetTest(createClientV2());
+    doBatchGetTest(createClientV3());
+  }
 
+  private void doBatchGetTest(RegionStoreClient client) throws Exception {
     server.put("key1", "value1");
     server.put("key2", "value2");
     server.put("key4", "value4");
@@ -100,8 +116,11 @@ public class RegionStoreClientTest extends MockServerTest {
 
   @Test
   public void scanTest() throws Exception {
-    RegionStoreClient client = createClient();
+    doScanTest(createClientV2());
+    doScanTest(createClientV3());
+  }
 
+  private void doScanTest(RegionStoreClient client) throws Exception {
     server.put("key1", "value1");
     server.put("key2", "value2");
     server.put("key4", "value4");
@@ -130,8 +149,11 @@ public class RegionStoreClientTest extends MockServerTest {
 
   @Test
   public void coprocessTest() throws Exception {
-    RegionStoreClient client = createClient();
+    doCoprocessTest(createClientV2());
+    doCoprocessTest(createClientV3());
+  }
 
+  private void doCoprocessTest(RegionStoreClient client) throws Exception {
     server.put("key1", "value1");
     server.put("key2", "value2");
     server.put("key4", "value4");

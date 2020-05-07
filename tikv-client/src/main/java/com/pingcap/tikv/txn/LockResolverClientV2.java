@@ -37,7 +37,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.CleanupRequest;
 import org.tikv.kvproto.Kvrpcpb.CleanupResponse;
 import org.tikv.kvproto.Kvrpcpb.ResolveLockRequest;
@@ -46,18 +45,15 @@ import org.tikv.kvproto.TikvGrpc;
 import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
 
+/** Before v3.0.5 TiDB uses the ttl on secondary lock. */
+
 // LockResolver resolves locks and also caches resolved txn status.
-public class LockResolverClient extends AbstractRegionStoreClient {
+public class LockResolverClientV2 extends AbstractRegionStoreClient
+    implements AbstractLockResolverClient {
   // ResolvedCacheSize is max number of cached txn status.
   private static final long RESOLVED_TXN_CACHE_SIZE = 2048;
-  // By default, locks after 3000ms is considered unusual (the client created the
-  // lock might be dead). Other client may cleanup this kind of lock.
-  // For locks created recently, we will do backoff and retry.
-  private static final long DEFAULT_LOCK_TTL = 3000;
-  private static final long MAX_LOCK_TTL = 120000;
-  // ttl = ttlFactor * sqrt(writeSizeInMiB)
-  private static final long TTL_FACTOR = 6000;
-  private static final Logger logger = LoggerFactory.getLogger(LockResolverClient.class);
+
+  private static final Logger logger = LoggerFactory.getLogger(LockResolverClientV2.class);
 
   private final ReadWriteLock readWriteLock;
   // Note: Because the internal of long is same as unsigned_long
@@ -69,7 +65,7 @@ public class LockResolverClient extends AbstractRegionStoreClient {
   // the list is chain of txn for O(1) lru cache
   private final Queue<Long> recentResolved;
 
-  public LockResolverClient(
+  public LockResolverClientV2(
       TiConfiguration conf,
       TiRegion region,
       TikvBlockingStub blockingStub,
@@ -109,7 +105,7 @@ public class LockResolverClient extends AbstractRegionStoreClient {
     }
   }
 
-  public Long getTxnStatus(BackOffer bo, Long txnID, ByteString primary) {
+  private Long getTxnStatus(BackOffer bo, Long txnID, ByteString primary) {
     Long status = getResolved(txnID);
 
     if (status != null) {
@@ -157,43 +153,21 @@ public class LockResolverClient extends AbstractRegionStoreClient {
     }
   }
 
-  public static Lock extractLockFromKeyErr(Kvrpcpb.KeyError keyError) {
-    if (keyError.hasLocked()) {
-      return new Lock(keyError.getLocked());
-    }
-
-    if (keyError.hasConflict()) {
-      Kvrpcpb.WriteConflict conflict = keyError.getConflict();
-      throw new KeyException(
-          String.format(
-              "scan meet key conflict on primary key %s at commit ts %s",
-              conflict.getPrimary(), conflict.getConflictTs()));
-    }
-
-    if (!keyError.getRetryable().isEmpty()) {
-      throw new KeyException(
-          String.format("tikv restart txn %s", keyError.getRetryableBytes().toStringUtf8()));
-    }
-
-    if (!keyError.getAbort().isEmpty()) {
-      throw new KeyException(
-          String.format("tikv abort txn %s", keyError.getAbortBytes().toStringUtf8()));
-    }
-
-    throw new KeyException(
-        String.format("unexpected key error meets and it is %s", keyError.toString()));
+  @Override
+  public String getVersion() {
+    return "V2";
   }
 
-  // ResolveLocks tries to resolve Locks. The resolving process is in 3 steps:
-  // 1) Use the `lockTTL` to pick up all expired locks. Only locks that are old
-  //    enough are considered orphan locks and will be handled later. If all locks
-  //    are expired then all locks will be resolved so true will be returned, otherwise
-  //    caller should sleep a while before retry.
-  // 2) For each lock, query the primary key to get txn(which left the lock)'s
-  //    commit status.
-  // 3) Send `ResolveLock` cmd to the lock's region to resolve all locks belong to
-  //    the same transaction.
-  public boolean resolveLocks(BackOffer bo, List<Lock> locks) {
+  @Override
+  public long resolveLocks(BackOffer bo, List<Lock> locks) {
+    if (doResolveLocks(bo, locks)) {
+      return 0L;
+    } else {
+      return 10000L;
+    }
+  }
+
+  private boolean doResolveLocks(BackOffer bo, List<Lock> locks) {
     if (locks.isEmpty()) {
       return true;
     }
@@ -210,7 +184,7 @@ public class LockResolverClient extends AbstractRegionStoreClient {
     }
 
     // TxnID -> []Region, record resolved Regions.
-    // TODO: Maybe put it in all LockResolverClient and share by all txns.
+    // TODO: Maybe put it in all LockResolverClientV2 and share by all txns.
     Map<Long, Set<RegionVerID>> cleanTxns = new HashMap<>();
     for (Lock l : expiredLocks) {
       Long status = getTxnStatus(bo, l.getTxnID(), l.getPrimary());

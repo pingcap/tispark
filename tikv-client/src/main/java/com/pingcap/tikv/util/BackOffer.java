@@ -56,5 +56,12 @@ public interface BackOffer {
    * doBackOff sleeps a while base on the BackOffType and records the error message. Will stop until
    * max back off time exceeded and throw an exception to the caller.
    */
-  void doBackOff(BackOffFunction.BackOffFuncType funcTypes, Exception err);
+  void doBackOff(BackOffFunction.BackOffFuncType funcType, Exception err);
+
+  /**
+   * BackoffWithMaxSleep sleeps a while base on the backoffType and records the error message and
+   * never sleep more than maxSleepMs for each sleep.
+   */
+  void doBackOffWithMaxSleep(
+      BackOffFunction.BackOffFuncType funcType, long maxSleepMs, Exception err);
 }
