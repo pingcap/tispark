@@ -6,7 +6,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class BackOffFunction {
   private int base;
   private int cap;
-  private int lastSleep;
+  private long lastSleep;
   private int attempts;
   private BackOffer.BackOffStrategy strategy;
 
@@ -35,22 +35,26 @@ public class BackOffFunction {
    * Do back off in exponential with optional jitters according to different back off strategies.
    * See http://www.awsarchitectureblog.com/2015/03/backoff.html
    */
-  int doBackOff() {
-    int sleep = 0;
-    int v = expo(base, cap, attempts);
+  long doBackOff(long maxSleepMs) {
+    long sleep = 0;
+    long v = expo(base, cap, attempts);
     switch (strategy) {
       case NoJitter:
         sleep = v;
         break;
       case FullJitter:
-        sleep = ThreadLocalRandom.current().nextInt(v);
+        sleep = ThreadLocalRandom.current().nextLong(v);
         break;
       case EqualJitter:
-        sleep = v / 2 + ThreadLocalRandom.current().nextInt(v / 2);
+        sleep = v / 2 + ThreadLocalRandom.current().nextLong(v / 2);
         break;
       case DecorrJitter:
-        sleep = Math.min(cap, base + ThreadLocalRandom.current().nextInt(lastSleep * 3 - base));
+        sleep = Math.min(cap, base + ThreadLocalRandom.current().nextLong(lastSleep * 3 - base));
         break;
+    }
+
+    if (maxSleepMs > 0 && sleep > maxSleepMs) {
+      sleep = maxSleepMs;
     }
 
     try {
