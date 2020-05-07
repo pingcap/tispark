@@ -27,19 +27,20 @@ If you are using maven (recommended), add the following code to your `pom.xml`:
 <dependencies>
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
-      <artifactId>tispark-assembly</artifactId>
-      <version>2.2.0</version>
+      <artifactId>tispark-core</artifactId>
+      <version>2.1.8-spark_${spark.version}</version>
     </dependency>
 </dependencies>
 ```
 
-If you want to use TiSpark-2.1.x, please use the following configuration:
+
+If you want to use TiSpark-2.2.x, please use the following configuration:
 ```xml
 <dependencies>
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
-      <artifactId>tispark-core</artifactId>
-      <version>2.1.8-spark_${spark.version}</version>
+      <artifactId>tispark-assembly</artifactId>
+      <version>2.2.0</version>
     </dependency>
 </dependencies>
 ```
