@@ -25,6 +25,7 @@ public class Lock {
   private final long ttl;
   private final ByteString key;
   private final ByteString primary;
+  private final long txnSize;
   private static final long defaultLockTTL = 3000;
 
   public Lock(Kvrpcpb.LockInfo l) {
@@ -32,6 +33,7 @@ public class Lock {
     key = l.getKey();
     primary = l.getPrimaryLock();
     ttl = l.getLockTtl() == 0 ? defaultLockTTL : l.getLockTtl();
+    txnSize = l.getTxnSize();
   }
 
   public long getTxnID() {
@@ -48,5 +50,9 @@ public class Lock {
 
   public ByteString getPrimary() {
     return primary;
+  }
+
+  public long getTxnSize() {
+    return txnSize;
   }
 }

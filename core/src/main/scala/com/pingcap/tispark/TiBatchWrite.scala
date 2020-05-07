@@ -15,6 +15,7 @@
 
 package com.pingcap.tispark
 
+import java.sql.SQLException
 import java.util
 
 import com.pingcap.tikv.allocator.RowIDAllocator
@@ -837,8 +838,20 @@ class TiBatchWrite(@transient val df: DataFrame,
       val indices = tiTableInfo.getIndices.asScala
 
       indices.foreach { index =>
-        val rdd = wrappedEncodedRdd.filter(_.indexId == index.getId)
+        val colName = index.getIndexColumns.get(0).getName
+        val tiColumn = tiTableInfo.getColumn(colName)
+        val colOffset = tiColumn.getOffset
+        val dataType = tiColumn.getType
 
+        val ordering = new Ordering[WrappedEncodedRow] {
+          override def compare(x: WrappedEncodedRow, y: WrappedEncodedRow): Int = {
+            val xIndex = x.row.get(colOffset, dataType)
+            val yIndex = y.row.get(colOffset, dataType)
+            xIndex.toString.compare(yIndex.toString)
+          }
+        }
+
+        val rdd = wrappedEncodedRdd.filter(_.indexId == index.getId)
         val regionSplitNum = if (options.regionSplitNum != 0) {
           options.regionSplitNum
         } else {
@@ -847,22 +860,31 @@ class TiBatchWrite(@transient val df: DataFrame,
 
         // region split
         if (regionSplitNum > 1) {
-          val minHandle = rdd.min().handle
-          val maxHandle = rdd.max().handle
-          if (checkTidbRegionSplitContidion(minHandle, maxHandle, regionSplitNum) || options.regionSplitNum != 0) {
-            logger.info("region split num=" + regionSplitNum + " index name=" + index.getName)
+          val minIndexValue = rdd.min()(ordering).row.get(colOffset, dataType).toString
+          val maxIndexValue = rdd.max()(ordering).row.get(colOffset, dataType).toString
+          logger.info(
+            s"index region split, regionSplitNum=$regionSplitNum, indexName=${index.getName}"
+          )
+          try {
             tiDBJDBCClient
               .splitIndexRegion(
                 options.database,
                 options.table,
                 index.getName,
-                minHandle,
-                maxHandle,
+                minIndexValue,
+                maxIndexValue,
                 regionSplitNum
               )
-          } else {
-            logger.warn("region split is skipped")
+          } catch {
+            case e: SQLException =>
+              if (options.isTest) {
+                throw e
+              }
           }
+        } else {
+          logger.warn(
+            s"skip index split index, regionSplitNum=$regionSplitNum, indexName=${index.getName}"
+          )
         }
       }
     }
@@ -874,14 +896,21 @@ class TiBatchWrite(@transient val df: DataFrame,
   private def splitTableRegion(wrappedRowRdd: RDD[WrappedEncodedRow]): Unit = {
     if (options.enableRegionSplit && isEnableSplitRegion) {
       if (options.regionSplitNum != 0) {
-        tiDBJDBCClient
-          .splitTableRegion(
-            options.database,
-            options.table,
-            0,
-            Int.MaxValue,
-            options.regionSplitNum
-          )
+        try {
+          tiDBJDBCClient
+            .splitTableRegion(
+              options.database,
+              options.table,
+              0,
+              Int.MaxValue,
+              options.regionSplitNum
+            )
+        } catch {
+          case e: SQLException =>
+            if (options.isTest) {
+              throw e
+            }
+        }
       } else {
         val regionSplitNum = if (options.regionSplitNum != 0) {
           options.regionSplitNum
@@ -893,18 +922,24 @@ class TiBatchWrite(@transient val df: DataFrame,
           val minHandle = wrappedRowRdd.min().handle
           val maxHandle = wrappedRowRdd.max().handle
           if (checkTidbRegionSplitContidion(minHandle, maxHandle, regionSplitNum)) {
-            logger.info("region split is enabled.")
-            logger.info("region split num is " + regionSplitNum)
-            tiDBJDBCClient
-              .splitTableRegion(
-                options.database,
-                options.table,
-                minHandle,
-                maxHandle,
-                regionSplitNum
-              )
+            logger.info(s"table region split is enabled, regionSplitNum=$regionSplitNum")
+            try {
+              tiDBJDBCClient
+                .splitTableRegion(
+                  options.database,
+                  options.table,
+                  minHandle,
+                  maxHandle,
+                  regionSplitNum
+                )
+            } catch {
+              case e: SQLException =>
+                if (options.isTest) {
+                  throw e
+                }
+            }
           } else {
-            logger.warn("region split is skipped")
+            logger.warn("table region split is skipped")
           }
         }
       }

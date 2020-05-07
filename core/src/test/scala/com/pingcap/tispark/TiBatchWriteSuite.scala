@@ -61,7 +61,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         df,
         ti,
         new TiDBOptions(
-          tidbOptions + ("database" -> s"$database", "table" -> tableToWrite)
+          tidbOptions + ("database" -> s"$database", "table" -> tableToWrite, "isTest" -> "true")
         )
       )
 
@@ -91,7 +91,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         df,
         ti,
         new TiDBOptions(
-          tidbOptions + ("database" -> s"$dbPrefix$database", "table" -> s"${batchWriteTablePrefix}_TABLE_NOT_EXISTS")
+          tidbOptions + ("database" -> s"$dbPrefix$database", "table" -> s"${batchWriteTablePrefix}_TABLE_NOT_EXISTS", "isTest" -> "true")
         )
       )
     }

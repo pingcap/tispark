@@ -80,6 +80,8 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val sleepAfterPrewritePrimaryKey: Long =
     parameters.getOrElse(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong
 
+  val isTest: Boolean = parameters.getOrElse(TIDB_IS_TEST, "false").toBoolean
+
   // ------------------------------------------------------------
   // Calculated parameters
   // ------------------------------------------------------------
@@ -157,4 +159,5 @@ object TiDBOptions {
   // parameters only for test
   // ------------------------------------------------------------
   val TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY: String = newOption("sleepAfterPrewritePrimaryKey")
+  val TIDB_IS_TEST: String = newOption("isTest")
 }

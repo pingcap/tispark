@@ -17,7 +17,6 @@
 
 package com.pingcap.tikv.operation;
 
-import static com.pingcap.tikv.txn.LockResolverClient.extractLockFromKeyErr;
 import static com.pingcap.tikv.util.BackOffFunction.BackOffFuncType.BoTxnLockFast;
 
 import com.google.protobuf.ByteString;
@@ -28,8 +27,8 @@ import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionErrorReceiver;
 import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
+import com.pingcap.tikv.txn.AbstractLockResolverClient;
 import com.pingcap.tikv.txn.Lock;
-import com.pingcap.tikv.txn.LockResolverClient;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import io.grpc.Status;
@@ -53,13 +52,13 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
   private final RegionManager regionManager;
   private final RegionErrorReceiver recv;
-  private final LockResolverClient lockResolverClient;
+  private final AbstractLockResolverClient lockResolverClient;
   private final TiRegion ctxRegion;
 
   public KVErrorHandler(
       RegionManager regionManager,
       RegionErrorReceiver recv,
-      LockResolverClient lockResolverClient,
+      AbstractLockResolverClient lockResolverClient,
       TiRegion ctxRegion,
       Function<RespT, Errorpb.Error> getRegionError,
       Function<RespT, Kvrpcpb.KeyError> getKeyError) {
@@ -134,21 +133,22 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     }
   }
 
-  private boolean checkLockError(BackOffer backOffer, Lock lock) {
+  private void resolveLock(BackOffer backOffer, Lock lock) {
     logger.warn("resolving lock");
-    boolean ok =
+    long msBeforeExpired =
         lockResolverClient.resolveLocks(
             backOffer, new ArrayList<>(Collections.singletonList(lock)));
-    if (!ok) {
+    if (msBeforeExpired > 0) {
       // if not resolve all locks, we wait and retry
-      backOffer.doBackOff(BoTxnLockFast, new KeyException(lock.toString()));
-      return true;
+      backOffer.doBackOffWithMaxSleep(
+          BoTxnLockFast, msBeforeExpired, new KeyException(lock.toString()));
     }
-    return false;
   }
 
   // Referenced from TiDB
   // store/tikv/region_request.go - onRegionError
+
+  /** @return true: client should retry */
   @Override
   public boolean handleResponseError(BackOffer backOffer, RespT resp) {
     if (resp == null) {
@@ -263,17 +263,20 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       invalidateRegionStoreCache(ctxRegion);
     }
 
+    boolean retry = false;
+
     // Key error handling logic
     Kvrpcpb.KeyError keyError = getKeyError.apply(resp);
     if (keyError != null) {
       try {
-        Lock lock = extractLockFromKeyErr(keyError);
-        checkLockError(backOffer, lock);
+        Lock lock = AbstractLockResolverClient.extractLockFromKeyErr(keyError);
+        resolveLock(backOffer, lock);
+        retry = true;
       } catch (KeyException e) {
         logger.warn("Unable to handle KeyExceptions other than LockException", e);
       }
     }
-    return false;
+    return retry;
   }
 
   @Override

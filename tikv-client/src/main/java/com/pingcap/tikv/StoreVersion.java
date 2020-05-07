@@ -25,9 +25,10 @@ import org.tikv.kvproto.Metapb;
 
 public class StoreVersion {
 
-  private int v0 = 0;
-  private int v1 = 0;
-  private int v2 = 0;
+  private static int scale = 10000;
+  private int v0 = 9999;
+  private int v1 = 9999;
+  private int v2 = 9999;
 
   private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -49,12 +50,15 @@ public class StoreVersion {
   }
 
   private int toIntVersion() {
-    int scale = 10000;
     return v0 * scale * scale + v1 * scale + v2;
   }
 
   private boolean greatThan(StoreVersion other) {
     return toIntVersion() > other.toIntVersion();
+  }
+
+  public static int compareTo(String v0, String v1) {
+    return new StoreVersion(v0).toIntVersion() - new StoreVersion(v1).toIntVersion();
   }
 
   public static boolean minTiKVVersion(String version, PDClient pdClient) {
