@@ -482,7 +482,8 @@ object SharedSQLContext extends Logging {
       TiDB_PASSWORD -> tidbPassword,
       TiDB_PORT -> s"$tidbPort",
       TiDB_USER -> tidbUser,
-      PD_ADDRESSES -> pdAddresses
+      PD_ADDRESSES -> pdAddresses,
+      "isTest" -> "true"
     )
   }
 }
