@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 import com.pingcap.tikv.TiConfiguration
 import com.pingcap.tikv.datatype.TypeMapping
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo}
+import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.types._
 import com.pingcap.tispark.{TiConfigConst, _}
 import org.apache.spark.sql.catalyst.InternalRow
@@ -115,10 +116,6 @@ object TiUtil {
       tiConf.setTikvRegionSplitSizeInMB(conf.get(TiConfigConst.TIKV_REGION_SPLIT_SIZE_IN_MB).toInt)
     }
 
-    if (conf.contains(TiConfigConst.USE_TIFLASH)) {
-      tiConf.setUseTiFlash(conf.get(TiConfigConst.USE_TIFLASH).toBoolean)
-    }
-
     if (conf.contains(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD)) {
       tiConf.setDowngradeThreshold(
         conf.get(TiConfigConst.REGION_INDEX_SCAN_DOWNGRADE_THRESHOLD).toInt
@@ -129,6 +126,13 @@ object TiUtil {
       tiConf.setPartitionPerSplit(conf.get(TiConfigConst.PARTITION_PER_SPLIT).toInt)
     }
 
+    if (conf.contains(TiConfigConst.ISOLATION_READ_ENGINES)) {
+      import scala.collection.JavaConversions._
+      tiConf.setIsolationReadEngines(
+        getIsolationReadEnginesFromString(conf.get(TiConfigConst.ISOLATION_READ_ENGINES)).toList
+      )
+    }
+
     tiConf
   }
 
@@ -137,6 +141,24 @@ object TiUtil {
 
   def getPartitionPerSplit(sqlContext: SQLContext): Int =
     sqlContext.getConf(TiConfigConst.PARTITION_PER_SPLIT, "10").toInt
+
+  private def getIsolationReadEnginesFromString(str: String): List[TiStoreType] = {
+    str
+      .toLowerCase()
+      .split(",")
+      .map {
+        case "tikv"    => TiStoreType.TiKV
+        case "tiflash" => TiStoreType.TiFlash
+        case s =>
+          throw new UnsupportedOperationException(
+            s"Unknown isolation engine type: $s, valid types are 'tikv, tiflash'"
+          )
+      }
+      .toList
+  }
+
+  def getIsolationReadEngines(sqlContext: SQLContext): List[TiStoreType] =
+    getIsolationReadEnginesFromString(sqlContext.getConf(TiConfigConst.ISOLATION_READ_ENGINES))
 
   def registerUDFs(sparkSession: SparkSession): Unit = {
     val timeZoneStr: String = "TimeZone: " + Converter.getLocalTimezone.toString

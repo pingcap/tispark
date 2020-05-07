@@ -422,7 +422,8 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     if (enableTiFlashTest) {
       // get result from TiFlash
       try {
-        spark.conf.set(TiConfigConst.USE_TIFLASH, "true")
+        val prev = spark.conf.get(TiConfigConst.ISOLATION_READ_ENGINES)
+        spark.conf.set(TiConfigConst.ISOLATION_READ_ENGINES, "tiflash")
         r4 = queryViaTiSpark(qSpark)
         sparkPlan = getSparkPlan(qSpark)
         if (!compSqlResult(qSpark, r3, r4, checkLimit)) {
@@ -433,7 +434,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                |TiFlash Plan:\n$sparkPlan""".stripMargin
           )
         }
-        spark.conf.set(TiConfigConst.USE_TIFLASH, "false")
+        spark.conf.set(TiConfigConst.ISOLATION_READ_ENGINES, prev)
       } catch {
         case e: Throwable =>
           logger.error(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed

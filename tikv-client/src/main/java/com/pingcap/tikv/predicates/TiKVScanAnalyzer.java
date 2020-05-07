@@ -57,6 +57,7 @@ public class TiKVScanAnalyzer {
       private boolean isDoubleRead;
       private double estimatedRowCount = -1;
       private List<TiPartitionDef> prunedParts;
+      private TiStoreType storeType = TiStoreType.TiKV;
 
       private Builder() {}
 
@@ -99,9 +100,21 @@ public class TiKVScanAnalyzer {
         return this;
       }
 
+      public Builder setStoreType(TiStoreType storeType) {
+        this.storeType = storeType;
+        return this;
+      }
+
       public TiKVScanPlan build() {
         return new TiKVScanPlan(
-            keyRanges, filters, index, cost, isDoubleRead, estimatedRowCount, prunedParts);
+            keyRanges,
+            filters,
+            index,
+            cost,
+            isDoubleRead,
+            estimatedRowCount,
+            prunedParts,
+            storeType);
       }
 
       // TODO: Fine-grained statistics usage
@@ -148,7 +161,8 @@ public class TiKVScanAnalyzer {
         double cost,
         boolean isDoubleRead,
         double estimatedRowCount,
-        List<TiPartitionDef> partDefs) {
+        List<TiPartitionDef> partDefs,
+        TiStoreType storeType) {
       this.filters = filters;
       this.keyRanges = keyRanges;
       this.cost = cost;
@@ -156,6 +170,7 @@ public class TiKVScanAnalyzer {
       this.isDoubleRead = isDoubleRead;
       this.estimatedRowCount = estimatedRowCount;
       this.prunedParts = partDefs;
+      this.storeType = storeType;
     }
 
     private final Map<Long, List<KeyRange>> keyRanges;
@@ -165,6 +180,7 @@ public class TiKVScanAnalyzer {
     private final boolean isDoubleRead;
     private final double estimatedRowCount;
     private final List<TiPartitionDef> prunedParts;
+    private final TiStoreType storeType;
 
     public double getEstimatedRowCount() {
       return estimatedRowCount;
@@ -196,6 +212,10 @@ public class TiKVScanAnalyzer {
 
     public List<TiPartitionDef> getPrunedParts() {
       return prunedParts;
+    }
+
+    public TiStoreType getStoreType() {
+      return storeType;
     }
   }
 

@@ -43,8 +43,15 @@ import scala.collection.mutable.ArrayBuffer
  */
 trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with SharedSparkContext {
   override protected val logger: Logger = SharedSQLContext.logger
-
-  protected def spark: SparkSession = _spark
+  private val tiContextCache = new TiContextCache
+  protected var jdbcUrl: String = _
+  protected var enableHive: Boolean = false
+  protected var _sparkSession: SparkSession = _
+  private var _spark: SparkSession = _
+  private var _tidbConf: Properties = _
+  private var _tidbConnection: Connection = _
+  private var _statement: Statement = _
+  private var _isHiveEnabled: Boolean = _
 
   // get the current TiContext lazily
   protected def ti: TiContext = tiContextCache.get()
@@ -57,7 +64,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
 
   protected def sql: String => DataFrame = spark.sql _
 
-  protected var jdbcUrl: String = _
+  protected def spark: SparkSession = _spark
 
   protected def tpchDBName: String = SharedSQLContext.tpchDBName
 
@@ -84,11 +91,14 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
     initializeSparkSession()
   }
 
-  protected var enableHive: Boolean = false
-
   protected def tidbUser: String = SharedSQLContext.tidbUser
 
   protected def tidbPassword: String = SharedSQLContext.tidbPassword
+
+  /**
+   * The [[TestSparkSession]] to use for all tests in this suite.
+   */
+  protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
   protected def tidbAddr: String = SharedSQLContext.tidbAddr
 
@@ -103,11 +113,6 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
   protected def loadData: String = SharedSQLContext.loadData
 
   protected def enableTiFlashTest: Boolean = SharedSQLContext.enableTiFlashTest
-
-  /**
-   * The [[TestSparkSession]] to use for all tests in this suite.
-   */
-  protected implicit def sqlContext: SQLContext = _spark.sqlContext
 
   protected def init(forceNotLoad: Boolean = false, isHiveEnabled: Boolean = false): Unit = {
     _isHiveEnabled = isHiveEnabled
@@ -138,38 +143,47 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
     }
   }
 
-  private var _spark: SparkSession = _
-  private var _tidbConf: Properties = _
-  private var _tidbConnection: Connection = _
-  private var _statement: Statement = _
-  private var _isHiveEnabled: Boolean = _
+  /**
+   * Stop the underlying resources, if any.
+   */
+  def stop(): Unit = {
+    tiContextCache.clear()
 
-  private class TiContextCache {
-    private var _ti: TiContext = _
-
-    private[test] def get(): TiContext = {
-      if (_ti == null) {
-        assert(_spark != null, "Spark Session should be initialized")
-        _ti = TiExtensions.getTiContext(_spark).get
+    if (_spark != null) {
+      try {
+        SparkSession.clearDefaultSession()
+        SparkSession.clearActiveSession()
+      } catch {
+        case e: Throwable => println(e)
+      } finally {
+        _spark = null
+        _sparkSession = null
       }
-      _ti
     }
 
-    private[test] def clear(): Unit = {
-      if (_ti == null) {
-        get()
+    if (_statement != null) {
+      try {
+        _statement.close()
+      } catch {
+        case _: Throwable =>
+      } finally {
+        _statement = null
       }
 
-      if (_ti != null) {
-        _ti.tiSession.close()
-        _ti = null
-      }
+    }
+
+    if (_tidbConnection != null) {
+      _tidbConnection.close()
+      _tidbConnection = null
+    }
+
+    // Reset statisticsManager in case it use older version of TiContext
+    StatisticsManager.reset()
+
+    if (_tidbConf != null) {
+      _tidbConf = null
     }
   }
-
-  private val tiContextCache = new TiContextCache
-
-  protected var _sparkSession: SparkSession = _
 
   /**
    * Initialize the [[TestSparkSession]].  Generally, this is just called from
@@ -187,19 +201,6 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
     if (_spark == null) {
       _spark = _sparkSession
     }
-  }
-
-  private def initStatistics(): Unit = {
-    _tidbConnection.setCatalog("tispark_test")
-    initializeStatement()
-    logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
-    _statement.execute("analyze table tispark_test.full_data_type_table_idx")
-    logger.info("Analyzing table tispark_test.full_data_type_table...")
-    _statement.execute("analyze table tispark_test.full_data_type_table")
-    logger.info("Analyzing table finished.")
-    logger.info("Analyzing table resolveLock_test.CUSTOMER...")
-    _statement.execute("analyze table resolveLock_test.CUSTOMER")
-    logger.info("Analyzing table finished.")
   }
 
   protected def initializeStatement(): Unit = {
@@ -232,6 +233,19 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
         )
         throw e
     }
+  }
+
+  private def initStatistics(): Unit = {
+    _tidbConnection.setCatalog("tispark_test")
+    initializeStatement()
+    logger.info("Analyzing table tispark_test.full_data_type_table_idx...")
+    _statement.execute("analyze table tispark_test.full_data_type_table_idx")
+    logger.info("Analyzing table tispark_test.full_data_type_table...")
+    _statement.execute("analyze table tispark_test.full_data_type_table")
+    logger.info("Analyzing table finished.")
+    logger.info("Analyzing table resolveLock_test.CUSTOMER...")
+    _statement.execute("analyze table resolveLock_test.CUSTOMER")
+    logger.info("Analyzing table finished.")
   }
 
   private def queryTiDBViaJDBC(query: String): List[List[Any]] = {
@@ -350,67 +364,42 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
     initializeSpark()
   }
 
-  /**
-   * Stop the underlying resources, if any.
-   */
-  def stop(): Unit = {
-    tiContextCache.clear()
+  private class TiContextCache {
+    private var _ti: TiContext = _
 
-    if (_spark != null) {
-      try {
-        SparkSession.clearDefaultSession()
-        SparkSession.clearActiveSession()
-      } catch {
-        case e: Throwable => println(e)
-      } finally {
-        _spark = null
-        _sparkSession = null
+    private[test] def clear(): Unit = {
+      if (_ti == null) {
+        get()
+      }
+
+      if (_ti != null) {
+        _ti.tiSession.close()
+        _ti = null
       }
     }
 
-    if (_statement != null) {
-      try {
-        _statement.close()
-      } catch {
-        case _: Throwable =>
-      } finally {
-        _statement = null
+    private[test] def get(): TiContext = {
+      if (_ti == null) {
+        assert(_spark != null, "Spark Session should be initialized")
+        _ti = TiExtensions.getTiContext(_spark).get
       }
-
-    }
-
-    if (_tidbConnection != null) {
-      _tidbConnection.close()
-      _tidbConnection = null
-    }
-
-    // Reset statisticsManager in case it use older version of TiContext
-    StatisticsManager.reset()
-
-    if (_tidbConf != null) {
-      _tidbConf = null
+      _ti
     }
   }
 }
 
 object SharedSQLContext extends Logging {
   protected val timeZoneOffset = "-7:00"
-  // Timezone is fixed to a random GMT-7 for those timezone sensitive tests (timestamp_*, date_*, etc)
-  private val timeZone = TimeZone.getTimeZone("GMT-7")
+  protected val logger: Logger = log
   // JDK time zone
   TimeZone.setDefault(timeZone)
   // Joda time zone
   DateTimeZone.setDefault(DateTimeZone.forTimeZone(timeZone))
   // Add Locale setting
   Locale.setDefault(Locale.CHINA)
-
-  protected val logger: Logger = log
-
   protected val tidbConf: Properties = initializeTiDBConf()
-
   protected val generateData: Boolean =
     getOrElse(tidbConf, SHOULD_GENERATE_DATA, "true").toLowerCase.toBoolean
-
   protected val generateDataSeed: Option[Long] = {
     var tmpSeed = getOrElse(tidbConf, GENERATE_DATA_SEED, "1234").toLong
     if (tmpSeed == 0) {
@@ -421,7 +410,8 @@ object SharedSQLContext extends Logging {
     }
     Some(tmpSeed)
   }
-
+  // Timezone is fixed to a random GMT-7 for those timezone sensitive tests (timestamp_*, date_*, etc)
+  private val timeZone = TimeZone.getTimeZone("GMT-7")
   protected var tidbUser: String = _
   protected var tidbPassword: String = _
   protected var tidbAddr: String = _

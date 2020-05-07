@@ -66,7 +66,9 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
   private val sql = s"CREATE DATABASE IF NOT EXISTS `$database`;\n" +
     s"DROP TABLE IF EXISTS `$database`.`$table`;\n" +
     s"${schema.toString};\n" +
-    s"INSERT INTO `$database`.`$table` VALUES $text;"
+    s"INSERT INTO `$database`.`$table` VALUES $text;\n"
+
+  private val tiflash_sql = s"ALTER TABLE `$database`.`$table` SET TIFLASH REPLICA 1"
 
   def save(): Unit = {
     import java.io._
@@ -77,6 +79,7 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
     file.createNewFile()
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(sql)
+    bw.write(tiflash_sql)
     bw.close()
   }
 

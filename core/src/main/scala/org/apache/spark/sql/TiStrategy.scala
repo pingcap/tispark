@@ -23,6 +23,7 @@ import com.pingcap.tikv.expression._
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTimestamp}
 import com.pingcap.tikv.predicates.{PredicateUtils, TiKVScanAnalyzer}
+import com.pingcap.tikv.region.TiStoreType
 import com.pingcap.tikv.statistics.TableStatistics
 import com.pingcap.tispark.statistics.StatisticsManager
 import com.pingcap.tispark.utils.ReflectionUtil._
@@ -30,7 +31,7 @@ import com.pingcap.tispark.utils.TiUtil
 import com.pingcap.tispark.{TiConfigConst, TiDBRelation}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.analysis.CleanupAliases
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, Average, Count, First, Max, Min, SpecialSum, Sum, SumNotNullable}
+import org.apache.spark.sql.catalyst.expressions.aggregate._
 import org.apache.spark.sql.catalyst.expressions.{Alias, Ascending, Attribute, AttributeMap, AttributeSet, Descending, ExprUtils, Expression, IntegerLiteral, IsNull, NamedExpression, NullsFirst, NullsLast, SortOrder, SubqueryExpression}
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical
@@ -47,7 +48,7 @@ object TiStrategy {
   private val assignedTSPlanCache = new mutable.WeakHashMap[LogicalPlan, Boolean]()
 
   private def hasTSAssigned(plan: LogicalPlan): Boolean = {
-    assignedTSPlanCache.get(plan).isDefined
+    assignedTSPlanCache.contains(plan)
   }
 
   private def markTSAssigned(plan: LogicalPlan): Unit = {
@@ -70,86 +71,16 @@ object TiStrategy {
 case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSession: SparkSession)
     extends Strategy
     with Logging {
+  type TiExpression = com.pingcap.tikv.expression.Expression
+  type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
   private lazy val tiContext: TiContext = getOrCreateTiContext(sparkSession)
   private lazy val sqlContext = tiContext.sqlContext
   private lazy val sqlConf: SQLConf = sqlContext.conf
-  type TiExpression = com.pingcap.tikv.expression.Expression
-  type TiColumnRef = com.pingcap.tikv.expression.ColumnRef
-
-  private def blacklist: ExpressionBlacklist = {
-    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
-    new ExpressionBlacklist(blacklistString)
-  }
 
   def typeBlackList: TypeBlacklist = {
     val blacklistString =
       sqlConf.getConfString(TiConfigConst.UNSUPPORTED_TYPES, "")
     new TypeBlacklist(blacklistString)
-  }
-
-  private def allowAggregationPushdown(): Boolean =
-    sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toLowerCase.toBoolean
-
-  private def allowIndexRead(): Boolean =
-    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "true").toLowerCase.toBoolean
-
-  private def useStreamingProcess: Boolean =
-    sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
-
-  // streaming only supports TypeDefault. Even we enable chunk, we should still
-  // use TypeDefault.
-  private def getCodecFormat(): EncodeType = {
-    val codecFormatStr =
-      sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "default").toLowerCase
-    if (useStreamingProcess) {
-      return EncodeType.TypeDefault
-    }
-
-    if (isUseTiFlash) {
-      codecFormatStr match {
-        case "chunk" =>
-          EncodeType.TypeChunk
-        case "chblock" =>
-          EncodeType.TypeCHBlock
-        case _ => EncodeType.TypeDefault
-      }
-    } else {
-      EncodeType.TypeDefault
-    }
-  }
-
-  private def isUseTiFlash: Boolean =
-    sqlConf.getConfString(TiConfigConst.USE_TIFLASH, "false").toLowerCase.toBoolean
-
-  private def timeZoneOffsetInSeconds(): Int = {
-    val tz = DateTimeZone.getDefault
-    val instant = DateTime.now.getMillis
-    val offsetInMilliseconds = tz.getOffset(instant)
-    val hours = TimeUnit.MILLISECONDS.toHours(offsetInMilliseconds).toInt
-    val seconds = hours * 3600
-    seconds
-  }
-
-  private def pushDownType(): PushDownType =
-    if (useStreamingProcess) {
-      PushDownType.STREAMING
-    } else {
-      PushDownType.NORMAL
-    }
-
-  // apply StartTs to every logical plan in Spark Planning stage
-  protected def applyStartTs(ts: TiTimestamp,
-                             forceUpdate: Boolean = false): PartialFunction[LogicalPlan, Unit] = {
-    case LogicalRelation(r @ TiDBRelation(_, _, _, timestamp, _), _, _, _) =>
-      if (timestamp == null || forceUpdate) {
-        r.ts = ts
-      }
-    case logicalPlan =>
-      logicalPlan transformExpressionsUp {
-        case s: SubqueryExpression =>
-          s.plan.foreachUp(applyStartTs(ts))
-          s
-      }
   }
 
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
@@ -175,6 +106,100 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       .flatten
   }
 
+  def referencedTiColumns(expression: TiExpression): Seq[TiColumnRef] =
+    PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
+
+  /**
+   * build a Seq of used TiColumnRef from AttributeSet and bound them to source table
+   *
+   * @param attributeSet AttributeSet containing projects w/ or w/o filters
+   * @param source       source TiDBRelation
+   * @return a Seq of TiColumnRef extracted
+   */
+  def buildTiColumnRefFromColumnSeq(attributeSet: AttributeSet,
+                                    source: TiDBRelation): Seq[TiColumnRef] = {
+    val tiColumnSeq: Seq[TiExpression] = attributeSet.toSeq.map { expr =>
+      ExprUtils.transformAttrToColRef(expr, source.table)
+    }
+    var tiColumns: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
+    for (expression <- tiColumnSeq) {
+      val colSetPerExpr = PredicateUtils.extractColumnRefFromExpression(expression)
+      colSetPerExpr.asScala.foreach {
+        tiColumns += _
+      }
+    }
+    tiColumns.toSeq
+  }
+
+  // apply StartTs to every logical plan in Spark Planning stage
+  protected def applyStartTs(ts: TiTimestamp,
+                             forceUpdate: Boolean = false): PartialFunction[LogicalPlan, Unit] = {
+    case LogicalRelation(r @ TiDBRelation(_, _, _, timestamp, _), _, _, _) =>
+      if (timestamp == null || forceUpdate) {
+        r.ts = ts
+      }
+    case logicalPlan =>
+      logicalPlan transformExpressionsUp {
+        case s: SubqueryExpression =>
+          s.plan.foreachUp(applyStartTs(ts))
+          s
+      }
+  }
+
+  private def blacklist: ExpressionBlacklist = {
+    val blacklistString = sqlConf.getConfString(TiConfigConst.UNSUPPORTED_PUSHDOWN_EXPR, "")
+    new ExpressionBlacklist(blacklistString)
+  }
+
+  private def allowAggregationPushDown(): Boolean =
+    sqlConf.getConfString(TiConfigConst.ALLOW_AGG_PUSHDOWN, "true").toLowerCase.toBoolean
+
+  private def allowIndexRead(): Boolean =
+    sqlConf.getConfString(TiConfigConst.ALLOW_INDEX_READ, "true").toLowerCase.toBoolean
+
+  private def useStreamingProcess: Boolean =
+    sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
+
+  private def codecFormat(): EncodeType = {
+    val codecFormatStr =
+      sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "default").toLowerCase
+    // streaming only supports TypeDefault. Even we enable chunk, we should still use TypeDefault.
+    if (useStreamingProcess) {
+      return EncodeType.TypeDefault
+    }
+
+    if (canUseTiFlash) {
+      codecFormatStr match {
+        case "chunk" =>
+          EncodeType.TypeChunk
+        case "chblock" =>
+          EncodeType.TypeCHBlock
+        case _ => EncodeType.TypeDefault
+      }
+    } else {
+      EncodeType.TypeDefault
+    }
+  }
+
+  private def canUseTiFlash: Boolean =
+    TiUtil.getIsolationReadEngines(sqlContext).contains(TiStoreType.TiFlash)
+
+  private def timeZoneOffsetInSeconds(): Int = {
+    val tz = DateTimeZone.getDefault
+    val instant = DateTime.now.getMillis
+    val offsetInMilliseconds = tz.getOffset(instant)
+    val hours = TimeUnit.MILLISECONDS.toHours(offsetInMilliseconds).toInt
+    val seconds = hours * 3600
+    seconds
+  }
+
+  private def pushDownType(): PushDownType =
+    if (useStreamingProcess) {
+      PushDownType.STREAMING
+    } else {
+      PushDownType.NORMAL
+    }
+
   private def toCoprocessorRDD(
     source: TiDBRelation,
     output: Seq[Attribute],
@@ -184,8 +209,12 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagRequest.setStartTs(source.ts)
 
     val notAllowPushDown = dagRequest.getFields.asScala
-      .map { _.getDataType.getType }
-      .exists { typeBlackList.isUnsupportedType }
+      .map {
+        _.getDataType.getType
+      }
+      .exists {
+        typeBlackList.isUnsupportedType
+      }
 
     if (notAllowPushDown) {
       throw new IgnoreUnsupportedTypeException("Unsupported type found in fields: " + typeBlackList)
@@ -207,11 +236,15 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     aggregates: Seq[AggregateExpression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest =
-      new TiDAGRequest(pushDownType(), getCodecFormat(), timeZoneOffsetInSeconds())
+      new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
-    aggregates.map { _.aggregateFunction }.foreach { expr =>
-      ExprUtils.transformAggExprToTiAgg(expr, source.table, dagRequest)
-    }
+    aggregates
+      .map {
+        _.aggregateFunction
+      }
+      .foreach { expr =>
+        ExprUtils.transformAggExprToTiAgg(expr, source.table, dagRequest)
+      }
 
     groupByList.foreach { expr =>
       ExprUtils.transformGroupingToTiGrouping(expr, source.table, dagRequest)
@@ -220,37 +253,12 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     dagRequest
   }
 
-  def referencedTiColumns(expression: TiExpression): Seq[TiColumnRef] =
-    PredicateUtils.extractColumnRefFromExpression(expression).asScala.toSeq
-
-  /**
-   * build a Seq of used TiColumnRef from AttributeSet and bound them to source table
-   *
-   * @param attributeSet AttributeSet containing projects w/ or w/o filters
-   * @param source source TiDBRelation
-   * @return a Seq of TiColumnRef extracted
-   */
-  def buildTiColumnRefFromColumnSeq(attributeSet: AttributeSet,
-                                    source: TiDBRelation): Seq[TiColumnRef] = {
-    val tiColumnSeq: Seq[TiExpression] = attributeSet.toSeq.map { expr =>
-      ExprUtils.transformAttrToColRef(expr, source.table)
-    }
-    var tiColumns: mutable.HashSet[TiColumnRef] = mutable.HashSet.empty[TiColumnRef]
-    for (expression <- tiColumnSeq) {
-      val colSetPerExpr = PredicateUtils.extractColumnRefFromExpression(expression)
-      colSetPerExpr.asScala.foreach {
-        tiColumns += _
-      }
-    }
-    tiColumns.toSeq
-  }
-
   private def filterToDAGRequest(
     tiColumns: Seq[TiColumnRef],
     filters: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest =
-      new TiDAGRequest(pushDownType(), getCodecFormat(), timeZoneOffsetInSeconds())
+      new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
   ): TiDAGRequest = {
     val tiFilters: Seq[TiExpression] = filters.map {
       ExprUtils.transformFilter(_, source.table, dagRequest)
@@ -262,7 +270,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     scanBuilder.buildTiDAGReq(
       allowIndexRead(),
-      isUseTiFlash,
+      canUseTiFlash,
       tiColumns.map { colRef =>
         source.table.getColumn(colRef.getName)
       }.asJava,
@@ -281,7 +289,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     source: TiDBRelation,
     sortOrder: Seq[SortOrder]
   ): SparkPlan = {
-    val request = new TiDAGRequest(pushDownType(), getCodecFormat(), timeZoneOffsetInSeconds())
+    val request = new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
     request.setLimit(limit)
     ExprUtils.transformSortOrderToTiOrderBy(request, sortOrder, source.table)
 
@@ -370,7 +378,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     filterPredicates: Seq[Expression],
     source: TiDBRelation,
     dagRequest: TiDAGRequest =
-      new TiDAGRequest(pushDownType(), getCodecFormat(), timeZoneOffsetInSeconds())
+      new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
   ): SparkPlan = {
 
     val projectSet = AttributeSet(projectList.flatMap(_.references))
@@ -482,7 +490,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       }
     }
 
-    tiColumns foreach { dagReq.addRequiredColumn }
+    tiColumns foreach {
+      dagReq.addRequiredColumn
+    }
 
     aggregationToDAGRequest(groupingExpressions, aggregateExpressions.distinct, source, dagReq)
 
@@ -523,7 +533,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     filters: Seq[Expression],
     source: TiDBRelation
   ): Boolean =
-    allowAggregationPushdown &&
+    allowAggregationPushDown &&
       filters.forall(ExprUtils.isSupportedFilter(_, source, blacklist)) &&
       groupingExpressions.forall(ExprUtils.isSupportedGroupingExpr(_, source, blacklist)) &&
       aggregateExpressions.forall(ExprUtils.isSupportedAggregate(_, source, blacklist)) &&
@@ -583,7 +593,9 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
           resultExpressions,
           TiAggregationProjection(filters, _, `source`, projects)
           ) if isValidAggregates(groupingExpressions, aggregateExpressions, filters, source) =>
-        val projectSet = AttributeSet((projects ++ filters).flatMap { _.references })
+        val projectSet = AttributeSet((projects ++ filters).flatMap {
+          _.references
+        })
         val tiColumns = buildTiColumnRefFromColumnSeq(projectSet, source)
         val dagReq: TiDAGRequest = filterToDAGRequest(tiColumns, filters, source)
         groupAggregateProjection(
