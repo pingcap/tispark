@@ -341,11 +341,11 @@ class TiBatchWrite(@transient val df: DataFrame,
       wrappedEncodedRdd
     }
 
-    val simplifiedWrappedEncodedRowRdd = encodedTiRowRDD.map(
-      row => SimplifiedWrappedEncodedRow(row.encodedKey, row.encodedValue)
+    val encodedKVPairRDD = encodedTiRowRDD.map(
+      row => EncodedKVPair(row.encodedKey, row.encodedValue)
     )
     // shuffle data in same task which belong to same region
-    val shuffledRDD = shuffleKeyToSameRegion(simplifiedWrappedEncodedRowRdd).cache()
+    val shuffledRDD = shuffleKeyToSameRegion(encodedKVPairRDD).cache()
 
     // take one row as primary key
     val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
@@ -622,9 +622,10 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   @throws(classOf[NoSuchTableException])
   private def shuffleKeyToSameRegion(
-    rdd: RDD[SimplifiedWrappedEncodedRow]
+    rdd: RDD[EncodedKVPair]
   ): RDD[(SerializableKey, Array[Byte])] = {
     val regions = getRegions
+    assert(regions.size() > 0)
     val tiRegionPartitioner = new TiRegionPartitioner(regions, options.writeConcurrency)
 
     rdd
@@ -636,23 +637,12 @@ class TiBatchWrite(@transient val df: DataFrame,
       )
   }
 
-  private def getRegions: List[TiRegion] = {
-    import scala.collection.JavaConversions._
-
-    val tableRegion = TiBatchWriteUtils.getRegionsByTable(tiSession, tiTableInfo).toList
+  private def getRegions: util.List[TiRegion] = {
+    val regions = TiBatchWriteUtils.getRegionsByTable(tiSession, tiTableInfo)
     logger.info(
-      s"find ${tableRegion.size} regions in $tiTableRef tableId: ${tiTableInfo.getId}"
+      s"find ${regions.size} regions in $tiTableRef tableId: ${tiTableInfo.getId}"
     )
-
-    val indexRegion = tiTableInfo.getIndices.toList.flatMap { index =>
-      val regions = TiBatchWriteUtils.getRegionByIndex(tiSession, tiTableInfo, index)
-      logger.info(
-        s"find ${regions.size} regions in $tiTableRef tableId: ${tiTableInfo.getId} index: ${index.getName}"
-      )
-      regions
-    }
-
-    tableRegion ++ indexRegion
+    regions
   }
 
   private def extractHandleId(row: TiRow): Long =
@@ -957,20 +947,33 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 }
 
-class TiRegionPartitioner(regions: List[TiRegion], writeConcurrency: Int) extends Partitioner {
-  override def numPartitions: Int = if (writeConcurrency <= 0) regions.length else writeConcurrency
+class TiRegionPartitioner(regions: util.List[TiRegion], writeConcurrency: Int) extends Partitioner {
+  def binarySearch(key: Key): Int = {
+    if (regions.get(0).contains(key)) {
+      return 0
+    }
+    var l = 0
+    var r = regions.size()
+    while (l < r) {
+      val mid = l + (r - l) / 2
+      val region = regions.get(mid)
+      if (Key.toRawKey(region.getEndKey).compareTo(key) <= 0) {
+        l = mid + 1
+      } else {
+        r = mid
+      }
+    }
+    assert(regions.get(l).contains(key))
+    l
+  }
+
+  override def numPartitions: Int = if (writeConcurrency <= 0) regions.size() else writeConcurrency
 
   override def getPartition(key: Any): Int = {
     val serializableKey = key.asInstanceOf[SerializableKey]
     val rawKey = Key.toRawKey(serializableKey.bytes)
 
-    regions.indices.foreach { i =>
-      val region = regions(i)
-      if (region.contains(rawKey)) {
-        return i % numPartitions
-      }
-    }
-    0
+    binarySearch(rawKey) % numPartitions
   }
 }
 
@@ -989,9 +992,9 @@ case class WrappedEncodedRow(row: TiRow,
   override def hashCode(): Int = encodedKey.hashCode()
 }
 
-// SimplifiedWrappedEncodedRow is used at last stage if write process.
+// EncodedKVPair is used at last stage if write process.
 // At this stage, sorting should not be happened anymore.
-case class SimplifiedWrappedEncodedRow(encodedKey: SerializableKey, encodedValue: Array[Byte]) {
+case class EncodedKVPair(encodedKey: SerializableKey, encodedValue: Array[Byte]) {
   override def hashCode(): Int = encodedKey.hashCode()
 }
 
