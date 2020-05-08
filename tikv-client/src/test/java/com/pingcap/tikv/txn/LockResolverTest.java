@@ -289,7 +289,7 @@ abstract class LockResolverTest {
 
   String genRandomKey(int strLength) {
     Random rnd = ThreadLocalRandom.current();
-    StringBuilder ret = new StringBuilder();
+    StringBuilder ret = new StringBuilder("test-");
     for (int i = 0; i < strLength; i++) {
       boolean isChar = (rnd.nextInt(2) % 2 == 0);
       if (isChar) {
