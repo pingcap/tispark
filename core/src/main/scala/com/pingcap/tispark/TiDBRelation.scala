@@ -64,7 +64,7 @@ case class TiDBRelation(session: TiSession,
     // Note: INFORMATION_SCHEMA.TIFLASH_REPLICA is not present in TiKV.
     // select * from information_schema.tiflash_replica where table_id = $id
     // TABLE_SCHEMA, TABLE_NAME, TABLE_ID, REPLICA_COUNT, LOCATION_LABELS, AVAILABLE, PROGRESS
-    table.getTiflashReplicaInfo.isAvailable
+    table.getTiflashReplicaInfo != null && table.getTiflashReplicaInfo.isAvailable
   }
 
   def getTiFlashReplicaProgress: Double = {
