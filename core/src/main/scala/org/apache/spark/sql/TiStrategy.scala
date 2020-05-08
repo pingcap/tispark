@@ -162,22 +162,21 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
   private def codecFormat(useTiFlash: Boolean = false): EncodeType = {
     val codecFormatStr =
-      sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "default").toLowerCase
-    // streaming only supports TypeDefault. Even we enable chunk, we should still use TypeDefault.
+      sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "chblock").toLowerCase
     if (useStreamingProcess) {
       return EncodeType.TypeDefault
     }
 
-    if (useTiFlash) {
-      codecFormatStr match {
-        case "chunk" =>
-          EncodeType.TypeChunk
-        case "chblock" =>
+    codecFormatStr match {
+      case "chunk" =>
+        EncodeType.TypeChunk
+      case "chblock" =>
+        if (useTiFlash) {
           EncodeType.TypeCHBlock
-        case _ => EncodeType.TypeDefault
-      }
-    } else {
-      EncodeType.TypeDefault
+        } else {
+          EncodeType.TypeChunk
+        }
+      case _ => EncodeType.TypeDefault
     }
   }
 
