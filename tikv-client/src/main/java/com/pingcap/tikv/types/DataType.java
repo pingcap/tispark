@@ -201,14 +201,13 @@ public abstract class DataType implements Serializable {
       case TypeDouble:
       case TypeYear:
       case TypeDuration:
+      case TypeTimestamp:
+      case TypeDate:
+      case TypeDatetime:
         return 8;
       case TypeDecimal:
         throw new UnsupportedOperationException(
             "this should not get involved in calculation process");
-      case TypeTimestamp:
-      case TypeDate:
-      case TypeDatetime:
-        return 20;
       case TypeNewDecimal:
         return 40;
       default:
