@@ -105,16 +105,16 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       return EncodeType.TypeDefault
     }
 
-    if (isUseTiFlash) {
-      codecFormatStr match {
-        case "chunk" =>
-          EncodeType.TypeChunk
-        case "chblock" =>
+    codecFormatStr match {
+      case "chunk" =>
+        EncodeType.TypeChunk
+      case "chblock" =>
+        if (isUseTiFlash) {
           EncodeType.TypeCHBlock
-        case _ => EncodeType.TypeDefault
-      }
-    } else {
-      EncodeType.TypeDefault
+        } else {
+          EncodeType.TypeChunk
+        }
+      case _ => EncodeType.TypeDefault
     }
   }
 
