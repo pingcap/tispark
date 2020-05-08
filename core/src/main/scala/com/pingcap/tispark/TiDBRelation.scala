@@ -17,9 +17,7 @@ package com.pingcap.tispark
 
 import com.pingcap.tikv.TiSession
 import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalException}
-import com.pingcap.tikv.expression.{ColumnRef, ComparisonBinaryExpression, Constant}
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
-import com.pingcap.tikv.types.IntegerType
 import com.pingcap.tispark.utils.ReflectionUtil.newAttributeReference
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.sql.catalyst.expressions.Attribute
@@ -63,35 +61,18 @@ case class TiDBRelation(session: TiSession,
     }
 
   lazy val isTiFlashReplicaAvailable: Boolean = {
+    // Note: INFORMATION_SCHEMA.TIFLASH_REPLICA is not present in TiKV.
     // select * from information_schema.tiflash_replica where table_id = $id
     // TABLE_SCHEMA, TABLE_NAME, TABLE_ID, REPLICA_COUNT, LOCATION_LABELS, AVAILABLE, PROGRESS
+    table.getTiflashReplicaInfo.isAvailable
+  }
 
+  def getTiFlashReplicaProgress: Double = {
     import scala.collection.JavaConversions._
-    val tiflashReplicaTable = getTableOrThrow("INFORMATION_SCHEMA", "TIFLASH_REPLICA")
-    val timestamp = session.getTimestamp
-    val tableId = table.getId
-    val dagRequest = new TiDAGRequest(TiDAGRequest.PushDownType.NORMAL)
-    val colAvailable = ColumnRef.create("AVAILABLE", IntegerType.TINYINT)
-    val colTableId = ColumnRef.create("TABLE_ID", IntegerType.BIGINT)
-    dagRequest.addRequiredColumn(colAvailable)
-    dagRequest.addFilters(
-      List(
-        ComparisonBinaryExpression.equal(colTableId, Constant.create(tableId, IntegerType.BIGINT))
-      ).toList
-    )
-    dagRequest.setLimit(1)
-    dagRequest.setTableInfo(tiflashReplicaTable)
-    dagRequest.setStartTs(timestamp)
-
-    val snapshot = session.createSnapshot(ts)
-    val rows = snapshot.tableReadRow(dagRequest, tableId)
-    if (!rows.hasNext) {
-      false
-    } else {
-      val result = rows.next().getInteger(0) > 0
-      assert(!rows.hasNext)
-      result
-    }
+    val progress = table.getPartitionInfo.getDefs
+      .map(partitonDef => session.getPDClient.getTiFlashReplicaProgress(partitonDef.getId))
+      .sum
+    progress / table.getPartitionInfo.getDefs.size()
   }
 
   override def sizeInBytes: Long = tableRef.sizeInBytes

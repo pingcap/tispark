@@ -228,7 +228,7 @@ public abstract class DataType implements Serializable {
     return nullBitMaps;
   }
 
-  private byte[] allNotNullBitMap = initAllNotNullBitMap();
+  private final byte[] allNotNullBitMap = initAllNotNullBitMap();
 
   private byte[] initAllNotNullBitMap() {
     byte[] allNotNullBitMap = new byte[128];
@@ -244,7 +244,7 @@ public abstract class DataType implements Serializable {
     return ((ch1) + (ch2 << 8) + (ch3 << 16) + (ch4 << 24));
   }
 
-  private byte[] readBuffer = new byte[8];
+  private final byte[] readBuffer = new byte[8];
 
   private long readLongLittleEndian(CodecDataInput cdi) {
     cdi.readFully(readBuffer, 0, 8);

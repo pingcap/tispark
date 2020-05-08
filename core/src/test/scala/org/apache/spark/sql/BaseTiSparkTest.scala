@@ -418,8 +418,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       }
     }
 
-    // test tiflash's result
-    if (enableTiFlashTest) {
+    if (!skipTiDB && enableTiFlashTest) {
       // get result from TiFlash
       try {
         val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)
