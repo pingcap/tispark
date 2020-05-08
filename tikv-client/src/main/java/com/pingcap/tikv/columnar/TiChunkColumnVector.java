@@ -111,30 +111,17 @@ public class TiChunkColumnVector extends TiColumnVector {
     return type instanceof DateTimeType || type instanceof TimestampType;
   }
 
-  // Time in TiDB has the following memory layout:
-  // name         type    num of bytes
-  // hour         uint32  4
-  // microsecond  uint32  4
-  // year         uint16  2
-  // month        uint16  1
-  // day          uint8   1
-  // minute       uint8   1
-  // second       uint8   1
-  // type         uint8   1
-  // Fsp          int8    1
   private long getTime(int rowId) {
     int startPos = rowId * fixLength;
-    long hour = data.getInt(startPos);
-    long microsecond = data.getInt(startPos + 4);
-    int year = data.getShort(startPos + 8);
-    int month = data.get(startPos + 10);
-    int day = data.get(startPos + 11);
-    int minute = data.get(startPos + 12);
-    int second = data.get(startPos + 13);
-    data.getShort(startPos + 14); // read extra two byte
-    int tp = data.get(startPos + 16);
-    int fsp = data.get(startPos + 17);
-    data.getShort(startPos + 18); // read extra two byte
+    TiCoreTime coreTime = new TiCoreTime(data.getLong(startPos));
+
+    int year = coreTime.getYear();
+    int month = coreTime.getMonth();
+    int day = coreTime.getDay();
+    int hour = coreTime.getHour();
+    int minute = coreTime.getMinute();
+    int second = coreTime.getSecond();
+    long microsecond = coreTime.getMicroSecond();
     // This behavior can be modified using the zeroDateTimeBehavior configuration property.
     // The allowable values are:
     //    * exception (the default), which throws an SQLException with an SQLState of S1009.
@@ -152,7 +139,7 @@ public class TiChunkColumnVector extends TiColumnVector {
       // only return microsecond from epoch.
       Timestamp ts =
           new Timestamp(
-              year - 1900, month - 1, day, (int) hour, minute, second, (int) microsecond * 1000);
+              year - 1900, month - 1, day, hour, minute, second, (int) microsecond * 1000);
       return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
     } else {
       throw new UnsupportedOperationException("data, datetime, timestamp are already handled.");

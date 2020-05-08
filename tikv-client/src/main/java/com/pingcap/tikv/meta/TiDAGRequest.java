@@ -154,6 +154,10 @@ public class TiDAGRequest implements Serializable {
     this.storeType = storeType;
   }
 
+  public void setEncodeType(EncodeType encodeType) {
+    this.encodeType = encodeType;
+  }
+
   public TiDAGRequest(PushDownType pushDownType) {
     this.pushDownType = pushDownType;
     this.encodeType = EncodeType.TypeDefault;
@@ -238,7 +242,7 @@ public class TiDAGRequest implements Serializable {
   private boolean distinct;
   private boolean isDoubleRead;
   private final PushDownType pushDownType;
-  private final EncodeType encodeType;
+  private EncodeType encodeType;
   private double estimatedCount = -1;
 
   private static ColumnInfo handleColumn =
