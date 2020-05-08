@@ -117,11 +117,17 @@ public class ConcreteBackOffer implements BackOffer {
 
   @Override
   public void doBackOff(BackOffFunction.BackOffFuncType funcType, Exception err) {
+    doBackOffWithMaxSleep(funcType, -1, err);
+  }
+
+  @Override
+  public void doBackOffWithMaxSleep(
+      BackOffFunction.BackOffFuncType funcType, long maxSleepMs, Exception err) {
     BackOffFunction backOffFunction =
         backOffFunctionMap.computeIfAbsent(funcType, this::createBackOffFunc);
 
     // Back off will be done here
-    totalSleep += backOffFunction.doBackOff();
+    totalSleep += backOffFunction.doBackOff(maxSleepMs);
     logger.debug(
         String.format(
             "%s, retry later(totalSleep %dms, maxSleep %dms)",
