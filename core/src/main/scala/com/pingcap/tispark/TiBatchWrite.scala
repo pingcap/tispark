@@ -18,6 +18,7 @@ package com.pingcap.tispark
 import java.sql.SQLException
 import java.util
 
+import com.google.protobuf.ByteString
 import com.pingcap.tikv.allocator.RowIDAllocator
 import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
@@ -328,8 +329,7 @@ class TiBatchWrite(@transient val df: DataFrame,
             }
         }
     } else {
-      val start =
-        getAutoTableIdStart(tiRowRdd.count)
+      val start = getAutoTableIdStart(tiRowRdd.count)
       val wrappedRowRdd = tiRowRdd.zipWithIndex.map { row =>
         WrappedRow(row._1, row._2 + start)
       }
@@ -358,7 +358,7 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
     }
 
-    logger.info(s"primary key: $primaryKey primary row: $primaryRow")
+    logger.info(s"primary key: $primaryKey")
 
     // filter primary key
     val secondaryKeysRDD = shuffledRDD.filter { keyValue =>
@@ -369,7 +369,9 @@ class TiBatchWrite(@transient val df: DataFrame,
     val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
     val prewritePrimaryBackoff =
       ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
+    logger.info("start to prewritePrimaryKey")
     ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
+    logger.info("prewritePrimaryKey success")
 
     // for test
     if (options.sleepAfterPrewritePrimaryKey > 0) {
@@ -384,6 +386,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
 
     // executors secondary pre-write
+    logger.info("start to prewriteSecondaryKeys")
     secondaryKeysRDD.foreachPartition { iterator =>
       val ti2PCClientOnExecutor =
         new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
@@ -403,6 +406,7 @@ class TiBatchWrite(@transient val df: DataFrame,
         case _: Throwable =>
       }
     }
+    logger.info("prewriteSecondaryKeys success")
 
     // driver primary commit
     val commitTs = tiSession.getTimestamp.getVersion
@@ -417,7 +421,9 @@ class TiBatchWrite(@transient val df: DataFrame,
     if (connectionLost()) {
       throw new TiBatchWriteException("tidb's jdbc connection is lost!")
     }
+    logger.info("start to commitPrimaryKey")
     ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
+    logger.info("commitPrimaryKey success")
 
     // stop primary key ttl update
     if (isTTLUpdate) {
@@ -429,6 +435,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // executors secondary commit
     if (!options.skipCommitSecondaryKey) {
+      logger.info("start to commitSecondaryKeys")
       secondaryKeysRDD.foreachPartition { iterator =>
         val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
 
@@ -444,6 +451,7 @@ class TiBatchWrite(@transient val df: DataFrame,
             logger.warn(s"commit secondary key error", e)
         }
       }
+      logger.info("commitSecondaryKeys finish")
     } else {
       logger.info("skipping commit secondary key")
     }
@@ -485,8 +493,6 @@ class TiBatchWrite(@transient val df: DataFrame,
       if (tableLocked) {
         tiDBJDBCClient.unlockTables()
         tableLocked = false
-      } else {
-        logger.warn("table already unlocked!")
       }
     } else {
       if (tiContext.tiConf.isWriteWithoutLockTable) {
@@ -499,37 +505,125 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   private def generateDataToBeRemovedRdd(rdd: RDD[WrappedRow],
                                          startTs: TiTimestamp): RDD[WrappedRow] = {
-    rdd
-      .mapPartitions { wrappedRows =>
-        val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs)
-        wrappedRows.map { wrappedRow =>
-          val rowBuf = mutable.ListBuffer.empty[WrappedRow]
-          //  check handle key
+    rdd.mapPartitions { wrappedRows =>
+      val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs)
+      var rowBuf = mutable.ListBuffer.empty[WrappedRow]
+      var rowBufIndex = 0
+
+      new Iterator[WrappedRow] {
+        override def hasNext: Boolean = {
+          while (true) {
+            if (!wrappedRows.hasNext && !(rowBufIndex < rowBuf.size)) {
+              return false
+            }
+
+            if (rowBufIndex < rowBuf.size) {
+              return true
+            }
+
+            processNextBatch()
+          }
+          assert(false)
+          false
+        }
+
+        override def next(): WrappedRow = {
+          if (hasNext) {
+            rowBufIndex = rowBufIndex + 1
+            rowBuf(rowBufIndex - 1)
+          } else {
+            null
+          }
+        }
+
+        def getNextBatch(itor: Iterator[WrappedRow]): List[WrappedRow] = {
+          val buf = mutable.ListBuffer.empty[WrappedRow]
+          var i = 0
+          while (itor.hasNext && i < options.snapshotBatchGetSize) {
+            buf.append(itor.next())
+            i = i + 1
+          }
+          buf.toList
+        }
+
+        def genNextHandleBatch(
+          batch: List[WrappedRow]
+        ): (util.List[Array[Byte]], util.Map[ByteString, Long]) = {
+          val list = new util.ArrayList[Array[Byte]]()
+          val map = new util.HashMap[ByteString, Long]()
+          batch.foreach { wrappedRow =>
+            val bytes = buildRowKey(wrappedRow.row, wrappedRow.handle).bytes
+            val key = ByteString.copyFrom(bytes)
+            list.add(bytes)
+            map.put(key, wrappedRow.handle)
+          }
+          (list, map)
+        }
+
+        def genNextIndexBatch(
+          batch: List[WrappedRow],
+          index: TiIndexInfo
+        ): (util.List[Array[Byte]], util.Map[ByteString, TiRow]) = {
+          val list = new util.ArrayList[Array[Byte]]()
+          val map = new util.HashMap[ByteString, TiRow]()
+          batch.foreach { wrappedRow =>
+            val bytes = buildUniqueIndexKey(wrappedRow.row, index).bytes
+            val key = ByteString.copyFrom(bytes)
+            list.add(bytes)
+            map.put(key, wrappedRow.row)
+          }
+          (list, map)
+        }
+
+        def processNextBatch(): Unit = {
+          rowBuf = mutable.ListBuffer.empty[WrappedRow]
+          rowBufIndex = 0
+
+          val batch = getNextBatch(wrappedRows)
+
           if (handleCol != null) {
-            val oldValue = snapshot.get(buildRowKey(wrappedRow.row, wrappedRow.handle).bytes)
-            if (oldValue.nonEmpty) {
-              val oldRow = TableCodec.decodeRow(oldValue, wrappedRow.handle, tiTableInfo)
-              rowBuf += WrappedRow(oldRow, wrappedRow.handle)
+            val (batchHandle, handleMap) = genNextHandleBatch(batch)
+            val oldValueList = snapshot.batchGet(batchHandle)
+            (0 until oldValueList.size()).foreach { i =>
+              val oldValuePair = oldValueList.get(i)
+              val oldValue = oldValuePair.getValue.toByteArray
+              val key = oldValuePair.getKey
+              val handle = handleMap.get(key)
+
+              val oldRow = TableCodec.decodeRow(oldValue, handle, tiTableInfo)
+              rowBuf += WrappedRow(oldRow, handle)
             }
           }
 
+          val oldIndicesBatch: util.List[Array[Byte]] = new util.ArrayList[Array[Byte]]()
+          val oldIndicesMap: mutable.HashMap[SerializableKey, Long] = new mutable.HashMap()
           uniqueIndices.foreach { index =>
-            val oldValue = snapshot.get(buildUniqueIndexKey(wrappedRow.row, index).bytes)
-            if (oldValue.nonEmpty) {
+            val (batchIndices, rowMap) = genNextIndexBatch(batch, index)
+            val oldValueList = snapshot.batchGet(batchIndices)
+            (0 until oldValueList.size()).foreach { i =>
+              val oldValuePair = oldValueList.get(i)
+              val oldValue = oldValuePair.getValue.toByteArray
+              val key = oldValuePair.getKey
               val oldHandle = TableCodec.decodeHandle(oldValue)
-              val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
-              val oldRow = TableCodec.decodeRow(
-                oldRowValue,
-                oldHandle,
-                tiTableInfo
-              )
-              rowBuf += WrappedRow(oldRow, oldHandle)
+              val tiRow = rowMap.get(key)
+
+              oldIndicesBatch.add(buildRowKey(tiRow, oldHandle).bytes)
+              oldIndicesMap.put(new SerializableKey(buildRowKey(tiRow, oldHandle).bytes), oldHandle)
             }
           }
-          rowBuf
+
+          val oldIndicesRowPairs = snapshot.batchGet(oldIndicesBatch)
+          (0 until oldIndicesRowPairs.size()).foreach { i =>
+            val oldIndicesRowPair = oldIndicesRowPairs.get(i)
+            val oldRowKey = oldIndicesRowPair.getKey.toByteArray
+            val oldRowValue = oldIndicesRowPair.getValue.toByteArray
+            val oldHandle = oldIndicesMap.get(new SerializableKey(oldRowKey)).get
+            val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
+            rowBuf += WrappedRow(oldRow, oldHandle)
+          }
         }
       }
-      .flatMap(identity)
+    }
   }
 
   private def connectionLost(): Boolean = {
