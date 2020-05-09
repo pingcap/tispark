@@ -177,30 +177,24 @@ public class TiRegion implements Serializable {
     return false;
   }
 
-  public boolean isMoreThan(ByteString key) {
-    return FastByteComparisons.compareTo(
-            meta.getStartKey().toByteArray(),
-            0,
-            meta.getStartKey().size(),
-            key.toByteArray(),
-            0,
-            key.size())
-        > 0;
-  }
-
-  public boolean isLessThan(ByteString key) {
-    return FastByteComparisons.compareTo(
-            meta.getEndKey().toByteArray(),
-            0,
-            meta.getEndKey().size(),
-            key.toByteArray(),
-            0,
-            key.size())
-        <= 0;
-  }
-
   public boolean contains(ByteString key) {
-    return !isMoreThan(key) && !isLessThan(key);
+    return (FastByteComparisons.compareTo(
+                meta.getStartKey().toByteArray(),
+                0,
+                meta.getStartKey().size(),
+                key.toByteArray(),
+                0,
+                key.size())
+            <= 0)
+        && (meta.getEndKey().isEmpty()
+            || FastByteComparisons.compareTo(
+                    meta.getEndKey().toByteArray(),
+                    0,
+                    meta.getEndKey().size(),
+                    key.toByteArray(),
+                    0,
+                    key.size())
+                > 0);
   }
 
   public boolean isValid() {
