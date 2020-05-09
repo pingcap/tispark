@@ -12,10 +12,10 @@ public class TiFlashReplicaInfo implements Serializable {
 
   @JsonCreator
   public TiFlashReplicaInfo(
-      @JsonProperty("count") long count,
-      @JsonProperty("location_labels") String[] locationLabels,
-      @JsonProperty("available") boolean available,
-      @JsonProperty("available_partition_ids") long[] availablePartitionIDs) {
+      @JsonProperty("Count") long count,
+      @JsonProperty("LocationLabels") String[] locationLabels,
+      @JsonProperty("Available") boolean available,
+      @JsonProperty("AvailablePartitionIDs") long[] availablePartitionIDs) {
     this.count = count;
     this.locationLabels = locationLabels;
     this.available = available;

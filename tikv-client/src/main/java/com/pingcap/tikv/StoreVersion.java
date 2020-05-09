@@ -34,7 +34,7 @@ public class StoreVersion {
 
   private StoreVersion(String version) {
     try {
-      String parts[] = version.split("[.-]");
+      String[] parts = version.split("[.-]");
       if (parts.length > 0) {
         v0 = Integer.parseInt(parts[0]);
       }
