@@ -264,9 +264,15 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
 
                             if (TEST_TIFLASH != "false") {
                                 sh """
-                                sudo sysctl -w net.ipv4.ip_local_port_range='10000 30000'
+                                sudo sysctl -w net.ipv4.ip_local_port_range='1000 30000'
                                 export LD_LIBRARY_PATH=/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash
                                 ls -l \$LD_LIBRARY_PATH
+                                lsof -i:3930
+                                lsof -i:9000
+                                lsof -i:8123
+                                lsof -i:8234
+                                lsof -i:20170
+                                lsof -i:20292
                                 tiflash/tiflash server config --config-file go/src/github.com/pingcap/tispark/config/tiflash.toml &>tiflash_cmd_line.log &
                                 sleep 60
                                 """
