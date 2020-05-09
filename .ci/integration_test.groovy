@@ -266,6 +266,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                                 sh """
                                 sudo sysctl -w net.ipv4.ip_local_port_range='10000 30000'
                                 export LD_LIBRARY_PATH=/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash
+                                ls -l \$LD_LIBRARY_PATH
                                 tiflash/tiflash server config --config-file go/src/github.com/pingcap/tispark/config/tiflash.toml &>tiflash_cmd_line.log &
                                 sleep 60
                                 """
@@ -287,10 +288,10 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             if (TEST_TIFLASH != "false") {
                                 try {
                                     sh "cat tiflash_cmd_line.log"
-                                    sh "ll tiflash/"
+                                    sh "ls -l tiflash/"
                                     sh "cat tiflash/tiflash_error.log"
-                                    sh "cat tiflash/tiflash_cluster_manager.log"
                                     sh "cat tiflash/tiflash.log"
+                                    sh "cat tiflash/tiflash_cluster_manager.log"
                                     sh "cat tiflash/tiflash_tikv.log"
                                 } catch (e) {
                                     throw e
