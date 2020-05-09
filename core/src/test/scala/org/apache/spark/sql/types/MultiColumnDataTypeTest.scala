@@ -61,7 +61,7 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
       val query = s"select $col1 from $tableName where $col2 $op $value"
       test(query) {
         setCurrentDatabase(dbName)
-        runTest(query)
+        runTest(query, testTiFlash = true)
       }
     }
   }

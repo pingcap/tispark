@@ -267,6 +267,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                                   rTiFlash: List[List[Any]] = null,
                                   skipJDBC: Boolean = false,
                                   skipTiDB: Boolean = false,
+                                  testTiFlash: Boolean = false,
                                   checkLimit: Boolean = true): Unit =
     try {
       explainSpark(qSpark)
@@ -283,6 +284,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           rTiFlash,
           skipJDBC,
           skipTiDB,
+          testTiFlash,
           checkLimit
         )
       }
@@ -318,6 +320,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                         rTiFlash: List[List[Any]] = null,
                         skipJDBC: Boolean = false,
                         skipTiDB: Boolean = false,
+                        testTiFlash: Boolean = false,
                         checkLimit: Boolean = true): Unit =
     runTestWithoutReplaceTableName(
       qSpark,
@@ -329,6 +332,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       rTiFlash,
       skipJDBC,
       skipTiDB,
+      testTiFlash,
       checkLimit
     )
 
@@ -360,6 +364,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                                              rTiFlash: List[List[Any]] = null,
                                              skipJDBC: Boolean = false,
                                              skipTiDB: Boolean = false,
+                                             testTiFlash: Boolean = false,
                                              checkLimit: Boolean = true): Unit = {
     if (skipped) {
       logger.warn(s"Test is skipped. [With Spark SQL: $qSpark]")
@@ -417,8 +422,14 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           logger.warn(s"Spark with JDBC failed when executing: $qJDBC", e) // JDBC failed
       }
     }
+    if (testTiFlash && !enableTiFlashTest) {
+      logger.warn(
+        "Due to config spark.tispark.enable.tiflash_test, " +
+          "although testTiFlash is set to true, tiflash test is not enabled"
+      )
+    }
 
-    if (!skipTiDB && enableTiFlashTest) {
+    if (!skipTiDB && testTiFlash) {
       // get result from TiFlash
       try {
         val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)

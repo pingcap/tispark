@@ -108,7 +108,6 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         cd tiflash
                         tar -zcvf flash_cluster_manager.tgz flash_cluster_manager/
                         rm ./flash_cluster_manager.tgz
-                        pwd
                         cd ..
                         """
                         stash includes: "tiflash/**", name: "tiflash_binary"
@@ -126,6 +125,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     dir("go/src/github.com/pingcap/tispark") {
                         deleteDir()
                         sh """
+                        pwd
                         cp -R /home/jenkins/agent/git/tispark/. ./
                         git checkout -f ${ghprbActualCommit}
                         find core/src -name '*Suite*' | grep -v 'MultiColumnPKDataTypeSuite' > test
