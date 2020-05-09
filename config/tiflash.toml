@@ -20,7 +20,7 @@ master_ttl = 60
 refresh_interval = 20
 update_rule_interval = 5
 [flash.proxy]
-config = "go/src/github.com/pingcap/tispark/config/tiflash-learner.toml"
+config = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/go/src/github.com/pingcap/tispark/config/tiflash-learner.toml"
 
 [logger]
 count = 20

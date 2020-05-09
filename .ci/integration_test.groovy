@@ -285,11 +285,16 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             sh "cat tikv.log"
                             sh "cat tidb.log"
                             if (TEST_TIFLASH != "false") {
-                                sh "cat tiflash_cmd_line.log"
-                                sh "cat tiflash/tiflash_error.log"
-                                sh "cat tiflash/tiflash_cluster_manager.log"
-                                sh "cat tiflash/tiflash.log"
-                                sh "cat tiflash/tiflash_tikv.log"
+                                try {
+                                    sh "cat tiflash_cmd_line.log"
+                                    sh "ll tiflash/"
+                                    sh "cat tiflash/tiflash_error.log"
+                                    sh "cat tiflash/tiflash_cluster_manager.log"
+                                    sh "cat tiflash/tiflash.log"
+                                    sh "cat tiflash/tiflash_tikv.log"
+                                } catch (e) {
+                                    throw e
+                                }
                             }
                             throw err
                         }
