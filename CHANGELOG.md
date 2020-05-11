@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 - Shade io.opencensus to resolve grpc conflict [#1352](https://github.com/pingcap/tispark/pull/1352)
 - Fix parition table isn't shown in show command [#1374](https://github.com/pingcap/tispark/pull/1374)
 - Fix partition pruning when partition definition contains big integer [#1385](https://github.com/pingcap/tispark/pull/1385)
-- Support TiDB-4.0 [#1398] https://github.com/pingcap/tispark/pull/1398
+- Support TiDB-4.0 [#1398](https://github.com/pingcap/tispark/pull/1398)
 
 ## [TiSpark 2.1.8] 2019-12-12
 ### Fixes
