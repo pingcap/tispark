@@ -266,16 +266,10 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                                 sh """
                                 export LD_LIBRARY_PATH=/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash
                                 ls -l \$LD_LIBRARY_PATH
-                                lsof -i:3930 || true
-                                lsof -i:9000 || true
-                                lsof -i:8123 || true
-                                lsof -i:8234 || true
-                                lsof -i:20170 || true
-                                lsof -i:20292 || true
                                 tiflash/tiflash server config --config-file go/src/github.com/pingcap/tispark/config/tiflash.toml &>tiflash_cmd_line.log &
+                                ps aux | grep 'tiflash'
                                 sleep 60
                                 """
-                                sh "cat tiflash/tiflash_error.log"
                                 sh "ps aux | grep 'tiflash'"
                             }
     

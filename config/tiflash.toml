@@ -25,7 +25,7 @@ config = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/go/src/git
 [logger]
 count = 20
 errorlog = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/tiflash_error.log"
-level = "info"
+level = "debug"
 log = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/tiflash.log"
 size = "1000M"
 
