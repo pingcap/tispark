@@ -1,6 +1,15 @@
 # TiSpark Changelog
 All notable changes to this project will be documented in this file.
 
+## [TiSpark 2.1.9] 2020-05-11
+### Fixes
+- Fix desc temp view [#1328](https://github.com/pingcap/tispark/pull/1328)
+- Fix prefix index on blob [#1334](https://github.com/pingcap/tispark/pull/1334)
+- Shade io.opencensus to resolve grpc conflict [#1352](https://github.com/pingcap/tispark/pull/1352)
+- Fix parition table isn't shown in show command [#1374](https://github.com/pingcap/tispark/pull/1374)
+- Fix partition pruning when partition definition contains big integer [#1385](https://github.com/pingcap/tispark/pull/1385)
+- Support TiDB-4.0 [#1398] https://github.com/pingcap/tispark/pull/1398
+
 ## [TiSpark 2.1.8] 2019-12-12
 ### Fixes
 - Fix UnsupportedOperationException: using stream rather than removeIf [#1303](https://github.com/pingcap/tispark/pull/1303)
