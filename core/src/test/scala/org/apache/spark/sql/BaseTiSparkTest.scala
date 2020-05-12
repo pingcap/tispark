@@ -33,7 +33,14 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected var tableNames: Seq[String] = _
 
+  def beforeAllWithHiveSupport(): Unit = {
+    _isHiveEnabled = true
+    beforeAllWithoutLoadData()
+    loadTestData()
+  }
+
   override def beforeAll(): Unit = {
+    _isHiveEnabled = false
     beforeAllWithoutLoadData()
     loadTestData()
   }

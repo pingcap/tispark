@@ -341,7 +341,6 @@ class CatalogTestSuite extends BaseTiSparkTest {
   }
 
   override def beforeAll(): Unit = {
-    enableHive = true
-    super.beforeAll()
+    super.beforeAllWithHiveSupport()
   }
 }

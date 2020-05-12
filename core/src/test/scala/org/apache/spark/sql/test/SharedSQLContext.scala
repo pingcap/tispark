@@ -45,13 +45,11 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
   override protected val logger: Logger = SharedSQLContext.logger
   private val tiContextCache = new TiContextCache
   protected var jdbcUrl: String = _
-  protected var enableHive: Boolean = false
   protected var _sparkSession: SparkSession = _
   private var _spark: SparkSession = _
   private var _tidbConf: Properties = _
   private var _tidbConnection: Connection = _
   private var _statement: Statement = _
-  private var _isHiveEnabled: Boolean = _
 
   // get the current TiContext lazily
   protected def ti: TiContext = tiContextCache.get()
@@ -80,14 +78,15 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
 
   protected def defaultTimeZone: TimeZone = SharedSQLContext.timeZone
 
-  protected def refreshConnections(): Unit = refreshConnections(false)
+  protected def refreshConnections(): Unit = refreshConnections(isHiveEnabled = false)
 
   protected def refreshConnections(isHiveEnabled: Boolean): Unit = {
     stop()
     SharedSparkContext.stop()
 
-    init(forceNotLoad = true, isHiveEnabled = isHiveEnabled)
-    initializeContext(isHiveEnabled)
+    _isHiveEnabled = isHiveEnabled
+    init(forceNotLoad = true)
+    initializeContext()
     initializeSparkSession()
   }
 
@@ -114,14 +113,13 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
 
   protected def enableTiFlashTest: Boolean = SharedSQLContext.enableTiFlashTest
 
-  protected def init(forceNotLoad: Boolean = false, isHiveEnabled: Boolean = false): Unit = {
-    _isHiveEnabled = isHiveEnabled
+  protected def init(forceNotLoad: Boolean = false): Unit = {
     initializeConf(forceNotLoad)
   }
 
   override protected def beforeAll(): Unit = {
     try {
-      init(isHiveEnabled = enableHive)
+      init()
       // initialize spark context
       super.beforeAll()
       initializeSparkSession()
