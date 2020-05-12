@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql
 
+import java.sql.Statement
+
 import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient}
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import com.pingcap.tikv.meta.TiTableInfo
@@ -51,6 +53,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     StoreVersion.minTiKVVersion("3.0.5", this.ti.tiSession.getPDClient)
   }
 
+  protected def supportBatchWrite: Boolean = {
+    StoreVersion.minTiKVVersion("3.0.14", this.ti.tiSession.getPDClient)
+  }
+
   protected def queryViaTiSpark(query: String): List[List[Any]] = {
     val df = sql(query)
     val schema = df.schema.fields
@@ -58,8 +64,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     dfData(df, schema)
   }
 
-  protected def queryTiDBViaJDBC(query: String): List[List[Any]] = {
-    val resultSet = callWithRetry(tidbStmt.executeQuery(query))
+  protected def queryTiDBViaJDBC(query: String,
+                                 retryOnFailure: Int = 3,
+                                 stmt: Statement = tidbStmt): List[List[Any]] = {
+    val resultSet = callWithRetry(stmt.executeQuery(query), retryOnFailure)
     val rsMetaData = resultSet.getMetaData
     val retSet = ArrayBuffer.empty[List[Any]]
     val retSchema = ArrayBuffer.empty[String]
