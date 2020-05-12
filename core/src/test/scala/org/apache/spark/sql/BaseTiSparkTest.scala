@@ -314,88 +314,101 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
     var sparkPlan: String = "null"
 
-    if (r1 == null) {
-      try {
-        r1 = queryViaTiSpark(qSpark)
-        sparkPlan = getSparkPlan(qSpark)
-      } catch {
-        case e: Throwable =>
-          try {
-            logger.error(s"TiSpark failed when executing: $qSpark", e)
-            logger.warn("failure detected with plan: \n", sparkPlan)
-          } finally {
-            fail(e)
-          }
-      }
-    }
-
-    if (skipJDBC && skipTiDB) {
-      // If JDBC and TiDB tests are both skipped, the correctness of test is not guaranteed.
-      // However the result might still be useful when we only want to test if the query fails in TiSpark.
-      logger.warn(
-        s"Unknown correctness of test result: Skipped in both JDBC and TiDB. [With Spark SQL: $qSpark]"
-      )
-      return
-    }
-
-    if (!skipJDBC && r2 == null) {
-      try {
-        r2 = queryViaTiSpark(qJDBC)
-      } catch {
-        case e: Throwable =>
-          logger.warn(s"Spark with JDBC failed when executing: $qJDBC", e) // JDBC failed
-      }
-    }
-
-    if (skipJDBC || !compSqlResult(qSpark, r1, r2, checkLimit)) {
-      if (!skipTiDB && r3 == null) {
+    if (!testTiFlash) {
+      if (r1 == null) {
         try {
-          r3 = queryTiDBViaJDBC(qSpark)
+          r1 = queryViaTiSpark(qSpark)
+          sparkPlan = getSparkPlan(qSpark)
         } catch {
-          case e: Throwable => logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
+          case e: Throwable =>
+            try {
+              logger.error(s"TiSpark failed when executing: $qSpark", e)
+              logger.warn("failure detected with plan: \n", sparkPlan)
+            } finally {
+              fail(e)
+            }
         }
       }
 
-      if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {
-        fail(
-          s"""Failed with
-             |TiSpark:\t\t${listToString(r1)}
-             |Spark With JDBC:${listToString(r2)}
-             |TiDB:\t\t\t${listToString(r3)}
-             |TiSpark Plan:\n$sparkPlan""".stripMargin
-        )
-      }
-    }
-
-    if (testTiFlash) {
-      if (!enableTiFlashTest) {
+      if (skipJDBC && skipTiDB) {
+        // If JDBC and TiDB tests are both skipped, the correctness of test is not guaranteed.
+        // However the result might still be useful when we only want to test if the query fails in TiSpark.
         logger.warn(
-          "Due to config spark.tispark.enable.tiflash_test, " +
-            "although testTiFlash is set to true, tiflash test is not enabled"
+          s"Unknown correctness of test result: Skipped in both JDBC and TiDB. [With Spark SQL: $qSpark]"
         )
-      } else if (!skipTiDB) {
-        // get result from TiFlash
+        return
+      }
+
+      if (!skipJDBC && r2 == null) {
         try {
-          val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)
-          spark.conf.set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
-          r4 = queryViaTiSpark(qSpark)
-          sparkPlan = getSparkPlan(qSpark)
-          if (!compSqlResult(qSpark, r3, r4, checkLimit)) {
-            fail(
-              s"""Failed with
-                 |TiFlash:\t\t${listToString(r4)}
-                 |TiDB:\t\t\t${listToString(r3)}
-                 |TiFlash Plan:\n$sparkPlan""".stripMargin
-            )
-          }
-          spark.conf.set(
-            TiConfigConst.ISOLATION_READ_ENGINES,
-            prev.getOrElse(TiConfigConst.TIKV_STORAGE_ENGINE)
-          )
+          r2 = queryViaTiSpark(qJDBC)
         } catch {
           case e: Throwable =>
-            logger.error(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed
-            fail(e)
+            logger.warn(s"Spark with JDBC failed when executing: $qJDBC", e) // JDBC failed
+        }
+      }
+
+      if (skipJDBC || !compSqlResult(qSpark, r1, r2, checkLimit)) {
+        if (!skipTiDB && r3 == null) {
+          try {
+            r3 = queryTiDBViaJDBC(qSpark)
+          } catch {
+            case e: Throwable =>
+              logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
+          }
+        }
+
+        if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {
+          fail(
+            s"""Failed with
+               |TiSpark:\t\t${listToString(r1)}
+               |Spark With JDBC:${listToString(r2)}
+               |TiDB:\t\t\t${listToString(r3)}
+               |TiSpark Plan:\n$sparkPlan""".stripMargin
+          )
+        }
+      }
+    } else {
+      if (testTiFlash) {
+        if (!enableTiFlashTest) {
+          logger.warn(
+            "Due to config spark.tispark.enable.tiflash_test, " +
+              "although testTiFlash is set to true, tiflash test is not enabled"
+          )
+        } else if (!skipTiDB) {
+          // get result from TiDB
+          if (r3 == null) {
+            try {
+              r3 = queryTiDBViaJDBC(qSpark)
+            } catch {
+              case e: Throwable =>
+                logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
+            }
+          }
+          // get result from TiFlash
+          try {
+            val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)
+            spark.conf
+              .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
+            r4 = queryViaTiSpark(qSpark)
+            sparkPlan = getSparkPlan(qSpark)
+            if (!compSqlResult(qSpark, r3, r4, checkLimit)) {
+              fail(
+                s"""Failed with
+                   |TiFlash:\t\t${listToString(r4)}
+                   |TiDB:\t\t\t${listToString(r3)}
+                   |TiFlash Plan:\n$sparkPlan""".stripMargin
+              )
+            }
+            spark.conf.set(
+              TiConfigConst.ISOLATION_READ_ENGINES,
+              prev.getOrElse(TiConfigConst.TIKV_STORAGE_ENGINE)
+            )
+          } catch {
+            case e: Throwable =>
+              logger.error(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed
+              fail(e)
+          }
         }
       }
     }
