@@ -22,7 +22,9 @@ import com.pingcap.tikv.meta.TiIndexInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.region.TiRegion;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TiBatchWriteUtils {
 
@@ -40,7 +42,19 @@ public class TiBatchWriteUtils {
     return regionList;
   }
 
-  public static List<TiRegion> getRegionsByTable(TiSession session, TiTableInfo table) {
+  private static final Comparator<TiIndexInfo> tiIndexInfoComparator =
+      Comparator.comparing(TiIndexInfo::getId);
+
+  public static List<TiRegion> getIndexRegions(TiSession session, TiTableInfo table) {
+    return table
+        .getIndices()
+        .stream()
+        .sorted(tiIndexInfoComparator)
+        .flatMap(index -> getRegionByIndex(session, table, index).stream())
+        .collect(Collectors.toList());
+  }
+
+  public static List<TiRegion> getRecordRegions(TiSession session, TiTableInfo table) {
     ArrayList<TiRegion> regionList = new ArrayList<>();
     Key key = RowKey.createMin(table.getId());
     RowKey endRowKey = RowKey.createBeyondMax(table.getId());
@@ -51,5 +65,11 @@ public class TiBatchWriteUtils {
       key = Key.toRawKey(region.getEndKey());
     }
     return regionList;
+  }
+
+  public static List<TiRegion> getRegionsByTable(TiSession session, TiTableInfo table) {
+    List<TiRegion> recordRegions = getIndexRegions(session, table);
+    recordRegions.addAll(getRecordRegions(session, table));
+    return recordRegions;
   }
 }

@@ -18,8 +18,8 @@ import java.util.logging.Logger;
 import org.apache.spark.sql.types.DataTypes;
 
 public class TypeMapping {
-  private final static Logger logger = Logger.getLogger(TypeMapping.class.getName());
-  private final static int MAX_PRECISION = 38;
+  private static final Logger logger = Logger.getLogger(TypeMapping.class.getName());
+  private static final int MAX_PRECISION = 38;
 
   private static boolean isStringType(DataType type) {
     return type instanceof EnumType || type instanceof JsonType || type instanceof SetType
