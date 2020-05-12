@@ -130,7 +130,7 @@ object TiUtil {
       import scala.collection.JavaConversions._
       tiConf.setIsolationReadEngines(
         getIsolationReadEnginesFromString(
-          conf.get(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIKV_STORAGE_ENGINE)
+          conf.get(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.DEFAULT_STORAGE_ENGINES)
         ).toList
       )
     }
@@ -161,7 +161,8 @@ object TiUtil {
 
   def getIsolationReadEngines(sqlContext: SQLContext): List[TiStoreType] =
     getIsolationReadEnginesFromString(
-      sqlContext.getConf(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIKV_STORAGE_ENGINE)
+      sqlContext
+        .getConf(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.DEFAULT_STORAGE_ENGINES)
     )
 
   def registerUDFs(sparkSession: SparkSession): Unit = {

@@ -409,7 +409,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
             }
             spark.conf.set(
               TiConfigConst.ISOLATION_READ_ENGINES,
-              prev.getOrElse(TiConfigConst.TIKV_STORAGE_ENGINE)
+              prev.getOrElse(TiConfigConst.DEFAULT_STORAGE_ENGINES)
             )
           } catch {
             case e: Throwable =>

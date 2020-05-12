@@ -50,4 +50,5 @@ object TiConfigConst {
 
   val TIKV_STORAGE_ENGINE: String = "tikv"
   val TIFLASH_STORAGE_ENGINE: String = "tiflash"
+  val DEFAULT_STORAGE_ENGINES: String = "tikv,tiflash"
 }
