@@ -29,6 +29,7 @@ import com.pingcap.tikv.operation.iterator.IndexScanIterator;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.util.RangeSplitter;
 import com.pingcap.tikv.util.RangeSplitter.RegionTask;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -66,6 +67,16 @@ public class Snapshot {
   public ByteString get(ByteString key) {
     return new KVClient(session.getConf(), session.getRegionStoreClientBuilder())
         .get(key, timestamp.getVersion());
+  }
+
+  public List<KvPair> batchGet(List<byte[]> keys) {
+    List<ByteString> list = new ArrayList<>();
+    for (byte[] key : keys) {
+      list.add(ByteString.copyFrom(key));
+    }
+
+    return new KVClient(session.getConf(), session.getRegionStoreClientBuilder())
+        .batchGet(list, timestamp.getVersion());
   }
 
   public Iterator<TiChunk> tableReadChunk(
