@@ -65,12 +65,12 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
         TEST_TIFLASH = "${m8[0][1]}"
     }
     
-    def readfile = { filename ->
+    groovy.lang.Closure readfile = { filename ->
         def file = readFile filename
         return file.split("\n") as List
     }
-    
-    def get_mvn_str = { total_chunks ->
+
+    groovy.lang.Closure get_mvn_str = { total_chunks ->
         def mvnStr = " -DwildcardSuites="
         for (int i = 0 ; i < total_chunks.size() - 1; i++) {
             // print total_chunks
@@ -180,8 +180,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     
         stage('Integration Tests') {
             def tests = [:]
-    
-            def run_tispark_test = { chunk_suffix ->
+
+            groovy.lang.Closure run_tispark_test = { chunk_suffix ->
                 dir("go/src/github.com/pingcap/tispark") {
                     if (chunk_suffix < 10) {
                         run_chunks = readfile("test_unit_0${chunk_suffix}")
@@ -203,7 +203,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                 }
             }
 
-            def run_tikvclient_test = { chunk_suffix ->
+            groovy.lang.Closure run_tikvclient_test = { chunk_suffix ->
                 dir("go/src/github.com/pingcap/tispark") {
                     sh """
                         archive_url=http://fileserver.pingcap.net/download/builds/pingcap/tispark/cache/tispark-m2-cache-latest.tar.gz
@@ -218,8 +218,8 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     sh 'curl -s https://codecov.io/bash | bash -s - -t @CODECOV_TOKEN'
                 }
             }
-    
-            def run_intergration_test = { chunk_suffix, run_test ->
+
+            groovy.lang.Closure run_intergration_test = { chunk_suffix, run_test ->
                 node("test_java") {
                     println "${NODE_NAME}"
                     container("java") {
@@ -232,7 +232,14 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     
                         try {
 
-                            if (TIDB_BRANCH.contains("4.0") && TIKV_BRANCH.contains("4.0") && PD_BRANCH.contains("4.0")) {
+                            groovy.lang.Closure isv4 = { branch_name ->
+                                if (branch_name.contains("4.0") || branch_name.equals("master")) {
+                                    return true
+                                }
+                                return false
+                            }
+
+                            if (isv4(TIDB_BRANCH) || isv4(TIKV_BRANCH) || isv4(PD_BRANCH)) {
                                 sh """
                                 rm go/src/github.com/pingcap/tispark/config/pd.toml
                                 rm go/src/github.com/pingcap/tispark/config/tikv.toml
