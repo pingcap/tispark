@@ -233,7 +233,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         try {
 
                             groovy.lang.Closure isv4 = { branch_name ->
-                                if (branch_name.contains("4.0") || branch_name.equals("master")) {
+                                if (branch_name.startsWith("4.0") || branch_name == "master") {
                                     return true
                                 }
                                 return false
