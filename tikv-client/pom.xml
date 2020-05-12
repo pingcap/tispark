@@ -162,15 +162,15 @@
                         </goals>
                     </execution>
                 </executions>
-              <configuration>
-                <arguments>
-                  <argument>-package</argument>
-                  <argument>com.pingcap.tikv.parser</argument>
-                </arguments>
-                <visitor>true</visitor>
-                <sourceDirectory>./src/main/java/com/pingcap/tikv/parser</sourceDirectory>
-                <outputDirectory>./target/generated-sources/antlr4/java/com/pingcap/tikv/parser</outputDirectory>
-              </configuration>
+                <configuration>
+                    <arguments>
+                        <argument>-package</argument>
+                        <argument>com.pingcap.tikv.parser</argument>
+                    </arguments>
+                    <visitor>true</visitor>
+                    <sourceDirectory>./src/main/java/com/pingcap/tikv/parser</sourceDirectory>
+                    <outputDirectory>./target/generated-sources/antlr4/java/com/pingcap/tikv/parser</outputDirectory>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
