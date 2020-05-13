@@ -344,7 +344,7 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>com.google.common</pattern>
-                                    <shadedPattern>shade.com.google.common</shadedPattern>
+                                    <shadedPattern>com.pingcap.com.google.common</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>io.opencensus</pattern>
