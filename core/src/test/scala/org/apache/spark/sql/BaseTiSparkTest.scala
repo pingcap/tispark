@@ -17,6 +17,8 @@
 
 package org.apache.spark.sql
 
+import java.sql.Statement
+
 import com.pingcap.tikv.meta.TiTableInfo
 import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient}
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
@@ -91,6 +93,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected def supportTTLUpdate: Boolean = {
     StoreVersion.minTiKVVersion("3.0.5", this.ti.tiSession.getPDClient)
+  }
+
+  protected def supportBatchWrite: Boolean = {
+    StoreVersion.minTiKVVersion("3.0.14", this.ti.tiSession.getPDClient)
   }
 
   protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {
@@ -428,8 +434,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     dfData(df, schema)
   }
 
-  protected def queryTiDBViaJDBC(query: String): List[List[Any]] = {
-    val resultSet = callWithRetry(tidbStmt.executeQuery(query))
+  protected def queryTiDBViaJDBC(query: String,
+                                 retryOnFailure: Int = 3,
+                                 stmt: Statement = tidbStmt): List[List[Any]] = {
+    val resultSet = callWithRetry(stmt.executeQuery(query), retryOnFailure)
     val rsMetaData = resultSet.getMetaData
     val retSet = ArrayBuffer.empty[List[Any]]
     val retSchema = ArrayBuffer.empty[String]
@@ -446,7 +454,6 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
     retSet.toList
   }
-
   protected def explainSpark(str: String, skipped: Boolean = false): Unit =
     try {
       if (skipped) {

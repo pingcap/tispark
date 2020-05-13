@@ -375,7 +375,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // for test
     if (options.sleepAfterPrewritePrimaryKey > 0) {
-      logger.debug(s"sleep ${options.sleepAfterPrewritePrimaryKey} ms for test")
+      logger.info(s"sleep ${options.sleepAfterPrewritePrimaryKey} ms for test")
       Thread.sleep(options.sleepAfterPrewritePrimaryKey)
     }
 
@@ -407,6 +407,12 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
     }
     logger.info("prewriteSecondaryKeys success")
+
+    // for test
+    if (options.sleepAfterPrewriteSecondaryKey > 0) {
+      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
+      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
+    }
 
     // driver primary commit
     val commitTs = tiSession.getTimestamp.getVersion

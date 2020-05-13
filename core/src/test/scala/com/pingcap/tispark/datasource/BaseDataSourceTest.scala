@@ -15,6 +15,8 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
     extends BaseTiSparkTest {
   protected def dbtable = s"`$database`.`$table`"
 
+  protected def dbtableWithPrefix = s"`$dbPrefix$database`.`$table`"
+
   override def beforeAll(): Unit = {
     super.beforeAll()
   }
