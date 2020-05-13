@@ -23,5 +23,7 @@
 # test.data.generate=true
 # The seed used to generate test data (0 means random).
 # test.data.generate.seed=1234
+# Whether to enable TiFlash tests
+# test.tiflash.enable=false
 # DB prefix for tidb databases in case it conflicts with hive database
-# spark.tispark.db_prefix=tidb_ 
+# spark.tispark.db_prefix=tidb_

@@ -410,6 +410,8 @@ object SharedSQLContext extends Logging {
     }
     Some(tmpSeed)
   }
+  protected val enableTiFlashTest: Boolean =
+    getOrElse(tidbConf, ENABLE_TIFLASH_TEST, "false").toBoolean
   protected var tidbUser: String = _
   protected var tidbPassword: String = _
   protected var tidbAddr: String = _
@@ -422,7 +424,6 @@ object SharedSQLContext extends Logging {
   protected var runTPCH: Boolean = true
   protected var runTPCDS: Boolean = false
   protected var dbPrefix: String = _
-  protected var enableTiFlashTest: Boolean = _
 
   readConf()
 
@@ -457,8 +458,6 @@ object SharedSQLContext extends Logging {
     // run TPC-H tests by default and disable TPC-DS tests by default
     tpchDBName = getOrElse(tidbConf, TPCH_DB_NAME, "tpch_test")
     tpcdsDBName = getOrElse(tidbConf, TPCDS_DB_NAME, "")
-
-    enableTiFlashTest = getOrElse(tidbConf, ENABLE_TIFLASH_TEST, "false").toBoolean
 
     loadData = getOrElse(tidbConf, SHOULD_LOAD_DATA, "auto").toLowerCase
 
