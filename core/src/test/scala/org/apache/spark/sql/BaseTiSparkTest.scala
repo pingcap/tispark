@@ -234,7 +234,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                         rTiFlash: List[List[Any]] = null,
                         skipJDBC: Boolean = false,
                         skipTiDB: Boolean = false,
-                        testTiFlash: Boolean = false,
+                        canTestTiFlash: Boolean = false,
                         checkLimit: Boolean = true): Unit =
     runTestWithoutReplaceTableName(
       qSpark = qSpark,
@@ -246,7 +246,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       rTiFlash = rTiFlash,
       skipJDBC = skipJDBC,
       skipTiDB = skipTiDB,
-      testTiFlash = testTiFlash,
+      canTestTiFlash = canTestTiFlash,
       checkLimit = checkLimit
     )
 
@@ -301,7 +301,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                                              rTiFlash: List[List[Any]] = null,
                                              skipJDBC: Boolean = false,
                                              skipTiDB: Boolean = false,
-                                             testTiFlash: Boolean = false,
+                                             canTestTiFlash: Boolean = false,
                                              checkLimit: Boolean = true): Unit = {
     if (skipped) {
       logger.warn(s"Test is skipped. [With Spark SQL: $qSpark]")
@@ -327,7 +327,9 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
     var sparkPlan: String = "null"
 
-    if (!testTiFlash) {
+    val shoudTestTiFlash = canTestTiFlash && enableTiFlashTest
+
+    if (!shoudTestTiFlash) {
       if (r1 == null) {
         try {
           r1 = queryViaTiSpark(qSpark)
@@ -382,46 +384,39 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
         }
       }
     } else {
-      if (testTiFlash) {
-        if (!enableTiFlashTest) {
-          logger.warn(
-            "Due to config spark.tispark.enable.tiflash_test, " +
-              "although testTiFlash is set to true, tiflash test is not enabled"
-          )
-        } else if (!skipTiDB) {
-          // get result from TiDB
-          if (r3 == null) {
-            try {
-              r3 = queryTiDBViaJDBC(qSpark)
-            } catch {
-              case e: Throwable =>
-                logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
-            }
-          }
-          // get result from TiFlash
+      if (!skipTiDB) {
+        // get result from TiDB
+        if (r3 == null) {
           try {
-            val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)
-            spark.conf
-              .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
-            r4 = queryViaTiSpark(qSpark)
-            sparkPlan = getSparkPlan(qSpark)
-            if (!compSqlResult(qSpark, r3, r4, checkLimit)) {
-              fail(
-                s"""Failed with
-                   |TiFlash:\t\t${listToString(r4)}
-                   |TiDB:\t\t\t${listToString(r3)}
-                   |TiFlash Plan:\n$sparkPlan""".stripMargin
-              )
-            }
-            spark.conf.set(
-              TiConfigConst.ISOLATION_READ_ENGINES,
-              prev.getOrElse(TiConfigConst.DEFAULT_STORAGE_ENGINES)
-            )
+            r3 = queryTiDBViaJDBC(qSpark)
           } catch {
             case e: Throwable =>
-              logger.error(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed
-              fail(e)
+              logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
           }
+        }
+        // get result from TiFlash
+        try {
+          val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)
+          spark.conf
+            .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
+          r4 = queryViaTiSpark(qSpark)
+          sparkPlan = getSparkPlan(qSpark)
+          if (!compSqlResult(qSpark, r3, r4, checkLimit)) {
+            fail(
+              s"""Failed with
+                 |TiFlash:\t\t${listToString(r4)}
+                 |TiDB:\t\t\t${listToString(r3)}
+                 |TiFlash Plan:\n$sparkPlan""".stripMargin
+            )
+          }
+          spark.conf.set(
+            TiConfigConst.ISOLATION_READ_ENGINES,
+            prev.getOrElse(TiConfigConst.DEFAULT_STORAGE_ENGINES)
+          )
+        } catch {
+          case e: Throwable =>
+            logger.error(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed
+            fail(e)
         }
       }
     }
@@ -474,7 +469,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                                   rTiFlash: List[List[Any]] = null,
                                   skipJDBC: Boolean = false,
                                   skipTiDB: Boolean = false,
-                                  testTiFlash: Boolean = false,
+                                  canTestTiFlash: Boolean = false,
                                   checkLimit: Boolean = true): Unit =
     try {
       explainSpark(qSpark)
@@ -488,7 +483,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           rTiFlash = rTiFlash,
           skipJDBC = skipJDBC,
           skipTiDB = skipTiDB,
-          testTiFlash = testTiFlash,
+          canTestTiFlash = canTestTiFlash,
           checkLimit = checkLimit
         )
       } else {
@@ -502,7 +497,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           rTiFlash = rTiFlash,
           skipJDBC = skipJDBC,
           skipTiDB = skipTiDB,
-          testTiFlash = testTiFlash,
+          canTestTiFlash = canTestTiFlash,
           checkLimit = checkLimit
         )
       }

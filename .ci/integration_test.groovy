@@ -233,7 +233,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         try {
 
                             groovy.lang.Closure isv4 = { branch_name ->
-                                if (branch_name.startsWith("4.0") || branch_name == "master") {
+                                if (branch_name.startsWith("v4") || branch_name == "master") {
                                     return true
                                 }
                                 return false
@@ -299,6 +299,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                                     sh "cat tiflash/tiflash.log"
                                     sh "cat tiflash/tiflash_cluster_manager.log"
                                     sh "cat tiflash/tiflash_tikv.log"
+                                    sh "echo 'done'"
                                 } catch (e) {
                                     throw e
                                 }

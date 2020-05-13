@@ -100,7 +100,7 @@ trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTyp
       List(genDescriptionNotNullable(dataTypes(i)), genDescriptionNotNullable(dataTypes(j))) ++ dataTypesWithDescription
     )
     val data = genData(schema)
-    data.save()
+    setTiFlashReplicaByConfig(data)
   }
 
   def test(i: Int, j: Int): Unit = {
@@ -108,5 +108,9 @@ trait GenerateMultiColumnPKDataTypeTestAction extends GenerateMultiColumnDataTyp
     val tableName = getTableName(cols.map(getTypeName): _*)
     init(tableName, i, j)
     loadTestData(tableName)
+    if (canTestTiFlash) {
+      // sleep for some time to wait for TiFlash syncing
+      Thread.sleep(10 * 1000)
+    }
   }
 }

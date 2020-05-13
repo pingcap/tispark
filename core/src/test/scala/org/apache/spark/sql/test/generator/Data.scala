@@ -41,6 +41,11 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
           .mkString("(", ",", ")")
       }
       .mkString(",")
+  private var hasTiFlashReplica = false
+
+  def setTiFLashReplica(has: Boolean): Unit = {
+    hasTiFlashReplica = has
+  }
 
   def toOutput(value: Any): String = value match {
     case null       => null
@@ -79,7 +84,9 @@ case class Data(schema: Schema, data: List[TiRow], directory: String) {
     file.createNewFile()
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(sql)
-    bw.write(tiflash_sql)
+    if (hasTiFlashReplica) {
+      bw.write(tiflash_sql)
+    }
     bw.close()
   }
 

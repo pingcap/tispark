@@ -28,6 +28,8 @@ trait BaseTestGenerationSpec {
 
   protected var cols: List[ReflectedDataType] = _
 
+  protected var canTestTiFlash: Boolean = false
+
   def getTableName(dataTypes: String*): String
 
   def getTableNameWithDesc(desc: String, dataTypes: String*): String

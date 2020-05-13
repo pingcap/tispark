@@ -49,6 +49,12 @@ trait GenerateMultiColumnDataTypeTestAction
 
   def genData(schema: Schema): Data = randomDataGenerator(schema, rowCount, dataTypeTestDir, r)
 
+  def setTiFlashReplicaByConfig(data: Data): Unit = {
+    canTestTiFlash = enableTiFlashTest
+    data.setTiFLashReplica(canTestTiFlash)
+    data.save()
+  }
+
   def init(tableName: String): Unit = {
     val dataTypesWithDescription = dataTypes.map { dataType =>
       val len = getTypeLength(dataType)
@@ -56,7 +62,7 @@ trait GenerateMultiColumnDataTypeTestAction
     }
     val schema = genSchema(tableName, dataTypesWithDescription)
     val data = genData(schema)
-    data.save()
+    setTiFlashReplicaByConfig(data)
   }
 
   def loadTestData(tableName: String): Unit
@@ -66,5 +72,9 @@ trait GenerateMultiColumnDataTypeTestAction
     val tableName = getTableName(dataTypes.map(getTypeName): _*)
     init(tableName)
     loadTestData(tableName)
+    if (canTestTiFlash) {
+      // sleep for some time to wait for TiFlash syncing
+      Thread.sleep(30 * 1000)
+    }
   }
 }
