@@ -8,7 +8,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
     def PD_BRANCH = "master"
     def MVN_PROFILE = "-Pjenkins"
     def TEST_MODE = "full"
-    def PARALLEL_NUMBER = 18
+    def PARALLEL_NUMBER = 24
     def TEST_REGION_SIZE = "normal"
     
     // parse tidb branch
