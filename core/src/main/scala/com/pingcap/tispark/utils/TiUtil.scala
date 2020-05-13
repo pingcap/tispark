@@ -130,7 +130,7 @@ object TiUtil {
       import scala.collection.JavaConversions._
       tiConf.setIsolationReadEngines(
         getIsolationReadEnginesFromString(
-          conf.get(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.DEFAULT_STORAGE_ENGINES)
+          conf.get(TiConfigConst.ISOLATION_READ_ENGINES)
         ).toList
       )
     }

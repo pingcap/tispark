@@ -237,17 +237,17 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                         testTiFlash: Boolean = false,
                         checkLimit: Boolean = true): Unit =
     runTestWithoutReplaceTableName(
-      qSpark,
-      replaceJDBCTableName(qSpark, skipJDBC),
-      skipped,
-      rSpark,
-      rJDBC,
-      rTiDB,
-      rTiFlash,
-      skipJDBC,
-      skipTiDB,
-      testTiFlash,
-      checkLimit
+      qSpark = qSpark,
+      qJDBC = replaceJDBCTableName(qSpark, skipJDBC),
+      skipped = skipped,
+      rSpark = rSpark,
+      rJDBC = rJDBC,
+      rTiDB = rTiDB,
+      rTiFlash = rTiFlash,
+      skipJDBC = skipJDBC,
+      skipTiDB = skipTiDB,
+      testTiFlash = testTiFlash,
+      checkLimit = checkLimit
     )
 
   /** Rename JDBC tables
@@ -479,20 +479,31 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     try {
       explainSpark(qSpark)
       if (qJDBC == null) {
-        runTest(qSpark, skipped, rSpark, rJDBC, rTiDB, rTiFlash, skipJDBC, skipTiDB, checkLimit)
+        runTest(
+          qSpark = qSpark,
+          skipped = skipped,
+          rSpark = rSpark,
+          rJDBC = rJDBC,
+          rTiDB = rTiDB,
+          rTiFlash = rTiFlash,
+          skipJDBC = skipJDBC,
+          skipTiDB = skipTiDB,
+          testTiFlash = testTiFlash,
+          checkLimit = checkLimit
+        )
       } else {
         runTestWithoutReplaceTableName(
-          qSpark,
-          qJDBC,
-          skipped,
-          rSpark,
-          rJDBC,
-          rTiDB,
-          rTiFlash,
-          skipJDBC,
-          skipTiDB,
-          testTiFlash,
-          checkLimit
+          qSpark = qSpark,
+          qJDBC = qJDBC,
+          skipped = skipped,
+          rSpark = rSpark,
+          rJDBC = rJDBC,
+          rTiDB = rTiDB,
+          rTiFlash = rTiFlash,
+          skipJDBC = skipJDBC,
+          skipTiDB = skipTiDB,
+          testTiFlash = testTiFlash,
+          checkLimit = checkLimit
         )
       }
     } catch {

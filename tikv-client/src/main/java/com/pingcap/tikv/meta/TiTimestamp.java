@@ -61,4 +61,9 @@ public class TiTimestamp implements Serializable {
   public int hashCode() {
     return Objects.hash(getVersion());
   }
+
+  @Override
+  public String toString() {
+    return "TiTimestamp(" + getVersion() + ")";
+  }
 }

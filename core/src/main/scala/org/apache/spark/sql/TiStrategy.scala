@@ -180,15 +180,12 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     }
   }
 
-  private def canUseTiKV(): Boolean =
-    TiUtil
-      .getIsolationReadEngines(sqlContext)
-      .contains(TiStoreType.TiKV)
-
-  private def canUseTiFlash(source: TiDBRelation): Boolean =
-    TiUtil
-      .getIsolationReadEngines(sqlContext)
-      .contains(TiStoreType.TiFlash) && source.isTiFlashReplicaAvailable
+  private def eligibleStorageEngines(source: TiDBRelation): List[TiStoreType] =
+    TiUtil.getIsolationReadEngines(sqlContext).filter {
+      case TiStoreType.TiKV    => true
+      case TiStoreType.TiFlash => source.isTiFlashReplicaAvailable
+      case _                   => false
+    }
 
   private def timeZoneOffsetInSeconds(): Int = {
     val tz = DateTimeZone.getDefault
@@ -272,10 +269,20 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
 
     val tblStatistics: TableStatistics = StatisticsManager.getTableStatistics(source.table.getId)
 
+    // engines that could be chosen.
+    val engines = eligibleStorageEngines(source)
+
+    if (engines.isEmpty) {
+      throw new RuntimeException(
+        s"No eligible storage engines found for $source, " +
+          s"isolation_read_engines = ${TiUtil.getIsolationReadEngines(sqlContext)}"
+      )
+    }
+
     scanBuilder.buildTiDAGReq(
       allowIndexRead(),
-      canUseTiKV(),
-      canUseTiFlash(source),
+      engines.contains(TiStoreType.TiKV),
+      engines.contains(TiStoreType.TiFlash),
       tiColumns.map { colRef =>
         source.table.getColumn(colRef.getName)
       }.asJava,

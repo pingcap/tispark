@@ -15,6 +15,7 @@
 
 package com.pingcap.tikv;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.pd.PDUtils;
 import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.Converter;
@@ -51,7 +52,7 @@ public class TiConfiguration implements Serializable {
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
   private static final int DEF_PARTITION_PER_SPLIT = 10;
   private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
-      Collections.singletonList(TiStoreType.TiKV);
+      ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;

@@ -30,14 +30,20 @@ class CatalogTestSuite extends BaseTiSparkTest {
 
   test("test new catalog") {
     setCurrentDatabase("default")
-    runTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
+    compSparkWithTiDB(
+      qSpark = s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table",
+      qTiDB = s"select count(*) from tispark_test.full_data_type_table"
+    )
     setCurrentDatabase("tispark_test")
     runTest(s"select count(*) from full_data_type_table")
   }
 
   test("test db prefix") {
     setCurrentDatabase("default")
-    explainAndRunTest(s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table")
+    compSparkWithTiDB(
+      qSpark = s"select count(*) from ${dbPrefix}tispark_test.full_data_type_table",
+      qTiDB = s"select count(*) from tispark_test.full_data_type_table"
+    )
   }
 
   test("test explain") {
