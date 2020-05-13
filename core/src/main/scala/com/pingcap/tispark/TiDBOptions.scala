@@ -82,6 +82,9 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val sleepAfterPrewritePrimaryKey: Long =
     parameters.getOrElse(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong
 
+  val sleepAfterPrewriteSecondaryKey: Long =
+    parameters.getOrElse(TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY, "0").toLong
+
   val isTest: Boolean = parameters.getOrElse(TIDB_IS_TEST, "false").toBoolean
 
   // ------------------------------------------------------------
@@ -153,7 +156,6 @@ object TiDBOptions {
   val TIDB_SKIP_COMMIT_SECONDARY_KEY: String = newOption("skipCommitSecondaryKey")
   val TIDB_ENABLE_REGION_SPLIT: String = newOption("enableRegionSplit")
   val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
-  val TIDB_LOCK_TTL_SECONDS: String = newOption("lockTTLSeconds")
   val TIDB_WRITE_CONCURRENCY: String = newOption("writeConcurrency")
   val TIDB_TTL_MODE: String = newOption("ttlMode")
   val TIDB_SNAPSHOT_BATCH_GET_SIZE: String = newOption("snapshotBatchGetSize")
@@ -161,6 +163,8 @@ object TiDBOptions {
   // ------------------------------------------------------------
   // parameters only for test
   // ------------------------------------------------------------
-  val TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY: String = newOption("sleepAfterPrewritePrimaryKey")
   val TIDB_IS_TEST: String = newOption("isTest")
+  val TIDB_LOCK_TTL_SECONDS: String = newOption("lockTTLSeconds")
+  val TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY: String = newOption("sleepAfterPrewritePrimaryKey")
+  val TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY: String = newOption("sleepAfterPrewriteSecondaryKey")
 }
