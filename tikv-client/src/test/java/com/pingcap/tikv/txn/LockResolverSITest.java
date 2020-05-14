@@ -43,6 +43,12 @@ public class LockResolverSITest extends LockResolverTest {
       skipTestInit();
       return;
     }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
     session.getConf().setIsolationLevel(IsolationLevel.SI);
     putAlphabet();
     prepareAlphabetLocks();
@@ -56,6 +62,12 @@ public class LockResolverSITest extends LockResolverTest {
       skipTestInit();
       return;
     }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
     for (int i = 0; i < 26; i++) {
       String k = String.valueOf((char) ('a' + i));
       TiTimestamp startTs = session.getTimestamp();
@@ -110,6 +122,12 @@ public class LockResolverSITest extends LockResolverTest {
       skipTestInit();
       return;
     }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
     TiTimestamp startTs = session.getTimestamp();
     TiTimestamp endTs = session.getTimestamp();
 
