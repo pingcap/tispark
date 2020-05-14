@@ -61,8 +61,13 @@ case class TiDBRelation(session: TiSession,
     }
 
   lazy val isTiFlashReplicaAvailable: Boolean = {
-    // Note: INFORMATION_SCHEMA.TIFLASH_REPLICA is not present in TiKV.
-    // select * from information_schema.tiflash_replica where table_id = $id
+    // Note:
+    // - INFORMATION_SCHEMA.TIFLASH_REPLICA is not present in TiKV or PD,
+    // it is calculated in TiDB and stored in memory.
+    // - In order to get those helpful information we have to read them from
+    // either TiKV or PD and keep them in memory as well.
+    //
+    // select * from INFORMATION_SCHEMA.TIFLASH_REPLICA where table_id = $id
     // TABLE_SCHEMA, TABLE_NAME, TABLE_ID, REPLICA_COUNT, LOCATION_LABELS, AVAILABLE, PROGRESS
     table.getTiflashReplicaInfo != null && table.getTiflashReplicaInfo.isAvailable
   }

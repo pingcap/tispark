@@ -160,23 +160,16 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
   private def useStreamingProcess: Boolean =
     sqlConf.getConfString(TiConfigConst.COPROCESS_STREAMING, "false").toLowerCase.toBoolean
 
-  private def codecFormat(useTiFlash: Boolean = false): EncodeType = {
+  private def getCodecFormat: EncodeType = {
     val codecFormatStr =
-      sqlConf.getConfString(TiConfigConst.CODEC_FORMAT, "chblock").toLowerCase
-    if (useStreamingProcess) {
-      return EncodeType.TypeDefault
-    }
+      sqlConf
+        .getConfString(TiConfigConst.CODEC_FORMAT, TiConfigConst.DEFAULT_CODEC_FORMAT)
+        .toLowerCase
 
     codecFormatStr match {
-      case "chunk" =>
-        EncodeType.TypeChunk
-      case "chblock" =>
-        if (useTiFlash) {
-          EncodeType.TypeCHBlock
-        } else {
-          EncodeType.TypeChunk
-        }
-      case _ => EncodeType.TypeDefault
+      case TiConfigConst.CHUNK_CODEC_FORMAT   => EncodeType.TypeChunk
+      case TiConfigConst.DEFAULT_CODEC_FORMAT => EncodeType.TypeCHBlock
+      case _                                  => EncodeType.TypeDefault
     }
   }
 
@@ -196,12 +189,14 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     seconds
   }
 
-  private def pushDownType(): PushDownType =
+  private def newTiDAGRequest(): TiDAGRequest = {
+    val ts = timeZoneOffsetInSeconds()
     if (useStreamingProcess) {
-      PushDownType.STREAMING
+      new TiDAGRequest(PushDownType.STREAMING, ts)
     } else {
-      PushDownType.NORMAL
+      new TiDAGRequest(PushDownType.NORMAL, getCodecFormat, ts)
     }
+  }
 
   private def toCoprocessorRDD(
     source: TiDBRelation,
@@ -551,9 +546,6 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
       !aggregateExpressions.exists(_.isDistinct) &&
       // TODO: This is a temporary fix for the issue: https://github.com/pingcap/tispark/issues/1039
       !groupingExpressions.exists(_.isInstanceOf[Alias])
-
-  private def newTiDAGRequest(): TiDAGRequest =
-    new TiDAGRequest(pushDownType(), codecFormat(), timeZoneOffsetInSeconds())
 
   // We do through similar logic with original Spark as in SparkStrategies.scala
   // Difference is we need to test if a sub-plan can be consumed all together by TiKV

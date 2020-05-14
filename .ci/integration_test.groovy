@@ -233,7 +233,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                         try {
 
                             groovy.lang.Closure isv4 = { branch_name ->
-                                if (branch_name.startsWith("v4") || branch_name == "master") {
+                                if (branch_name.startsWith("v4") || branch_name.startsWith("release-4") || branch_name == "master") {
                                     return true
                                 }
                                 return false
@@ -292,17 +292,18 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             sh "cat tikv.log"
                             sh "cat tidb.log"
                             if (TEST_TIFLASH != "false") {
-                                try {
-                                    sh "cat tiflash_cmd_line.log"
-                                    sh "ls -l tiflash/"
-                                    sh "cat tiflash/tiflash_error.log"
-                                    sh "cat tiflash/tiflash.log"
-                                    sh "cat tiflash/tiflash_cluster_manager.log"
-                                    sh "cat tiflash/tiflash_tikv.log"
-                                    sh "echo 'done'"
-                                } catch (e) {
-                                    throw e
-                                }
+                                sh """
+                                touch tiflash_cmd_line.log
+                                touch tiflash/tiflash_error.log
+                                touch tiflash/tiflash.log
+                                touch tiflash/tiflash_cluster_manager.log
+                                touch tiflash/tiflash_tikv.log
+                                """
+                                sh "cat tiflash_cmd_line.log"
+                                sh "cat tiflash/tiflash_error.log"
+                                sh "cat tiflash/tiflash.log"
+                                sh "cat tiflash/tiflash_cluster_manager.log"
+                                sh "cat tiflash/tiflash_tikv.log"
                             }
                             throw err
                         }

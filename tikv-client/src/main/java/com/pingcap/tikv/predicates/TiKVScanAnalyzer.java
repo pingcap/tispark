@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
+import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.exception.TiClientInternalException;
 import com.pingcap.tikv.expression.Expression;
 import com.pingcap.tikv.expression.PartitionPruner;
@@ -154,7 +155,7 @@ public class TiKVScanAnalyzer {
       }
     }
 
-    TiKVScanPlan(
+    private TiKVScanPlan(
         Map<Long, List<KeyRange>> keyRanges,
         Set<Expression> filters,
         TiIndexInfo index,
@@ -267,16 +268,22 @@ public class TiKVScanAnalyzer {
       throw new RuntimeException("No valid plan found for table '" + table.getName() + "'");
     }
 
-    dagRequest.addRanges(minPlan.getKeyRanges());
-    if (canUseTiFlash) {
-      dagRequest.setStoreType(TiStoreType.TiFlash);
+    TiStoreType minPlanStoreType = minPlan.getStoreType();
+    // TiKV should not use CHBlock as Encode Type.
+    if (minPlanStoreType == TiStoreType.TiKV
+        && dagRequest.getEncodeType() == EncodeType.TypeCHBlock) {
+      dagRequest.setEncodeType(EncodeType.TypeChunk);
     }
+    // Set DAG Request's store type as minPlan's store type.
+    dagRequest.setStoreType(minPlanStoreType);
+
+    dagRequest.addRanges(minPlan.getKeyRanges());
     dagRequest.setPrunedParts(minPlan.getPrunedParts());
     dagRequest.addFilters(new ArrayList<>(minPlan.getFilters()));
     if (minPlan.isIndexScan()) {
       dagRequest.setIndexInfo(minPlan.getIndex());
       // need to set isDoubleRead to true for dagRequest in case of double read
-      dagRequest.setIsDoubleRead(minPlan.isDoubleRead);
+      dagRequest.setIsDoubleRead(minPlan.isDoubleRead());
     }
 
     dagRequest.setTableInfo(table);

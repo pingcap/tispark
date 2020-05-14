@@ -119,7 +119,7 @@ public class TiDAGRequest implements Serializable {
     }
 
     public TiDAGRequest build(PushDownType pushDownType) {
-      TiDAGRequest req = new TiDAGRequest(pushDownType, EncodeType.TypeDefault);
+      TiDAGRequest req = new TiDAGRequest(pushDownType);
       req.setTableInfo(tableInfo);
       req.addRanges(ranges);
       req.addFilters(filters);
@@ -154,6 +154,10 @@ public class TiDAGRequest implements Serializable {
     this.storeType = storeType;
   }
 
+  public EncodeType getEncodeType() {
+    return encodeType;
+  }
+
   public void setEncodeType(EncodeType encodeType) {
     this.encodeType = encodeType;
   }
@@ -163,7 +167,7 @@ public class TiDAGRequest implements Serializable {
     this.encodeType = EncodeType.TypeDefault;
   }
 
-  public TiDAGRequest(PushDownType pushDownType, EncodeType encodeType) {
+  private TiDAGRequest(PushDownType pushDownType, EncodeType encodeType) {
     this.pushDownType = pushDownType;
     this.encodeType = encodeType;
   }
