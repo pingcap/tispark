@@ -6,6 +6,7 @@ mark_cache_size = 5368709120
 path = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/data"
 tcp_port = 8123
 tmp_path = "/tmp"
+capacity="10737418240"
 
 [application]
 runAsDaemon = true

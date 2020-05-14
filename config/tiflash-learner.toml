@@ -16,7 +16,3 @@ status-addr = "127.0.0.1:20292"
 
 [storage]
 data-dir = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/flash"
-
-[raftstore]
-# set store capacity, if no set, use disk capacity.
-capacity = "8G"
