@@ -22,28 +22,29 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
-class WriteReadTest extends BaseDataSourceTest("test_concurrency_write_read") {
+class ConcurrentcyTest extends BaseDataSourceTest("test_concurrency_write_read") {
 
-  private val row1 = Row(1, "Hello")
-  private val row2 = Row(2, "TiDB")
-  private val row3 = Row(3, "Spark")
-  private val row4 = Row(4, "null")
+  protected val row1 = Row(1, "Hello")
+  protected val row2 = Row(2, "TiDB")
+  protected val row3 = Row(3, "Spark")
+  protected val row4 = Row(4, "null")
+  protected val row5 = Row(5, "test")
 
-  private val schema = StructType(
+  protected val schema = StructType(
     List(
       StructField("i", IntegerType),
       StructField("s", StringType)
     )
   )
 
-  private val sleepBeforeQuery = 10000
-  private val sleepAfterPrewriteSecondaryKey = 240000
+  protected val sleepBeforeQuery = 10000
+  protected val sleepAfterPrewriteSecondaryKey = 240000
 
   override def beforeAll(): Unit = {
     super.beforeAll()
   }
 
-  protected def newThreadJDBC(i: Int, resultRowCount: AtomicInteger): Thread = {
+  protected def newJDBCReadThread(i: Int, resultRowCount: AtomicInteger): Thread = {
     new Thread(new Runnable {
       override def run(): Unit = {
         Thread.sleep(sleepBeforeQuery)
@@ -63,7 +64,7 @@ class WriteReadTest extends BaseDataSourceTest("test_concurrency_write_read") {
     })
   }
 
-  protected def newThreadTiSpark(i: Int, resultRowCount: AtomicInteger): Thread = {
+  protected def newTiSparkReadThread(i: Int, resultRowCount: AtomicInteger): Thread = {
     new Thread(new Runnable {
       override def run(): Unit = {
         Thread.sleep(sleepBeforeQuery)
