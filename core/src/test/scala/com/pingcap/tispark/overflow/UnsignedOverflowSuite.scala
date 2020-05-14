@@ -15,10 +15,16 @@ import org.apache.spark.sql.types._
 class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_overflow") {
 
   test("Test TINYINT UNSIGNED Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyIntUnsignedUpperBound(false)
   }
 
   test("Test TINYINT UNSIGNED as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyIntUnsignedUpperBound(true)
   }
 
@@ -54,10 +60,16 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test TINYINT UNSIGNED Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyIntUnsignedLowerBound(false)
   }
 
   test("Test TINYINT UNSIGNED as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyIntUnsignedLowerBound(false)
   }
 
@@ -93,10 +105,16 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test SMALLINT UNSIGNED Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testSmallIntUnsignedUpperBound(false)
   }
 
   test("Test SMALLINT UNSIGNED as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testSmallIntUnsignedUpperBound(true)
   }
 
@@ -132,10 +150,16 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test SMALLINT UNSIGNED Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testSmallIntUnsignedLowerBound(false)
   }
 
   test("Test SMALLINT UNSIGNED as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testSmallIntUnsignedLowerBound(true)
   }
 
@@ -171,10 +195,16 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test MEDIUMINT UNSIGNED Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMediumIntUnsignedUpperBound(false)
   }
 
   test("Test MEDIUMINT UNSIGNED as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMediumIntUnsignedUpperBound(true)
   }
 
@@ -210,10 +240,16 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test MEDIUMINT UNSIGNED Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMediumIntUnsignedLowerBound(false)
   }
 
   test("Test MEDIUMINT UNSIGNED as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMediumIntUnsignedLowerBound(true)
   }
 
@@ -249,10 +285,16 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test INT UNSIGNED Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testIntUnsignedUpperBound(false)
   }
 
   test("Test INT UNSIGNED as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testIntUnsignedUpperBound(true)
   }
 
@@ -288,10 +330,16 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test INT UNSIGNED Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testIntUnsignedLowerBound(false)
   }
 
   test("Test INT UNSIGNED as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testIntUnsignedLowerBound(true)
   }
 
@@ -329,10 +377,16 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test BIGINT UNSIGNED Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBigIntUnsignedUpperBound(false)
   }
 
   test("Test BIGINT UNSIGNED as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBigIntUnsignedUpperBound(true)
   }
 
@@ -368,10 +422,16 @@ class UnsignedOverflowSuite extends BaseDataSourceTest("test_data_type_unsigned_
   }
 
   test("Test BIGINT UNSIGNED Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBigIntUnsignedLowerBound(false)
   }
 
   test("Test BIGINT UNSIGNED as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBigIntUnsignedLowerBound(true)
   }
 

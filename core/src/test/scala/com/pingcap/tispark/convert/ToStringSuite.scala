@@ -33,6 +33,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
     )
 
   test("Test Convert from java.lang.Boolean to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Boolean -> STRING
     compareTiDBWriteWithJDBC {
@@ -77,6 +81,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   }
 
   test("Test Convert from java.lang.Byte to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Byte -> STRING
     compareTiDBWriteWithJDBC {
@@ -125,6 +133,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   }
 
   test("Test Convert from java.lang.Short to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Short -> STRING
     compareTiDBWriteWithJDBC {
@@ -173,6 +185,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   }
 
   test("Test Convert from java.lang.Integer to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Integer -> STRING
     compareTiDBWriteWithJDBC {
@@ -221,6 +237,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   }
 
   test("Test Convert from java.lang.Long to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Long -> STRING
     compareTiDBWriteWithJDBC {
@@ -271,6 +291,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   // TODO: float -> string problem
   // 3.4028235E38 -> 340282350000000000000000000000000000000
   ignore("Test Convert from java.lang.Float to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Float -> STRING
     compareTiDBWriteWithJDBC {
@@ -326,6 +350,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
 
   // TODO: java.sql.BatchUpdateException: Data truncation: Data too long for column 'c1' at row 1
   ignore("Test Convert from java.lang.Double to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Double -> STRING
     compareTiDBWriteWithJDBC {
@@ -363,6 +391,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   }
 
   test("Test Convert from String to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.String -> STRING
     compareTiDBWriteWithJDBC {
@@ -400,6 +432,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   }
 
   test("Test Convert from java.math.BigDecimal to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // failure
     // java.math.BigDecimal -> STRING
     compareTiDBWriteWithJDBC {
@@ -448,6 +484,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   }
 
   test("Test Convert from java.sql.Date to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // failure
     // java.sql.Date -> STRING
     compareTiDBWriteWithJDBC {
@@ -496,6 +536,10 @@ class ToStringSuite extends BaseDataSourceTest("test_data_type_convert_to_string
   }
 
   test("Test Convert from java.sql.Timestamp to STRING") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.sql.Timestamp -> STRING
     compareTiDBWriteWithJDBC {

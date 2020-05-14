@@ -11,10 +11,16 @@ import org.apache.spark.sql.types._
 class DateTimeOverflowSuite extends BaseDataSourceTest("test_data_type_datetime_overflow") {
 
   test("Test DATETIME YEAR Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testDateTimeOverflow(false)
   }
 
   test("Test DATETIME as key YEAR Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testDateTimeOverflow(true)
   }
 

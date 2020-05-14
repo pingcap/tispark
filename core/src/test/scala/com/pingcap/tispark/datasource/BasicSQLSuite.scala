@@ -22,10 +22,18 @@ class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
   }
 
   test("Test Select") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     testSelectSQL(Seq(row1, row2))
   }
 
   test("Test Insert Into") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val tmpTable = "default.testInsert"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
@@ -49,6 +57,10 @@ class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
   }
 
   test("Test Insert Overwrite") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val tmpTable = "default.testOverwrite"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable

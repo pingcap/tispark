@@ -38,6 +38,10 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
     )
 
   test("Test Convert from java.lang.Boolean to BIT") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Boolean -> BIT
     compareTiDBWriteWithJDBC {
@@ -79,6 +83,10 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Byte to BIT") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Byte -> BIT
     compareTiDBWriteWithJDBC {
@@ -115,6 +123,10 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Short to BIT") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Short -> BIT
     compareTiDBWriteWithJDBC {
@@ -151,6 +163,10 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Integer to BIT") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Integer -> BIT
     compareTiDBWriteWithJDBC {
@@ -187,6 +203,10 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Long to BIT") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Long -> BIT
     compareTiDBWriteWithJDBC {
@@ -223,6 +243,10 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Float to BIT") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Float -> BIT
     compareTiDBWriteWithJDBC {
@@ -259,6 +283,10 @@ class ToBitSuite extends BaseDataSourceTest("test_data_type_convert_to_bit") {
   }
 
   test("Test Convert from java.lang.Double to BIT") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Double -> BIT
     compareTiDBWriteWithJDBC {

@@ -50,6 +50,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     for (table <- tables) {
       logDebug(s"start test table [$table]")
 
@@ -81,6 +85,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: isPkHandle") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     for (table <- tables) {
       logDebug(s"start test table [$table]")
       val tableToWrite = s"${batchWriteTablePrefix}_${isPkHandlePrefix}_$table"
@@ -205,6 +213,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: replace + isPkHandle") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     for (table <- tables) {
       logDebug(s"start test table [$table]")
 
@@ -366,6 +378,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: replace + uniqueKey") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     for (table <- tables) {
       logDebug(s"start test table [$table]")
 
@@ -528,6 +544,10 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
   }
 
   test("table not exists") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // select
     val df = sql(s"select * from CUSTOMER")
 

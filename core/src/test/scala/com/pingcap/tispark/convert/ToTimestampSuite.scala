@@ -22,6 +22,10 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
     jdbcUpdate(s"create table $dbtable(i INT, c1 TIMESTAMP, c2 TIMESTAMP(6))")
 
   ignore("Test Convert from java.lang.Long to TIMESTAMP") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Long -> TIMESTAMP
     compareTiDBWriteWithJDBC {
@@ -59,6 +63,10 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
   }
 
   test("Test Convert from String to TIMESTAMP") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // String -> TIMESTAMP
     compareTiDBWriteWithJDBC {
@@ -92,6 +100,10 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
   }
 
   test("Test Convert from java.sql.Date to TIMESTAMP") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.sql.Date -> TIMESTAMP
     compareTiDBWriteWithJDBC {
@@ -129,6 +141,10 @@ class ToTimestampSuite extends BaseDataSourceTest("test_data_type_convert_to_tim
   }
 
   test("Test Convert from java.sql.Timestamp to TIMESTAMP") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.sql.Timestamp -> TIMESTAMP
     compareTiDBWriteWithJDBC {

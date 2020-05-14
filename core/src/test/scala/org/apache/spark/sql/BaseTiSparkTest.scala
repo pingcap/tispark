@@ -54,7 +54,11 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def supportBatchWrite: Boolean = {
-    StoreVersion.minTiKVVersion("3.0.14", this.ti.tiSession.getPDClient)
+    // currently only the following versions support BatchWrite
+    // 3.0.x (x >= 14)
+    // 3.1.x (x >= 0)
+    StoreVersion.minTiKVVersion("3.0.14", this.ti.tiSession.getPDClient) && !StoreVersion
+      .minTiKVVersion("4.0.0", this.ti.tiSession.getPDClient)
   }
 
   protected def queryViaTiSpark(query: String): List[List[Any]] = {
