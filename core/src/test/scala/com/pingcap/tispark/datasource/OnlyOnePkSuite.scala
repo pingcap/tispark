@@ -22,6 +22,10 @@ class OnlyOnePkSuite extends BaseDataSourceTest("test_datasource_only_one_pk") {
   }
 
   test("Test Write Append") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
 

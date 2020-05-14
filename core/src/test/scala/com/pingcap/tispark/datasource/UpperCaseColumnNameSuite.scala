@@ -27,6 +27,10 @@ class UpperCaseColumnNameSuite
   }
 
   test("Test insert upper case column name") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val data: RDD[Row] = sc.makeRDD(List(row1))
     val df = sqlContext.createDataFrame(data, schema)
     df.write

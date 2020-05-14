@@ -11,10 +11,16 @@ import org.apache.spark.sql.types._
 class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow") {
 
   test("Test DATE YEAR Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testYearOverflow(false)
   }
 
   test("Test DATE as key YEAR Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testYearOverflow(true)
   }
 
@@ -50,10 +56,16 @@ class DateOverflowSuite extends BaseDataSourceTest("test_data_type_date_overflow
   }
 
   test("Test DATE Month Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMonthOverflow(false)
   }
 
   test("Test DATE as key Month Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMonthOverflow(true)
   }
 
