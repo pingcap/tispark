@@ -17,7 +17,7 @@ package com.pingcap.tispark.concurrency
 
 import java.util.concurrent.atomic.AtomicInteger
 
-class WriteReadNotConflictWithPrimaryKeySuite extends WriteReadTest {
+class WriteReadNotConflictWithPrimaryKeySuite extends ConcurrentcyTest {
   test("read not conflict with primary key using jdbc") {
     if (!supportBatchWrite) {
       cancel
@@ -31,7 +31,7 @@ class WriteReadNotConflictWithPrimaryKeySuite extends WriteReadTest {
 
     // query via jdbc
     val resultRowCount = new AtomicInteger(0)
-    val readThread4 = newThreadJDBC(4, resultRowCount)
+    val readThread4 = newJDBCReadThread(4, resultRowCount)
 
     readThread4.start()
     readThread4.join()
@@ -52,7 +52,7 @@ class WriteReadNotConflictWithPrimaryKeySuite extends WriteReadTest {
 
     // query via jdbc
     val resultRowCount = new AtomicInteger(0)
-    val readThread4 = newThreadTiSpark(4, resultRowCount)
+    val readThread4 = newTiSparkReadThread(4, resultRowCount)
 
     readThread4.start()
 
