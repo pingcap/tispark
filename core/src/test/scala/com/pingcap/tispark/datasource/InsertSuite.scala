@@ -37,6 +37,10 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table without primary key") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(
@@ -72,6 +76,10 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key (primary key is handle)") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key, s varchar(128))")
     jdbcUpdate(
@@ -105,6 +113,10 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key with tiny int") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(s"create table $dbtable(i tinyint primary key, s varchar(128))")
     jdbcUpdate(
@@ -120,6 +132,10 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key with small int") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(s"create table $dbtable(i smallint primary key, s varchar(128))")
     jdbcUpdate(
@@ -135,6 +151,10 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key with medium int") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(s"create table $dbtable(i mediumint primary key, s varchar(128))")
     jdbcUpdate(
@@ -150,6 +170,10 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key (auto increase case 1)") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")
     jdbcUpdate(
@@ -191,6 +215,9 @@ class InsertSuite extends BaseDataSourceTest("test.datasource_insert") {
   }
 
   test("Test insert to table with primary key (auto increase case 2)") {
+    if (!supportBatchWrite) {
+      cancel
+    }
 
     dropTable()
     jdbcUpdate(s"create table $dbtable(i int primary key AUTO_INCREMENT, s varchar(128))")

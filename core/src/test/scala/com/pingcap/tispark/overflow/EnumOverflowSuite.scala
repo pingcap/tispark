@@ -11,10 +11,16 @@ import org.apache.spark.sql.types._
 class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow") {
 
   test("Test ENUM Value Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testEnumValueOverflow(false)
   }
 
   test("Test ENUM as key Value Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testEnumValueOverflow(true)
   }
 
@@ -47,10 +53,16 @@ class EnumOverflowSuite extends BaseDataSourceTest("test_data_type_enum_overflow
   }
 
   test("Test ENUM Number Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testEnumNumberOverflow(false)
   }
 
   test("Test ENUM as key Number Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testEnumNumberOverflow(true)
   }
 

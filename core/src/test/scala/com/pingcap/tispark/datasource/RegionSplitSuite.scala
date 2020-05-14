@@ -15,6 +15,10 @@ class RegionSplitSuite extends BaseDataSourceTest("region_split_test") {
   )
 
   test("index region split test") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // do not test this case on tidb which does not support split region
     if (!isEnableSplitRegion) {
       cancel
@@ -38,6 +42,10 @@ class RegionSplitSuite extends BaseDataSourceTest("region_split_test") {
   }
 
   test("table region split test") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // do not test this case on tidb which does not support split region
     if (!isEnableSplitRegion) {
       cancel

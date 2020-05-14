@@ -16,10 +16,16 @@ import org.apache.spark.sql.types._
 class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_overflow") {
 
   test("Test TINYINT Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyIntUpperBound(false)
   }
 
   test("Test TINYINT as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyIntUpperBound(true)
   }
 
@@ -55,10 +61,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test TINYINT Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyIntLowerBound(false)
   }
 
   test("Test TINYINT as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyIntLowerBound(true)
   }
 
@@ -94,10 +106,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test SMALLINT Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testSmallIntUpperBound(false)
   }
 
   test("Test SMALLINT as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testSmallIntUpperBound(true)
   }
 
@@ -133,10 +151,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test SMALLINT Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testSmallIntLowerBound(false)
   }
 
   test("Test SMALLINT as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testSmallIntLowerBound(true)
   }
 
@@ -172,10 +196,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test MEDIUMINT Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMediumIntUpperBound(false)
   }
 
   test("Test MEDIUMINT as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMediumIntUpperBound(true)
   }
 
@@ -211,10 +241,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test MEDIUMINT Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMediumIntLowerBound(false)
   }
 
   test("Test MEDIUMINT as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testMediumIntLowerBound(true)
   }
 
@@ -250,10 +286,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test INT Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testIntUpperBound(false)
   }
 
   test("Test INT as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testIntUpperBound(true)
   }
 
@@ -289,10 +331,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test INT Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testIntLowerBound(false)
   }
 
   test("Test INT as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testIntLowerBound(true)
   }
 
@@ -328,10 +376,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BIGINT Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBigIntUpperBound(false)
   }
 
   test("Test BIGINT as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBigIntUpperBound(true)
   }
 
@@ -367,10 +421,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BIGINT Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBigIntLowerBound(false)
   }
 
   test("Test BIGINT as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBigIntLowerBound(true)
   }
 
@@ -406,10 +466,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BOOLEAN Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBooleanUpperBound(false)
   }
 
   test("Test BOOLEAN as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBooleanUpperBound(true)
   }
 
@@ -445,10 +511,16 @@ class SignedOverflowSuite extends BaseDataSourceTest("test_data_type_signed_over
   }
 
   test("Test BOOLEAN Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBooleanLowerBound(false)
   }
 
   test("Test BOOLEAN as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBooleanLowerBound(true)
   }
 

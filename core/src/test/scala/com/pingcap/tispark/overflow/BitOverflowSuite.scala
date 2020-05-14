@@ -11,9 +11,15 @@ import org.apache.spark.sql.types._
 class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow") {
 
   test("Test BIT(1) Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit1UpperBound(false)
   }
   test("Test BIT(1) as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit1UpperBound(true)
   }
 
@@ -51,10 +57,16 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(1) Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit1LowerBound(false)
   }
 
   test("Test BIT(1) as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit1LowerBound(true)
   }
 
@@ -92,10 +104,16 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(4) Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit4UpperBound(false)
   }
 
   test("Test BIT(4) as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit4UpperBound(true)
   }
 
@@ -132,10 +150,16 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(4) Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit4LowerBound(false)
   }
 
   test("Test BIT(4) as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit4LowerBound(true)
   }
 
@@ -172,10 +196,16 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(8) Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit8UpperBound(false)
   }
 
   test("Test BIT(8) as key Upper bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit8UpperBound(true)
   }
 
@@ -213,10 +243,16 @@ class BitOverflowSuite extends BaseDataSourceTest("test_data_type_bit_overflow")
   }
 
   test("Test BIT(8) Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit8LowerBound(false)
   }
 
   test("Test BIT(8) as key Lower bound Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBit8LowerBound(true)
   }
 

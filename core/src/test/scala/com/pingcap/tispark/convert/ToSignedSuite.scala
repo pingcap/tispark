@@ -33,6 +33,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
     )
 
   test("Test Convert from java.lang.Boolean to SINGED") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Boolean -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
     compareTiDBWriteWithJDBC {
@@ -76,6 +80,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   }
 
   test("Test Convert from java.lang.Byte to SIGNED") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Byte -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
     compareTiDBWriteWithJDBC {
@@ -116,6 +124,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   }
 
   test("Test Convert from java.lang.Short to SIGNED") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Short -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
     compareTiDBWriteWithJDBC {
@@ -159,6 +171,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   }
 
   test("Test Convert from java.lang.Integer to SIGNED") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Integer -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
     compareTiDBWriteWithJDBC {
@@ -204,6 +220,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   }
 
   test("Test Convert from java.lang.Long to SIGNED") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Long -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
     compareTiDBWriteWithJDBC {
@@ -251,6 +271,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   }
 
   test("Test Convert from java.lang.Float to SIGNED") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Float -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
     compareTiDBWriteWithJDBC {
@@ -299,6 +323,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   }
 
   test("Test Convert from java.lang.Double to SIGNED") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Double -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
     compareTiDBWriteWithJDBC {
@@ -344,6 +372,10 @@ class ToSignedSuite extends BaseDataSourceTest("test_data_type_convert_to_signed
   }
 
   test("Test Convert from String to SIGNED") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // String -> {TINYINT SMALLINT MEDIUMINT INT BIGINT} SIGNED BOOLEAN
     compareTiDBWriteWithJDBC {

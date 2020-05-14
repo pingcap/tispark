@@ -10,6 +10,10 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
     super.beforeAll()
 
   test("Test write to table does not exist") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val row1 = Row(null, "Hello")
     val row2 = Row(2L, "TiDB")
 
@@ -29,6 +33,10 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
   }
 
   test("Test column does not exist") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val row1 = Row(2L, 3L)
 
     val schema = StructType(
@@ -56,6 +64,10 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
   }
 
   test("Missing insert column") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val row1 = Row(2L, 3L)
 
     val schema = StructType(
@@ -83,6 +95,10 @@ class ExceptionTestSuite extends BaseDataSourceTest("test_datasource_exception_t
   }
 
   test("Insert null value to Not Null Column") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val row1 = Row(null, 3L)
     val row2 = Row(4L, null)
 

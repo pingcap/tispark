@@ -21,6 +21,10 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   )
 
   test("test column type can be truncated") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, i int, s varchar(128), unique index(s(2)))"
@@ -39,6 +43,10 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   }
 
   test("no pk, no unique index case") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, i int, s varchar(128), index(i))"
@@ -58,6 +66,10 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   }
 
   test("pk is not handle adding unique index") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, i int, s varchar(128), unique index(i), primary key(s))"
@@ -76,6 +88,10 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   }
 
   test("pk is handle adding unique index") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, i int, s varchar(128), unique index(i), primary key(pk))"
@@ -94,6 +110,10 @@ class AddingIndexInsertSuite extends BaseDataSourceTest("adding_index_insert") {
   }
 
   test("Test no pk adding unique index") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(s"create table $dbtable(pk int, i int, s varchar(128), unique index(i))")
     jdbcUpdate(
