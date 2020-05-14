@@ -265,7 +265,8 @@ public class TiKVScanAnalyzer {
       }
     }
     if (minPlan == null) {
-      throw new RuntimeException("No valid plan found for table '" + table.getName() + "'");
+      throw new TiClientInternalException(
+          "No valid plan found for table '" + table.getName() + "'");
     }
 
     TiStoreType minPlanStoreType = minPlan.getStoreType();

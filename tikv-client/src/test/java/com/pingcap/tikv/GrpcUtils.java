@@ -91,7 +91,6 @@ public class GrpcUtils {
         .setId(id)
         .setAddress(address)
         .setState(state)
-        .setVersion("3.0.5")
         .addAllLabels(Arrays.asList(labels))
         .setVersion("3.0.5")
         .build();
