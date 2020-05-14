@@ -42,6 +42,10 @@ class LineItemSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: lineitem") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val tableToWrite = s"${batchWriteTablePrefix}_$table"
 
     // select
@@ -73,6 +77,10 @@ class LineItemSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: isPkHandle: lineitem") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val tableToWrite = s"${batchWriteTablePrefix}_${isPkHandlePrefix}_$table"
     tidbStmt.execute(s"drop table if exists `$tableToWrite`")
     val createTableSQL =
@@ -136,6 +144,10 @@ class LineItemSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: replace + isPkHandle: lineitem") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val tableToWrite = s"${batchWriteTablePrefix}_${replacePKHandlePrefix}_$table"
     tidbStmt.execute(s"drop table if exists `$tableToWrite`")
     val createTableSQL =
@@ -215,6 +227,10 @@ class LineItemSuite extends BaseTiSparkTest {
   }
 
   test("ti batch write: replace + uniqueKey: lineitem") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val tableToWrite = s"${batchWriteTablePrefix}_${replaceUniquePrefix}_$table"
     tidbStmt.execute(s"drop table if exists `$tableToWrite`")
     val createTableSQL =

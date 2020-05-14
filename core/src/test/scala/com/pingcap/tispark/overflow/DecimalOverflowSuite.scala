@@ -13,6 +13,10 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
   case class TestData(length: Int, precision: Int, writeData: Double, readData: Long) {}
 
   test("Test DECIMAL Not Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val testDataList =
       TestData(38, 0, 1.5d, 2L) ::
         TestData(38, 0, 1.4d, 1L) ::
@@ -67,6 +71,10 @@ class DecimalOverflowSuite extends BaseDataSourceTest("test_data_type_decimal_ov
   case class OverflowTestData(length: Int, precision: Int, writeData: Double) {}
 
   test("Test DECIMAL Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val testDataList =
       OverflowTestData(10, 4, 1000000d) ::
         OverflowTestData(2, 0, 100d) ::

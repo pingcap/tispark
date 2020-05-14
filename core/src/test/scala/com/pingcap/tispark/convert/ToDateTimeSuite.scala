@@ -37,6 +37,10 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
   }
 
   test("Test Convert from String to DATETIME") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // String -> DATETIME
     compareTiDBWriteWithJDBC {
@@ -64,6 +68,10 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
   }
 
   test("Test Convert from java.sql.Date to DATETIME") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.sql.Date -> DATETIME
     compareTiDBWriteWithJDBC {
@@ -94,6 +102,10 @@ class ToDateTimeSuite extends BaseDataSourceTest("test_data_type_convert_to_date
   }
 
   test("Test Convert from java.sql.Timestamp to DATETIME") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.sql.Timestamp -> DATETIME
     compareTiDBWriteWithJDBC {

@@ -29,10 +29,18 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
   }
 
   test("Test Select") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     testTiDBSelect(Seq(row1, row2))
   }
 
   test("Test Write Append") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
 
@@ -48,6 +56,10 @@ class BasicDataSourceSuite extends BaseDataSourceTest("test_datasource_basic") {
   }
 
   test("Test Write Overwrite") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val data: RDD[Row] = sc.makeRDD(List(row3, row4))
     val df = sqlContext.createDataFrame(data, schema)
 

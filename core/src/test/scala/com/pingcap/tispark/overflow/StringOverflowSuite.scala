@@ -16,10 +16,16 @@ import org.apache.spark.sql.types.{StructField, _}
 class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_overflow") {
 
   test("Test CHAR Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testCharOverflow(false)
   }
 
   test("Test CHAR as key Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testCharOverflow(true)
   }
 
@@ -55,10 +61,16 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test VARCHAR Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testVarcharOverflow(false)
   }
 
   test("Test VARCHAR as key Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testVarcharOverflow(true)
   }
 
@@ -94,10 +106,16 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test TINYTEXT Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyTextOverflow(false)
   }
 
   test("Test TINYTEXT as key Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyTextOverflow(true)
   }
 
@@ -138,10 +156,16 @@ class StringOverflowSuite extends BaseDataSourceTest("test_data_type_string_over
   }
 
   test("Test TEXT Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTextOverflow(false)
   }
 
   test("Test TEXT as key Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTextOverflow(true)
   }
 

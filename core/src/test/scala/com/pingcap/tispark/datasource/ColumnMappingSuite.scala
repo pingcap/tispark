@@ -39,6 +39,10 @@ class ColumnMappingSuite
   }
 
   test("Test different column order with full schema") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(i int primary key auto_increment, s varchar(128), c varchar(128))"
@@ -99,6 +103,10 @@ class ColumnMappingSuite
   }
 
   test("Test different column order without auto increment column") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(i int primary key auto_increment, s varchar(128), c varchar(128))"
