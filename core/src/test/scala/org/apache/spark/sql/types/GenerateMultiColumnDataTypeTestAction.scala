@@ -72,9 +72,5 @@ trait GenerateMultiColumnDataTypeTestAction
     val tableName = getTableName(dataTypes.map(getTypeName): _*)
     init(tableName)
     loadTestData(tableName)
-    if (canTestTiFlash) {
-      // sleep for some time to wait for TiFlash syncing
-      Thread.sleep(30 * 1000)
-    }
   }
 }

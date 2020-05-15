@@ -13,6 +13,6 @@ case class MultiColumnDataTypePKGenerator(dataTypes: List[ReflectedDataType],
 
   def loadTestData(tableName: String): Unit = {
     logger.info(s"${preDescription}Test $tableName - $testDesc")
-    loadSQLFile(dataTypeTestDir, tableName)
+    loadSQLFile(dataTypeTestDir, tableName, checkTiFlashReplica = canTestTiFlash)
   }
 }
