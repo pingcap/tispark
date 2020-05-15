@@ -333,7 +333,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
     // When enableTiFlashTest is true, only test TiFlash tests, vice versa.
     val shouldTestTiFlash = canTestTiFlash && enableTiFlashTest
-    val shouldTestTiKV = !canTestTiFlash && !enableTiFlashTest
+    val shouldTestTiKV = !enableTiFlashTest
 
     if (shouldTestTiKV) {
       if (r1 == null) {
