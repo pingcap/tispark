@@ -15,20 +15,20 @@
 
 package com.pingcap.tikv;
 
+import com.google.common.collect.ImmutableList;
 import com.pingcap.tikv.pd.PDUtils;
+import com.pingcap.tikv.region.TiStoreType;
 import com.pingcap.tikv.types.Converter;
 import java.io.Serializable;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import org.joda.time.DateTimeZone;
 import org.tikv.kvproto.Kvrpcpb.CommandPri;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 
 public class TiConfiguration implements Serializable {
+  private static final DateTimeZone DEF_TIMEZONE = Converter.getLocalTimezone();
   private static final int DEF_TIMEOUT = 10;
   private static final TimeUnit DEF_TIMEOUT_UNIT = TimeUnit.MINUTES;
   private static final int DEF_SCAN_BATCH_SIZE = 100;
@@ -50,8 +50,9 @@ public class TiConfiguration implements Serializable {
   private static final boolean DEF_WRITE_ALLOW_SPARK_SQL = false;
   private static final boolean DEF_WRITE_WITHOUT_LOCK_TABLE = false;
   private static final int DEF_TIKV_REGION_SPLIT_SIZE_IN_MB = 96;
-  private static final boolean DEF_USE_TIFLASH = false;
   private static final int DEF_PARTITION_PER_SPLIT = 10;
+  private static final List<TiStoreType> DEF_ISOLATION_READ_ENGINES =
+      ImmutableList.of(TiStoreType.TiKV, TiStoreType.TiFlash);
 
   private int timeout = DEF_TIMEOUT;
   private TimeUnit timeoutUnit = DEF_TIMEOUT_UNIT;
@@ -59,7 +60,6 @@ public class TiConfiguration implements Serializable {
   private boolean truncateAsWarning = DEF_TRUNCATE_AS_WARNING;
   private int maxFrameSize = DEF_MAX_FRAME_SIZE;
   private List<URI> pdAddrs = new ArrayList<>();
-  private DateTimeZone localTimeZone = Converter.getLocalTimezone();
   private int indexScanBatchSize = DEF_INDEX_SCAN_BATCH_SIZE;
   private int downgradeThreshold = DEF_REGION_SCAN_DOWNGRADE_THRESHOLD;
   private int indexScanConcurrency = DEF_INDEX_SCAN_CONCURRENCY;
@@ -76,7 +76,7 @@ public class TiConfiguration implements Serializable {
   private int tikvRegionSplitSizeInMB = DEF_TIKV_REGION_SPLIT_SIZE_IN_MB;
   private int partitionPerSplit = DEF_PARTITION_PER_SPLIT;
 
-  private boolean useTiFlash = DEF_USE_TIFLASH;
+  private List<TiStoreType> isolationReadEngines = DEF_ISOLATION_READ_ENGINES;
 
   public static TiConfiguration createDefault(String pdAddrsStr) {
     Objects.requireNonNull(pdAddrsStr, "pdAddrsStr is null");
@@ -92,8 +92,21 @@ public class TiConfiguration implements Serializable {
     return PDUtils.addrsToUrls(addrs);
   }
 
+  public static <E> String listToString(List<E> list) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("[");
+    for (int i = 0; i < list.size(); i++) {
+      sb.append(list.get(i).toString());
+      if (i != list.size() - 1) {
+        sb.append(",");
+      }
+    }
+    sb.append("]");
+    return sb.toString();
+  }
+
   public DateTimeZone getLocalTimeZone() {
-    return localTimeZone;
+    return DEF_TIMEZONE;
   }
 
   public int getTimeout() {
@@ -120,19 +133,6 @@ public class TiConfiguration implements Serializable {
 
   public String getPdAddrsString() {
     return listToString(pdAddrs);
-  }
-
-  public static <E> String listToString(List<E> list) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("[");
-    for (int i = 0; i < list.size(); i++) {
-      sb.append(list.get(i).toString());
-      if (i != list.size() - 1) {
-        sb.append(",");
-      }
-    }
-    sb.append("]");
-    return sb.toString();
   }
 
   public int getScanBatchSize() {
@@ -257,20 +257,12 @@ public class TiConfiguration implements Serializable {
     this.writeAllowSparkSQL = writeAllowSparkSQL;
   }
 
-  public void setTikvRegionSplitSizeInMB(int tikvRegionSplitSizeInMB) {
-    this.tikvRegionSplitSizeInMB = tikvRegionSplitSizeInMB;
-  }
-
   public int getTikvRegionSplitSizeInMB() {
     return tikvRegionSplitSizeInMB;
   }
 
-  public void setUseTiFlash(boolean useTiFlash) {
-    this.useTiFlash = useTiFlash;
-  }
-
-  public boolean isUseTiFlash() {
-    return useTiFlash;
+  public void setTikvRegionSplitSizeInMB(int tikvRegionSplitSizeInMB) {
+    this.tikvRegionSplitSizeInMB = tikvRegionSplitSizeInMB;
   }
 
   public int getDowngradeThreshold() {
@@ -287,5 +279,13 @@ public class TiConfiguration implements Serializable {
 
   public void setPartitionPerSplit(int partitionPerSplit) {
     this.partitionPerSplit = partitionPerSplit;
+  }
+
+  public List<TiStoreType> getIsolationReadEngines() {
+    return isolationReadEngines;
+  }
+
+  public void setIsolationReadEngines(List<TiStoreType> isolationReadEngines) {
+    this.isolationReadEngines = isolationReadEngines;
   }
 }

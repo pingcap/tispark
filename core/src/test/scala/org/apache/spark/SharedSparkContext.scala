@@ -23,12 +23,14 @@ trait SharedSparkContext extends BeforeAndAfterAll with BeforeAndAfterEach { sel
 
   def sc: SparkContext = _sc
 
+  protected var _isHiveEnabled: Boolean = false
+
   protected var conf: SparkConf = new SparkConf(false)
 
-  protected def initializeContext(enableHive: Boolean = false): Unit = synchronized {
+  protected def initializeContext(): Unit = synchronized {
     if (null == _sc) {
       conf.set("spark.sql.test.key", "true")
-      if (enableHive) {
+      if (_isHiveEnabled) {
         conf.set(StaticSQLConf.CATALOG_IMPLEMENTATION, "hive")
       }
       _sc = new SparkContext("local[4]", "tispark-integration-test", conf)

@@ -51,6 +51,7 @@ public class TiTableInfo implements Serializable {
   private final TiPartitionInfo partitionInfo;
   private final TiColumnInfo primaryKeyColumn;
   private final TiViewInfo viewInfo;
+  private final TiFlashReplicaInfo tiflashReplicaInfo;
 
   @JsonCreator
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -68,7 +69,8 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("max_idx_id") long maxIndexId,
       @JsonProperty("old_schema_id") long oldSchemaId,
       @JsonProperty("partition") TiPartitionInfo partitionInfo,
-      @JsonProperty("view") TiViewInfo viewInfo) {
+      @JsonProperty("view") TiViewInfo viewInfo,
+      @JsonProperty("tiflash_replica") TiFlashReplicaInfo tiFlashReplicaInfo) {
     this.id = id;
     this.name = name.getL();
     this.charset = charset;
@@ -90,6 +92,7 @@ public class TiTableInfo implements Serializable {
     this.oldSchemaId = oldSchemaId;
     this.partitionInfo = partitionInfo;
     this.viewInfo = viewInfo;
+    this.tiflashReplicaInfo = tiFlashReplicaInfo;
 
     TiColumnInfo primaryKey = null;
     for (TiColumnInfo col : this.columns) {
@@ -194,6 +197,10 @@ public class TiTableInfo implements Serializable {
     return partitionInfo;
   }
 
+  public TiFlashReplicaInfo getTiflashReplicaInfo() {
+    return tiflashReplicaInfo;
+  }
+
   TableInfo toProto() {
     return TableInfo.newBuilder()
         .setTableId(getId())
@@ -260,7 +267,8 @@ public class TiTableInfo implements Serializable {
           getMaxIndexId(),
           getOldSchemaId(),
           partitionInfo,
-          null);
+          null,
+          getTiflashReplicaInfo());
     } else {
       return this;
     }

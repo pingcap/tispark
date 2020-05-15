@@ -41,10 +41,16 @@ object TiConfigConst {
   val WRITE_ENABLE: String = "spark.tispark.write.enable"
   val WRITE_WITHOUT_LOCK_TABLE: String = "spark.tispark.write.without_lock_table"
   val TIKV_REGION_SPLIT_SIZE_IN_MB: String = "spark.tispark.tikv.region_split_size_in_mb"
-  val USE_TIFLASH: String = "spark.tispark.use.tiflash"
-  val ENABLE_TIFLASH_TEST: String = "spark.tispark.enable.tiflash_test"
+  val ISOLATION_READ_ENGINES: String = "spark.tispark.isolation_read_engines"
   val PARTITION_PER_SPLIT: String = "spark.tispark.partition_per_split"
 
   val SNAPSHOT_ISOLATION_LEVEL: String = "SI"
   val READ_COMMITTED_ISOLATION_LEVEL: String = "RC"
+
+  val TIKV_STORAGE_ENGINE: String = "tikv"
+  val TIFLASH_STORAGE_ENGINE: String = "tiflash"
+  val DEFAULT_STORAGE_ENGINES: String = "tikv,tiflash"
+
+  val CHUNK_CODEC_FORMAT: String = "chunk"
+  val DEFAULT_CODEC_FORMAT: String = "chblock"
 }

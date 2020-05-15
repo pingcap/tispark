@@ -27,5 +27,6 @@ object TestConstants {
   val SHOULD_LOAD_DATA = "test.data.load"
   val SHOULD_GENERATE_DATA = "test.data.generate"
   val GENERATE_DATA_SEED = "test.data.generate.seed"
+  val ENABLE_TIFLASH_TEST = "test.tiflash.enable"
   val SHOULD_SKIP_TEST = "test.skip"
 }

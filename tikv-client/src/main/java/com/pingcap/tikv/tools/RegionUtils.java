@@ -18,7 +18,6 @@ package com.pingcap.tikv.tools;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
-import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.meta.TiDAGRequest;
 import com.pingcap.tikv.meta.TiDAGRequest.PushDownType;
@@ -70,7 +69,7 @@ public class RegionUtils {
             ImmutableList.of(),
             table,
             session.getTimestamp(),
-            new TiDAGRequest(PushDownType.NORMAL, EncodeType.TypeDefault));
+            new TiDAGRequest(PushDownType.NORMAL));
     List<KeyRange> ranges = new ArrayList<>();
     dagRequest.getRangesMaps().forEach((k, v) -> ranges.addAll(v));
     return RangeSplitter.newSplitter(session.getRegionManager()).splitRangeByRegion(ranges);

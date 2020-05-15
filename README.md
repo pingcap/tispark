@@ -207,6 +207,7 @@ The configurations in the table below can be put together with `spark-defaults.c
 | `spark.tispark.db_prefix` |  `""` | The string that indicates the extra prefix for all databases in TiDB. This string distinguishes the databases in TiDB from the Hive databases with the same name. |
 | `spark.tispark.request.isolation.level` |  `SI` | Isolation level means whether to resolve locks for the underlying TiDB clusters. When you use the "RC", you get the latest version of record smaller than your `tso` and ignore the locks. If you use "SI", you resolve the locks and get the records depending on whether the resolved lock is committed or aborted.  |
 | `spark.tispark.coprocessor.chunk_batch_size` | `1024` | How many rows fetched from Coprocessor |
+| `spark.tispark.isolation_read_engines` | `"tikv,tiflash"` | List of readable engines of TiSpark, comma separated, storage engines not listed will not be read |
 
 ## `Log4j` Configuration
 

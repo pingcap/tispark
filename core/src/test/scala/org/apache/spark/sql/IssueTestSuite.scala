@@ -203,13 +203,6 @@ class IssueTestSuite extends BaseTiSparkTest {
     )
   }
 
-  test("test db prefix") {
-    ti.tidbMapTable(s"${dbPrefix}tispark_test", "full_data_type_table", dbNameAsPrefix = true)
-    val df = spark.sql(s"select count(*) from ${dbPrefix}tispark_test_full_data_type_table")
-    df.explain()
-    df.show
-  }
-
   test("Test count") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute(

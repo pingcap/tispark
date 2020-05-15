@@ -24,6 +24,7 @@
         <powermock.version>1.6.6</powermock.version>
         <jackson.version>2.10.0</jackson.version>
         <trove4j.version>3.0.1</trove4j.version>
+        <jetcd.version>0.4.1</jetcd.version>
         <joda-time.version>2.9.9</joda-time.version>
         <joda-convert.version>1.9.2</joda-convert.version>
         <proto.folder>${basedir}/proto</proto.folder>
@@ -113,6 +114,21 @@
             <artifactId>grpc-testing</artifactId>
             <version>${grpc.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.etcd</groupId>
+            <artifactId>jetcd-core</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.etcd</groupId>
+                    <artifactId>jetcd-resolver</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.etcd</groupId>
+                    <artifactId>jetcd-common</artifactId>
+                </exclusion>
+            </exclusions>
+            <version>${jetcd.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
