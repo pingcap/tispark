@@ -39,6 +39,12 @@ public class LockResolverRCTest extends LockResolverTest {
       skipTestInit();
       return;
     }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
     session.getConf().setIsolationLevel(IsolationLevel.RC);
     putAlphabet();
     prepareAlphabetLocks();
@@ -52,6 +58,12 @@ public class LockResolverRCTest extends LockResolverTest {
       skipTestInit();
       return;
     }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
     TiTimestamp startTs = session.getTimestamp();
     TiTimestamp endTs = session.getTimestamp();
 

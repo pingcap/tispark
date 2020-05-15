@@ -39,8 +39,13 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
       return;
     }
 
-    if (!isV3()) {
-      skipTestV3();
+    if (!isLockResolverClientV3()) {
+      skipTestTiDBV3();
+      return;
+    }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -74,8 +79,13 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
       return;
     }
 
-    if (!isV3()) {
-      skipTestV3();
+    if (!isLockResolverClientV3()) {
+      skipTestTiDBV3();
+      return;
+    }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -121,8 +131,13 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
       return;
     }
 
-    if (!isV3()) {
-      skipTestV3();
+    if (!isLockResolverClientV3()) {
+      skipTestTiDBV3();
+      return;
+    }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -168,8 +183,13 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
       return;
     }
 
-    if (!isV3()) {
-      skipTestV3();
+    if (!isLockResolverClientV3()) {
+      skipTestTiDBV3();
+      return;
+    }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -212,8 +232,13 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
       return;
     }
 
-    if (!isV3()) {
-      skipTestV3();
+    if (!isLockResolverClientV3()) {
+      skipTestTiDBV3();
+      return;
+    }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
       return;
     }
 

@@ -18,6 +18,7 @@ package com.pingcap.tikv.txn;
 import static junit.framework.TestCase.*;
 
 import com.google.protobuf.ByteString;
+import com.pingcap.tikv.StoreVersion;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
@@ -259,8 +260,12 @@ abstract class LockResolverTest {
     logger.warn("Test skipped due to failure in initializing pd client.");
   }
 
-  void skipTestV3() {
-    logger.warn("Test skipped due to version of TiKV is to low.");
+  void skipTestTiDBV3() {
+    logger.warn("Test skipped due to version of TiDB/TiKV is to low.");
+  }
+
+  void skipTestTiDBV4() {
+    logger.warn("Test skipped due to version of TiDB/TiDB is to 4.0.");
   }
 
   void versionTest() {
@@ -352,7 +357,11 @@ abstract class LockResolverTest {
     assertEquals(v.toStringUtf8(), value);
   }
 
-  boolean isV3() {
+  boolean isLockResolverClientV3() {
     return getRegionStoreClient("").lockResolverClient.getVersion().equals("V3");
+  }
+
+  boolean isTiDBV4() {
+    return StoreVersion.minTiKVVersion("4.0.0", session.getPDClient());
   }
 }
