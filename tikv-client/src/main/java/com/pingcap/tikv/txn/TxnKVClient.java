@@ -105,6 +105,28 @@ public class TxnKVClient implements AutoCloseable {
     return result;
   }
 
+  /** TXN Heart Beat: update primary key ttl */
+  public ClientRPCResult txnHeartBeat(
+      BackOffer backOffer,
+      ByteString primaryLock,
+      long startTs,
+      long ttl,
+      TiRegion tiRegion,
+      Metapb.Store store) {
+    ClientRPCResult result = new ClientRPCResult(true, false, null);
+    // send request
+    RegionStoreClient client = clientBuilder.build(tiRegion, store);
+    try {
+      client.txnHeartBeat(backOffer, primaryLock, startTs, ttl);
+    } catch (Exception e) {
+      result.setSuccess(false);
+      // mark retryable, region error, should retry heart beat again
+      result.setRetry(retryableException(e));
+      result.setException(e);
+    }
+    return result;
+  }
+
   /**
    * Commit request of 2pc, add backoff logic when encountered region error, ErrBodyMissing, and
    * other errors

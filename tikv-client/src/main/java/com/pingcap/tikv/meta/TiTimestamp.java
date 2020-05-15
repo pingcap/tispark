@@ -30,6 +30,10 @@ public class TiTimestamp implements Serializable {
     this.logical = l;
   }
 
+  public static long extractPhysical(long ts) {
+    return ts >> PHYSICAL_SHIFT_BITS;
+  }
+
   public long getVersion() {
     return (physical << PHYSICAL_SHIFT_BITS) + logical;
   }
@@ -56,5 +60,10 @@ public class TiTimestamp implements Serializable {
   @Override
   public int hashCode() {
     return Objects.hash(getVersion());
+  }
+
+  @Override
+  public String toString() {
+    return "TiTimestamp(" + getVersion() + ")";
   }
 }

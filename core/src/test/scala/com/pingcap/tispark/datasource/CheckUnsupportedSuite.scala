@@ -10,6 +10,10 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
     super.beforeAll()
 
   test("Test write to partition table") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
 
     tidbStmt.execute("set @@tidb_enable_table_partition = 1")
@@ -46,6 +50,10 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
   }
 
   test("Check Virtual Generated Column") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2))"
@@ -71,6 +79,10 @@ class CheckUnsupportedSuite extends BaseDataSourceTest("test_datasource_check_un
   }
 
   test("Check Stored Generated Column") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(i INT, c1 INT, c2 INT,  c3 INT AS (c1 + c2) STORED)"

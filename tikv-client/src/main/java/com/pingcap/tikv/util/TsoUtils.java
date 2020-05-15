@@ -1,15 +1,15 @@
 package com.pingcap.tikv.util;
 
-public final class TsoUtils {
-  private static final long physicalShiftBits = 18;
+import com.pingcap.tikv.meta.TiTimestamp;
 
+public final class TsoUtils {
   public static boolean isExpired(long lockTS, long ttl) {
     // Because the UNIX time in milliseconds is in long style and will
     // not exceed to become the negative number, so the comparison is correct
-    return System.currentTimeMillis() >= extractPhysical(lockTS) + ttl;
+    return untilExpired(lockTS, ttl) <= 0;
   }
 
-  private static long extractPhysical(long ts) {
-    return ts >> physicalShiftBits;
+  public static long untilExpired(long lockTS, long ttl) {
+    return TiTimestamp.extractPhysical(lockTS) + ttl - System.currentTimeMillis();
   }
 }

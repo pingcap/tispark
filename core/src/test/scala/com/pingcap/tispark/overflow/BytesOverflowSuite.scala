@@ -16,10 +16,16 @@ import org.apache.spark.sql.types._
 class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overflow") {
 
   test("Test BINARY Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBinaryOverflow(false)
   }
 
   test("Test BINARY as key Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testBinaryOverflow(true)
   }
 
@@ -55,10 +61,16 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
   }
 
   test("Test VARBINARY Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testVarbinaryOverflow(false)
   }
 
   test("Test VARBINARY as key Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testVarbinaryOverflow(true)
   }
 
@@ -94,10 +106,16 @@ class BytesOverflowSuite extends BaseDataSourceTest("test_data_type_bytes_overfl
   }
 
   test("Test TINYBLOB Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyBlobOverflow(false)
   }
 
   test("Test TINYBLOB as key Overflow") {
+    if (!supportBatchWrite) {
+      cancel
+    }
     testTinyBlobOverflow(true)
   }
 

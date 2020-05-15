@@ -19,17 +19,29 @@ class FilterPushdownSuite extends BaseDataSourceTest("test_datasource_filter_pus
   }
 
   test("Test Simple Comparisons") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     testTiDBSelectFilter("s = 'Hello'", Seq(row1))
     testTiDBSelectFilter("i > 2", Seq(row3, row4))
     testTiDBSelectFilter("i < 3", Seq(row2))
   }
 
   test("Test >= and <=") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     testTiDBSelectFilter("i >= 2", Seq(row2, row3, row4))
     testTiDBSelectFilter("i <= 3", Seq(row2, row3))
   }
 
   test("Test logical operators") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     testTiDBSelectFilter("i >= 2 AND i <= 3", Seq(row2, row3))
     testTiDBSelectFilter("NOT i = 3", Seq(row2, row4))
     testTiDBSelectFilter("NOT i = 3 OR i IS NULL", Seq(row1, row2, row4))
@@ -37,6 +49,10 @@ class FilterPushdownSuite extends BaseDataSourceTest("test_datasource_filter_pus
   }
 
   test("Test IN") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     testTiDBSelectFilter("i IN ( 2, 3)", Seq(row2, row3))
   }
 

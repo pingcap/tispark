@@ -23,6 +23,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   )
 
   test("test unique index replace with primary key is handle and index") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2), index(s))"
@@ -44,6 +48,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   }
 
   test("test same key in one rdd") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"
@@ -62,6 +70,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   }
 
   test("test unique index replace with primary key is handle") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk), unique index(c1), unique index(c2))"
@@ -83,6 +95,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   }
 
   test("test unique index replace without primary key") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), unique index(c1), unique index(c2))"
@@ -104,6 +120,10 @@ class AddingIndexReplaceSuite extends BaseDataSourceTest("adding_index_replace")
   }
 
   test("test pk is handle") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(
       s"create table $dbtable(pk int, c1 int, c2 int, s varchar(128), primary key(pk))"

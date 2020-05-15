@@ -100,10 +100,18 @@ public class TiDBJDBCClient implements AutoCloseable {
     return (Boolean) splitTable;
   }
 
-  // SPLIT TABLE table_name [INDEX index_name] BETWEEN (lower_value) AND (upper_value) REGIONS
-  // region_num
+  /**
+   * split table region by calling tidb jdbc command `SPLIT TABLE`, e.g. SPLIT TABLE table_name
+   * BETWEEN (lower_value) AND (upper_value) REGIONS 9
+   *
+   * @param dbName database name in tidb
+   * @param tblName table name in tidb
+   * @param minVal min value
+   * @param maxVal max value
+   * @param regionNum number of regions to split
+   */
   public void splitTableRegion(
-      String dbName, String tblName, long minVal, long maxVal, long regionNum) {
+      String dbName, String tblName, long minVal, long maxVal, long regionNum) throws SQLException {
     try (Statement tidbStmt = connection.createStatement()) {
       String sql =
           String.format(
@@ -111,87 +119,41 @@ public class TiDBJDBCClient implements AutoCloseable {
               dbName, tblName, minVal, maxVal, regionNum);
       logger.info("split table region: " + sql);
       tidbStmt.execute(sql);
-    } catch (Exception ignored) {
-      logger.warn("failed to split table region");
+    } catch (SQLException e) {
+      logger.warn("failed to split table region", e);
+      throw e;
     }
   }
 
   /**
    * split index region by calling tidb jdbc command `SPLIT TABLE`, e.g. SPLIT TABLE t INDEX idx
-   * BETWEEN (-9223372036854775808) AND (9223372036854775807) REGIONS 16;
+   * BETWEEN ("2010-01-01 00:00:00") AND ("2020-01-01 00:00:00") REGIONS 16;
    *
    * @param dbName database name in tidb
    * @param tblName table name in tidb
    * @param idxName index name in table
-   * @param minVal min value
-   * @param maxVal max value
+   * @param minIndexVal min index value
+   * @param maxIndexVal max index value
    * @param regionNum number of regions to split
    */
   public void splitIndexRegion(
-      String dbName, String tblName, String idxName, long minVal, long maxVal, long regionNum) {
+      String dbName,
+      String tblName,
+      String idxName,
+      String minIndexVal,
+      String maxIndexVal,
+      long regionNum)
+      throws SQLException {
     try (Statement tidbStmt = connection.createStatement()) {
       String sql =
           String.format(
-              "split table `%s`.`%s` index %s between (%d) and (%d) regions %d",
-              dbName, tblName, idxName, minVal, maxVal, regionNum);
+              "split table `%s`.`%s` index %s between (\"%s\") and (\"%s\") regions %d",
+              dbName, tblName, idxName, minIndexVal, maxIndexVal, regionNum);
       logger.info("split index region: " + sql);
       tidbStmt.execute(sql);
-    } catch (Exception ignored) {
-      logger.warn("failed to split index region");
-    }
-  }
-
-  /**
-   * split index region by calling tidb jdbc command `SPLIT TABLE`, e.g. SPLIT TABLE t1 INDEX idx4
-   * by ("a", "2000-01-01 00:00:01"), ("b", "2019-04-17 14:26:19"), ("c", ""); if you have a table
-   * t1 and index idx4.
-   *
-   * @param dbName database name in tidb
-   * @param tblName table name in tidb
-   * @param idxName index name in table
-   * @param splitPoints represents the index column's value.
-   * @return
-   */
-  public void splitIndexRegion(
-      String dbName, String tblName, String idxName, List<List<String>> splitPoints) {
-
-    if (splitPoints.isEmpty()) {
-      return;
-    }
-    StringBuilder sb = new StringBuilder();
-    sb.append("split table ")
-        .append("`")
-        .append(dbName)
-        .append("`.`")
-        .append(tblName)
-        .append("`")
-        .append(" index ")
-        .append(idxName)
-        .append(" by");
-
-    for (int i = 0; i < splitPoints.size(); i++) {
-      List<String> splitPoint = splitPoints.get(i);
-      StringBuilder splitPointStr = new StringBuilder("(");
-      for (int j = 0; j < splitPoint.size(); j++) {
-        splitPointStr.append("\"");
-        splitPointStr.append(splitPoint.get(j));
-        if (j < splitPoint.size() - 1) {
-          splitPointStr.append(",");
-        }
-        splitPointStr.append("\"");
-      }
-      splitPointStr.append(")");
-      sb.append(splitPointStr);
-
-      if (i < splitPoints.size() - 1) {
-        sb.append(",");
-      }
-    }
-
-    try (Statement tidbStmt = connection.createStatement()) {
-      tidbStmt.execute(sb.toString());
-    } catch (Exception ignored) {
-      logger.warn("failed to split index region");
+    } catch (SQLException e) {
+      logger.warn("failed to split index region", e);
+      throw e;
     }
   }
 

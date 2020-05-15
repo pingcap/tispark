@@ -11,6 +11,9 @@ import org.apache.spark.sql.types._
 class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test") {
 
   test("Test Read different types") {
+    if (!supportBatchWrite) {
+      cancel
+    }
 
     dropTable()
     jdbcUpdate(s"""
@@ -93,6 +96,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
 
   //todo support TIME/YEAR/BINARY/SET
   test("Test different data type") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(s"""
                   |create table $dbtable(
@@ -312,6 +319,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test decimal pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // decimal pk
     dropTable()
     jdbcUpdate(s"""
@@ -340,6 +351,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test char pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // char pk
     dropTable()
     jdbcUpdate(s"""
@@ -368,6 +383,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test varchar pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // char pk
     dropTable()
     jdbcUpdate(s"""
@@ -396,6 +415,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test date pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // char pk
     dropTable()
     jdbcUpdate(s"""
@@ -426,6 +449,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test datetime pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // datetime pk
     dropTable()
     jdbcUpdate(s"""
@@ -456,6 +483,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test timestamp pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // timestamp pk
     dropTable()
     jdbcUpdate(s"""
@@ -486,6 +517,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test text pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // timestamp pk
     dropTable()
     jdbcUpdate(s"""
@@ -515,6 +550,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test blob pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // blob pk
     dropTable()
     jdbcUpdate(s"""
@@ -545,6 +584,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test enum pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // enum pk
     dropTable()
     jdbcUpdate(s"""
@@ -573,6 +616,10 @@ class BatchWriteDataTypeSuite extends BaseDataSourceTest("test_data_type", "test
   }
 
   test("Test composite pk") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // enum pk
     dropTable()
     jdbcUpdate(s"""

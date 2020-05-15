@@ -22,11 +22,19 @@ class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
   }
 
   test("Test Select") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     testSelectSQL(Seq(row1, row2))
   }
 
   test("Test Insert Into") {
-    val tmpTable = "testInsert"
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val tmpTable = "default.testInsert"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
                       |USING tidb
@@ -49,7 +57,11 @@ class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
   }
 
   test("Test Insert Overwrite") {
-    val tmpTable = "testOverwrite"
+    if (!supportBatchWrite) {
+      cancel
+    }
+
+    val tmpTable = "default.testOverwrite"
     sqlContext.sql(s"""
                       |CREATE TABLE $tmpTable
                       |USING tidb
@@ -77,21 +89,21 @@ class BasicSQLSuite extends BaseDataSourceTest("test_datasource_sql") {
   }
 
   private def testSelectSQL(expectedAnswer: Seq[Row]): Unit = {
-    val tmpName = s"testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}"
-    sqlContext.sql(s"""
-                      |CREATE TABLE $tmpName
-                      |USING tidb
-                      |OPTIONS (
-                      |  database '$database',
-                      |  table '$table',
-                      |  tidb.addr '$tidbAddr',
-                      |  tidb.password '$tidbPassword',
-                      |  tidb.port '$tidbPort',
-                      |  tidb.user '$tidbUser',
-                      |  spark.tispark.pd.addresses '$pdAddresses'
-                      |)
+    val tmpName = s"default.testSelect_${Math.abs(Random.nextLong())}_${System.currentTimeMillis()}"
+    sql(s"""
+           |CREATE TABLE $tmpName
+           |USING tidb
+           |OPTIONS (
+           |  database '$database',
+           |  table '$table',
+           |  tidb.addr '$tidbAddr',
+           |  tidb.password '$tidbPassword',
+           |  tidb.port '$tidbPort',
+           |  tidb.user '$tidbUser',
+           |  spark.tispark.pd.addresses '$pdAddresses'
+           |)
        """.stripMargin)
-    val df = sqlContext.sql(s"select * from $tmpName sort by i")
+    val df = sql(s"select * from $tmpName sort by i")
     checkAnswer(df, expectedAnswer)
   }
 

@@ -119,7 +119,7 @@ public class TiDAGRequest implements Serializable {
     }
 
     public TiDAGRequest build(PushDownType pushDownType) {
-      TiDAGRequest req = new TiDAGRequest(pushDownType, EncodeType.TypeDefault);
+      TiDAGRequest req = new TiDAGRequest(pushDownType);
       req.setTableInfo(tableInfo);
       req.addRanges(ranges);
       req.addFilters(filters);
@@ -154,12 +154,20 @@ public class TiDAGRequest implements Serializable {
     this.storeType = storeType;
   }
 
+  public EncodeType getEncodeType() {
+    return encodeType;
+  }
+
+  public void setEncodeType(EncodeType encodeType) {
+    this.encodeType = encodeType;
+  }
+
   public TiDAGRequest(PushDownType pushDownType) {
     this.pushDownType = pushDownType;
     this.encodeType = EncodeType.TypeDefault;
   }
 
-  public TiDAGRequest(PushDownType pushDownType, EncodeType encodeType) {
+  private TiDAGRequest(PushDownType pushDownType, EncodeType encodeType) {
     this.pushDownType = pushDownType;
     this.encodeType = encodeType;
   }
@@ -238,7 +246,7 @@ public class TiDAGRequest implements Serializable {
   private boolean distinct;
   private boolean isDoubleRead;
   private final PushDownType pushDownType;
-  private final EncodeType encodeType;
+  private EncodeType encodeType;
   private double estimatedCount = -1;
 
   private static ColumnInfo handleColumn =
@@ -248,6 +256,9 @@ public class TiDAGRequest implements Serializable {
           // We haven't changed the field name in protobuf file, but
           // we need to set this to true in order to retrieve the handle,
           // so the name 'setPkHandle' may sounds strange.
+          .setTp(8)
+          .setColumnLen(20)
+          .setFlag(2)
           .build();
 
   public DAGRequest buildIndexScan() {

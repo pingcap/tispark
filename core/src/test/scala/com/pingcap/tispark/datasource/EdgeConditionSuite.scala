@@ -5,7 +5,7 @@ import org.apache.spark.sql.types._
 
 class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condition") {
 
-  private val TEST_LARGE_DATA_SIZE = 102400
+  private val TEST_LARGE_DATA_SIZE = 25600
 
   private val TEST_LARGE_COLUMN_SIZE = 512
 
@@ -13,6 +13,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
     super.beforeAll()
 
   test("Write to table with one column (primary key long type)") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val row1 = Row(1L)
     val row2 = Row(2L)
     val row3 = Row(3L)
@@ -37,6 +41,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
   }
 
   test("Write to table with one column (primary key int type)") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val row1 = Row(1)
     val row2 = Row(2)
     val row3 = Row(3)
@@ -61,6 +69,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
   }
 
   test("Write to table with one column (primary key + auto increase)") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val row1 = Row(1L)
     val row2 = Row(2L)
     val row3 = Row(3L)
@@ -85,6 +97,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
   }
 
   test("Write to table with one column (no primary key)") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val row1 = Row(null)
     val row2 = Row("Hello")
     val row3 = Row("Spark")
@@ -109,6 +125,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
   }
 
   test("Write to table with many columns") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val types = ("int", LongType) :: ("varchar(128)", StringType) :: Nil
     val data1 = 1L :: "TiDB" :: Nil
     val data2 = 2L :: "Spark" :: Nil
@@ -149,6 +169,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
   }
 
   test("Write Empty data") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     val row1 = Row(1L)
 
     val schema = StructType(
@@ -170,6 +194,10 @@ class EdgeConditionSuite extends BaseDataSourceTest("test_datasource_edge_condit
   }
 
   test("Write large amount of data") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     var list: List[Row] = Nil
     for (i <- 0 until TEST_LARGE_DATA_SIZE) {
       list = Row(i.toLong) :: list

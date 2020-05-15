@@ -188,7 +188,7 @@ class StatisticsTestSuite extends BasePlanTest {
       }
   }
 
-  test("baseline test") {
+  ignore("baseline test") {
     val tableName = "full_data_type_table_idx"
     val df = spark.sql(
       s"select tp_bigint from $tableName where tp_tinyint = 0 and tp_int < 0"

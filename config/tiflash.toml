@@ -1,0 +1,69 @@
+default_profile = "default"
+display_name = "TiFlash"
+http_port = 9000
+listen_host = "0.0.0.0"
+mark_cache_size = 5368709120
+path = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/data"
+tcp_port = 8123
+tmp_path = "/tmp"
+capacity="10737418240"
+
+[application]
+runAsDaemon = true
+
+[flash]
+service_addr = "127.0.0.1:3930"
+tidb_status_addr = "127.0.0.1:10080"
+[flash.flash_cluster]
+cluster_manager_path = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/flash_cluster_manager"
+log = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/tiflash_cluster_manager.log"
+master_ttl = 60
+refresh_interval = 20
+update_rule_interval = 5
+[flash.proxy]
+config = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/go/src/github.com/pingcap/tispark/config/tiflash-learner.toml"
+
+[logger]
+count = 20
+errorlog = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/tiflash_error.log"
+level = "info"
+log = "/home/jenkins/agent/workspace/tispark_ghpr_integration_test/tiflash/tiflash.log"
+size = "1000M"
+
+[profiles]
+[profiles.default]
+load_balancing = "random"
+max_memory_usage = 10000000000
+use_uncompressed_cache = 0
+[profiles.readonly]
+readonly = 1
+
+[quotas]
+[quotas.default]
+[quotas.default.interval]
+duration = 3600
+errors = 0
+execution_time = 0
+queries = 0
+read_rows = 0
+result_rows = 0
+
+[raft]
+pd_addr = "127.0.0.1:2379"
+
+[status]
+metrics_port = 8234
+
+[users]
+[users.default]
+password = ""
+profile = "default"
+quota = "default"
+[users.default.networks]
+ip = "::/0"
+[users.readonly]
+password = ""
+profile = "readonly"
+quota = "default"
+[users.readonly.networks]
+ip = "::/0"

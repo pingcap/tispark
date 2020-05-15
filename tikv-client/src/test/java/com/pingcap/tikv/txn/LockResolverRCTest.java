@@ -18,8 +18,6 @@ package com.pingcap.tikv.txn;
 import static junit.framework.TestCase.*;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.TiConfiguration;
-import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.meta.TiTimestamp;
 import com.pingcap.tikv.region.RegionStoreClient;
@@ -27,35 +25,26 @@ import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ConcreteBackOffer;
 import java.util.Collections;
-import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 
 public class LockResolverRCTest extends LockResolverTest {
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
-
-  @Before
-  public void setUp() {
-    TiConfiguration conf = TiConfiguration.createDefault(pdAddr);
-    conf.setIsolationLevel(IsolationLevel.RC);
-    try {
-      session = TiSession.getInstance(conf);
-      this.builder = session.getRegionStoreClientBuilder();
-      init = true;
-    } catch (Exception e) {
-      fail("TiDB cluster may not be present");
-      init = false;
-    }
+  public LockResolverRCTest() {
+    super(IsolationLevel.RC);
   }
 
   @Test
   public void getRCTest() {
     if (!init) {
-      skipTest();
+      skipTestInit();
       return;
     }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
     session.getConf().setIsolationLevel(IsolationLevel.RC);
     putAlphabet();
     prepareAlphabetLocks();
@@ -66,9 +55,15 @@ public class LockResolverRCTest extends LockResolverTest {
   @Test
   public void RCTest() {
     if (!init) {
-      skipTest();
+      skipTestInit();
       return;
     }
+
+    if (isTiDBV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
     TiTimestamp startTs = session.getTimestamp();
     TiTimestamp endTs = session.getTimestamp();
 
@@ -95,10 +90,7 @@ public class LockResolverRCTest extends LockResolverTest {
     try {
       // After committing <a, aa>, we can read it.
       assertTrue(
-          commit(
-              Collections.singletonList(ByteString.copyFromUtf8("a")),
-              startTs.getVersion(),
-              endTs.getVersion()));
+          commitString(Collections.singletonList("a"), startTs.getVersion(), endTs.getVersion()));
       BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
       ByteString v =
           client.get(backOffer, ByteString.copyFromUtf8("a"), session.getTimestamp().getVersion());

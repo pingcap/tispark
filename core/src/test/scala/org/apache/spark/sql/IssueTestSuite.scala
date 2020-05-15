@@ -203,13 +203,6 @@ class IssueTestSuite extends BaseTiSparkTest {
     )
   }
 
-  test("test db prefix") {
-    ti.tidbMapTable(s"${dbPrefix}tispark_test", "full_data_type_table", dbNameAsPrefix = true)
-    val df = spark.sql(s"select count(*) from ${dbPrefix}tispark_test_full_data_type_table")
-    df.explain()
-    df.show
-  }
-
   test("Test count") {
     tidbStmt.execute("DROP TABLE IF EXISTS `t`")
     tidbStmt.execute(
@@ -467,8 +460,25 @@ class IssueTestSuite extends BaseTiSparkTest {
     )
   }
 
+  test("test large amount of tables") {
+    tidbStmt.execute("DROP DATABASE IF EXISTS large_amount_tables")
+    tidbStmt.execute("CREATE DATABASE large_amount_tables")
+
+    val size = 2000
+    var sqls = ""
+    (1 to size).foreach { i =>
+      val sql = s"create table large_amount_tables.t$i(c1 bigint); "
+      sqls = sqls + sql
+    }
+    tidbStmt.execute(sqls)
+    sql(s"use ${dbPrefix}large_amount_tables")
+    val df = sql("show tables")
+    assert(df.count() >= size)
+  }
+
   override def afterAll(): Unit =
     try {
+      tidbStmt.execute("DROP DATABASE IF EXISTS large_amount_tables")
       tidbStmt.execute("drop table if exists t")
       tidbStmt.execute("drop table if exists tmp_debug")
       tidbStmt.execute("drop table if exists t1")

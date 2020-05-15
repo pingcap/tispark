@@ -58,6 +58,7 @@ public class DAGIteratorTest extends MockServerTest {
             .setAddress(LOCAL_ADDR + ":" + port)
             .setId(1)
             .setState(Metapb.StoreState.Up)
+            .setVersion("3.0.5")
             .build();
 
     TiTableInfo table = createTable();

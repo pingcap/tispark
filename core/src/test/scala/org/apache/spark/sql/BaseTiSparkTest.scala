@@ -17,9 +17,11 @@
 
 package org.apache.spark.sql
 
-import com.pingcap.tikv.TiDBJDBCClient
-import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
+import java.sql.Statement
+
 import com.pingcap.tikv.meta.TiTableInfo
+import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient}
+import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
 import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
@@ -33,7 +35,49 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
 
   protected var tableNames: Seq[String] = _
 
-  private def tiCatalog = ti.tiCatalog
+  def beforeAllWithHiveSupport(): Unit = {
+    _isHiveEnabled = true
+    beforeAllWithoutLoadData()
+    loadTestData()
+  }
+
+  override def beforeAll(): Unit = {
+    _isHiveEnabled = false
+    beforeAllWithoutLoadData()
+    loadTestData()
+  }
+
+  protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
+    try {
+      tableNames = Seq.empty[String]
+      for (dbName <- databases) {
+        setCurrentDatabase(dbName)
+        val tableDF = spark.read
+          .format("jdbc")
+          .option(JDBCOptions.JDBC_URL, jdbcUrl)
+          .option(JDBCOptions.JDBC_TABLE_NAME, "information_schema.tables")
+          .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
+          .load()
+          .filter(s"table_schema = '$dbName'")
+          .select("TABLE_NAME")
+        val tables = tableDF.collect().map((row: Row) => row.get(0).toString)
+        tables.foreach(createOrReplaceTempView(dbName, _))
+        tableNames ++= tables
+      }
+      logger.info("reload test data complete")
+    } catch {
+      case e: Exception => logger.warn("reload test data failed", e)
+    } finally {
+      tableNames = tableNames.sorted.reverse
+    }
+
+  def beforeAllWithoutLoadData(): Unit = {
+    super.beforeAll()
+    setLogLevel("WARN")
+  }
+
+  def setLogLevel(level: String): Unit =
+    spark.sparkContext.setLogLevel(level)
 
   protected def isEnableTableLock: Boolean = {
     val conn = TiDBUtils.createConnectionFactory(jdbcUrl)()
@@ -47,30 +91,16 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     tiDBJDBCClient.isEnableSplitRegion
   }
 
-  protected def queryViaTiSpark(query: String): List[List[Any]] = {
-    val df = sql(query)
-    val schema = df.schema.fields
-
-    dfData(df, schema)
+  protected def supportTTLUpdate: Boolean = {
+    StoreVersion.minTiKVVersion("3.0.5", this.ti.tiSession.getPDClient)
   }
 
-  protected def queryTiDBViaJDBC(query: String): List[List[Any]] = {
-    val resultSet = callWithRetry(tidbStmt.executeQuery(query))
-    val rsMetaData = resultSet.getMetaData
-    val retSet = ArrayBuffer.empty[List[Any]]
-    val retSchema = ArrayBuffer.empty[String]
-    for (i <- 1 to rsMetaData.getColumnCount) {
-      retSchema += rsMetaData.getColumnTypeName(i)
-    }
-    while (resultSet.next()) {
-      val row = ArrayBuffer.empty[Any]
-
-      for (i <- 1 to rsMetaData.getColumnCount) {
-        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
-      }
-      retSet += row.toList
-    }
-    retSet.toList
+  protected def supportBatchWrite: Boolean = {
+    // currently only the following versions support BatchWrite
+    // 3.0.x (x >= 14)
+    // 3.1.x (x >= 0)
+    StoreVersion.minTiKVVersion("3.0.14", this.ti.tiSession.getPDClient) && !StoreVersion
+      .minTiKVVersion("4.0.0", this.ti.tiSession.getPDClient)
   }
 
   protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {
@@ -90,6 +120,19 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       resList += metaData.getColumnName(i)
     }
     resList.toList
+  }
+
+  protected def refreshConnections(testTables: TestTables, isHiveEnabled: Boolean = false): Unit = {
+    super.refreshConnections(isHiveEnabled)
+    loadTestData(testTables)
+  }
+
+  protected def loadTestData(testTables: TestTables): Unit = {
+    val dbName = testTables.dbName
+    setCurrentDatabase(dbName)
+    for (tableName <- testTables.tables) {
+      createOrReplaceTempView(dbName, tableName)
+    }
   }
 
   protected def createOrReplaceTempView(dbName: String,
@@ -125,54 +168,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       }
     }
 
-  protected def loadTestData(databases: Seq[String] = defaultTestDatabases): Unit =
-    try {
-      tableNames = Seq.empty[String]
-      for (dbName <- databases) {
-        setCurrentDatabase(dbName)
-        val tableDF = spark.read
-          .format("jdbc")
-          .option(JDBCOptions.JDBC_URL, jdbcUrl)
-          .option(JDBCOptions.JDBC_TABLE_NAME, "information_schema.tables")
-          .option(JDBCOptions.JDBC_DRIVER_CLASS, "com.mysql.jdbc.Driver")
-          .load()
-          .filter(s"table_schema = '$dbName'")
-          .select("TABLE_NAME")
-        val tables = tableDF.collect().map((row: Row) => row.get(0).toString)
-        tables.foreach(createOrReplaceTempView(dbName, _))
-        tableNames ++= tables
-      }
-      logger.info("reload test data complete")
-    } catch {
-      case e: Exception => logger.warn("reload test data failed", e)
-    } finally {
-      tableNames = tableNames.sorted.reverse
-    }
-
-  protected def loadTestData(testTables: TestTables): Unit = {
-    val dbName = testTables.dbName
-    setCurrentDatabase(dbName)
-    for (tableName <- testTables.tables) {
-      createOrReplaceTempView(dbName, tableName)
-    }
-  }
-
-  def beforeAllWithoutLoadData(): Unit = {
-    super.beforeAll()
-    setLogLevel("WARN")
-  }
-
-  override def beforeAll(): Unit = {
-    beforeAllWithoutLoadData()
-    loadTestData()
-  }
-
-  protected case class TestTables(dbName: String, tables: String*)
-
-  protected def refreshConnections(testTables: TestTables, isHiveEnabled: Boolean = false): Unit = {
-    super.refreshConnections(isHiveEnabled)
-    loadTestData(testTables)
-  }
+  private def tiCatalog = ti.tiCatalog
 
   override protected def refreshConnections(isHiveEnabled: Boolean): Unit = {
     super.refreshConnections(isHiveEnabled)
@@ -184,13 +180,84 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     loadTestData()
   }
 
-  def setLogLevel(level: String): Unit =
-    spark.sparkContext.setLogLevel(level)
+  protected def compSparkWithTiDB(qSpark: String,
+                                  qTiDB: String = null,
+                                  checkLimit: Boolean = true): Unit =
+    if (qTiDB == null) {
+      compSparkWithTiDB(qSpark, checkLimit)
+    } else {
+      runTest(qSpark, rTiDB = queryTiDBViaJDBC(qTiDB), skipJDBC = true, checkLimit = checkLimit)
+    }
+
+  protected def checkSparkResult(sql: String,
+                                 result: List[List[Any]],
+                                 checkLimit: Boolean = true): Unit =
+    assert(compSqlResult(sql, queryViaTiSpark(sql), result, checkLimit))
+
+  protected def checkSparkResultContains(sql: String,
+                                         result: List[Any],
+                                         checkLimit: Boolean = true): Unit =
+    assert(queryViaTiSpark(sql).exists(x => compSqlResult(sql, List(x), List(result), checkLimit)))
+
+  protected def explainAndTest(str: String, skipped: Boolean = false): Unit =
+    try {
+      explainSpark(str)
+      judge(str, skipped)
+    } catch {
+      case e: Throwable => fail(e)
+    }
+
+  protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
+    runTest(str, skipped = skipped, skipJDBC = true, checkLimit = checkLimit)
+
+  /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
+   *    - TiSpark query throws exception
+   *    - Both TiDB and Spark-JDBC queries fails to execute
+   *    - Both TiDB and Spark-JDBC results differ from TiSpark result
+   *
+   * For JDBC tests we use different view names to distinguish, so table names in Spark SQL will be
+   * renamed in Spark-JDBC SQL
+   *
+   * rSpark, rJDBC and rTiDB are used when we want to guarantee a fixed result which might change due to
+   *    - Current incorrectness/instability in used version(s)
+   *    - Format differences for partial data types
+   *
+   * @param qSpark     query for TiSpark and TiDB
+   * @param rSpark     pre-calculated TiSpark result
+   * @param rJDBC      pre-calculated Spark-JDBC result
+   * @param rTiDB      pre-calculated TiDB result
+   * @param skipJDBC   whether not to run test for Spark-JDBC
+   * @param skipTiDB   whether not to run test for TiDB
+   * @param checkLimit whether check if sql contains limit but not order by
+   */
+  protected def runTest(qSpark: String,
+                        skipped: Boolean = false,
+                        rSpark: List[List[Any]] = null,
+                        rJDBC: List[List[Any]] = null,
+                        rTiDB: List[List[Any]] = null,
+                        rTiFlash: List[List[Any]] = null,
+                        skipJDBC: Boolean = false,
+                        skipTiDB: Boolean = false,
+                        canTestTiFlash: Boolean = false,
+                        checkLimit: Boolean = true): Unit =
+    runTestWithoutReplaceTableName(
+      qSpark = qSpark,
+      qJDBC = replaceJDBCTableName(qSpark, skipJDBC),
+      skipped = skipped,
+      rSpark = rSpark,
+      rJDBC = rJDBC,
+      rTiDB = rTiDB,
+      rTiFlash = rTiFlash,
+      skipJDBC = skipJDBC,
+      skipTiDB = skipTiDB,
+      canTestTiFlash = canTestTiFlash,
+      checkLimit = checkLimit
+    )
 
   /** Rename JDBC tables
    *   - currently we use table names with `_j` suffix for JDBC tests
    *
-   * @param qSpark spark sql query
+   * @param qSpark   spark sql query
    * @param skipJDBC if JDBC tests are skipped, no need to rename
    * @return
    */
@@ -210,142 +277,24 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     qJDBC
   }
 
-  protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
-    runTest(str, skipped = skipped, skipJDBC = true, checkLimit = checkLimit)
-
-  protected def compSparkWithTiDB(qSpark: String,
-                                  qTiDB: String = null,
-                                  checkLimit: Boolean = true): Unit =
-    if (qTiDB == null) {
-      compSparkWithTiDB(qSpark, checkLimit)
-    } else {
-      runTest(qSpark, rTiDB = queryTiDBViaJDBC(qTiDB), skipJDBC = true, checkLimit = checkLimit)
-    }
-
-  private def compSparkWithTiDB(sql: String, checkLimit: Boolean): Unit =
-    runTest(sql, skipJDBC = true, checkLimit = checkLimit)
-
-  protected def checkSparkResult(sql: String,
-                                 result: List[List[Any]],
-                                 checkLimit: Boolean = true): Unit =
-    assert(compSqlResult(sql, queryViaTiSpark(sql), result, checkLimit))
-
-  protected def checkSparkResultContains(sql: String,
-                                         result: List[Any],
-                                         checkLimit: Boolean = true): Unit =
-    assert(queryViaTiSpark(sql).exists(x => compSqlResult(sql, List(x), List(result), checkLimit)))
-
-  protected def explainSpark(str: String, skipped: Boolean = false): Unit =
-    try {
-      if (skipped) {
-        logger.warn(s"Test is skipped. [With Spark SQL: $str]")
-      } else {
-        spark.sql(str).explain()
-      }
-    } catch {
-      case e: Throwable => fail(e)
-    }
-
-  protected def explainAndTest(str: String, skipped: Boolean = false): Unit =
-    try {
-      explainSpark(str)
-      judge(str, skipped)
-    } catch {
-      case e: Throwable => fail(e)
-    }
-
-  protected def explainAndRunTest(qSpark: String,
-                                  qJDBC: String = null,
-                                  skipped: Boolean = false,
-                                  rSpark: List[List[Any]] = null,
-                                  rJDBC: List[List[Any]] = null,
-                                  rTiDB: List[List[Any]] = null,
-                                  rTiFlash: List[List[Any]] = null,
-                                  skipJDBC: Boolean = false,
-                                  skipTiDB: Boolean = false,
-                                  checkLimit: Boolean = true): Unit =
-    try {
-      explainSpark(qSpark)
-      if (qJDBC == null) {
-        runTest(qSpark, skipped, rSpark, rJDBC, rTiDB, rTiFlash, skipJDBC, skipTiDB, checkLimit)
-      } else {
-        runTestWithoutReplaceTableName(
-          qSpark,
-          qJDBC,
-          skipped,
-          rSpark,
-          rJDBC,
-          rTiDB,
-          rTiFlash,
-          skipJDBC,
-          skipTiDB,
-          checkLimit
-        )
-      }
-    } catch {
-      case e: Throwable => fail(e)
-    }
-
   /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
    *    - TiSpark query throws exception
    *    - Both TiDB and Spark-JDBC queries fails to execute
    *    - Both TiDB and Spark-JDBC results differ from TiSpark result
-   *
-   * For JDBC tests we use different view names to distinguish, so table names in Spark SQL will be
-   * renamed in Spark-JDBC SQL
    *
    * rSpark, rJDBC and rTiDB are used when we want to guarantee a fixed result which might change due to
    *    - Current incorrectness/instability in used version(s)
    *    - Format differences for partial data types
    *
-   * @param qSpark      query for TiSpark and TiDB
-   * @param rSpark      pre-calculated TiSpark result
-   * @param rJDBC       pre-calculated Spark-JDBC result
-   * @param rTiDB       pre-calculated TiDB result
-   * @param skipJDBC    whether not to run test for Spark-JDBC
-   * @param skipTiDB    whether not to run test for TiDB
-   * @param checkLimit  whether check if sql contains limit but not order by
-   */
-  protected def runTest(qSpark: String,
-                        skipped: Boolean = false,
-                        rSpark: List[List[Any]] = null,
-                        rJDBC: List[List[Any]] = null,
-                        rTiDB: List[List[Any]] = null,
-                        rTiFlash: List[List[Any]] = null,
-                        skipJDBC: Boolean = false,
-                        skipTiDB: Boolean = false,
-                        checkLimit: Boolean = true): Unit =
-    runTestWithoutReplaceTableName(
-      qSpark,
-      replaceJDBCTableName(qSpark, skipJDBC),
-      skipped,
-      rSpark,
-      rJDBC,
-      rTiDB,
-      rTiFlash,
-      skipJDBC,
-      skipTiDB,
-      checkLimit
-    )
-
-  /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
-   *    - TiSpark query throws exception
-   *    - Both TiDB and Spark-JDBC queries fails to execute
-   *    - Both TiDB and Spark-JDBC results differ from TiSpark result
-   *
-   *  rSpark, rJDBC and rTiDB are used when we want to guarantee a fixed result which might change due to
-   *    - Current incorrectness/instability in used version(s)
-   *    - Format differences for partial data types
-   *
-   * @param qSpark      query for TiSpark and TiDB
-   * @param qJDBC       query for Spark-JDBC
-   * @param rSpark      pre-calculated TiSpark result
-   * @param rJDBC       pre-calculated Spark-JDBC result
-   * @param rTiDB       pre-calculated TiDB result
-   * @param rTiFlash    pre-calculated TiFlash result
-   * @param skipJDBC    whether not to run test for Spark-JDBC
-   * @param skipTiDB    whether not to run test for TiDB
-   * @param checkLimit  whether check if sql contains limit but not order by
+   * @param qSpark     query for TiSpark and TiDB
+   * @param qJDBC      query for Spark-JDBC
+   * @param rSpark     pre-calculated TiSpark result
+   * @param rJDBC      pre-calculated Spark-JDBC result
+   * @param rTiDB      pre-calculated TiDB result
+   * @param rTiFlash   pre-calculated TiFlash result
+   * @param skipJDBC   whether not to run test for Spark-JDBC
+   * @param skipTiDB   whether not to run test for TiDB
+   * @param checkLimit whether check if sql contains limit but not order by
    */
   private def runTestWithoutReplaceTableName(qSpark: String,
                                              qJDBC: String,
@@ -356,6 +305,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                                              rTiFlash: List[List[Any]] = null,
                                              skipJDBC: Boolean = false,
                                              skipTiDB: Boolean = false,
+                                             canTestTiFlash: Boolean = false,
                                              checkLimit: Boolean = true): Unit = {
     if (skipped) {
       logger.warn(s"Test is skipped. [With Spark SQL: $qSpark]")
@@ -381,82 +331,184 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
     var sparkPlan: String = "null"
 
-    if (r1 == null) {
-      try {
-        r1 = queryViaTiSpark(qSpark)
-        sparkPlan = getSparkPlan(qSpark)
-      } catch {
-        case e: Throwable =>
+    val shoudTestTiFlash = canTestTiFlash && enableTiFlashTest
+
+    if (!shoudTestTiFlash) {
+      if (r1 == null) {
+        try {
+          r1 = queryViaTiSpark(qSpark)
+          sparkPlan = getSparkPlan(qSpark)
+        } catch {
+          case e: Throwable =>
+            try {
+              logger.error(s"TiSpark failed when executing: $qSpark", e)
+              logger.warn("failure detected with plan: \n", sparkPlan)
+            } finally {
+              fail(e)
+            }
+        }
+      }
+
+      if (skipJDBC && skipTiDB) {
+        // If JDBC and TiDB tests are both skipped, the correctness of test is not guaranteed.
+        // However the result might still be useful when we only want to test if the query fails in TiSpark.
+        logger.warn(
+          s"Unknown correctness of test result: Skipped in both JDBC and TiDB. [With Spark SQL: $qSpark]"
+        )
+        return
+      }
+
+      if (!skipJDBC && r2 == null) {
+        try {
+          r2 = queryViaTiSpark(qJDBC)
+        } catch {
+          case e: Throwable =>
+            logger.warn(s"Spark with JDBC failed when executing: $qJDBC", e) // JDBC failed
+        }
+      }
+
+      if (skipJDBC || !compSqlResult(qSpark, r1, r2, checkLimit)) {
+        if (!skipTiDB && r3 == null) {
           try {
-            logger.error(s"TiSpark failed when executing: $qSpark", e)
-            logger.warn("failure detected with plan: \n", sparkPlan)
-          } finally {
-            fail(e)
+            r3 = queryTiDBViaJDBC(qSpark)
+          } catch {
+            case e: Throwable =>
+              logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
           }
-      }
-    }
+        }
 
-    if (skipJDBC && skipTiDB) {
-      // If JDBC and TiDB tests are both skipped, the correctness of test is not guaranteed.
-      // However the result might still be useful when we only want to test if the query fails in TiSpark.
-      logger.warn(
-        s"Unknown correctness of test result: Skipped in both JDBC and TiDB. [With Spark SQL: $qSpark]"
-      )
-      return
-    }
-
-    if (!skipJDBC && r2 == null) {
-      try {
-        r2 = queryViaTiSpark(qJDBC)
-      } catch {
-        case e: Throwable =>
-          logger.warn(s"Spark with JDBC failed when executing: $qJDBC", e) // JDBC failed
-      }
-    }
-
-    // test tiflash's result
-    if (enableTiFlashTest) {
-      // get result from TiFlash
-      try {
-        spark.conf.set(TiConfigConst.USE_TIFLASH, "true")
-        r4 = queryViaTiSpark(qSpark)
-        sparkPlan = getSparkPlan(qSpark)
-        if (!compSqlResult(qSpark, r3, r4, checkLimit)) {
+        if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {
           fail(
             s"""Failed with
-               |TiFlash:\t\t${listToString(r4)}
+               |TiSpark:\t\t${listToString(r1)}
+               |Spark With JDBC:${listToString(r2)}
                |TiDB:\t\t\t${listToString(r3)}
-               |TiFlash Plan:\n$sparkPlan""".stripMargin
+               |TiSpark Plan:\n$sparkPlan""".stripMargin
           )
         }
-        spark.conf.set(TiConfigConst.USE_TIFLASH, "false")
-      } catch {
-        case e: Throwable =>
-          logger.error(s"TiSpark over TiFlash failed when executing: $qJDBC", e) // JDBC failed
-          fail(e)
       }
-    }
-
-    if (skipJDBC || !compSqlResult(qSpark, r1, r2, checkLimit)) {
-      if (!skipTiDB && r3 == null) {
-        try {
-          r3 = queryTiDBViaJDBC(qSpark)
-        } catch {
-          case e: Throwable => logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
+    } else {
+      if (!skipTiDB) {
+        // get result from TiDB
+        if (r3 == null) {
+          try {
+            r3 = queryTiDBViaJDBC(qSpark)
+          } catch {
+            case e: Throwable =>
+              logger.warn(s"TiDB failed when executing: $qSpark", e) // TiDB failed
+          }
         }
-      }
-
-      if (skipTiDB || !compSqlResult(qSpark, r1, r3, checkLimit)) {
-        fail(
-          s"""Failed with
-             |TiSpark:\t\t${listToString(r1)}
-             |Spark With JDBC:${listToString(r2)}
-             |TiDB:\t\t\t${listToString(r3)}
-             |TiSpark Plan:\n$sparkPlan""".stripMargin
-        )
+        // get result from TiFlash
+        try {
+          val prev = spark.conf.getOption(TiConfigConst.ISOLATION_READ_ENGINES)
+          spark.conf
+            .set(TiConfigConst.ISOLATION_READ_ENGINES, TiConfigConst.TIFLASH_STORAGE_ENGINE)
+          r4 = queryViaTiSpark(qSpark)
+          sparkPlan = getSparkPlan(qSpark)
+          if (!compSqlResult(qSpark, r3, r4, checkLimit)) {
+            fail(
+              s"""Failed with
+                 |TiFlash:\t\t${listToString(r4)}
+                 |TiDB:\t\t\t${listToString(r3)}
+                 |TiFlash Plan:\n$sparkPlan""".stripMargin
+            )
+          }
+          spark.conf.set(
+            TiConfigConst.ISOLATION_READ_ENGINES,
+            prev.getOrElse(TiConfigConst.DEFAULT_STORAGE_ENGINES)
+          )
+        } catch {
+          case e: Throwable =>
+            logger
+              .error(s"TiSpark over TiFlash failed when executing: $qSpark", e) // TiFlash failed
+            fail(e)
+        }
       }
     }
   }
+
+  protected def queryViaTiSpark(query: String): List[List[Any]] = {
+    val df = sql(query)
+    val schema = df.schema.fields
+
+    dfData(df, schema)
+  }
+
+  protected def queryTiDBViaJDBC(query: String,
+                                 retryOnFailure: Int = 3,
+                                 stmt: Statement = tidbStmt): List[List[Any]] = {
+    val resultSet = callWithRetry(stmt.executeQuery(query), retryOnFailure)
+    val rsMetaData = resultSet.getMetaData
+    val retSet = ArrayBuffer.empty[List[Any]]
+    val retSchema = ArrayBuffer.empty[String]
+    for (i <- 1 to rsMetaData.getColumnCount) {
+      retSchema += rsMetaData.getColumnTypeName(i)
+    }
+    while (resultSet.next()) {
+      val row = ArrayBuffer.empty[Any]
+
+      for (i <- 1 to rsMetaData.getColumnCount) {
+        row += toOutput(resultSet.getObject(i), retSchema(i - 1))
+      }
+      retSet += row.toList
+    }
+    retSet.toList
+  }
+  protected def explainSpark(str: String, skipped: Boolean = false): Unit =
+    try {
+      if (skipped) {
+        logger.warn(s"Test is skipped. [With Spark SQL: $str]")
+      } else {
+        spark.sql(str).explain()
+      }
+    } catch {
+      case e: Throwable => fail(e)
+    }
+
+  protected def explainAndRunTest(qSpark: String,
+                                  qJDBC: String = null,
+                                  skipped: Boolean = false,
+                                  rSpark: List[List[Any]] = null,
+                                  rJDBC: List[List[Any]] = null,
+                                  rTiDB: List[List[Any]] = null,
+                                  rTiFlash: List[List[Any]] = null,
+                                  skipJDBC: Boolean = false,
+                                  skipTiDB: Boolean = false,
+                                  canTestTiFlash: Boolean = false,
+                                  checkLimit: Boolean = true): Unit =
+    try {
+      explainSpark(qSpark)
+      if (qJDBC == null) {
+        runTest(
+          qSpark = qSpark,
+          skipped = skipped,
+          rSpark = rSpark,
+          rJDBC = rJDBC,
+          rTiDB = rTiDB,
+          rTiFlash = rTiFlash,
+          skipJDBC = skipJDBC,
+          skipTiDB = skipTiDB,
+          canTestTiFlash = canTestTiFlash,
+          checkLimit = checkLimit
+        )
+      } else {
+        runTestWithoutReplaceTableName(
+          qSpark = qSpark,
+          qJDBC = qJDBC,
+          skipped = skipped,
+          rSpark = rSpark,
+          rJDBC = rJDBC,
+          rTiDB = rTiDB,
+          rTiFlash = rTiFlash,
+          skipJDBC = skipJDBC,
+          skipTiDB = skipTiDB,
+          canTestTiFlash = canTestTiFlash,
+          checkLimit = checkLimit
+        )
+      }
+    } catch {
+      case e: Throwable => fail(e)
+    }
 
   protected def explainTestAndCollect(sql: String): Unit = {
     val df = spark.sql(sql)
@@ -471,5 +523,10 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     println(s"time: ${(System.currentTimeMillis() - s) / 1e3}s")
     ret
   }
+
+  private def compSparkWithTiDB(sql: String, checkLimit: Boolean): Unit =
+    runTest(sql, skipJDBC = true, checkLimit = checkLimit)
+
+  protected case class TestTables(dbName: String, tables: String*)
 
 }

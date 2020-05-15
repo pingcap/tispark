@@ -34,6 +34,10 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
     )
 
   test("Test Convert from java.lang.Boolean to DECIMAL") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Boolean -> DECIMAL
     compareTiDBWriteWithJDBC {
@@ -88,6 +92,10 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   }
 
   test("Test Convert from java.lang.Byte to DECIMAL") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Byte -> DECIMAL
     compareTiDBWriteWithJDBC {
@@ -125,6 +133,10 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   }
 
   test("Test Convert from java.lang.Short to DECIMAL") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Short -> DECIMAL
     compareTiDBWriteWithJDBC {
@@ -162,6 +174,10 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   }
 
   test("Test Convert from java.lang.Integer to DECIMAL") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Integer -> DECIMAL
     compareTiDBWriteWithJDBC {
@@ -199,6 +215,10 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   }
 
   test("Test Convert from java.lang.Long to DECIMAL") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Long -> DECIMAL
     compareTiDBWriteWithJDBC {
@@ -236,6 +256,10 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   }
 
   test("Test Convert from java.lang.Float to DECIMAL") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Float -> DECIMAL
     compareTiDBWriteWithJDBC {
@@ -282,6 +306,10 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   }
 
   test("Test Convert from java.lang.Double to DECIMAL") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Double -> DECIMAL
     compareTiDBWriteWithJDBC {
@@ -327,6 +355,10 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   }
 
   test("Test Convert from String to DECIMAL") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.String -> DECIMAL
     compareTiDBWriteWithJDBC {
@@ -369,6 +401,10 @@ class ToDecimalSuite extends BaseDataSourceTest("test_data_type_convert_to_decim
   }
 
   test("Test Convert from java.math.BigDecimal to DECIMAL") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // failure
     // java.math.BigDecimal -> DECIMAL
     compareTiDBWriteWithJDBC {

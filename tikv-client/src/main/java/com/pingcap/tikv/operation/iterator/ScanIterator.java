@@ -91,6 +91,7 @@ public abstract class ScanIterator implements Iterator<Kvrpcpb.KvPair> {
       // of a transaction. Otherwise below code might lose data
       if (currentCache.size() < conf.getScanBatchSize()) {
         startKey = curRegionEndKey;
+        lastKey = Key.toRawKey(curRegionEndKey);
       } else if (currentCache.size() > conf.getScanBatchSize()) {
         throw new IndexOutOfBoundsException(
             "current cache size = "

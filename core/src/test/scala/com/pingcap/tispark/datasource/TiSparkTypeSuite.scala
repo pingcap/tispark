@@ -16,6 +16,10 @@ class TiSparkTypeSuite extends BaseDataSourceTest("type_test") {
     )
   )
   test("bigint test") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     dropTable()
     jdbcUpdate(s"create table $dbtable(i bigint, s varchar(128))")
     jdbcUpdate(

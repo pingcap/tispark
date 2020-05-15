@@ -37,17 +37,48 @@ case class TiDBRelation(session: TiSession,
   @transient val sqlContext: SQLContext
 ) extends BaseRelation
     with InsertableRelation {
-  val table: TiTableInfo = meta
-    .getTable(tableRef.databaseName, tableRef.tableName)
-    .getOrElse(
-      throw new TiClientInternalException(
-        "Table not exist " + tableRef + " valid databases are: " + meta.getDatabases
-          .map(_.getName)
-          .mkString("[", ",", "]")
-      )
-    )
+  lazy val table: TiTableInfo = getTableOrThrow(tableRef.databaseName, tableRef.tableName)
 
   override lazy val schema: StructType = TiUtil.getSchemaFromTable(table)
+
+  private def getTableOrThrow(database: String, table: String): TiTableInfo =
+    meta.getTable(database, table).getOrElse {
+      val db = meta.getDatabase(database)
+      if (db.isEmpty) {
+        throw new TiClientInternalException(
+          "Database not exist " + database + " valid databases are: " + meta.getDatabases
+            .map(_.getName)
+            .mkString("[", ",", "]")
+        )
+      } else {
+        throw new TiClientInternalException(
+          "Table not exist " + tableRef + " valid tables are: " + meta
+            .getTables(db.get)
+            .map(_.getName)
+            .mkString("[", ",", "]")
+        )
+      }
+    }
+
+  lazy val isTiFlashReplicaAvailable: Boolean = {
+    // Note:
+    // - INFORMATION_SCHEMA.TIFLASH_REPLICA is not present in TiKV or PD,
+    // it is calculated in TiDB and stored in memory.
+    // - In order to get those helpful information we have to read them from
+    // either TiKV or PD and keep them in memory as well.
+    //
+    // select * from INFORMATION_SCHEMA.TIFLASH_REPLICA where table_id = $id
+    // TABLE_SCHEMA, TABLE_NAME, TABLE_ID, REPLICA_COUNT, LOCATION_LABELS, AVAILABLE, PROGRESS
+    table.getTiflashReplicaInfo != null && table.getTiflashReplicaInfo.isAvailable
+  }
+
+  def getTiFlashReplicaProgress: Double = {
+    import scala.collection.JavaConversions._
+    val progress = table.getPartitionInfo.getDefs
+      .map(partitonDef => session.getPDClient.getTiFlashReplicaProgress(partitonDef.getId))
+      .sum
+    progress / table.getPartitionInfo.getDefs.size()
+  }
 
   override def sizeInBytes: Long = tableRef.sizeInBytes
 
@@ -142,4 +173,8 @@ case class TiDBRelation(session: TiSession,
         "SparkSQL entry for tispark write is disabled. Set spark.tispark.write.allow_spark_sql to enable."
       )
     }
+
+  override def toString: String = {
+    s"TiDBRelation($tableRef, $ts)"
+  }
 }

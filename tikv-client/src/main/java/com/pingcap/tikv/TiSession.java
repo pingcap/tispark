@@ -76,7 +76,7 @@ public class TiSession implements AutoCloseable {
         if (clientBuilder == null) {
           clientBuilder =
               new RegionStoreClient.RegionStoreClientBuilder(
-                  conf, this.channelFactory, this.getRegionManager());
+                  conf, this.channelFactory, this.getRegionManager(), this.getPDClient());
         }
         res = clientBuilder;
       }

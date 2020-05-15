@@ -17,6 +17,8 @@
 
 package com.pingcap.tikv.util;
 
+import com.pingcap.tikv.TTLManager;
+
 public interface BackOffer {
   // Back off strategies
   enum BackOffStrategy {
@@ -45,13 +47,21 @@ public interface BackOffer {
   int GC_DELETE_RANGE_MAX_BACKOFF = 100 * seconds;
   int RAWKV_MAX_BACKOFF = 40 * seconds;
   int SPLIT_REGION_BACKOFF = 20 * seconds;
-  int BATCH_PREWRITE_BACKOFF = 30 * seconds;
+  int BATCH_PREWRITE_BACKOFF = TTLManager.MANAGED_LOCK_TTL;
   int BATCH_COMMIT_BACKOFF = 10 * seconds;
   int WAIT_SCATTER_REGION_FINISH = 120 * seconds;
+  int PD_INFO_BACKOFF = 5 * seconds;
 
   /**
    * doBackOff sleeps a while base on the BackOffType and records the error message. Will stop until
    * max back off time exceeded and throw an exception to the caller.
    */
-  void doBackOff(BackOffFunction.BackOffFuncType funcTypes, Exception err);
+  void doBackOff(BackOffFunction.BackOffFuncType funcType, Exception err);
+
+  /**
+   * BackoffWithMaxSleep sleeps a while base on the backoffType and records the error message and
+   * never sleep more than maxSleepMs for each sleep.
+   */
+  void doBackOffWithMaxSleep(
+      BackOffFunction.BackOffFuncType funcType, long maxSleepMs, Exception err);
 }

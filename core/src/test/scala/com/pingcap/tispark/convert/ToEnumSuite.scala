@@ -46,6 +46,10 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
                   |)""".stripMargin)
 
   test("Test Convert from java.lang.Boolean to ENUM") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Boolean -> ENUM
     compareTiDBWriteWithJDBC {
@@ -84,6 +88,10 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   }
 
   test("Test Convert from java.lang.Byte to ENUM") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Byte -> ENUM
     compareTiDBWriteWithJDBC {
@@ -123,6 +131,10 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   }
 
   test("Test Convert from java.lang.Short to ENUM") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Short -> ENUM
     compareTiDBWriteWithJDBC {
@@ -162,6 +174,10 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   }
 
   test("Test Convert from java.lang.Integer to ENUM") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Integer -> ENUM
     compareTiDBWriteWithJDBC {
@@ -201,6 +217,10 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   }
 
   test("Test Convert from java.lang.Long to ENUM") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Long -> ENUM
     compareTiDBWriteWithJDBC {
@@ -240,6 +260,10 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   }
 
   test("Test Convert from java.lang.Float to ENUM") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Float -> ENUM
     compareTiDBWriteWithJDBC {
@@ -279,6 +303,10 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   }
 
   test("Test Convert from java.lang.Double to ENUM") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.Double -> ENUM
     compareTiDBWriteWithJDBC {
@@ -318,6 +346,10 @@ class ToEnumSuite extends BaseDataSourceTest("test_data_type_convert_to_enum") {
   }
 
   test("Test Convert from String to ENUM") {
+    if (!supportBatchWrite) {
+      cancel
+    }
+
     // success
     // java.lang.String -> ENUM
     compareTiDBWriteWithJDBC {
