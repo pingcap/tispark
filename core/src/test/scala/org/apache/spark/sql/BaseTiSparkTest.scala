@@ -331,9 +331,11 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
     var sparkPlan: String = "null"
 
-    val shoudTestTiFlash = canTestTiFlash && enableTiFlashTest
+    // When enableTiFlashTest is true, only test TiFlash tests, vice versa.
+    val shouldTestTiFlash = canTestTiFlash && enableTiFlashTest
+    val shouldTestTiKV = !canTestTiFlash && !enableTiFlashTest
 
-    if (!shoudTestTiFlash) {
+    if (shouldTestTiKV) {
       if (r1 == null) {
         try {
           r1 = queryViaTiSpark(qSpark)
@@ -387,7 +389,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           )
         }
       }
-    } else {
+    } else if (shouldTestTiFlash) {
       if (!skipTiDB) {
         // get result from TiDB
         if (r3 == null) {
