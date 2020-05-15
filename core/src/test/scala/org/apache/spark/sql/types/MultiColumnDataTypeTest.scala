@@ -69,6 +69,7 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
           setCurrentDatabase(dbName)
           runTest(query, canTestTiFlash = true)
         }
+      }
     }
   }
 
