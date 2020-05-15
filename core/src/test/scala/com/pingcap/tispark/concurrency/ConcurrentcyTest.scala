@@ -80,7 +80,7 @@ class ConcurrentcyTest extends BaseDataSourceTest("test_concurrency_write_read")
     })
   }
 
-  protected def doBatchWriteInBackground(): Unit = {
+  protected def doBatchWriteInBackground(options: Map[String, String] = Map.empty): Unit = {
     new Thread(new Runnable {
       override def run(): Unit = {
         logger.info("start doBatchWriteInBackground")
@@ -89,6 +89,7 @@ class ConcurrentcyTest extends BaseDataSourceTest("test_concurrency_write_read")
         df.write
           .format("tidb")
           .options(tidbOptions)
+          .options(options)
           .option("database", database)
           .option("table", table)
           .option("sleepAfterPrewriteSecondaryKey", sleepAfterPrewriteSecondaryKey)
@@ -96,6 +97,16 @@ class ConcurrentcyTest extends BaseDataSourceTest("test_concurrency_write_read")
           .save()
       }
     }).start()
+  }
+
+  protected def compareSelect(): Unit = {
+    val query = s"select * from $dbtableWithPrefix order by i"
+
+    sql(query).show(false)
+
+    val r1 = queryViaTiSpark(s"select * from $dbtableWithPrefix order by i")
+    val r2 = queryTiDBViaJDBC(s"select * from $dbtable order by i")
+    compSqlResult(query, r1, r2, checkLimit = false)
   }
 
   override protected def dropTable(): Unit = {
