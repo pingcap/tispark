@@ -207,8 +207,17 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       case e: Throwable => fail(e)
     }
 
-  protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
-    runTest(str, skipped = skipped, skipJDBC = true, checkLimit = checkLimit)
+  protected def judge(str: String,
+                      skipped: Boolean = false,
+                      canTestTiFlash: Boolean = false,
+                      checkLimit: Boolean = true): Unit =
+    runTest(
+      str,
+      skipped = skipped,
+      skipJDBC = true,
+      canTestTiFlash = canTestTiFlash,
+      checkLimit = checkLimit
+    )
 
   /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
    *    - TiSpark query throws exception
@@ -331,9 +340,11 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
     var sparkPlan: String = "null"
 
-    val shoudTestTiFlash = canTestTiFlash && enableTiFlashTest
+    // When enableTiFlashTest is true, only test TiFlash tests, vice versa.
+    val shouldTestTiFlash = canTestTiFlash && enableTiFlashTest
+    val shouldTestTiKV = !enableTiFlashTest
 
-    if (!shoudTestTiFlash) {
+    if (shouldTestTiKV) {
       if (r1 == null) {
         try {
           r1 = queryViaTiSpark(qSpark)
@@ -387,7 +398,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
           )
         }
       }
-    } else {
+    } else if (shouldTestTiFlash) {
       if (!skipTiDB) {
         // get result from TiDB
         if (r3 == null) {
