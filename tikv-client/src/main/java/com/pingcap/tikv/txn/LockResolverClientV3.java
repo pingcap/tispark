@@ -27,6 +27,7 @@ import com.pingcap.tikv.exception.RegionException;
 import com.pingcap.tikv.operation.KVErrorHandler;
 import com.pingcap.tikv.region.AbstractRegionStoreClient;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.region.TiRegion.RegionVerID;
 import com.pingcap.tikv.util.BackOffer;
@@ -46,30 +47,26 @@ import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
 
 /** Since v3.0.5 TiDB ignores the ttl on secondary lock and will use the ttl on primary key. */
-
-// LockResolver resolves locks and also caches resolved txn status.
 public class LockResolverClientV3 extends AbstractRegionStoreClient
     implements AbstractLockResolverClient {
-  // ResolvedCacheSize is max number of cached txn status.
-  private static final long RESOLVED_TXN_CACHE_SIZE = 2048;
-
-  // bigTxnThreshold : transaction involves keys exceed this threshold can be treated as `big
-  // transaction`.
-  private static final long BIG_TXN_THRESHOLD = 16;
-
   private static final Logger logger = LoggerFactory.getLogger(LockResolverClientV3.class);
 
   private final ReadWriteLock readWriteLock;
-  // Note: Because the internal of long is same as unsigned_long
-  // and Txn id are never changed. Be careful to compare between two tso
-  // the `resolved` mapping is as {@code Map<TxnId, TxnStatus>}
-  // TxnStatus represents a txn's final status. It should be Commit or Rollback.
-  // if TxnStatus > 0, means the commit ts, otherwise abort
+
+  /**
+   * Note: Because the internal of long is same as unsigned_long and Txn id are never changed. Be
+   * careful to compare between two tso the `resolved` mapping is as {@code Map<TxnId, TxnStatus>}
+   * TxnStatus represents a txn's final status. It should be Commit or Rollback. if TxnStatus > 0,
+   * means the commit ts, otherwise abort
+   */
   private final Map<Long, TxnStatus> resolved;
-  // the list is chain of txn for O(1) lru cache
+
+  /** the list is chain of txn for O(1) lru cache */
   private final Queue<Long> recentResolved;
 
   private final PDClient pdClient;
+
+  private final RegionStoreClient.RegionStoreClientBuilder clientBuilder;
 
   public LockResolverClientV3(
       TiConfiguration conf,
@@ -78,12 +75,14 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
       TikvStub asyncStub,
       ChannelFactory channelFactory,
       RegionManager regionManager,
-      PDClient pdClient) {
+      PDClient pdClient,
+      RegionStoreClient.RegionStoreClientBuilder clientBuilder) {
     super(conf, region, channelFactory, blockingStub, asyncStub, regionManager);
     resolved = new HashMap<>();
     recentResolved = new LinkedList<>();
     readWriteLock = new ReentrantReadWriteLock();
     this.pdClient = pdClient;
+    this.clientBuilder = clientBuilder;
   }
 
   @Override
@@ -92,11 +91,12 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
   }
 
   @Override
-  public long resolveLocks(BackOffer bo, List<Lock> locks) {
+  public ResolveLockResult resolveLocks(
+      BackOffer bo, long callerStartTS, List<Lock> locks, boolean forWrite) {
     TxnExpireTime msBeforeTxnExpired = new TxnExpireTime();
 
     if (locks.isEmpty()) {
-      return msBeforeTxnExpired.value();
+      return new ResolveLockResult(msBeforeTxnExpired.value());
     }
 
     List<Lock> expiredLocks = new ArrayList<>();
@@ -109,7 +109,7 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
     }
 
     if (expiredLocks.isEmpty()) {
-      return msBeforeTxnExpired.value();
+      return new ResolveLockResult(msBeforeTxnExpired.value());
     }
 
     Map<Long, Set<RegionVerID>> cleanTxns = new HashMap<>();
@@ -127,7 +127,7 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
       }
     }
 
-    return msBeforeTxnExpired.value();
+    return new ResolveLockResult(msBeforeTxnExpired.value());
   }
 
   private void resolveLock(
@@ -165,7 +165,10 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
               this,
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-              resp -> resp.hasError() ? resp.getError() : null);
+              resp -> resp.hasError() ? resp.getError() : null,
+              resolveLockResult -> null,
+              0L,
+              false);
       Kvrpcpb.ResolveLockResponse resp =
           callWithRetry(bo, TikvGrpc.getKvResolveLockMethod(), factory, handler);
 
@@ -207,28 +210,37 @@ public class LockResolverClientV3 extends AbstractRegionStoreClient
       return status;
     }
 
+    Supplier<CleanupRequest> factory =
+        () -> {
+          TiRegion primaryKeyRegion = regionManager.getRegionByKey(primary);
+          return CleanupRequest.newBuilder()
+              .setContext(primaryKeyRegion.getContext())
+              .setKey(primary)
+              .setStartVersion(txnID)
+              .setCurrentTs(currentTS)
+              .build();
+        };
+
     status = new TxnStatus();
     while (true) {
-      // refresh region
-      region = regionManager.getRegionByKey(primary);
-
-      Supplier<CleanupRequest> factory =
-          () ->
-              CleanupRequest.newBuilder()
-                  .setContext(region.getContext())
-                  .setKey(primary)
-                  .setStartVersion(txnID)
-                  .setCurrentTs(currentTS)
-                  .build();
+      TiRegion primaryKeyRegion = regionManager.getRegionByKey(primary);
       KVErrorHandler<CleanupResponse> handler =
           new KVErrorHandler<>(
               regionManager,
               this,
               this,
-              region,
+              primaryKeyRegion,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-              resp -> resp.hasError() ? resp.getError() : null);
-      CleanupResponse resp = callWithRetry(bo, TikvGrpc.getKvCleanupMethod(), factory, handler);
+              resp -> resp.hasError() ? resp.getError() : null,
+              resolveLockResult -> null,
+              0L,
+              false);
+
+      // new RegionStoreClient for PrimaryKey
+      RegionStoreClient primaryKeyRegionStoreClient = clientBuilder.build(primary);
+      CleanupResponse resp =
+          primaryKeyRegionStoreClient.callWithRetry(
+              bo, TikvGrpc.getKvCleanupMethod(), factory, handler);
 
       if (resp.hasRegionError()) {
         bo.doBackOff(BoRegionMiss, new RegionException(resp.getRegionError()));

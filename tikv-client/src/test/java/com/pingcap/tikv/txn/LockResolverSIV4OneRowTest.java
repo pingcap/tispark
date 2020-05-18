@@ -17,28 +17,30 @@ package com.pingcap.tikv.txn;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
+import static junit.framework.TestCase.fail;
 
+import com.pingcap.tikv.exception.KeyException;
 import java.util.Collections;
 import org.junit.Test;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 
-public class LockResolverSIV3OneRowTest extends LockResolverTest {
+public class LockResolverSIV4OneRowTest extends LockResolverTest {
   private String value1 = "v1";
   private String value2 = "v2";
 
-  public LockResolverSIV3OneRowTest() {
+  public LockResolverSIV4OneRowTest() {
     super(IsolationLevel.SI);
   }
 
   @Test
-  public void TTLExpire() {
+  public void TTLExpire() throws InterruptedException {
     if (!init) {
       skipTestInit();
       return;
     }
 
-    if (!isLockResolverClientV3()) {
-      skipTestTiDBV3();
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -54,20 +56,21 @@ public class LockResolverSIV3OneRowTest extends LockResolverTest {
     assertTrue(lockKey(key, value2, key, value2, false, startTs, endTs, ttl));
 
     // TTL expires, we should be able to read <key, value1> instead.
+    Thread.sleep(ttl);
     assertEquals(pointGet(key), value1);
 
     commitFail(key, startTs, endTs);
   }
 
   @Test
-  public void TTLNotExpireCommitFail() throws InterruptedException {
+  public void NonBlockingReadTTLExpireCommitFail() throws InterruptedException {
     if (!init) {
       skipTestInit();
       return;
     }
 
-    if (!isLockResolverClientV3()) {
-      skipTestTiDBV3();
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -82,26 +85,67 @@ public class LockResolverSIV3OneRowTest extends LockResolverTest {
     long endTs = session.getTimestamp().getVersion();
     assertTrue(lockKey(key, value2, key, value2, false, startTs, endTs, ttl));
 
-    // TTL not expire, resolved key fail
-    checkTTLNotExpired(key);
-
-    // TTL expires
-    // We should be able to read <key, value1> instead.
-    Thread.sleep(ttl);
+    // non blocking read
     assertEquals(pointGet(key), value1);
 
+    // TTL expires
+    Thread.sleep(ttl);
+
+    // resolve lock
+    assertEquals(pointGet(key), value1);
+
+    // commit fail
     commitFail(key, startTs, endTs);
   }
 
   @Test
-  public void TTLNotExpireCommitSuccess() {
+  public void NonBlockingReadCommitTSExpiredCommitFail() {
     if (!init) {
       skipTestInit();
       return;
     }
 
-    if (!isLockResolverClientV3()) {
-      skipTestTiDBV3();
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
+    String key = genRandomKey(64);
+    long ttl = GET_BACKOFF + GET_BACKOFF / 2;
+
+    // Put <key, value1> into kv
+    putKVandTestGet(key, value1);
+
+    // Prewrite <key, value2> as primary without committing it
+    long startTs = session.getTimestamp().getVersion();
+    long endTs = session.getTimestamp().getVersion();
+    assertTrue(lockKey(key, value2, key, value2, false, startTs, endTs, ttl));
+
+    // get new endTs
+    endTs = session.getTimestamp().getVersion();
+
+    // non blocking read
+    assertEquals(pointGet(key), value1);
+
+    try {
+      // TTL not expires, but CommitTS expired, commit failed
+      commitString(Collections.singletonList(key), startTs, endTs);
+      fail();
+    } catch (KeyException e) {
+      assertTrue(
+          e.getMessage().startsWith("Key exception occurred and the reason is commit_ts_expired"));
+    }
+  }
+
+  @Test
+  public void NonBlockingReadCommitSuccess() {
+    if (!init) {
+      skipTestInit();
+      return;
+    }
+
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -116,13 +160,14 @@ public class LockResolverSIV3OneRowTest extends LockResolverTest {
     long endTs = session.getTimestamp().getVersion();
     assertTrue(lockKey(key, value2, key, value2, false, startTs, endTs, ttl));
 
-    // TTL not expire, resolved key fail
-    checkTTLNotExpired(key);
+    // non blocking read
+    assertEquals(pointGet(key), value1);
 
-    // continue the commitString phase of <key, value2>
+    // get new commitTS
+    endTs = session.getTimestamp().getVersion();
+
+    // TTL not expires, CommitTS not expired, commit success
     commitString(Collections.singletonList(key), startTs, endTs);
-
-    // get
     assertEquals(pointGet(key), value2);
   }
 }

@@ -29,6 +29,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import org.tikv.kvproto.Kvrpcpb;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 import org.tikv.kvproto.Metapb;
@@ -113,10 +114,15 @@ public class TiRegion implements Serializable {
   }
 
   public Kvrpcpb.Context getContext() {
+    return getContext(java.util.Collections.emptySet());
+  }
+
+  public Kvrpcpb.Context getContext(Set<Long> resolvedLocks) {
     Kvrpcpb.Context.Builder builder = Kvrpcpb.Context.newBuilder();
     builder.setIsolationLevel(this.isolationLevel);
     builder.setPriority(this.commandPri);
     builder.setRegionId(meta.getId()).setPeer(this.peer).setRegionEpoch(this.meta.getRegionEpoch());
+    builder.addAllResolvedLocks(resolvedLocks);
     return builder.build();
   }
 
@@ -217,7 +223,9 @@ public class TiRegion implements Serializable {
 
   @Override
   public boolean equals(final Object another) {
-    if (!(another instanceof TiRegion)) return false;
+    if (!(another instanceof TiRegion)) {
+      return false;
+    }
     TiRegion anotherRegion = ((TiRegion) another);
     return anotherRegion.meta.equals(this.meta)
         && anotherRegion.peer.equals(this.peer)

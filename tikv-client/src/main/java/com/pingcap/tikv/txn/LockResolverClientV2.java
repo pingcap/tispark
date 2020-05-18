@@ -46,23 +46,21 @@ import org.tikv.kvproto.TikvGrpc.TikvBlockingStub;
 import org.tikv.kvproto.TikvGrpc.TikvStub;
 
 /** Before v3.0.5 TiDB uses the ttl on secondary lock. */
-
-// LockResolver resolves locks and also caches resolved txn status.
 public class LockResolverClientV2 extends AbstractRegionStoreClient
     implements AbstractLockResolverClient {
-  // ResolvedCacheSize is max number of cached txn status.
-  private static final long RESOLVED_TXN_CACHE_SIZE = 2048;
-
   private static final Logger logger = LoggerFactory.getLogger(LockResolverClientV2.class);
 
   private final ReadWriteLock readWriteLock;
-  // Note: Because the internal of long is same as unsigned_long
-  // and Txn id are never changed. Be careful to compare between two tso
-  // the `resolved` mapping is as {@code Map<TxnId, TxnStatus>}
-  // TxnStatus represents a txn's final status. It should be Commit or Rollback.
-  // if TxnStatus > 0, means the commit ts, otherwise abort
+
+  /**
+   * Note: Because the internal of long is same as unsigned_long and Txn id are never changed. Be
+   * careful to compare between two tso the `resolved` mapping is as {@code Map<TxnId, TxnStatus>}
+   * TxnStatus represents a txn's final status. It should be Commit or Rollback. if TxnStatus > 0,
+   * means the commit ts, otherwise abort
+   */
   private final Map<Long, Long> resolved;
-  // the list is chain of txn for O(1) lru cache
+
+  /** the list is chain of txn for O(1) lru cache */
   private final Queue<Long> recentResolved;
 
   public LockResolverClientV2(
@@ -130,7 +128,10 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
               this,
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-              resp -> resp.hasError() ? resp.getError() : null);
+              resp -> resp.hasError() ? resp.getError() : null,
+              resolveLockResult -> null,
+              0L,
+              false);
       CleanupResponse resp = callWithRetry(bo, TikvGrpc.getKvCleanupMethod(), factory, handler);
 
       status = 0L;
@@ -159,11 +160,12 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
   }
 
   @Override
-  public long resolveLocks(BackOffer bo, List<Lock> locks) {
+  public ResolveLockResult resolveLocks(
+      BackOffer bo, long callerStartTS, List<Lock> locks, boolean forWrite) {
     if (doResolveLocks(bo, locks)) {
-      return 0L;
+      return new ResolveLockResult(0L);
     } else {
-      return 10000L;
+      return new ResolveLockResult(10000L);
     }
   }
 
@@ -233,7 +235,10 @@ public class LockResolverClientV2 extends AbstractRegionStoreClient
               this,
               region,
               resp -> resp.hasRegionError() ? resp.getRegionError() : null,
-              resp -> resp.hasError() ? resp.getError() : null);
+              resp -> resp.hasError() ? resp.getError() : null,
+              resolveLockResult -> null,
+              0L,
+              false);
       ResolveLockResponse resp =
           callWithRetry(bo, TikvGrpc.getKvResolveLockMethod(), factory, handler);
 

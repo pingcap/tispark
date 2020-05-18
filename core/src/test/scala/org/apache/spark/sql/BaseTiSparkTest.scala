@@ -20,7 +20,7 @@ package org.apache.spark.sql
 import java.sql.Statement
 
 import com.pingcap.tikv.meta.TiTableInfo
-import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient}
+import com.pingcap.tikv.{StoreVersion, TiDBJDBCClient, Version}
 import com.pingcap.tispark.{TiConfigConst, TiDBUtils}
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.apache.spark.sql.catalyst.catalog.TiSessionCatalog
@@ -92,15 +92,23 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
   }
 
   protected def supportTTLUpdate: Boolean = {
-    StoreVersion.minTiKVVersion("3.0.5", this.ti.tiSession.getPDClient)
+    StoreVersion.minTiKVVersion(Version.RESOLVE_LOCK_V3, this.ti.tiSession.getPDClient)
   }
 
   protected def supportBatchWrite: Boolean = {
     // currently only the following versions support BatchWrite
     // 3.0.x (x >= 14)
     // 3.1.x (x >= 0)
-    StoreVersion.minTiKVVersion("3.0.14", this.ti.tiSession.getPDClient) && !StoreVersion
-      .minTiKVVersion("4.0.0", this.ti.tiSession.getPDClient)
+    // >= 4.0.0
+    StoreVersion.minTiKVVersion(Version.BATCH_WRITE, this.ti.tiSession.getPDClient)
+  }
+
+  protected def nonBlockingRead: Boolean = {
+    StoreVersion.minTiKVVersion(Version.RESOLVE_LOCK_V4, this.ti.tiSession.getPDClient)
+  }
+
+  protected def blockingRead: Boolean = {
+    !nonBlockingRead
   }
 
   protected def getTableInfo(databaseName: String, tableName: String): TiTableInfo = {

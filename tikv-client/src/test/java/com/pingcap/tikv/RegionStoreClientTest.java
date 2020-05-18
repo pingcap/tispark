@@ -35,11 +35,15 @@ import org.tikv.kvproto.Metapb;
 public class RegionStoreClientTest extends MockServerTest {
 
   private RegionStoreClient createClientV2() {
-    return createClient("2.1.19");
+    return createClient(Version.RESOLVE_LOCK_V2);
   }
 
   private RegionStoreClient createClientV3() {
-    return createClient("3.0.12");
+    return createClient(Version.RESOLVE_LOCK_V3);
+  }
+
+  private RegionStoreClient createClientV4() {
+    return createClient(Version.RESOLVE_LOCK_V4);
   }
 
   private RegionStoreClient createClient(String version) {
@@ -60,6 +64,7 @@ public class RegionStoreClientTest extends MockServerTest {
   public void getTest() throws Exception {
     doGetTest(createClientV2());
     doGetTest(createClientV3());
+    doGetTest(createClientV4());
   }
 
   private void doGetTest(RegionStoreClient client) {

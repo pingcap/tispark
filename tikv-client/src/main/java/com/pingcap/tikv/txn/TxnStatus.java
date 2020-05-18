@@ -17,6 +17,8 @@
 
 package com.pingcap.tikv.txn;
 
+import org.tikv.kvproto.Kvrpcpb;
+
 /**
  * ttl > 0: lock is not resolved
  *
@@ -27,15 +29,30 @@ package com.pingcap.tikv.txn;
 public class TxnStatus {
   private long ttl;
   private long commitTS;
+  private Kvrpcpb.Action action;
 
   public TxnStatus() {
     this.ttl = 0L;
     this.commitTS = 0L;
+    this.action = Kvrpcpb.Action.UNRECOGNIZED;
+  }
+
+  public TxnStatus(long ttl) {
+    this.ttl = ttl;
+    this.commitTS = 0L;
+    this.action = Kvrpcpb.Action.UNRECOGNIZED;
   }
 
   public TxnStatus(long ttl, long commitTS) {
     this.ttl = ttl;
     this.commitTS = commitTS;
+    this.action = Kvrpcpb.Action.UNRECOGNIZED;
+  }
+
+  public TxnStatus(long ttl, long commitTS, Kvrpcpb.Action action) {
+    this.ttl = ttl;
+    this.commitTS = commitTS;
+    this.action = action;
   }
 
   public long getTtl() {
@@ -56,5 +73,13 @@ public class TxnStatus {
 
   public boolean isCommitted() {
     return ttl == 0 && commitTS > 0;
+  }
+
+  public Kvrpcpb.Action getAction() {
+    return action;
+  }
+
+  public void setAction(Kvrpcpb.Action action) {
+    this.action = action;
   }
 }

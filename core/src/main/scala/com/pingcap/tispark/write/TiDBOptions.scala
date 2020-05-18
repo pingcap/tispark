@@ -102,7 +102,13 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   val snapshotBatchGetSize: Int = parameters.getOrElse(TIDB_SNAPSHOT_BATCH_GET_SIZE, "2048").toInt
 
-  val useTableLock: Boolean = parameters.getOrElse(TIDB_USE_TABLE_LOCK, "true").toBoolean
+  def useTableLock(isV4: Boolean): Boolean = {
+    if (isV4) {
+      parameters.getOrElse(TIDB_USE_TABLE_LOCK, "false").toBoolean
+    } else {
+      parameters.getOrElse(TIDB_USE_TABLE_LOCK, "true").toBoolean
+    }
+  }
 
   val sleepAfterPrewritePrimaryKey: Long =
     parameters.getOrElse(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong

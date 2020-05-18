@@ -71,7 +71,6 @@ public class TTLManager {
   public TTLManager(TiConfiguration conf, long startTS, byte[] primaryKey) {
     this.startTS = startTS;
     this.primaryLock = ByteString.copyFrom(primaryKey);
-    ;
     this.state = new AtomicInteger(STATE_UNINITIALIZED);
 
     this.kvClient = TiSession.getInstance(conf).createTxnClient();

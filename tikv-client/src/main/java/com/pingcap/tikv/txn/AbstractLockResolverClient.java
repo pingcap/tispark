@@ -20,8 +20,10 @@ package com.pingcap.tikv.txn;
 import com.pingcap.tikv.PDClient;
 import com.pingcap.tikv.StoreVersion;
 import com.pingcap.tikv.TiConfiguration;
+import com.pingcap.tikv.Version;
 import com.pingcap.tikv.exception.KeyException;
 import com.pingcap.tikv.region.RegionManager;
+import com.pingcap.tikv.region.RegionStoreClient;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.util.BackOffer;
 import com.pingcap.tikv.util.ChannelFactory;
@@ -31,9 +33,13 @@ import org.tikv.kvproto.Metapb;
 import org.tikv.kvproto.TikvGrpc;
 
 public interface AbstractLockResolverClient {
-  public static final String MIN_RESOLVE_LOCK_V3_VERSION = "3.0.5";
+  /** ResolvedCacheSize is max number of cached txn status. */
+  long RESOLVED_TXN_CACHE_SIZE = 2048;
 
-  public String getVersion();
+  /** transaction involves keys exceed this threshold can be treated as `big transaction`. */
+  long BIG_TXN_THRESHOLD = 16;
+
+  String getVersion();
 
   /**
    * ResolveLocks tries to resolve Locks. The resolving process is in 3 steps: 1) Use the `lockTTL`
@@ -44,12 +50,15 @@ public interface AbstractLockResolverClient {
    * lock's region to resolve all locks belong to the same transaction.
    *
    * @param bo
+   * @param callerStartTS
    * @param locks
+   * @param forWrite
    * @return msBeforeTxnExpired: 0 means all locks are resolved
    */
-  public long resolveLocks(BackOffer bo, List<Lock> locks);
+  ResolveLockResult resolveLocks(
+      BackOffer bo, long callerStartTS, List<Lock> locks, boolean forWrite);
 
-  public static Lock extractLockFromKeyErr(Kvrpcpb.KeyError keyError) {
+  static Lock extractLockFromKeyErr(Kvrpcpb.KeyError keyError) {
     if (keyError.hasLocked()) {
       return new Lock(keyError.getLocked());
     }
@@ -76,7 +85,7 @@ public interface AbstractLockResolverClient {
         String.format("unexpected key error meets and it is %s", keyError.toString()));
   }
 
-  public static AbstractLockResolverClient getInstance(
+  static AbstractLockResolverClient getInstance(
       Metapb.Store store,
       TiConfiguration conf,
       TiRegion region,
@@ -84,13 +93,31 @@ public interface AbstractLockResolverClient {
       TikvGrpc.TikvStub asyncStub,
       ChannelFactory channelFactory,
       RegionManager regionManager,
-      PDClient pdClient) {
-    if (StoreVersion.compareTo(store.getVersion(), MIN_RESOLVE_LOCK_V3_VERSION) < 0) {
+      PDClient pdClient,
+      RegionStoreClient.RegionStoreClientBuilder clientBuilder) {
+    if (StoreVersion.compareTo(store.getVersion(), Version.RESOLVE_LOCK_V3) < 0) {
       return new LockResolverClientV2(
           conf, region, blockingStub, asyncStub, channelFactory, regionManager);
-    } else {
+    } else if (StoreVersion.compareTo(store.getVersion(), Version.RESOLVE_LOCK_V4) < 0) {
       return new LockResolverClientV3(
-          conf, region, blockingStub, asyncStub, channelFactory, regionManager, pdClient);
+          conf,
+          region,
+          blockingStub,
+          asyncStub,
+          channelFactory,
+          regionManager,
+          pdClient,
+          clientBuilder);
+    } else {
+      return new LockResolverClientV4(
+          conf,
+          region,
+          blockingStub,
+          asyncStub,
+          channelFactory,
+          regionManager,
+          pdClient,
+          clientBuilder);
     }
   }
 }

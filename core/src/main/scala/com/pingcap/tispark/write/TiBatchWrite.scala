@@ -319,7 +319,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
   }
 
   private def getUseTableLock(): Boolean = {
-    if (!options.useTableLock) {
+    if (!options.useTableLock(StoreVersion.minTiKVVersion("4.0.0", tiSession.getPDClient))) {
       false
     } else {
       if (tiDBJDBCClient.isEnableTableLock) {

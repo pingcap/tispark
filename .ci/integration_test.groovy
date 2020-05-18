@@ -192,6 +192,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                     print run_chunks
                     def mvnStr = get_mvn_str(run_chunks)
                     sh """
+                        rm -rf /maven/.m2/repository/*
+                        rm -rf /maven/.m2/settings.xml
+                        rm -rf ~/.m2/settings.xml
                         archive_url=http://fileserver.pingcap.net/download/builds/pingcap/tispark/cache/tispark-m2-cache-latest.tar.gz
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
@@ -206,6 +209,9 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
             groovy.lang.Closure run_tikvclient_test = { chunk_suffix ->
                 dir("go/src/github.com/pingcap/tispark") {
                     sh """
+                        rm -rf /maven/.m2/repository/*
+                        rm -rf /maven/.m2/settings.xml
+                        rm -rf ~/.m2/settings.xml
                         archive_url=http://fileserver.pingcap.net/download/builds/pingcap/tispark/cache/tispark-m2-cache-latest.tar.gz
                         if [ ! "\$(ls -A /maven/.m2/repository)" ]; then curl -sL \$archive_url | tar -zx -C /maven || true; fi
                     """
@@ -257,6 +263,7 @@ def call(ghprbActualCommit, ghprbCommentBody, ghprbPullId, ghprbPullTitle, ghprb
                             killall -9 tikv-server || true
                             killall -9 pd-server || true
                             killall -9 tiflash || true
+                            killall -9 java || true
                             touch tiflash_cmd_line.log
                             sleep 10
                             bin/pd-server --name=pd --data-dir=pd --config=go/src/github.com/pingcap/tispark/config/pd.toml &>pd.log &

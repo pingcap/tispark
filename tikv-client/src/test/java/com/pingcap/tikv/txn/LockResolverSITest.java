@@ -44,11 +44,6 @@ public class LockResolverSITest extends LockResolverTest {
       return;
     }
 
-    if (isTiDBV4()) {
-      skipTestTiDBV4();
-      return;
-    }
-
     session.getConf().setIsolationLevel(IsolationLevel.SI);
     putAlphabet();
     prepareAlphabetLocks();
@@ -60,11 +55,6 @@ public class LockResolverSITest extends LockResolverTest {
   public void cleanLockTest() {
     if (!init) {
       skipTestInit();
-      return;
-    }
-
-    if (isTiDBV4()) {
-      skipTestTiDBV4();
       return;
     }
 
@@ -117,14 +107,14 @@ public class LockResolverSITest extends LockResolverTest {
   }
 
   @Test
-  public void SITest() {
+  public void SITestBlocking() {
     if (!init) {
       skipTestInit();
       return;
     }
 
-    if (isTiDBV4()) {
-      skipTestTiDBV4();
+    if (isLockResolverClientV4()) {
+      logger.warn("Test skipped due to version of TiDB/TiKV should be 2.x or 3.x.");
       return;
     }
 
@@ -159,5 +149,59 @@ public class LockResolverSITest extends LockResolverTest {
     } catch (KeyException e) {
       assertFalse(e.getKeyError().getRetryable().isEmpty());
     }
+  }
+
+  @Test
+  public void SITestNonBlocking() {
+    if (!init) {
+      skipTestInit();
+      return;
+    }
+
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
+    TiTimestamp startTs = session.getTimestamp();
+    TiTimestamp endTs = session.getTimestamp();
+
+    // Put <a, a> into kv
+    putKV("a", "a", startTs.getVersion(), endTs.getVersion());
+
+    startTs = session.getTimestamp();
+    endTs = session.getTimestamp();
+
+    // Prewrite <a, aa> as primary without committing it
+    assertTrue(
+        lockKey(
+            "a", "aa", "a", "aa", false, startTs.getVersion(), endTs.getVersion(), LARGE_LOCK_TTL));
+
+    TiRegion tiRegion = session.getRegionManager().getRegionByKey(ByteString.copyFromUtf8("a"));
+    RegionStoreClient client = builder.build(tiRegion);
+
+    {
+      BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
+      Long callerTS = session.getTimestamp().getVersion();
+      System.out.println("callerTS1= " + callerTS);
+      ByteString v = client.get(backOffer, ByteString.copyFromUtf8("a"), callerTS);
+      assertEquals(v.toStringUtf8(), String.valueOf('a'));
+    }
+
+    try {
+      // Trying to continue the commitString phase of <a, aa> will fail because CommitTS <
+      // MinCommitTS
+      commitString(Collections.singletonList("a"), startTs.getVersion(), endTs.getVersion());
+      fail();
+    } catch (KeyException e) {
+      assertTrue(
+          e.getMessage().startsWith("Key exception occurred and the reason is commit_ts_expired"));
+    }
+
+    // Trying to continue the commitString phase of <a, aa> will success because CommitTS >
+    // MinCommitTS
+    endTs = session.getTimestamp();
+    assertTrue(
+        commitString(Collections.singletonList("a"), startTs.getVersion(), endTs.getVersion()));
   }
 }

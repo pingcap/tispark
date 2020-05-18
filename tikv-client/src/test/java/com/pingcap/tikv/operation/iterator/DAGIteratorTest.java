@@ -22,6 +22,7 @@ import com.google.protobuf.ByteString;
 import com.pingcap.tikv.GrpcUtils;
 import com.pingcap.tikv.KVMockServer;
 import com.pingcap.tikv.MockServerTest;
+import com.pingcap.tikv.Version;
 import com.pingcap.tikv.codec.Codec.BytesCodec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.codec.CodecDataOutput;
@@ -58,7 +59,7 @@ public class DAGIteratorTest extends MockServerTest {
             .setAddress(LOCAL_ADDR + ":" + port)
             .setId(1)
             .setState(Metapb.StoreState.Up)
-            .setVersion("3.0.5")
+            .setVersion(Version.RESOLVE_LOCK_V4)
             .build();
 
     TiTableInfo table = createTable();

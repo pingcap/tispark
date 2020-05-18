@@ -71,6 +71,7 @@ public class ConcreteScanIterator extends ScanIterator {
     this.version = version;
   }
 
+  @Override
   TiRegion loadCurrentRegionToCache() throws GrpcException {
     TiRegion region;
     try (RegionStoreClient client = builder.build(startKey)) {
