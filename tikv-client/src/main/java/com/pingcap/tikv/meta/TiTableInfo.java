@@ -52,6 +52,8 @@ public class TiTableInfo implements Serializable {
   private final TiColumnInfo primaryKeyColumn;
   private final TiViewInfo viewInfo;
   private final TiFlashReplicaInfo tiflashReplicaInfo;
+  private final long version;
+  private final long updateTimestamp;
 
   @JsonCreator
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -70,7 +72,9 @@ public class TiTableInfo implements Serializable {
       @JsonProperty("old_schema_id") long oldSchemaId,
       @JsonProperty("partition") TiPartitionInfo partitionInfo,
       @JsonProperty("view") TiViewInfo viewInfo,
-      @JsonProperty("tiflash_replica") TiFlashReplicaInfo tiFlashReplicaInfo) {
+      @JsonProperty("tiflash_replica") TiFlashReplicaInfo tiFlashReplicaInfo,
+      @JsonProperty("version") long version,
+      @JsonProperty("update_timestamp") long updateTimestamp) {
     this.id = id;
     this.name = name.getL();
     this.charset = charset;
@@ -93,6 +97,8 @@ public class TiTableInfo implements Serializable {
     this.partitionInfo = partitionInfo;
     this.viewInfo = viewInfo;
     this.tiflashReplicaInfo = tiFlashReplicaInfo;
+    this.version = version;
+    this.updateTimestamp = updateTimestamp;
 
     TiColumnInfo primaryKey = null;
     for (TiColumnInfo col : this.columns) {
@@ -268,7 +274,9 @@ public class TiTableInfo implements Serializable {
           getOldSchemaId(),
           partitionInfo,
           null,
-          getTiflashReplicaInfo());
+          getTiflashReplicaInfo(),
+          version,
+          updateTimestamp);
     } else {
       return this;
     }
@@ -291,5 +299,13 @@ public class TiTableInfo implements Serializable {
       }
     }
     return false;
+  }
+
+  public long getVersion() {
+    return version;
+  }
+
+  public long getUpdateTimestamp() {
+    return updateTimestamp;
   }
 }
