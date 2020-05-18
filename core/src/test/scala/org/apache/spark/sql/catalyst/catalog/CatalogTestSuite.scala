@@ -15,7 +15,7 @@
 
 package org.apache.spark.sql.catalyst.catalog
 
-import org.apache.spark.sql.BaseTiSparkTest
+import org.apache.spark.sql.{AnalysisException, BaseTiSparkTest}
 
 class CatalogTestSuite extends BaseTiSparkTest {
   test("test show databases/tables") {
@@ -344,6 +344,50 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("drop table if exists testLogic1")
     spark.sql("drop table if exists testLogic2")
     spark.sql("drop table if exists testLogic3")
+  }
+
+  test("support desc table column") {
+    val expectedDescTableColumn =
+      List(
+        List("col_name", "id"),
+        List("data_type", "bigint"),
+        List("comment", "NULL")
+      )
+    val expectedDescExtendedTableColumn =
+      List(
+        List("col_name", "id"),
+        List("data_type", "bigint"),
+        List("comment", "NULL"),
+        List("min", "NULL"),
+        List("max", "NULL"),
+        List("num_nulls", "NULL"),
+        List("distinct_count", "NULL"),
+        List("avg_col_len", "NULL"),
+        List("max_col_len", "NULL"),
+        List("histogram", "NULL")
+      )
+
+    tidbStmt.execute("DROP TABLE IF EXISTS `t`")
+    tidbStmt.execute(
+      """CREATE TABLE `t` (
+        |  `id` bigint(20) DEFAULT NULL
+        |) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+      """.stripMargin
+    )
+
+    setCurrentDatabase("tispark_test")
+    // column does not exist
+    intercept[AnalysisException] {
+      spark.sql("desc t a").show()
+    }
+
+    explainAndRunTest("desc t id", skipJDBC = true, rTiDB = expectedDescTableColumn)
+    explainAndRunTest(
+      "desc extended t id",
+      skipJDBC = true,
+      rTiDB = expectedDescExtendedTableColumn
+    )
+    spark.sql("drop table if exists t")
   }
 
   test("test schema change") {
