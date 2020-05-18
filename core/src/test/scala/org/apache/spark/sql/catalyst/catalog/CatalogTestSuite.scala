@@ -346,7 +346,27 @@ class CatalogTestSuite extends BaseTiSparkTest {
     spark.sql("drop table if exists testLogic3")
   }
 
+  test("test schema change") {
+    val tableName = "catalog_test"
+    tidbStmt.execute(s"DROP TABLE IF EXISTS `$tableName`")
+    tidbStmt.execute(s"CREATE TABLE $tableName(c1 int)")
+    val catalog = this.ti.tiSession.getCatalog
+    val tableInfo1 = catalog.getTable(s"${dbPrefix}tispark_test", tableName)
+
+    tidbStmt.execute(s"ALTER TABLE `$tableName` ADD COLUMN c2 INT;")
+    val tableInfo2 = catalog.getTable(s"${dbPrefix}tispark_test", tableName)
+    assert(tableInfo1.getUpdateTimestamp < tableInfo2.getUpdateTimestamp)
+
+    tidbStmt.execute(s"insert into `$tableName` values (1, 2)")
+    val tableInfo3 = catalog.getTable(s"${dbPrefix}tispark_test", tableName)
+    assert(tableInfo2.getUpdateTimestamp == tableInfo3.getUpdateTimestamp)
+
+    tidbStmt.execute(s"DROP TABLE IF EXISTS `$tableName`")
+  }
+
   override def beforeAll(): Unit = {
     super.beforeAllWithHiveSupport()
+
+    tidbStmt.execute(s"DROP TABLE IF EXISTS `catalog_test`")
   }
 }

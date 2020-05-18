@@ -70,7 +70,7 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val regionSplitNum: Int = parameters.getOrElse(TIDB_REGION_SPLIT_NUM, "0").toInt
 
   val enableRegionSplit: Boolean =
-    parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "true").toBoolean
+    parameters.getOrElse(TIDB_ENABLE_REGION_SPLIT, "false").toBoolean
 
   val writeConcurrency: Int = parameters.getOrElse(TIDB_WRITE_CONCURRENCY, "0").toInt
 
@@ -79,11 +79,15 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   val snapshotBatchGetSize: Int = parameters.getOrElse(TIDB_SNAPSHOT_BATCH_GET_SIZE, "2048").toInt
 
+  val useTableLock: Boolean = parameters.getOrElse(TIDB_USE_TABLE_LOCK, "true").toBoolean
+
   val sleepAfterPrewritePrimaryKey: Long =
     parameters.getOrElse(TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY, "0").toLong
 
   val sleepAfterPrewriteSecondaryKey: Long =
     parameters.getOrElse(TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY, "0").toLong
+
+  val sleepAfterGetCommitTS: Long = parameters.getOrElse(TIDB_SLEEP_AFTER_GET_COMMIT_TS, "0").toLong
 
   val isTest: Boolean = parameters.getOrElse(TIDB_IS_TEST, "false").toBoolean
 
@@ -159,6 +163,7 @@ object TiDBOptions {
   val TIDB_WRITE_CONCURRENCY: String = newOption("writeConcurrency")
   val TIDB_TTL_MODE: String = newOption("ttlMode")
   val TIDB_SNAPSHOT_BATCH_GET_SIZE: String = newOption("snapshotBatchGetSize")
+  val TIDB_USE_TABLE_LOCK: String = newOption("useTableLock")
 
   // ------------------------------------------------------------
   // parameters only for test
@@ -167,4 +172,5 @@ object TiDBOptions {
   val TIDB_LOCK_TTL_SECONDS: String = newOption("lockTTLSeconds")
   val TIDB_SLEEP_AFTER_PREWRITE_PRIMARY_KEY: String = newOption("sleepAfterPrewritePrimaryKey")
   val TIDB_SLEEP_AFTER_PREWRITE_SECONDARY_KEY: String = newOption("sleepAfterPrewriteSecondaryKey")
+  val TIDB_SLEEP_AFTER_GET_COMMIT_TS: String = newOption("sleepAfterGetCommitTS")
 }
