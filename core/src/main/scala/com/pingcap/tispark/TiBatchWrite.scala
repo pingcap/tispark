@@ -83,7 +83,7 @@ class TiBatchWrite(@transient val df: DataFrame,
   private var handleCol: TiColumnInfo = _
 
   @transient private var tiDBJDBCClient: TiDBJDBCClient = _
-  private var isEnableTableLock: Boolean = _
+  private var useTableLock: Boolean = _
   private var isEnableSplitRegion: Boolean = _
   private var tableLocked: Boolean = false
 
@@ -178,21 +178,25 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // lock table
     tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
-    isEnableTableLock = {
-      if (tiDBJDBCClient.isEnableTableLock) {
-        if (tiDBJDBCClient.getDelayCleanTableLock >= MIN_DELAY_CLEAN_TABLE_LOCK) {
-          true
+    useTableLock = {
+      if (!options.useTableLock) {
+        false
+      } else {
+        if (tiDBJDBCClient.isEnableTableLock) {
+          if (tiDBJDBCClient.getDelayCleanTableLock >= MIN_DELAY_CLEAN_TABLE_LOCK) {
+            true
+          } else {
+            logger.warn(
+              s"table lock disabled! to enable table lock, please set tidb config: delay-clean-table-lock >= $MIN_DELAY_CLEAN_TABLE_LOCK"
+            )
+            false
+          }
         } else {
-          logger.warn(
-            s"table lock disabled! to enable table lock, please set tidb config: delay-clean-table-lock >= $MIN_DELAY_CLEAN_TABLE_LOCK"
-          )
           false
         }
-      } else {
-        false
       }
     }
-    if (!isEnableTableLock) {
+    if (!useTableLock) {
       logger.warn(
         s"table lock disabled! to enable table lock, please set tidb config: enable-table-lock = true"
       )
@@ -422,6 +426,17 @@ class TiBatchWrite(@transient val df: DataFrame,
         s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs"
       )
     }
+
+    if (!useTableLock && isSchemaChanged()) {
+      throw new TiBatchWriteException("schema has changed during prewrite!")
+    }
+
+    // for test
+    if (options.sleepAfterGetCommitTS > 0) {
+      logger.info(s"sleep ${options.sleepAfterGetCommitTS} ms for test")
+      Thread.sleep(options.sleepAfterGetCommitTS)
+    }
+
     val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(PRIMARY_KEY_COMMIT_BACKOFF)
 
     if (connectionLost()) {
@@ -463,6 +478,11 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
   }
 
+  private def isSchemaChanged(): Boolean = {
+    val newTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
+    tiTableInfo.getUpdateTimestamp < newTableInfo.getUpdateTimestamp
+  }
+
   private def getAutoTableIdStart(step: Long): Long = {
     RowIDAllocator
       .create(
@@ -477,7 +497,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   @throws(classOf[TiBatchWriteException])
   private def lockTable(): Unit = {
-    if (isEnableTableLock) {
+    if (useTableLock) {
       if (!tableLocked) {
         tiDBJDBCClient.lockTableWriteLocal(options.database, options.table)
         tableLocked = true
@@ -495,7 +515,7 @@ class TiBatchWrite(@transient val df: DataFrame,
 
   @throws(classOf[TiBatchWriteException])
   private def unlockTable(): Unit = {
-    if (isEnableTableLock) {
+    if (useTableLock) {
       if (tableLocked) {
         tiDBJDBCClient.unlockTables()
         tableLocked = false
@@ -633,7 +653,7 @@ class TiBatchWrite(@transient val df: DataFrame,
   }
 
   private def connectionLost(): Boolean = {
-    if (isEnableTableLock) {
+    if (useTableLock) {
       tiDBJDBCClient.isClosed
     } else {
       // TODO: what if version of tidb does not support lock table

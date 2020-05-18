@@ -50,6 +50,8 @@ public class MetaUtils {
     private List<TiIndexInfo> indices = new ArrayList<>();
     private TiPartitionInfo partInfo;
     private Long tid = null;
+    private long version = 0L;
+    private long updateTimestamp = 0L;
 
     public TableBuilder() {}
 
@@ -122,6 +124,11 @@ public class MetaUtils {
       return this;
     }
 
+    public TableBuilder version(long version) {
+      this.version = version;
+      return this;
+    }
+
     public TiTableInfo build() {
       if (tid == null) {
         tid = newId();
@@ -144,7 +151,9 @@ public class MetaUtils {
           0,
           partInfo,
           null,
-          null);
+          null,
+          version,
+          updateTimestamp);
     }
   }
 
