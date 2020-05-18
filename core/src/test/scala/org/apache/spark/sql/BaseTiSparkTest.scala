@@ -207,8 +207,17 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
       case e: Throwable => fail(e)
     }
 
-  protected def judge(str: String, skipped: Boolean = false, checkLimit: Boolean = true): Unit =
-    runTest(str, skipped = skipped, skipJDBC = true, checkLimit = checkLimit)
+  protected def judge(str: String,
+                      skipped: Boolean = false,
+                      canTestTiFlash: Boolean = false,
+                      checkLimit: Boolean = true): Unit =
+    runTest(
+      str,
+      skipped = skipped,
+      skipJDBC = true,
+      canTestTiFlash = canTestTiFlash,
+      checkLimit = checkLimit
+    )
 
   /** Run test with sql `qSpark` for TiSpark and TiDB, `qJDBC` for Spark-JDBC. Throw fail exception when
    *    - TiSpark query throws exception

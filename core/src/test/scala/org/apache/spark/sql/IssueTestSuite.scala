@@ -237,7 +237,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     )
 
     assert(try {
-      judge("select a, max(b) from t group by a limit 2")
+      judge("select a, max(b) from t group by a limit 2", canTestTiFlash = true)
       false
     } catch {
       case _: Throwable => true
