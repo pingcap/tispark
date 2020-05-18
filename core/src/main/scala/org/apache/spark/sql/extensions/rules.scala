@@ -94,6 +94,8 @@ case class TiDDLRule(getOrCreateTiContext: SparkSession => TiContext)(sparkSessi
       TiShowColumnsCommand(tiContext, st)
     case dt: DescribeTableCommand =>
       TiDescribeTablesCommand(tiContext, dt)
+    case dc: DescribeColumnCommand =>
+      TiDescribeColumnCommand(tiContext, dc)
     case ct: CreateTableLikeCommand =>
       TiCreateTableLikeCommand(tiContext, ct)
   }
