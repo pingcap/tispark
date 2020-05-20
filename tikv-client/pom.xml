@@ -359,7 +359,7 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>com.google.common</pattern>
-                                    <shadedPattern>com.pingcap.com.google.common</shadedPattern>
+                                    <shadedPattern>shade.com.google.common</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>io.opencensus</pattern>
