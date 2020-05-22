@@ -15,6 +15,7 @@
 
 package com.pingcap.tispark
 
+import com.pingcap.tispark.write.{TiBatchWrite, TiDBOptions}
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
 
@@ -64,7 +65,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
       val df = sql(s"select * from $table")
 
       // batch write
-      TiBatchWrite.writeToTiDB(
+      TiBatchWrite.write(
         df,
         ti,
         new TiDBOptions(
@@ -188,7 +189,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
       } else {
         tidbStmt.execute(createTableSQL)
         val df = sql(s"select * from $table")
-        TiBatchWrite.writeToTiDB(
+        TiBatchWrite.write(
           df,
           ti,
           new TiDBOptions(
@@ -333,7 +334,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         )
 
         // batch write
-        TiBatchWrite.writeToTiDB(
+        TiBatchWrite.write(
           df,
           ti,
           new TiDBOptions(
@@ -499,7 +500,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
         )
 
         // batch write
-        TiBatchWrite.writeToTiDB(
+        TiBatchWrite.write(
           df,
           ti,
           new TiDBOptions(
@@ -553,7 +554,7 @@ class TiBatchWriteSuite extends BaseTiSparkTest {
 
     // batch write
     intercept[NoSuchTableException] {
-      TiBatchWrite.writeToTiDB(
+      TiBatchWrite.write(
         df,
         ti,
         new TiDBOptions(

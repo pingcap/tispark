@@ -37,7 +37,7 @@ In addition, if `replace` is true, data to be inserted is duplicated before the 
     - if the primary key or unique index exists in the database, data with conflicts expects an exception.
     - if no same primary key or unique index exists, data is inserted.
 
-## Use Spark connector with extensions enabled
+## Use Spark connector
 
 The Spark connector adheres to the standard Spark API, but with the addition of TiDB-specific options.
 
@@ -206,6 +206,35 @@ CREATE TABLE CUSTOMER_DST USING tidb OPTIONS (database 'tpch_test', table 'TARGE
 INSERT INTO CUSTOMER_DST VALUES(1000, 'Customer#000001000', 'AnJ5lxtLjioClr2khl9pb8NLxG2', 9, '19-407-425-2584', 2209.81, 'AUTOMOBILE', '. even, express theodolites upo')
 
 INSERT INTO CUSTOMER_DST SELECT * FROM CUSTOMER_SRC
+```
+
+## Writing to Multi-tables
+
+TiDB Connector supports writing data into multi-tables in one transaction using scala/java API.
+
+```
+val inputDatabase = args(0)
+val inputTable1 = args(1)
+val inputTable2 = args(2)
+val outputDatabase = args(3)
+val outputTable1 = args(4)
+val outputTable2 = args(5)
+
+val df1 = spark.sql(s"select * from $inputTable1")
+val df2 = spark.sql(s"select * from $inputTable2")
+
+val data = Map(DBTable(outputDatabase, outputTable1) -> df1, DBTable(outputDatabase, outputTable2) -> df2)
+
+// writing data to multi-tables
+TiBatchWrite.write(
+  data,
+  tiContext,
+  Map(
+    "tidb.addr" -> "172.16.5.59",
+    "tidb.port" -> "9194",
+    "tidb.user"-> "root",
+    "tidb.password" -> "")
+)
 ```
 
 ## TiDB Options
