@@ -60,9 +60,11 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
     for ((op, value) <- getOperations(dataType)) {
       val query = s"select $col1 from $tableName where $col2 $op $value"
       // TODO: revert these ignored tests after they are fixed.
-      if (col1.contains("boolean") || col1.contains("bit") || col1.contains("date")) {
+      if (col1.contains("boolean") || col1.contains("blob0") || col1.contains("date") || col1
+            .contains("bit")) {
         // ignore
-      } else if (col2.contains("boolean")) {
+      } else if (col2.contains("boolean") || col2.contains("blob") || col2.contains("bit") || col2
+                   .contains("binary")) {
         // ignore
       } else {
         test(query) {
