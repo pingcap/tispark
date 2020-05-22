@@ -465,9 +465,11 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
     }
     retSet.toList
   }
-  protected def explainSpark(str: String, skipped: Boolean = false): Unit =
+  protected def explainSpark(str: String,
+                             skipped: Boolean = false,
+                             canTestTiFlash: Boolean = false): Unit =
     try {
-      if (skipped) {
+      if (skipped || (!canTestTiFlash && enableTiFlashTest)) {
         logger.warn(s"Test is skipped. [With Spark SQL: $str]")
       } else {
         spark.sql(str).explain()
@@ -488,7 +490,7 @@ class BaseTiSparkTest extends QueryTest with SharedSQLContext {
                                   canTestTiFlash: Boolean = false,
                                   checkLimit: Boolean = true): Unit =
     try {
-      explainSpark(qSpark)
+      explainSpark(qSpark, canTestTiFlash = canTestTiFlash)
       if (qJDBC == null) {
         runTest(
           qSpark = qSpark,
