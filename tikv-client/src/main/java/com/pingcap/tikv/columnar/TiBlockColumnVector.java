@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
-import java.time.LocalDate;
+import org.joda.time.LocalDate;
 
 public class TiBlockColumnVector extends TiColumnVector {
   private int fixedLength;
@@ -183,7 +183,8 @@ public class TiBlockColumnVector extends TiColumnVector {
     int year = (int) (ym / 13);
     int month = (int) (ym % 13);
     int day = (int) (ymd & ((1 << 5) - 1));
-    return LocalDate.of(year, month, day).toEpochDay();
+    LocalDate date = new LocalDate(year, month, day, null);
+    return date.toDate().getTime() / 24 / 3600 / 1000;
   }
   /**
    * Returns the long type value for rowId. The return value is undefined and can be anything, if
