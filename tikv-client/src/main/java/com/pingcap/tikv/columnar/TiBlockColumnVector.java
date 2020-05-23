@@ -282,15 +282,16 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public byte[] getBinary(int rowId) {
-      if (type.equals(BytesType.BLOB) || type.equals(BytesType.TINY_BLOB)) {
-        long offset = (dataAddr + offsetAt(rowId));
-        int numBytes = sizeAt(rowId) - 1;
-        byte[] ret = new byte[numBytes];
-        MemoryUtil.getBytes(offset, ret, 0, numBytes);
-        return ret;
-      } else {
-        throw new UnsupportedOperationException("get Binary for TiBlockColumnVector is not supported");
-      }
+    if (type.equals(BytesType.BLOB) || type.equals(BytesType.TINY_BLOB)) {
+      long offset = (dataAddr + offsetAt(rowId));
+      int numBytes = sizeAt(rowId) - 1;
+      byte[] ret = new byte[numBytes];
+      MemoryUtil.getBytes(offset, ret, 0, numBytes);
+      return ret;
+    } else {
+      throw new UnsupportedOperationException(
+          "get Binary for TiBlockColumnVector is not supported");
+    }
   }
 
   /** @return child [[TiColumnVector]] at the given ordinal. */
