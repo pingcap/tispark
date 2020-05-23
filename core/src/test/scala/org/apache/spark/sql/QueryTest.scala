@@ -175,6 +175,7 @@ abstract class QueryTest extends SparkFunSuite {
       row.map {
         case null           => "null"
         case a: Array[Byte] => a.mkString("[", ",", "]")
+        case b: Boolean     => if (b) "1" else "0"
         case s              => s.toString
       }.mkString
     }
