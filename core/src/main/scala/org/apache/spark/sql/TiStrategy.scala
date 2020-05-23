@@ -164,7 +164,7 @@ case class TiStrategy(getOrCreateTiContext: SparkSession => TiContext)(sparkSess
     // FIXME: Should use default codec format "chblock", change it back after fix.
     val codecFormatStr =
       sqlConf
-        .getConfString(TiConfigConst.CODEC_FORMAT, TiConfigConst.CHUNK_CODEC_FORMAT)
+        .getConfString(TiConfigConst.CODEC_FORMAT, TiConfigConst.DEFAULT_CODEC_FORMAT)
         .toLowerCase
 
     codecFormatStr match {

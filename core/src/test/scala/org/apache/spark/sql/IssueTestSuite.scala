@@ -237,7 +237,7 @@ class IssueTestSuite extends BaseTiSparkTest {
     )
 
     assert(try {
-      judge("select a, max(b) from t group by a limit 2")
+      judge("select a, max(b) from t group by a limit 2", canTestTiFlash = true)
       false
     } catch {
       case _: Throwable => true
@@ -305,6 +305,9 @@ class IssueTestSuite extends BaseTiSparkTest {
   }
 
   test("TISPARK-16 fix excessive dag column") {
+    if (enableTiFlashTest) {
+      cancel("ignored in tiflash test")
+    }
     tidbStmt.execute("DROP TABLE IF EXISTS `t1`")
     tidbStmt.execute("DROP TABLE IF EXISTS `t2`")
     tidbStmt.execute(
@@ -344,6 +347,9 @@ class IssueTestSuite extends BaseTiSparkTest {
 
   // https://github.com/pingcap/tispark/issues/262
   test("NPE when decoding datetime,date,timestamp") {
+    if (enableTiFlashTest) {
+      cancel("ignored in tiflash test")
+    }
     tidbStmt.execute("DROP TABLE IF EXISTS `tmp_debug`")
     tidbStmt.execute(
       "CREATE TABLE `tmp_debug` (\n  `tp_datetime` datetime DEFAULT NULL, `tp_date` date DEFAULT NULL, `tp_timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin"
@@ -413,6 +419,9 @@ class IssueTestSuite extends BaseTiSparkTest {
   }
 
   test("test push down filters when using index double read") {
+    if (enableTiFlashTest) {
+      cancel("ignored in tiflash test")
+    }
     explainTestAndCollect(
       "select id_dt, tp_int, tp_double, tp_varchar from full_data_type_table_idx limit 10"
     )
@@ -428,6 +437,9 @@ class IssueTestSuite extends BaseTiSparkTest {
   }
 
   test("unsigned bigint as group by column") {
+    if (enableTiFlashTest) {
+      cancel("ignored in tiflash test")
+    }
     tidbStmt.execute("drop table if exists table_group_by_bigint")
     tidbStmt.execute("""
                        |CREATE TABLE `table_group_by_bigint` (
