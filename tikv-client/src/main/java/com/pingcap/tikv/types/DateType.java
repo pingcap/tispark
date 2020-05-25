@@ -102,11 +102,12 @@ public class DateType extends AbstractDateTimeType {
     return date.toDate().getTime() / (24 * 60 * 60 * 1000);
   }
 
-  //Spark will add timezone offset when convert epoch day to date, so need to consider timezone offset here
-  static public int getEpochDayForSpark(long millisUtc) {
+  // Spark will add timezone offset when convert epoch day to date, so need to consider timezone
+  // offset here
+  public static int getEpochDayForSpark(long millisUtc) {
     DateTimeZone tz = Converter.getLocalTimezone();
     tz.getOffset(millisUtc);
     long millisLocal = millisUtc + tz.getOffset(millisUtc);
-    return (int)Math.floor((double)millisLocal/ 3600 / 24 / 1000);
+    return (int) Math.floor((double) millisLocal / 3600 / 24 / 1000);
   }
 }
