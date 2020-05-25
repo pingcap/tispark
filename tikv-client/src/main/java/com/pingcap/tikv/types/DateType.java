@@ -24,6 +24,7 @@ import com.pingcap.tikv.exception.ConvertNotSupportException;
 import com.pingcap.tikv.exception.ConvertOverflowException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import java.sql.Date;
+import java.util.TimeZone;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 
@@ -105,9 +106,8 @@ public class DateType extends AbstractDateTimeType {
   // Spark will add timezone offset when convert epoch day to date, so need to consider timezone
   // offset here
   public static int getEpochDayForSpark(long millisUtc) {
-    DateTimeZone tz = Converter.getLocalTimezone();
-    tz.getOffset(millisUtc);
+    TimeZone tz = TimeZone.getDefault();
     long millisLocal = millisUtc + tz.getOffset(millisUtc);
-    return (int) Math.floor((double) millisLocal / 3600 / 24 / 1000);
+    return (int) Math.floor((double) millisLocal / (3600 * 24 * 1000));
   }
 }
