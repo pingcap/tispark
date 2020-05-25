@@ -184,8 +184,8 @@ public class TiBlockColumnVector extends TiColumnVector {
     int year = (int) (ym / 13);
     int month = (int) (ym % 13);
     int day = (int) (ymd & ((1 << 5) - 1));
-    LocalDate date = new LocalDate(year, month, day, null);
-    return date.toDate().getTime() / 24 / 3600 / 1000;
+    LocalDate date = new LocalDate(year, month, day);
+    return DateType.getEpochDayForSpark(date.toDate().getTime());
   }
   /**
    * Returns the long type value for rowId. The return value is undefined and can be anything, if

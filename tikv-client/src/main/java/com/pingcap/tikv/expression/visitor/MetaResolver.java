@@ -56,7 +56,8 @@ public class MetaResolver extends DefaultVisitor<Void, Expression> {
     // We may need add a expressionRewriter to address this.
     if (predicate != null) {
       visit(predicate.getColumnRef(), node);
-      predicate.getValue().setDataType(predicate.getColumnRef().getDataType());
+      if (predicate.getValue().getDataType() == null)
+        predicate.getValue().setDataType(predicate.getColumnRef().getDataType());
     }
     return null;
   }
