@@ -163,33 +163,18 @@ public class TiBlockColumnVector extends TiColumnVector {
 
   private long getDateTime(int rowId) {
     long v = MemoryUtil.getLong(dataAddr + (rowId << 3));
-    long ymdhms = v >> 24;
-    long ymd = ymdhms >> 17;
+    long ymdhms = v >>> 24;
+    long ymd = ymdhms >>> 17;
     int day = (int) (ymd & ((1 << 5) - 1));
-    long ym = ymd >> 5;
+    long ym = ymd >>> 5;
     int month = (int) (ym % 13);
     int year = (int) (ym / 13);
 
     int hms = (int) (ymdhms & ((1 << 17) - 1));
     int second = hms & ((1 << 6) - 1);
-    int minute = (hms >> 6) & ((1 << 6) - 1);
-    int hour = hms >> 12;
+    int minute = (hms >>> 6) & ((1 << 6) - 1);
+    int hour = hms >>> 12;
     int microsec = (int) (v % (1 << 24));
-    logger.warn(
-        "Read date/timestamp column: "
-            + year
-            + "-"
-            + month
-            + "-"
-            + day
-            + " "
-            + hour
-            + ":"
-            + minute
-            + ":"
-            + second
-            + "."
-            + microsec);
     Timestamp ts =
         new Timestamp(year - 1900, month - 1, day, hour, minute, second, microsec * 1000);
     return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
@@ -197,26 +182,11 @@ public class TiBlockColumnVector extends TiColumnVector {
 
   private long getTime(int rowId) {
     long v = MemoryUtil.getLong(dataAddr + (rowId << 3));
-    long ymd = v >> 41;
-    long ym = ymd >> 5;
+    long ymd = v >>> 41;
+    long ym = ymd >>> 5;
     int year = (int) (ym / 13);
     int month = (int) (ym % 13);
     int day = (int) (ymd & ((1 << 5) - 1));
-    logger.warn(
-        "Read date/timestamp column: "
-            + year
-            + "-"
-            + month
-            + "-"
-            + day
-            + " "
-            + 0
-            + ":"
-            + 0
-            + ":"
-            + 0
-            + "."
-            + 0);
     LocalDate date = new LocalDate(year, month, day);
     return Math.floorDiv(date.toDate().getTime(), (3600 * 24 * 1000));
   }

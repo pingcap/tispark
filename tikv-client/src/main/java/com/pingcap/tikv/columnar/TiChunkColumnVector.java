@@ -136,21 +136,6 @@ public class TiChunkColumnVector extends TiColumnVector {
       month = 1;
       day = 1;
     }
-    logger.warn(
-        "Read date/timestamp column: "
-            + year
-            + "-"
-            + month
-            + "-"
-            + day
-            + " "
-            + hour
-            + ":"
-            + minute
-            + ":"
-            + second
-            + "."
-            + microsecond);
     if (this.type instanceof DateType) {
       LocalDate date = new LocalDate(year, month, day);
       return Math.floorDiv(date.toDate().getTime(), (3600 * 24 * 1000));
