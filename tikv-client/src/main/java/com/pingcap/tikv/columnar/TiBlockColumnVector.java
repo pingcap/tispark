@@ -12,6 +12,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import org.joda.time.LocalDate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TiBlockColumnVector extends TiColumnVector {
   private int fixedLength;
@@ -24,6 +26,7 @@ public class TiBlockColumnVector extends TiColumnVector {
 
   long dataAddr;
   ByteBuffer data;
+  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   public TiBlockColumnVector(CHType type, ByteBuffer data, int numOfRows, int fixedLength) {
     super(type.toDataType(), numOfRows);
@@ -172,6 +175,21 @@ public class TiBlockColumnVector extends TiColumnVector {
     int minute = (hms >> 6) & ((1 << 6) - 1);
     int hour = hms >> 12;
     int microsec = (int) (v % (1 << 24));
+    logger.warn(
+        "Read date/timestamp column: "
+            + year
+            + "-"
+            + month
+            + "-"
+            + day
+            + " "
+            + hour
+            + ":"
+            + minute
+            + ":"
+            + second
+            + "."
+            + microsec);
     Timestamp ts =
         new Timestamp(year - 1900, month - 1, day, hour, minute, second, microsec * 1000);
     return ts.getTime() / 1000 * 1000000 + ts.getNanos() / 1000;
@@ -184,6 +202,21 @@ public class TiBlockColumnVector extends TiColumnVector {
     int year = (int) (ym / 13);
     int month = (int) (ym % 13);
     int day = (int) (ymd & ((1 << 5) - 1));
+    logger.warn(
+        "Read date/timestamp column: "
+            + year
+            + "-"
+            + month
+            + "-"
+            + day
+            + " "
+            + 0
+            + ":"
+            + 0
+            + ":"
+            + 0
+            + "."
+            + 0);
     LocalDate date = new LocalDate(year, month, day);
     return Math.floorDiv(date.toDate().getTime(), (3600 * 24 * 1000));
   }
