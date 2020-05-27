@@ -4,6 +4,7 @@ import static com.pingcap.tikv.util.MemoryUtil.EMPTY_BYTE_BUFFER_DIRECT;
 
 import com.pingcap.tikv.columnar.datatypes.CHType;
 import com.pingcap.tikv.types.AbstractDateTimeType;
+import com.pingcap.tikv.types.BytesType;
 import com.pingcap.tikv.types.DateType;
 import com.pingcap.tikv.util.MemoryUtil;
 import java.math.BigDecimal;
@@ -159,17 +160,17 @@ public class TiBlockColumnVector extends TiColumnVector {
 
   private long getDateTime(int rowId) {
     long v = MemoryUtil.getLong(dataAddr + (rowId << 3));
-    long ymdhms = v >> 24;
-    long ymd = ymdhms >> 17;
+    long ymdhms = v >>> 24;
+    long ymd = ymdhms >>> 17;
     int day = (int) (ymd & ((1 << 5) - 1));
-    long ym = ymd >> 5;
+    long ym = ymd >>> 5;
     int month = (int) (ym % 13);
     int year = (int) (ym / 13);
 
     int hms = (int) (ymdhms & ((1 << 17) - 1));
     int second = hms & ((1 << 6) - 1);
-    int minute = (hms >> 6) & ((1 << 6) - 1);
-    int hour = hms >> 12;
+    int minute = (hms >>> 6) & ((1 << 6) - 1);
+    int hour = hms >>> 12;
     int microsec = (int) (v % (1 << 24));
     Timestamp ts =
         new Timestamp(year - 1900, month - 1, day, hour, minute, second, microsec * 1000);
@@ -178,13 +179,13 @@ public class TiBlockColumnVector extends TiColumnVector {
 
   private long getTime(int rowId) {
     long v = MemoryUtil.getLong(dataAddr + (rowId << 3));
-    long ymd = v >> 41;
-    long ym = ymd >> 5;
+    long ymd = v >>> 41;
+    long ym = ymd >>> 5;
     int year = (int) (ym / 13);
     int month = (int) (ym % 13);
     int day = (int) (ymd & ((1 << 5) - 1));
-    LocalDate date = new LocalDate(year, month, day, null);
-    return date.toDate().getTime() / 24 / 3600 / 1000;
+    LocalDate date = new LocalDate(year, month, day);
+    return Math.floorDiv(date.toDate().getTime(), AbstractDateTimeType.MILLS_PER_DAY);
   }
   /**
    * Returns the long type value for rowId. The return value is undefined and can be anything, if
@@ -281,7 +282,16 @@ public class TiBlockColumnVector extends TiColumnVector {
    */
   @Override
   public byte[] getBinary(int rowId) {
-    throw new UnsupportedOperationException("get Binary for TiBlockColumnVector is not supported");
+    if (type.equals(BytesType.BLOB) || type.equals(BytesType.TINY_BLOB)) {
+      long offset = (dataAddr + offsetAt(rowId));
+      int numBytes = sizeAt(rowId) - 1;
+      byte[] ret = new byte[numBytes];
+      MemoryUtil.getBytes(offset, ret, 0, numBytes);
+      return ret;
+    } else {
+      throw new UnsupportedOperationException(
+          "get Binary for TiBlockColumnVector is not supported");
+    }
   }
 
   /** @return child [[TiColumnVector]] at the given ordinal. */

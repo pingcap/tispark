@@ -83,6 +83,10 @@ public class IntegerType extends DataType {
     return result;
   }
 
+  public boolean isSameCatalog(DataType other) {
+    return other instanceof IntegerType;
+  }
+
   /** {@inheritDoc} */
   @Override
   protected Object decodeNotNull(int flag, CodecDataInput cdi) {

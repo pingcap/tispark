@@ -50,30 +50,30 @@ public class TiCoreTime {
   }
 
   public int getYear() {
-    return (int) ((coreTime & YEAR_BIT_FIELD_MASK) >> YEAR_BIT_FIELD_OFFSET);
+    return (int) ((coreTime & YEAR_BIT_FIELD_MASK) >>> YEAR_BIT_FIELD_OFFSET);
   }
 
   public int getMonth() {
-    return (int) ((coreTime & MONTH_BIT_FIELD_MASK) >> MONTH_BIT_FIELD_OFFSET);
+    return (int) ((coreTime & MONTH_BIT_FIELD_MASK) >>> MONTH_BIT_FIELD_OFFSET);
   }
 
   public int getDay() {
-    return (int) ((coreTime & DAY_BIT_FIELD_MASK) >> DAY_BIT_FIELD_OFFSET);
+    return (int) ((coreTime & DAY_BIT_FIELD_MASK) >>> DAY_BIT_FIELD_OFFSET);
   }
 
   public int getHour() {
-    return (int) ((coreTime & HOUR_BIT_FIELD_MASK) >> HOUR_BIT_FIELD_OFFSET);
+    return (int) ((coreTime & HOUR_BIT_FIELD_MASK) >>> HOUR_BIT_FIELD_OFFSET);
   }
 
   public int getMinute() {
-    return (int) ((coreTime & MINUTE_BIT_FIELD_MASK) >> MINUTE_BIT_FIELD_OFFSET);
+    return (int) ((coreTime & MINUTE_BIT_FIELD_MASK) >>> MINUTE_BIT_FIELD_OFFSET);
   }
 
   public int getSecond() {
-    return (int) ((coreTime & SECOND_BIT_FIELD_MASK) >> SECOND_BIT_FIELD_OFFSET);
+    return (int) ((coreTime & SECOND_BIT_FIELD_MASK) >>> SECOND_BIT_FIELD_OFFSET);
   }
 
   public long getMicroSecond() {
-    return (coreTime & MICROSECOND_BIT_FIELD_MASK) >> MICROSECOND_BIT_FIELD_OFFSET;
+    return (coreTime & MICROSECOND_BIT_FIELD_MASK) >>> MICROSECOND_BIT_FIELD_OFFSET;
   }
 }

@@ -56,7 +56,16 @@ public class MetaResolver extends DefaultVisitor<Void, Expression> {
     // We may need add a expressionRewriter to address this.
     if (predicate != null) {
       visit(predicate.getColumnRef(), node);
-      predicate.getValue().setDataType(predicate.getColumnRef().getDataType());
+      // do not set the constant data type to the column ref data type if they are the
+      // same catalog because it may narrow the constant type, and cause wrong result.
+      // for example when the filter is `bit_col op long_constant`, set long_constant
+      // to bit type will truncated the long_constant, and may cause wrong result
+      if (predicate.getValue().getDataType() == null
+          || !predicate
+              .getValue()
+              .getDataType()
+              .isSameCatalog(predicate.getColumnRef().getDataType()))
+        predicate.getValue().setDataType(predicate.getColumnRef().getDataType());
     }
     return null;
   }
