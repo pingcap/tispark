@@ -3,6 +3,7 @@ package com.pingcap.tispark
 import java.sql.{Connection, Driver, DriverManager}
 import java.util.Properties
 
+import com.pingcap.tispark.write.TiDBOptions
 import org.apache.spark.sql.execution.datasources.jdbc.{DriverRegistry, DriverWrapper}
 
 import scala.util.Try

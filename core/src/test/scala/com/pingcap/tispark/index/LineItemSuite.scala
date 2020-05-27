@@ -15,7 +15,7 @@
 
 package com.pingcap.tispark.index
 
-import com.pingcap.tispark.{TiBatchWrite, TiDBOptions}
+import com.pingcap.tispark.write.{TiBatchWrite, TiDBOptions}
 import org.apache.spark.sql.BaseTiSparkTest
 import org.apache.spark.sql.functions._
 
@@ -53,7 +53,7 @@ class LineItemSuite extends BaseTiSparkTest {
     val df = sql(s"select * from $table $where")
 
     // batch write
-    TiBatchWrite.writeToTiDB(
+    TiBatchWrite.write(
       df,
       ti,
       new TiDBOptions(
@@ -111,7 +111,7 @@ class LineItemSuite extends BaseTiSparkTest {
     val df = sql(s"select * from $table $where")
       .withColumn("FAKEKEY", expr("monotonically_increasing_id()"))
 
-    TiBatchWrite.writeToTiDB(
+    TiBatchWrite.write(
       df,
       ti,
       new TiDBOptions(
@@ -179,7 +179,7 @@ class LineItemSuite extends BaseTiSparkTest {
       .withColumn("FAKEKEY", expr("monotonically_increasing_id()"))
     val dfCount1 = df1.count().toInt
 
-    TiBatchWrite.writeToTiDB(
+    TiBatchWrite.write(
       df1,
       ti,
       new TiDBOptions(
@@ -194,7 +194,7 @@ class LineItemSuite extends BaseTiSparkTest {
       s"select FAKEKEY, L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, CONCAT(L_COMMENT, '_t') AS L_COMMENT from global_temp.`$tmpView` limit $dfCount2"
     )
 
-    TiBatchWrite.writeToTiDB(
+    TiBatchWrite.write(
       df2,
       ti,
       new TiDBOptions(
@@ -262,7 +262,7 @@ class LineItemSuite extends BaseTiSparkTest {
       .withColumn("FAKEKEY", expr("monotonically_increasing_id()"))
     val dfCount1 = df1.count().toInt
 
-    TiBatchWrite.writeToTiDB(
+    TiBatchWrite.write(
       df1,
       ti,
       new TiDBOptions(
@@ -277,7 +277,7 @@ class LineItemSuite extends BaseTiSparkTest {
       s"select FAKEKEY, L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, CONCAT(L_COMMENT, '_t') AS L_COMMENT from global_temp.`$tmpView` limit $dfCount2"
     )
 
-    TiBatchWrite.writeToTiDB(
+    TiBatchWrite.write(
       df2,
       ti,
       new TiDBOptions(
