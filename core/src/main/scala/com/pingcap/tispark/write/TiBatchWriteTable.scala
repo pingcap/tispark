@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 PingCAP, Inc.
+ * Copyright 2020 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,201 +13,90 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark
+package com.pingcap.tispark.write
 
 import java.sql.SQLException
 import java.util
 
 import com.google.protobuf.ByteString
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.codec.{CodecDataOutput, KeyUtils, TableCodec}
+import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
 import com.pingcap.tikv.exception.TiBatchWriteException
-import com.pingcap.tikv.key.{IndexKey, Key, RowKey}
-import com.pingcap.tikv.meta.{TiColumnInfo, TiDBInfo, TiTableInfo, _}
+import com.pingcap.tikv.key.{IndexKey, RowKey}
+import com.pingcap.tikv.meta._
 import com.pingcap.tikv.region.TiRegion
 import com.pingcap.tikv.row.ObjectRowImpl
 import com.pingcap.tikv.types.DataType.EncodeType
 import com.pingcap.tikv.types.IntegerType
-import com.pingcap.tikv.util.{BackOffer, ConcreteBackOffer}
-import com.pingcap.tikv.{TTLManager, TiBatchWriteUtils, TiDBJDBCClient, _}
-import com.pingcap.tispark.TiBatchWrite.TiRow
+import com.pingcap.tikv.{TiBatchWriteUtils, TiConfiguration, TiDBJDBCClient, TiSession}
+import com.pingcap.tispark.TiTableReference
 import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.{Partitioner, SparkConf}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.functions.lit
-import org.apache.spark.sql.{DataFrame, Row, TiContext}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{TiContext, _}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object TiBatchWrite {
-  // Milliseconds
-  private val MIN_DELAY_CLEAN_TABLE_LOCK = 60000
-  private val DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA = 30000
-  private val PRIMARY_KEY_COMMIT_BACKOFF = MIN_DELAY_CLEAN_TABLE_LOCK - DELAY_CLEAN_TABLE_LOCK_AND_COMMIT_BACKOFF_DELTA
-
-  type SparkRow = org.apache.spark.sql.Row
-  type TiRow = com.pingcap.tikv.row.Row
-  type TiDataType = com.pingcap.tikv.types.DataType
-
-  @throws(classOf[NoSuchTableException])
-  @throws(classOf[TiBatchWriteException])
-  def writeToTiDB(df: DataFrame, tiContext: TiContext, options: TiDBOptions): Unit =
-    new TiBatchWrite(df, tiContext, options).write()
-}
-
-class TiBatchWrite(@transient val df: DataFrame,
-                   @transient val tiContext: TiContext,
-                   options: TiDBOptions)
+class TiBatchWriteTable(@transient val df: DataFrame,
+                        @transient val tiContext: TiContext,
+                        val options: TiDBOptions,
+                        val tiConf: TiConfiguration,
+                        @transient val tiDBJDBCClient: TiDBJDBCClient,
+                        val isEnableSplitRegion: Boolean)
     extends Serializable {
   private final val logger = LoggerFactory.getLogger(getClass.getName)
 
   import TiBatchWrite._
 
-  private var tiConf: TiConfiguration = _
-  @transient private var tiSession: TiSession = _
-
   private var tiTableRef: TiTableReference = _
   private var tiDBInfo: TiDBInfo = _
   private var tiTableInfo: TiTableInfo = _
-
   private var tableColSize: Int = _
-
   private var colsMapInTiDB: Map[String, TiColumnInfo] = _
-
   private var colsInDf: List[String] = _
-
   private var uniqueIndices: List[TiIndexInfo] = _
   private var handleCol: TiColumnInfo = _
-
-  @transient private var tiDBJDBCClient: TiDBJDBCClient = _
-  private var useTableLock: Boolean = _
-  private var isEnableSplitRegion: Boolean = _
+  @transient private val tiSession = tiContext.tiSession
   private var tableLocked: Boolean = false
 
-  @transient private var ttlManager: TTLManager = _
-  private var isTTLUpdate: Boolean = _
-  private var lockTTLSeconds: Long = _
+  tiTableRef = options.getTiTableRef(tiConf)
+  tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
+  tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
 
-  @throws(classOf[NoSuchTableException])
-  @throws(classOf[TiBatchWriteException])
-  private def write(): Unit = {
-    try {
-      doWrite()
-    } finally {
-      close()
-    }
+  if (tiTableInfo == null) {
+    throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
   }
 
-  private def close(): Unit = {
-    try {
-      unlockTable()
-    } catch {
-      case _: Throwable =>
-    }
+  colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
+  colsInDf = df.columns.toList.map(_.toLowerCase())
+  uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
+  handleCol = tiTableInfo.getPKIsHandleColumn
+  tableColSize = tiTableInfo.getColumns.size()
 
-    try {
-      if (ttlManager != null) {
-        ttlManager.close()
-      }
-    } catch {
-      case _: Throwable =>
-    }
-
-    try {
-      if (tiDBJDBCClient != null) {
-        tiDBJDBCClient.close()
-      }
-    } catch {
-      case _: Throwable =>
-    }
-  }
-
-  private def mergeSparkConfWithDataSourceConf(conf: SparkConf,
-                                               options: TiDBOptions): TiConfiguration = {
-    val clonedConf = conf.clone()
-    // priority: data source config > spark config
-    clonedConf.setAll(options.parameters)
-    TiUtil.sparkConfToTiConf(clonedConf)
-  }
-
-  @throws(classOf[NoSuchTableException])
-  @throws(classOf[TiBatchWriteException])
-  private def doWrite(): Unit = {
-    // check if write enable
-    if (!tiContext.tiConf.isWriteEnable) {
-      throw new TiBatchWriteException(
-        "tispark batch write is disabled! set spark.tispark.write.enable to enable."
-      )
-    }
-
-    // initialize
-    tiConf = mergeSparkConfWithDataSourceConf(tiContext.conf, options)
-    tiSession = tiContext.tiSession
-    tiTableRef = options.getTiTableRef(tiConf)
-    tiDBInfo = tiSession.getCatalog.getDatabase(tiTableRef.databaseName)
-    tiTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
-
-    if (tiTableInfo == null) {
-      throw new NoSuchTableException(tiTableRef.databaseName, tiTableRef.tableName)
-    }
-
-    colsMapInTiDB = tiTableInfo.getColumns.asScala.map(col => col.getName -> col).toMap
-    colsInDf = df.columns.toList.map(_.toLowerCase())
-    uniqueIndices = tiTableInfo.getIndices.asScala.filter(index => index.isUnique).toList
-    handleCol = tiTableInfo.getPKIsHandleColumn
-    tableColSize = tiTableInfo.getColumns.size()
-
-    val tikvSupportUpdateTTL = StoreVersion.minTiKVVersion("3.0.5", tiSession.getPDClient)
-    isTTLUpdate = options.isTTLUpdate(tikvSupportUpdateTTL)
-    lockTTLSeconds = options.getLockTTLSeconds(tikvSupportUpdateTTL)
-
-    // check unsupported
-    checkUnsupported()
-
-    // cache data
+  def persist(): Unit = {
     df.persist(org.apache.spark.storage.StorageLevel.MEMORY_AND_DISK)
+  }
 
-    // check empty
+  def isDFEmpty(): Boolean = {
     if (TiUtil.isDataFrameEmpty(df)) {
-      logger.warn("data is empty!")
-      return
+      logger.warn(s"the dataframe write to $tiTableRef is empty!")
+      true
+    } else {
+      false
     }
+  }
 
-    // lock table
-    tiDBJDBCClient = new TiDBJDBCClient(TiDBUtils.createConnectionFactory(options.url)())
-    useTableLock = {
-      if (!options.useTableLock) {
-        false
-      } else {
-        if (tiDBJDBCClient.isEnableTableLock) {
-          if (tiDBJDBCClient.getDelayCleanTableLock >= MIN_DELAY_CLEAN_TABLE_LOCK) {
-            true
-          } else {
-            logger.warn(
-              s"table lock disabled! to enable table lock, please set tidb config: delay-clean-table-lock >= $MIN_DELAY_CLEAN_TABLE_LOCK"
-            )
-            false
-          }
-        } else {
-          false
-        }
-      }
+  def checkSchemaChange(): Unit = {
+    val newTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
+    if (tiTableInfo.getUpdateTimestamp < newTableInfo.getUpdateTimestamp) {
+      throw new TiBatchWriteException("schema has changed during prewrite!")
     }
-    if (!useTableLock) {
-      logger.warn(
-        s"table lock disabled! to enable table lock, please set tidb config: enable-table-lock = true"
-      )
-    }
+  }
 
-    isEnableSplitRegion = tiDBJDBCClient.isEnableSplitRegion
-    lockTable()
-
-    // check schema
-    checkColumnNumbers()
-
+  def preCalculate(startTimeStamp: TiTimestamp): RDD[(SerializableKey, Array[Byte])] = {
     // auto increment
     val rdd = if (tiTableInfo.hasAutoIncrementColumn) {
       val isProvidedID = tableColSize == colsInDf.length
@@ -266,11 +155,6 @@ class TiBatchWrite(@transient val df: DataFrame,
 
     // check value not null
     checkValueNotNull(tiRowRdd)
-
-    // get timestamp as start_ts
-    val startTimeStamp = tiSession.getTimestamp
-    val startTs = startTimeStamp.getVersion
-    logger.info(s"startTS: $startTs")
 
     // for partition table, we need calculate each row and tell which physical table
     // that row is belong to.
@@ -350,137 +234,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     )
     // shuffle data in same task which belong to same region
     val shuffledRDD = shuffleKeyToSameRegion(encodedKVPairRDD).cache()
-
-    // take one row as primary key
-    val (primaryKey: SerializableKey, primaryRow: Array[Byte]) = {
-      val takeOne = shuffledRDD.take(1)
-      if (takeOne.length == 0) {
-        logger.warn("there is no data in source rdd")
-        return
-      } else {
-        takeOne(0)
-      }
-    }
-
-    logger.info(s"primary key: $primaryKey")
-
-    // filter primary key
-    val secondaryKeysRDD = shuffledRDD.filter { keyValue =>
-      !keyValue._1.equals(primaryKey)
-    }
-
-    // driver primary pre-write
-    val ti2PCClient = new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
-    val prewritePrimaryBackoff =
-      ConcreteBackOffer.newCustomBackOff(BackOffer.BATCH_PREWRITE_BACKOFF)
-    logger.info("start to prewritePrimaryKey")
-    ti2PCClient.prewritePrimaryKey(prewritePrimaryBackoff, primaryKey.bytes, primaryRow)
-    logger.info("prewritePrimaryKey success")
-
-    // for test
-    if (options.sleepAfterPrewritePrimaryKey > 0) {
-      logger.info(s"sleep ${options.sleepAfterPrewritePrimaryKey} ms for test")
-      Thread.sleep(options.sleepAfterPrewritePrimaryKey)
-    }
-
-    // start primary key ttl update
-    if (isTTLUpdate) {
-      ttlManager = new TTLManager(tiConf, startTs, primaryKey.bytes)
-      ttlManager.keepAlive()
-    }
-
-    // executors secondary pre-write
-    logger.info("start to prewriteSecondaryKeys")
-    secondaryKeysRDD.foreachPartition { iterator =>
-      val ti2PCClientOnExecutor =
-        new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
-
-      val pairs = iterator.map { keyValue =>
-        new TwoPhaseCommitter.BytePairWrapper(
-          keyValue._1.bytes,
-          keyValue._2
-        )
-      }.asJava
-
-      ti2PCClientOnExecutor.prewriteSecondaryKeys(primaryKey.bytes, pairs)
-
-      try {
-        ti2PCClientOnExecutor.close()
-      } catch {
-        case _: Throwable =>
-      }
-    }
-    logger.info("prewriteSecondaryKeys success")
-
-    // for test
-    if (options.sleepAfterPrewriteSecondaryKey > 0) {
-      logger.info(s"sleep ${options.sleepAfterPrewriteSecondaryKey} ms for test")
-      Thread.sleep(options.sleepAfterPrewriteSecondaryKey)
-    }
-
-    // driver primary commit
-    val commitTs = tiSession.getTimestamp.getVersion
-    // check commitTS
-    if (commitTs <= startTs) {
-      throw new TiBatchWriteException(
-        s"invalid transaction tso with startTs=$startTs, commitTs=$commitTs"
-      )
-    }
-
-    if (!useTableLock && isSchemaChanged()) {
-      throw new TiBatchWriteException("schema has changed during prewrite!")
-    }
-
-    // for test
-    if (options.sleepAfterGetCommitTS > 0) {
-      logger.info(s"sleep ${options.sleepAfterGetCommitTS} ms for test")
-      Thread.sleep(options.sleepAfterGetCommitTS)
-    }
-
-    val commitPrimaryBackoff = ConcreteBackOffer.newCustomBackOff(PRIMARY_KEY_COMMIT_BACKOFF)
-
-    if (connectionLost()) {
-      throw new TiBatchWriteException("tidb's jdbc connection is lost!")
-    }
-    logger.info("start to commitPrimaryKey")
-    ti2PCClient.commitPrimaryKey(commitPrimaryBackoff, primaryKey.bytes, commitTs)
-    logger.info("commitPrimaryKey success")
-
-    // stop primary key ttl update
-    if (isTTLUpdate) {
-      ttlManager.close()
-    }
-
-    // unlock table
-    unlockTable()
-
-    // executors secondary commit
-    if (!options.skipCommitSecondaryKey) {
-      logger.info("start to commitSecondaryKeys")
-      secondaryKeysRDD.foreachPartition { iterator =>
-        val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
-
-        val keys = iterator.map { keyValue =>
-          new TwoPhaseCommitter.ByteWrapper(keyValue._1.bytes)
-        }.asJava
-
-        try {
-          ti2PCClientOnExecutor.commitSecondaryKeys(keys, commitTs)
-        } catch {
-          case e: TiBatchWriteException =>
-            // ignored
-            logger.warn(s"commit secondary key error", e)
-        }
-      }
-      logger.info("commitSecondaryKeys finish")
-    } else {
-      logger.info("skipping commit secondary key")
-    }
-  }
-
-  private def isSchemaChanged(): Boolean = {
-    val newTableInfo = tiSession.getCatalog.getTable(tiTableRef.databaseName, tiTableRef.tableName)
-    tiTableInfo.getUpdateTimestamp < newTableInfo.getUpdateTimestamp
+    shuffledRDD
   }
 
   private def getAutoTableIdStart(step: Long): Long = {
@@ -495,37 +249,19 @@ class TiBatchWrite(@transient val df: DataFrame,
       .getStart
   }
 
-  @throws(classOf[TiBatchWriteException])
-  private def lockTable(): Unit = {
-    if (useTableLock) {
-      if (!tableLocked) {
-        tiDBJDBCClient.lockTableWriteLocal(options.database, options.table)
-        tableLocked = true
-      } else {
-        logger.warn("table already locked!")
-      }
+  def lockTable(): Unit = {
+    if (!tableLocked) {
+      tiDBJDBCClient.lockTableWriteLocal(options.database, options.table)
+      tableLocked = true
     } else {
-      if (tiContext.tiConf.isWriteWithoutLockTable) {
-        logger.warn("write without lock table enabled! only for test!")
-      } else {
-        throw new TiBatchWriteException("current tidb does not support LockTable or is disabled!")
-      }
+      logger.warn("table already locked!")
     }
   }
 
-  @throws(classOf[TiBatchWriteException])
-  private def unlockTable(): Unit = {
-    if (useTableLock) {
-      if (tableLocked) {
-        tiDBJDBCClient.unlockTables()
-        tableLocked = false
-      }
-    } else {
-      if (tiContext.tiConf.isWriteWithoutLockTable) {
-        logger.warn("write without lock table enabled! only for test!")
-      } else {
-        throw new TiBatchWriteException("current tidb does not support LockTable or is disabled!")
-      }
+  def unlockTable(): Unit = {
+    if (tableLocked) {
+      tiDBJDBCClient.unlockTables()
+      tableLocked = false
     }
   }
 
@@ -652,17 +388,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
   }
 
-  private def connectionLost(): Boolean = {
-    if (useTableLock) {
-      tiDBJDBCClient.isClosed
-    } else {
-      // TODO: what if version of tidb does not support lock table
-      false
-    }
-  }
-
-  @throws(classOf[TiBatchWriteException])
-  private def checkUnsupported(): Unit = {
+  def checkUnsupported(): Unit = {
     // write to partition table
     if (tiTableInfo.isPartitionEnabled) {
       throw new TiBatchWriteException(
@@ -678,7 +404,7 @@ class TiBatchWrite(@transient val df: DataFrame,
     }
   }
 
-  private def checkColumnNumbers(): Unit = {
+  def checkColumnNumbers(): Unit = {
     if (!tiTableInfo.hasAutoIncrementColumn && colsInDf.length != tableColSize) {
       throw new TiBatchWriteException(
         s"table without auto increment column, but data col size ${colsInDf.length} != table column size $tableColSize"
@@ -1065,68 +791,4 @@ class TiBatchWrite(@transient val df: DataFrame,
       }
     }
   }
-}
-
-class TiRegionPartitioner(regions: util.List[TiRegion], writeConcurrency: Int) extends Partitioner {
-  def binarySearch(key: Key): Int = {
-    if (regions.get(0).contains(key)) {
-      return 0
-    }
-    var l = 0
-    var r = regions.size()
-    while (l < r) {
-      val mid = l + (r - l) / 2
-      val region = regions.get(mid)
-      if (Key.toRawKey(region.getEndKey).compareTo(key) <= 0) {
-        l = mid + 1
-      } else {
-        r = mid
-      }
-    }
-    assert(regions.get(l).contains(key))
-    l
-  }
-
-  override def numPartitions: Int = if (writeConcurrency <= 0) regions.size() else writeConcurrency
-
-  override def getPartition(key: Any): Int = {
-    val serializableKey = key.asInstanceOf[SerializableKey]
-    val rawKey = Key.toRawKey(serializableKey.bytes)
-
-    binarySearch(rawKey) % numPartitions
-  }
-}
-
-case class WrappedRow(row: TiRow, handle: Long)
-
-case class WrappedEncodedRow(row: TiRow,
-                             handle: Long,
-                             encodedKey: SerializableKey,
-                             encodedValue: Array[Byte],
-                             isIndex: Boolean,
-                             indexId: Long,
-                             remove: Boolean)
-    extends Ordered[WrappedEncodedRow] {
-  override def compare(that: WrappedEncodedRow): Int = this.handle.toInt - that.handle.toInt
-
-  override def hashCode(): Int = encodedKey.hashCode()
-}
-
-// EncodedKVPair is used at last stage if write process.
-// At this stage, sorting should not be happened anymore.
-case class EncodedKVPair(encodedKey: SerializableKey, encodedValue: Array[Byte]) {
-  override def hashCode(): Int = encodedKey.hashCode()
-}
-
-class SerializableKey(val bytes: Array[Byte]) extends Serializable {
-  override def toString: String = KeyUtils.formatBytes(bytes)
-
-  override def equals(that: Any): Boolean =
-    that match {
-      case that: SerializableKey => this.bytes.sameElements(that.bytes)
-      case _                     => false
-    }
-
-  override def hashCode(): Int =
-    util.Arrays.hashCode(bytes)
 }

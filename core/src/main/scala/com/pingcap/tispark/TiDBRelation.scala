@@ -20,6 +20,7 @@ import com.pingcap.tikv.exception.{TiBatchWriteException, TiClientInternalExcept
 import com.pingcap.tikv.meta.{TiDAGRequest, TiTableInfo, TiTimestamp}
 import com.pingcap.tispark.utils.ReflectionUtil.newAttributeReference
 import com.pingcap.tispark.utils.TiUtil
+import com.pingcap.tispark.write.{TiDBOptions, TiDBWriter}
 import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.sources.{BaseRelation, InsertableRelation}
