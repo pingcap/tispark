@@ -191,7 +191,7 @@ abstract class QueryTest extends SparkFunSuite {
           // the result order may be different in TiDB and TiSpark, so compare result as follows
           // 1. compare directly
           // 2. if 1 fails, use `NullableListOrdering` to sort the result, then compare
-          // 3. if 2 fails and the sql does not contains `order by`, use string compare the sort the result, then compare
+          // 3. if 2 fails and the sql does not contains `order by`, use string based `sortComp` to sort the result, then compare
           var result = comp(
             lhs,
             rhs
