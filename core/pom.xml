@@ -97,6 +97,11 @@
             <version>2.7.2</version>
             <scope>${spark.scope}</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>19.0</version>
+        </dependency>
         <!-- For tests -->
         <dependency>
             <groupId>org.scalatest</groupId>
@@ -310,6 +315,30 @@
                     <!-- Rename Jar to contain Spark Version -->
                     <!--<finalName>${artifactId}-${version}-spark-${spark.version}-jar-with-dependencies</finalName>-->
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.google.common</pattern>
+                                    <shadedPattern>com.pingcap.com.google.common</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <!-- Scala Format Plug-in -->
             <plugin>
