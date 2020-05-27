@@ -99,6 +99,6 @@ public class DateType extends AbstractDateTimeType {
       return null;
     }
     // return how many days from EPOCH
-    return Math.floorDiv(date.toDate().getTime(), (3600 * 24 * 1000));
+    return Math.floorDiv(date.toDate().getTime(), AbstractDateTimeType.MILLS_PER_DAY);
   }
 }
