@@ -23,8 +23,6 @@ import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import org.joda.time.LocalDate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
 public class TiChunkColumnVector extends TiColumnVector {
@@ -38,8 +36,6 @@ public class TiChunkColumnVector extends TiColumnVector {
   private long[] offsets;
 
   private ByteBuffer data;
-
-  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   public TiChunkColumnVector(
       DataType dataType,

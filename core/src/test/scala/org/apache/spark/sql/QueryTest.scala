@@ -187,20 +187,32 @@ abstract class QueryTest extends SparkFunSuite {
       try {
         if (lhs.length != rhs.length) {
           false
-        } else if (!isOrdered) {
-          comp(
-            lhs.sortWith((_1, _2) => sortComp(_1, _2)),
-            rhs.sortWith((_1, _2) => sortComp(_1, _2))
-          )
         } else {
-          implicit object NullableListOrdering extends Ordering[List[Any]] {
-            override def compare(p1: List[Any], p2: List[Any]): Int =
-              p1.contains(null).compareTo(p2.contains(null))
-          }
-          comp(
-            lhs.sortBy[List[Any]](x => x),
-            rhs.sortBy[List[Any]](x => x)
+          // the result order may be different in TiDB and TiSpark, so compare result as follows
+          // 1. compare directly
+          // 2. if 1 fails, use `NullableListOrdering` to sort the result, then compare
+          // 3. if 2 fails and the sql does not contains `order by`, use string compare the sort the result, then compare
+          var result = comp(
+            lhs,
+            rhs
           )
+          if (!result) {
+            implicit object NullableListOrdering extends Ordering[List[Any]] {
+              override def compare(p1: List[Any], p2: List[Any]): Int =
+                p1.contains(null).compareTo(p2.contains(null))
+            }
+            result = comp(
+              lhs.sortBy[List[Any]](x => x),
+              rhs.sortBy[List[Any]](x => x)
+            )
+          }
+          if (!result && !isOrdered) {
+            result = comp(
+              lhs.sortWith((_1, _2) => sortComp(_1, _2)),
+              rhs.sortWith((_1, _2) => sortComp(_1, _2))
+            )
+          }
+          result
         }
       } catch {
         // TODO:Remove this temporary exception handling

@@ -12,8 +12,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import org.joda.time.LocalDate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TiBlockColumnVector extends TiColumnVector {
   private int fixedLength;
@@ -26,7 +24,6 @@ public class TiBlockColumnVector extends TiColumnVector {
 
   long dataAddr;
   ByteBuffer data;
-  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
   public TiBlockColumnVector(CHType type, ByteBuffer data, int numOfRows, int fixedLength) {
     super(type.toDataType(), numOfRows);
