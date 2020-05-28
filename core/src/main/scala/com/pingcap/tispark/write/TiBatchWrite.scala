@@ -23,7 +23,7 @@ import com.pingcap.tispark.TiDBUtils
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.analysis.NoSuchTableException
-import org.apache.spark.sql.{DataFrame, TiContext}
+import org.apache.spark.sql.{DataFrame, SparkSession, TiContext, TiExtensions}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -48,13 +48,18 @@ object TiBatchWrite {
   @throws(classOf[NoSuchTableException])
   @throws(classOf[TiBatchWriteException])
   def write(dataToWrite: Map[DBTable, DataFrame],
-            tiContext: TiContext,
+            sparkSession: SparkSession,
             parameters: Map[String, String]): Unit = {
-    new TiBatchWrite(
-      dataToWrite,
-      tiContext,
-      new TiDBOptions(parameters ++ Map(TiDBOptions.TIDB_MULTI_TABLES -> "true"))
-    ).write()
+    TiExtensions.getTiContext(sparkSession) match {
+      case Some(tiContext) =>
+        new TiBatchWrite(
+          dataToWrite,
+          tiContext,
+          new TiDBOptions(parameters ++ Map(TiDBOptions.TIDB_MULTI_TABLES -> "true"))
+        ).write()
+      case None =>
+        throw new TiBatchWriteException("TiExtensions is disable!")
+    }
   }
 }
 
