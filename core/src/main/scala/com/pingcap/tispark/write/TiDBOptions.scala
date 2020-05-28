@@ -97,6 +97,9 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   // ttlMode = { "FIXED", "UPDATE", "DEFAULT" }
   val ttlMode: String = parameters.getOrElse(TIDB_TTL_MODE, "DEFAULT").toUpperCase()
 
+  val useSnapshotBatchGet: Boolean =
+    parameters.getOrElse(TIDB_USE_SNAPSHOT_BATCH_GET, "true").toBoolean
+
   val snapshotBatchGetSize: Int = parameters.getOrElse(TIDB_SNAPSHOT_BATCH_GET_SIZE, "2048").toInt
 
   val useTableLock: Boolean = parameters.getOrElse(TIDB_USE_TABLE_LOCK, "true").toBoolean
@@ -192,6 +195,7 @@ object TiDBOptions {
   val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
   val TIDB_WRITE_CONCURRENCY: String = newOption("writeConcurrency")
   val TIDB_TTL_MODE: String = newOption("ttlMode")
+  val TIDB_USE_SNAPSHOT_BATCH_GET: String = newOption("useSnapshotBatchGet")
   val TIDB_SNAPSHOT_BATCH_GET_SIZE: String = newOption("snapshotBatchGetSize")
   val TIDB_USE_TABLE_LOCK: String = newOption("useTableLock")
   val TIDB_MULTI_TABLES: String = newOption("multiTables")

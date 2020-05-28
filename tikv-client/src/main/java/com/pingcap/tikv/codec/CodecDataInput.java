@@ -41,10 +41,12 @@ public class CodecDataInput implements DataInput {
       this.count = buf.length;
     }
 
+    @Override
     public int read() {
       return (pos < count) ? (buf[pos++] & 0xff) : -1;
     }
 
+    @Override
     public int read(byte[] b, int off, int len) {
       if (b == null) {
         throw new NullPointerException();
@@ -68,6 +70,7 @@ public class CodecDataInput implements DataInput {
       return len;
     }
 
+    @Override
     public long skip(long n) {
       long k = count - pos;
       if (n < k) {
@@ -78,22 +81,27 @@ public class CodecDataInput implements DataInput {
       return k;
     }
 
+    @Override
     public int available() {
       return count - pos;
     }
 
+    @Override
     public boolean markSupported() {
       return true;
     }
 
+    @Override
     public void mark(int readAheadLimit) {
       mark = pos;
     }
 
+    @Override
     public void reset() {
       pos = mark;
     }
 
+    @Override
     public void close() throws IOException {}
   }
 

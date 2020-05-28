@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 PingCAP, Inc.
+ * Copyright 2019 PingCAP, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,55 +37,6 @@ import org.tikv.kvproto.Kvrpcpb.Op;
 import org.tikv.kvproto.Metapb;
 
 public class TwoPhaseCommitter {
-
-  public static class ByteWrapper {
-    private byte[] bytes;
-
-    public ByteWrapper(byte[] bytes) {
-      this.bytes = bytes;
-    }
-
-    public byte[] getBytes() {
-      return this.bytes;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-
-      ByteWrapper that = (ByteWrapper) o;
-
-      return Arrays.equals(bytes, that.bytes);
-    }
-
-    @Override
-    public int hashCode() {
-      return Arrays.hashCode(bytes);
-    }
-  }
-
-  public static class BytePairWrapper {
-    private byte[] key;
-    private byte[] value;
-
-    public BytePairWrapper(byte[] key, byte[] value) {
-      this.key = key;
-      this.value = value;
-    }
-
-    public byte[] getKey() {
-      return key;
-    }
-
-    public byte[] getValue() {
-      return value;
-    }
-  }
 
   /** buffer spark rdd iterator data into memory */
   private static final int WRITE_BUFFER_SIZE = 32 * 1024;
@@ -467,7 +418,7 @@ public class TwoPhaseCommitter {
 
           @Override
           public ByteString next() {
-            return ByteString.copyFrom(keys.next().bytes);
+            return ByteString.copyFrom(keys.next().getBytes());
           }
         };
 

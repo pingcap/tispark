@@ -175,7 +175,11 @@ class TiBatchWriteTable(@transient val df: DataFrame,
 
       val distinctWrappedRowRdd = deduplicate(wrappedRowRdd)
 
-      val deletion = generateDataToBeRemovedRdd(distinctWrappedRowRdd, startTimeStamp)
+      val deletion = if (options.useSnapshotBatchGet) {
+        generateDataToBeRemovedRddV2(distinctWrappedRowRdd, startTimeStamp)
+      } else {
+        generateDataToBeRemovedRddV1(distinctWrappedRowRdd, startTimeStamp)
+      }
       if (!options.replace && !deletion.isEmpty()) {
         throw new TiBatchWriteException("data to be inserted has conflicts with TiKV data")
       }
@@ -265,8 +269,43 @@ class TiBatchWriteTable(@transient val df: DataFrame,
     }
   }
 
-  private def generateDataToBeRemovedRdd(rdd: RDD[WrappedRow],
-                                         startTs: TiTimestamp): RDD[WrappedRow] = {
+  private def generateDataToBeRemovedRddV1(rdd: RDD[WrappedRow],
+                                           startTs: TiTimestamp): RDD[WrappedRow] = {
+    rdd
+      .mapPartitions { wrappedRows =>
+        val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs)
+        wrappedRows.map { wrappedRow =>
+          val rowBuf = mutable.ListBuffer.empty[WrappedRow]
+          //  check handle key
+          if (handleCol != null) {
+            val oldValue = snapshot.get(buildRowKey(wrappedRow.row, wrappedRow.handle).bytes)
+            if (oldValue.nonEmpty) {
+              val oldRow = TableCodec.decodeRow(oldValue, wrappedRow.handle, tiTableInfo)
+              rowBuf += WrappedRow(oldRow, wrappedRow.handle)
+            }
+          }
+
+          uniqueIndices.foreach { index =>
+            val oldValue = snapshot.get(buildUniqueIndexKey(wrappedRow.row, index).bytes)
+            if (oldValue.nonEmpty) {
+              val oldHandle = TableCodec.decodeHandle(oldValue)
+              val oldRowValue = snapshot.get(buildRowKey(wrappedRow.row, oldHandle).bytes)
+              val oldRow = TableCodec.decodeRow(
+                oldRowValue,
+                oldHandle,
+                tiTableInfo
+              )
+              rowBuf += WrappedRow(oldRow, oldHandle)
+            }
+          }
+          rowBuf
+        }
+      }
+      .flatMap(identity)
+  }
+
+  private def generateDataToBeRemovedRddV2(rdd: RDD[WrappedRow],
+                                           startTs: TiTimestamp): RDD[WrappedRow] = {
     rdd.mapPartitions { wrappedRows =>
       val snapshot = TiSession.getInstance(tiConf).createSnapshot(startTs)
       var rowBuf = mutable.ListBuffer.empty[WrappedRow]
@@ -348,7 +387,7 @@ class TiBatchWriteTable(@transient val df: DataFrame,
             val oldValueList = snapshot.batchGet(batchHandle)
             (0 until oldValueList.size()).foreach { i =>
               val oldValuePair = oldValueList.get(i)
-              val oldValue = oldValuePair.getValue.toByteArray
+              val oldValue = oldValuePair.getValue
               val key = oldValuePair.getKey
               val handle = handleMap.get(key)
 
@@ -364,7 +403,7 @@ class TiBatchWriteTable(@transient val df: DataFrame,
             val oldValueList = snapshot.batchGet(batchIndices)
             (0 until oldValueList.size()).foreach { i =>
               val oldValuePair = oldValueList.get(i)
-              val oldValue = oldValuePair.getValue.toByteArray
+              val oldValue = oldValuePair.getValue
               val key = oldValuePair.getKey
               val oldHandle = TableCodec.decodeHandle(oldValue)
               val tiRow = rowMap.get(key)
@@ -377,8 +416,8 @@ class TiBatchWriteTable(@transient val df: DataFrame,
           val oldIndicesRowPairs = snapshot.batchGet(oldIndicesBatch)
           (0 until oldIndicesRowPairs.size()).foreach { i =>
             val oldIndicesRowPair = oldIndicesRowPairs.get(i)
-            val oldRowKey = oldIndicesRowPair.getKey.toByteArray
-            val oldRowValue = oldIndicesRowPair.getValue.toByteArray
+            val oldRowKey = oldIndicesRowPair.getKey
+            val oldRowValue = oldIndicesRowPair.getValue
             val oldHandle = oldIndicesMap.get(new SerializableKey(oldRowKey)).get
             val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
             rowBuf += WrappedRow(oldRow, oldHandle)
