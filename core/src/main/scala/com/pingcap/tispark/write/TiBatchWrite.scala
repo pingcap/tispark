@@ -235,7 +235,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
         new TwoPhaseCommitter(tiConf, startTs, lockTTLSeconds * 1000)
 
       val pairs = iterator.map { keyValue =>
-        new TwoPhaseCommitter.BytePairWrapper(
+        new BytePairWrapper(
           keyValue._1.bytes,
           keyValue._2
         )
@@ -301,7 +301,7 @@ class TiBatchWrite(@transient val dataToWrite: Map[DBTable, DataFrame],
         val ti2PCClientOnExecutor = new TwoPhaseCommitter(tiConf, startTs)
 
         val keys = iterator.map { keyValue =>
-          new TwoPhaseCommitter.ByteWrapper(keyValue._1.bytes)
+          new ByteWrapper(keyValue._1.bytes)
         }.asJava
 
         try {
