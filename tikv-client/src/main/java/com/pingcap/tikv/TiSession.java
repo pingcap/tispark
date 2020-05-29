@@ -29,8 +29,12 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TiSession implements AutoCloseable {
+  private static final Logger logger = LoggerFactory.getLogger(TiSession.class);
+
   private final TiConfiguration conf;
   private final ChannelFactory channelFactory;
   private Function<CacheInvalidateEvent, Void> cacheInvalidateCallback;
@@ -42,6 +46,8 @@ public class TiSession implements AutoCloseable {
 
   private volatile RegionManager regionManager;
   private volatile RegionStoreClient.RegionStoreClientBuilder clientBuilder;
+
+  private boolean isClosed = false;
 
   private static final Map<String, TiSession> sessionCachedMap = new HashMap<>();
 
@@ -189,6 +195,12 @@ public class TiSession implements AutoCloseable {
 
   @Override
   public synchronized void close() throws Exception {
+    if (isClosed) {
+      logger.warn("this TiSession is already closed!");
+      return;
+    }
+
+    isClosed = true;
     synchronized (sessionCachedMap) {
       sessionCachedMap.remove(conf.getPdAddrsString());
     }
