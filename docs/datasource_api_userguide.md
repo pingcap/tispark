@@ -228,10 +228,10 @@ val data = Map(DBTable(outputDatabase, outputTable1) -> df1, DBTable(outputDatab
 // writing data to multi-tables
 TiBatchWrite.write(
   data,
-  tiContext,
+  spark,
   Map(
-    "tidb.addr" -> "172.16.5.59",
-    "tidb.port" -> "9194",
+    "tidb.addr" -> "127.0.0.1",
+    "tidb.port" -> "4000",
     "tidb.user"-> "root",
     "tidb.password" -> "")
 )
