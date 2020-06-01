@@ -223,7 +223,7 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
       // check every 5 secs
       Thread.sleep(5000)
       val available = queryTiDBViaJDBC(
-        s"select AVAILABLE from INFORMATION_SCHEMA.TIFLASH_REPLICA where TABLE_NAME = $tableName"
+        s"select AVAILABLE from INFORMATION_SCHEMA.TIFLASH_REPLICA where TABLE_NAME = '$tableName'"
       )
       if (available.nonEmpty && available.head.head.toString == "true") {
         return true
