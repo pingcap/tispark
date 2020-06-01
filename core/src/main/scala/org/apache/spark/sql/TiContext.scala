@@ -26,6 +26,7 @@ import com.pingcap.tispark.utils.ReflectionUtil._
 import com.pingcap.tispark.utils.TiUtil
 import org.apache.spark.SparkConf
 import org.apache.spark.internal.Logging
+import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
 import org.apache.spark.sql.catalyst.catalog._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST._
@@ -42,6 +43,18 @@ class TiContext(val sparkSession: SparkSession) extends Serializable with Loggin
   val tiConf: TiConfiguration = TiUtil.sparkConfToTiConf(conf)
   val tiSession: TiSession = TiSession.getInstance(tiConf)
   val meta: MetaManager = new MetaManager(tiSession.getCatalog)
+
+  sparkSession.sparkContext.addSparkListener(new SparkListener() {
+    override def onApplicationEnd(applicationEnd: SparkListenerApplicationEnd): Unit = {
+      if (tiSession != null) {
+        try {
+          tiSession.close()
+        } catch {
+          case e: Throwable => logWarning("fail to close TiSession!", e)
+        }
+      }
+    }
+  })
 
   TiUtil.registerUDFs(sparkSession)
   StatisticsManager.initStatisticsManager(tiSession)

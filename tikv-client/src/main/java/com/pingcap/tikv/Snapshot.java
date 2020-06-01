@@ -32,6 +32,7 @@ import com.pingcap.tikv.util.RangeSplitter.RegionTask;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.tikv.kvproto.Kvrpcpb.KvPair;
 
@@ -69,14 +70,21 @@ public class Snapshot {
         .get(key, timestamp.getVersion());
   }
 
-  public List<KvPair> batchGet(List<byte[]> keys) {
+  public List<BytePairWrapper> batchGet(List<byte[]> keys) {
     List<ByteString> list = new ArrayList<>();
     for (byte[] key : keys) {
       list.add(ByteString.copyFrom(key));
     }
 
-    return new KVClient(session.getConf(), session.getRegionStoreClientBuilder())
-        .batchGet(list, timestamp.getVersion());
+    List<KvPair> kvPairList =
+        new KVClient(session.getConf(), session.getRegionStoreClientBuilder())
+            .batchGet(list, timestamp.getVersion());
+    return kvPairList
+        .stream()
+        .map(
+            kvPair ->
+                new BytePairWrapper(kvPair.getKey().toByteArray(), kvPair.getValue().toByteArray()))
+        .collect(Collectors.toList());
   }
 
   public Iterator<TiChunk> tableReadChunk(

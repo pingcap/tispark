@@ -257,6 +257,10 @@ public abstract class DataType implements Serializable {
         + ((long) (readBuffer[7] & 255) << 56));
   }
 
+  public boolean isSameCatalog(DataType other) {
+    return false;
+  }
+
   // all data should be read in little endian.
   public TiChunkColumnVector decodeChunkColumn(CodecDataInput cdi) {
     int numRows = readIntLittleEndian(cdi);

@@ -13,12 +13,13 @@
  * limitations under the License.
  */
 
-package com.pingcap.tispark
+package com.pingcap.tispark.write
 
 import java.util.Locale
 
-import com.pingcap.tikv.{TTLManager, TiConfiguration}
 import com.pingcap.tikv.exception.TiBatchWriteException
+import com.pingcap.tikv.{TTLManager, TiConfiguration}
+import com.pingcap.tispark.TiTableReference
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 
@@ -47,6 +48,16 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     }
   }
 
+  private def getOrDefault(name: String, default: String): String = {
+    if (parameters.isDefinedAt(name)) {
+      parameters(name)
+    } else if (parameters.isDefinedAt(s"$optParamPrefix$name")) {
+      parameters(s"$optParamPrefix$name")
+    } else {
+      default
+    }
+  }
+
   // ------------------------------------------------------------
   // Required parameters
   // ------------------------------------------------------------
@@ -54,8 +65,17 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
   val port: String = checkAndGet(TIDB_PORT)
   val user: String = checkAndGet(TIDB_USER)
   val password: String = checkAndGet(TIDB_PASSWORD)
-  val database: String = checkAndGet(TIDB_DATABASE)
-  val table: String = checkAndGet(TIDB_TABLE)
+  val multiTables: Boolean = parameters.getOrElse(TIDB_MULTI_TABLES, "false").toBoolean
+  val database: String = if (!multiTables) {
+    checkAndGet(TIDB_DATABASE)
+  } else {
+    getOrDefault(TIDB_DATABASE, "")
+  }
+  val table: String = if (!multiTables) {
+    checkAndGet(TIDB_TABLE)
+  } else {
+    getOrDefault(TIDB_TABLE, "")
+  }
 
   // ------------------------------------------------------------
   // Optional parameters only for writing
@@ -76,6 +96,9 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
 
   // ttlMode = { "FIXED", "UPDATE", "DEFAULT" }
   val ttlMode: String = parameters.getOrElse(TIDB_TTL_MODE, "DEFAULT").toUpperCase()
+
+  val useSnapshotBatchGet: Boolean =
+    parameters.getOrElse(TIDB_USE_SNAPSHOT_BATCH_GET, "true").toBoolean
 
   val snapshotBatchGetSize: Int = parameters.getOrElse(TIDB_SNAPSHOT_BATCH_GET_SIZE, "2048").toInt
 
@@ -117,6 +140,16 @@ class TiDBOptions(@transient val parameters: CaseInsensitiveMap[String]) extends
     } else {
       parameters.getOrElse(TIDB_LOCK_TTL_SECONDS, "3600").toLong
     }
+
+  def setDBTable(dBTable: DBTable): TiDBOptions = {
+    new TiDBOptions(
+      parameters ++ Map(
+        TIDB_DATABASE -> dBTable.database,
+        TIDB_TABLE -> dBTable.table,
+        TIDB_MULTI_TABLES -> "false"
+      )
+    )
+  }
 }
 
 object TiDBOptions {
@@ -162,8 +195,10 @@ object TiDBOptions {
   val TIDB_REGION_SPLIT_NUM: String = newOption("regionSplitNum")
   val TIDB_WRITE_CONCURRENCY: String = newOption("writeConcurrency")
   val TIDB_TTL_MODE: String = newOption("ttlMode")
+  val TIDB_USE_SNAPSHOT_BATCH_GET: String = newOption("useSnapshotBatchGet")
   val TIDB_SNAPSHOT_BATCH_GET_SIZE: String = newOption("snapshotBatchGetSize")
   val TIDB_USE_TABLE_LOCK: String = newOption("useTableLock")
+  val TIDB_MULTI_TABLES: String = newOption("multiTables")
 
   // ------------------------------------------------------------
   // parameters only for test

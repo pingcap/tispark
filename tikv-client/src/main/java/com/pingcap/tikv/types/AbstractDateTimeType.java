@@ -23,6 +23,8 @@ public abstract class AbstractDateTimeType extends DataType {
     super(tp);
   }
 
+  public static long MILLS_PER_DAY = 3600L * 24 * 1000;
+
   public abstract DateTimeZone getTimezone();
   /**
    * Decode DateTime from packed long value In TiDB / MySQL, timestamp type is converted to UTC and

@@ -3,16 +3,12 @@ package com.pingcap.tikv.codec;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
-import com.pingcap.tikv.row.DefaultRowReader;
 import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
-import com.pingcap.tikv.row.RowReader;
-import com.pingcap.tikv.types.DataType;
 import com.pingcap.tikv.types.DataType.EncodeType;
 import com.pingcap.tikv.types.IntegerType;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class TableCodec {
   /**
@@ -52,34 +48,34 @@ public class TableCodec {
   }
 
   public static Row decodeRow(byte[] value, Long handle, TiTableInfo tableInfo) {
-    CodecDataInput cdi = new CodecDataInput(value);
-    List<DataType> newColTypes = new ArrayList<>();
-    List<TiColumnInfo> colsWithoutPK =
-        tableInfo
-            .getColumns()
-            .stream()
-            .filter(col -> !col.canSkip(tableInfo.isPkHandle()))
-            .collect(Collectors.toList());
-    for (TiColumnInfo col : colsWithoutPK) {
-      newColTypes.add(IntegerType.BIGINT);
-      newColTypes.add(col.getType());
-    }
-
-    RowReader rowReader = DefaultRowReader.create(cdi);
-    Row row = rowReader.readRow(newColTypes.toArray(new DataType[0]));
     if (handle == null && tableInfo.isPkHandle()) {
       throw new IllegalArgumentException("when pk is handle, handle cannot be null");
     }
+
+    int colSize = tableInfo.getColumns().size();
+    HashMap<Long, TiColumnInfo> idToColumn = new HashMap<>(colSize);
+    for (TiColumnInfo col : tableInfo.getColumns()) {
+      idToColumn.put(col.getId(), col);
+    }
+
+    // decode bytes to Map<ColumnID, Data>
+    HashMap<Long, Object> decodedDataMap = new HashMap<>(colSize);
+    CodecDataInput cdi = new CodecDataInput(value);
     Object[] res = new Object[tableInfo.getColumns().size()];
-    int offset = 0;
+    while (!cdi.eof()) {
+      long colID = (long) IntegerType.BIGINT.decode(cdi);
+      Object colValue = idToColumn.get(colID).getType().decode(cdi);
+      decodedDataMap.put(colID, colValue);
+    }
+
+    // construct Row with Map<ColumnID, Data> & handle
     for (int i = 0; i < tableInfo.getColumns().size(); i++) {
       // skip pk is handle case
       TiColumnInfo col = tableInfo.getColumn(i);
       if (col.isPrimaryKey() && tableInfo.isPkHandle()) {
         res[i] = handle;
-        offset = -1;
       } else {
-        res[i] = row.get(2 * (i + offset) + 1, col.getType());
+        res[i] = decodedDataMap.get(col.getId());
       }
     }
 

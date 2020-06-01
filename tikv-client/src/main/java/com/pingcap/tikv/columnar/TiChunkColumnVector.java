@@ -22,7 +22,7 @@ import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
-import java.time.LocalDate;
+import org.joda.time.LocalDate;
 
 /** An implementation of {@link TiColumnVector}. All data is stored in TiDB chunk format. */
 public class TiChunkColumnVector extends TiColumnVector {
@@ -133,8 +133,8 @@ public class TiChunkColumnVector extends TiColumnVector {
       day = 1;
     }
     if (this.type instanceof DateType) {
-      // only return day from epoch
-      return LocalDate.of(year, month, day).toEpochDay();
+      LocalDate date = new LocalDate(year, month, day);
+      return Math.floorDiv(date.toDate().getTime(), AbstractDateTimeType.MILLS_PER_DAY);
     } else if (type instanceof DateTimeType || type instanceof TimestampType) {
       // only return microsecond from epoch.
       Timestamp ts =
