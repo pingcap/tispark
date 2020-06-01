@@ -45,12 +45,10 @@ class MultiColumnDataTypeSuite
     }
     for (i <- columnNames.indices) {
       val col1 = columnNames(i)
-      if (col1.contains("date")) {
-        for (j <- columnNames.indices) {
-          val col2 = columnNames(j)
-          val dataType2 = dataTypes(j)
-          simpleSelect(database, tblName, col1, col2, dataType2)
-        }
+      for (j <- columnNames.indices) {
+        val col2 = columnNames(j)
+        val dataType2 = dataTypes(j)
+        simpleSelect(database, tblName, col1, col2, dataType2)
       }
     }
   }

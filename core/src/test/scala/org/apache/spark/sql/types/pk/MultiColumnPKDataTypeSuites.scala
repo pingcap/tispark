@@ -47,12 +47,10 @@ trait MultiColumnPKDataTypeSuites
     }
     for (u <- dt.indices) {
       val col1 = columnNames(u)
-      if (col1.contains("date")) {
-        for (v <- dt.indices) {
-          val col2 = columnNames(v)
-          val dataType = dt(v)
-          simpleSelect(database, tableName, col1, col2, dataType)
-        }
+      for (v <- dt.indices) {
+        val col2 = columnNames(v)
+        val dataType = dt(v)
+        simpleSelect(database, tableName, col1, col2, dataType)
       }
     }
   }
