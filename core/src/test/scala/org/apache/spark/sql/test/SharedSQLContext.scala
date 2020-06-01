@@ -212,10 +212,13 @@ trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with S
   }
 
   private def checkLoadTiFlashWithRetry(tableName: String): Boolean = {
-    val check = queryTiDBViaJDBC(s"show tables like '$tableName'")
+    val check = queryTiDBViaJDBC(
+      s"select TABLE_SCHEMA from INFORMATION_SCHEMA.TABLES where TABLE_NAME = '$tableName'"
+    )
     if (check.isEmpty) {
       throw new RuntimeException(s"$tableName not found in TiDB after load. Load SQL file failed.")
     }
+    logger.info(s"Table $tableName found present in ${check.head.head}")
     for (_ <- 0 until 60) {
       // check every 5 secs
       Thread.sleep(5000)
