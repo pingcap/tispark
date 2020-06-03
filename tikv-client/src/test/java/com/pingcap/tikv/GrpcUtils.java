@@ -92,7 +92,7 @@ public class GrpcUtils {
         .setAddress(address)
         .setState(state)
         .addAllLabels(Arrays.asList(labels))
-        .setVersion("3.0.5")
+        .setVersion(Version.RESOLVE_LOCK_V4)
         .build();
   }
 

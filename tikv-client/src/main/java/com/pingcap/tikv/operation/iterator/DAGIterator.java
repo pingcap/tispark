@@ -182,6 +182,8 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     Queue<SelectResponse> responseQueue = new ArrayDeque<>();
     remainTasks.add(regionTask);
     BackOffer backOffer = ConcreteBackOffer.newCopNextMaxBackOff();
+
+    HashSet<Long> resolvedLocks = new HashSet<>();
     // In case of one region task spilt into several others, we ues a queue to properly handle all
     // the remaining tasks.
     while (!remainTasks.isEmpty()) {
@@ -196,11 +198,13 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
       try {
         RegionStoreClient client =
             session.getRegionStoreClientBuilder().build(region, store, storeType);
+        client.addResolvedLocks(startTs, new ArrayList<>(resolvedLocks));
         Collection<RangeSplitter.RegionTask> tasks =
             client.coprocess(backOffer, dagRequest, ranges, responseQueue, startTs);
         if (tasks != null) {
           remainTasks.addAll(tasks);
         }
+        resolvedLocks.addAll(client.getResolvedLocks(startTs));
       } catch (Throwable e) {
         // Handle region task failed
         logger.error(
@@ -236,7 +240,8 @@ public abstract class DAGIterator<T> extends CoprocessorIterator<T> {
     RegionStoreClient client;
     try {
       client = session.getRegionStoreClientBuilder().build(region, store, storeType);
-      Iterator<SelectResponse> responseIterator = client.coprocessStreaming(dagRequest, ranges);
+      Iterator<SelectResponse> responseIterator =
+          client.coprocessStreaming(dagRequest, ranges, startTs);
       if (responseIterator == null) {
         eof = true;
         return null;

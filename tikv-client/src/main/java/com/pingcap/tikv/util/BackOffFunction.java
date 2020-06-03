@@ -28,7 +28,8 @@ public class BackOffFunction {
     BoPDRPC,
     BoRegionMiss,
     BoUpdateLeader,
-    BoServerBusy
+    BoServerBusy,
+    BoTxnNotFound
   }
 
   /**

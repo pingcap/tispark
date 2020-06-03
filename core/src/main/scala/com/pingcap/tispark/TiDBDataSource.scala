@@ -45,7 +45,7 @@ class TiDBDataSource
 
     TiExtensions.getTiContext(sparkSession) match {
       case Some(tiContext) =>
-        val ts = tiContext.tiSession.createTxnClient().getTimestamp
+        val ts = tiContext.tiSession.getTimestamp
         TiDBRelation(
           tiContext.tiSession,
           options.getTiTableRef(tiContext.tiConf),

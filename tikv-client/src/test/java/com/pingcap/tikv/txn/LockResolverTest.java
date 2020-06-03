@@ -18,7 +18,6 @@ package com.pingcap.tikv.txn;
 import static junit.framework.TestCase.*;
 
 import com.google.protobuf.ByteString;
-import com.pingcap.tikv.StoreVersion;
 import com.pingcap.tikv.TiConfiguration;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.exception.GrpcException;
@@ -47,13 +46,13 @@ import org.tikv.kvproto.Kvrpcpb.Op;
 abstract class LockResolverTest {
   private Kvrpcpb.IsolationLevel isolationLevel;
 
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+  protected final Logger logger = LoggerFactory.getLogger(this.getClass());
   TiSession session;
   static final int DEFAULT_TTL = 10;
   RegionStoreClient.RegionStoreClientBuilder builder;
   boolean init;
   private static final String DEFAULT_PD_ADDR = "127.0.0.1:2379";
-  private static final long LARGE_LOCK_TTL = BackOffer.GET_MAX_BACKOFF + 2 * 1000;
+  protected static final long LARGE_LOCK_TTL = BackOffer.GET_MAX_BACKOFF + 2 * 1000;
 
   static final int GET_BACKOFF = 5 * 1000;
   static final int CHECK_TTL_BACKOFF = 1000;
@@ -261,11 +260,11 @@ abstract class LockResolverTest {
   }
 
   void skipTestTiDBV3() {
-    logger.warn("Test skipped due to version of TiDB/TiKV is to low.");
+    logger.warn("Test skipped due to version of TiDB/TiKV should be 3.x.");
   }
 
   void skipTestTiDBV4() {
-    logger.warn("Test skipped due to version of TiDB/TiDB is to 4.0.");
+    logger.warn("Test skipped due to version of TiDB/TiKV should be 4.x.");
   }
 
   void versionTest() {
@@ -273,21 +272,34 @@ abstract class LockResolverTest {
   }
 
   void versionTest(boolean hasLock) {
+    if (isLockResolverClientV4()) {
+      versionTest(hasLock, false);
+    } else {
+      versionTest(hasLock, true);
+    }
+  }
+
+  private void versionTest(boolean hasLock, boolean blockingRead) {
     for (int i = 0; i < 26; i++) {
       ByteString key = ByteString.copyFromUtf8(String.valueOf((char) ('a' + i)));
       TiRegion tiRegion = session.getRegionManager().getRegionByKey(key);
       RegionStoreClient client = builder.build(tiRegion);
       BackOffer backOffer = ConcreteBackOffer.newGetBackOff();
-      try {
-        ByteString v = client.get(backOffer, key, session.getTimestamp().getVersion());
-        if (hasLock && i == 3) {
-          // key "d" should be locked
-          fail();
-        } else {
-          assertEquals(String.valueOf((char) ('a' + i)), v.toStringUtf8());
+      if (blockingRead) {
+        try {
+          ByteString v = client.get(backOffer, key, session.getTimestamp().getVersion());
+          if (hasLock && i == 3) {
+            // key "d" should be locked
+            fail();
+          } else {
+            assertEquals(String.valueOf((char) ('a' + i)), v.toStringUtf8());
+          }
+        } catch (GrpcException e) {
+          assertEquals(e.getMessage(), "retry is exhausted.");
         }
-      } catch (GrpcException e) {
-        assertEquals(e.getMessage(), "retry is exhausted.");
+      } else {
+        ByteString v = client.get(backOffer, key, session.getTimestamp().getVersion());
+        assertEquals(String.valueOf((char) ('a' + i)), v.toStringUtf8());
       }
     }
   }
@@ -340,7 +352,6 @@ abstract class LockResolverTest {
       commitString(Collections.singletonList(key), startTs, endTs);
       fail();
     } catch (KeyException e) {
-      assertFalse(e.getKeyError().getRetryable().isEmpty());
     }
   }
 
@@ -361,7 +372,7 @@ abstract class LockResolverTest {
     return getRegionStoreClient("").lockResolverClient.getVersion().equals("V3");
   }
 
-  boolean isTiDBV4() {
-    return StoreVersion.minTiKVVersion("4.0.0", session.getPDClient());
+  boolean isLockResolverClientV4() {
+    return getRegionStoreClient("").lockResolverClient.getVersion().equals("V4");
   }
 }

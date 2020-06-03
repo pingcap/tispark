@@ -43,8 +43,13 @@ class WriteReadConflictSuite extends ConcurrentcyTest {
     readThread2.join()
     readThread3.join()
 
-    // Empty Result or Resolve Lock Timeout
-    assert(resultRowCount.get() == 0)
+    if (blockingRead) {
+      // Resolve Lock Timeout (table scan)
+      assert(resultRowCount.get() == 0)
+    } else {
+      // non-blocking read old data
+      assert(resultRowCount.get() == 0)
+    }
   }
 
   test("read conflict using tispark") {
@@ -72,8 +77,13 @@ class WriteReadConflictSuite extends ConcurrentcyTest {
     readThread2.join()
     readThread3.join()
 
-    // Resolve Lock Timeout
-    assert(resultRowCount.get() == 0)
+    if (blockingRead) {
+      // Resolve Lock Timeout (table scan)
+      assert(resultRowCount.get() == 0)
+    } else {
+      // non-blocking read old data
+      assert(resultRowCount.get() == 0)
+    }
   }
 
   test("read conflict using jdbc 2") {
@@ -94,8 +104,13 @@ class WriteReadConflictSuite extends ConcurrentcyTest {
     readThread4.start()
     readThread4.join()
 
-    // Resolve Lock Timeout (table scan)
-    assert(resultRowCount.get() == 0)
+    if (blockingRead) {
+      // Resolve Lock Timeout (table scan)
+      assert(resultRowCount.get() == 0)
+    } else {
+      // non-blocking read old data
+      assert(resultRowCount.get() == 1)
+    }
   }
 
   test("read conflict using tispark 2") {
@@ -116,7 +131,12 @@ class WriteReadConflictSuite extends ConcurrentcyTest {
     readThread4.start()
     readThread4.join()
 
-    // Resolve Lock Timeout (table scan)
-    assert(resultRowCount.get() == 0)
+    if (blockingRead) {
+      // Resolve Lock Timeout (table scan)
+      assert(resultRowCount.get() == 0)
+    } else {
+      // non-blocking read old data
+      assert(resultRowCount.get() == 1)
+    }
   }
 }

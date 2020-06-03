@@ -17,18 +17,21 @@ package com.pingcap.tikv.txn;
 
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.fail;
 
+import com.pingcap.tikv.exception.KeyException;
 import java.util.Collections;
+import junit.framework.TestCase;
 import org.junit.Test;
 import org.tikv.kvproto.Kvrpcpb.IsolationLevel;
 
-public class LockResolverSIV3TwoRowTest extends LockResolverTest {
+public class LockResolverSIV4TwoRowTest extends LockResolverTest {
   private String value1 = "v1";
   private String value2 = "v2";
   private String value3 = "v3";
   private String value4 = "v4";
 
-  public LockResolverSIV3TwoRowTest() {
+  public LockResolverSIV4TwoRowTest() {
     super(IsolationLevel.SI);
   }
 
@@ -39,8 +42,8 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
       return;
     }
 
-    if (!isLockResolverClientV3()) {
-      skipTestTiDBV3();
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -68,14 +71,14 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
   }
 
   @Test
-  public void TTLExpireCommitFail() throws InterruptedException {
+  public void NonBlockingReadTTLExpireCommitFail() throws InterruptedException {
     if (!init) {
       skipTestInit();
       return;
     }
 
-    if (!isLockResolverClientV3()) {
-      skipTestTiDBV3();
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -99,14 +102,14 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     // prewriteString <secondary key, value2>
     assertTrue(prewriteString(secondaryKey, value4, startTs, primaryKey, ttl));
 
-    // check ttl not expired
-    checkTTLNotExpired(primaryKey);
-    checkTTLNotExpired(secondaryKey);
+    // non blocking read
+    assertEquals(pointGet(primaryKey), value1);
+    assertEquals(pointGet(secondaryKey), value2);
 
     // TTL expires
     Thread.sleep(ttl);
 
-    // read old data
+    // read old data & resolve lock
     assertEquals(pointGet(primaryKey), value1);
     assertEquals(pointGet(secondaryKey), value2);
 
@@ -115,14 +118,14 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
   }
 
   @Test
-  public void TTLExpireCommitSuccess() throws InterruptedException {
+  public void NonBlockingReadCommitTSExpiredCommitFail() {
     if (!init) {
       skipTestInit();
       return;
     }
 
-    if (!isLockResolverClientV3()) {
-      skipTestTiDBV3();
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -138,7 +141,6 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     long ttl = GET_BACKOFF + GET_BACKOFF / 2;
 
     long startTs = session.getTimestamp().getVersion();
-    long endTs = session.getTimestamp().getVersion();
 
     // prewriteString <primary key, value1>
     assertTrue(prewriteString(primaryKey, value3, startTs, primaryKey, ttl));
@@ -146,12 +148,60 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     // prewriteString <secondary key, value2>
     assertTrue(prewriteString(secondaryKey, value4, startTs, primaryKey, ttl));
 
-    // check ttl not expired
-    checkTTLNotExpired(primaryKey);
-    checkTTLNotExpired(secondaryKey);
+    // get new endTs
+    long endTs = session.getTimestamp().getVersion();
 
-    // TTL expires
-    Thread.sleep(ttl);
+    // non blocking read
+    assertEquals(pointGet(primaryKey), value1);
+    assertEquals(pointGet(secondaryKey), value2);
+
+    try {
+      // TTL not expires, but CommitTS expired, commit failed
+      commitString(Collections.singletonList(primaryKey), startTs, endTs);
+      fail();
+    } catch (KeyException e) {
+      TestCase.assertTrue(
+          e.getMessage().startsWith("Key exception occurred and the reason is commit_ts_expired"));
+    }
+  }
+
+  @Test
+  public void NonBlockingReadCommitSuccess() throws InterruptedException {
+    if (!init) {
+      skipTestInit();
+      return;
+    }
+
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
+      return;
+    }
+
+    String primaryKey = genRandomKey(64);
+    String secondaryKey = genRandomKey(64);
+
+    // Put <primaryKey, value1> into kv
+    putKVandTestGet(primaryKey, value1);
+
+    // Put <secondaryKey, value2> into kv
+    putKVandTestGet(secondaryKey, value2);
+
+    long ttl = GET_BACKOFF + GET_BACKOFF / 2;
+
+    long startTs = session.getTimestamp().getVersion();
+
+    // prewriteString <primary key, value1>
+    assertTrue(prewriteString(primaryKey, value3, startTs, primaryKey, ttl));
+
+    // prewriteString <secondary key, value2>
+    assertTrue(prewriteString(secondaryKey, value4, startTs, primaryKey, ttl));
+
+    // non blocking read
+    assertEquals(pointGet(primaryKey), value1);
+    assertEquals(pointGet(secondaryKey), value2);
+
+    // get new endTs
+    long endTs = session.getTimestamp().getVersion();
 
     // commitString primary key
     assertTrue(commitString(Collections.singletonList(primaryKey), startTs, endTs));
@@ -162,58 +212,14 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
   }
 
   @Test
-  public void TTLNotExpireCommitSuccess() throws InterruptedException {
-    if (!init) {
-      skipTestInit();
-      return;
-    }
-
-    if (!isLockResolverClientV3()) {
-      skipTestTiDBV3();
-      return;
-    }
-
-    String primaryKey = genRandomKey(64);
-    String secondaryKey = genRandomKey(64);
-
-    long ttl = GET_BACKOFF + GET_BACKOFF / 2;
-
-    long startTs = session.getTimestamp().getVersion();
-    long endTs = session.getTimestamp().getVersion();
-
-    // prewriteString <primary key, value1>
-    assertTrue(prewriteString(primaryKey, value1, startTs, primaryKey, ttl));
-
-    // prewriteString <secondary key, value2>
-    assertTrue(prewriteString(secondaryKey, value2, startTs, primaryKey, ttl));
-
-    // check ttl not expired
-    checkTTLNotExpired(primaryKey);
-    checkTTLNotExpired(secondaryKey);
-
-    // commitString primary key
-    assertTrue(commitString(Collections.singletonList(primaryKey), startTs, endTs));
-
-    // get check primary key & secondary key
-    assertEquals(pointGet(primaryKey), value1);
-
-    // secondary key ttl not expired
-    checkTTLNotExpired(secondaryKey);
-
-    // get secondary key
-    Thread.sleep(ttl);
-    assertEquals(pointGet(secondaryKey), value2);
-  }
-
-  @Test
   public void checkPrimaryTTL() throws InterruptedException {
     if (!init) {
       skipTestInit();
       return;
     }
 
-    if (!isLockResolverClientV3()) {
-      skipTestTiDBV3();
+    if (!isLockResolverClientV4()) {
+      skipTestTiDBV4();
       return;
     }
 
@@ -240,15 +246,18 @@ public class LockResolverSIV3TwoRowTest extends LockResolverTest {
     // secondary ttl expired, but primary not
     Thread.sleep(secondaryTTL);
 
-    // check ttl not expired
-    checkTTLNotExpired(primaryKey);
-    checkTTLNotExpired(secondaryKey);
-
-    // secondary ttl expired & primary expired
-    Thread.sleep(primaryTTL);
-
-    // get check primary key & secondary key
+    // non blocking read
     assertEquals(pointGet(primaryKey), value1);
     assertEquals(pointGet(secondaryKey), value2);
+
+    // get new endTs
+    long endTs = session.getTimestamp().getVersion();
+
+    // commitString primary key
+    assertTrue(commitString(Collections.singletonList(primaryKey), startTs, endTs));
+
+    // get check primary key & secondary key
+    assertEquals(pointGet(primaryKey), value3);
+    assertEquals(pointGet(secondaryKey), value4);
   }
 }

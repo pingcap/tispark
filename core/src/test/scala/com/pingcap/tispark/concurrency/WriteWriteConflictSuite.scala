@@ -19,8 +19,12 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 
 class WriteWriteConflictSuite extends ConcurrentcyTest {
-  test("write write conflict using jdbc") {
+  test("write write conflict using TableLock & jdbc") {
     if (!supportBatchWrite) {
+      cancel
+    }
+
+    if (!isEnableTableLock) {
       cancel
     }
 
@@ -28,7 +32,7 @@ class WriteWriteConflictSuite extends ConcurrentcyTest {
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(4, 'null')")
 
-    doBatchWriteInBackground()
+    doBatchWriteInBackground(Map("useTableLock" -> "true"))
 
     Thread.sleep(sleepBeforeQuery)
 
@@ -41,8 +45,12 @@ class WriteWriteConflictSuite extends ConcurrentcyTest {
     )
   }
 
-  test("write write conflict using tispark") {
+  test("write write conflict using TableLock & tispark") {
     if (!supportBatchWrite) {
+      cancel
+    }
+
+    if (!isEnableTableLock) {
       cancel
     }
 
@@ -50,7 +58,7 @@ class WriteWriteConflictSuite extends ConcurrentcyTest {
     jdbcUpdate(s"create table $dbtable(i int, s varchar(128))")
     jdbcUpdate(s"insert into $dbtable values(4, 'null')")
 
-    doBatchWriteInBackground()
+    doBatchWriteInBackground(Map("useTableLock" -> "true"))
 
     Thread.sleep(sleepBeforeQuery)
 
@@ -62,6 +70,7 @@ class WriteWriteConflictSuite extends ConcurrentcyTest {
         .options(tidbOptions)
         .option("database", database)
         .option("table", table)
+        .option("useTableLock", "true")
         .mode("append")
         .save()
     }

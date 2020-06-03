@@ -241,22 +241,22 @@ TiBatchWrite.write(
 
 The following table shows the TiDB-specific options, which can be passed in through `TiDBOptions` or `SparkConf`.
 
-| Key                        | Short Name    | Required | Default | Description                                                                                                                                    |
-| -------------------------- | ------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| spark.tispark.pd.addresses | -             | true     | -       | The addresses of PD clusters, split by comma                                                                                                   |
-| spark.tispark.tidb.addr    | tidb.addr     | true     | -       | TiDB address, which currently only supports one instance                                                                                       |
-| spark.tispark.tidb.port    | tidb.port     | true     | -       | TiDB Port                                                                                                                                      |
-| spark.tispark.tidb.user    | tidb.user     | true     | -       | TiDB User                                                                                                                                      |
-| tidb.password              | tidb.password | true     | -       | TiDB Password                                                                                                                                  |
-| database                   | -             | true     | -       | TiDB Database                                                                                                                                  |
-| table                      | -             | true     | -       | TiDB Table                                                                                                                                     |
-| replace                    | -             | false    | false   | To define the behavior of append                                                                                                               |
-| useTableLock               | -             | false    | true    | Whether to lock the table during writing                                                                                                       |
-| skipCommitSecondaryKey     | -             | false    | false   | Whether to skip the commit phase of secondary keys                                                                                             |
-| enableRegionSplit          | -             | false    | true    | To split Region to avoid hot Region during insertion                                                                                           |
-| regionSplitNum             | -             | false    | 0       | The Region split number defined by user during insertion                                                                                       |
-| writeConcurrency           | -             | false    | 0       | The maximum number of threads that write data to TiKV. It is recommended that `writeConcurrency` is smaller than 8 * `number of TiKV instance` |
-| snapshotBatchGetSize       | -             | false    | 2048    | The max size of keys for calling `Snapshot.batchGet`                                                                                           |
+| Key                        | Short Name    | Required | Default                | Description                                                                                                                                    |
+| -------------------------- | ------------- | -------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| spark.tispark.pd.addresses | -             | true     | -                      | The addresses of PD clusters, split by comma                                                                                                   |
+| spark.tispark.tidb.addr    | tidb.addr     | true     | -                      | TiDB address, which currently only supports one instance                                                                                       |
+| spark.tispark.tidb.port    | tidb.port     | true     | -                      | TiDB Port                                                                                                                                      |
+| spark.tispark.tidb.user    | tidb.user     | true     | -                      | TiDB User                                                                                                                                      |
+| tidb.password              | tidb.password | true     | -                      | TiDB Password                                                                                                                                  |
+| database                   | -             | true     | -                      | TiDB Database                                                                                                                                  |
+| table                      | -             | true     | -                      | TiDB Table                                                                                                                                     |
+| replace                    | -             | false    | false                  | To define the behavior of append                                                                                                               |
+| useTableLock               | -             | false    | true (3.x) false (4.x) | Whether to lock the table during writing                                                                                                       |
+| skipCommitSecondaryKey     | -             | false    | false                  | Whether to skip the commit phase of secondary keys                                                                                             |
+| enableRegionSplit          | -             | false    | true                   | To split Region to avoid hot Region during insertion                                                                                           |
+| regionSplitNum             | -             | false    | 0                      | The Region split number defined by user during insertion                                                                                       |
+| writeConcurrency           | -             | false    | 0                      | The maximum number of threads that write data to TiKV. It is recommended that `writeConcurrency` is smaller than 8 * `number of TiKV instance` |
+| snapshotBatchGetSize       | -             | false    | 2048                   | The max size of keys for calling `Snapshot.batchGet`                                                                                           |
 
 ## TiDB Version and Configuration for Write
 

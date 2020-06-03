@@ -29,11 +29,11 @@ import com.pingcap.tikv.region.RegionManager;
 import com.pingcap.tikv.region.TiRegion;
 import com.pingcap.tikv.txn.AbstractLockResolverClient;
 import com.pingcap.tikv.txn.Lock;
+import com.pingcap.tikv.txn.ResolveLockResult;
 import com.pingcap.tikv.util.BackOffFunction;
 import com.pingcap.tikv.util.BackOffer;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.function.Function;
 import org.slf4j.Logger;
@@ -50,10 +50,13 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
   private final Function<RespT, Errorpb.Error> getRegionError;
   private final Function<RespT, Kvrpcpb.KeyError> getKeyError;
   private final Function<CacheInvalidateEvent, Void> cacheInvalidateCallBack;
+  private final Function<ResolveLockResult, Object> resolveLockResultCallback;
   private final RegionManager regionManager;
   private final RegionErrorReceiver recv;
   private final AbstractLockResolverClient lockResolverClient;
   private final TiRegion ctxRegion;
+  private final long callerStartTS;
+  private final boolean forWrite;
 
   public KVErrorHandler(
       RegionManager regionManager,
@@ -61,7 +64,10 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
       AbstractLockResolverClient lockResolverClient,
       TiRegion ctxRegion,
       Function<RespT, Errorpb.Error> getRegionError,
-      Function<RespT, Kvrpcpb.KeyError> getKeyError) {
+      Function<RespT, Kvrpcpb.KeyError> getKeyError,
+      Function<ResolveLockResult, Object> resolveLockResultCallback,
+      long callerStartTS,
+      boolean forWrite) {
     this.ctxRegion = ctxRegion;
     this.recv = recv;
     this.lockResolverClient = lockResolverClient;
@@ -70,6 +76,9 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
     this.getKeyError = getKeyError;
     this.cacheInvalidateCallBack =
         regionManager != null ? regionManager.getCacheInvalidateCallback() : null;
+    this.resolveLockResultCallback = resolveLockResultCallback;
+    this.callerStartTS = callerStartTS;
+    this.forWrite = forWrite;
   }
 
   private Errorpb.Error getRegionError(RespT resp) {
@@ -135,9 +144,12 @@ public class KVErrorHandler<RespT> implements ErrorHandler<RespT> {
 
   private void resolveLock(BackOffer backOffer, Lock lock) {
     logger.warn("resolving lock");
-    long msBeforeExpired =
+
+    ResolveLockResult resolveLockResult =
         lockResolverClient.resolveLocks(
-            backOffer, new ArrayList<>(Collections.singletonList(lock)));
+            backOffer, callerStartTS, Collections.singletonList(lock), forWrite);
+    resolveLockResultCallback.apply(resolveLockResult);
+    long msBeforeExpired = resolveLockResult.getMsBeforeTxnExpired();
     if (msBeforeExpired > 0) {
       // if not resolve all locks, we wait and retry
       backOffer.doBackOffWithMaxSleep(
