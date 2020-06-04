@@ -22,7 +22,7 @@ import com.pingcap.tidb.tipb.DAGRequest;
 import com.pingcap.tidb.tipb.EncodeType;
 import com.pingcap.tikv.TiSession;
 import com.pingcap.tikv.codec.Codec.IntegerCodec;
-import com.pingcap.tikv.codec.CodecDataInputLittleEndian;
+import com.pingcap.tikv.codec.CodecDataInput;
 import com.pingcap.tikv.columnar.BatchedTiChunkColumnVector;
 import com.pingcap.tikv.columnar.TiChunk;
 import com.pingcap.tikv.columnar.TiChunkColumnVector;
@@ -48,7 +48,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
   protected final DAGRequest dagRequest;
   protected final DataType[] handleTypes;
   protected RowReader rowReader;
-  protected CodecDataInputLittleEndian dataInput;
+  protected CodecDataInput dataInput;
   protected boolean eof = false;
   protected int taskIndex;
   protected int chunkIndex;
@@ -155,7 +155,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
             int size = childColumnVectors.get(0).size();
             count += childColumnVectors.get(0).get(size - 1).numOfRows();
             // left data should be trashed.
-            dataInput = new CodecDataInputLittleEndian(new byte[0]);
+            dataInput = new CodecDataInput(new byte[0]);
           }
 
           for (int i = 0; i < dataTypes.length; i++) {
@@ -187,7 +187,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
             columnVectors[columnIdx] = type.decode(dataInput, (int) numOfRows);
             // TODO this is workaround to bybass nullable type
           }
-          dataInput = new CodecDataInputLittleEndian(new byte[0]);
+          dataInput = new CodecDataInput(new byte[0]);
           return new TiChunk(columnVectors);
         }
       }
@@ -239,7 +239,7 @@ public abstract class CoprocessorIterator<T> implements Iterator<T> {
     if (0 > chunkIndex || chunkIndex >= chunkList.size()) {
       throw new IllegalArgumentException();
     }
-    dataInput = new CodecDataInputLittleEndian(chunkList.get(chunkIndex).getRowsData());
+    dataInput = new CodecDataInput(chunkList.get(chunkIndex).getRowsData());
     rowReader = RowReaderFactory.createRowReader(dataInput);
   }
 }

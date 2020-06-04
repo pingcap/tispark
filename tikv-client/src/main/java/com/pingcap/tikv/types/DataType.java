@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.pingcap.tidb.tipb.ExprType;
 import com.pingcap.tikv.codec.Codec;
 import com.pingcap.tikv.codec.CodecDataInput;
-import com.pingcap.tikv.codec.CodecDataInputLittleEndian;
 import com.pingcap.tikv.codec.CodecDataOutput;
 import com.pingcap.tikv.columnar.TiChunkColumnVector;
 import com.pingcap.tikv.exception.ConvertNotSupportException;
@@ -236,14 +235,36 @@ public abstract class DataType implements Serializable {
     return allNotNullBitMap;
   }
 
+  private int readIntLittleEndian(CodecDataInput cdi) {
+    int ch1 = cdi.readUnsignedByte();
+    int ch2 = cdi.readUnsignedByte();
+    int ch3 = cdi.readUnsignedByte();
+    int ch4 = cdi.readUnsignedByte();
+    return ((ch1) + (ch2 << 8) + (ch3 << 16) + (ch4 << 24));
+  }
+
+  private final byte[] readBuffer = new byte[8];
+
+  private long readLongLittleEndian(CodecDataInput cdi) {
+    cdi.readFully(readBuffer, 0, 8);
+    return ((readBuffer[0] & 255)
+        + ((readBuffer[1] & 255) << 8)
+        + ((readBuffer[2] & 255) << 16)
+        + ((readBuffer[3] & 255) << 24)
+        + ((long) (readBuffer[4] & 255) << 32)
+        + ((long) (readBuffer[5] & 255) << 40)
+        + ((long) (readBuffer[6] & 255) << 48)
+        + ((long) (readBuffer[7] & 255) << 56));
+  }
+
   public boolean isSameCatalog(DataType other) {
     return false;
   }
 
   // all data should be read in little endian.
-  public TiChunkColumnVector decodeChunkColumn(CodecDataInputLittleEndian cdi) {
-    int numRows = cdi.readInt();
-    int numNulls = cdi.readInt();
+  public TiChunkColumnVector decodeChunkColumn(CodecDataInput cdi) {
+    int numRows = readIntLittleEndian(cdi);
+    int numNulls = readIntLittleEndian(cdi);
     assert (numRows >= 0) && (numNulls >= 0);
     int numNullBitmapBytes = (numRows + 7) / 8;
     byte[] nullBitMaps = new byte[numNullBitmapBytes];
@@ -265,7 +286,7 @@ public abstract class DataType implements Serializable {
       // and convert bytes to int64
       offsets = new long[numOffsets];
       for (int i = 0; i < numOffsets; i++) {
-        offsets[i] = cdi.readLong();
+        offsets[i] = readLongLittleEndian(cdi);
       }
       numDataBytes = (int) offsets[numRows];
     }
