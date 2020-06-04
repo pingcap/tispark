@@ -57,10 +57,10 @@ trait MultiColumnDataTypeTest extends BaseTiSparkTest {
                    col1: String,
                    col2: String,
                    dataType: ReflectedDataType): Unit = {
-    for ((op, value) <- getOperations(dataType)) {
-      val query = s"select $col1 from $tableName where $col2 $op $value"
-      test(query) {
-        setCurrentDatabase(dbName)
+    test(s"select $col1 from $tableName where $col2 <op> <value>") {
+      setCurrentDatabase(dbName)
+      for ((op, value) <- getOperations(dataType)) {
+        val query = s"select $col1 from $tableName where $col2 $op $value"
         runTest(query, canTestTiFlash = true)
       }
     }
