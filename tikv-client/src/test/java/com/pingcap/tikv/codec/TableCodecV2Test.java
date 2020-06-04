@@ -120,15 +120,25 @@ public class TableCodecV2Test {
     }
   }
 
+  private static final DataType TEST_BIT_TYPE =
+      DataTypeFactory.of(
+          new TiColumnInfo.InternalTypeHolder(
+              MySQLType.TypeBit.getTypeCode(), 0, 24, 0, "", "", ImmutableList.of()));
+  private static final DataType TEST_ENUM_TYPE =
+      DataTypeFactory.of(
+          new TiColumnInfo.InternalTypeHolder(
+              MySQLType.TypeEnum.getTypeCode(), 0, 24, 0, "", "", ImmutableList.of("y", "n")));
+  private static final DataType TEST_SET_TYPE =
+      DataTypeFactory.of(
+          new TiColumnInfo.InternalTypeHolder(
+              MySQLType.TypeSet.getTypeCode(), 0, 24, 0, "", "", ImmutableList.of("n1", "n2")));
+
   @Test
   public void testLargeColID() {
     TestCase testCase =
         TestCase.createNew(
             new int[] {128, 1, 1, 0, 0, 0, 44, 1, 0, 0, 0, 0, 0, 0},
-            MetaUtils.TableBuilder.newBuilder()
-                .name("t")
-                .addColumn("c1", BitType.BIT, false)
-                .build(),
+            MetaUtils.TableBuilder.newBuilder().name("t").addColumn("c1", BitType.BIT).build(),
             300L,
             new Object[] {null});
     testCase.testDecode();
@@ -144,7 +154,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 1, 0, 2},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", IntegerType.INT, false)
+                    .addColumn("c1", IntegerType.INT)
                     .build(),
                 new Object[] {2L}),
             // test int64
@@ -152,7 +162,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 208, 237, 144, 46, 0, 0, 0},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", IntegerType.BIGINT, false)
+                    .addColumn("c1", IntegerType.BIGINT)
                     .build(),
                 new Object[] {200000000000L}),
             // test float
@@ -160,14 +170,14 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 192, 39, 250, 225, 64, 0, 0, 0},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", RealType.FLOAT, false)
+                    .addColumn("c1", RealType.FLOAT)
                     .build(),
                 new Object[] {11.99}),
             TestCase.createNew(
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 63, 216, 5, 30, 191, 255, 255, 255},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", RealType.FLOAT, false)
+                    .addColumn("c1", RealType.FLOAT)
                     .build(),
                 new Object[] {-11.99}),
             // test decimal
@@ -175,7 +185,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 5, 0, 6, 4, 139, 38, 172},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", DecimalType.DECIMAL, false)
+                    .addColumn("c1", DecimalType.DECIMAL)
                     .build(),
                 new Object[] {new BigDecimal("11.9900")}),
             // test bit
@@ -183,12 +193,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 4, 0, 48, 48, 49, 0},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn(
-                        "c1",
-                        DataTypeFactory.of(
-                            new TiColumnInfo.InternalTypeHolder(
-                                16, 0, 24, 0, "", "", ImmutableList.of())),
-                        false)
+                    .addColumn("c1", TEST_BIT_TYPE, false)
                     .build(),
                 new Object[] {new byte[] {49, 48, 48}}),
             // test date
@@ -196,7 +201,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 69, 77, 105, 166, 25},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", DateType.DATE, false)
+                    .addColumn("c1", DateType.DATE)
                     .build(),
                 new Object[] {new Date(1590007985000L - timezoneOffset)}),
             // test datetime
@@ -204,7 +209,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 69, 77, 105, 166, 25},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", DateTimeType.DATETIME, false)
+                    .addColumn("c1", DateTimeType.DATETIME)
                     .build(),
                 new Object[] {new Timestamp(1590007985000L - timezoneOffset)}),
             // test timestamp
@@ -212,7 +217,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 0, 0, 69, 77, 105, 166, 25},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", TimestampType.TIMESTAMP, false)
+                    .addColumn("c1", TimestampType.TIMESTAMP)
                     .build(),
                 new Object[] {new Timestamp(1590007985000L)}),
             // test duration
@@ -220,7 +225,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 8, 0, 0, 198, 34, 193, 197, 13, 0, 0},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", TimeType.TIME, false)
+                    .addColumn("c1", TimeType.TIME)
                     .build(),
                 new Object[] {15143000000000L}),
             // test year
@@ -228,7 +233,7 @@ public class TableCodecV2Test {
                 new int[] {128, 0, 1, 0, 0, 0, 1, 2, 0, 228, 7},
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", IntegerType.YEAR, false)
+                    .addColumn("c1", IntegerType.YEAR)
                     .build(),
                 new Object[] {2020L}),
             // test varchar
@@ -240,7 +245,7 @@ public class TableCodecV2Test {
                 },
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", StringType.VARCHAR, false)
+                    .addColumn("c1", StringType.VARCHAR)
                     .build(),
                 new Object[] {"test with some escapes _.*[{\\\n'\"\u0001中文"}),
             // test year
@@ -251,7 +256,7 @@ public class TableCodecV2Test {
                 },
                 MetaUtils.TableBuilder.newBuilder()
                     .name("t")
-                    .addColumn("c1", BytesType.LONG_TEXT, false)
+                    .addColumn("c1", BytesType.LONG_TEXT)
                     .build(),
                 new Object[] {
                   new byte[] {
@@ -269,10 +274,7 @@ public class TableCodecV2Test {
     TestCase testCase =
         TestCase.createNew(
             new int[] {128, 1, 1, 0, 0, 0, 44, 1, 0, 0, 0, 0, 0, 0},
-            MetaUtils.TableBuilder.newBuilder()
-                .name("t")
-                .addColumn("c1", BitType.BIT, false)
-                .build(),
+            MetaUtils.TableBuilder.newBuilder().name("t").addColumn("c1", BitType.BIT).build(),
             300L,
             new Object[] {null});
     testCase.testDecode();
@@ -297,10 +299,70 @@ public class TableCodecV2Test {
             new int[] {128, 0, 1, 0, 1, 0, 2, 1, 1, 0, 2},
             MetaUtils.TableBuilder.newBuilder()
                 .name("t")
-                .addColumn("c1", IntegerType.BIGINT, false)
-                .addColumn("c2", IntegerType.BIGINT, false)
+                .addColumn("c1", IntegerType.BIGINT)
+                .addColumn("c2", IntegerType.BIGINT)
                 .build(),
             new Object[] {null, 2L});
+    testCase.testDecode();
+  }
+
+  @Test
+  public void testNewRowTypes() {
+    MetaUtils.TableBuilder tableBuilder =
+        MetaUtils.TableBuilder.newBuilder()
+            .name("t")
+            .addColumn("c1", IntegerType.BIGINT, 1)
+            .addColumn("c2", IntegerType.SMALLINT, 22)
+            .addColumn("c3", RealType.DOUBLE, 3)
+            .addColumn("c4", BytesType.BLOB, 24)
+            .addColumn("c5", StringType.CHAR, 25)
+            .addColumn("c6", TimestampType.TIMESTAMP, 5)
+            .addColumn("c7", TimeType.TIME, 16)
+            .addColumn("c8", DecimalType.DECIMAL, 8)
+            .addColumn("c9", IntegerType.YEAR, 12)
+            .addColumn("c10", TEST_ENUM_TYPE, 9)
+            .addColumn("c11", JsonType.JSON, 14)
+            .addColumn("c12", UninitializedType.NULL, 11) // null
+            .addColumn("c13", UninitializedType.NULL, 2) // null
+            .addColumn("c14", UninitializedType.NULL, 100) // null
+            .addColumn("c15", RealType.FLOAT, 116)
+            .addColumn("c16", TEST_SET_TYPE, 117)
+            .addColumn("c17", TEST_BIT_TYPE, 118)
+            .addColumn("c18", StringType.VAR_STRING, 119);
+    TiTableInfo tbl = tableBuilder.build();
+    Timestamp ts = new Timestamp(1320923471000L);
+    ts.setNanos(999999000);
+    TestCase testCase =
+        TestCase.createNew(
+            new int[] {
+              128, 0, 15, 0, 3, 0, 1, 3, 5, 8, 9, 12, 14, 16, 22, 24, 25, 116, 117, 118, 119, 2, 11,
+              100, 1, 0, 9, 0, 17, 0, 22, 0, 23, 0, 25, 0, 54, 0, 62, 0, 63, 0, 66, 0, 68, 0, 76, 0,
+              77, 0, 81, 0, 81, 0, 1, 192, 0, 0, 0, 0, 0, 0, 0, 63, 66, 15, 203, 178, 148, 138, 25,
+              6, 4, 139, 38, 172, 2, 207, 7, 1, 1, 0, 0, 0, 28, 0, 0, 0, 19, 0, 0, 0, 1, 0, 9, 20,
+              0, 0, 0, 97, 2, 0, 0, 0, 0, 0, 0, 0, 0, 128, 226, 194, 24, 13, 0, 0, 1, 97, 98, 99,
+              97, 98, 192, 24, 0, 0, 0, 0, 0, 0, 1, 48, 48, 49, 0
+            },
+            tbl,
+            new Object[] {
+              1L,
+              1L,
+              2.0,
+              "abc".getBytes(),
+              "ab",
+              ts,
+              4 * 3600 * 1000000000L,
+              new BigDecimal("11.9900"),
+              1999L,
+              "n",
+              "",
+              null,
+              null,
+              null,
+              6.0,
+              "n1",
+              new byte[] {49, 48, 48},
+              ""
+            });
     testCase.testDecode();
   }
 }

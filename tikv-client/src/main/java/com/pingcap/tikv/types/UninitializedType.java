@@ -30,7 +30,9 @@ import com.pingcap.tikv.meta.TiColumnInfo;
  */
 public class UninitializedType extends DataType {
   public static final UninitializedType DECIMAL = new UninitializedType(MySQLType.TypeDecimal);
-  public static final MySQLType[] subTypes = new MySQLType[] {MySQLType.TypeDecimal};
+  public static final UninitializedType NULL = new UninitializedType(MySQLType.TypeNull);
+  public static final MySQLType[] subTypes =
+      new MySQLType[] {MySQLType.TypeDecimal, MySQLType.TypeNull};
 
   private UninitializedType(MySQLType tp) {
     super(tp);

@@ -17,6 +17,7 @@ package com.pingcap.tikv.codec;
 
 import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.exception.CodecException;
+import com.pingcap.tikv.exception.TypeException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.ObjectRowImpl;
@@ -27,6 +28,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -93,18 +95,16 @@ public class TableCodecV2 {
       case TypeInt24:
       case TypeShort:
       case TypeTiny:
-        // TODO: decode unsigned
-        return decodeInt(colData);
-      case TypeYear:
+        // TODO: decode consider unsigned
         return decodeInt(colData);
       case TypeFloat:
         return decodeFloat(colData);
       case TypeDouble:
         return decodeDouble(colData);
+      case TypeString:
       case TypeVarString:
       case TypeVarchar:
         return new String(colData, StandardCharsets.UTF_8);
-      case TypeString:
       case TypeBlob:
       case TypeTinyBlob:
       case TypeMediumBlob:
@@ -122,19 +122,20 @@ public class TableCodecV2 {
       case TypeTimestamp:
         return decodeTimestamp(colData, DateTimeZone.UTC);
       case TypeDuration:
+      case TypeYear:
         return decodeInt(colData);
       case TypeEnum:
-        throw new CodecException("enum decode not implemented");
+        return decodeEnum(colData, tp.getElems());
       case TypeSet:
-        throw new CodecException("set decode not implemented");
+        return decodeSet(colData, tp.getElems());
+      case TypeNull:
+        return null;
       case TypeJSON:
         throw new CodecException("json decode not implemented");
       case TypeDecimal:
       case TypeGeometry:
       case TypeNewDate:
         throw new CodecException("type should not appear in colData");
-      case TypeNull:
-        throw new CodecException("null should not appear in colData");
       default:
         throw new CodecException("invalid data type " + tp.getType().name());
     }
@@ -215,7 +216,49 @@ public class TableCodecV2 {
     if (extendedDateTime == null) {
       return Codec.DateTimeCodec.createExtendedDateTime(tz, 1, 1, 1, 0, 0, 0, 0).toTimeStamp();
     }
-    Timestamp ts = extendedDateTime.toTimeStamp();
-    return ts;
+    return extendedDateTime.toTimeStamp();
+  }
+
+  static String decodeEnum(byte[] val, List<String> elems) {
+    int idx = (int) decodeInt(val) - 1;
+    if (idx < 0 || idx >= elems.size()) throw new TypeException("Index is out of range");
+    return elems.get(idx);
+  }
+
+  private static final long[] setIndexValue = initSetIndexVal();
+  private static final long[] setIndexInvertValue = initSetIndexInvertVal();
+
+  private static long[] initSetIndexInvertVal() {
+    long[] tmpArr = new long[64];
+    for (int i = 0; i < 64; i++) {
+      // complement of original value.
+      tmpArr[i] = ~setIndexValue[i];
+    }
+    return tmpArr;
+  }
+
+  private static long[] initSetIndexVal() {
+    long[] tmpArr = new long[64];
+    for (int i = 0; i < 64; i++) {
+      tmpArr[i] = 1L << i;
+    }
+    return tmpArr;
+  }
+
+  static String decodeSet(byte[] val, List<String> elems) {
+    long number = decodeInt(val);
+    List<String> items = new ArrayList<>();
+    int length = elems.size();
+    for (int i = 0; i < length; i++) {
+      long checker = number & setIndexValue[i];
+      if (checker != 0) {
+        items.add(elems.get(i));
+        number &= setIndexInvertValue[i];
+      }
+    }
+    if (number != 0) {
+      throw new TypeException(String.format("invalid number %d for Set %s", number, elems));
+    }
+    return String.join(",", items);
   }
 }

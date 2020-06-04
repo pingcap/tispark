@@ -69,6 +69,10 @@ public class MetaUtils {
       return addColumn(name, type, false);
     }
 
+    public TableBuilder addColumn(String name, DataType type, long colId) {
+      return addColumn(name, type, false, colId);
+    }
+
     public TableBuilder addColumn(String name, DataType type, boolean pk, long colId) {
       for (TiColumnInfo c : columns) {
         if (c.matchName(name)) {
