@@ -34,6 +34,10 @@ public class StoreVersion {
 
   private StoreVersion(String version) {
     try {
+      // tiflash version starts with `v`
+      if (version.startsWith("v")) {
+        version = version.substring(1);
+      }
       String[] parts = version.split("[.-]");
       if (parts.length > 0) {
         v0 = Integer.parseInt(parts[0]);
