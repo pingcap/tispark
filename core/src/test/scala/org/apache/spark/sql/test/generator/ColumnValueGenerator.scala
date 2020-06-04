@@ -123,13 +123,10 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
     val list: List[Any] = dataType match {
       case BIT                                                                     => List.empty[Array[Byte]]
       case TINYINT | SMALLINT | MEDIUMINT | INT | BIGINT if !tiDataType.isUnsigned => List(-1L)
-      // todo set the special bound of timestamp to 1970-01-01 08:00:00 to avoid
-      //  TiFlash bug https://internal.pingcap.net/jira/browse/FLASH-1197
-      //  should change it back to 1970-01-01 00:00:01 once Flash-1197 is fixed
-      case TIMESTAMP                      => List(new java.sql.Timestamp(28800000))
-      case _ if isCharCharset(dataType)   => List("")
-      case _ if isBinaryCharset(dataType) => List(Array[Byte]())
-      case _                              => List.empty[String]
+      case TIMESTAMP                                                               => List(new java.sql.Timestamp(1000))
+      case _ if isCharCharset(dataType)                                            => List("")
+      case _ if isBinaryCharset(dataType)                                          => List(Array[Byte]())
+      case _                                                                       => List.empty[String]
     }
     if (lowerBound != null && upperBound != null) {
       list ::: List(lowerBound, upperBound)
@@ -221,10 +218,7 @@ case class ColumnValueGenerator(dataType: ReflectedDataType,
         new java.sql.Date(milliseconds)
       case TIMESTAMP =>
         // start from 1970-01-01 00:00:01 to 2038-01-19 03:14:07
-        // todo set the start of timestamp to 1970-01-01 08:00:00 to avoid
-        //  TiFlash bug https://internal.pingcap.net/jira/browse/FLASH-1197
-        //  should change it back to 1970-01-01 00:00:01 once Flash-1197 is fixed
-        val milliseconds = Math.abs(r.nextInt * 1000L + 28800000L) + Math.abs(r.nextInt(1000))
+        val milliseconds = Math.abs(r.nextInt * 1000L + 1000L) + Math.abs(r.nextInt(1000))
         new java.sql.Timestamp(milliseconds)
       case ENUM => generateRandomEnumValue(r)
       case SET  => generateRandomSetValue(r)
