@@ -34,9 +34,9 @@ import org.tikv.kvproto.Metapb;
 
 public class MetaUtils {
   public static class TableBuilder {
-    static long autoId = 1;
+    long autoId = 1;
 
-    private static long newId() {
+    private long newId() {
       return autoId++;
     }
 
@@ -69,16 +69,20 @@ public class MetaUtils {
       return addColumn(name, type, false);
     }
 
-    public TableBuilder addColumn(String name, DataType type, boolean pk) {
+    public TableBuilder addColumn(String name, DataType type, boolean pk, long colId) {
       for (TiColumnInfo c : columns) {
         if (c.matchName(name)) {
           throw new TiClientInternalException("duplicated name: " + name);
         }
       }
 
-      TiColumnInfo col = new TiColumnInfo(newId(), name, columns.size(), type, pk);
+      TiColumnInfo col = new TiColumnInfo(colId, name, columns.size(), type, pk);
       columns.add(col);
       return this;
+    }
+
+    public TableBuilder addColumn(String name, DataType type, boolean pk) {
+      return addColumn(name, type, pk, newId());
     }
 
     public TableBuilder addPartition(

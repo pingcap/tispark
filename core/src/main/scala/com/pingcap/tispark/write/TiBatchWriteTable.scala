@@ -20,7 +20,7 @@ import java.util
 
 import com.google.protobuf.ByteString
 import com.pingcap.tikv.allocator.RowIDAllocator
-import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec}
+import com.pingcap.tikv.codec.{CodecDataOutput, TableCodec, TableCodecV1}
 import com.pingcap.tikv.exception.TiBatchWriteException
 import com.pingcap.tikv.key.{IndexKey, RowKey}
 import com.pingcap.tikv.meta._
@@ -418,7 +418,7 @@ class TiBatchWriteTable(@transient val df: DataFrame,
             val oldIndicesRowPair = oldIndicesRowPairs.get(i)
             val oldRowKey = oldIndicesRowPair.getKey
             val oldRowValue = oldIndicesRowPair.getValue
-            val oldHandle = oldIndicesMap.get(new SerializableKey(oldRowKey)).get
+            val oldHandle = oldIndicesMap(new SerializableKey(oldRowKey))
             val oldRow = TableCodec.decodeRow(oldRowValue, oldHandle, tiTableInfo)
             rowBuf += WrappedRow(oldRow, oldHandle)
           }

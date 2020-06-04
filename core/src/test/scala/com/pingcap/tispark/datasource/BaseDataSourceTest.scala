@@ -2,6 +2,7 @@ package com.pingcap.tispark.datasource
 
 import java.util.Objects
 
+import com.pingcap.tikv.meta.TiColumnInfo
 import com.pingcap.tispark.TiConfigConst
 import org.apache.spark.SparkException
 import org.apache.spark.rdd.RDD
@@ -249,6 +250,16 @@ class BaseDataSourceTest(val table: String, val database: String = "tispark_test
       .filter(filter)
       .sort("i")
     checkAnswer(loadedDf, expectedAnswer)
+  }
+
+  protected def tiRowToSparkRow(row: TiRow, tiColsInfos: java.util.List[TiColumnInfo]): Row = {
+    val sparkRow = new Array[Any](row.fieldCount())
+    for (i <- 0 until row.fieldCount()) {
+      val colTp = tiColsInfos.get(i).getType
+      val colVal = row.get(i, colTp)
+      sparkRow(i) = colVal
+    }
+    Row.fromSeq(sparkRow)
   }
 
   protected def getTestDatabaseNameInSpark(database: String): String = s"$dbPrefix$database"

@@ -1,9 +1,7 @@
 package org.apache.spark.sql.insertion
 
-import com.pingcap.tikv.meta.TiColumnInfo
 import com.pingcap.tispark.datasource.BaseDataSourceTest
 import com.pingcap.tispark.utils.TiUtil
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.test.generator.DataType.ReflectedDataType
 import org.apache.spark.sql.test.generator.Schema
 import org.apache.spark.sql.test.generator.TestDataGenerator._
@@ -21,16 +19,6 @@ class BatchWritePkSuite
     super.beforeAll()
     tidbStmt.execute(s"drop database if exists $database")
     tidbStmt.execute(s"create database $database")
-  }
-
-  private def tiRowToSparkRow(row: TiRow, tiColsInfos: java.util.List[TiColumnInfo]) = {
-    val sparkRow = new Array[Any](row.fieldCount())
-    for (i <- 0 until row.fieldCount()) {
-      val colTp = tiColsInfos.get(i).getType
-      val colVal = row.get(i, colTp)
-      sparkRow(i) = colVal
-    }
-    Row.fromSeq(sparkRow)
   }
 
   private def dropAndCreateTbl(schema: Schema): Unit = {
