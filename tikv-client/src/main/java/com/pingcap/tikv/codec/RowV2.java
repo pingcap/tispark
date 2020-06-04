@@ -169,12 +169,6 @@ public class RowV2 {
     int i = 0, j = this.numNotNullCols;
     ColIDSearchResult result = new ColIDSearchResult(-1, false, false);
     result.idx = binarySearch(i, j, colID);
-    System.out.println("try find colID = " + colID);
-    if (this.large) {
-      System.out.println("colIDs32=" + Arrays.toString(this.colIDs32));
-    } else {
-      System.out.println("colIDs  =" + Arrays.toString(this.colIDs));
-    }
     if (result.idx != -1) {
       return result;
     }

@@ -15,16 +15,22 @@
 
 package com.pingcap.tikv.codec;
 
+import com.pingcap.tikv.ExtendedDateTime;
 import com.pingcap.tikv.exception.CodecException;
 import com.pingcap.tikv.meta.TiColumnInfo;
 import com.pingcap.tikv.meta.TiTableInfo;
 import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
+import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import org.joda.time.DateTimeZone;
 
 public class TableCodecV2 {
 
@@ -97,6 +103,7 @@ public class TableCodecV2 {
         return decodeDouble(colData);
       case TypeVarString:
       case TypeVarchar:
+        return new String(colData, StandardCharsets.UTF_8);
       case TypeString:
       case TypeBlob:
       case TypeTinyBlob:
@@ -108,6 +115,26 @@ public class TableCodecV2 {
       case TypeBit:
         int byteSize = (int) ((tp.getLength() + 7) >>> 3);
         return decodeBit(decodeInt(colData), byteSize);
+      case TypeDate:
+        return new Date(decodeTimestamp(colData, Converter.getLocalTimezone()).getTime());
+      case TypeDatetime:
+        return decodeTimestamp(colData, Converter.getLocalTimezone());
+      case TypeTimestamp:
+        return decodeTimestamp(colData, DateTimeZone.UTC);
+      case TypeDuration:
+        return decodeInt(colData);
+      case TypeEnum:
+        throw new CodecException("enum decode not implemented");
+      case TypeSet:
+        throw new CodecException("set decode not implemented");
+      case TypeJSON:
+        throw new CodecException("json decode not implemented");
+      case TypeDecimal:
+      case TypeGeometry:
+      case TypeNewDate:
+        throw new CodecException("type should not appear in colData");
+      case TypeNull:
+        throw new CodecException("null should not appear in colData");
       default:
         throw new CodecException("invalid data type " + tp.getType().name());
     }
@@ -166,15 +193,29 @@ public class TableCodecV2 {
 
   static byte[] decodeBit(long val, int byteSize) {
     if (byteSize != -1 && (byteSize < 1 || byteSize > 8)) {
-      throw new CodecException("Invalid byteSize");
+      throw new CodecException("Invalid byteSize " + byteSize);
     }
-    byte[] buf = new byte[8];
     CodecDataOutput cdo = new CodecDataOutput();
     cdo.writeLong(val);
     if (byteSize != -1) {
-      return trimLeadingZeroBytes(buf);
+      return trimLeadingZeroBytes(cdo.toBytes());
     } else {
-      return Arrays.copyOfRange(buf, 8 - byteSize, 8);
+      return Arrays.copyOfRange(cdo.toBytes(), 8 - byteSize, 8);
     }
+  }
+
+  static Timestamp decodeTimestamp(byte[] val, DateTimeZone tz) {
+    //    Codec.DateTimeCodec.fromPackedLong(, Converter.getLocalTimezone());
+    ExtendedDateTime extendedDateTime =
+        Codec.DateTimeCodec.fromPackedLong(new CodecDataInputLittleEndian(val).readLong(), tz);
+    // Even though null is filtered out but data like 0000-00-00 exists
+    // according to MySQL JDBC behavior, it can chose the **ROUND** behavior converted to the
+    // nearest
+    // value which is 0001-01-01.
+    if (extendedDateTime == null) {
+      return Codec.DateTimeCodec.createExtendedDateTime(tz, 1, 1, 1, 0, 0, 0, 0).toTimeStamp();
+    }
+    Timestamp ts = extendedDateTime.toTimeStamp();
+    return ts;
   }
 }
