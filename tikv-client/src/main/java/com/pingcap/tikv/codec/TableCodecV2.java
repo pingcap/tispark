@@ -24,6 +24,7 @@ import com.pingcap.tikv.row.ObjectRowImpl;
 import com.pingcap.tikv.row.Row;
 import com.pingcap.tikv.types.Converter;
 import com.pingcap.tikv.types.DataType;
+import com.pingcap.tikv.util.JsonUtils;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -128,10 +129,10 @@ public class TableCodecV2 {
         return decodeEnum(colData, tp.getElems());
       case TypeSet:
         return decodeSet(colData, tp.getElems());
+      case TypeJSON:
+        return decodeJson(colData);
       case TypeNull:
         return null;
-      case TypeJSON:
-        throw new CodecException("json decode not implemented");
       case TypeDecimal:
       case TypeGeometry:
       case TypeNewDate:
@@ -260,5 +261,9 @@ public class TableCodecV2 {
       throw new TypeException(String.format("invalid number %d for Set %s", number, elems));
     }
     return String.join(",", items);
+  }
+
+  static String decodeJson(byte[] val) {
+    return JsonUtils.parseJson(new CodecDataInput(val)).toString();
   }
 }

@@ -354,7 +354,7 @@ public class TableCodecV2Test {
               new BigDecimal("11.9900"),
               1999L,
               "n",
-              "",
+              "{\"a\":2}",
               null,
               null,
               null,
