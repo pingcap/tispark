@@ -34,13 +34,13 @@ If you are using maven (recommended), add the following code to your `pom.xml`:
 ```
 
 
-If you want to use TiSpark-2.2.x, please use the following configuration:
+If you want to use TiSpark-2.3.x, please use the following configuration:
 ```xml
 <dependencies>
     <dependency>
       <groupId>com.pingcap.tispark</groupId>
       <artifactId>tispark-assembly</artifactId>
-      <version>2.2.0</version>
+      <version>2.3.0-rc</version>
     </dependency>
 </dependencies>
 ```
@@ -67,33 +67,32 @@ To skip the tests that you do not need to run, add `-Dmaven.test.skip=true`.
 
 ## How to choose TiSpark Version
 
-| Spark Version | Recommended TiSpark Version |
-| ------------- | ---------------------- |
-| Spark-2.4.x | TiSpark-2.2.0、TiSpark-2.1.9 |
-| Spark-2.3.x | TiSpark-2.2.0、TiSpark-2.1.9 |
-| Spark-2.2.x | TiSpark-1.2.1 |
-| Spark-2.1.x | TiSpark-1.2.1 |
+| Spark Version | Recommended TiSpark Version     |
+| ------------- | ------------------------------- |
+| Spark-2.4.x   | TiSpark-2.3.0-rc、TiSpark-2.1.9 |
+| Spark-2.3.x   | TiSpark-2.3.0-rc、TiSpark-2.1.9 |
+| Spark-2.2.x   | TiSpark-1.2.1                   |
+| Spark-2.1.x   | TiSpark-1.2.1                   |
 
 ## Latest TiDB/TiKV/PD versions supported by TiSpark
 
-| TiSpark Version | Latest TiDB Version | Latest TiKV Version | Latest PD Version |
-| ----- | ------ | ------ | ------ |
-| < 1.2 | v2.1.9 | v2.1.9 | v2.1.9 |
-| 1.2.x | v2.1.x | v2.1.x | v2.1.x |
-| 2.x | v3.0.2 | v3.0.2 | v3.0.2 |
-| Latest (master) | v3.0.12 | v3.0.12 | v3.0.12 |
+| TiSpark Version | Latest TiDB/TiKV/PD Version |
+| --------------- | --------------------------- |
+| < 1.2           | v2.1.9                      |
+| 1.2.x           | v2.1.x                      |
+| 2.1.x           | v3.0.2                      |
+| 2.3.x           | v4.0.x                      |
 
 ## Spark versions supported by TiSpark
 
 Although TiSpark provides backward compatibility to TiDB, it only guarantees the **restricted** support for the earlier Spark versions to follow the latest DataSource API changes.
 
-| TiSpark Version | Spark Version |
-| ----- | ------ |
-| 1.x | Spark v2.1.0+ |
-| 2.0 | Spark v2.3.0+ |
-| 2.1.x | Spark v2.3.0+, Spark v2.4.0+ |
-| 2.2.x | Spark v2.3.0+, Spark v2.4.0+ |
-| Latest (master) | Spark v2.3.0+, Spark v2.4.0+ |
+| TiSpark Version | Spark Version                |
+| --------------- | ---------------------------- |
+| 1.x             | Spark v2.1.0+                |
+| 2.0             | Spark v2.3.0+                |
+| 2.1.x           | Spark v2.3.0+, Spark v2.4.0+ |
+| 2.3.x           | Spark v2.3.0+, Spark v2.4.0+ |
 
 ## How to upgrade from Spark 2.1 to Spark 2.3/2.4
 
