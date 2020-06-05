@@ -14,8 +14,8 @@ Read the [Quick Start](./docs/userguide.md).
 ## Getting TiSpark
 
 + Currently, TiSpark 2.1.9 is the latest stable version, which is highly recommended. It is compatible with Spark 2.3.0+ and Spark 2.4.0+. It is also compatible with TiDB-2.x and TiDB-3.x.
-  - When using TiSpark 2.1.9 with Spark 2.3.0+, use version `2.1.9-spark_2.3` and follow the [document for Spark 2.3+](./docs/userguide.md).
-  - When using TiSpark 2.1.9 with Spark 2.4.0+, use version `2.1.9-spark_2.4` and follow the [document for Spark 2.3+](./docs/userguide.md).
+  - When using TiSpark 2.1.9 with Spark 2.3.0+, use version `2.1.9-spark_2.3` and follow the [document](./docs/userguide.md).
+  - When using TiSpark 2.1.9 with Spark 2.4.0+, use version `2.1.9-spark_2.4` and follow the [document](./docs/userguide.md).
 
 + TiSpark 1.2.1 is the latest stable version compatible with Spark 2.1.0+.
   - When using TiSpark 1.2.1, follow the [document for Spark 2.1](./docs/userguide_spark2.1.md).
