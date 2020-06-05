@@ -27,9 +27,10 @@ public class StringType extends BytesType {
 
   public static final StringType VARCHAR = new StringType(MySQLType.TypeVarchar);
   public static final StringType CHAR = new StringType(MySQLType.TypeString);
+  public static final StringType VAR_STRING = new StringType(MySQLType.TypeVarString);
 
   public static final MySQLType[] subTypes =
-      new MySQLType[] {MySQLType.TypeVarchar, MySQLType.TypeString};
+      new MySQLType[] {MySQLType.TypeVarchar, MySQLType.TypeString, MySQLType.TypeVarString};
 
   protected StringType(MySQLType tp) {
     super(tp);

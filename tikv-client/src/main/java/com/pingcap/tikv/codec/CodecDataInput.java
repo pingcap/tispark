@@ -29,7 +29,7 @@ public class CodecDataInput implements DataInput {
    *
    * @see ByteArrayInputStream
    */
-  private class UnSyncByteArrayInputStream extends InputStream {
+  private static class UnSyncByteArrayInputStream extends InputStream {
     protected byte[] buf;
     protected int pos;
     protected int mark = 0;
@@ -105,9 +105,9 @@ public class CodecDataInput implements DataInput {
     public void close() throws IOException {}
   }
 
-  private final DataInputStream inputStream;
-  private final UnSyncByteArrayInputStream backingStream;
-  private final byte[] backingBuffer;
+  protected final DataInputStream inputStream;
+  protected final UnSyncByteArrayInputStream backingStream;
+  protected final byte[] backingBuffer;
 
   public CodecDataInput(ByteString data) {
     this(data.toByteArray());
@@ -232,23 +232,6 @@ public class CodecDataInput implements DataInput {
   public long readLong() {
     try {
       return inputStream.readLong();
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  final long readPartialLong() {
-    try {
-      byte[] readBuffer = new byte[8];
-      inputStream.read(readBuffer, 0, 8);
-      return (((long) readBuffer[0] << 56)
-          + ((long) (readBuffer[1] & 0xff) << 48)
-          + ((long) (readBuffer[2] & 0xff) << 40)
-          + ((long) (readBuffer[3] & 0xff) << 32)
-          + ((long) (readBuffer[4] & 0xff) << 24)
-          + ((readBuffer[5] & 0xff) << 16)
-          + ((readBuffer[6] & 0xff) << 8)
-          + ((readBuffer[7] & 0xff) << 0));
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

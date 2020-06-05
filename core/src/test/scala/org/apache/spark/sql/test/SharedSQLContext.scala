@@ -42,6 +42,8 @@ import scala.collection.mutable.ArrayBuffer
  * `tidb_config.properties` must be provided in test resources folder
  */
 trait SharedSQLContext extends SparkFunSuite with Eventually with Logging with SharedSparkContext {
+  type TiRow = com.pingcap.tikv.row.Row
+
   override protected val logger: Logger = SharedSQLContext.logger
   private val tiContextCache = new TiContextCache
   protected var jdbcUrl: String = _
